@@ -1,4 +1,5 @@
 from collections import defaultdict
+from ..common.util import namespace_match
 from typing import Dict, List, Union
 import codecs
 import logging
@@ -24,20 +25,8 @@ class _NamespaceDependentDefaultDict(defaultdict):
         self._non_padded_function = non_padded_function
         super(_NamespaceDependentDefaultDict, self).__init__()
 
-    """
-    Matches a namespace pattern against a namespace string.  For example, "*tags" matches
-    "passage_tags" and "question_tags" and "tokens" matches "tokens" but not "stemmed_tokens".
-    """
-    def _namespace_match(self, pattern: str, namespace: str):
-        if pattern[0] == '*' and namespace.endswith(pattern[1:]):
-            return True
-        elif pattern == namespace:
-            return True
-        else:
-            return False
-
     def __missing__(self, key: str):
-        if any(self._namespace_match(pattern, key) for pattern in self._non_padded_namespaces):
+        if any(namespace_match(pattern, key) for pattern in self._non_padded_namespaces):
             value = self._non_padded_function()
         else:
             value = self._padded_function()
@@ -88,7 +77,7 @@ class Vocabulary:
         If you want to cap the number of tokens in your vocabulary, you can do so with this
         parameter.  If you specify a single integer, every namespace will have its vocabulary fixed
         to be no larger than this.  If you specify a dictionary, then each namespace in the
-        ``counter`` can have a separate maximum vocabulariy size.  Any missing key will have a value
+        ``counter`` can have a separate maximum vocabulary size.  Any missing key will have a value
         of ``None``, which means no cap on the vocabulary size.
     non_padded_namespaces : ``List[str]``, optional (default=``["*tags", "*labels"]``)
         By default, we assume you are mapping word / character tokens to integers, and so you want

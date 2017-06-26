@@ -104,3 +104,15 @@ def clean_layer_name(input_name: str,
         input_name = '_'.join(input_name.split('_')[:-1])
 
     return input_name
+
+"""
+Matches a namespace pattern against a namespace string.  For example, "*tags" matches
+"passage_tags" and "question_tags" and "tokens" matches "tokens" but not "stemmed_tokens".
+"""
+def namespace_match(pattern: str, namespace: str):
+    if pattern[0] == '*' and namespace.endswith(pattern[1:]):
+        return True
+    elif pattern == namespace:
+        return True
+    else:
+        return False
