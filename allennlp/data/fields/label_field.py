@@ -16,13 +16,20 @@ class LabelField(Field):
     text or 0-indexed integers.  If the labels need indexing, we will use a :class:`Vocabulary` to
     convert the string labels into integers.
 
+    This field will get converted into a one-hot vector, where the size of the vector is the number
+    of unique labels in your data.
+
     Parameters
     ----------
     label : ``Union[str, int]``
     label_namespace : ``str``, optional (default=``labels``)
-        The namespace to use for converting label strings into integers.  If you have multiple
-        different label fields in your data, you should make sure you use different namespaces for
-        each one.
+        The namespace to use for converting label strings into integers.  We map label strings to
+        integers for you (e.g., "entailment" and "contradiction" get converted to one-hot vectors),
+        and this namespace tells the ``Vocabulary`` object which mapping from strings to integers
+        to use (so "entailment" as a label doesn't get the same integer id as "entailment" as a
+        word).  If you have multiple different label fields in your data, you should make sure you
+        use different namespaces for each one, always using the suffix "labels" (e.g.,
+        "passage_labels" and "question_labels").
     num_labels : ``int``, optional (default=``None``)
         If your labels are 0-indexed integers, you can pass in the number of labels here, and we'll
         skip the indexing step.  If this is ``None``, no matter the type of ``label``, we'll use a
@@ -30,17 +37,18 @@ class LabelField(Field):
     """
     def __init__(self,
                  label: Union[str, int],
-                 label_namespace: str='*labels',
+                 label_namespace: str='labels',
                  num_labels: int=None):
         self._label = label
         self._label_namespace = label_namespace
         if num_labels is None:
             self._label_id = None
             self._num_labels = None
-            if not self._label_namespace.startswith("*"):
-                logger.warning("The namespace of your tag (%s) does not begin with *,"
-                               " meaning the vocabulary namespace will contain UNK "
-                               "and PAD tokens by default.", self._label_namespace)
+            if not self._label_namespace.endswith("labels"):
+                logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
+                               "ending with 'labels', so we don't add UNK and PAD tokens by "
+                               "default to your vocabulary.  See documentation for "
+                               "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
         else:
             assert isinstance(label, int), "Labels must be ints if you want to skip indexing"
             self._label_id = label
@@ -69,7 +77,7 @@ class LabelField(Field):
 
     @overrides
     def empty_field(self):
-        return LabelField(0, self._label_namespace)
+        return LabelField(0, self._label_namespace, self._num_labels)
 
     def label(self):
         return self._label

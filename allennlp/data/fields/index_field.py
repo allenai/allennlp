@@ -14,6 +14,18 @@ class IndexField(Field):
     passage, for example.  Because it's an index into a :class:`SequenceField`, we take one of
     those as input and use it to compute padding lengths, so we create a one-hot representation of
     the correct length.
+
+    An ``IndexField`` will get converted into a one-hot vector, where the size of the vector is the
+    number of elements in the dependent ``SequenceField``.
+
+    Parameters
+    ----------
+    index : ``int``
+        The index to be represented as a 1 in the one-hot vector.  This is typically the "correct
+        answer" in some classification decision over the sequence, like where an answer span starts
+        in SQuAD, or which answer option is correct in a multiple choice question.
+    sequence_field : ``SequenceField``
+        A field containing the sequence that this ``IndexField`` is a pointer into.
     """
     def __init__(self, index: int, sequence_field: SequenceField):
         self._index = index

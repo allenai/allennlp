@@ -18,17 +18,35 @@ class TagField(Field):
     A ``TagField`` assigns a categorical label to each element in a :class:`SequenceField`.
     Because it's a labeling of some other field, we take that field as input here, and we use it to
     determine our padding and other things.
+
+    This field will get converted into a sequence of one-hot vectors, where the size of each
+    one-hot vector is the number of unique tags in your data.
+
+    Parameters
+    ----------
+    tags : ``List[str]``
+        A sequence of categorical labels, encoded as strings.  These could be POS tags like [NN,
+        JJ, ...], BIO tags like [B-PERS, I-PERS, O, O, ...], or any other categorical tag sequence.
+    sequence_field : ``SequenceField``
+        A field containing the sequence that this ``TagField`` is labeling.  Most often, this is a
+        ``TextField``, for tagging individual tokens in a sentence.
+    tag_namespace : ``str``, optional (default=``'tags'``)
+        The namespace to use for converting tag strings into integers.  We convert tag strings to
+        integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
+        strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
-    def __init__(self, tags: List[str], sequence_field: SequenceField, tag_namespace: str='*tags'):
+    def __init__(self, tags: List[str], sequence_field: SequenceField, tag_namespace: str='tags'):
         self._tags = tags
         self._sequence_field = sequence_field
         self._tag_namespace = tag_namespace
         self._indexed_tags = None
         self._num_tags = None
 
-        if not self._tag_namespace.startswith("*"):
-            logger.warning("The namespace of your tag (%s) does not begin with *, meaning the vocabulary "
-                           "namespace will contain UNK and PAD tokens by default.", self._tag_namespace)
+        if not self._tag_namespace.endswith("tags"):
+            logger.warning("Your tag namespace was '%s'. We recommend you use a namespace "
+                           "ending with 'tags', so we don't add UNK and PAD tokens by "
+                           "default to your vocabulary.  See documentation for "
+                           "`non_padded_namespaces` parameter in Vocabulary.", self._tag_namespace)
 
         if len(tags) != sequence_field.sequence_length():
             raise ConfigurationError("Tag length and sequence length "
