@@ -34,11 +34,11 @@ run chmod 600 ./pypirc so only you can read/write.
 6. Build both the sources and the wheel. Do not change anything in setup.py between
    creating the wheel and the source distribution (obviously).
 
-   For the wheel, run: "python setup.py bdist_wheel" in the top level deep_qa directory.
+   For the wheel, run: "python setup.py bdist_wheel" in the top level allennlp directory.
    (this will build a wheel for the python version you use to build it - make sure you use python 3.x).
 
    For the sources, run: "python setup.py sdist"
-   You should now have a /dist directory with both .whl and .tar.gz source versions of deep_qa.
+   You should now have a /dist directory with both .whl and .tar.gz source versions of allennlp.
 
 7. Check that everything looks correct by uploading the package to the pypi test server:
 
@@ -46,7 +46,7 @@ run chmod 600 ./pypirc so only you can read/write.
    (pypi suggest using twine as other methods upload files via plaintext.)
 
    Check that you can install it in a virtualenv by running:
-   pip install -i https://testpypi.python.org/pypi deep_qa
+   pip install -i https://testpypi.python.org/pypi allennlp
 
 8. Upload the final version to actual pypi:
    twine upload dist/* -r pypi

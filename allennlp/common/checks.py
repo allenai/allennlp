@@ -23,18 +23,7 @@ def ensure_pythonhashseed_set():
         message % (REQUIRED_PYTHONHASHSEED, REQUIRED_PYTHONHASHSEED)
 
 
-def log_keras_version_info():
-    import keras
-    logger.info("Keras version: " + keras.__version__)
-    from keras import backend as K
-    try:
-        backend = K.backend()
-    except AttributeError:
-        backend = K._BACKEND  # pylint: disable=protected-access
-    if backend == 'theano':
-        import theano
-        logger.info("Theano version: " + theano.__version__)
-        logger.warning("Using Keras' theano backend is not supported! Expect to crash...")
-    elif backend == 'tensorflow':
-        import tensorflow
-        logger.info("Tensorflow version: " + tensorflow.__version__)  # pylint: disable=no-member
+def log_pytorch_version_info():
+    import torch
+    logger.info("Pytorch version: " + torch.__version__)
+

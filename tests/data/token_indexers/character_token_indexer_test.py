@@ -4,10 +4,10 @@ from collections import defaultdict
 from allennlp.data.token_indexers import token_indexers
 from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class CharacterTokenIndexerTest(DeepQaTestCase):
+class CharacterTokenIndexerTest(AllenNlpTestCase):
 
     def test_count_vocab_items_respects_casing(self):
         indexer = token_indexers["characters"]("characters")

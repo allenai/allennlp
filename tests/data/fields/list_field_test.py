@@ -4,10 +4,10 @@ import numpy
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import TextField, ListField
 from allennlp.data.token_indexers import token_indexers
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestListField(DeepQaTestCase):
+class TestListField(AllenNlpTestCase):
 
     def setUp(self):
         self.vocab = Vocabulary()

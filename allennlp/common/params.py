@@ -28,7 +28,7 @@ logging.Logger.param = __param
 class Params(MutableMapping):
     """
     Represents a parameter dictionary with a history, and contains other functionality around
-    parameter passing and validation for DeepQA.
+    parameter passing and validation for AllenNLP.
 
     There are currently two benefits of a ``Params`` object over a plain dictionary for parameter
     passing:
@@ -40,7 +40,7 @@ class Params(MutableMapping):
        specification of the actual parameters used than is given in a JSON / HOCON file, because
        those may not specify what default values were used, whereas this will log them.
 
-    The convention for using a ``Params`` object in DeepQA is that you will consume the parameters
+    The convention for using a ``Params`` object in AllenNLP is that you will consume the parameters
     as you read them, so that there are none left when you've read everything you expect.  This
     lets us easily validate that you didn't pass in any `extra` parameters, just by making sure
     that the parameter dictionary is empty.  You should do this when you're done handling

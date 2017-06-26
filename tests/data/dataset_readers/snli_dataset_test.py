@@ -1,9 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.data.dataset_readers import SnliReader
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestSnliDataset(DeepQaTestCase):
+class TestSnliDataset(AllenNlpTestCase):
 
     def setUp(self):
         super(TestSnliDataset, self).setUp()

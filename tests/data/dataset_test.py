@@ -8,10 +8,10 @@ from allennlp.data.dataset import Dataset
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.token_indexers import token_indexers
 from allennlp.common.checks import ConfigurationError
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestDataset(DeepQaTestCase):
+class TestDataset(AllenNlpTestCase):
 
     def setUp(self):
         self.vocab = Vocabulary()

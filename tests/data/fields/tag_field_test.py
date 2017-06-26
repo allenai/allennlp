@@ -8,10 +8,10 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import TextField, TagField
 from allennlp.data.token_indexers import token_indexers
 from allennlp.common.checks import ConfigurationError
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestTagField(DeepQaTestCase):
+class TestTagField(AllenNlpTestCase):
 
     def test_tag_length_mismatch_raises(self):
         with pytest.raises(ConfigurationError):

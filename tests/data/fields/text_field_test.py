@@ -8,11 +8,11 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import token_indexers
 
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 
 
-class TestTextField(DeepQaTestCase):
+class TestTextField(AllenNlpTestCase):
     def setUp(self):
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("sentence", namespace='words')

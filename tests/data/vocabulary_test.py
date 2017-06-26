@@ -6,10 +6,10 @@ from allennlp.data.fields.text_field import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.dataset import Dataset
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestVocabulary(DeepQaTestCase):
+class TestVocabulary(AllenNlpTestCase):
 
     def setUp(self):
         token_indexer = SingleIdTokenIndexer("tokens")

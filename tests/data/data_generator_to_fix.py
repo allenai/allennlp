@@ -3,10 +3,10 @@ import numpy
 
 from allennlp.common.params import Params
 from allennlp.data.data_generator import DataGenerator
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestDataGenerator(DeepQaTestCase):
+class TestDataGenerator(AllenNlpTestCase):
     def setUp(self):
         super(TestDataGenerator, self).setUp()
         self.text_trainer = FakeTextTrainer()

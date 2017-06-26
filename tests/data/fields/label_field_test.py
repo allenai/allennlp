@@ -3,10 +3,10 @@ import numpy
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import LabelField
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestLabelField(DeepQaTestCase):
+class TestLabelField(AllenNlpTestCase):
 
     def test_pad_returns_one_hot_array(self):
         label = LabelField(5, num_labels=10)

@@ -10,11 +10,11 @@ import shutil
 import numpy
 from numpy.testing import assert_allclose
 
-from ..common.checks import log_keras_version_info
+from ..common.checks import log_pytorch_version_info
 from ..common.params import Params
 
 
-class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
+class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     TEST_DIR = './TMP_TEST/'
     TRAIN_FILE = TEST_DIR + 'train_file'
     VALIDATION_FILE = TEST_DIR + 'validation_file'
@@ -28,7 +28,7 @@ class DeepQaTestCase(TestCase):  # pylint: disable=too-many-public-methods
     def setUp(self):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                             level=logging.DEBUG)
-        log_keras_version_info()
+        log_pytorch_version_info()
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
     def tearDown(self):

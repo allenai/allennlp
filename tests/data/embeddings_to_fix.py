@@ -8,10 +8,10 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.layers.embeddings import PretrainedEmbeddings
 
 #from allennlp.models.text_classification import ClassificationModel
-from allennlp.testing.test_case import DeepQaTestCase
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestPretrainedEmbeddings(DeepQaTestCase):
+class TestPretrainedEmbeddings(AllenNlpTestCase):
     # pylint: disable=protected-access
     def test_get_embedding_layer_uses_correct_embedding_dim(self):
         vocab = Vocabulary()
