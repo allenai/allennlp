@@ -9,11 +9,10 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class _NamespaceDependentDefaultDict(defaultdict):
     """
-    Using ``defaultdicts`` to handle namespaces is really convenient - you don't need to worry
-    about whether you've seen a particular namespace before in any of the methods in
-    ``Vocabulary``.  But because some namespaces need padding (like "tokens") and some don't (like
-    "labels"), we want different defaults depending on the namespace.  This lets us still use a
-    ``defaultdict``, but have different default values depending on the key that we're given.
+    Sometimes certain namespaces need padding (like "tokens") and some don't (like
+    "labels"), and we want different defaults depending on the namespace.  This class lets us use a
+    ``defaultdict`` (https://docs.python.org/2/library/collections.html#collections.defaultdict),
+    but have different default values depending on the namespace of the key.
     """
     def __init__(self, non_padded_namespaces: List[str], padded_function, non_padded_function):
         self._non_padded_namespaces = non_padded_namespaces
