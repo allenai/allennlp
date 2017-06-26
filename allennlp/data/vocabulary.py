@@ -13,6 +13,10 @@ class _NamespaceDependentDefaultDict(defaultdict):
     "labels"), and we want different defaults depending on the namespace.  This class lets us use a
     ``defaultdict`` (https://docs.python.org/2/library/collections.html#collections.defaultdict),
     but have different default values depending on the namespace of the key.
+
+    This class also handles *-namespaces.  In other words, if "*tags" is in non_padded_namespaces
+    then "passage_tags", "question_tags", etc. (anything that ends with "tags" will have the
+    non_padded default value.
     """
     def __init__(self, non_padded_namespaces: List[str], padded_function, non_padded_function):
         self._non_padded_namespaces = non_padded_namespaces
@@ -75,9 +79,9 @@ class Vocabulary:
     max_vocab_size : ``Union[int, Dict[str, int]]``, optional (default=``None``)
         If you want to cap the number of tokens in your vocabulary, you can do so with this
         parameter.  If you specify a single integer, every namespace will have its vocabulary fixed
-        to be no larger than this.  If you specify a dictionary, the keys need to be the same as
-        the namespaces in the ``counter``, and any missing key will have a value of ``None``, which
-        means no cap on the vocabulary size.
+        to be no larger than this.  If you specify a dictionary, then each namespace in the
+        ``counter`` can have a separate maximum vocabulariy size.  Any missing key will have a value
+        of ``None``, which means no cap on the vocabulary size.
     non_padded_namespaces : ``List[str]``, optional (default=``["*tags", "*labels"]``)
         By default, we assume you are mapping word / character tokens to integers, and so you want
         to reserve word indices for padding and out-of-vocabulary tokens.  However, if you are
