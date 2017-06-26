@@ -5,6 +5,7 @@ REQUIRED_PYTHONHASHSEED = '2157'
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 class ConfigurationError(Exception):
     def __init__(self, message):
         super(ConfigurationError, self).__init__()

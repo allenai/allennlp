@@ -5,7 +5,7 @@ import numpy
 import pytest
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.layers.embeddings import PretrainedEmbeddings
+from allennlp.layers.embeddings import get_pretrained_embedding_layer
 
 #from allennlp.models.text_classification import ClassificationModel
 from allennlp.testing.test_case import AllenNlpTestCase
@@ -19,14 +19,14 @@ class TestPretrainedEmbeddings(AllenNlpTestCase):
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
-        embedding_layer = PretrainedEmbeddings.get_embedding_layer(embeddings_filename, vocab)
-        assert embedding_layer.output_dim == 3
+        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
+        assert embedding_layer.embedding_dim == 3
 
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word1 1.0 2.3 -1.0 3.1\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 -4.0 -1.2\n".encode('utf-8'))
-        embedding_layer = PretrainedEmbeddings.get_embedding_layer(embeddings_filename, vocab)
-        assert embedding_layer.output_dim == 4
+        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
+        assert embedding_layer.embedding_dim == 4
 
     def test_get_embedding_layer_crashes_when_embedding_dim_is_one(self):
         vocab = Vocabulary()
@@ -36,7 +36,7 @@ class TestPretrainedEmbeddings(AllenNlpTestCase):
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
         with pytest.raises(Exception):
-            PretrainedEmbeddings.get_embedding_layer(embeddings_filename, vocab)
+            get_pretrained_embedding_layer(embeddings_filename, vocab)
 
     def test_get_embedding_layer_skips_inconsistent_lines(self):
         vocab = Vocabulary()
@@ -46,9 +46,9 @@ class TestPretrainedEmbeddings(AllenNlpTestCase):
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 \n".encode('utf-8'))
-        embedding_layer = PretrainedEmbeddings.get_embedding_layer(embeddings_filename, vocab)
-        word_vector = embedding_layer._initial_weights[0][vocab.get_token_index("word2")]
-        assert not numpy.allclose(word_vector[:2], numpy.asarray([0.1, 0.4]))
+        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
+        word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
+        assert not numpy.allclose(word_vector.numpy()[:2], numpy.array([0.1, 0.4]))
 
     def test_get_embedding_layer_actually_initializes_word_vectors_correctly(self):
         vocab = Vocabulary()
@@ -56,9 +56,9 @@ class TestPretrainedEmbeddings(AllenNlpTestCase):
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
-        embedding_layer = PretrainedEmbeddings.get_embedding_layer(embeddings_filename, vocab)
-        word_vector = embedding_layer._initial_weights[0][vocab.get_token_index("word")]
-        assert numpy.allclose(word_vector, numpy.asarray([1.0, 2.3, -1.0]))
+        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
+        word_vector = embedding_layer.weight.data[vocab.get_token_index("word")]
+        assert numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
 
     def test_get_embedding_layer_initializes_unseen_words_randomly_not_zero(self):
         vocab = Vocabulary()
@@ -66,9 +66,9 @@ class TestPretrainedEmbeddings(AllenNlpTestCase):
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
-        embedding_layer = PretrainedEmbeddings.get_embedding_layer(embeddings_filename, vocab)
-        word_vector = embedding_layer._initial_weights[0][vocab.get_token_index("word2")]
-        assert not numpy.allclose(word_vector, numpy.asarray([0.0, 0.0, 0.0]))
+        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
+        word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
+        assert not numpy.allclose(word_vector.numpy(), numpy.array([0.0, 0.0, 0.0]))
 
     @pytest.mark.skip
     def test_embedding_will_not_project_random_embeddings(self):
