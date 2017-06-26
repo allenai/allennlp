@@ -1,4 +1,3 @@
-import codecs
 import gzip
 import logging
 
@@ -18,22 +17,24 @@ class Embedding(torch.nn.Module):
 
     Parameters
     ----------
-    num_embeddings:, int:
+    num_embeddings :, int:
         Size of the dictionary of embeddings (vocabulary size).
-    embedding_dim: int
+    embedding_dim : int
         The size of each embedding vector.
-    weight: torch.FloatTensor, (optional, default=None)
+    weight : torch.FloatTensor, (optional, default=None)
         A pre-initialised weight matrix for the embedding lookup, allowing the use of
         pretrained vectors.
-    padding_index: int, (optional, default=None)
+    padding_index : int, (optional, default=None)
         If given, pads the output with zeros whenever it encounters the index.
-    max_norm: float, (optional, default=None)
+    trainable : bool, (optional, default=True)
+        Whether or not to optimize the embedding parameters.
+    max_norm : float, (optional, default=None)
         If given, will renormalize the embeddings to always have a norm lesser than this
-    norm_type: float, (optional, default=2):
+    norm_type : float, (optional, default=2):
         The p of the p-norm to compute for the max_norm option
-    scale_grad_by_freq: boolean, (optional, default=False):
+    scale_grad_by_freq : boolean, (optional, default=False):
         If given, this will scale gradients by the frequency of the words in the mini-batch.
-    sparse: bool, (optional, default=False):
+    sparse : bool, (optional, default=False):
         Whether or not the Pytorch backend should use a sparse representation of the embedding weight.
 
     Returns
@@ -61,32 +62,21 @@ class Embedding(torch.nn.Module):
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
 
-        if embedding_dim == 1:
-            raise ConfigurationError("There is no need to embed tokens if you "
-                                     "are using a 1 dimensional embedding.")
-
         if weight is None:
             weight = torch.FloatTensor(num_embeddings, embedding_dim)
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
-            self.reset_parameters()
-
+            self.weight.data.normal_(0, 1)
         else:
             if weight.size() != (num_embeddings, embedding_dim):
                 raise ConfigurationError("A weight matrix was passed with contradictory embedding shapes.")
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
-            if self.padding_index is not None:
-                self.weight.data[self.padding_index].fill_(0)
 
-    def reset_parameters(self):
-        self.weight.data.normal_(0, 1)
         if self.padding_index is not None:
             self.weight.data[self.padding_index].fill_(0)
 
     def forward(self, input):
-        padding_idx = self.padding_idx
-        if padding_idx is None:
-            padding_idx = -1
-        return self._backend.Embedding(padding_idx,
+        padding_index = self.padding_index if self.padding_index is not None else -1
+        return self._backend.Embedding(padding_index,
                                        self.max_norm,
                                        self.norm_type,
                                        self.scale_grad_by_freq,
@@ -96,27 +86,41 @@ class Embedding(torch.nn.Module):
 def get_pretrained_embedding_layer(embeddings_filename: str,
                                    vocab: Vocabulary,
                                    namespace: str="tokens",
-                                   trainable: bool=True,
-                                   log_misses: bool=False):
+                                   trainable: bool=True):
     """
-    Reads a pre-trained embedding file and generates a Keras Embedding layer that has weights
+    Reads a pre-trained embedding file and generates an Embedding layer that has weights
     initialized to the pre-trained embeddings.  The Embedding layer can either be trainable or
     not.
 
-    We use the DataIndexer to map from the word strings in the embeddings file to the indices
-    that we need, and to know which words from the embeddings file we can safely ignore.  If we
-    come across a word in DataIndexer that does not show up with the embeddings file, we give
-    it a zero vector.
+    We use the ``Vocabulary`` to map from the word strings in the embeddings file to the indices
+    that we need, and to know which words from the embeddings file we can safely ignore.
 
-    The embeddings file is assumed to be gzipped, formatted as [word] [dim 1] [dim 2] ...
+    Parameters
+    ----------
+
+    embeddings_filename : str, required.
+        The path to a file containing pretrined embeddings. The embeddings
+        file is assumed to be gzipped and space delimited, e.g. [word] [dim 1] [dim 2] ...
+    vocab : Vocabulary, required.
+        A Vocabulary object.
+    namespace : str, (optional, default=tokens)
+        The namespace of the vocabulary to find pretrained embeddings for.
+    trainable : bool, (optional, default=True)
+        Whether or not the embedding parameters should be optimized.
+
+    Returns
+    -------
+
+    An Embedding Module initialised with a weight matrix of shape
+    (vocab.get_vocab_size(namespace), pretrained_embedding_dim),
+    where the indices of words appearing in the pretrained embedding file
+    are initialized to the pretrained embedding value.
+
     """
     words_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
     vocab_size = vocab.get_vocab_size(namespace)
     embeddings = {}
     embedding_dim = None
-
-    # TODO(matt): make this a parameter
-    embedding_misses_filename = 'embedding_misses.txt'
 
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading embeddings from file")
@@ -144,26 +148,17 @@ def get_pretrained_embedding_layer(embeddings_filename: str,
     # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
     # then filling in the word vectors we just read.
     logger.info("Initializing pre-trained embedding layer")
-    if log_misses:
-        logger.info("Logging embedding misses to %s", embedding_misses_filename)
-        embedding_misses_file = codecs.open(embedding_misses_filename, 'w', 'utf-8')
     embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).uniform_(-0.05, 0.05)
 
-    # Depending on whether the namespace has PAD and UNK tokens, we start at different indices,
-    # because you shouldn't have pretrained embeddings for PAD or UNK.
-    start_index = 0 if namespace.startswith("*") else 2
-    for i in range(start_index, vocab_size):
+    for i in range(0, vocab_size):
         word = vocab.get_token_from_index(i, namespace)
 
         # If we don't have a pre-trained vector for this word, we'll just leave this row alone,
         # so the word has a random initialization.
         if word in embeddings:
             embedding_matrix[i] = torch.FloatTensor(embeddings[word])
-        elif log_misses:
-            print(word, file=embedding_misses_file)
-
-    if log_misses:
-        embedding_misses_file.close()
+        else:
+            logger.debug("Word %s was not found in the embedding file. Initialising randomly.", word)
 
     # The weight matrix is initialized, so we construct and return the actual Embedding.
     return Embedding(num_embeddings=vocab_size,
