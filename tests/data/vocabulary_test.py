@@ -1,11 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
 import codecs
 
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.dataset import Dataset
 from allennlp.data.fields.text_field import TextField
 from allennlp.data.instance import Instance
-from allennlp.data.dataset import Dataset
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.vocabulary import _NamespaceDependentDefaultDict
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
@@ -68,6 +69,16 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab.get_token_from_index(word_index, namespace='2') == "word"
         assert vocab.get_token_from_index(word2_index, namespace='2') == "word2"
         assert vocab.get_vocab_size(namespace='2') == initial_vocab_size + 2
+
+    def test_namespace_dependent_default_dict(self):
+        dict = _NamespaceDependentDefaultDict(["bar", "*baz"], lambda: 7, lambda: 3)
+        # 'foo' is not a padded namespace
+        assert dict["foo"] == 7
+        # "baz" is a direct match with a padded namespace
+        assert dict["baz"] == 3
+        # the following match the wildcard "*baz"
+        assert dict["bar"] == 3
+        assert dict["foobaz"] == 3
 
     def test_unknown_token(self):
         # pylint: disable=protected-access

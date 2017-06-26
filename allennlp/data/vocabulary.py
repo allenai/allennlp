@@ -24,14 +24,22 @@ class _NamespaceDependentDefaultDict(defaultdict):
         self._non_padded_function = non_padded_function
         super(_NamespaceDependentDefaultDict, self).__init__()
 
+    """
+    Matches a namespace pattern against a namespace string.  For example, "*tags" matches
+    "passage_tags" and "question_tags" and "tokens" matches "tokens" but not "stemmed_tokens".
+    """
+    def _namespace_match(self, pattern: str, namespace: str):
+        if pattern[0] == '*' and namespace.endswith(pattern[1:]):
+            return True
+        elif pattern == namespace:
+            return True
+        else:
+            return False
+
     def __missing__(self, key: str):
-        value = None
-        for namespace_str in self._non_padded_namespaces:
-            if namespace_str[0] == '*' and key.endswith(namespace_str[1:]):
-                value = self._non_padded_function()
-            elif namespace_str == key:
-                value = self._non_padded_function()
-        if value is None:
+        if any(self.namespace_match(pattern, key) for pattern in self._non_padded_namespaces):
+            value = self._non_padded_function()
+        else:
             value = self._padded_function()
         dict.__setitem__(self, key, value)
         return value
