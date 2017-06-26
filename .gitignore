@@ -1,2 +1,7 @@
-*.class
-*.log
+*.pyc
+/data/
+/models/
+/experiments/
+.cache/
+.coverage
+_build

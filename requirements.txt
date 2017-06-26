@@ -1,0 +1,88 @@
+# Library dependencies for the python code.  You need to install these with
+# `pip install -r requirements.txt` before you can run this.
+
+#### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
+
+# In order to use allennlp you will also need to install pytorch. Currently, the version depends on
+# your OS. Please visit http://pytorch.org/ and follow the instructions for installation.
+
+# Neural net and related libraries.
+h5py
+scikit-learn
+
+# Parameter parsing.
+pyhocon
+
+# Type checking for python
+typing
+
+#### NICE-TO-HAVE LIBRARIES FOR MAIN CODE ####
+
+# Adds an @overrides decorator for better documentation and error checking when using subclasses.
+overrides
+
+# Used by some old code.  We moved away from it because it's too slow, but some old code still
+# imports this.
+nltk
+
+# Mainly used for the faster tokenizer.
+spacy
+
+# Used by span prediction models.
+numpy
+matplotlib
+
+# aws commandline tools for running on Docker remotely.
+awscli>=1.11.91
+
+#### TESTING-RELATED PACKAGES ####
+
+# Checks style, syntax, and other useful errors
+pylint==1.6.5
+
+# We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
+# the tests.  With this here, you can run the tests with `py.test` from the base directory.
+pytest
+
+# Makes it so that pytest can handle the code structure we use, with src/main/python, and src/test.
+pytest-pythonpath
+
+# Allows generation of coverage reports with pytest.
+pytest-cov
+
+# Allows marking tests as flaky, to be rerun if they fail
+flaky
+
+# Allows codecov to generate coverage reports
+coverage
+codecov
+
+#### LIBRARIES USED IN SCRIPTS ####
+# argument parsing in for data cleaning scripts
+argparse
+
+# Used to read the NewsQA CSV and output a clean one.
+pandas==0.19.2
+
+# progress bars in data cleaning scripts
+tqdm
+
+#### DOC-RELATED PACKAGES ####
+
+# Builds our documentation.
+sphinx==1.5.3
+
+# Watches the documentation directory and rebuilds on changes.
+sphinx-autobuild
+
+# enables numpydoc formatting in sphinx
+numpydoc
+
+# doc theme
+sphinx_rtd_theme
+
+# Only used to convert our readme to reStructuredText on Pypi.
+pypandoc
+
+# Pypi uploads
+twine
