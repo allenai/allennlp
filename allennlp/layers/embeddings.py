@@ -62,7 +62,8 @@ class Embedding(torch.nn.Module):
         self.sparse = sparse
 
         if embedding_dim == 1:
-            raise ConfigurationError("There is no need to embed tokens if you are using a 1 dimensional embedding.")
+            raise ConfigurationError("There is no need to embed tokens if you "
+                                     "are using a 1 dimensional embedding.")
 
         if weight is None:
             weight = torch.FloatTensor(num_embeddings, embedding_dim)
@@ -109,7 +110,7 @@ def get_pretrained_embedding_layer(embeddings_filename: str,
 
     The embeddings file is assumed to be gzipped, formatted as [word] [dim 1] [dim 2] ...
     """
-    words_to_keep = set(vocab.tokens_in_namespace(namespace))
+    words_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
     vocab_size = vocab.get_vocab_size(namespace)
     embeddings = {}
     embedding_dim = None
