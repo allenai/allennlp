@@ -37,7 +37,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
             return False
 
     def __missing__(self, key: str):
-        if any(self.namespace_match(pattern, key) for pattern in self._non_padded_namespaces):
+        if any(self._namespace_match(pattern, key) for pattern in self._non_padded_namespaces):
             value = self._non_padded_function()
         else:
             value = self._padded_function()
