@@ -184,18 +184,17 @@ class Vocabulary:
         else:
             return self._token_to_index[namespace][token]
 
-    def tokens_in_namespace(self, namespace: str='tokens'):
-        # TODO(Mark): Ask MattG if this is what he wanted.
-        return list(self._index_to_token[namespace].values())
+    def get_index_to_token_vocabulary(self, namespace: str='tokens') -> Dict[int, str]:
+        return self._index_to_token[namespace]
 
-    def get_token_index(self, token: str, namespace: str='tokens'):
+    def get_token_index(self, token: str, namespace: str='tokens') -> int:
         if token in self._token_to_index[namespace]:
             return self._token_to_index[namespace][token]
         else:
             return self._token_to_index[namespace][self._oov_token]
 
-    def get_token_from_index(self, index: int, namespace: str='tokens'):
+    def get_token_from_index(self, index: int, namespace: str='tokens') -> str:
         return self._index_to_token[namespace][index]
 
-    def get_vocab_size(self, namespace: str='tokens'):
+    def get_vocab_size(self, namespace: str='tokens') -> int:
         return len(self._token_to_index[namespace])

@@ -21,27 +21,29 @@ class TestVocabulary(AllenNlpTestCase):
     def test_from_dataset_respects_min_count(self):
 
         vocab = Vocabulary.from_dataset(self.dataset, min_count=4)
-        assert 'a' in vocab.tokens_in_namespace()
-        assert 'b' not in vocab.tokens_in_namespace()
-        assert 'c' not in vocab.tokens_in_namespace()
+        words = vocab.get_index_to_token_vocabulary().values()
+        assert 'a' in words
+        assert 'b' not in words
+        assert 'c' not in words
 
         vocab = Vocabulary.from_dataset(self.dataset, min_count=1)
-        assert 'a' in vocab.tokens_in_namespace()
-        assert 'b' in vocab.tokens_in_namespace()
-        assert 'c' in vocab.tokens_in_namespace()
+        words = vocab.get_index_to_token_vocabulary().values()
+        assert 'a' in words
+        assert 'b' in words
+        assert 'c' in words
 
     def test_add_word_to_index_gives_consistent_results(self):
         vocab = Vocabulary()
         initial_vocab_size = vocab.get_vocab_size()
         word_index = vocab.add_token_to_namespace("word")
-        assert "word" in vocab.tokens_in_namespace()
+        assert "word" in vocab.get_index_to_token_vocabulary().values()
         assert vocab.get_token_index("word") == word_index
         assert vocab.get_token_from_index(word_index) == "word"
         assert vocab.get_vocab_size() == initial_vocab_size + 1
 
         # Now add it again, and make sure nothing changes.
         vocab.add_token_to_namespace("word")
-        assert "word" in vocab.tokens_in_namespace()
+        assert "word" in vocab.get_index_to_token_vocabulary().values()
         assert vocab.get_token_index("word") == word_index
         assert vocab.get_token_from_index(word_index) == "word"
         assert vocab.get_vocab_size() == initial_vocab_size + 1
@@ -50,7 +52,7 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary()
         initial_vocab_size = vocab.get_vocab_size()
         word_index = vocab.add_token_to_namespace("word", namespace='1')
-        assert "word" in vocab.tokens_in_namespace(namespace='1')
+        assert "word" in vocab.get_index_to_token_vocabulary(namespace='1').values()
         assert vocab.get_token_index("word", namespace='1') == word_index
         assert vocab.get_token_from_index(word_index, namespace='1') == "word"
         assert vocab.get_vocab_size(namespace='1') == initial_vocab_size + 1
@@ -59,8 +61,8 @@ class TestVocabulary(AllenNlpTestCase):
         # new.
         word2_index = vocab.add_token_to_namespace("word2", namespace='2')
         word_index = vocab.add_token_to_namespace("word", namespace='2')
-        assert "word" in vocab.tokens_in_namespace(namespace='2')
-        assert "word2" in vocab.tokens_in_namespace(namespace='2')
+        assert "word" in vocab.get_index_to_token_vocabulary(namespace='2').values()
+        assert "word2" in vocab.get_index_to_token_vocabulary(namespace='2').values()
         assert vocab.get_token_index("word", namespace='2') == word_index
         assert vocab.get_token_index("word2", namespace='2') == word2_index
         assert vocab.get_token_from_index(word_index, namespace='2') == "word"
