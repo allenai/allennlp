@@ -1,4 +1,5 @@
 from collections import defaultdict
+from ..common.util import namespace_match
 from typing import Dict, List, Union
 import codecs
 import logging
@@ -9,11 +10,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class _NamespaceDependentDefaultDict(defaultdict):
     """
-    Using ``defaultdicts`` to handle namespaces is really convenient - you don't need to worry
-    about whether you've seen a particular namespace before in any of the methods in
-    ``Vocabulary``.  But because some namespaces need padding (like "tokens") and some don't (like
-    "labels"), we want different defaults depending on the namespace.  This lets us still use a
-    ``defaultdict``, but have different default values depending on the key that we're given.
+    Sometimes certain namespaces need padding (like "tokens") and some don't (like
+    "labels"), and we want different defaults depending on the namespace.  This class lets us use a
+    `defaultdict <https://docs.python.org/2/library/collections.html#collections.defaultdict>`_,
+    but have different default values depending on the namespace of the key.
+
+    This class also handles *-namespaces.  In other words, if "*tags" is in non_padded_namespaces
+    then "passage_tags", "question_tags", etc. (anything that ends with "tags" will have the
+    non_padded default value.
     """
     def __init__(self, non_padded_namespaces: List[str], padded_function, non_padded_function):
         self._non_padded_namespaces = non_padded_namespaces
@@ -22,13 +26,9 @@ class _NamespaceDependentDefaultDict(defaultdict):
         super(_NamespaceDependentDefaultDict, self).__init__()
 
     def __missing__(self, key: str):
-        value = None
-        for namespace_str in self._non_padded_namespaces:
-            if namespace_str[0] == '*' and key.endswith(namespace_str[1:]):
-                value = self._non_padded_function()
-            elif namespace_str == key:
-                value = self._non_padded_function()
-        if value is None:
+        if any(namespace_match(pattern, key) for pattern in self._non_padded_namespaces):
+            value = self._non_padded_function()
+        else:
             value = self._padded_function()
         dict.__setitem__(self, key, value)
         return value
@@ -76,9 +76,9 @@ class Vocabulary:
     max_vocab_size : ``Union[int, Dict[str, int]]``, optional (default=``None``)
         If you want to cap the number of tokens in your vocabulary, you can do so with this
         parameter.  If you specify a single integer, every namespace will have its vocabulary fixed
-        to be no larger than this.  If you specify a dictionary, the keys need to be the same as
-        the namespaces in the ``counter``, and any missing key will have a value of ``None``, which
-        means no cap on the vocabulary size.
+        to be no larger than this.  If you specify a dictionary, then each namespace in the
+        ``counter`` can have a separate maximum vocabulary size.  Any missing key will have a value
+        of ``None``, which means no cap on the vocabulary size.
     non_padded_namespaces : ``List[str]``, optional (default=``["*tags", "*labels"]``)
         By default, we assume you are mapping word / character tokens to integers, and so you want
         to reserve word indices for padding and out-of-vocabulary tokens.  However, if you are
