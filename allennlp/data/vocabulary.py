@@ -1,12 +1,13 @@
 from collections import defaultdict
-from ..common.util import namespace_match
 from typing import Dict, List, Union
 import codecs
 import logging
-
 import tqdm
 
+from ..common.util import namespace_match
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 class _NamespaceDependentDefaultDict(defaultdict):
     """

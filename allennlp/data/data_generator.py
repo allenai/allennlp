@@ -177,7 +177,7 @@ class DataGenerator:
 
     @staticmethod
     def sort_dataset_by_padding(dataset: Dataset,
-                                sorting_keys: List[Tuple[str, str]],
+                                sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
                                 padding_noise: float=0.0) -> List[Instance]:
         """
         Sorts the ``Instances`` in this ``Dataset`` by their padding lengths, using the keys in

@@ -74,13 +74,13 @@ class Embedding(torch.nn.Module):
         if self.padding_index is not None:
             self.weight.data[self.padding_index].fill_(0)
 
-    def forward(self, input):
+    def forward(self, inputs):  # pylint: disable=arguments-differ
         padding_index = self.padding_index if self.padding_index is not None else -1
         return self._backend.Embedding(padding_index,
                                        self.max_norm,
                                        self.norm_type,
                                        self.scale_grad_by_freq,
-                                       self.sparse)(input, self.weight)
+                                       self.sparse)(inputs, self.weight)
 
 
 def get_pretrained_embedding_layer(embeddings_filename: str,
