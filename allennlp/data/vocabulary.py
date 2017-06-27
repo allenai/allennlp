@@ -1,5 +1,6 @@
 from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Any, Callable, Dict, List, Union
+
 import codecs
 import logging
 import tqdm
@@ -11,16 +12,43 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class _NamespaceDependentDefaultDict(defaultdict):
     """
-    Sometimes certain namespaces need padding (like "tokens") and some don't (like
-    "labels"), and we want different defaults depending on the namespace.  This class lets us use a
-    `defaultdict <https://docs.python.org/2/library/collections.html#collections.defaultdict>`_,
-    but have different default values depending on the namespace of the key.
+    This is a `defaultdict
+    <https://docs.python.org/2/library/collections.html#collections.defaultdict>`_ where the
+    default value is dependent on the key that is passed.
 
-    This class also handles *-namespaces.  In other words, if "*tags" is in non_padded_namespaces
-    then "passage_tags", "question_tags", etc. (anything that ends with "tags" will have the
-    non_padded default value.
+    We use "namespaces" in the :class:`Vocabulary` object to keep track of several different
+    mappings from strings to integers, so that we have a consistent API for mapping words, tags,
+    labels, characters, or whatever else you want, into integers.  The issue is that some of those
+    namespaces (words and characters) should have integers reserved for padding and
+    out-of-vocabulary tokens, while others (labels and tags) shouldn't.  This class allows you to
+    specify filters on the namespace (the key used in the ``defaultdict``), and use different
+    default values depending on whether the namespace passes the filter.
+
+    To do filtering, we take a list of ``non_padded_namespaces``.  This is a list of strings that
+    are either matched exactly against the keys, or treated as suffixes, if the string starts with
+    `*`.  In other words, if "*tags" is in non_padded_namespaces then "passage_tags",
+    "question_tags", etc. (anything that ends with "tags") will have the ``non_padded`` default
+    value.
+
+    Parameters
+    ----------
+    non_padded_namespaces : ``List[str]``
+        A list of strings describing which namespaces are not padded.  If a namespace (key) is
+        missing from this dictionary, we will use :func:`namespace_match` to see whether the
+        namespace should be padded.  If the given namespace matches any of the strings in this
+        list, we will use ``non_padded_function`` to initialize the value for that namespace, and
+        we will use ``padded_function`` otherwise.
+    padded_function : ``Callable[[], Any]``
+        A zero-argument function to call to initialize a value for a namespace that `should` be
+        padded.
+    non_padded_function : ``Callable[[], Any]``
+        A zero-argument function to call to initialize a value for a namespace that should `not` be
+        padded.
     """
-    def __init__(self, non_padded_namespaces: List[str], padded_function, non_padded_function):
+    def __init__(self,
+                 non_padded_namespaces: List[str],
+                 padded_function: Callable[[], Any],
+                 non_padded_function: Callable[[], Any]):
         self._non_padded_namespaces = non_padded_namespaces
         self._padded_function = padded_function
         self._non_padded_function = non_padded_function
