@@ -5,6 +5,7 @@ REQUIRED_PYTHONHASHSEED = '2157'
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 class ConfigurationError(Exception):
     def __init__(self, message):
         super(ConfigurationError, self).__init__()
@@ -26,4 +27,3 @@ def ensure_pythonhashseed_set():
 def log_pytorch_version_info():
     import torch
     logger.info("Pytorch version: " + torch.__version__)
-
