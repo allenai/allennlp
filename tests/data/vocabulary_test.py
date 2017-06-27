@@ -71,14 +71,14 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab.get_vocab_size(namespace='2') == initial_vocab_size + 2
 
     def test_namespace_dependent_default_dict(self):
-        defaultDict = _NamespaceDependentDefaultDict(["bar", "*baz"], lambda: 7, lambda: 3)
+        default_dict = _NamespaceDependentDefaultDict(["bar", "*baz"], lambda: 7, lambda: 3)
         # 'foo' is not a padded namespace
-        assert defaultDict["foo"] == 7
+        assert default_dict["foo"] == 7
         # "baz" is a direct match with a padded namespace
-        assert defaultDict["baz"] == 3
+        assert default_dict["baz"] == 3
         # the following match the wildcard "*baz"
-        assert defaultDict["bar"] == 3
-        assert defaultDict["foobaz"] == 3
+        assert default_dict["bar"] == 3
+        assert default_dict["foobaz"] == 3
 
     def test_unknown_token(self):
         # pylint: disable=protected-access

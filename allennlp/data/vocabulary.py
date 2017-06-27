@@ -12,7 +12,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
     """
     Sometimes certain namespaces need padding (like "tokens") and some don't (like
     "labels"), and we want different defaults depending on the namespace.  This class lets us use a
-    ``defaultdict`` (https://docs.python.org/2/library/collections.html#collections.defaultdict),
+    `defaultdict <https://docs.python.org/2/library/collections.html#collections.defaultdict>`_,
     but have different default values depending on the namespace of the key.
 
     This class also handles *-namespaces.  In other words, if "*tags" is in non_padded_namespaces
