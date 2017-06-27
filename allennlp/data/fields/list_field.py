@@ -13,6 +13,16 @@ class ListField(SequenceField):
     """
     A ``ListField`` is a list of other fields.  You would use this to represent, e.g., a list of
     answer options that are themselves ``TextFields``.
+
+    This field will get converted into a tensor that has one more mode than the items in the list.
+    If this is a list of ``TextFields`` that have shape (num_words, num_characters), this
+    ``ListField`` will output a tensor of shape (num_sentences, num_words, num_characters).
+
+    Parameters
+    ----------
+    field_list : ``List[Field]``
+        A list of ``Field`` objects to be concatenated into a single input tensor.  All of the
+        contained ``Field`` objects must be of the same type.
     """
     def __init__(self, field_list: List[Field]):
         field_class_set = set([field.__class__ for field in field_list])

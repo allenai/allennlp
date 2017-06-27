@@ -22,6 +22,10 @@ class TextField(SequenceField):
     list of :class:`TokenIndexer` objects that will be used to convert the tokens into indices.
     Each ``TokenIndexer`` could represent each token as a single ID, or a list of character IDs, or
     something else.
+
+    This field will get converted into a list of arrays, one for each ``TokenIndexer``.  A
+    ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
+    ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
     def __init__(self, tokens: List[str], token_indexers: List[TokenIndexer]):
         self._tokens = tokens
