@@ -37,8 +37,8 @@ class LabelField(Field):
     """
     def __init__(self,
                  label: Union[str, int],
-                 label_namespace: str='labels',
-                 num_labels: int=None):
+                 label_namespace: str = 'labels',
+                 num_labels: int = None):
         self._label = label
         self._label_namespace = label_namespace
         if num_labels is None:

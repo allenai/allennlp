@@ -46,13 +46,13 @@ class Embedding(torch.nn.Module):
     def __init__(self,
                  num_embeddings: int,
                  embedding_dim: int,
-                 weight: torch.FloatTensor=None,
-                 padding_index: int=None,
-                 trainable: bool=True,
-                 max_norm: float=None,
-                 norm_type: float=2.,
-                 scale_grad_by_freq: bool=False,
-                 sparse: bool=False):
+                 weight: torch.FloatTensor = None,
+                 padding_index: int = None,
+                 trainable: bool = True,
+                 max_norm: float = None,
+                 norm_type: float = 2.,
+                 scale_grad_by_freq: bool = False,
+                 sparse: bool = False):
         super(Embedding, self).__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
@@ -85,8 +85,8 @@ class Embedding(torch.nn.Module):
 
 def get_pretrained_embedding_layer(embeddings_filename: str,
                                    vocab: Vocabulary,
-                                   namespace: str="tokens",
-                                   trainable: bool=True):
+                                   namespace: str = "tokens",
+                                   trainable: bool = True):
     """
     Reads a pre-trained embedding file and generates an Embedding layer that has weights
     initialized to the pre-trained embeddings.  The Embedding layer can either be trainable or

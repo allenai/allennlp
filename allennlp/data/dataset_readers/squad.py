@@ -49,9 +49,9 @@ class SquadSentenceSelectionReader(DatasetReader):
     """
     def __init__(self,
                  squad_filename: str,
-                 negative_sentence_selection: str="paragraph",
-                 tokenizer: Tokenizer=WordTokenizer(),
-                 token_indexers: List[TokenIndexer]=None):
+                 negative_sentence_selection: str = "paragraph",
+                 tokenizer: Tokenizer = WordTokenizer(),
+                 token_indexers: List[TokenIndexer] = None):
         self._squad_filename = squad_filename
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
         self._tokenizer = tokenizer

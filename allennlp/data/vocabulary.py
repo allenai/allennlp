@@ -123,10 +123,10 @@ class Vocabulary:
         label fields in this code), you don't have to specify anything here.
     """
     def __init__(self,
-                 counter: Dict[str, Dict[str, int]]=None,
-                 min_count: int=1,
-                 max_vocab_size: Union[int, Dict[str, int]]=None,
-                 non_padded_namespaces: List[str]=None):
+                 counter: Dict[str, Dict[str, int]] = None,
+                 min_count: int = 1,
+                 max_vocab_size: Union[int, Dict[str, int]] = None,
+                 non_padded_namespaces: List[str] = None):
         self._padding_token = "@@PADDING@@"
         self._oov_token = "@@UNKOWN@@"
         if non_padded_namespaces is None:
@@ -150,7 +150,7 @@ class Vocabulary:
                     if count >= min_count:
                         self.add_token_to_namespace(token, namespace)
 
-    def set_from_file(self, filename: str, oov_token: str, namespace: str="tokens"):
+    def set_from_file(self, filename: str, oov_token: str, namespace: str = "tokens"):
         """
         If you already have a vocabulary file for a trained model somewhere, and you really want to
         use that vocabulary file instead of just setting the vocabulary from a dataset, for
@@ -182,9 +182,9 @@ class Vocabulary:
     @classmethod
     def from_dataset(cls,
                      dataset,
-                     min_count: int=1,
-                     max_vocab_size: Union[int, Dict[str, int]]=None,
-                     non_padded_namespaces: List[str]=None) -> 'Vocabulary':
+                     min_count: int = 1,
+                     max_vocab_size: Union[int, Dict[str, int]] = None,
+                     non_padded_namespaces: List[str] = None) -> 'Vocabulary':
         """
         Constructs a vocabulary given a :class:`.Dataset` and some parameters.  We count all of the
         vocabulary items in the dataset, then pass those counts, and the other parameters, to
@@ -200,7 +200,7 @@ class Vocabulary:
                           max_vocab_size=max_vocab_size,
                           non_padded_namespaces=non_padded_namespaces)
 
-    def add_token_to_namespace(self, token: str, namespace: str='tokens') -> int:
+    def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:
         """
         Adds ``token`` to the index, if it is not already present.  Either way, we return the index of
         the token.
@@ -210,20 +210,18 @@ class Vocabulary:
             self._token_to_index[namespace][token] = index
             self._index_to_token[namespace][index] = token
             return index
-        else:
-            return self._token_to_index[namespace][token]
+        return self._token_to_index[namespace][token]
 
-    def get_index_to_token_vocabulary(self, namespace: str='tokens') -> Dict[int, str]:
+    def get_index_to_token_vocabulary(self, namespace: str = 'tokens') -> Dict[int, str]:
         return self._index_to_token[namespace]
 
-    def get_token_index(self, token: str, namespace: str='tokens') -> int:
+    def get_token_index(self, token: str, namespace: str = 'tokens') -> int:
         if token in self._token_to_index[namespace]:
             return self._token_to_index[namespace][token]
-        else:
-            return self._token_to_index[namespace][self._oov_token]
+        return self._token_to_index[namespace][self._oov_token]
 
-    def get_token_from_index(self, index: int, namespace: str='tokens') -> str:
+    def get_token_from_index(self, index: int, namespace: str = 'tokens') -> str:
         return self._index_to_token[namespace][index]
 
-    def get_vocab_size(self, namespace: str='tokens') -> int:
+    def get_vocab_size(self, namespace: str = 'tokens') -> int:
         return len(self._token_to_index[namespace])

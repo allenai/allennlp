@@ -75,8 +75,8 @@ class Dataset:
         return {**padding_lengths}
 
     def as_arrays(self,
-                  padding_lengths: Dict[str, Dict[str, int]]=None,
-                  verbose: bool=True) -> Dict[str, List[numpy.array]]:
+                  padding_lengths: Dict[str, Dict[str, int]] = None,
+                  verbose: bool = True) -> Dict[str, List[numpy.array]]:
         """
         This method converts this ``Dataset`` into a set of numpy arrays that can be passed through
         a model.  In order for the numpy arrays to be valid arrays, all ``Instances`` in this

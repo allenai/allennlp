@@ -20,8 +20,8 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
 
 def pad_sequence_to_length(sequence: List,
                            desired_length: int,
-                           default_value: Callable[[], Any]=lambda: 0,
-                           padding_on_right: bool=True) -> List:
+                           default_value: Callable[[], Any] = lambda: 0,
+                           padding_on_right: bool = True) -> List:
     """
     Take a list of objects and pads it to the desired length, returning the padded list.  The
     original list is not modified.
@@ -73,8 +73,8 @@ def add_noise_to_dict_values(dictionary: Dict[Any, float], noise_param: float) -
 
 
 def clean_layer_name(input_name: str,
-                     strip_right_of_last_backslash: bool=True,
-                     strip_numerics_after_underscores: bool=True):
+                     strip_right_of_last_backslash: bool = True,
+                     strip_numerics_after_underscores: bool = True):
     """
     There exist cases when layer names need to be concatenated in order to create new, unique
     layer names. However, the indices added to layer names designating the ith output of calling
@@ -114,5 +114,4 @@ def namespace_match(pattern: str, namespace: str):
         return True
     elif pattern == namespace:
         return True
-    else:
-        return False
+    return False

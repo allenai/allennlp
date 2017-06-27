@@ -35,7 +35,7 @@ class TagField(Field):
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
-    def __init__(self, tags: List[str], sequence_field: SequenceField, tag_namespace: str='tags'):
+    def __init__(self, tags: List[str], sequence_field: SequenceField, tag_namespace: str = 'tags'):
         self._tags = tags
         self._sequence_field = sequence_field
         self._tag_namespace = tag_namespace
