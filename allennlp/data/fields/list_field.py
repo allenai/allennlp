@@ -60,8 +60,8 @@ class ListField(SequenceField):
         padded_fields = [field.pad(padding_lengths) for field in padded_field_list]
         if isinstance(padded_fields[0], (list, tuple)):
             return [numpy.asarray(x) for x in zip(*padded_fields)]
-
-        return [numpy.asarray(padded_fields)]
+        else:
+            return [numpy.asarray(padded_fields)]
 
     @overrides
     def empty_field(self):

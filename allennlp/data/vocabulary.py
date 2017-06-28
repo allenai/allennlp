@@ -210,7 +210,8 @@ class Vocabulary:
             self._token_to_index[namespace][token] = index
             self._index_to_token[namespace][index] = token
             return index
-        return self._token_to_index[namespace][token]
+        else:
+            return self._token_to_index[namespace][token]
 
     def get_index_to_token_vocabulary(self, namespace: str = 'tokens') -> Dict[int, str]:
         return self._index_to_token[namespace]
@@ -218,7 +219,8 @@ class Vocabulary:
     def get_token_index(self, token: str, namespace: str = 'tokens') -> int:
         if token in self._token_to_index[namespace]:
             return self._token_to_index[namespace][token]
-        return self._token_to_index[namespace][self._oov_token]
+        else:
+            return self._token_to_index[namespace][self._oov_token]
 
     def get_token_from_index(self, index: int, namespace: str = 'tokens') -> str:
         return self._index_to_token[namespace][index]

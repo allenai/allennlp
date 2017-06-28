@@ -24,7 +24,7 @@ class TeeLogger:
         # correctly, so we'll just make sure that each batch shows up on its one line.
         if '\x08' in message:
             message = message.replace('\x08', '')
-            if message or message[-1] != '\n':
+            if not message or message[-1] != '\n':
                 message += '\n'
         self.log.write(message)
 
