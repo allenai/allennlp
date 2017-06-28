@@ -29,21 +29,28 @@ class Model(torch.nn.Module):
         >>>     outputs = self.last_layer(inputs)
         >>>
         >>>     if compute_loss:
-        >>>         return outputs, self.compute_loss(outputs, targets, model_state)
+        >>>         loss = self.compute_loss(outputs, targets, model_state)
+        >>>         return outputs, loss
         >>>     else:
-        >>>     return outputs
+        >>>         return outputs
 
         Parameters
         ----------
-
         inputs: Dict[str, torch.Tensor], required.
             A dictionary of tensors comprising everything needed to perform a
             training update, _including_ labels. At inference time, simply
             pass an input dictionary which does not include labels and
-
         compute_loss: bool, optional (default = False)
             If true, this method should call `:func: compute_loss` and return
             both the model outputs and a scalar loss to optimise.
+
+        Returns
+        -------
+
+        outputs: torch.Tensor or List[torch.Tensor]
+            The outputs from the model.
+        loss: float, optional
+            If ``compute_outputs=True``, return a scalar loss to optimise.
 
         """
 
@@ -62,15 +69,12 @@ class Model(torch.nn.Module):
 
         Parameters
         ----------
-
         model_output : torch.Tensor or List[torch.Tensor], required.
             The output of the result of calling `:func: forward`. This
             can be a list, as complex models may have many outputs.
-
         targets : torch.Tensor or List[torch.Tensor], required.
             The gold targets for computing some loss function with respect to
             the model outputs.
-
         model_state : Dict[str, Any], optional (default = None)
             As Pytorch creates dynamic computation graphs, it is possible for your loss
             function to change depending on some model state. At it's simplest, this
@@ -78,5 +82,10 @@ class Model(torch.nn.Module):
             data where not every training instance has every mode, for example.
             This dictionary is where model state required for computing the loss
             should be passed.
+
+        Returns
+        -------
+        A scalar loss to be optimised.
+
         """
         raise NotImplementedError
