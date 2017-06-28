@@ -15,9 +15,9 @@ class TestLabelField(AllenNlpTestCase):
 
     def test_label_field_can_index_with_vocab(self):
         vocab = Vocabulary()
-        vocab.add_token_to_namespace("entailment", namespace="*labels")
-        vocab.add_token_to_namespace("contradiction", namespace="*labels")
-        vocab.add_token_to_namespace("neutral", namespace="*labels")
+        vocab.add_token_to_namespace("entailment", namespace="labels")
+        vocab.add_token_to_namespace("contradiction", namespace="labels")
+        vocab.add_token_to_namespace("neutral", namespace="labels")
 
         label = LabelField("entailment")
         label.index(vocab)

@@ -30,9 +30,9 @@ class WordTokenizer(Tokenizer):
         The :class:`WordStemmer` to use.  Default is no stemming.
     """
     def __init__(self,
-                 word_splitter: WordSplitter=SimpleWordSplitter(),
-                 word_filter: WordFilter=PassThroughWordFilter(),
-                 word_stemmer: WordStemmer=PassThroughWordStemmer()):
+                 word_splitter: WordSplitter = SimpleWordSplitter(),
+                 word_filter: WordFilter = PassThroughWordFilter(),
+                 word_stemmer: WordStemmer = PassThroughWordStemmer()):
         self.word_splitter = word_splitter
         self.word_filter = word_filter
         self.word_stemmer = word_stemmer

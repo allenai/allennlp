@@ -29,8 +29,8 @@ class SnliReader(DatasetReader):
     """
     def __init__(self,
                  snli_filename: str,
-                 tokenizer: Tokenizer=WordTokenizer(),
-                 token_indexers: List[TokenIndexer]=None):
+                 tokenizer: Tokenizer = WordTokenizer(),
+                 token_indexers: List[TokenIndexer] = None):
         self._snli_filename = snli_filename
         self._tokenizer = tokenizer
         if token_indexers is None:

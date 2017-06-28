@@ -52,12 +52,12 @@ class Params(MutableMapping):
     # and passing no value to the default parameter of "pop".
     DEFAULT = object()
 
-    def __init__(self, params: Dict[str, Any], history: str=""):
+    def __init__(self, params: Dict[str, Any], history: str = ""):
         self.params = params
         self.history = history
 
     @overrides
-    def pop(self, key: str, default: Any=DEFAULT):
+    def pop(self, key: str, default: Any = DEFAULT):
         """
         Performs the functionality associated with dict.pop(key), along with checking for
         returned dictionaries, replacing them with Param objects with an updated history.
@@ -76,7 +76,7 @@ class Params(MutableMapping):
         return self.__check_is_dict(key, value)
 
     @overrides
-    def get(self, key: str, default: Any=DEFAULT):
+    def get(self, key: str, default: Any = DEFAULT):
         """
         Performs the functionality associated with dict.get(key) but also checks for returned
         dicts and returns a Params object in their place with an updated history.
@@ -90,7 +90,7 @@ class Params(MutableMapping):
             value = self.params.get(key, default)
         return self.__check_is_dict(key, value)
 
-    def pop_choice(self, key: str, choices: List[Any], default_to_first_choice: bool=False):
+    def pop_choice(self, key: str, choices: List[Any], default_to_first_choice: bool = False):
         """
         Gets the value of ``key`` in the ``params`` dictionary, ensuring that the value is one of
         the given choices. Note that this `pops` the key from params, modifying the dictionary,
@@ -156,7 +156,7 @@ class Params(MutableMapping):
         was one.  ``class_name`` should be the name of the `calling` class, the one that got extra
         parameters (if there are any).
         """
-        if len(self.params) != 0:
+        if self.params:
             raise ConfigurationError("Extra parameters passed to {}: {}".format(class_name, self.params))
 
     def __getitem__(self, key):
@@ -181,15 +181,14 @@ class Params(MutableMapping):
         if isinstance(value, dict):
             new_history = self.history + new_history + "."
             return Params(value, new_history)
-        else:
-            return value
+        return value
 
 
 def pop_choice(params: Dict[str, Any],
                key: str,
                choices: List[Any],
-               default_to_first_choice: bool=False,
-               history: str="?.") -> Any:
+               default_to_first_choice: bool = False,
+               history: str = "?.") -> Any:
     """
     Performs the same function as :func:`Params.pop_choice`, but is required in order to deal with
     places that the Params object is not welcome, such as inside Keras layers.  See the docstring

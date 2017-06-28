@@ -25,7 +25,7 @@ class CharacterTokenizer(Tokenizer):
         operation.  You probably do not want to do this, as character vocabularies are generally
         not very large to begin with, but it's an option if you really want it.
     """
-    def __init__(self, byte_encoding: str=None, lowercase_characters: bool=False):
+    def __init__(self, byte_encoding: str = None, lowercase_characters: bool = False):
         self.byte_encoding = byte_encoding
         self.lowercase_characters = lowercase_characters
 

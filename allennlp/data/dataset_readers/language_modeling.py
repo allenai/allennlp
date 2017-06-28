@@ -37,9 +37,9 @@ class LanguageModelingReader(DatasetReader):
     """
     def __init__(self,
                  filename: str,
-                 tokens_per_instance: int=None,
-                 tokenizer: Tokenizer=WordTokenizer(),
-                 token_indexers: List[TokenIndexer]=None):
+                 tokens_per_instance: int = None,
+                 tokenizer: Tokenizer = WordTokenizer(),
+                 token_indexers: List[TokenIndexer] = None):
         self._filename = filename
         self._tokens_per_instance = tokens_per_instance
         self._tokenizer = tokenizer

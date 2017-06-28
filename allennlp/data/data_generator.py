@@ -103,7 +103,7 @@ class DataGenerator:
         #: this data.
         self.last_num_batches = None
 
-    def create_generator(self, dataset: Dataset, batch_size: int=None):
+    def create_generator(self, dataset: Dataset, batch_size: int = None):
         """
         Main external API call: converts an ``IndexedDataset`` into a data generator suitable for
         use with Keras' ``fit_generator`` and related methods.
@@ -177,8 +177,8 @@ class DataGenerator:
 
     @staticmethod
     def sort_dataset_by_padding(dataset: Dataset,
-                                sorting_keys: List[Tuple[str, str]],
-                                padding_noise: float=0.0) -> List[Instance]:
+                                sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
+                                padding_noise: float = 0.0) -> List[Instance]:
         """
         Sorts the ``Instances`` in this ``Dataset`` by their padding lengths, using the keys in
         ``sorting_keys`` (in the order in which they are provided).  ``sorting_keys`` is a list of

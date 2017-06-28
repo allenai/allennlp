@@ -46,13 +46,13 @@ class Embedding(torch.nn.Module):
     def __init__(self,
                  num_embeddings: int,
                  embedding_dim: int,
-                 weight: torch.FloatTensor=None,
-                 padding_index: int=None,
-                 trainable: bool=True,
-                 max_norm: float=None,
-                 norm_type: float=2.,
-                 scale_grad_by_freq: bool=False,
-                 sparse: bool=False):
+                 weight: torch.FloatTensor = None,
+                 padding_index: int = None,
+                 trainable: bool = True,
+                 max_norm: float = None,
+                 norm_type: float = 2.,
+                 scale_grad_by_freq: bool = False,
+                 sparse: bool = False):
         super(Embedding, self).__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
@@ -74,19 +74,19 @@ class Embedding(torch.nn.Module):
         if self.padding_index is not None:
             self.weight.data[self.padding_index].fill_(0)
 
-    def forward(self, input):
+    def forward(self, inputs):  # pylint: disable=arguments-differ
         padding_index = self.padding_index if self.padding_index is not None else -1
         return self._backend.Embedding(padding_index,
                                        self.max_norm,
                                        self.norm_type,
                                        self.scale_grad_by_freq,
-                                       self.sparse)(input, self.weight)
+                                       self.sparse)(inputs, self.weight)
 
 
 def get_pretrained_embedding_layer(embeddings_filename: str,
                                    vocab: Vocabulary,
-                                   namespace: str="tokens",
-                                   trainable: bool=True):
+                                   namespace: str = "tokens",
+                                   trainable: bool = True):
     """
     Reads a pre-trained embedding file and generates an Embedding layer that has weights
     initialized to the pre-trained embeddings.  The Embedding layer can either be trainable or

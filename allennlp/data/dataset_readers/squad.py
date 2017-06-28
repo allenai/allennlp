@@ -49,9 +49,9 @@ class SquadSentenceSelectionReader(DatasetReader):
     """
     def __init__(self,
                  squad_filename: str,
-                 negative_sentence_selection: str="paragraph",
-                 tokenizer: Tokenizer=WordTokenizer(),
-                 token_indexers: List[TokenIndexer]=None):
+                 negative_sentence_selection: str = "paragraph",
+                 tokenizer: Tokenizer = WordTokenizer(),
+                 token_indexers: List[TokenIndexer] = None):
         self._squad_filename = squad_filename
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
         self._tokenizer = tokenizer
@@ -73,7 +73,9 @@ class SquadSentenceSelectionReader(DatasetReader):
         # Maps question indices to question strings
         self._id_to_question = {}
 
-    def _get_sentence_choices(self, question_id: int, answer_id: int) -> Tuple[List[str], int]:
+    def _get_sentence_choices(self,
+                              question_id: int,
+                              answer_id: int) -> Tuple[List[str], int]:  # pylint: disable=invalid-sequence-index
         # Because sentences and questions have different indices, we need this to hold tuples of
         # ("sentence", id) or ("question", id), instead of just single ids.
         negative_sentences = set()

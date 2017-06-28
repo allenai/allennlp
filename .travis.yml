@@ -1,0 +1,26 @@
+# use new container-based travis workers
+sudo: false
+dist: trusty
+
+language: python
+
+cache:
+  directories:
+  - /home/travis/nltk_data
+  - /home/travis/download
+  - /home/travis/miniconda3
+  - /home/travis/.cache/pip
+
+env:
+  matrix:
+    # run tests, submit coverage info
+    - COVERAGE="true"
+    # pylint checks skip the tests
+    - RUN_PYLINT="true" SKIP_TESTS="true"
+
+notifications:
+  email: false
+
+install: source build_tools/travis/install.sh
+script: bash build_tools/travis/test_script.sh
+after_success: source build_tools/travis/after_success.sh
