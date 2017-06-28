@@ -1,25 +1,54 @@
 from collections import defaultdict
-from ..common.util import namespace_match
-from typing import Dict, List, Union
+from typing import Any, Callable, Dict, List, Union
+
 import codecs
 import logging
-
 import tqdm
+
+from ..common.util import namespace_match
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 class _NamespaceDependentDefaultDict(defaultdict):
     """
-    Sometimes certain namespaces need padding (like "tokens") and some don't (like
-    "labels"), and we want different defaults depending on the namespace.  This class lets us use a
-    `defaultdict <https://docs.python.org/2/library/collections.html#collections.defaultdict>`_,
-    but have different default values depending on the namespace of the key.
+    This is a `defaultdict
+    <https://docs.python.org/2/library/collections.html#collections.defaultdict>`_ where the
+    default value is dependent on the key that is passed.
 
-    This class also handles *-namespaces.  In other words, if "*tags" is in non_padded_namespaces
-    then "passage_tags", "question_tags", etc. (anything that ends with "tags" will have the
-    non_padded default value.
+    We use "namespaces" in the :class:`Vocabulary` object to keep track of several different
+    mappings from strings to integers, so that we have a consistent API for mapping words, tags,
+    labels, characters, or whatever else you want, into integers.  The issue is that some of those
+    namespaces (words and characters) should have integers reserved for padding and
+    out-of-vocabulary tokens, while others (labels and tags) shouldn't.  This class allows you to
+    specify filters on the namespace (the key used in the ``defaultdict``), and use different
+    default values depending on whether the namespace passes the filter.
+
+    To do filtering, we take a list of ``non_padded_namespaces``.  This is a list of strings that
+    are either matched exactly against the keys, or treated as suffixes, if the string starts with
+    `*`.  In other words, if "*tags" is in non_padded_namespaces then "passage_tags",
+    "question_tags", etc. (anything that ends with "tags") will have the ``non_padded`` default
+    value.
+
+    Parameters
+    ----------
+    non_padded_namespaces : ``List[str]``
+        A list of strings describing which namespaces are not padded.  If a namespace (key) is
+        missing from this dictionary, we will use :func:`namespace_match` to see whether the
+        namespace should be padded.  If the given namespace matches any of the strings in this
+        list, we will use ``non_padded_function`` to initialize the value for that namespace, and
+        we will use ``padded_function`` otherwise.
+    padded_function : ``Callable[[], Any]``
+        A zero-argument function to call to initialize a value for a namespace that `should` be
+        padded.
+    non_padded_function : ``Callable[[], Any]``
+        A zero-argument function to call to initialize a value for a namespace that should `not` be
+        padded.
     """
-    def __init__(self, non_padded_namespaces: List[str], padded_function, non_padded_function):
+    def __init__(self,
+                 non_padded_namespaces: List[str],
+                 padded_function: Callable[[], Any],
+                 non_padded_function: Callable[[], Any]):
         self._non_padded_namespaces = non_padded_namespaces
         self._padded_function = padded_function
         self._non_padded_function = non_padded_function
@@ -94,10 +123,10 @@ class Vocabulary:
         label fields in this code), you don't have to specify anything here.
     """
     def __init__(self,
-                 counter: Dict[str, Dict[str, int]]=None,
-                 min_count: int=1,
-                 max_vocab_size: Union[int, Dict[str, int]]=None,
-                 non_padded_namespaces: List[str]=None):
+                 counter: Dict[str, Dict[str, int]] = None,
+                 min_count: int = 1,
+                 max_vocab_size: Union[int, Dict[str, int]] = None,
+                 non_padded_namespaces: List[str] = None):
         self._padding_token = "@@PADDING@@"
         self._oov_token = "@@UNKOWN@@"
         if non_padded_namespaces is None:
@@ -121,7 +150,7 @@ class Vocabulary:
                     if count >= min_count:
                         self.add_token_to_namespace(token, namespace)
 
-    def set_from_file(self, filename: str, oov_token: str, namespace: str="tokens"):
+    def set_from_file(self, filename: str, oov_token: str, namespace: str = "tokens"):
         """
         If you already have a vocabulary file for a trained model somewhere, and you really want to
         use that vocabulary file instead of just setting the vocabulary from a dataset, for
@@ -153,9 +182,9 @@ class Vocabulary:
     @classmethod
     def from_dataset(cls,
                      dataset,
-                     min_count: int=1,
-                     max_vocab_size: Union[int, Dict[str, int]]=None,
-                     non_padded_namespaces: List[str]=None) -> 'Vocabulary':
+                     min_count: int = 1,
+                     max_vocab_size: Union[int, Dict[str, int]] = None,
+                     non_padded_namespaces: List[str] = None) -> 'Vocabulary':
         """
         Constructs a vocabulary given a :class:`.Dataset` and some parameters.  We count all of the
         vocabulary items in the dataset, then pass those counts, and the other parameters, to
@@ -171,7 +200,7 @@ class Vocabulary:
                           max_vocab_size=max_vocab_size,
                           non_padded_namespaces=non_padded_namespaces)
 
-    def add_token_to_namespace(self, token: str, namespace: str='tokens') -> int:
+    def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:
         """
         Adds ``token`` to the index, if it is not already present.  Either way, we return the index of
         the token.
@@ -184,17 +213,17 @@ class Vocabulary:
         else:
             return self._token_to_index[namespace][token]
 
-    def get_index_to_token_vocabulary(self, namespace: str='tokens') -> Dict[int, str]:
+    def get_index_to_token_vocabulary(self, namespace: str = 'tokens') -> Dict[int, str]:
         return self._index_to_token[namespace]
 
-    def get_token_index(self, token: str, namespace: str='tokens') -> int:
+    def get_token_index(self, token: str, namespace: str = 'tokens') -> int:
         if token in self._token_to_index[namespace]:
             return self._token_to_index[namespace][token]
         else:
             return self._token_to_index[namespace][self._oov_token]
 
-    def get_token_from_index(self, index: int, namespace: str='tokens') -> str:
+    def get_token_from_index(self, index: int, namespace: str = 'tokens') -> str:
         return self._index_to_token[namespace][index]
 
-    def get_vocab_size(self, namespace: str='tokens') -> int:
+    def get_vocab_size(self, namespace: str = 'tokens') -> int:
         return len(self._token_to_index[namespace])

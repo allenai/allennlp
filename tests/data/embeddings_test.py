@@ -3,11 +3,9 @@ import gzip
 
 import numpy
 import pytest
-from allennlp.common.checks import ConfigurationError
+
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.layers.embeddings import get_pretrained_embedding_layer
-
-#from allennlp.models.text_classification import ClassificationModel
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
@@ -69,40 +67,3 @@ class TestPretrainedEmbeddings(AllenNlpTestCase):
         embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
         assert not numpy.allclose(word_vector.numpy(), numpy.array([0.0, 0.0, 0.0]))
-
-    @pytest.mark.skip
-    def test_embedding_will_not_project_random_embeddings(self):
-        self.write_pretrained_vector_files()
-        self.write_true_false_model_files()
-        with pytest.raises(ConfigurationError):
-            args = {
-                    "embeddings": {
-                            "words": {
-                                    "dimension": 5,
-                                    "project": True,
-                                    "fine_tune": True,
-                                    "dropout": 0.2
-                            }
-                    }
-            }
-            model = self.get_model(ClassificationModel, args)
-            model.train()
-
-    @pytest.mark.skip
-    def test_projection_dim_not_equal_to_pretrained_dim_with_no_projection_flag_raises_error(self):
-        self.write_pretrained_vector_files()
-        self.write_true_false_model_files()
-        with pytest.raises(ConfigurationError):
-            args = {
-                    "embeddings": {
-                            "words": {
-                                    "dimension": 13,
-                                    "pretrained_file": self.PRETRAINED_VECTORS_GZIP,
-                                    "project": False,
-                                    "fine_tune": False,
-                                    "dropout": 0.2
-                            }
-                    }
-            }
-            model = self.get_model(ClassificationModel, args)
-            model.train()

@@ -26,8 +26,8 @@ class TokenCharactersIndexer(TokenIndexer):
         retains casing.
     """
     def __init__(self,
-                 character_namespace: str='token_characters',
-                 character_tokenizer: CharacterTokenizer=CharacterTokenizer()):
+                 character_namespace: str = 'token_characters',
+                 character_tokenizer: CharacterTokenizer = CharacterTokenizer()):
         self.character_namespace = character_namespace
         self.character_tokenizer = character_tokenizer
 

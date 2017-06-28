@@ -20,7 +20,7 @@ class SingleIdTokenIndexer(TokenIndexer):
         If ``True``, we will call ``token.lower()`` before getting an index for the token from the
         vocabulary.
     """
-    def __init__(self, token_namespace: str='tokens', lowercase_tokens: bool=False):
+    def __init__(self, token_namespace: str = 'tokens', lowercase_tokens: bool = False):
         self.token_namespace = token_namespace
         self.lowercase_tokens = lowercase_tokens
 
