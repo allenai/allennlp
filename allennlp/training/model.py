@@ -55,8 +55,8 @@ class Model(torch.nn.Module):
         outputs: torch.Tensor or List[torch.Tensor]
             The outputs from the model.
         loss: float, optional
-            If ``compute_outputs=True``, return a scalar loss to optimise.
-
+            If ``compute_loss=True``, return a scalar loss to optimise.
+            If ``compute_loss=False``, return None.
         """
 
         raise NotImplementedError
