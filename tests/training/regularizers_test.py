@@ -17,7 +17,6 @@ class TestRegularizers(AllenNlpTestCase):
         initializer = Constant(-1)
         initializer(model)
         value = L1Regularizer(1.0)(model)
-        print(value)
         # 115 because of biases.
         assert value.data.numpy() == 115.0
 
@@ -30,4 +29,3 @@ class TestRegularizers(AllenNlpTestCase):
         initializer(model)
         value = L2Regularizer(1.0)(model)
         assert value.data.numpy() == 28.75
-
