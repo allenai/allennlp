@@ -8,7 +8,9 @@ class Model(torch.nn.Module):
     raw torch Module, we provide a slightly different API.
     """
 
-    def forward(self, inputs: Dict[str, torch.Tensor], compute_loss: bool = False):
+    def forward(self,
+                inputs: Dict[str, torch.Tensor],
+                compute_loss: bool = False):  # pylint: disable=arguments-differ
         """
         Defines the forward pass of the model. In addition, to facilitate easy training,
         this method is designed to compute a loss function defined by a user.
