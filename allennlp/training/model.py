@@ -1,4 +1,4 @@
-from typing import Any, List, Dict, Union
+from typing import Any, List, Dict, Optional, Union
 import torch
 
 
@@ -13,9 +13,9 @@ class Model(torch.nn.Module):
     data generation, because model inputs are named.
     """
 
-    def forward(self,
+    def forward(self,  # pylint: disable=arguments-differ
                 inputs: Dict[str, torch.Tensor],
-                compute_loss: bool = False):  # pylint: disable=arguments-differ
+                compute_loss: bool = False) -> (Union[torch.Tensor, List[torch.Tensor]], Optional[float]):
         """
         Defines the forward pass of the model. In addition, to facilitate easy training,
         this method is designed to compute a loss function defined by a user.
@@ -37,7 +37,7 @@ class Model(torch.nn.Module):
         >>>         loss = self.compute_loss(outputs, targets, model_state)
         >>>         return outputs, loss
         >>>     else:
-        >>>         return outputs
+        >>>         return outputs, None
 
         Parameters
         ----------
