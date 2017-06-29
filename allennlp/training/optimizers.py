@@ -15,7 +15,7 @@ optimizers = {
 
 
 def get_optimizer_from_params(model_parameters: List[torch.Tensor],
-                              params: Union[Dict[str, Any], str]):
+                              params: Union[Dict[str, Any], str]) -> torch.optim.Optimizer:
     """
     This function converts a set of model parameters to be optimized and a
     dictionary of optimizer parameters (or a string name of one of the optimizers above)

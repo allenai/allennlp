@@ -1,5 +1,4 @@
 from typing import List
-from
 import re
 
 import torch
@@ -12,11 +11,13 @@ class Regularizer:
     which is typically applied to a loss function.
     """
     def __init__(self, module_regex: str = ""):
-        self.module_regex = re.compile(module_regex)
+        self.module_regex = module_regex
 
     def __call__(self, module: torch.nn.Module) -> float:
-
         raise NotImplementedError
+
+    def module_name_matches_regex(self, module: torch.nn.Module):
+        return re.match(self.module_regex, module.__class__.__name__) is not None
 
 
 class RegularizerApplicator:
@@ -34,8 +35,7 @@ class RegularizerApplicator:
                            module: torch.nn.Module,
                            regularizer: Regularizer):
 
-        for name, child in module.named_children():
-            if re.match(regularizer.module_regex, name) is not None:
+        for child in module.children():
                 self.accumulator += regularizer(child)
                 self._regularize_module(child, regularizer)
 
@@ -57,8 +57,9 @@ class L1Regularizer(Regularizer):
 
     def __call__(self, module: torch.nn.Module) -> float:
         value = 0.0
-        for parameter in module.parameters():
-            value += torch.sum(torch.abs(parameter))
+        if self.module_name_matches_regex(module):
+            for parameter in module.parameters():
+                value += torch.sum(torch.abs(parameter))
 
         return self.alpha * value
 
@@ -71,8 +72,7 @@ class L2Regularizer(Regularizer):
 
     def __call__(self, module: torch.nn.Module) -> float:
         value = 0.0
-        for parameter in module.parameters():
-            value += torch.sum(torch.pow(parameter, 2))
-
+        if self.module_name_matches_regex(module):
+            for parameter in module.parameters():
+                value += torch.sum(torch.pow(parameter, 2))
         return self.alpha * value
-
