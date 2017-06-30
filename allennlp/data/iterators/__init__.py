@@ -5,7 +5,7 @@ from .bucket_iterator import BucketIterator
 from .adaptive_iterator import AdaptiveIterator
 
 
-iterators = OrderedDict()
+iterators = OrderedDict()  # pylint: disable=invalid-name
 iterators["bucket"] = BucketIterator
 iterators["basic"] = BasicIterator
-iterators[""]
+iterators["adaptive"] = AdaptiveIterator

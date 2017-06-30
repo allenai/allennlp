@@ -8,14 +8,29 @@ from ...common.util import add_noise_to_dict_values
 
 
 class BucketIterator(BasicIterator):
-
     """
+    An iterator which by default, pads batches with respect to the maximum
+    input lengths `per batch`. Additionally, you can provide a list of field names
+    and padding keys which the dataset will be sorted by before doing this batching,
+    causing inputs with similar length to be batched together, making computation
+    more efficient (as less time is wasted on padded elements of the batch).
+
     Parameters
     ----------
     sorting_keys : List[Tuple[str, str]], optional (default = [])
         To bucket inputs into batches, we want to group the instances by padding length, so that
-        we minimize the amount of padding necessary per batch. By default, this sorting
-    padding_noise: double, optional (default=.1)
+        we minimize the amount of padding necessary per batch. In order to do this, we need to
+        know which fields need what type of padding, and in what order.
+
+        For example:
+        [(sentence1, "sentence_length"), (sentence2, "sentence_length"), ("sentence1", "char_length")]
+
+        would sort a dataset first by the "sentence_length" of the "sentence1" field, then by the
+        "sentence_length" of the "sentence2" field, and finally by the "char_length" of the "sentence1"
+        field.
+        By default, the list of sorting keys is empty, meaning the dataset won't be sorted and batches
+        will just be padded using the max lengths of all fields requiring padding calculated per batch.
+    padding_noise: float, optional (default=.1)
         When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
         isn't deterministic.  This parameter determines how much noise we add, as a percentage of
         the actual padding value for each instance.
@@ -33,7 +48,7 @@ class BucketIterator(BasicIterator):
 
     def __init__(self,
                  sorting_keys: List[Tuple[str, str]] = None,
-                 padding_noise: float = 0.2,
+                 padding_noise: float = 0.1,
                  sort_every_epoch: bool = True,
                  batch_size: int = 32):
 
@@ -45,7 +60,7 @@ class BucketIterator(BasicIterator):
     @overrides
     def __call__(self, dataset: Dataset):
         grouped_instances = self._create_batches(dataset)
-        self.last_num_batches = len(grouped_instances)
+        self.last_num_batches = len(grouped_instances)  # pylint: disable=attribute-defined-outside-init
 
         while True:
             if self.sort_every_epoch:

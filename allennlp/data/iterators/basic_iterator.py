@@ -8,7 +8,8 @@ from ...common.util import group_by_count
 class BasicIterator:
     """
     A very basic iterator, which takes a dataset, pads all of it's instances to
-    the maximum lengths of the relevant fields acro and yields fixed size batches.
+    the maximum lengths of the relevant fields across the whole dataset and yields
+    fixed size batches.
 
     Parameters
     ----------
@@ -20,7 +21,7 @@ class BasicIterator:
 
     def __call__(self, dataset: Dataset):
         grouped_instances = self._create_batches(dataset)
-        self.last_num_batches = len(grouped_instances)
+        self.last_num_batches = len(grouped_instances)  # pylint: disable=attribute-defined-outside-init
 
         padding_lengths = dataset.get_padding_lengths()
         while True:
