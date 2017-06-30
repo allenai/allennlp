@@ -1,94 +1,81 @@
-from typing import Any, List, Dict, Optional, Union
+from typing import Dict
 import torch
 
 
 class Model(torch.nn.Module):
     """
-    This abstract class represents a model to be trained. Rather than relying on the
-    raw torch Module, we provide a slightly different API, particularly to align with
-    data processing code for textual data. As textual data pre-processing and deep NLP
-    model inputs tend to be more complicated than for other modalities, we use
-    dictionaries of tensors to pass inputs to the model, to keep on top of what's
-    going on. It also makes reading model implementations easier to connect to
-    data generation, because model inputs are named.
-    """
+    This abstract class represents a model to be trained. Rather than relying completely
+    on the pytorch Module, we provide a richer API that maintains more metadata
+    about the tensors used. This makes reading model implementations easier to
+    connect to data generation, because model inputs are named.
 
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: Dict[str, torch.Tensor],
-                compute_loss: bool = False) -> (Union[torch.Tensor, List[torch.Tensor]], Optional[float]):
+    Models built using this API are still compatible with other pytorch models and can
+    be used naturally as modules within other models - outputs are dictionaries, which
+    can be unpacked and passed into other layers. One caveat to this is that if you
+    wish to use an AllenNLP model inside a Container (such as nn.Sequential), you must
+    interleave the models with a wrapper module which unpacks the dictionary into
+    a list of tensors.
+
+    Finally, in order for your model to be trained using the AllenNLP Trainer API, the output
+    dictionary of your Model must include a "loss" key, which will be optimised during
+    the training process.
+    """
+    #  TODO(Mark): Implement this.
+    def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
         Defines the forward pass of the model. In addition, to facilitate easy training,
         this method is designed to compute a loss function defined by a user.
 
-        The input dictionary is comprised of everything required to perform a
-        training update, `including` labels. It is down to the user to ensure
-        that inference can be performed (using compute_loss = False) without the
-        presence of these labels! Hence, any inputs not available at inference
-        time should only be used inside an ``if compute_loss:`` conditional block.
+        The input is comprised of everything required to perform a
+        training update, `including` labels - you define the signature here!
+        It is down to the user to ensure that inference can be performed
+        (using compute_loss = False) without the presence of these labels.
+        Hence, any inputs not available at inference time should only be used
+        inside a conditional block.
 
         The intended sketch of this method is as follows:
 
-        >>> def forward(inputs, compute_loss=False):
+        >>> def forward(self, input1, input2, targets=None):
         >>>     ....
         >>>     ....
-        >>>     outputs = self.last_layer(inputs)
+        >>>     output1 = self.layer1(input1)
+        >>>     output2 = self.layer2(input2)
+        >>>     output_dict = {"output1": output1, "output2": output2}
+        >>>     if targets is not None:
+        >>>         loss = self._compute_loss(output1, output2, targets)
+        >>>         output_dict["loss"] = loss
         >>>
-        >>>     if compute_loss:
-        >>>         loss = self.compute_loss(outputs, targets, model_state)
-        >>>         return outputs, loss
-        >>>     else:
-        >>>         return outputs, None
+        >>>     return output_dict
 
         Parameters
         ----------
-        inputs: Dict[str, torch.Tensor], required.
-            A dictionary of tensors comprising everything needed to perform a
-            training update, `including` labels. At inference time, simply
-            pass an input dictionary which does not include labels and
-        compute_loss: bool, optional (default = False)
-            If true, this method should call :func:`compute_loss` and return
-            both the model outputs and a scalar loss to optimise.
+        inputs:
+            Tensors comprising everything needed to perform a training update,
+            `including` labels, which should be optional (i.e have a default value of None).
+            At inference time, simply pass the relevant inputs, not including the labels.
 
         Returns
         -------
+        output_dict: Dict[str, torch.Tensor]
+            The outputs from the model. In order to train a model using the AllenNLP Trainer
+            api, you must provide a "loss" key pointing to a scalar torch.Tensor representing
+            the loss to be optimized.
 
-        outputs: torch.Tensor or List[torch.Tensor]
-            The outputs from the model.
-        loss: float, optional
-            If ``compute_loss=True``, return a scalar loss to optimise.
-            If ``compute_loss=False``, return None.
         """
-
         raise NotImplementedError
 
-    def compute_loss(self,
-                     model_output: Union[torch.Tensor, List[torch.Tensor]],
-                     targets: Union[torch.Tensor, List[torch.Tensor]],
-                     model_state: Dict[str, Any] = None) -> float:
+    def _compute_loss(self, *inputs) -> torch.Tensor:   # pylint: disable=arguments-differ
         """
         Computes a scalar loss function to optimise. This method is designed
-        to be called and returned by :func:`forward` when `compute_loss = True`.
-        It is part of the public interface however, as there are scenarios in which
-        direct evaluation may be useful, such as during model comparison.
+        to be called and returned by :func:`forward` when label tensors are provided.
 
         Parameters
         ----------
-        model_output : torch.Tensor or List[torch.Tensor], required.
-            The output of the result of calling :func:`forward`. This
-            can be a list, as complex models may have many outputs.
-        targets : torch.Tensor or List[torch.Tensor], required.
-            The gold targets for computing some loss function with respect to
-            the model outputs.
-        model_state : Dict[str, Any], optional (default = None)
-            As Pytorch creates dynamic computation graphs, it is possible for your loss
-            function to change depending on some model state. At it's simplest, this
-            might be your original inputs, if you were training on multi-modal
-            data where not every training instance has every mode, for example.
-            This dictionary is where model state required for computing the loss
-            should be passed.
+        inputs:
+            All input tensors required to compute the loss function of the model.
 
         Returns
         -------
-        A scalar loss to be optimised.
+        A scalar Tensor loss to be optimised.
         """
         raise NotImplementedError
