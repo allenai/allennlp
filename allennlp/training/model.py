@@ -5,7 +5,7 @@ import torch
 class Model(torch.nn.Module):
     """
     This abstract class represents a model to be trained. Rather than relying completely
-    on the pytorch Module, we provide a richer API that maintains more metadata
+    on the Pytorch Module, we provide a richer API that maintains more metadata
     about the tensors used. This makes reading model implementations easier to
     connect to data generation, because model inputs are named.
 
@@ -16,9 +16,9 @@ class Model(torch.nn.Module):
     interleave the models with a wrapper module which unpacks the dictionary into
     a list of tensors.
 
-    Finally, in order for your model to be trained using the AllenNLP Trainer API, the output
-    dictionary of your Model must include a "loss" key, which will be optimised during
-    the training process.
+    Finally, in order for your model to be trained using the :class:`~allennlp.training.Trainer`
+    api, the output dictionary of your Model must include a "loss" key, which will be
+    optimised during the training process.
     """
     #  TODO(Mark): Implement this.
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
@@ -29,9 +29,8 @@ class Model(torch.nn.Module):
         The input is comprised of everything required to perform a
         training update, `including` labels - you define the signature here!
         It is down to the user to ensure that inference can be performed
-        (using compute_loss = False) without the presence of these labels.
-        Hence, any inputs not available at inference time should only be used
-        inside a conditional block.
+        without the presence of these labels. Hence, any inputs not available at
+        inference time should only be used inside a conditional block.
 
         The intended sketch of this method is as follows:
 
@@ -42,6 +41,7 @@ class Model(torch.nn.Module):
         >>>     output2 = self.layer2(input2)
         >>>     output_dict = {"output1": output1, "output2": output2}
         >>>     if targets is not None:
+        >>>         # Function returning a scalar torch.Tensor, defined by the user.
         >>>         loss = self._compute_loss(output1, output2, targets)
         >>>         output_dict["loss"] = loss
         >>>
@@ -57,25 +57,8 @@ class Model(torch.nn.Module):
         Returns
         -------
         output_dict: Dict[str, torch.Tensor]
-            The outputs from the model. In order to train a model using the AllenNLP Trainer
-            api, you must provide a "loss" key pointing to a scalar torch.Tensor representing
-            the loss to be optimized.
-
-        """
-        raise NotImplementedError
-
-    def _compute_loss(self, *inputs) -> torch.Tensor:   # pylint: disable=arguments-differ
-        """
-        Computes a scalar loss function to optimise. This method is designed
-        to be called and returned by :func:`forward` when label tensors are provided.
-
-        Parameters
-        ----------
-        inputs:
-            All input tensors required to compute the loss function of the model.
-
-        Returns
-        -------
-        A scalar Tensor loss to be optimised.
+            The outputs from the model. In order to train a model using the
+            :class:`~allennlp.training.Trainer` api, you must provide a "loss"
+            key pointing to a scalar torch.Tensor representing the loss to be optimized.
         """
         raise NotImplementedError
