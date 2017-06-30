@@ -5,7 +5,7 @@ import torch
 from ..data.dataset import Dataset
 from ..common.params import Params
 from .optimizers import get_optimizer_from_params
-from .regularizers import
+
 
 class Trainer:
 
@@ -67,11 +67,8 @@ class Trainer:
             self.optimizer.step()
 
     def save_model(self, file_path):
-
         state_dictionary = self.model.state_dict()
         torch.save(state_dictionary, file_path)
-
-
 
     @classmethod
     def from_params(cls, params: Params):

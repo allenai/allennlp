@@ -23,7 +23,8 @@ class Regularizer:
 class RegularizerApplicator:
     """
     Recursively applies a list of regularizers to a Module
-    and it's children.
+    and it's children. A regularizer will only be applied to
+    a module if its regex matches the module class name.
     """
     def __init__(self, regluarizers: List[Regularizer]):
 
