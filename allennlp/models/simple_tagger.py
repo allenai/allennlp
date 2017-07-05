@@ -55,12 +55,11 @@ class SimpleTagger(Model):
         Returns
         -------
         An output dictionary consisting of:
-
         logits : torch.FloatTensor
             A tensor of shape (batch_size, sequence_length, tag_vocab_size)
             representing unnormalised log probabilities of the tag classes.
-
-        loss:
+        loss: : torch.FloatTensor, optional
+            A scalar loss to be optimised.
 
         """
         embedded_text_input = self.embedding(text_input)
