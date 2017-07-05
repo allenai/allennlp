@@ -5,22 +5,20 @@ import torch
 class Model(torch.nn.Module):
     """
     This abstract class represents a model to be trained. Rather than relying completely
-    on the Pytorch Module, we provide a richer API that maintains more metadata
-    about the tensors used. This makes reading model implementations easier to
-    connect to data generation, because model inputs are named.
+    on the Pytorch Module, we modify the output spec of ``forward`` to be a dictionary.
 
     Models built using this API are still compatible with other pytorch models and can
     be used naturally as modules within other models - outputs are dictionaries, which
     can be unpacked and passed into other layers. One caveat to this is that if you
     wish to use an AllenNLP model inside a Container (such as nn.Sequential), you must
     interleave the models with a wrapper module which unpacks the dictionary into
-    a list of tensors.
+    a list of tensors. TODO(Mark): Implement this.
 
     Finally, in order for your model to be trained using the :class:`~allennlp.training.Trainer`
     api, the output dictionary of your Model must include a "loss" key, which will be
     optimised during the training process.
     """
-    #  TODO(Mark): Implement this.
+
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
         Defines the forward pass of the model. In addition, to facilitate easy training,
