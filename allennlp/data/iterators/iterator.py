@@ -9,8 +9,7 @@ from ...common.params import Params
 class Iterator:
     """
     An abstract Iterator class. Iterators must implement __call__, which yields
-    batched examples. Additionally, it must specify a private method expressing
-    how a dataset is transformed into batches.
+    batched examples.
     """
     def __call__(self, dataset: Dataset) -> Generator[Dict[str, List[numpy.array]], None, None]:
 
