@@ -12,7 +12,6 @@ from allennlp.testing.test_case import AllenNlpTestCase
 
 
 class TestDataset(AllenNlpTestCase):
-
     def setUp(self):
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("this", "words")
