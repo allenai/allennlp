@@ -12,21 +12,15 @@ class NlpApi:
     for building a model with AllenNLP, but we think you should, because it's useful.
 
     ``NlpApi`` abstracts away particular decisions that are frequently necessary in NLP, like how
-    exactly words get represented as vectors, or what kind of RNN should be used when processing
-    sequences of word vectors.  When building a model, you just call a function like
-    :func:`embed_input`, or :func:`get_recurrent_layer`, and leave the decision of `how` exactly
-    things are embedded or encoded for later.  This makes it easy to define a `class` of models in
-    your model code, and easily run controlled experiments with these models later.  If you come up
-    with a new RNN variant (say, multiplicative LSTMs, or recurrent additive networks), or a new
-    way to represent words, you can easily run experiments on all models that use this API without
-    changing any model code - you just change the state in the ``NlpApi``, which can be done from
-    parameters in an experiment configuration file.
-
-    Note that in the typical, intended usage of this class, you won't be actually instantiating
-    this class yourself - AllenNLP will instantiate it :func:`from_params` given a parameter file
-    that you provide to our experiment framework.  Though you can instantiate this object yourself
-    and bypass our experiment code (or just ignore this class altogether and build models without
-    it), if you really want to.  TODO(matt): link to some documentation here.
+    exactly words get represented as vectors, or what kind of RNN or other encoder should be used
+    when processing sequences of word vectors.  When building a model, you just call a function
+    like :func:`get_token_embedder`, or :func:`get_sentence_encoder`, and leave the decision of
+    `how` exactly things are embedded or encoded for later.  This makes it easy to define a `class`
+    of models in your model code, and easily run controlled experiments with these models later.
+    If you come up with a new RNN variant (say, multiplicative LSTMs, or recurrent additive
+    networks), or a new way to represent words, you can easily run experiments on all models that
+    use this API without changing any model code - you just change the state in the ``NlpApi``,
+    which can be done from parameters in an experiment configuration file.
 
     Key abstractions:
 
