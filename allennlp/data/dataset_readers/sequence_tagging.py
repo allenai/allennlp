@@ -45,8 +45,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
                 sequence = TextField(tokens, self._token_indexers)
                 sequence_tags = TagField(tags, sequence)
-                instances.append(Instance({'input_tokens': sequence,
-                                           'output_tags': sequence_tags}))
+                instances.append(Instance({'sequence_tokens': sequence,
+                                           'sequence_tags': sequence_tags}))
         return Dataset(instances)
 
     @classmethod

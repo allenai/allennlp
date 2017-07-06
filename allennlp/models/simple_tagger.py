@@ -20,12 +20,14 @@ class SimpleTagger(Model):
     def __init__(self,
                  vocabulary: Vocabulary,
                  embedding_dim: int = 100,
-                 hidden_size: int = 200):
+                 hidden_size: int = 200,
+                 num_layers: int = 2):
         super(SimpleTagger, self).__init__()
 
         self.vocabulary = vocabulary
         self.embedding_dim = embedding_dim
         self.hidden_size = hidden_size
+        self.num_layers = num_layers
 
         self.embedding = Embedding(self.embedding_dim,
                                    self.vocabulary.get_vocab_size("tokens"))
@@ -40,12 +42,12 @@ class SimpleTagger(Model):
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self,
-                text_input: torch.IntTensor,
+                sequence_tokens: torch.IntTensor,
                 sequence_tags: torch.IntTensor = None):
         """
         Parameters
         ----------
-        text_input :
+        sequence_tokens :
         sequence_tags : torch.IntTensor, optional (default = None)
             A torch tensor representing the sequence of gold labels.
             These can either be integer indexes or one hot arrays of
@@ -62,7 +64,7 @@ class SimpleTagger(Model):
             A scalar loss to be optimised.
 
         """
-        embedded_text_input = self.embedding(text_input)
+        embedded_text_input = self.embedding(sequence_tokens)
         encoded_text = self.stacked_encoders(embedded_text_input)
         logits = self.tag_projection_layer(encoded_text)
         class_probabilities = F.softmax(logits)
@@ -86,7 +88,7 @@ class SimpleTagger(Model):
         padding_lengths = text_field.get_padding_lengths()
         text_field.pad(padding_lengths)
         sentence_arrays = text_field.index(self.vocabulary)
-        output_dict = self.forward(text_input=sentence_arrays)
+        output_dict = self.forward(sequence_tags=sentence_arrays)
         predictions = output_dict["class_probabilities"]
         _, indices = predictions.max(-1).numpy().astype("int32")
 
