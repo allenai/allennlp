@@ -13,6 +13,7 @@ models = {}  # type: Dict[str, Model]
 
 @app.route('/')
 def root() -> Response:
+    """serve index.html at the root"""
     return send_from_directory('.', 'index.html')
 
 
@@ -35,7 +36,6 @@ def handle_unknown_model(error: UnknownModel) -> Response:
 def predict(model_name: str) -> Response:
     """make a prediction using the specified model and return the results"""
     model = models.get(model_name.lower())
-    print(model)
     if model is None:
         raise UnknownModel(model_name)
 
