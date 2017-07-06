@@ -5,7 +5,7 @@ import numpy
 import pytest
 
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.layers.embeddings import get_pretrained_embedding_layer
+from allennlp.modules.embeddings import get_pretrained_embedding_layer
 from allennlp.testing.test_case import AllenNlpTestCase
 
 

@@ -9,8 +9,6 @@ class TimeDistributed(torch.nn.Module):
 
     Note that while the above gives shapes with ``batch_size`` first, this ``Module`` also works if
     ``batch_size`` is second - we always just combine the first two dimensions, then split them.
-
-    This behaves identically to Keras' TimeDistributed layer.
     """
     def __init__(self, module):
         super(TimeDistributed, self).__init__()
