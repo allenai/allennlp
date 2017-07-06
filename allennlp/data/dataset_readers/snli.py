@@ -21,26 +21,23 @@ class SnliReader(DatasetReader):
 
     Parameters
     ----------
-    snli_filename : ``str``
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : ``List[TokenIndexer]``, optional (default=``[SingleIdTokenIndexer()]``)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
     """
     def __init__(self,
-                 snli_filename: str,
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: List[TokenIndexer] = None):
-        self._snli_filename = snli_filename
         self._tokenizer = tokenizer
         if token_indexers is None:
             token_indexers = [SingleIdTokenIndexer()]
         self._token_indexers = token_indexers
 
     @overrides
-    def read(self):
+    def read(self, file_path: str):
         instances = []
-        with open(self._snli_filename, 'r') as snli_file:
+        with open(file_path, 'r') as snli_file:
             for line in snli_file:
                 example = json.loads(line)
 
@@ -65,11 +62,9 @@ class SnliReader(DatasetReader):
         tokenizer : ``Params``, optional
         token_indexers: ``List[Params]``, optional
         """
-        filename = params.pop('filename')
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = [TokenIndexer.from_params(p)
                           for p in params.pop('token_indexers', [Params({})])]
         params.assert_empty(cls.__name__)
-        return SnliReader(snli_filename=filename,
-                          tokenizer=tokenizer,
+        return SnliReader(tokenizer=tokenizer,
                           token_indexers=token_indexers)

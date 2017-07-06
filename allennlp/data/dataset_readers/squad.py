@@ -22,7 +22,6 @@ class SquadSentenceSelectionReader(DatasetReader):
     """
     Parameters
     ----------
-    squad_filename : ``str``
     negative_sentence_selection : ``str``, optional (default=``"paragraph"``)
         A comma-separated list of methods to use to generate negative sentences in the data.
 
@@ -48,11 +47,9 @@ class SquadSentenceSelectionReader(DatasetReader):
         We similarly use this for both the question and the sentences.  See :class:`TokenIndexer`.
     """
     def __init__(self,
-                 squad_filename: str,
                  negative_sentence_selection: str = "paragraph",
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: List[TokenIndexer] = None):
-        self._squad_filename = squad_filename
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
         self._tokenizer = tokenizer
         if token_indexers is None:
@@ -130,14 +127,14 @@ class SquadSentenceSelectionReader(DatasetReader):
                 sentence_choices.append(self._id_to_question[index])
         return sentence_choices, correct_choice
 
-    def read(self):
+    def read(self, file_path: str):
         # Import is here, since it isn't necessary by default.
         import nltk
 
         # Holds tuples of (question_text, answer_sentence_id)
         questions = []
         logger.info("Reading file at %s", self._squad_filename)
-        with open(self._squad_filename) as dataset_file:
+        with open(file_path) as dataset_file:
             dataset_json = json.load(dataset_file)
             dataset = dataset_json['data']
         logger.info("Reading the dataset")
@@ -231,13 +228,11 @@ class SquadSentenceSelectionReader(DatasetReader):
         tokenizer : ``Params``, optional
         token_indexers: ``List[Params]``, optional
         """
-        squad_filename = params.pop('squad_filename')
         negative_sentence_selection = params.pop('negative_sentence_selection', 'paragraph')
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = [TokenIndexer.from_params(p)
                           for p in params.pop('token_indexers', [Params({})])]
         params.assert_empty(cls.__name__)
-        return SquadSentenceSelectionReader(squad_filename=squad_filename,
-                                            negative_sentence_selection=negative_sentence_selection,
+        return SquadSentenceSelectionReader(negative_sentence_selection=negative_sentence_selection,
                                             tokenizer=tokenizer,
                                             token_indexers=token_indexers)
