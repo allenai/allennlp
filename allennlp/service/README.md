@@ -3,6 +3,14 @@
 This service uses Flask to serve AllenNLP models through a REST API.
 (Or it will once they're ready; right now it serves one-line placeholder models.)
 
+To start the server just run
+
+```
+FLASK_APP=allennlp/service/server.py flask run --port 5001
+```
+
+(or whatever port you want).
+
 Right now the API has two routes.
 
 `GET /models` returns a list of the available models.
