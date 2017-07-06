@@ -210,8 +210,8 @@ class NlpApi:
 
         See the class docstring for usage info, and a description of the parameters.
         """
-        return self._get_module_from_dict(self._token_embedders, name, fallback_behavior,
-                                          self._default_token_embedder, "token embedder")
+        return self._get_module_from_dict(self._token_embedders, self._default_token_embedder,
+                                          name, fallback_behavior, "token embedder")
 
     def get_context_encoder(self, name: str, fallback_behavior: str = "crash") -> Module:
         """
@@ -226,8 +226,8 @@ class NlpApi:
 
         See the class docstring for usage info, and a description of the parameters.
         """
-        return self._get_module_from_dict(self._context_encoders, name, fallback_behavior,
-                                          self._default_context_encoder, "context encoder")
+        return self._get_module_from_dict(self._context_encoders, self._default_context_encoder,
+                                          name, fallback_behavior, "context encoder")
 
     def get_sentence_encoder(self, name: str, fallback_behavior: str = "crash") -> Module:
         """
@@ -238,13 +238,13 @@ class NlpApi:
 
         See the class docstring for usage info, and a description of the parameters.
         """
-        return self._get_module_from_dict(self._sentence_encoders, name, fallback_behavior,
-                                          self._default_sentence_encoder, "token embedder")
+        return self._get_module_from_dict(self._sentence_encoders, self._default_sentence_encoder,
+                                          name, fallback_behavior, "token embedder")
 
     @staticmethod
     def _get_module_from_dict(module_dict: Dict[str, Module],
-                              name: str,
                               default_module_fn: Callable[[], Module],
+                              name: str,
                               fallback_behavior: str,
                               module_type: str) -> Module:
         if name in module_dict:
