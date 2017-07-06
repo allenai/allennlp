@@ -34,6 +34,19 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     def tearDown(self):
         shutil.rmtree(self.TEST_DIR)
 
+    def get_trainer_params(self, additional_arguments=None):
+        params = Params({})
+        params['save_models'] = False
+        params['model_serialization_prefix'] = self.TEST_DIR
+        params['train_files'] = [self.TRAIN_FILE]
+        params['validation_files'] = [self.VALIDATION_FILE]
+        params['num_epochs'] = 1
+
+        if additional_arguments:
+            for key, value in additional_arguments.items():
+                params[key] = deepcopy(value)
+        return params
+
     def get_model_params(self, additional_arguments=None):
         params = Params({})
         params['save_models'] = False
