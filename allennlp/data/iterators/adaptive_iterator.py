@@ -3,15 +3,36 @@ import random
 import logging
 
 from overrides import overrides
-from ..instance import Instance
-from ..dataset import Dataset
-from .bucket_iterator import BucketIterator
+
+from allennlp.data import Dataset, Instance
+from allennlp.data.iterators.bucket_iterator import BucketIterator
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class AdaptiveIterator(BucketIterator):
     """
+    An ``AdaptiveIterator`` is a ``DataIterator`` that varies the batch size to try to optimize
+    GPU memory usage.  Because padding lengths are done dynamically, we can have larger batches
+    when padding lengths are smaller, maximizing our usage of the GPU.  This is intended only for
+    use with very large models that only barely fit on the GPU - if your model is small enough that
+    you can easily fit a reasonable batch size on the GPU for your biggest instances, you probably
+    should just use a :class:`BucketIterator`.  This is also still largely experimental, because it
+    interacts with the learning rate in odd ways, and we haven't yet implemented good algorithms to
+    modify the learning rate based on batch size, etc.
+
+    In order for this to work correctly, you need to do two things:
+
+    1. Provide the ``padding_memory_scaling`` function, which gives a big-O bound on memory
+       usage given padding lengths. For instance, if you have two TextFields with
+       ``sentence_lengths`` which require padding, this might be simply |sentence1| * |sentence2|.
+    2. Tune the `adaptive_memory_usage_constant` parameter for your particular model and GPU.
+       While tuning this, set ``biggest_batch_first`` to ``True``, which will bypass the adaptive
+       grouping step and use the batching of a ``BucketIterator``, returning the biggest batch
+       first.  You want to find the largest batch size for which this largest batch actually fits
+       on the GPU without running out of memory.  TODO(mattg): make this happen automatically
+       somehow.
+
     Parameters
     ----------
     adaptive_memory_usage_constant : int, required.
@@ -24,7 +45,7 @@ class AdaptiveIterator(BucketIterator):
         parameter so that you get the right batch size for your biggest instances.  If you set the
         log level to ``DEBUG`` in ``scripts/run_model.py``, you can see the batch sizes that are
         computed.
-    padding_memory_scaling: Callable[Dict[str, int], float], required.
+    padding_memory_scaling: Callable[[Dict[str, int]], float], required.
         This function is used for computing the adaptive batch sizes.  We assume that memory usage is a
         function that looks like this: :math:`M = b * O(p) * c`, where :math:`M` is the memory
         usage, :math:`b` is the batch size, :math:`c` is some constant that depends on how much GPU
@@ -39,67 +60,43 @@ class AdaptiveIterator(BucketIterator):
         larger than this, even if you have enough memory to handle it on your GPU.  You might
         choose to do this to keep smaller batches because you like the noisier gradient estimates
         that come from smaller batches, for instance.
-    use_adaptive_grouping : bool, optional (default = True)
-        If ``use_adaptive_grouping`` is ``True``, we will vary the batch size to try to optimize
-        GPU memory usage.  Because padding lengths are done dynamically, we can have larger batches
-        when padding lengths are smaller, maximizing our usage of the GPU.  In order for this to work,
-         you need to do two things:
-        (1) Provide the ``padding_memory_scaling`` function, which gives a big-O bound on memory
-        usage given padding lengths. For instance, if you have two TextFields with ``sentence_lengths``
-        which require padding, this might be simply |sentence1| * |sentence2|.
-        (2) Tune the `adaptive_memory_usage_constant` parameter for your particular model and GPU.
-        The only reason this is a parameter is so that you can do this tuning easily by setting this to
-        False. If you are not using adaptive batch sizes, you should use a :class:`~BucketIterator`.
-    biggest_batch_first: bool, optional (default=False)
-        This is largely for testing, to see how large of a batch you can safely use with your GPU.
-        It's only meaningful if you're using dynamic padding - this will let you try out the
-        largest batch that you have in the data `first`, so that if you're going to run out of
-        memory, you know it early, instead of waiting through the whole batch to find out at the
-        end that you're going to crash.
-
-    See :class:`~BucketIterator` for a description of the other parameters.
+    biggest_batch_first : bool, optional (default=False)
+        See :class:`BucketIterator`.  If this is ``True``, we bypass the adaptive grouping step, so
+        you can tune the ``adaptive_memory_usage_constant``.
+    sorting_keys : List[Tuple[str, str]]
+        See :class:`BucketIterator`.
+    padding_noise : List[Tuple[str, str]]
+        See :class:`BucketIterator`.
     """
     def __init__(self,
                  adaptive_memory_usage_constant: float,
-                 padding_memory_scaling: Callable[Dict[str, int], float],
+                 padding_memory_scaling: Callable[[Dict[str, int]], float],
                  maximum_batch_size: int = 10000,
-                 use_adaptive_grouping: bool = True,
                  biggest_batch_first: bool = False,
                  sorting_keys: List[Tuple[str, str]] = None,
-                 padding_noise: float = 0.2,
-                 sort_every_epoch: bool = True):
-
-        self.padding_memory_scaling = padding_memory_scaling
-        self.maximum_batch_size = maximum_batch_size
-        self.adaptive_memory_usage_constant = adaptive_memory_usage_constant
-        self.biggest_batch_first = biggest_batch_first
-        self.use_adaptive_grouping = use_adaptive_grouping
-        super(AdaptiveIterator, self).__init__(sorting_keys, padding_noise, sort_every_epoch)
+                 padding_noise: float = 0.2):
+        self._padding_memory_scaling = padding_memory_scaling
+        self._maximum_batch_size = maximum_batch_size
+        self._adaptive_memory_usage_constant = adaptive_memory_usage_constant
+        super(AdaptiveIterator, self).__init__(sorting_keys, padding_noise, biggest_batch_first)
 
     @overrides
-    def _create_batches(self, dataset: Dataset) -> List[List[Instance]]:
+    def num_batches_per_epoch(self, dataset: Dataset) -> int:
+        return len(self._create_batches(dataset))
 
-        if self.use_adaptive_grouping:
-            if self.sorting_keys:
-                instances = self.sort_dataset_by_padding(dataset,
-                                                         self.sorting_keys,
-                                                         self.padding_noise)
-            else:
-                instances = dataset.instances
-            # Group the instances into different sized batches,
-            # depending on how padded they are.
-            grouped_instances = self.__adaptive_grouping(instances)
+    @overrides
+    def _create_batches(self, dataset: Dataset, shuffle: bool = True) -> List[List[Instance]]:
+        if self._biggest_batch_first:
+            return super(AdaptiveIterator, self)._create_batches(dataset)
+        if self._sorting_keys:
+            instances = self._sort_dataset_by_padding(dataset,
+                                                      self._sorting_keys,
+                                                      self._padding_noise)
         else:
-            grouped_instances = super(AdaptiveIterator, self)._create_batches(dataset)
-        if self.biggest_batch_first:
-            # We'll actually pop the last _two_ batches,
-            # because the last one might not be full.
-            last_batch = grouped_instances.pop()
-            penultimate_batch = grouped_instances.pop()
-            random.shuffle(grouped_instances)
-            grouped_instances.insert(0, penultimate_batch)
-            grouped_instances.insert(0, last_batch)
-        else:
+            instances = dataset.instances
+        # Group the instances into different sized batches, depending on how padded they are.
+        grouped_instances = self.__adaptive_grouping(instances)
+        if shuffle:
             random.shuffle(grouped_instances)
         return grouped_instances
 
@@ -113,9 +110,9 @@ class AdaptiveIterator(BucketIterator):
             instance_lengths = instance.get_padding_lengths()
             for key in instance_lengths:
                 current_lengths[key] = max(instance_lengths[key], current_lengths.get(key, -1))
-            big_o_memory_constant = self.padding_memory_scaling(current_lengths)
-            if (len(current_batch) * big_o_memory_constant > self.adaptive_memory_usage_constant
-                        or len(current_batch) > self.maximum_batch_size):
+            big_o_memory_constant = self._padding_memory_scaling(current_lengths)
+            if (len(current_batch) * big_o_memory_constant > self._adaptive_memory_usage_constant
+                        or len(current_batch) > self._maximum_batch_size):
                 current_batch.pop()
                 if logger.getEffectiveLevel() <= logging.DEBUG:
                     padding_lengths = Dataset(current_batch).get_padding_lengths()

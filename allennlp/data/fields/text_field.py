@@ -42,6 +42,7 @@ class TextField(SequenceField):
     def index(self, vocab: Vocabulary):
         token_arrays = []
         for indexer in self._token_indexers:
+            print("Indexer:", indexer)
             arrays = [indexer.token_to_indices(token, vocab) for token in self._tokens]
             token_arrays.append(arrays)
         self._indexed_tokens = token_arrays
