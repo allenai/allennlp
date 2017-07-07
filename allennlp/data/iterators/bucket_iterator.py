@@ -24,13 +24,14 @@ class BucketIterator(BasicIterator):
         which fields need what type of padding, and in what order.
 
         For example:
-        ``[("sentence1", "sentence_length"),
-           ("sentence2", "sentence_length"),
-           ("sentence1", "char_length")]``
+        ``[("sentence1", "num_tokens"),
+           ("sentence2", "num_tokens"),
+           ("sentence1", "num_token_characters")]``
 
-        would sort a dataset first by the "sentence_length" of the "sentence1" field, then by the
-        "sentence_length" of the "sentence2" field, and finally by the "char_length" of the
-        "sentence1" field.
+        would sort a dataset first by the "num_tokens" of the "sentence1" field, then by the
+        "num_tokens" of the "sentence2" field, and finally by the "num_token_characters" of the
+        "sentence1" field.  TODO(mattg): we should have some documentation somewhere that gives the
+        standard padding keys used by different fields.
 
         By default, the list of sorting keys is empty, meaning the dataset won't be sorted and
         batches will just be padded using the max lengths of all fields requiring padding
@@ -59,7 +60,7 @@ class BucketIterator(BasicIterator):
         super(BucketIterator, self).__init__(batch_size)
 
     @overrides
-    def _create_batches(self, dataset: Dataset, shuffle: bool = True) -> List[List[Instance]]:
+    def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
         if self._sorting_keys:
             dataset = self._sort_dataset_by_padding(dataset,
                                                     self._sorting_keys,
@@ -74,7 +75,7 @@ class BucketIterator(BasicIterator):
         if self._biggest_batch_first:
             grouped_instances.insert(0, penultimate_batch)
             grouped_instances.insert(0, last_batch)
-        return super(BucketIterator, self)._create_batches(dataset)
+        return grouped_instances
 
     @staticmethod
     def _sort_dataset_by_padding(dataset: Dataset,
@@ -88,9 +89,11 @@ class BucketIterator(BasicIterator):
         instances_with_lengths = []
         for instance in dataset.instances:
             padding_lengths = instance.get_padding_lengths()
+            print("Instance:", instance)
+            print("padding lengths:", padding_lengths)
             if padding_noise > 0.0:
                 noisy_lengths = {}
-                for field_name, field_lengths in padding_lengths:
+                for field_name, field_lengths in padding_lengths.items():
                     noisy_lengths[field_name] = add_noise_to_dict_values(field_lengths, padding_noise)
                 padding_lengths = noisy_lengths
             instance_with_lengths = [padding_lengths[field_name][padding_key]

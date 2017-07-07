@@ -7,10 +7,9 @@ from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.testing.test_case import AllenNlpTestCase
 
-
-class TestBasicIterator(AllenNlpTestCase):
+class IteratorTest(AllenNlpTestCase):
     def setUp(self):
-        super(TestBasicIterator, self).setUp()
+        super(IteratorTest, self).setUp()
         self.token_indexers = [SingleIdTokenIndexer()]
         self.vocab = Vocabulary()
         self.this_index = self.vocab.add_token_to_namespace('this')
@@ -39,18 +38,15 @@ class TestBasicIterator(AllenNlpTestCase):
         # First we need to remove padding tokens from the candidates.
         # pylint: disable=protected-access
         candidate_instances = [tuple(w for w in instance if w != 0) for instance in candidate_instances]
-        expected_instances = [tuple(instance.get_field("text")._indexed_tokens[0]) for instance in self.instances]
-        print(candidate_instances)
-        print(expected_instances)
+        expected_instances = [tuple(instance.fields()["text"]._indexed_tokens[0]) for instance in self.instances]
         assert set(candidate_instances) == set(expected_instances)
 
-    def test_num_batches_per_epoch_calculates_correctly(self):
-        iterator = BasicIterator(batch_size=2)
-        assert iterator.num_batches_per_epoch(self.dataset) == 3
 
-    def test_yield_one_pass_iterates_over_the_data_once(self):
+class TestBasicIterator(IteratorTest):
+    # We also test some of the stuff in `DataIterator` here.
+    def test_yield_one_epoch_iterates_over_the_data_once(self):
         iterator = BasicIterator(batch_size=2)
-        batches = list(iterator.yield_one_pass(self.dataset))
+        batches = list(iterator(self.dataset, num_epochs=1))
         # We just want to get the single-token array for the text field in the instance.
         instances = [tuple(instance) for batch in batches for instance in batch['text'][0]]
         assert len(instances) == 5
@@ -63,3 +59,11 @@ class TestBasicIterator(AllenNlpTestCase):
         instances = [tuple(instance) for batch in batches for instance in batch['text'][0]]
         assert len(instances) == 5 * 6
         self.assert_instances_are_correct(instances)
+
+    def test_create_batches_groups_correctly(self):
+        # pylint: disable=protected-access
+        iterator = BasicIterator(batch_size=2)
+        grouped_instances = iterator._create_batches(self.dataset, shuffle=False)
+        assert grouped_instances == [[self.instances[0], self.instances[1]],
+                                     [self.instances[2], self.instances[3]],
+                                     [self.instances[4]]]

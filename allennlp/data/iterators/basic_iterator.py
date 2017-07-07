@@ -10,9 +10,8 @@ from allennlp.data.iterators import DataIterator
 
 class BasicIterator(DataIterator):
     """
-    A very basic iterator, which takes a dataset, pads all of it's instances to
-    the maximum lengths of the relevant fields across the whole dataset and yields
-    fixed size batches.
+    A very basic iterator, which takes a dataset, pads all of it's instances to the maximum lengths
+    of the relevant fields across the whole dataset, and yields fixed size batches.
 
     Parameters
     ----------
@@ -23,25 +22,7 @@ class BasicIterator(DataIterator):
         self._batch_size = batch_size
 
     @overrides
-    def __call__(self, dataset: Dataset):
-        while True:
-            for batch in self.yield_one_pass(dataset):
-                yield batch
-
-    @overrides
-    def num_batches_per_epoch(self, dataset: Dataset) -> int:
-        extra_batch = 1 if len(dataset.instances) % self._batch_size > 0 else 0
-        return (len(dataset.instances) // self._batch_size) + extra_batch
-
-    @overrides
-    def yield_one_pass(self, dataset: Dataset):
-        grouped_instances = self._create_batches(dataset)
-        for group in grouped_instances:
-            batch = Dataset(group)
-            padding_lengths = batch.get_padding_lengths()
-            yield batch.as_arrays(padding_lengths, verbose=False)
-
-    def _create_batches(self, dataset: Dataset, shuffle: bool = True) -> List[List[Instance]]:
+    def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
         instances = dataset.instances
         if shuffle:
             random.shuffle(instances)

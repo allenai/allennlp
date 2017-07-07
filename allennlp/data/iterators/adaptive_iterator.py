@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Callable, Dict, List, Tuple
 import random
 import logging
@@ -45,9 +46,9 @@ class AdaptiveIterator(BucketIterator):
         parameter so that you get the right batch size for your biggest instances.  If you set the
         log level to ``DEBUG`` in ``scripts/run_model.py``, you can see the batch sizes that are
         computed.
-    padding_memory_scaling: Callable[[Dict[str, int]], float], required.
-        This function is used for computing the adaptive batch sizes.  We assume that memory usage is a
-        function that looks like this: :math:`M = b * O(p) * c`, where :math:`M` is the memory
+    padding_memory_scaling: Callable[[Dict[str, Dict[str, int]]], float], required.
+        This function is used for computing the adaptive batch sizes.  We assume that memory usage
+        is a function that looks like this: :math:`M = b * O(p) * c`, where :math:`M` is the memory
         usage, :math:`b` is the batch size, :math:`c` is some constant that depends on how much GPU
         memory you have and various model hyperparameters, and :math:`O(p)` is a function outlining
         how memory usage asymptotically varies with the padding lengths.  Our approach will be to
@@ -63,6 +64,9 @@ class AdaptiveIterator(BucketIterator):
     biggest_batch_first : bool, optional (default=False)
         See :class:`BucketIterator`.  If this is ``True``, we bypass the adaptive grouping step, so
         you can tune the ``adaptive_memory_usage_constant``.
+    batch_size : int, optional (default=None)
+        Only used when ``biggest_batch_first`` is ``True``, used for tuning
+        ``adaptive_memory_usage_constant``.
     sorting_keys : List[Tuple[str, str]]
         See :class:`BucketIterator`.
     padding_noise : List[Tuple[str, str]]
@@ -70,24 +74,24 @@ class AdaptiveIterator(BucketIterator):
     """
     def __init__(self,
                  adaptive_memory_usage_constant: float,
-                 padding_memory_scaling: Callable[[Dict[str, int]], float],
+                 padding_memory_scaling: Callable[[Dict[str, Dict[str, int]]], float],
                  maximum_batch_size: int = 10000,
                  biggest_batch_first: bool = False,
+                 batch_size: int = None,
                  sorting_keys: List[Tuple[str, str]] = None,
                  padding_noise: float = 0.2):
         self._padding_memory_scaling = padding_memory_scaling
         self._maximum_batch_size = maximum_batch_size
         self._adaptive_memory_usage_constant = adaptive_memory_usage_constant
-        super(AdaptiveIterator, self).__init__(sorting_keys, padding_noise, biggest_batch_first)
+        super(AdaptiveIterator, self).__init__(sorting_keys=sorting_keys,
+                                               padding_noise=padding_noise,
+                                               biggest_batch_first=biggest_batch_first,
+                                               batch_size=batch_size)
 
     @overrides
-    def num_batches_per_epoch(self, dataset: Dataset) -> int:
-        return len(self._create_batches(dataset))
-
-    @overrides
-    def _create_batches(self, dataset: Dataset, shuffle: bool = True) -> List[List[Instance]]:
+    def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
         if self._biggest_batch_first:
-            return super(AdaptiveIterator, self)._create_batches(dataset)
+            return super(AdaptiveIterator, self)._create_batches(dataset, shuffle)
         if self._sorting_keys:
             instances = self._sort_dataset_by_padding(dataset,
                                                       self._sorting_keys,
@@ -95,21 +99,23 @@ class AdaptiveIterator(BucketIterator):
         else:
             instances = dataset.instances
         # Group the instances into different sized batches, depending on how padded they are.
-        grouped_instances = self.__adaptive_grouping(instances)
+        grouped_instances = self._adaptive_grouping(instances)
         if shuffle:
             random.shuffle(grouped_instances)
         return grouped_instances
 
-    def __adaptive_grouping(self, dataset: Dataset):
+    def _adaptive_grouping(self, dataset: Dataset):
         batches = []
         current_batch = []
-        current_lengths = {}
+        current_lengths = defaultdict(dict)
         logger.debug("Creating adaptive groups")
         for instance in dataset.instances:
             current_batch.append(instance)
             instance_lengths = instance.get_padding_lengths()
-            for key in instance_lengths:
-                current_lengths[key] = max(instance_lengths[key], current_lengths.get(key, -1))
+            for field_name in instance_lengths:
+                for key in instance_lengths[field_name]:
+                    current_lengths[field_name][key] = max(instance_lengths[field_name][key],
+                                                           current_lengths[field_name].get(key, -1))
             big_o_memory_constant = self._padding_memory_scaling(current_lengths)
             if (len(current_batch) * big_o_memory_constant > self._adaptive_memory_usage_constant
                         or len(current_batch) > self._maximum_batch_size):
