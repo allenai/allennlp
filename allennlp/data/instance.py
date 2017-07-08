@@ -60,9 +60,3 @@ class Instance:
 
     def fields(self):
         return self._fields
-
-    def get_field(self, name: str):
-        """
-        Returns the field with name ``name``.
-        """
-        return self._fields[name]
