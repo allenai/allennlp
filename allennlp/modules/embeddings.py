@@ -148,7 +148,7 @@ def get_pretrained_embedding_layer(embeddings_filename: str,
     # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
     # then filling in the word vectors we just read.
     logger.info("Initializing pre-trained embedding layer")
-    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).uniform_(-0.05, 0.05)
+    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(0, 1)
 
     for i in range(0, vocab_size):
         word = vocab.get_token_from_index(i, namespace)
