@@ -66,10 +66,10 @@ class TextField(SequenceField):
                 indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
             lengths.append(indexer_lengths)
         padding_lengths = {'num_tokens': len(self._indexed_tokens[0])}
-        # Get all the namespaces which have been used for padding.
-        all_namespaces = set().union(*[d.keys() for d in lengths])
-        for namespace in all_namespaces:
-            padding_lengths[namespace] = max(x[namespace] if namespace in x else 0 for x in lengths)
+        # Get all the keys which have been used for padding.
+        padding_keys = set().union(*[d.keys() for d in lengths])
+        for padding_key in padding_keys:
+            padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
         return padding_lengths
 
     @overrides
