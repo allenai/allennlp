@@ -9,6 +9,7 @@ ENV PYTHONHASHSEED 2157
 
 COPY . .
 
-RUN /bin/bash -c "source activate runenv && scripts/install_requirements.sh"
+RUN /bin/bash -c 'source activate runenv && scripts/install_requirements.sh &&\
+ pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.1.11.post5-cp35-cp35m-linux_x86_64.whl'
 
 CMD ["/bin/sh", "-c]
