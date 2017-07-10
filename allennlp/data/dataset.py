@@ -147,4 +147,5 @@ class Dataset:
                 field_arrays[field_name] = [numpy.asarray(x) for x in zip(*field_array_list)]
             else:
                 field_arrays[field_name] = numpy.asarray(field_array_list)
-        return field_arrays
+        # Unpack into a standard dict to remove defaultdict functionality.
+        return {**field_arrays}
