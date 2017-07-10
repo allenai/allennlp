@@ -15,7 +15,7 @@ class SimpleTaggerTest(AllenNlpTestCase):
 
     def setUp(self):
         super(SimpleTaggerTest, self).setUp()
-        self.write_sequence_tagging_files()
+        self.write_sequence_tagging_data()
 
         dataset = SequenceTaggingDatasetReader(self.TRAIN_FILE).read()
         vocab = Vocabulary.from_dataset(dataset)

@@ -7,7 +7,7 @@ class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
 
     def setUp(self):
         super(TestSequenceTaggingDatasetReader, self).setUp()
-        self.write_sequence_tagging_files()
+        self.write_sequence_tagging_data()
 
     def test_read_from_file(self):
 
