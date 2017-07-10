@@ -1,16 +1,15 @@
-from typing import Dict
+from typing import Dict, Any
 
-import numpy
 import torch
 from torch.nn.modules.linear import Linear
 from torch.nn.modules import LSTM
 import torch.nn.functional as F
 
-from ..training.model import Model
-from ..modules.embeddings import Embedding
-from ..modules.time_distributed import TimeDistributed
-from ..data.vocabulary import Vocabulary
-from ..data.fields.text_field import TextField
+from allennlp.training.model import Model
+from allennlp.modules.embeddings import Embedding
+from allennlp.modules.time_distributed import TimeDistributed
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.fields.text_field import TextField
 
 
 class SimpleTagger(Model):
@@ -55,14 +54,14 @@ class SimpleTagger(Model):
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self,  # pylint: disable=arguments-differ
-                sequence_tokens: torch.IntTensor,
-                sequence_tags: torch.IntTensor = None):
+                tokens: torch.LongTensor,
+                tags: torch.LongTensor = None):
         """
         Parameters
         ----------
-        sequence_tokens : torch.LongTensor, required
+        tokens : torch.LongTensor, required
             A torch tensor representing the indices of the
-        sequence_tags : torch.LongTensor, optional (default = None)
+        tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of gold labels.
             These can either be integer indexes or one hot arrays of
             labels, so of shape (batch_size, sequence_length) or of
@@ -78,9 +77,9 @@ class SimpleTagger(Model):
             A scalar loss to be optimised.
 
         """
-        batch_size = sequence_tokens.size()[0]
+        batch_size = tokens.size()[0]
         # TODO(Mark): Change to use NlpApi.
-        embedded_text_input = self.embedding(sequence_tokens)
+        embedded_text_input = self.embedding(tokens)
         encoded_text, _ = self.stacked_encoders(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)
@@ -89,16 +88,16 @@ class SimpleTagger(Model):
 
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
-        if sequence_tags:
-            # NLL criterion takes integer labels, not one hot.
-            if sequence_tags.dim() == 3:
-                _, sequence_tags = sequence_tags.max(-1)
-            loss = self.sequence_loss(reshaped_log_probs, sequence_tags.view(-1))
+        if tags:
+            # Negative log likelihood criterion takes integer labels, not one hot.
+            if tags.dim() == 3:
+                _, tags = tags.max(-1)
+            loss = self.sequence_loss(reshaped_log_probs, tags.view(-1))
             output_dict["loss"] = loss
 
         return output_dict
 
-    def tag(self, text_field: TextField) -> Dict[str, numpy.array]:
+    def tag(self, text_field: TextField) -> Dict[str, Any]:
         """
         Perform inference on a TextField to produce predicted tags and class probabilities
         over the possible tags.
@@ -126,7 +125,7 @@ class SimpleTagger(Model):
         # Add a batch dimension by unsqueezing, because pytorch
         # doesn't support inputs without one.
         array_input = torch.autograd.Variable(torch.LongTensor(array_input[0])).unsqueeze(0)
-        output_dict = self.forward(sequence_tokens=array_input)
+        output_dict = self.forward(tokens=array_input)
 
         # Remove batch dimension, as we only had one input.
         predictions = output_dict["class_probabilities"].data.squeeze(0)

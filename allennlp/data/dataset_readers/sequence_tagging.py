@@ -2,12 +2,11 @@ from typing import List
 
 from overrides import overrides
 
-from . import DatasetReader
-from .. import Dataset
-from .. import Instance
-from ...common import Params
-from ..fields import TextField, TagField
-from ..token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data import Dataset, Instance
+from allennlp.common import Params
+from allennlp.data.fields import TextField, TagField
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 
 
 class SequenceTaggingDatasetReader(DatasetReader):
@@ -23,9 +22,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
     filename : ``str``
     token_indexers : ``List[TokenIndexer]``, optional (default=``[SingleIdTokenIndexer()]``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
-        Note that the `output` representation will always be single token IDs - if you've specified
-        a ``SingleIdTokenIndexer`` here, we use the first one you specify.  Otherwise, we create
-        one with default parameters.
+        Note that the `output` tags will always correspond to single token IDs based on how they
+        are pre-tokenised in the data file.
     """
     def __init__(self,
                  filename: str,
@@ -45,8 +43,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
                 sequence = TextField(tokens, self._token_indexers)
                 sequence_tags = TagField(tags, sequence)
-                instances.append(Instance({'sequence_tokens': sequence,
-                                           'sequence_tags': sequence_tags}))
+                instances.append(Instance({'tokens': sequence,
+                                           'tags': sequence_tags}))
         return Dataset(instances)
 
     @classmethod
@@ -55,7 +53,6 @@ class SequenceTaggingDatasetReader(DatasetReader):
         Parameters
         ----------
         filename : ``str``
-        tokenizer : ``Params``, optional
         token_indexers: ``List[Params]``, optional
         """
         filename = params.pop('filename')
