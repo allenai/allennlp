@@ -1,5 +1,6 @@
-from typing import List
+from typing import Dict
 
+import numpy
 import torch
 from torch.nn.modules.linear import Linear
 from torch.nn.modules import LSTM
@@ -53,7 +54,7 @@ class SimpleTagger(Model):
                                                            self.num_classes))
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
-    def forward(self,
+    def forward(self,  # pylint: disable=arguments-differ
                 sequence_tokens: torch.IntTensor,
                 sequence_tags: torch.IntTensor = None):
         """
@@ -80,7 +81,7 @@ class SimpleTagger(Model):
         batch_size = sequence_tokens.size()[0]
         # TODO(Mark): Change to use NlpApi.
         embedded_text_input = self.embedding(sequence_tokens)
-        encoded_text, lstm_states = self.stacked_encoders(embedded_text_input)
+        encoded_text, _ = self.stacked_encoders(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)
         reshaped_log_probs = logits.view(-1, self.num_classes)
@@ -97,7 +98,7 @@ class SimpleTagger(Model):
 
         return output_dict
 
-    def tag(self, text_field: TextField):
+    def tag(self, text_field: TextField) -> Dict[str, numpy.array]:
         """
         Perform inference on a TextField to produce predicted tags and class probabilities
         over the possible tags.

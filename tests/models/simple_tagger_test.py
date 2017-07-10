@@ -33,8 +33,8 @@ class SimpleTaggerTest(AllenNlpTestCase):
         # TODO(Mark): clean this up once the Trainer is finalised.
         sequence = training_arrays["sequence_tokens"][0]
         tags = training_arrays["sequence_tags"]
-        training_arrays = {"sequence_tokens": Variable(torch.from_numpy(sequence)),
-                           "sequence_tags": Variable(torch.from_numpy(tags))}
+        training_arrays = {"sequence_tokens": Variable(torch.from_numpy(sequence)),  # pylint: disable=no-member
+                           "sequence_tags": Variable(torch.from_numpy(tags))}  # pylint: disable=no-member
         _ = self.model.forward(**training_arrays)
 
     def test_tag_returns_distributions_per_token(self):
