@@ -15,7 +15,18 @@ from ..data.fields.text_field import TextField
 class SimpleTagger(Model):
     """
     This ``SimpleTagger`` simply encodes a sequence of text with some number of stacked
-    ``seq2seq_encoders``, then predicts a tag at each index.
+    ``seq2seq_encoders``, then predicts a tag for each token in the sequence.
+
+    Parameters
+    ----------
+    vocabulary : Vocabulary, required
+        A Vocabulary, required in order to compute sizes for input/output projections.
+    embedding_dim : int, optional (default = 100)
+        The dimensionality of the embedding space used to embed the input sequence.
+    hidden_size : int, optional (default = 200)
+        The dimensionality of the hidden state of the LSTM encoder.
+    num_layers : int, optional (default = 2)
+        The number of stacked LSTM encoders to use.
     """
 
     def __init__(self,
@@ -29,16 +40,15 @@ class SimpleTagger(Model):
         self.embedding_dim = embedding_dim
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.num_classes = self.vocabulary.get_vocab_size("tags")
 
         self.embedding = Embedding(self.vocabulary.get_vocab_size("tokens"),
                                    self.embedding_dim)
-
+        # TODO(Mark): support masking once utility functions are merged.
         self.stacked_encoders = LSTM(self.embedding_dim,
                                      self.hidden_size,
                                      self.num_layers,
                                      batch_first=True)
-
-        self.num_classes = self.vocabulary.get_vocab_size("tags")
         self.tag_projection_layer = TimeDistributed(Linear(self.hidden_size,
                                                            self.num_classes))
         self.sequence_loss = torch.nn.CrossEntropyLoss()
@@ -49,8 +59,9 @@ class SimpleTagger(Model):
         """
         Parameters
         ----------
-        sequence_tokens :
-        sequence_tags : torch.IntTensor, optional (default = None)
+        sequence_tokens : torch.LongTensor, required
+            A torch tensor representing the indices of the
+        sequence_tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of gold labels.
             These can either be integer indexes or one hot arrays of
             labels, so of shape (batch_size, sequence_length) or of
@@ -67,11 +78,11 @@ class SimpleTagger(Model):
 
         """
         batch_size = sequence_tokens.size()[0]
+        # TODO(Mark): Change to use NlpApi.
         embedded_text_input = self.embedding(sequence_tokens)
         encoded_text, lstm_states = self.stacked_encoders(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)
-
         reshaped_log_probs = logits.view(-1, self.num_classes)
         class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, -1, self.num_classes])
 
@@ -107,7 +118,6 @@ class SimpleTagger(Model):
             An array of shape (text_input_length, num_classes), where each row is a
             distribution over classes for a given token in the sentence.
         """
-
         text_field.index(self.vocabulary)
         padding_lengths = text_field.get_padding_lengths()
         array_input = text_field.pad(padding_lengths)
@@ -119,8 +129,8 @@ class SimpleTagger(Model):
 
         # Remove batch dimension, as we only had one input.
         predictions = output_dict["class_probabilities"].data.squeeze(0)
-        _, indices = predictions.max(-1)
-
-        tags = [self.vocabulary.get_token_from_index(x, namespace="tags") for x in indices.squeeze(1).numpy()]
+        _, argmax = predictions.max(-1)
+        indices = argmax.squeeze(1).numpy()
+        tags = [self.vocabulary.get_token_from_index(x, namespace="tags") for x in indices]
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}
