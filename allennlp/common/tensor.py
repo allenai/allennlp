@@ -3,6 +3,21 @@ import torch
 
 
 def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
+    """
+    Compute sequence lengths for each batch element in a tensor using a
+    binary mask.
+
+    Parameters
+    ----------
+    mask : torch.ByteTensor, required
+        A 2D binary mask of shape (batch_size, sequence_length) to
+        calculate the per-batch sequence lengths from.
+
+    Returns
+    -------
+    A torch.FloatTensor of shape (batch_size,) representing the lengths
+    of the sequences in the batch.
+    """
 
     # Flip mask to make padded elements equal to one.
     inverse_mask = mask == 0
@@ -14,14 +29,7 @@ def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
     return length_indices.squeeze().float()
 
 
-def get_lengths_from_sequence_tensor(tensor: torch.FloatTensor):
-
-    binary_mask = (tensor != 0.0).sum(-1) == tensor.size(-1)
-
-    return get_lengths_from_binary_sequence_mask(binary_mask)
-
-
-def sort_by_length(tensor, sequence_lengths):
+def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.LongTensor):
 
     seq_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
     sorted_tensor = tensor[permutation_index]
