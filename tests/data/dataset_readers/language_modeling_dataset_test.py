@@ -4,7 +4,6 @@ from allennlp.testing.test_case import AllenNlpTestCase
 
 
 class TestLanguageModellingDatasetReader(AllenNlpTestCase):
-
     def setUp(self):
         super(TestLanguageModellingDatasetReader, self).setUp()
         self.write_sentence_data()
