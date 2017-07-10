@@ -37,7 +37,7 @@ source activate testenv
 
 # Install requirements via pip and download data inside our conda environment.
 bash scripts/install_requirements.sh
-pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.1.11.post5-cp35-cp35m-linux_x86_64.whl
+pip install --no-cache-dir -q pip install http://download.pytorch.org/whl/cu80/torch-0.1.12.post2-cp35-cp35m-linux_x86_64.whl
 
 # List the packages to get their versions for debugging
 pip list
