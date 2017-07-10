@@ -34,12 +34,11 @@ class NlpApi:
        you, so it is easy to try new representations later.
     2. ``get_seq2seq_encoder()``.  This method returns a ``Module`` that transforms sequences of
        vectors into new sequences of vectors, encoding context from other elements in the sequence.
-       We are `encoding` a sequence (hence "encoder"), and we are `returning` a sequence (hence
-       "to_sequence").  These ``Modules`` take as input a ``Tensor`` with shape ``(batch_size,
-       num_tokens, embedding_dim)``, and return a ``Tensor`` with the same shape.  These are
-       typically recurrent layers that return a vector for every input vector they receive.  Having
-       this as an abstraction lets you easily switch between LSTMs, bi-LSTMs, GRUs, or some new
-       recurrent layer that someone comes up with.
+       These ``Modules`` take as input a ``Tensor`` with shape ``(batch_size, num_tokens,
+       embedding_dim)``, and return a ``Tensor`` with the same shape.  These are typically
+       recurrent layers that return a vector for every input vector they receive.  Having this as
+       an abstraction lets you easily switch between LSTMs, bi-LSTMs, GRUs, or some new recurrent
+       layer that someone comes up with.
     3. ``get_seq2vec_encoder()``.  This method returns a ``Module`` that transforms sequences of
        vectors into a single vector.  The difference between this method and
        :func:`get_seq2seq_encoder` is the return value: both ``get_seq2vec_encoder`` and
@@ -48,14 +47,14 @@ class NlpApi:
        here are CNNs, tree-structured recursive networks, RNNs where you just take the last hidden
        state or do some pooling operation over the sequence, etc.
 
-    All of these functions behave similarly, and they function largely as python dictionaries.  You
-    give the function a name, and the function returns a ``Module`` or ``None``.  The name should
-    correspond to a location in your model, such as "passage_tokens", "question_encoder",
-    "modeling_layer_2", etc.  Each time you call these APIs in different parts of your model code,
-    you should typically pass a unique name to the function.  When constructing this ``NlpApi``
-    object, you map those names to concrete ``Modules`` that will be used to perform the function.
-    In your model, you should check whether the object you got was ``None``, and fall back to some
-    other option if it was.
+    All of these functions behave similarly, and they function largely as python dictionaries, just
+    doing some simple redirection.  You give the function a name, and the function returns a
+    ``Module`` or ``None``.  The name should correspond to a location in your model, such as
+    "passage_tokens", "question_encoder", "modeling_layer_2", etc.  Each time you call these APIs
+    in different parts of your model code, you should typically pass a unique name to the function.
+    When constructing this ``NlpApi`` object, you map those names to concrete ``Modules`` that will
+    be used to perform the function.  In your model, you should check whether the object you got
+    was ``None``, and fall back to some other option if it was.
 
     For example, if we're writing model code for the Bidirectional Attention Flow model (BiDAF) for
     reading comprehension on the Stanford Question Answering Dataset (SQuAD), we might have code
@@ -122,8 +121,8 @@ class NlpApi:
         seq2seq_encoder_fn = lambda: BiGru(hidden_dim=512)
 
     Now, without changing the model code at all, I am experimenting with my fancy new transfer
-    learning algorithm, and trying out a different encoder for the initial encoding of the question
-    and passage, and just tweaking the RNN in the modeling layer a bit (GRUs instead of LSTMs, a
+    learning algorithm, trying out a different encoder for the initial encoding of the question and
+    passage, and just tweaking the RNN in the modeling layer a bit (GRUs instead of LSTMs, a
     little wider).
 
     If I wanted the model to allow for even more flexibility, I could use the API a little bit
