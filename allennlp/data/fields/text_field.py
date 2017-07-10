@@ -90,7 +90,7 @@ class TextField(SequenceField):
         # pylint: disable=protected-access
         text_field = TextField([], self._token_indexers)
         # This needs to be a list of empty lists for each token_indexer,
-        # for padding reasons iListField.
+        # for padding reasons in ListField.
         text_field._indexed_tokens = [[] for _ in range(len(self._token_indexers))]
         return text_field
 
