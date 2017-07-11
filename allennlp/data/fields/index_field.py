@@ -45,6 +45,9 @@ class IndexField(Field):
     def empty_field(self):
         return IndexField(0, None)
 
+    def sequence_field(self):
+        return self._sequence_field
+
     def sequence_index(self):
         # This method can't be called index,
         # as that name is already reserved.

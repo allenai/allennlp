@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AllenNLP</title>
+</head>
+<body>
+    <form>
+        <div>
+            <select name="model-picker" id="model-picker">
+            </select>
+        </div>
+        <div>
+            <textarea name="model-input" id="model-input"></textarea>
+        </div>
+        <div>
+            <button type="button" onclick="runModel()">run model</button>
+        </div>
+    </form>
+    <div id="output">
+    </div>
+
+    <script>
+
+/* Populate the dropdown based on available models. */
+(function() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'models');
+    xhr.onload = function() {
+        if (xhr.status == 200) {
+            var models = JSON.parse(xhr.responseText)['models'];
+            models.forEach(function(modelName) {
+                var option = document.createElement("option");
+                option.value = modelName;
+                option.innerText = modelName;
+                document.getElementById("model-picker").appendChild(option);
+            });
+        }
+    }
+    xhr.send();
+})();
+
+/* Run the selected model and put the results in the `output` div. */
+function runModel() {
+    var modelName = document.getElementById("model-picker").value;
+    var input = document.getElementById("model-input").value;
+
+    var xhr = new XMLHttpRequest();
+
+    xhr.open('POST', 'predict/' + modelName);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            document.getElementById("output").innerText = xhr.responseText;
+        }
+    }
+    xhr.send(JSON.stringify({ 'input': input }));
+}
+
+    </script>
+
+</body>
+</html>

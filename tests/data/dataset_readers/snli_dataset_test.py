@@ -4,10 +4,9 @@ from allennlp.testing.test_case import AllenNlpTestCase
 
 
 class TestSnliDataset(AllenNlpTestCase):
-
     def setUp(self):
         super(TestSnliDataset, self).setUp()
-        self.write_original_snli_data()
+        self.write_snli_data()
 
     def test_read_from_file(self):
 
