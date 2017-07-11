@@ -1,4 +1,5 @@
 from typing import List
+from collections import OrderedDict
 import re
 
 import torch
@@ -27,9 +28,7 @@ class RegularizerApplicator:
     a module if its regex matches the module class name.
     """
     def __init__(self, regularizers: List[Regularizer]):
-
         self._regularizers = regularizers
-
         self.accumulator = 0.
 
     def _regularize_module(self,
@@ -77,3 +76,8 @@ class L2Regularizer(Regularizer):
             for parameter in module.parameters():
                 value += torch.sum(torch.pow(parameter, 2))
         return self.alpha * value
+
+
+regularizers = OrderedDict()
+regularizers["l1"] = L1Regularizer
+regularizers["l2"] = L2Regularizer

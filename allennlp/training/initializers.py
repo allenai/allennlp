@@ -1,10 +1,11 @@
 from typing import List
+from collections import OrderedDict
 import re
 
 import torch.nn.init
 
-from ..common.checks import ConfigurationError
-
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
 
 class Initializer:
     """
@@ -124,3 +125,13 @@ class NormalSparse(Initializer):
         if self.module_name_matches_regex(module):
             for parameter in module.paramters():
                 torch.nn.init.sparse(parameter, sparsity=self.sparsity, std=self.std)
+
+
+initializers = OrderedDict()
+initializers["normal"] = Normal
+initializers["uniform"] = Uniform
+initializers["constant"] = Constant
+initializers["xavier_uniform"] = XavierUniform
+initializers["xavier_normal"] = XavierNormal
+initializers["orthogonal"] = Orthogonal
+initializers["normal_sparse"] = NormalSparse
