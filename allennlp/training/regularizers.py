@@ -27,8 +27,8 @@ class RegularizerApplicator:
     and it's children. A regularizer will only be applied to
     a module if its regex matches the module class name.
     """
-    def __init__(self, regularizers: List[Regularizer]):
-        self._regularizers = regularizers
+    def __init__(self, all_regularizers: List[Regularizer]):
+        self._regularizers = all_regularizers
         self.accumulator = 0.
 
     def _regularize_module(self,
@@ -36,8 +36,8 @@ class RegularizerApplicator:
                            regularizer: Regularizer):
 
         for child in module.children():
-                self.accumulator += regularizer(child)
-                self._regularize_module(child, regularizer)
+            self.accumulator += regularizer(child)
+            self._regularize_module(child, regularizer)
 
     def __call__(self, module: torch.nn.Module) -> float:
         self.accumulator = 0.
@@ -78,6 +78,6 @@ class L2Regularizer(Regularizer):
         return self.alpha * value
 
 
-regularizers = OrderedDict()
+regularizers = OrderedDict()  # pylint: disable=invalid-name
 regularizers["l1"] = L1Regularizer
 regularizers["l2"] = L2Regularizer

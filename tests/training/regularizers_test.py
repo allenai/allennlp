@@ -1,5 +1,4 @@
-
-
+# pylint: disable=no-self-use
 import torch
 
 from allennlp.training.regularizers import L1Regularizer, L2Regularizer
@@ -11,8 +10,8 @@ class TestRegularizers(AllenNlpTestCase):
 
     def test_l1_regularization(self):
         model = torch.nn.Sequential(
-            torch.nn.Linear(5, 10),
-            torch.nn.Linear(10, 5)
+                torch.nn.Linear(5, 10),
+                torch.nn.Linear(10, 5)
         )
         initializer = Constant(-1)
         initializer(model)
@@ -22,8 +21,8 @@ class TestRegularizers(AllenNlpTestCase):
 
     def test_l2_regularization(self):
         model = torch.nn.Sequential(
-            torch.nn.Linear(5, 10),
-            torch.nn.Linear(10, 5)
+                torch.nn.Linear(5, 10),
+                torch.nn.Linear(10, 5)
         )
         initializer = Constant(0.5)
         initializer(model)

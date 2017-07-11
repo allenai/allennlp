@@ -1,4 +1,4 @@
-
+# pylint: disable=no-self-use, invalid-name
 import torch
 import pytest
 from allennlp.training.initializers import Constant, InitializerApplicator
@@ -10,8 +10,8 @@ class TestInitializers(AllenNlpTestCase):
 
     def test_all_parameters_are_initialized(self):
         model = torch.nn.Sequential(
-            torch.nn.Linear(5, 10),
-            torch.nn.Linear(10, 5)
+                torch.nn.Linear(5, 10),
+                torch.nn.Linear(10, 5)
         )
         initializer = InitializerApplicator([Constant(5)])
         initializer(model)
@@ -24,9 +24,9 @@ class TestInitializers(AllenNlpTestCase):
 
     def test_regex_matches_are_initialized_correctly(self):
         model = torch.nn.Sequential(
-            torch.nn.Linear(5, 10),
-            torch.nn.Linear(10, 5),
-            torch.nn.Conv1d(5, 5, 5)
+                torch.nn.Linear(5, 10),
+                torch.nn.Linear(10, 5),
+                torch.nn.Conv1d(5, 5, 5)
         )
         initializers = InitializerApplicator([Constant(10), Constant(5, "Conv")])
         initializers(model)

@@ -5,7 +5,7 @@ import re
 import torch.nn.init
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params
+
 
 class Initializer:
     """
@@ -28,10 +28,10 @@ class InitializerApplicator:
     Applies a list of initializers to a model or Module recursively.
     All parameters in the Module will be initialized.
     """
-    def __init__(self, initializers: List[Initializer]):
-        self._initializers = initializers
+    def __init__(self, all_initializers: List[Initializer]):
+        self._initializers = all_initializers
 
-        if all([x.module_regex == '' for x in initializers]) and len(self._initializers) > 1:
+        if all([x.module_regex == '' for x in all_initializers]) and len(self._initializers) > 1:
             raise ConfigurationError("No module_regex specified with multiple initializers causes"
                                      "all parameters to be set using the last initializer.")
 
@@ -58,9 +58,10 @@ class Normal(Initializer):
 
 
 class Uniform(Initializer):
+    # Use these poor variable names here to match the pytorch functional interface.
     def __init__(self, a: float = 0.0, b: float = 1.0, module_regex: str = ''):
-        self.a = a
-        self.b = b
+        self.a = a  # pylint: disable=invalid-name
+        self.b = b  # pylint: disable=invalid-name
         super(Uniform, self).__init__(module_regex)
 
     def __call__(self, module: torch.nn.Module):
@@ -127,7 +128,7 @@ class NormalSparse(Initializer):
                 torch.nn.init.sparse(parameter, sparsity=self.sparsity, std=self.std)
 
 
-initializers = OrderedDict()
+initializers = OrderedDict()  # pylint: disable=invalid-name
 initializers["normal"] = Normal
 initializers["uniform"] = Uniform
 initializers["constant"] = Constant
