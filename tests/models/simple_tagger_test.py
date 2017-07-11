@@ -17,7 +17,7 @@ class SimpleTaggerTest(AllenNlpTestCase):
         super(SimpleTaggerTest, self).setUp()
         self.write_sequence_tagging_data()
 
-        dataset = SequenceTaggingDatasetReader(self.TRAIN_FILE).read()
+        dataset = SequenceTaggingDatasetReader().read(self.TRAIN_FILE)
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)
@@ -26,6 +26,12 @@ class SimpleTaggerTest(AllenNlpTestCase):
         self.model = SimpleTagger(embedding_dim=5,
                                   hidden_size=7,
                                   vocabulary=self.vocab)
+
+    def test_simple_tagger_trains_and_loads(self):
+
+        dataset_reader = SequenceTaggingDatasetReader()
+        self.ensure_model_trains_and_loads(model=self.model,
+                                           dataset_reader=dataset_reader)
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = self.dataset.as_arrays()

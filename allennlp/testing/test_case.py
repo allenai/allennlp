@@ -13,6 +13,7 @@ from numpy.testing import assert_allclose
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.training.trainer import Trainer
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.iterators import BasicIterator, DataIterator
 from allennlp.training.model import Model
 from allennlp.data.dataset_readers import DatasetReader
@@ -20,6 +21,7 @@ from allennlp.data.dataset_readers import DatasetReader
 
 class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     TEST_DIR = './TMP_TEST/'
+    MODEL_FILE = TEST_DIR + "model.th"
     TRAIN_FILE = TEST_DIR + 'train_file'
     VALIDATION_FILE = TEST_DIR + 'validation_file'
     TEST_FILE = TEST_DIR + 'test_file'
@@ -41,38 +43,47 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     def get_trainer_params(self, additional_arguments=None):
         params = Params({})
         params['save_models'] = False
-        params['model_serialization_prefix'] = self.TEST_DIR
-
+        params['model_serialization_prefix'] = self.MODEL_FILE
         params['num_epochs'] = 1
 
         if additional_arguments:
             for key, value in additional_arguments.items():
-                params[key] = deepcopy(value)
+                params[key] = value
         return params
 
     def ensure_model_trains_and_loads(self,
                                       model: Model,
                                       dataset_reader: DatasetReader,
-                                      additional_trainer_args: Params,
+                                      additional_trainer_args: Params = None,
                                       iterator: DataIterator = None):
         # Our loading tests work better if you're not using complex iterators, so by
         # default we use the basic one unless you pass an iterator into this function.
         # If you _do_ use them, we'll skip some of the stuff below that isn't compatible.
+        additional_trainer_args = additional_trainer_args or {}
 
+        dataset = dataset_reader.read(self.TRAIN_FILE)
         additional_trainer_args["save_models"] = True
+        additional_trainer_args["dataset"] = dataset
+        additional_trainer_args["model"] = model
         trainer = Trainer.from_params(self.get_trainer_params(additional_trainer_args))
 
         # Load the model that we serialized.
+
+        trainer.save_model(self.MODEL_FILE)
         loaded_model = model
         loaded_model.load_state_dict(torch.load(trainer.model_serialization_prefix))
 
-        dataset = dataset_reader.read(self.VALIDATION_FILE)
+        dataset = dataset_reader.read(self.TRAIN_FILE)
+        vocab = Vocabulary.from_dataset(dataset)
+        dataset.index_instances(vocab)
         # Our loading tests work better if you're not using complex iterators, so by
         # default we use the basic one unless you pass an iterator into this function.
         # If you _do_ use them, we'll skip some of the stuff below that isn't compatible.
         data_iterator = iterator or BasicIterator()
         single_batch = next(data_iterator(dataset))
 
+
+        print(single_batch)
         model_predictions = model.forward(**single_batch)
         loaded_model_predictions = loaded_model.forward(**single_batch)
 
