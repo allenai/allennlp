@@ -6,7 +6,8 @@ from ..data.dataset import Dataset
 from ..common.params import Params
 from ..common.checks import ConfigurationError
 from .optimizers import get_optimizer_from_params
-from ..data.iterators import Iterator, concrete_iterators
+from allennlp.data.iterators import DataIterator
+
 
 class Trainer:
 
@@ -18,7 +19,7 @@ class Trainer:
                  model: torch.nn.Module,
                  optimizer_params: Dict[str, Any],
                  dataset: Dataset,
-                 iterator: Iterator,
+                 iterator: DataIterator,
                  patience: int,
                  batch_size: int = 32,
                  num_epochs: int = 20,
@@ -85,7 +86,7 @@ class Trainer:
         dataset = params.pop("dataset")
         model = params.pop("model")
         optimizer_params = params.pop("optimizer", Params({'type:': 'adam'})).as_dict()
-        iterator = Iterator.from_params(params.pop("iterator"))
+        iterator = DataIterator.from_params(params.pop("iterator"))
 
         params.assert_empty(cls.__class__.__name__)
         return cls(dataset=dataset,

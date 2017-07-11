@@ -8,13 +8,12 @@ import os
 import shutil
 
 import torch
-import numpy
 from numpy.testing import assert_allclose
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.training.trainer import Trainer
-from allennlp.data.iterators import BasicIterator, Iterator
+from allennlp.data.iterators import BasicIterator, DataIterator
 from allennlp.training.model import Model
 from allennlp.data.dataset_readers import DatasetReader
 
@@ -55,7 +54,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
                                       model: Model,
                                       dataset_reader: DatasetReader,
                                       additional_trainer_args: Params,
-                                      iterator: Iterator = None):
+                                      iterator: DataIterator = None):
         # Our loading tests work better if you're not using complex iterators, so by
         # default we use the basic one unless you pass an iterator into this function.
         # If you _do_ use them, we'll skip some of the stuff below that isn't compatible.

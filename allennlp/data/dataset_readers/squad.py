@@ -133,7 +133,7 @@ class SquadSentenceSelectionReader(DatasetReader):
 
         # Holds tuples of (question_text, answer_sentence_id)
         questions = []
-        logger.info("Reading file at %s", self._squad_filename)
+        logger.info("Reading file at %s", file_path)
         with open(file_path) as dataset_file:
             dataset_json = json.load(dataset_file)
             dataset = dataset_json['data']
