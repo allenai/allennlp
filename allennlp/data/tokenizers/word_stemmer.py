@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict  # pylint: disable=unused-import
+from typing import Dict, Type  # pylint: disable=unused-import
 
 from nltk.stem import PorterStemmer as NltkPorterStemmer
 from overrides import overrides
@@ -7,7 +7,7 @@ from overrides import overrides
 from ...common import Params
 
 # pylint: disable=invalid-name
-word_stemmers = OrderedDict()  # type: Dict[str, type]
+word_stemmers = OrderedDict()  # type: Dict[str, Type[WordStemmer]]
 # pylint: enable=invalid-name
 
 class WordStemmer:
@@ -28,7 +28,7 @@ class WordStemmer:
     def from_params(params: Params) -> 'WordStemmer':
         choice = params.pop_choice('type', list(word_stemmers.keys()), default_to_first_choice=True)
         params.assert_empty('WordStemmer')
-        return word_stemmers[choice]()  # type: ignore
+        return word_stemmers[choice]()
 
 class PassThroughWordStemmer(WordStemmer):
     """

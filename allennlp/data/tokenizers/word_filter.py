@@ -1,12 +1,12 @@
 from collections import OrderedDict
-from typing import List, Dict  # pylint: disable=unused-import
+from typing import List, Dict, Type  # pylint: disable=unused-import
 
 from overrides import overrides
 
 from ...common import Params
 
 # pylint: disable=invalid-name
-word_filters = OrderedDict()  # type: Dict[str, type]
+word_filters = OrderedDict()  # type: Dict[str, Type[WordFilter]]
 # pylint: enable=invalid-name
 
 
@@ -26,7 +26,7 @@ class WordFilter:
     def from_params(params: Params) -> 'WordFilter':
         choice = params.pop_choice('type', list(word_filters.keys()), default_to_first_choice=True)
         params.assert_empty('WordFilter')
-        return word_filters[choice]()  # type: ignore
+        return word_filters[choice]()
 
 
 class PassThroughWordFilter(WordFilter):

@@ -1,12 +1,12 @@
 from collections import OrderedDict
-from typing import List, Dict  # pylint: disable=unused-import
+from typing import List, Dict, Type  # pylint: disable=unused-import
 
 from overrides import overrides
 
 from ...common import Params
 
 # pylint: disable=invalid-name
-word_splitters = OrderedDict()  # type: Dict[str, type]
+word_splitters = OrderedDict()  # type: Dict[str, Type[WordSplitter]]
 # pylint: enable=invalid-name
 
 class WordSplitter:
@@ -23,7 +23,7 @@ class WordSplitter:
     def from_params(params: Params) -> 'WordSplitter':
         choice = params.pop_choice('type', list(word_splitters.keys()), default_to_first_choice=True)
         params.assert_empty('WordSplitter')
-        return word_splitters[choice]()  # type: ignore
+        return word_splitters[choice]()
 
 
 class SimpleWordSplitter(WordSplitter):
