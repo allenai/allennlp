@@ -11,5 +11,5 @@ iterators = OrderedDict()  # type: Dict[str, type]
 # pylint: enable=invalid-name
 
 iterators["bucket"] = BucketIterator
-iterators["basic"] = DataIterator
+iterators["basic"] = BasicIterator
 iterators["adaptive"] = AdaptiveIterator
