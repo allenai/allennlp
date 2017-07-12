@@ -1,12 +1,12 @@
 from collections import OrderedDict
-from typing import List, Dict, cast  # pylint: disable=unused-import
+from typing import List, Dict  # pylint: disable=unused-import
 
 from overrides import overrides
 
 from ...common import Params
 
 # pylint: disable=invalid-name
-word_splitters = OrderedDict()  # type: Dict[str, 'WordSplitter']
+word_splitters = OrderedDict()  # type: Dict[str, type]
 # pylint: enable=invalid-name
 
 class WordSplitter:
@@ -130,8 +130,7 @@ class SpacyWordSplitter(WordSplitter):
         return [str(token.lower_) for token in self.en_nlp.tokenizer(sentence)]
 
 
-# these `cast`s are runtime no-ops that make `mypy` happy
-word_splitters['simple'] = cast(WordSplitter, SimpleWordSplitter)
-word_splitters['spaces'] = cast(WordSplitter, SpaceWordSplitter)
-word_splitters['nltk'] = cast(WordSplitter, NltkWordSplitter)
-word_splitters['spacy'] = cast(WordSplitter, SpacyWordSplitter)
+word_splitters['simple'] = SimpleWordSplitter
+word_splitters['spaces'] = SpaceWordSplitter
+word_splitters['nltk'] = NltkWordSplitter
+word_splitters['spacy'] = SpacyWordSplitter

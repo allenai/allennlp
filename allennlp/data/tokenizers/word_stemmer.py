@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, cast  # pylint: disable=unused-import
+from typing import Dict  # pylint: disable=unused-import
 
 from nltk.stem import PorterStemmer as NltkPorterStemmer
 from overrides import overrides
@@ -7,7 +7,7 @@ from overrides import overrides
 from ...common import Params
 
 # pylint: disable=invalid-name
-word_stemmers = OrderedDict()  # type: Dict[str, 'WordStemmer']
+word_stemmers = OrderedDict()  # type: Dict[str, type]
 # pylint: enable=invalid-name
 
 class WordStemmer:
@@ -50,6 +50,5 @@ class PorterStemmer(WordStemmer):
     def stem_word(self, word: str) -> str:
         return self.stemmer.stem(word)
 
-# these `cast`s are runtime no-ops that make `mypy` happy
-word_stemmers['pass_through'] = cast(WordStemmer, PassThroughWordStemmer)
-word_stemmers['porter'] = cast(WordStemmer, PorterStemmer)
+word_stemmers['pass_through'] = PassThroughWordStemmer
+word_stemmers['porter'] = PorterStemmer

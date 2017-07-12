@@ -1,12 +1,12 @@
 from collections import OrderedDict
-from typing import List, cast, Dict  # pylint: disable=unused-import
+from typing import List, Dict  # pylint: disable=unused-import
 
 from overrides import overrides
 
 from ...common import Params
 
 # pylint: disable=invalid-name
-word_filters = OrderedDict()  # type: Dict[str, 'WordFilter']
+word_filters = OrderedDict()  # type: Dict[str, type]
 # pylint: enable=invalid-name
 
 
@@ -74,6 +74,5 @@ class StopwordFilter(WordFilter):
         return [word for word in words if word not in self.stopwords]
 
 
-# these `cast`s are runtime no-ops that make `mypy` happy
-word_filters['pass_through'] = cast(WordFilter, PassThroughWordFilter)
-word_filters['stopwords'] = cast(WordFilter, StopwordFilter)
+word_filters['pass_through'] = PassThroughWordFilter
+word_filters['stopwords'] = StopwordFilter

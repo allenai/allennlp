@@ -7,9 +7,9 @@ from .bucket_iterator import BucketIterator
 from .adaptive_iterator import AdaptiveIterator
 
 # pylint: disable=invalid-name
-iterators = OrderedDict()  # type: Dict[str, 'DataIterator']
+iterators = OrderedDict()  # type: Dict[str, type]
 # pylint: enable=invalid-name
 
-iterators["bucket"] = cast(DataIterator, BucketIterator)
-iterators["basic"] = cast(DataIterator, BasicIterator)
-iterators["adaptive"] = cast(DataIterator, AdaptiveIterator)
+iterators["bucket"] = BucketIterator
+iterators["basic"] = DataIterator
+iterators["adaptive"] = AdaptiveIterator
