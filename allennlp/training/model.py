@@ -19,7 +19,7 @@ class Model(torch.nn.Module):
     optimised during the training process.
     """
 
-    def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
+    def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
         Defines the forward pass of the model. In addition, to facilitate easy training,
         this method is designed to compute a loss function defined by a user.
