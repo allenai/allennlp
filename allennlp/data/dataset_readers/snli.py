@@ -3,7 +3,7 @@ import json
 
 from overrides import overrides
 
-from . import DatasetReader
+from .dataset_reader import DatasetReader
 from .. import Dataset
 from .. import Instance
 from ...common import Params
@@ -30,7 +30,7 @@ class SnliReader(DatasetReader):
     def __init__(self,
                  snli_filename: str,
                  tokenizer: Tokenizer = WordTokenizer(),
-                 token_indexers: List[TokenIndexer] = None):
+                 token_indexers: List[TokenIndexer] = None) -> None:
         self._snli_filename = snli_filename
         self._tokenizer = tokenizer
         if token_indexers is None:

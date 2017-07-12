@@ -2,7 +2,7 @@ from typing import List
 
 from overrides import overrides
 
-from . import DatasetReader
+from .dataset_reader import DatasetReader
 from .. import Dataset
 from .. import Instance
 from ...common import Params
@@ -39,7 +39,7 @@ class LanguageModelingReader(DatasetReader):
                  filename: str,
                  tokens_per_instance: int = None,
                  tokenizer: Tokenizer = WordTokenizer(),
-                 token_indexers: List[TokenIndexer] = None):
+                 token_indexers: List[TokenIndexer] = None) -> None:
         self._filename = filename
         self._tokens_per_instance = tokens_per_instance
         self._tokenizer = tokenizer

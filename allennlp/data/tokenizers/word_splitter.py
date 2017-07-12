@@ -1,9 +1,13 @@
 from collections import OrderedDict
-from typing import List
+from typing import List, Dict, cast  # pylint: disable=unused-import
 
 from overrides import overrides
 
 from ...common import Params
+
+# pylint: disable=invalid-name
+word_splitters = OrderedDict()  # type: Dict[str, 'WordSplitter']
+# pylint: enable=invalid-name
 
 class WordSplitter:
     """
@@ -19,7 +23,7 @@ class WordSplitter:
     def from_params(params: Params) -> 'WordSplitter':
         choice = params.pop_choice('type', list(word_splitters.keys()), default_to_first_choice=True)
         params.assert_empty('WordSplitter')
-        return word_splitters[choice]()
+        return word_splitters[choice]()  # type: ignore
 
 
 class SimpleWordSplitter(WordSplitter):
@@ -55,7 +59,7 @@ class SimpleWordSplitter(WordSplitter):
         fields = sentence.lower().split()
         tokens = []
         for field in fields:  # type: str
-            add_at_end = []
+            add_at_end = []  # type: List[str]
             while self._can_split(field) and field[0] in self.beginning_punctuation:
                 tokens.append(field[0])
                 field = field[1:]
@@ -126,8 +130,8 @@ class SpacyWordSplitter(WordSplitter):
         return [str(token.lower_) for token in self.en_nlp.tokenizer(sentence)]
 
 
-word_splitters = OrderedDict()  # pylint: disable=invalid-name
-word_splitters['simple'] = SimpleWordSplitter
-word_splitters['spaces'] = SpaceWordSplitter
-word_splitters['nltk'] = NltkWordSplitter
-word_splitters['spacy'] = SpacyWordSplitter
+# these `cast`s are runtime no-ops that make `mypy` happy
+word_splitters['simple'] = cast(WordSplitter, SimpleWordSplitter)
+word_splitters['spaces'] = cast(WordSplitter, SpaceWordSplitter)
+word_splitters['nltk'] = cast(WordSplitter, NltkWordSplitter)
+word_splitters['spacy'] = cast(WordSplitter, SpacyWordSplitter)

@@ -38,7 +38,7 @@ class LabelField(Field):
     def __init__(self,
                  label: Union[str, int],
                  label_namespace: str = 'labels',
-                 num_labels: int = None):
+                 num_labels: int = None) -> None:
         self._label = label
         self._label_namespace = label_namespace
         if num_labels is None:
@@ -57,12 +57,12 @@ class LabelField(Field):
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         if self._label_id is None:
-            counter[self._label_namespace][self._label] += 1
+            counter[self._label_namespace][self._label] += 1  # type: ignore
 
     @overrides
     def index(self, vocab: Vocabulary):
         if self._label_id is None:
-            self._label_id = vocab.get_token_index(self._label, self._label_namespace)
+            self._label_id = vocab.get_token_index(self._label, self._label_namespace)  # type: ignore
             self._num_labels = vocab.get_vocab_size(self._label_namespace)
 
     @overrides

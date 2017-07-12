@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, cast
 
 from overrides import overrides
 
@@ -20,7 +20,7 @@ class SingleIdTokenIndexer(TokenIndexer):
         If ``True``, we will call ``token.lower()`` before getting an index for the token from the
         vocabulary.
     """
-    def __init__(self, token_namespace: str = 'tokens', lowercase_tokens: bool = False):
+    def __init__(self, token_namespace: str = 'tokens', lowercase_tokens: bool = False) -> None:
         self.token_namespace = token_namespace
         self.lowercase_tokens = lowercase_tokens
 
@@ -50,10 +50,12 @@ class SingleIdTokenIndexer(TokenIndexer):
 
     @overrides
     def pad_token_sequence(self,
-                           tokens: List[int],
+                           tokens: List[TokenType],
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[TokenType]:
-        return pad_sequence_to_length(tokens, desired_num_tokens)
+        # cast is runtime no-op that makes mypy happy
+        int_tokens = cast(List[int], tokens)
+        return pad_sequence_to_length(int_tokens, desired_num_tokens)
 
     @classmethod
     def from_params(cls, params: Params):

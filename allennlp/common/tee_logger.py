@@ -10,7 +10,7 @@ class TeeLogger:
         sys.stdout = TeeLogger("stdout.log", sys.stdout)
         sys.stderr = TeeLogger("stdout.log", sys.stderr)
     """
-    def __init__(self, filename: str, terminal: io.TextIOWrapper):
+    def __init__(self, filename: str, terminal: io.TextIOWrapper) -> None:
         self.terminal = terminal
         parent_directory = os.path.dirname(filename)
         os.makedirs(parent_directory, exist_ok=True)

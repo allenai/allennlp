@@ -53,5 +53,5 @@ class DataIterator:
         from . import iterators
         # TODO(Mark): The adaptive iterator will need a bit of work here,
         # to retrieve the scaling function etc.
-        iterator_type = params.pop_choice("type", iterators.keys())
+        iterator_type = params.pop_choice("type", iterators.keys())  # type: ignore
         return iterators[iterator_type](**params.as_dict())

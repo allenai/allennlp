@@ -18,7 +18,7 @@ class Dataset:
     could be in an indexed or unindexed state - the ``Dataset`` has methods around indexing the
     data and converting the data into arrays.
     """
-    def __init__(self, instances: List[Instance]):
+    def __init__(self, instances: List[Instance]) -> None:
         """
         A Dataset just takes a list of instances in its constructor.  It's important that all
         subclasses have an identical constructor to this (though possibly with different Instance
@@ -26,7 +26,7 @@ class Dataset:
         class that call the constructor, such as `truncate()`.
         """
         all_instance_fields_and_types = [{k: v.__class__.__name__ for k, v in x.fields().items()}
-                                         for x in instances]
+                                         for x in instances]  # type: List[Dict[str, str]]
         # Check all the field names and Field types are the same for every instance.
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
             raise ConfigurationError("You cannot construct a Dataset with non-homogeneous Instances.")
@@ -60,11 +60,12 @@ class Dataset:
         This can then be used to convert this dataset into arrays of consistent length, or to set
         model parameters, etc.
         """
-        padding_lengths = defaultdict(dict)
-        all_instance_lengths = [instance.get_padding_lengths() for instance in self.instances]
+        padding_lengths = defaultdict(dict)  # type: Dict[str, Dict[str, int]]
+        all_instance_lengths = [instance.get_padding_lengths()
+                                for instance in self.instances]  # type: List[Dict[str, Dict[str, int]]]
         if not all_instance_lengths:
             return {**padding_lengths}
-        all_field_lengths = defaultdict(list)
+        all_field_lengths = defaultdict(list)  # type: Dict[str, List[Dict[str, int]]]
         for instance_lengths in all_instance_lengths:
             for field_name, instance_field_lengths in instance_lengths.items():
                 all_field_lengths[field_name].append(instance_field_lengths)
@@ -120,7 +121,7 @@ class Dataset:
         instance_padding_lengths = self.get_padding_lengths()
         if verbose:
             logger.info("Instance max lengths: %s", str(instance_padding_lengths))
-        lengths_to_use = defaultdict(dict)
+        lengths_to_use = defaultdict(dict)  # type: Dict[str, Dict[str, int]]
         for field_name, instance_field_lengths in instance_padding_lengths.items():
             for padding_key in instance_field_lengths.keys():
                 if padding_lengths[field_name].get(padding_key) is not None:
@@ -129,7 +130,7 @@ class Dataset:
                     lengths_to_use[field_name][padding_key] = instance_field_lengths[padding_key]
 
         # Now we actually pad the instances to numpy arrays.
-        field_arrays = defaultdict(list)
+        field_arrays = defaultdict(list)  # type: Dict[str, list]
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
             for instance in tqdm.tqdm(self.instances):
