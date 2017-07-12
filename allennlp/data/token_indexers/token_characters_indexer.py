@@ -45,10 +45,8 @@ class TokenCharactersIndexer(TokenIndexer):
 
     @overrides
     def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
-        if isinstance(token, list):
-            return {'num_token_characters': len(token)}
-        else:
-            raise ValueError("token should be a list")
+        list_token = cast(List[int], token)
+        return {'num_token_characters': len(list_token)}
 
     @overrides
     def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):
