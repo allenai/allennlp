@@ -89,8 +89,8 @@ class TokenCharactersIndexer(TokenIndexer):
             options for byte encoding and other things.  These parameters get passed to the character
             tokenizer.  The default is to use unicode characters and to retain casing.
         """
-        character_namespace = params.pop('namespace', 'token_characters')
+        namespace = params.pop('namespace', 'token_characters')
         character_tokenizer_params = params.pop('character_tokenizer', {})
         character_tokenizer = CharacterTokenizer.from_params(character_tokenizer_params)
         params.assert_empty(cls.__name__)
-        return cls(character_namespace=character_namespace, character_tokenizer=character_tokenizer)
+        return cls(namespace=namespace, character_tokenizer=character_tokenizer)
