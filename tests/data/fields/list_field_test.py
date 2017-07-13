@@ -23,9 +23,12 @@ class TestListField(AllenNlpTestCase):
         super(TestListField, self).setUp()
 
     def test_get_padding_lengths(self):
-        field1 = TextField(["this", "is", "a", "sentence"], [token_indexers["single id"]("words")])
-        field2 = TextField(["this", "is", "a", "different", "sentence"], [token_indexers["single id"]("words")])
-        field3 = TextField(["this", "is", "another", "sentence"], [token_indexers["single id"]("words")])
+        field1 = TextField(["this", "is", "a", "sentence"],
+                           {"words": token_indexers["single id"]("words")})
+        field2 = TextField(["this", "is", "a", "different", "sentence"],
+                           {"words": token_indexers["single id"]("words")})
+        field3 = TextField(["this", "is", "another", "sentence"],
+                           {"words": token_indexers["single id"]("words")})
 
         list_field = ListField([field1, field2, field3])
         list_field.index(self.vocab)
@@ -34,9 +37,12 @@ class TestListField(AllenNlpTestCase):
         assert lengths == {"num_fields": 3, "num_tokens": 5}
 
     def test_all_fields_padded_to_max_length(self):
-        field1 = TextField(["this", "is", "a", "sentence"], [token_indexers["single id"]("words")])
-        field2 = TextField(["this", "is", "a", "different", "sentence"], [token_indexers["single id"]("words")])
-        field3 = TextField(["this", "is", "another", "sentence"], [token_indexers["single id"]("words")])
+        field1 = TextField(["this", "is", "a", "sentence"],
+                           {"words": token_indexers["single id"]("words")})
+        field2 = TextField(["this", "is", "a", "different", "sentence"],
+                           {"words": token_indexers["single id"]("words")})
+        field3 = TextField(["this", "is", "another", "sentence"],
+                           {"words": token_indexers["single id"]("words")})
 
         list_field = ListField([field1, field2, field3])
         list_field.index(self.vocab)
@@ -48,9 +54,12 @@ class TestListField(AllenNlpTestCase):
 
     def test_fields_can_pad_to_greater_than_max_length(self):
 
-        field1 = TextField(["this", "is", "a", "sentence"], [token_indexers["single id"]("words")])
-        field2 = TextField(["this", "is", "a", "different", "sentence"], [token_indexers["single id"]("words")])
-        field3 = TextField(["this", "is", "another", "sentence"], [token_indexers["single id"]("words")])
+        field1 = TextField(["this", "is", "a", "sentence"],
+                           {"words": token_indexers["single id"]("words")})
+        field2 = TextField(["this", "is", "a", "different", "sentence"],
+                           {"words": token_indexers["single id"]("words")})
+        field3 = TextField(["this", "is", "another", "sentence"],
+                           {"words": token_indexers["single id"]("words")})
 
         list_field = ListField([field1, field2, field3])
         list_field.index(self.vocab)
@@ -66,14 +75,14 @@ class TestListField(AllenNlpTestCase):
 
     def test_pad_can_handle_multiple_token_indexers(self):
         field1 = TextField(["this", "is", "a", "sentence"],
-                           [token_indexers["single id"]("words"),
-                            token_indexers["characters"]("characters")])
+                           {"words": token_indexers["single id"]("words"),
+                            "characters": token_indexers["characters"]("characters")})
         field2 = TextField(["this", "is", "a", "different", "sentence"],
-                           [token_indexers["single id"]("words"),
-                            token_indexers["characters"]("characters")])
+                           {"words": token_indexers["single id"]("words"),
+                            "characters": token_indexers["characters"]("characters")})
         field3 = TextField(["this", "is", "another", "sentence"],
-                           [token_indexers["single id"]("words"),
-                            token_indexers["characters"]("characters")])
+                           {"words": token_indexers["single id"]("words"),
+                            "characters": token_indexers["characters"]("characters")})
 
         list_field = ListField([field1, field2, field3])
         list_field.index(self.vocab)

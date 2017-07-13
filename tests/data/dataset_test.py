@@ -23,7 +23,7 @@ class TestDataset(AllenNlpTestCase):
 
     def test_instances_must_have_homogeneous_fields(self):
         instance1 = Instance({"tag": (LabelField(1))})
-        instance2 = Instance({"words": TextField(["hello"], [])})
+        instance2 = Instance({"words": TextField(["hello"], {})})
         with pytest.raises(ConfigurationError):
             _ = Dataset([instance1, instance2])
 
@@ -48,12 +48,12 @@ class TestDataset(AllenNlpTestCase):
 
     def get_dataset(self):
         field1 = TextField(["this", "is", "a", "sentence", "."],
-                           [token_indexers["single id"]()])
+                           {"tokens": token_indexers["single id"]()})
         field2 = TextField(["this", "is", "a", "different", "sentence", "."],
-                           [token_indexers["single id"]()])
+                           {"tokens": token_indexers["single id"]()})
         field3 = TextField(["here", "is", "a", "sentence", "."],
-                           [token_indexers["single id"]()])
-        field4 = TextField(["this", "is", "short"], [token_indexers["single id"]()])
+                           {"tokens": token_indexers["single id"]()})
+        field4 = TextField(["this", "is", "short"], {"tokens": token_indexers["single id"]()})
         instances = [Instance({"text1": field1, "text2": field2}),
                      Instance({"text1": field3, "text2": field4})]
 

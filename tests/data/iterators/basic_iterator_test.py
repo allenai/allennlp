@@ -10,7 +10,7 @@ from allennlp.testing.test_case import AllenNlpTestCase
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):
         super(IteratorTest, self).setUp()
-        self.token_indexers = [SingleIdTokenIndexer()]
+        self.token_indexers = {"tokens": SingleIdTokenIndexer()}
         self.vocab = Vocabulary()
         self.this_index = self.vocab.add_token_to_namespace('this')
         self.is_index = self.vocab.add_token_to_namespace('is')
@@ -38,7 +38,8 @@ class IteratorTest(AllenNlpTestCase):
         # First we need to remove padding tokens from the candidates.
         # pylint: disable=protected-access
         candidate_instances = [tuple(w for w in instance if w != 0) for instance in candidate_instances]
-        expected_instances = [tuple(instance.fields()["text"]._indexed_tokens[0]) for instance in self.instances]
+        expected_instances = [tuple(instance.fields()["text"]._indexed_tokens["tokens"])
+                              for instance in self.instances]
         assert set(candidate_instances) == set(expected_instances)
 
 

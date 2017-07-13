@@ -1,8 +1,7 @@
-from typing import Generic
 from allennlp.data.fields.field import Field, DataArray
 
 
-class SequenceField(Field[DataArray], Generic[DataArray]):
+class SequenceField(Field[DataArray]):
     """
     A ``SequenceField`` represents a sequence of things.  This class just adds a method onto
     ``Field``: :func:`sequence_length`.  It exists so that ``TagField``, ``IndexField`` and other

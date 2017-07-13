@@ -21,38 +21,31 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
     to tokenize raw strings using a :class:`..tokenizers.Tokenizer`.
 
     Because string tokens can be represented as indexed arrays in a number of ways, we also take a
-    list of :class:`TokenIndexer` objects that will be used to convert the tokens into indices.
+    dictionary of :class:`TokenIndexer` objects that will be used to convert the tokens into indices.
     Each ``TokenIndexer`` could represent each token as a single ID, or a list of character IDs, or
     something else.
 
-    This field will get converted into a dictionary of arrays, one for each ``TokenIndexer``.  A
+    This field will get converted into apy dictionary of arrays, one for each ``TokenIndexer``.  A
     ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
-    def __init__(self, tokens: List[str], token_indexers: List[TokenIndexer]) -> None:
+    def __init__(self, tokens: List[str], token_indexers: Dict[str, TokenIndexer]) -> None:
         self._tokens = tokens
         self._token_indexers = token_indexers
-        self._indexed_tokens = None  # type: Optional[List[TokenList]]
-
-        indexer_namespaces = [token_indexer.namespace for token_indexer in token_indexers]
-
-        if not len(indexer_namespaces) == len(set(indexer_namespaces)):
-            raise ConfigurationError("You are using TokenIndexers which have non-unique "
-                                     "namespaces to be used for indexing. Namespaces "
-                                     "used: {}".format(" ".join(indexer_namespaces)))
+        self._indexed_tokens = None  # type: Optional[Dict[str, TokenList]]
 
     # @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
-        for indexer in self._token_indexers:
+        for indexer in self._token_indexers.values():
             for token in self._tokens:
                 indexer.count_vocab_items(token, counter)
 
     # @overrides
     def index(self, vocab: Vocabulary):
-        token_arrays = []
-        for indexer in self._token_indexers:
+        token_arrays = {}
+        for indexer_name, indexer in self._token_indexers.items():
             arrays = [indexer.token_to_indices(token, vocab) for token in self._tokens]
-            token_arrays.append(arrays)
+            token_arrays[indexer_name] = arrays
         self._indexed_tokens = token_arrays
 
     # @overrides
@@ -61,11 +54,11 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
         if self._indexed_tokens is None:
             raise ConfigurationError("You must call .index(vocabulary) on a "
                                      "field before determining padding lengths.")
-        for indexer, array in zip(self._token_indexers, self._indexed_tokens):
+        for indexer_name, indexer in self._token_indexers.items():
             indexer_lengths = {}
 
             # This is a list of dicts, one for each token in the field.
-            token_lengths = [indexer.get_padding_lengths(token) for token in array]
+            token_lengths = [indexer.get_padding_lengths(token) for token in self._indexed_tokens[indexer_name]]
             # TODO(Mark): This breaks if the token list is empty, but we need to be able to have empty fields.
             # Just raise here?
             # Iterate over the keys in the first element of the list.
@@ -74,7 +67,8 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
             for key in token_lengths[0].keys():
                 indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
             lengths.append(indexer_lengths)
-        padding_lengths = {'num_tokens': len(self._indexed_tokens[0])}
+        any_indexed_token_key = list(self._indexed_tokens.keys())[0]
+        padding_lengths = {'num_tokens': len(self._indexed_tokens[any_indexed_token_key])}
         # Get all the keys which have been used for padding.
         padding_keys = {key for d in lengths for key in d.keys()}
         for padding_key in padding_keys:
@@ -89,11 +83,12 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
     def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.array]:
         arrays = {}
         desired_num_tokens = padding_lengths['num_tokens']
-        for indexer, array in zip(self._token_indexers, self._indexed_tokens):
-            padded_array = indexer.pad_token_sequence(array, desired_num_tokens, padding_lengths)
+        for (indexer_name, indexer) in self._token_indexers.items():
+            padded_array = indexer.pad_token_sequence(self._indexed_tokens[indexer_name],
+                                                      desired_num_tokens, padding_lengths)
             # Use the namespace of the indexer as a key to recognise what
             # the array corresponds to in a model.
-            arrays[indexer.namespace] = padded_array
+            arrays[indexer_name] = padded_array
         return arrays
 
     # @overrides
@@ -102,7 +97,7 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
         text_field = TextField([], self._token_indexers)
         # This needs to be a list of empty lists for each token_indexer,
         # for padding reasons in ListField.
-        text_field._indexed_tokens = [[] for _ in range(len(self._token_indexers))]
+        text_field._indexed_tokens = {name: [] for name in self._token_indexers.keys()}
         return text_field
 
     def tokens(self):

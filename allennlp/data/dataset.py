@@ -76,7 +76,7 @@ class Dataset:
                 padding_lengths[field_name][padding_key] = max_value
         return {**padding_lengths}
 
-    def as_arrays(self,
+    def as_arrays(self,  # ignore type
                   padding_lengths: Dict[str, Dict[str, int]] = None,
                   verbose: bool = True) -> Dict[str, DataArray]:
         """
