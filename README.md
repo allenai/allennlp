@@ -25,10 +25,16 @@ dependencies needed to run DeepQA.
     source activate allennlp
     ```
 
-4.  Install the required dependencies.
+4.  Install the required dependencies. To install only the runtime dependencies, run
 
     ```
     ./scripts/install_requirements.sh
+    ```
+
+    If you want to install all of the testing/linting/type-checking dependencies, run instead
+
+    ```
+    INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
     ```
 
 5. Visit http://pytorch.org/ and install the relevant pytorch package.
