@@ -9,10 +9,10 @@ import numpy
 
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.token_indexers.token_indexer import TokenType  # pylint: disable=unused-import
-from allennlp.data.token_indexers import TokenIndexer
+from allennlp.data.token_indexers import TokenIndexer, TokenType
 from allennlp.common.checks import ConfigurationError
 
+TokenList = List[TokenType]  # pylint: disable=invalid-name
 
 class TextField(SequenceField):
     """
@@ -31,7 +31,7 @@ class TextField(SequenceField):
     def __init__(self, tokens: List[str], token_indexers: List[TokenIndexer]) -> None:
         self._tokens = tokens
         self._token_indexers = token_indexers
-        self._indexed_tokens = None  # type: Optional[List[List[TokenType]]]
+        self._indexed_tokens = None  # type: Optional[List[TokenList]]
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
