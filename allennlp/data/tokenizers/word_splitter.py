@@ -1,9 +1,13 @@
 from collections import OrderedDict
-from typing import List
+from typing import List, Dict, Type  # pylint: disable=unused-import
 
 from overrides import overrides
 
 from ...common import Params
+
+# pylint: disable=invalid-name
+word_splitters = OrderedDict()  # type: Dict[str, Type[WordSplitter]]
+# pylint: enable=invalid-name
 
 class WordSplitter:
     """
@@ -55,7 +59,7 @@ class SimpleWordSplitter(WordSplitter):
         fields = sentence.lower().split()
         tokens = []
         for field in fields:  # type: str
-            add_at_end = []
+            add_at_end = []  # type: List[str]
             while self._can_split(field) and field[0] in self.beginning_punctuation:
                 tokens.append(field[0])
                 field = field[1:]
@@ -126,7 +130,6 @@ class SpacyWordSplitter(WordSplitter):
         return [str(token.lower_) for token in self.en_nlp.tokenizer(sentence)]
 
 
-word_splitters = OrderedDict()  # pylint: disable=invalid-name
 word_splitters['simple'] = SimpleWordSplitter
 word_splitters['spaces'] = SpaceWordSplitter
 word_splitters['nltk'] = NltkWordSplitter

@@ -27,7 +27,7 @@ class IndexField(Field):
     sequence_field : ``SequenceField``
         A field containing the sequence that this ``IndexField`` is a pointer into.
     """
-    def __init__(self, index: int, sequence_field: SequenceField):
+    def __init__(self, index: int, sequence_field: SequenceField) -> None:
         self._index = index
         self._sequence_field = sequence_field
 

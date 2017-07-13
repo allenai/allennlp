@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, cast
 import itertools
 
 from overrides import overrides
@@ -27,7 +27,7 @@ class TokenCharactersIndexer(TokenIndexer):
     """
     def __init__(self,
                  character_namespace: str = 'token_characters',
-                 character_tokenizer: CharacterTokenizer = CharacterTokenizer()):
+                 character_tokenizer: CharacterTokenizer = CharacterTokenizer()) -> None:
         self.character_namespace = character_namespace
         self.character_tokenizer = character_tokenizer
 
@@ -45,7 +45,8 @@ class TokenCharactersIndexer(TokenIndexer):
 
     @overrides
     def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
-        return {'num_token_characters': len(token)}
+        list_token = cast(List[int], token)
+        return {'num_token_characters': len(list_token)}
 
     @overrides
     def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):
@@ -57,12 +58,14 @@ class TokenCharactersIndexer(TokenIndexer):
 
     @overrides
     def pad_token_sequence(self,
-                           tokens: List[List[int]],
+                           tokens: List[TokenType],
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[TokenType]:
-        padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=lambda: [])
+        # cast is runtime no-op that makes mypy happy
+        list_tokens = cast(List[List[int]], tokens)
+        padded_tokens = pad_sequence_to_length(list_tokens, desired_num_tokens, default_value=lambda: [])
         desired_token_length = padding_lengths['num_token_characters']
-        longest_token = max(tokens, key=len)
+        longest_token = max(list_tokens, key=len)
         if desired_token_length > len(longest_token):
             # Since we want to pad to greater than the longest token, we add a
             # "dummy token" to get the speed of itertools.zip_longest.

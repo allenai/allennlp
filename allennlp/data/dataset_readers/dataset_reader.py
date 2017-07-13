@@ -14,8 +14,8 @@ class DatasetReader:
         """
         raise NotImplementedError
 
-    @staticmethod
-    def from_params(params: Params):
+    @classmethod
+    def from_params(cls, params: Params):
         from . import dataset_readers
         choice = params.pop_choice('type', list(dataset_readers.keys()))
         return dataset_readers[choice].from_params(params)

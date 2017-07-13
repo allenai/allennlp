@@ -24,7 +24,7 @@ class ListField(SequenceField):
         A list of ``Field`` objects to be concatenated into a single input tensor.  All of the
         contained ``Field`` objects must be of the same type.
     """
-    def __init__(self, field_list: List[Field]):
+    def __init__(self, field_list: List[Field]) -> None:
         field_class_set = set([field.__class__ for field in field_list])
         assert len(field_class_set) == 1, "ListFields must contain a single field type, found " +\
                                           str(field_class_set)

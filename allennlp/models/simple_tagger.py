@@ -33,7 +33,7 @@ class SimpleTagger(Model):
                  vocabulary: Vocabulary,
                  embedding_dim: int = 100,
                  hidden_size: int = 200,
-                 num_layers: int = 2):
+                 num_layers: int = 2) -> None:
         super(SimpleTagger, self).__init__()
 
         self.vocabulary = vocabulary
@@ -53,9 +53,10 @@ class SimpleTagger(Model):
                                                            self.num_classes))
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
-    def forward(self,  # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ
+    def forward(self,  # type: ignore
                 tokens: torch.LongTensor,
-                tags: torch.LongTensor = None):
+                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         """
         Parameters
         ----------
@@ -96,6 +97,8 @@ class SimpleTagger(Model):
             output_dict["loss"] = loss
 
         return output_dict
+
+    # pylint: enable=arguments-differ
 
     def tag(self, text_field: TextField) -> Dict[str, Any]:
         """

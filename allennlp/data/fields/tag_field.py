@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional  # pylint: disable=unused-import
 import logging
 
 from overrides import overrides
@@ -35,12 +35,12 @@ class TagField(Field):
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
-    def __init__(self, tags: List[str], sequence_field: SequenceField, tag_namespace: str = 'tags'):
+    def __init__(self, tags: List[str], sequence_field: SequenceField, tag_namespace: str = 'tags') -> None:
         self._tags = tags
         self._sequence_field = sequence_field
         self._tag_namespace = tag_namespace
-        self._indexed_tags = None
-        self._num_tags = None
+        self._indexed_tags = None  # type: Optional[List[int]]
+        self._num_tags = None      # type: Optional[int]
 
         if not self._tag_namespace.endswith("tags"):
             logger.warning("Your tag namespace was '%s'. We recommend you use a namespace "

@@ -22,7 +22,7 @@ def __param(self, message, *args, **kws):
     # Logger takes its '*args' as 'args'.
     if self.isEnabledFor(PARAMETER):
         self._log(PARAMETER, message, args, **kws) # pylint: disable=protected-access
-logging.Logger.param = __param
+logging.Logger.param = __param  # type: ignore
 
 
 class Params(MutableMapping):
@@ -52,7 +52,7 @@ class Params(MutableMapping):
     # and passing no value to the default parameter of "pop".
     DEFAULT = object()
 
-    def __init__(self, params: Dict[str, Any], history: str = ""):
+    def __init__(self, params: Dict[str, Any], history: str = "") -> None:
         self.params = params
         self.history = history
 
@@ -72,7 +72,7 @@ class Params(MutableMapping):
                 raise ConfigurationError("key \"{}\" is required at location \"{}\"".format(key, self.history))
         else:
             value = self.params.pop(key, default)
-        logger.param(self.history + key + " = " + str(value))
+        logger.param(self.history + key + " = " + str(value))  # type: ignore
         return self.__check_is_dict(key, value)
 
     @overrides

@@ -2,12 +2,12 @@ from collections import Counter
 import json
 import logging
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Set  # pylint: disable=unused-import
 
 import numpy
 from tqdm import tqdm
 
-from . import DatasetReader
+from .dataset_reader import DatasetReader
 from .. import Dataset
 from .. import Instance
 from ...common import Params
@@ -51,7 +51,7 @@ class SquadSentenceSelectionReader(DatasetReader):
                  squad_filename: str,
                  negative_sentence_selection: str = "paragraph",
                  tokenizer: Tokenizer = WordTokenizer(),
-                 token_indexers: List[TokenIndexer] = None):
+                 token_indexers: List[TokenIndexer] = None) -> None:
         self._squad_filename = squad_filename
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
         self._tokenizer = tokenizer
@@ -61,24 +61,24 @@ class SquadSentenceSelectionReader(DatasetReader):
 
         # Initializing some data structures here that will be useful when reading a file.
         # Maps sentence strings to sentence indices
-        self._sentence_to_id = {}
+        self._sentence_to_id = {}  # type: Dict[str, int]
         # Maps sentence indices to sentence strings
-        self._id_to_sentence = {}
+        self._id_to_sentence = {}  # type: Dict[int, str]
         # Maps paragraph ids to lists of contained sentence ids
-        self._paragraph_sentences = {}
+        self._paragraph_sentences = {}  # type: Dict[int, List[int]]
         # Maps sentence ids to the containing paragraph id.
-        self._sentence_paragraph_map = {}
+        self._sentence_paragraph_map = {}  # type: Dict[int, int]
         # Maps question strings to question indices
-        self._question_to_id = {}
+        self._question_to_id = {}  # type: Dict[str, int]
         # Maps question indices to question strings
-        self._id_to_question = {}
+        self._id_to_question = {}  # type: Dict[int, str]
 
     def _get_sentence_choices(self,
                               question_id: int,
                               answer_id: int) -> Tuple[List[str], int]:  # pylint: disable=invalid-sequence-index
         # Because sentences and questions have different indices, we need this to hold tuples of
         # ("sentence", id) or ("question", id), instead of just single ids.
-        negative_sentences = set()
+        negative_sentences = set()  # type: Set[Tuple[str, int]]
         for selection_method in self._negative_sentence_selection_methods:
             if selection_method == 'paragraph':
                 paragraph_id = self._sentence_paragraph_map[answer_id]

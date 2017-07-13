@@ -18,7 +18,7 @@ class Instance:
     processing pipeline, all fields will end up as ``IndexedFields``, and will then be converted
     into padded arrays by a ``DataGenerator``.
     """
-    def __init__(self, fields: Dict[str, Field]):
+    def __init__(self, fields: Dict[str, Field]) -> None:
         self._fields = fields
 
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

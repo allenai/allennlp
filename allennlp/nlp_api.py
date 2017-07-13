@@ -196,7 +196,7 @@ class NlpApi:
                  seq2seq_encoders: Dict[str, Module] = None,
                  seq2seq_encoder_fn: Callable[[], Module] = None,
                  seq2vec_encoders: Dict[str, Module] = None,
-                 seq2vec_encoder_fn: Callable[[], Module] = None):
+                 seq2vec_encoder_fn: Callable[[], Module] = None) -> None:
         self._token_embedders = token_embedders or {}
         self._token_embedder_fn = token_embedder_fn
         self._seq2seq_encoders = seq2seq_encoders or {}

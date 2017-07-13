@@ -32,7 +32,7 @@ class WordTokenizer(Tokenizer):
     def __init__(self,
                  word_splitter: WordSplitter = SimpleWordSplitter(),
                  word_filter: WordFilter = PassThroughWordFilter(),
-                 word_stemmer: WordStemmer = PassThroughWordStemmer()):
+                 word_stemmer: WordStemmer = PassThroughWordStemmer()) -> None:
         self.word_splitter = word_splitter
         self.word_filter = word_filter
         self.word_stemmer = word_stemmer
