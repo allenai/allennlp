@@ -152,11 +152,12 @@ class Dataset:
                 # This is creating a dict of {namespace: batch_array} for each
                 # namespace within this field. This is mostly utilised by TextFields,
                 # which will have one namespace per TokenIndexer used within the Field.
-                namespace_array_dict = {}
-                namespaces = field_array_list[0].keys()
-                for namespace in namespaces:
-                    namespace_array_dict[namespace] = numpy.asarray([x[namespace] for x in field_array_list])
-                field_arrays[field_name] = namespace_array_dict
+                namespace_batch_dict = defaultdict(list)
+                for namespace_dict in field_array_list:
+                    for namespace, array in namespace_dict.items():
+                        namespace_batch_dict[namespace].append(array)
+                field_arrays[field_name] = {namespace: numpy.asarray(array_list) for
+                                            namespace, array_list in namespace_batch_dict.items()}
             elif isinstance(field_array_list[0], (list, tuple)):
                 field_arrays[field_name] = [numpy.asarray(x) for x in zip(*field_array_list)]
             else:
