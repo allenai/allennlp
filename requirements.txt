@@ -49,6 +49,9 @@ git+git://github.com/PyCQA/pylint.git@2561f539d60a3563d6507e7a22e226fb10b58210
 # the tests.  With this here, you can run the tests with `py.test` from the base directory.
 pytest
 
+# Static type checking
+mypy
+
 # Makes it so that pytest can handle the code structure we use, with src/main/python, and src/test.
 pytest-pythonpath
 
