@@ -2,14 +2,16 @@ from typing import Dict
 
 from overrides import overrides
 
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data import Dataset, Instance
 from allennlp.common import Params
+from allennlp.data import Dataset, Instance
+from allennlp.data.dataset_readers import register_dataset_reader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
 
+@register_dataset_reader("language modeling")
 class LanguageModelingReader(DatasetReader):
     """
     Reads a text file and converts it into a ``Dataset`` suitable for training a language model.
