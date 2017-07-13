@@ -1,10 +1,13 @@
-from typing import Dict, Union
+from typing import Dict, Generic, TypeVar
 
 import numpy
 
 from allennlp.data.vocabulary import Vocabulary
 
-class Field:
+DataArray = TypeVar("DataArray", numpy.array, Dict[str, numpy.array])  # pylint: disable=invalid-name
+
+
+class Field(Generic[DataArray]):
     """
     A ``Field`` is some piece of a data instance that ends up as an array in a model (either as an
     input or an output).  Data instances are just collections of fields.
@@ -65,7 +68,7 @@ class Field:
         """
         raise NotImplementedError
 
-    def as_array(self, padding_lengths: Dict[str, int]) -> Union[numpy.array, Dict[str, numpy.array]]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> DataArray:
         """
         Given a set of specified padding lengths, actually pad the data in this field and return a
         numpy array of the correct shape.  This actually returns a list instead of a single array,

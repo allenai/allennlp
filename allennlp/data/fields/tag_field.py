@@ -13,7 +13,7 @@ from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class TagField(Field):
+class TagField(Field[numpy.array]):
     """
     A ``TagField`` assigns a categorical label to each element in a :class:`SequenceField`.
     Because it's a labeling of some other field, we take that field as input here, and we use it to
@@ -78,7 +78,7 @@ class TagField(Field):
         return numpy.asarray(one_hot_tags)
 
     @overrides
-    def empty_field(self):
+    def empty_field(self):  # pylint: disable=no-self-use
         # pylint: disable=protected-access
         tag_field = TagField([], None)
         tag_field._indexed_tags = []

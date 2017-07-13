@@ -4,7 +4,7 @@ standard word vectors, or pass through an LSTM.
 """
 from typing import Dict, List, Optional  # pylint: disable=unused-import
 
-from overrides import overrides
+# from overrides import overrides
 import numpy
 
 from allennlp.data.fields.sequence_field import SequenceField
@@ -14,7 +14,8 @@ from allennlp.common.checks import ConfigurationError
 
 TokenList = List[TokenType]  # pylint: disable=invalid-name
 
-class TextField(SequenceField):
+
+class TextField(SequenceField[Dict[str, numpy.array]]):
     """
     This ``Field`` represents a list of string tokens.  Before constructing this object, you need
     to tokenize raw strings using a :class:`..tokenizers.Tokenizer`.
@@ -33,13 +34,20 @@ class TextField(SequenceField):
         self._token_indexers = token_indexers
         self._indexed_tokens = None  # type: Optional[List[TokenList]]
 
-    @overrides
+        indexer_namespaces = [token_indexer.namespace for token_indexer in token_indexers]
+
+        if not len(indexer_namespaces) == len(set(indexer_namespaces)):
+            raise ConfigurationError("You are using TokenIndexers which have non-unique "
+                                     "namespaces to be used for indexing. Namespaces "
+                                     "used: {}".format(" ".join(indexer_namespaces)))
+
+    # @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         for indexer in self._token_indexers:
             for token in self._tokens:
                 indexer.count_vocab_items(token, counter)
 
-    @overrides
+    # @overrides
     def index(self, vocab: Vocabulary):
         token_arrays = []
         for indexer in self._token_indexers:
@@ -47,7 +55,7 @@ class TextField(SequenceField):
             token_arrays.append(arrays)
         self._indexed_tokens = token_arrays
 
-    @overrides
+    # @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         lengths = []
         if self._indexed_tokens is None:
@@ -73,11 +81,11 @@ class TextField(SequenceField):
             padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
         return padding_lengths
 
-    @overrides
+    # @overrides
     def sequence_length(self) -> int:
         return len(self._tokens)
 
-    @overrides
+    # @overrides
     def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.array]:
         arrays = {}
         desired_num_tokens = padding_lengths['num_tokens']
@@ -88,7 +96,7 @@ class TextField(SequenceField):
             arrays[indexer.namespace] = padded_array
         return arrays
 
-    @overrides
+    # @overrides
     def empty_field(self):
         # pylint: disable=protected-access
         text_field = TextField([], self._token_indexers)

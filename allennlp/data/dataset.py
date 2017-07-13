@@ -1,11 +1,12 @@
 import logging
 from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import numpy
 import tqdm
 
 from allennlp.data.instance import Instance
+from allennlp.data.fields import DataArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
 
@@ -77,7 +78,7 @@ class Dataset:
 
     def as_arrays(self,
                   padding_lengths: Dict[str, Dict[str, int]] = None,
-                  verbose: bool = True) -> Dict[str, Union[numpy.array, Dict[str, numpy.array]]]:
+                  verbose: bool = True) -> Dict[str, DataArray]:
         """
         This method converts this ``Dataset`` into a set of numpy arrays that can be passed through
         a model.  In order for the numpy arrays to be valid arrays, all ``Instances`` in this
@@ -102,7 +103,7 @@ class Dataset:
 
         Returns
         -------
-        data_arrays : ``Dict[str, Union[numpy.array, Dict[str, numpy.array]]]``
+        data_arrays : ``Dict[str, DataArray]``
             A dictionary of data arrays, keyed by field name, suitable for passing as input to a
             model.  This is a `batch` of instances, so, e.g., if the instances have a "question"
             field and an "answer" field, the "question" fields for all of the instances will be
