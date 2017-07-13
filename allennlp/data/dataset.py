@@ -77,8 +77,7 @@ class Dataset:
 
     def as_arrays(self,
                   padding_lengths: Dict[str, Dict[str, int]] = None,
-                  verbose: bool = True) -> Dict[str, List[Union[numpy.array,
-                                                                Dict[str, numpy.array]]]]:
+                  verbose: bool = True) -> Dict[str, Union[numpy.array, Dict[str, numpy.array]]]:
         """
         This method converts this ``Dataset`` into a set of numpy arrays that can be passed through
         a model.  In order for the numpy arrays to be valid arrays, all ``Instances`` in this
@@ -103,7 +102,7 @@ class Dataset:
 
         Returns
         -------
-        data_arrays : ``Dict[str, Union[Dict[str, numpy.array], List[numpy.array]]``
+        data_arrays : ``Dict[str, Union[numpy.array, Dict[str, numpy.array]]]``
             A dictionary of data arrays, keyed by field name, suitable for passing as input to a
             model.  This is a `batch` of instances, so, e.g., if the instances have a "question"
             field and an "answer" field, the "question" fields for all of the instances will be
@@ -138,11 +137,11 @@ class Dataset:
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
             for instance in tqdm.tqdm(self.instances):
-                for field, arrays in instance.pad(lengths_to_use).items():
+                for field, arrays in instance.as_array(lengths_to_use).items():
                     field_arrays[field].append(arrays)
         else:
             for instance in self.instances:
-                for field, arrays in instance.pad(lengths_to_use).items():
+                for field, arrays in instance.as_array(lengths_to_use).items():
                     field_arrays[field].append(arrays)
 
         # Finally, we combine the arrays that we got for each instance into one big array (or set
@@ -158,8 +157,6 @@ class Dataset:
                         namespace_batch_dict[namespace].append(array)
                 field_arrays[field_name] = {namespace: numpy.asarray(array_list) for
                                             namespace, array_list in namespace_batch_dict.items()}
-            elif isinstance(field_array_list[0], (list, tuple)):
-                field_arrays[field_name] = [numpy.asarray(x) for x in zip(*field_array_list)]
             else:
                 field_arrays[field_name] = numpy.asarray(field_array_list)
         # Unpack into a standard dict to remove defaultdict functionality.

@@ -53,19 +53,17 @@ class ListField(SequenceField):
         return len(self._field_list)
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> Union[Dict[str, numpy.array], List[numpy.array]]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> Union[Dict[str, numpy.array], numpy.array]:
         padded_field_list = pad_sequence_to_length(self._field_list,
                                                    padding_lengths['num_fields'],
                                                    self._field_list[0].empty_field)
-        padded_fields = [field.pad(padding_lengths) for field in padded_field_list]
+        padded_fields = [field.as_array(padding_lengths) for field in padded_field_list]
         if isinstance(padded_fields[0], dict):
             namespaces = list(padded_fields[0].keys())
             return {namespace: numpy.array([field[namespace] for field in padded_fields])
                     for namespace in namespaces}
-        elif isinstance(padded_fields[0], (list, tuple)):
-            return [numpy.asarray(x) for x in zip(*padded_fields)]
         else:
-            return [numpy.asarray(padded_fields)]
+            return numpy.asarray(padded_fields)
 
     @overrides
     def empty_field(self):

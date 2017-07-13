@@ -54,19 +54,20 @@ class SimpleTagger(Model):
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
     # pylint: disable=arguments-differ
-    def forward(self,
+    def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         """
         Parameters
         ----------
         tokens : Dict[str, torch.LongTensor], required
-            A dictionary of namespaces which have been indexed to their corresponding tensors.
-            At its most basic, using a SingleIdTokenIndexer this is: {"tokens": Tensor(batch_size,
-            sequence_length)}. This dictionary will have as many items as you have used
-            token indexers in the ``TextField`` representing your sequence. This dictionary is
-            designed to be passed directly to a ``TokenEmbedder``, which knows how to combine
-            different word representations into a single one per token in your input.
+            The output of TextField.as_array() which should typically be passed directly to a
+            ``TokenEmbedder``. Concretely, it is a dictionary of namespaces which have been indexed
+            to their corresponding tensors. At its most basic, using a SingleIdTokenIndexer this is:
+            {"tokens": Tensor(batch_size, sequence_length)}. This dictionary will have as many
+            items as you have used token indexers in the ``TextField`` representing your sequence.
+            This dictionary is designed to be passed directly to a ``TokenEmbedder``, which knows
+            how to combine different word representations into a single one per token in your input.
         tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of gold labels.
             These can either be integer indexes or one hot arrays of
@@ -129,7 +130,7 @@ class SimpleTagger(Model):
         """
         text_field.index(self.vocabulary)
         padding_lengths = text_field.get_padding_lengths()
-        array_input = text_field.pad(padding_lengths)
+        array_input = text_field.as_array(padding_lengths)
         # TODO(Mark): Generalise how the array is transformed into a variable after settling the data API.
         # Add a batch dimension by unsqueezing, because pytorch
         # doesn't support inputs without one.

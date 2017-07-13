@@ -78,7 +78,7 @@ class TextField(SequenceField):
         return len(self._tokens)
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.array]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.array]:
         arrays = {}
         desired_num_tokens = padding_lengths['num_tokens']
         for indexer, array in zip(self._token_indexers, self._indexed_tokens):

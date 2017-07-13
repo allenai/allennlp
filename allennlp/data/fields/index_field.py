@@ -36,7 +36,7 @@ class IndexField(Field):
         return {'num_options': self._sequence_field.sequence_length()}
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
         one_hot_index = numpy.zeros(padding_lengths['num_options'])
         one_hot_index[self._index] = 1
         return one_hot_index

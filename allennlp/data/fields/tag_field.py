@@ -67,7 +67,7 @@ class TagField(Field):
         return {'num_tokens': self._sequence_field.sequence_length()}
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.array:
         desired_num_tokens = padding_lengths['num_tokens']
         padded_tags = pad_sequence_to_length(self._indexed_tags, desired_num_tokens)
         one_hot_tags = []

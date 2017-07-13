@@ -41,7 +41,7 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([field1, field2, field3])
         list_field.index(self.vocab)
 
-        array_dict = list_field.pad(list_field.get_padding_lengths())
+        array_dict = list_field.as_array(list_field.get_padding_lengths())
         numpy.testing.assert_array_almost_equal(array_dict["words"][0], numpy.array([2, 3, 4, 5, 0]))
         numpy.testing.assert_array_almost_equal(array_dict["words"][1], numpy.array([2, 3, 4, 1, 5]))
         numpy.testing.assert_array_almost_equal(array_dict["words"][2], numpy.array([2, 3, 1, 5, 0]))
@@ -57,7 +57,7 @@ class TestListField(AllenNlpTestCase):
         padding_lengths = list_field.get_padding_lengths()
         padding_lengths["num_tokens"] = 7
         padding_lengths["num_fields"] = 5
-        array_dict = list_field.pad(padding_lengths)
+        array_dict = list_field.as_array(padding_lengths)
         numpy.testing.assert_array_almost_equal(array_dict["words"][0], numpy.array([2, 3, 4, 5, 0, 0, 0]))
         numpy.testing.assert_array_almost_equal(array_dict["words"][1], numpy.array([2, 3, 4, 1, 5, 0, 0]))
         numpy.testing.assert_array_almost_equal(array_dict["words"][2], numpy.array([2, 3, 1, 5, 0, 0, 0]))
@@ -78,7 +78,7 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([field1, field2, field3])
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
-        array_dict = list_field.pad(padding_lengths)
+        array_dict = list_field.as_array(padding_lengths)
         words = array_dict["words"]
         characters = array_dict["characters"]
         numpy.testing.assert_array_almost_equal(words, numpy.array([[2, 3, 4, 5, 0],

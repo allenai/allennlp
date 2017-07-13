@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, Union
 
 import numpy
 
@@ -65,7 +65,7 @@ class Field:
         """
         raise NotImplementedError
 
-    def pad(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> Union[numpy.array, Dict[str, numpy.array]]:
         """
         Given a set of specified padding lengths, actually pad the data in this field and return a
         numpy array of the correct shape.  This actually returns a list instead of a single array,
@@ -79,7 +79,7 @@ class Field:
         So that ``ListField`` can pad the number of fields in a list (e.g., the number of answer
         option ``TextFields``), we need a representation of an empty field of each type.  This
         returns that.  This will only ever be called when we're to the point of calling
-        :func:`pad`, so you don't need to worry about ``get_padding_lengths``,
+        :func:`as_array`, so you don't need to worry about ``get_padding_lengths``,
         ``count_vocab_items``, etc., being called on this empty field.
 
         We make this an instance method instead of a static method so that if there is any state
