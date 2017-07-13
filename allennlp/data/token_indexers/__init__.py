@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from typing import Dict, Type # mypy: disable=unused-import
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.token_indexers.token_characters_indexer import TokenCharactersIndexer
 from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
 
