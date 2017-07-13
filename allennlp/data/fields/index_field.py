@@ -3,8 +3,8 @@ from typing import Dict, List
 from overrides import overrides
 import numpy
 
-from .field import Field
-from .sequence_field import SequenceField
+from allennlp.data.fields.field import Field
+from allennlp.data.fields.sequence_field import SequenceField
 
 
 class IndexField(Field):

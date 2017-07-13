@@ -1,6 +1,6 @@
 from typing import List
 
-from ...common import Params
+from allennlp.common import Params
 
 
 class Tokenizer:

@@ -5,7 +5,7 @@ import codecs
 import logging
 import tqdm
 
-from ..common.util import namespace_match
+from allennlp.common.util import namespace_match
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

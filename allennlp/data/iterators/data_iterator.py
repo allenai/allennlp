@@ -50,7 +50,7 @@ class DataIterator:
 
     @classmethod
     def from_params(cls, params: Params):
-        from . import iterators
+        from allennlp.data.iterators import iterators
         # TODO(Mark): The adaptive iterator will need a bit of work here,
         # to retrieve the scaling function etc.
         iterator_type = params.pop_choice("type", list(iterators.keys()))

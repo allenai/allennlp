@@ -1,8 +1,8 @@
 from typing import List
 from overrides import overrides
 
-from ...common import Params
-from .tokenizer import Tokenizer
+from allennlp.common import Params
+from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 
 class CharacterTokenizer(Tokenizer):

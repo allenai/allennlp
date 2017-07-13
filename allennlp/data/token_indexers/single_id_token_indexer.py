@@ -2,10 +2,10 @@ from typing import Dict, List, cast
 
 from overrides import overrides
 
-from ...common.util import pad_sequence_to_length
-from ...common import Params
-from ...data.vocabulary import Vocabulary
-from ...data.token_indexers.token_indexer import TokenIndexer, TokenType
+from allennlp.common.util import pad_sequence_to_length
+from allennlp.common import Params
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 
 
 class SingleIdTokenIndexer(TokenIndexer):

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 from typing import Dict, Type  # pylint: disable=unused-import
 
-from .tokenizer import Tokenizer
-from .word_tokenizer import WordTokenizer
-from .character_tokenizer import CharacterTokenizer
+from allennlp.data.tokenizers.tokenizer import Tokenizer
+from allennlp.data.tokenizers.word_tokenizer import WordTokenizer
+from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
 
 # The first item added here will be used as the default in some cases.
 # pylint: disable=invalid-name

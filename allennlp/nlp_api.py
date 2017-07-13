@@ -2,7 +2,7 @@ from typing import Callable, Dict
 
 from torch.nn import Module
 
-from .common import Params
+from allennlp.common import Params
 
 
 class NlpApi:

@@ -4,11 +4,11 @@ import logging
 from overrides import overrides
 import numpy
 
-from .field import Field
-from .sequence_field import SequenceField
-from ..vocabulary import Vocabulary
-from ...common.util import pad_sequence_to_length
-from ...common.checks import ConfigurationError
+from allennlp.data.fields.field import Field
+from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.util import pad_sequence_to_length
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

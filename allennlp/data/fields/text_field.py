@@ -7,11 +7,11 @@ from typing import Dict, List, Optional  # pylint: disable=unused-import
 from overrides import overrides
 import numpy
 
-from .sequence_field import SequenceField
-from ..vocabulary import Vocabulary
-from ..token_indexers.token_indexer import TokenType  # pylint: disable=unused-import
-from ..token_indexers import TokenIndexer
-from ...common.checks import ConfigurationError
+from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.token_indexers.token_indexer import TokenType  # pylint: disable=unused-import
+from allennlp.data.token_indexers import TokenIndexer
+from allennlp.common.checks import ConfigurationError
 
 
 class TextField(SequenceField):

@@ -2,7 +2,7 @@ from typing import Dict, List
 
 import numpy
 
-from ..vocabulary import Vocabulary
+from allennlp.data.vocabulary import Vocabulary
 
 class Field:
     """

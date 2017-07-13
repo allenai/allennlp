@@ -5,9 +5,9 @@ from typing import Dict, List
 import numpy
 import tqdm
 
-from .instance import Instance
-from .vocabulary import Vocabulary
-from ..common.checks import ConfigurationError
+from allennlp.data.instance import Instance
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

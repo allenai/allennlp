@@ -9,8 +9,8 @@ import shutil
 
 from numpy.testing import assert_allclose
 
-from ..common.checks import log_pytorch_version_info
-from ..common.params import Params
+from allennlp.common.checks import log_pytorch_version_info
+from allennlp.common.params import Params
 
 
 class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods

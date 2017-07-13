@@ -4,7 +4,7 @@ from typing import Dict, Type  # pylint: disable=unused-import
 from nltk.stem import PorterStemmer as NltkPorterStemmer
 from overrides import overrides
 
-from ...common import Params
+from allennlp.common import Params
 
 # pylint: disable=invalid-name
 word_stemmers = OrderedDict()  # type: Dict[str, Type[WordStemmer]]

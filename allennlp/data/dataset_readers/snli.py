@@ -3,13 +3,12 @@ import json
 
 from overrides import overrides
 
-from .dataset_reader import DatasetReader
-from .. import Dataset
-from .. import Instance
-from ...common import Params
-from ..fields import TextField, LabelField
-from ..token_indexers import TokenIndexer, SingleIdTokenIndexer
-from ..tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data import Dataset, Instance
+from allennlp.common import Params
+from allennlp.data.fields import TextField, LabelField
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
 
 class SnliReader(DatasetReader):
