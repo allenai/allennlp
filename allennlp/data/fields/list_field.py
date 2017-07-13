@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from overrides import overrides
 import numpy
@@ -53,12 +53,17 @@ class ListField(SequenceField):
         return len(self._field_list)
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
+    def pad(self, padding_lengths: Dict[str, int]) -> Union[Dict[str, numpy.array], List[numpy.array]]:
         padded_field_list = pad_sequence_to_length(self._field_list,
                                                    padding_lengths['num_fields'],
                                                    self._field_list[0].empty_field)
         padded_fields = [field.pad(padding_lengths) for field in padded_field_list]
-        if isinstance(padded_fields[0], (list, tuple)):
+        if isinstance(padded_fields[0], dict):
+            namespaces = list(padded_fields[0].keys())
+            return {namespace: numpy.array([field[namespace] for field in padded_fields])
+                    for namespace in namespaces}
+        # TODO(Mark): Check if this case ever happens....
+        elif isinstance(padded_fields[0], (list, tuple)):
             return [numpy.asarray(x) for x in zip(*padded_fields)]
         else:
             return [numpy.asarray(padded_fields)]

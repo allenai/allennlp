@@ -23,7 +23,7 @@ class TextField(SequenceField):
     Each ``TokenIndexer`` could represent each token as a single ID, or a list of character IDs, or
     something else.
 
-    This field will get converted into a list of arrays, one for each ``TokenIndexer``.  A
+    This field will get converted into a dictionary of arrays, one for each ``TokenIndexer``.  A
     ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
@@ -77,12 +77,14 @@ class TextField(SequenceField):
         return len(self._tokens)
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
-        arrays = []
+    def pad(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.array]:
+        arrays = {}
         desired_num_tokens = padding_lengths['num_tokens']
         for indexer, array in zip(self._token_indexers, self._indexed_tokens):
             padded_array = indexer.pad_token_sequence(array, desired_num_tokens, padding_lengths)
-            arrays.append(numpy.asarray(padded_array))
+            # Use the namespace of the indexer as a key to recognise what
+            # the array corresponds to in a model.
+            arrays[indexer.namespace] = padded_array
         return arrays
 
     @overrides

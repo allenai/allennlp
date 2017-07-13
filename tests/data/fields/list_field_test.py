@@ -41,10 +41,10 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([field1, field2, field3])
         list_field.index(self.vocab)
 
-        array = list_field.pad(list_field.get_padding_lengths())
-        numpy.testing.assert_array_almost_equal(array[0][0], numpy.array([2, 3, 4, 5, 0]))
-        numpy.testing.assert_array_almost_equal(array[0][1], numpy.array([2, 3, 4, 1, 5]))
-        numpy.testing.assert_array_almost_equal(array[0][2], numpy.array([2, 3, 1, 5, 0]))
+        array_dict = list_field.pad(list_field.get_padding_lengths())
+        numpy.testing.assert_array_almost_equal(array_dict["words"][0], numpy.array([2, 3, 4, 5, 0]))
+        numpy.testing.assert_array_almost_equal(array_dict["words"][1], numpy.array([2, 3, 4, 1, 5]))
+        numpy.testing.assert_array_almost_equal(array_dict["words"][2], numpy.array([2, 3, 1, 5, 0]))
 
     def test_fields_can_pad_to_greater_than_max_length(self):
 
@@ -57,12 +57,12 @@ class TestListField(AllenNlpTestCase):
         padding_lengths = list_field.get_padding_lengths()
         padding_lengths["num_tokens"] = 7
         padding_lengths["num_fields"] = 5
-        array = list_field.pad(padding_lengths)
-        numpy.testing.assert_array_almost_equal(array[0][0], numpy.array([2, 3, 4, 5, 0, 0, 0]))
-        numpy.testing.assert_array_almost_equal(array[0][1], numpy.array([2, 3, 4, 1, 5, 0, 0]))
-        numpy.testing.assert_array_almost_equal(array[0][2], numpy.array([2, 3, 1, 5, 0, 0, 0]))
-        numpy.testing.assert_array_almost_equal(array[0][3], numpy.array([0, 0, 0, 0, 0, 0, 0]))
-        numpy.testing.assert_array_almost_equal(array[0][4], numpy.array([0, 0, 0, 0, 0, 0, 0]))
+        array_dict = list_field.pad(padding_lengths)
+        numpy.testing.assert_array_almost_equal(array_dict["words"][0], numpy.array([2, 3, 4, 5, 0, 0, 0]))
+        numpy.testing.assert_array_almost_equal(array_dict["words"][1], numpy.array([2, 3, 4, 1, 5, 0, 0]))
+        numpy.testing.assert_array_almost_equal(array_dict["words"][2], numpy.array([2, 3, 1, 5, 0, 0, 0]))
+        numpy.testing.assert_array_almost_equal(array_dict["words"][3], numpy.array([0, 0, 0, 0, 0, 0, 0]))
+        numpy.testing.assert_array_almost_equal(array_dict["words"][4], numpy.array([0, 0, 0, 0, 0, 0, 0]))
 
     def test_pad_can_handle_multiple_token_indexers(self):
         field1 = TextField(["this", "is", "a", "sentence"],
@@ -78,8 +78,9 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([field1, field2, field3])
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
-        arrays = list_field.pad(padding_lengths)
-        words, characters = arrays
+        array_dict = list_field.pad(padding_lengths)
+        words = array_dict["words"]
+        characters = array_dict["characters"]
         numpy.testing.assert_array_almost_equal(words, numpy.array([[2, 3, 4, 5, 0],
                                                                     [2, 3, 4, 1, 5],
                                                                     [2, 3, 1, 5, 0]]))
