@@ -14,9 +14,11 @@ cache:
 env:
   matrix:
     # run tests, submit coverage info
-    - COVERAGE="true"
+    - COVERAGE="true" RUN_TESTS="true"
     # pylint checks skip the tests
-    - RUN_PYLINT="true" RUN_MYPY="true" SKIP_TESTS="true"
+    - RUN_PYLINT="true"
+    # mypy checks also skip the tests
+    - RUN_MYPY="true"
 
 notifications:
   email: false
