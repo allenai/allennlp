@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, cast, Type
+from typing import Dict, Type
 
 from .data_iterator import DataIterator
 from .basic_iterator import BasicIterator

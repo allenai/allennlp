@@ -30,6 +30,7 @@ class WordStemmer:
         params.assert_empty('WordStemmer')
         return word_stemmers[choice]()
 
+
 class PassThroughWordStemmer(WordStemmer):
     """
     Does not stem words; it's a no-op.  This is the default word stemmer.
@@ -49,6 +50,7 @@ class PorterStemmer(WordStemmer):
     @overrides
     def stem_word(self, word: str) -> str:
         return self.stemmer.stem(word)
+
 
 word_stemmers['pass_through'] = PassThroughWordStemmer
 word_stemmers['porter'] = PorterStemmer

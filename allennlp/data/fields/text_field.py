@@ -68,8 +68,7 @@ class TextField(SequenceField):
             lengths.append(indexer_lengths)
         padding_lengths = {'num_tokens': len(self._indexed_tokens[0])}
         # Get all the keys which have been used for padding.
-        # TODO: figure out the right type hint for this next line
-        padding_keys = set().union(*[d.keys() for d in lengths])  # type: ignore
+        padding_keys = {key for d in lengths for key in d.keys()}
         for padding_key in padding_keys:
             padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
         return padding_lengths

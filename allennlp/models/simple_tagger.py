@@ -100,7 +100,6 @@ class SimpleTagger(Model):
 
     # pylint: enable=arguments-differ
 
-
     def tag(self, text_field: TextField) -> Dict[str, Any]:
         """
         Perform inference on a TextField to produce predicted tags and class probabilities
