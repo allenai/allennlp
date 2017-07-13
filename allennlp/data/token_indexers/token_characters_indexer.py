@@ -7,6 +7,8 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers import CharacterTokenizer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
+# pylint: disable=no-self-use
+
 
 class TokenCharactersIndexer(TokenIndexer[List[int]]):
     """
@@ -43,19 +45,19 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         return indices
 
     # @overrides
-    def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:  # pylint: disable=no-self-use
+    def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
         return {'num_token_characters': len(token)}
 
     # overrides
-    def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):  # pylint: disable=no-self-use
+    def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):
         return (num_tokens, padding_lengths['num_token_characters'])
 
     # @overrides
-    def get_padding_token(self) -> List[int]:  # pylint: disable=no-self-use
+    def get_padding_token(self) -> List[int]:
         return []
 
     # @overrides
-    def pad_token_sequence(self,  # pylint: disable=no-self-use
+    def pad_token_sequence(self,
                            tokens: List[List[int]],
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[List[int]]:

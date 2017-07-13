@@ -5,6 +5,8 @@ from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
+# pylint: disable=no-self-use
+
 
 class SingleIdTokenIndexer(TokenIndexer[int]):
     """
@@ -36,19 +38,19 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
         return vocabulary.get_token_index(token, self.token_namespace)
 
     # @overrides
-    def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):  # pylint: disable=unused-argument,no-self-use
+    def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):  # pylint: disable=unused-argument
         return (num_tokens,)
 
     # @overrides
-    def get_padding_token(self) -> int:  # pylint: disable=no-self-use
+    def get_padding_token(self) -> int:
         return 0
 
     # @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument,no-self-use
+    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
         return {}
 
     # @overrides
-    def pad_token_sequence(self,                                           # pylint: disable=no-self-use
+    def pad_token_sequence(self,
                            tokens: List[int],
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
