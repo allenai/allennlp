@@ -20,6 +20,10 @@ if [[ "$RUN_PYLINT" == "true" ]]; then
     source scripts/pylint.sh
 fi
 
+if [[ "$RUN_MYPY" == "true" ]]; then
+    source scripts/mypy.sh
+fi
+
 if [[ "$SKIP_TESTS" != "true" ]]; then
     run_tests
 fi

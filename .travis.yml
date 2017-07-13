@@ -16,7 +16,7 @@ env:
     # run tests, submit coverage info
     - COVERAGE="true"
     # pylint checks skip the tests
-    - RUN_PYLINT="true" SKIP_TESTS="true"
+    - RUN_PYLINT="true" RUN_MYPY="true" SKIP_TESTS="true"
 
 notifications:
   email: false
