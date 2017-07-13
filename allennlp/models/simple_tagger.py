@@ -59,8 +59,13 @@ class SimpleTagger(Model):
         """
         Parameters
         ----------
-        tokens : torch.LongTensor, required
-            A torch tensor representing the indices of the
+        tokens : Dict[str, torch.LongTensor], required
+            A dictionary of namespaces which have been indexed to their corresponding tensors.
+            At its most basic, using a SingleIdTokenIndexer this is: {"tokens": Tensor(batch_size,
+            sequence_length)}. This dictionary will have as many items as you have used
+            token indexers in the ``TextField`` representing your sequence. This dictionary is
+            designed to be passed directly to a ``TokenEmbedder``, which knows how to combine
+            different word representations into a single one per token in your input.
         tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of gold labels.
             These can either be integer indexes or one hot arrays of
@@ -77,7 +82,7 @@ class SimpleTagger(Model):
             A scalar loss to be optimised.
 
         """
-        # TODO(Mark): Change to use NlpApi.
+        # TODO(Mark): Change to use NlpApi/TokenEmbedder once it exists.
         tokens = tokens["tokens"]
         batch_size = tokens.size()[0]
         embedded_text_input = self.embedding(tokens)

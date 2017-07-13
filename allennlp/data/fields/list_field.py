@@ -62,7 +62,6 @@ class ListField(SequenceField):
             namespaces = list(padded_fields[0].keys())
             return {namespace: numpy.array([field[namespace] for field in padded_fields])
                     for namespace in namespaces}
-        # TODO(Mark): Check if this case ever happens....
         elif isinstance(padded_fields[0], (list, tuple)):
             return [numpy.asarray(x) for x in zip(*padded_fields)]
         else:

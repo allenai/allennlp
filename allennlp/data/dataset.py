@@ -102,12 +102,15 @@ class Dataset:
 
         Returns
         -------
-        data_arrays : ``Dict[str, List[numpy.array]]``
+        data_arrays : ``Dict[str, Union[Dict[str, numpy.array], List[numpy.array]]``
             A dictionary of data arrays, keyed by field name, suitable for passing as input to a
             model.  This is a `batch` of instances, so, e.g., if the instances have a "question"
             field and an "answer" field, the "question" fields for all of the instances will be
             grouped together into a single array, and the "answer" fields for all instances will be
-            similarly grouped in a parallel set of arrays, for batched computation.
+            similarly grouped in a parallel set of arrays, for batched computation. Additionally,
+            for TextFields, the value of the dictionary key is no longer a list, but another
+            dictionary mapping namespaces to arrays. The number of elements in this sub-dictionary
+            corresponds to the number of ``TokenIndexers`` used to index the Field.
         """
         if padding_lengths is None:
             padding_lengths = defaultdict(dict)
@@ -145,11 +148,14 @@ class Dataset:
         # of arrays) per field.
         for field_name, field_array_list in field_arrays.items():
             if isinstance(field_array_list[0], dict):
-                field_dict = {}
+                # This is creating a dict of {namespace: batch_array} for each
+                # namespace within this field. This is mostly utilised by TextFields,
+                # which will have one namespace per TokenIndexer used within the Field.
+                namespace_array_dict = {}
                 namespaces = field_array_list[0].keys()
                 for namespace in namespaces:
-                    field_dict[namespace] = numpy.asarray([x[namespace] for x in field_array_list])
-                field_arrays[field_name] = field_dict
+                    namespace_array_dict[namespace] = numpy.asarray([x[namespace] for x in field_array_list])
+                field_arrays[field_name] = namespace_array_dict
             elif isinstance(field_array_list[0], (list, tuple)):
                 field_arrays[field_name] = [numpy.asarray(x) for x in zip(*field_array_list)]
             else:
