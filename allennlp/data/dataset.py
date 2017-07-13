@@ -1,12 +1,11 @@
 import logging
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy
 import tqdm
 
 from allennlp.data.instance import Instance
-from allennlp.data.fields import DataArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
 
@@ -76,9 +75,9 @@ class Dataset:
                 padding_lengths[field_name][padding_key] = max_value
         return {**padding_lengths}
 
-    def as_arrays(self,  # ignore type
+    def as_arrays(self,
                   padding_lengths: Dict[str, Dict[str, int]] = None,
-                  verbose: bool = True) -> Dict[str, DataArray]:
+                  verbose: bool = True) -> Dict[str, Union[numpy.array, Dict[str, numpy.array]]]:
         """
         This method converts this ``Dataset`` into a set of numpy arrays that can be passed through
         a model.  In order for the numpy arrays to be valid arrays, all ``Instances`` in this
@@ -152,11 +151,11 @@ class Dataset:
                 # This is creating a dict of {namespace: batch_array} for each
                 # namespace within this field. This is mostly utilised by TextFields,
                 # which will have one namespace per TokenIndexer used within the Field.
-                namespace_batch_dict = defaultdict(list)
+                namespace_batch_dict = defaultdict(list)  # type: Dict[str, List[numpy.array]]
                 for namespace_dict in field_array_list:
                     for namespace, array in namespace_dict.items():
                         namespace_batch_dict[namespace].append(array)
-                field_arrays[field_name] = {namespace: numpy.asarray(array_list) for
+                field_arrays[field_name] = {namespace: numpy.asarray(array_list) for  # type: ignore
                                             namespace, array_list in namespace_batch_dict.items()}
             else:
                 field_arrays[field_name] = numpy.asarray(field_array_list)

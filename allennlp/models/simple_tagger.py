@@ -85,9 +85,9 @@ class SimpleTagger(Model):
 
         """
         # TODO(Mark): Change to use NlpApi/TokenEmbedder once it exists.
-        tokens = tokens["tokens"]
-        batch_size = tokens.size()[0]
-        embedded_text_input = self.embedding(tokens)
+        word_tokens = tokens["tokens"]
+        batch_size = word_tokens.size()[0]
+        embedded_text_input = self.embedding(word_tokens)
         encoded_text, _ = self.stacked_encoders(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)

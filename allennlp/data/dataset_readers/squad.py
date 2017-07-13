@@ -54,8 +54,6 @@ class SquadSentenceSelectionReader(DatasetReader):
         self._squad_filename = squad_filename
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
         self._tokenizer = tokenizer
-        if token_indexers is None:
-            token_indexers = [SingleIdTokenIndexer()]
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
         # Initializing some data structures here that will be useful when reading a file.
