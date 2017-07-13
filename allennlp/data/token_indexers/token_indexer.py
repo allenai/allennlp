@@ -1,13 +1,12 @@
-from typing import Dict, List, Union
+from typing import Dict, List, TypeVar, Generic
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common import Params
 
 
-TokenType = Union[int, List[int]]  # pylint: disable=invalid-name
+TokenType = TypeVar("TokenType", int, List[int])  # pylint: disable=invalid-name
 
-
-class TokenIndexer:
+class TokenIndexer(Generic[TokenType]):
     """
     A ``TokenIndexer`` determines how string tokens get represented as arrays of indices in a model.
     This class both converts strings into numerical values, with the help of a :class:`Vocabulary`,
@@ -75,7 +74,7 @@ class TokenIndexer:
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params):  # type: ignore
         from allennlp.data.token_indexers import token_indexers
         choice = params.pop_choice('type', list(token_indexers.keys()), default_to_first_choice=True)
         return token_indexers[choice].from_params(params)

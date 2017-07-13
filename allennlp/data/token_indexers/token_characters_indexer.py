@@ -1,16 +1,16 @@
-from typing import Dict, List, cast
+from typing import Dict, List
 import itertools
-
-from overrides import overrides
 
 from allennlp.common.params import Params
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers import CharacterTokenizer
-from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
+
+# pylint: disable=no-self-use
 
 
-class TokenCharactersIndexer(TokenIndexer):
+class TokenCharactersIndexer(TokenIndexer[List[int]]):
     """
     This :class:`TokenIndexer` represents tokens as lists of character indices.
 
@@ -31,41 +31,39 @@ class TokenCharactersIndexer(TokenIndexer):
         self.namespace = namespace
         self.character_tokenizer = character_tokenizer
 
-    @overrides
+    # TODO(joelgrus) uncomment these once fix is merged to overrides library
+    # @overrides
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
         for character in self.character_tokenizer.tokenize(token):
             counter[self.namespace][character] += 1
 
-    @overrides
-    def token_to_indices(self, token: str, vocabulary: Vocabulary) -> TokenType:
+    # @overrides
+    def token_to_indices(self, token: str, vocabulary: Vocabulary) -> List[int]:
         indices = []
         for character in self.character_tokenizer.tokenize(token):
             indices.append(vocabulary.get_token_index(character, self.namespace))
         return indices
 
-    @overrides
-    def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
-        list_token = cast(List[int], token)
-        return {'num_token_characters': len(list_token)}
+    # @overrides
+    def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
+        return {'num_token_characters': len(token)}
 
-    @overrides
+    # overrides
     def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):
         return (num_tokens, padding_lengths['num_token_characters'])
 
-    @overrides
-    def get_padding_token(self) -> TokenType:
+    # @overrides
+    def get_padding_token(self) -> List[int]:
         return []
 
-    @overrides
+    # @overrides
     def pad_token_sequence(self,
-                           tokens: List[TokenType],
+                           tokens: List[List[int]],
                            desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[TokenType]:
-        # cast is runtime no-op that makes mypy happy
-        list_tokens = cast(List[List[int]], tokens)
-        padded_tokens = pad_sequence_to_length(list_tokens, desired_num_tokens, default_value=lambda: [])
+                           padding_lengths: Dict[str, int]) -> List[List[int]]:
+        padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=lambda: [])
         desired_token_length = padding_lengths['num_token_characters']
-        longest_token = max(list_tokens, key=len)
+        longest_token = max(tokens, key=len)
         if desired_token_length > len(longest_token):
             # Since we want to pad to greater than the longest token, we add a
             # "dummy token" to get the speed of itertools.zip_longest.
