@@ -38,9 +38,9 @@ class TestDataset(AllenNlpTestCase):
         dataset.index_instances(self.vocab)
         padding_lengths = dataset.get_padding_lengths()
         arrays = dataset.as_arrays(padding_lengths)
+        text1 = arrays["text1"]["words"]
+        text2 = arrays["text2"]["words"]
 
-        text1 = arrays["text1"][0]
-        text2 = arrays["text2"][0]
         numpy.testing.assert_array_almost_equal(text1, numpy.array([[2, 3, 4, 5, 6],
                                                                     [1, 3, 4, 5, 6]]))
         numpy.testing.assert_array_almost_equal(text2, numpy.array([[2, 3, 4, 1, 5, 6],

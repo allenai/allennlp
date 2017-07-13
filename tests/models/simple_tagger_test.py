@@ -31,9 +31,10 @@ class SimpleTaggerTest(AllenNlpTestCase):
         training_arrays = self.dataset.as_arrays()
 
         # TODO(Mark): clean this up once the Trainer is finalised.
-        sequence = training_arrays["tokens"][0]
+        print(training_arrays)
+        sequence = training_arrays["tokens"]["tokens"]
         tags = training_arrays["tags"]
-        training_arrays = {"tokens": Variable(torch.from_numpy(sequence)),  # pylint: disable=no-member
+        training_arrays = {"tokens": {"tokens": Variable(torch.from_numpy(sequence))},  # pylint: disable=no-member
                            "tags": Variable(torch.from_numpy(tags))}  # pylint: disable=no-member
         _ = self.model.forward(**training_arrays)
 

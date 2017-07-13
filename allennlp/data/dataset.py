@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy
 import tqdm
@@ -76,7 +76,8 @@ class Dataset:
 
     def as_arrays(self,
                   padding_lengths: Dict[str, Dict[str, int]] = None,
-                  verbose: bool = True) -> Dict[str, List[numpy.array]]:
+                  verbose: bool = True) -> Dict[str, List[Union[numpy.array,
+                                                                Dict[str, numpy.array]]]]:
         """
         This method converts this ``Dataset`` into a set of numpy arrays that can be passed through
         a model.  In order for the numpy arrays to be valid arrays, all ``Instances`` in this
@@ -143,7 +144,13 @@ class Dataset:
         # Finally, we combine the arrays that we got for each instance into one big array (or set
         # of arrays) per field.
         for field_name, field_array_list in field_arrays.items():
-            if isinstance(field_array_list[0], (list, tuple)):
+            if isinstance(field_array_list[0], dict):
+                field_dict = {}
+                namespaces = field_array_list[0].keys()
+                for namespace in namespaces:
+                    field_dict[namespace] = numpy.asarray([x[namespace] for x in field_array_list])
+                field_arrays[field_name] = field_dict
+            elif isinstance(field_array_list[0], (list, tuple)):
                 field_arrays[field_name] = [numpy.asarray(x) for x in zip(*field_array_list)]
             else:
                 field_arrays[field_name] = numpy.asarray(field_array_list)

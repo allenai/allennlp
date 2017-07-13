@@ -54,7 +54,7 @@ class SimpleTagger(Model):
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self,  # pylint: disable=arguments-differ
-                tokens: torch.LongTensor,
+                tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None):
         """
         Parameters
@@ -77,8 +77,9 @@ class SimpleTagger(Model):
             A scalar loss to be optimised.
 
         """
-        batch_size = tokens.size()[0]
         # TODO(Mark): Change to use NlpApi.
+        tokens = tokens["tokens"]
+        batch_size = tokens.size()[0]
         embedded_text_input = self.embedding(tokens)
         encoded_text, _ = self.stacked_encoders(embedded_text_input)
 
@@ -124,7 +125,7 @@ class SimpleTagger(Model):
         # TODO(Mark): Generalise how the array is transformed into a variable after settling the data API.
         # Add a batch dimension by unsqueezing, because pytorch
         # doesn't support inputs without one.
-        array_input = torch.autograd.Variable(torch.LongTensor(array_input[0])).unsqueeze(0)
+        array_input = {"tokens": torch.autograd.Variable(torch.LongTensor(array_input["tokens"])).unsqueeze(0)}
         output_dict = self.forward(tokens=array_input)
 
         # Remove batch dimension, as we only had one input.
