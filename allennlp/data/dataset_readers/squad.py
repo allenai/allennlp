@@ -7,13 +7,12 @@ from typing import List, Tuple, Dict, Set  # pylint: disable=unused-import
 import numpy
 from tqdm import tqdm
 
-from .dataset_reader import DatasetReader
-from .. import Dataset
-from .. import Instance
-from ...common import Params
-from ..fields import TextField, ListField, IndexField
-from ..token_indexers import TokenIndexer, SingleIdTokenIndexer
-from ..tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data import Dataset, Instance
+from allennlp.common import Params
+from allennlp.data.fields import TextField, ListField, IndexField
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 

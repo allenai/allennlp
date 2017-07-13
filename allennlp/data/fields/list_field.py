@@ -3,10 +3,10 @@ from typing import Dict, List
 from overrides import overrides
 import numpy
 
-from .field import Field
-from .sequence_field import SequenceField
-from ..vocabulary import Vocabulary
-from ...common.util import pad_sequence_to_length
+from allennlp.data.fields.field import Field
+from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.util import pad_sequence_to_length
 
 
 class ListField(SequenceField):

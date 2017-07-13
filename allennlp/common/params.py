@@ -5,7 +5,7 @@ import logging
 import pyhocon
 
 from overrides import overrides
-from .checks import ConfigurationError
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

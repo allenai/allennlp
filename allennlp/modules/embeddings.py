@@ -4,8 +4,8 @@ import logging
 import numpy
 import torch
 
-from ..data.vocabulary import Vocabulary
-from ..common.checks import ConfigurationError
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 

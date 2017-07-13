@@ -1,10 +1,10 @@
 from typing import List
 
-from ...common import Params
-from .tokenizer import Tokenizer
-from .word_filter import WordFilter, PassThroughWordFilter
-from .word_splitter import WordSplitter, SimpleWordSplitter
-from .word_stemmer import WordStemmer, PassThroughWordStemmer
+from allennlp.common import Params
+from allennlp.data.tokenizers.tokenizer import Tokenizer
+from allennlp.data.tokenizers.word_filter import WordFilter, PassThroughWordFilter
+from allennlp.data.tokenizers.word_splitter import WordSplitter, SimpleWordSplitter
+from allennlp.data.tokenizers.word_stemmer import WordStemmer, PassThroughWordStemmer
 
 
 class WordTokenizer(Tokenizer):

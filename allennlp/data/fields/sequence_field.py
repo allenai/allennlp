@@ -1,4 +1,4 @@
-from .field import Field
+from allennlp.data.fields.field import Field
 
 
 class SequenceField(Field):

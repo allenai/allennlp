@@ -1,1 +1,1 @@
-from .params import Params
+from allennlp.common.params import Params

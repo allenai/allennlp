@@ -3,11 +3,11 @@ import itertools
 
 from overrides import overrides
 
-from ...common.params import Params
-from ...common.util import pad_sequence_to_length
-from ...data.vocabulary import Vocabulary
-from ...data.tokenizers import CharacterTokenizer
-from ...data.token_indexers.token_indexer import TokenIndexer, TokenType
+from allennlp.common.params import Params
+from allennlp.common.util import pad_sequence_to_length
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.tokenizers import CharacterTokenizer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 
 
 class TokenCharactersIndexer(TokenIndexer):

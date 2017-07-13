@@ -3,7 +3,7 @@ from typing import List, Dict, Type  # pylint: disable=unused-import
 
 from overrides import overrides
 
-from ...common import Params
+from allennlp.common import Params
 
 # pylint: disable=invalid-name
 word_splitters = OrderedDict()  # type: Dict[str, Type[WordSplitter]]

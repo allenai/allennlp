@@ -2,8 +2,8 @@ from typing import Dict, List
 
 import numpy
 
-from .fields import Field
-from .vocabulary import Vocabulary
+from allennlp.data.fields import Field
+from allennlp.data.vocabulary import Vocabulary
 
 
 class Instance:
