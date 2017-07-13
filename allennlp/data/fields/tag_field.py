@@ -1,14 +1,14 @@
-from typing import Dict, List
+from typing import Dict, List, Optional  # pylint: disable=unused-import
 import logging
 
 from overrides import overrides
 import numpy
 
-from .field import Field
-from .sequence_field import SequenceField
-from ..vocabulary import Vocabulary
-from ...common.util import pad_sequence_to_length
-from ...common.checks import ConfigurationError
+from allennlp.data.fields.field import Field
+from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.util import pad_sequence_to_length
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -35,12 +35,12 @@ class TagField(Field):
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
-    def __init__(self, tags: List[str], sequence_field: SequenceField, tag_namespace: str = 'tags'):
+    def __init__(self, tags: List[str], sequence_field: SequenceField, tag_namespace: str = 'tags') -> None:
         self._tags = tags
         self._sequence_field = sequence_field
         self._tag_namespace = tag_namespace
-        self._indexed_tags = None
-        self._num_tags = None
+        self._indexed_tags = None  # type: Optional[List[int]]
+        self._num_tags = None      # type: Optional[int]
 
         if not self._tag_namespace.endswith("tags"):
             logger.warning("Your tag namespace was '%s'. We recommend you use a namespace "

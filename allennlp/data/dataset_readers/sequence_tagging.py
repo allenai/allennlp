@@ -2,7 +2,7 @@ from typing import List
 
 from overrides import overrides
 
-from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data import Dataset, Instance
 from allennlp.common import Params
 from allennlp.data.fields import TextField, TagField
@@ -27,7 +27,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
     """
     def __init__(self,
                  filename: str,
-                 token_indexers: List[TokenIndexer] = None):
+                 token_indexers: List[TokenIndexer] = None) -> None:
         self._filename = filename
         self._token_indexers = token_indexers or [SingleIdTokenIndexer()]
 

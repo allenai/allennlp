@@ -5,7 +5,7 @@ import codecs
 import logging
 import tqdm
 
-from ..common.util import namespace_match
+from allennlp.common.util import namespace_match
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -48,7 +48,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
     def __init__(self,
                  non_padded_namespaces: List[str],
                  padded_function: Callable[[], Any],
-                 non_padded_function: Callable[[], Any]):
+                 non_padded_function: Callable[[], Any]) -> None:
         self._non_padded_namespaces = non_padded_namespaces
         self._padded_function = padded_function
         self._non_padded_function = non_padded_function
@@ -64,14 +64,14 @@ class _NamespaceDependentDefaultDict(defaultdict):
 
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
-    def __init__(self, non_padded_namespaces: List[str], padding_token: str, oov_token: str):
+    def __init__(self, non_padded_namespaces: List[str], padding_token: str, oov_token: str) -> None:
         super(_TokenToIndexDefaultDict, self).__init__(non_padded_namespaces,
                                                        lambda: {padding_token: 0, oov_token: 1},
                                                        lambda: {})
 
 
 class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
-    def __init__(self, non_padded_namespaces: List[str], padding_token: str, oov_token: str):
+    def __init__(self, non_padded_namespaces: List[str], padding_token: str, oov_token: str) -> None:
         super(_IndexToTokenDefaultDict, self).__init__(non_padded_namespaces,
                                                        lambda: {0: padding_token, 1: oov_token},
                                                        lambda: {})
@@ -126,13 +126,13 @@ class Vocabulary:
                  counter: Dict[str, Dict[str, int]] = None,
                  min_count: int = 1,
                  max_vocab_size: Union[int, Dict[str, int]] = None,
-                 non_padded_namespaces: List[str] = None):
+                 non_padded_namespaces: List[str] = None) -> None:
         self._padding_token = "@@PADDING@@"
         self._oov_token = "@@UNKOWN@@"
         if non_padded_namespaces is None:
             non_padded_namespaces = ["*tags", "*labels"]
         if not isinstance(max_vocab_size, dict):
-            max_vocab_size = defaultdict(lambda: max_vocab_size)
+            max_vocab_size = defaultdict(lambda: max_vocab_size)  # type: ignore
         self._token_to_index = _TokenToIndexDefaultDict(non_padded_namespaces,
                                                         self._padding_token,
                                                         self._oov_token)
@@ -191,7 +191,7 @@ class Vocabulary:
         :func:`__init__`.  See that method for a description of what the other parameters do.
         """
         logger.info("Fitting token dictionary")
-        namespace_token_counts = defaultdict(lambda: defaultdict(int))
+        namespace_token_counts = defaultdict(lambda: defaultdict(int))  # type: Dict[str, Dict[str, int]]
         for instance in tqdm.tqdm(dataset.instances):
             instance.count_vocab_items(namespace_token_counts)
 

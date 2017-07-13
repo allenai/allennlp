@@ -3,8 +3,8 @@ from typing import Dict, List
 from overrides import overrides
 import numpy
 
-from .field import Field
-from .sequence_field import SequenceField
+from allennlp.data.fields.field import Field
+from allennlp.data.fields.sequence_field import SequenceField
 
 
 class IndexField(Field):
@@ -27,7 +27,7 @@ class IndexField(Field):
     sequence_field : ``SequenceField``
         A field containing the sequence that this ``IndexField`` is a pointer into.
     """
-    def __init__(self, index: int, sequence_field: SequenceField):
+    def __init__(self, index: int, sequence_field: SequenceField) -> None:
         self._index = index
         self._sequence_field = sequence_field
 

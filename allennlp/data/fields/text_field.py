@@ -2,15 +2,16 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
-from typing import Dict, List
+from typing import Dict, List, Optional  # pylint: disable=unused-import
 
 from overrides import overrides
 import numpy
 
-from .sequence_field import SequenceField
-from ..vocabulary import Vocabulary
-from ..token_indexers import TokenIndexer
-from ...common.checks import ConfigurationError
+from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.token_indexers.token_indexer import TokenType  # pylint: disable=unused-import
+from allennlp.data.token_indexers import TokenIndexer
+from allennlp.common.checks import ConfigurationError
 
 
 class TextField(SequenceField):
@@ -27,10 +28,10 @@ class TextField(SequenceField):
     ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
-    def __init__(self, tokens: List[str], token_indexers: List[TokenIndexer]):
+    def __init__(self, tokens: List[str], token_indexers: List[TokenIndexer]) -> None:
         self._tokens = tokens
         self._token_indexers = token_indexers
-        self._indexed_tokens = None
+        self._indexed_tokens = None  # type: Optional[List[List[TokenType]]]
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
@@ -67,7 +68,7 @@ class TextField(SequenceField):
             lengths.append(indexer_lengths)
         padding_lengths = {'num_tokens': len(self._indexed_tokens[0])}
         # Get all the keys which have been used for padding.
-        padding_keys = set().union(*[d.keys() for d in lengths])
+        padding_keys = {key for d in lengths for key in d.keys()}
         for padding_key in padding_keys:
             padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
         return padding_lengths

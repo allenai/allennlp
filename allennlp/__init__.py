@@ -1,1 +1,1 @@
-from .nlp_api import NlpApi
+from allennlp.nlp_api import NlpApi

@@ -3,10 +3,10 @@ from typing import Dict, List, Union
 from overrides import overrides
 import numpy
 
-from .field import Field
-from .sequence_field import SequenceField
-from ..vocabulary import Vocabulary
-from ...common.util import pad_sequence_to_length
+from allennlp.data.fields.field import Field
+from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.util import pad_sequence_to_length
 
 
 class ListField(SequenceField):
@@ -24,7 +24,7 @@ class ListField(SequenceField):
         A list of ``Field`` objects to be concatenated into a single input tensor.  All of the
         contained ``Field`` objects must be of the same type.
     """
-    def __init__(self, field_list: List[Field]):
+    def __init__(self, field_list: List[Field]) -> None:
         field_class_set = set([field.__class__ for field in field_list])
         assert len(field_class_set) == 1, "ListFields must contain a single field type, found " +\
                                           str(field_class_set)

@@ -1,7 +1,7 @@
 from typing import Dict, List, Union
 
-from ..vocabulary import Vocabulary
-from ...common import Params
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common import Params
 
 
 TokenType = Union[int, List[int]]  # pylint: disable=invalid-name
@@ -74,8 +74,8 @@ class TokenIndexer:
         """
         raise NotImplementedError
 
-    @staticmethod
-    def from_params(params: Params):
-        from . import token_indexers
+    @classmethod
+    def from_params(cls, params: Params):
+        from allennlp.data.token_indexers import token_indexers
         choice = params.pop_choice('type', list(token_indexers.keys()), default_to_first_choice=True)
         return token_indexers[choice].from_params(params)
