@@ -2,7 +2,7 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
-from typing import Dict, List, Optional, Union  # pylint: disable=unused-import
+from typing import Dict, List, Optional  # pylint: disable=unused-import
 
 from overrides import overrides
 import numpy
