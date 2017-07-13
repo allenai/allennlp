@@ -15,7 +15,7 @@ class DatasetReader:
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'DatasetReader':
         from allennlp.data.dataset_readers import dataset_readers
         choice = params.pop_choice('type', list(dataset_readers.keys()))
         return dataset_readers[choice].from_params(params)

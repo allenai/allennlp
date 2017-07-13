@@ -1,0 +1,19 @@
+// DO NOT COMMIT THIS!!  It belongs in a test somewhere, eventually.
+{
+  "operation": "train",
+  "dataset_reader": {
+    "params": "read by DatasetReader.from_params()"
+  },
+  "train_data_path": "path",
+  "validation_data_path": "path",
+  "model": {
+    "params": "read by Model.from_params()",
+    "nlp_api": {
+      "params": "read by NlpApi.from_params()"
+    }
+  },
+  "training": {
+    "params": "read by Trainer.from_params()",
+    "data_iterator": "read by DataIterator.from_params()"
+  }
+}
