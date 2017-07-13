@@ -2,14 +2,13 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
-from typing import Dict, List, Optional  # pylint: disable=unused-import
+from typing import Dict, List, Optional, Union  # pylint: disable=unused-import
 
 from overrides import overrides
 import numpy
 
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.token_indexers.token_indexer import TokenType  # pylint: disable=unused-import
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.common.checks import ConfigurationError
 
@@ -31,7 +30,7 @@ class TextField(SequenceField):
     def __init__(self, tokens: List[str], token_indexers: List[TokenIndexer]) -> None:
         self._tokens = tokens
         self._token_indexers = token_indexers
-        self._indexed_tokens = None  # type: Optional[List[List[TokenType]]]
+        self._indexed_tokens = None  # type: Optional[List[List[Union[int, List[int]]]]]
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
