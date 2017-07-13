@@ -144,7 +144,7 @@ class TestSquadSentenceSelectionReader(AllenNlpTestCase):
         # We aren't going to try to guess _which_ random sentences get selected, but we will at
         # least make sure that we get the expected number of results.
         reader = SquadSentenceSelectionReader(self.squad_file,
-                                              negative_sentence_selection="random-2,as_array-to-5")
+                                              negative_sentence_selection="random-2,pad-to-5")
         instances = reader.read().instances
         assert instances[0].fields()['sentences'].sequence_length() == 6
         self.assert_index_field_points_to_correct_sentence(instances[0].fields()['correct_sentence'],
