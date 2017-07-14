@@ -144,9 +144,8 @@ class Dataset:
                 for field, arrays in instance.as_array(lengths_to_use).items():
                     field_arrays[field].append(arrays)
 
-        # Finally, we combine the arrays that we got for each instance into
-        # one big array (or set of arrays) per field.
-        final_field_arrays = {}
+        # Finally, we combine the arrays that we got for each instance into one big array (or set
+        # of arrays) per field.
         for field_name, field_array_list in field_arrays.items():
             if isinstance(field_array_list[0], dict):
                 # This is creating a dict of {namespace: batch_array} for each
@@ -156,10 +155,9 @@ class Dataset:
                 for namespace_dict in field_array_list:
                     for namespace, array in namespace_dict.items():
                         namespace_batch_dict[namespace].append(array)
-                final_field_arrays[field_name] = {namespace: numpy.asarray(array_list) for
-                                                  namespace, array_list in namespace_batch_dict.items()}
+                field_arrays[field_name] = {namespace: numpy.asarray(array_list) for  # type: ignore
+                                            namespace, array_list in namespace_batch_dict.items()}
             else:
-                final_field_arrays[field_name] = numpy.asarray(field_array_list)
-            # Delete as we go for memory efficiency.
-            del field_arrays[field_name]
-        return final_field_arrays
+                field_arrays[field_name] = numpy.asarray(field_array_list)
+        # Unpack into a standard dict to remove defaultdict functionality.
+        return {**field_arrays}
