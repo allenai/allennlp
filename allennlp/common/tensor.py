@@ -1,4 +1,4 @@
-
+from typing import List
 import torch
 
 
@@ -41,3 +41,21 @@ def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.Long
 
     return sorted_tensor, restoration_indices
 
+
+def get_dropout_mask(dropout_probability: float, shape: List[int]):
+    """
+    Parameters
+    ----------
+    dropout_probability: float, Probability of dropping a dimension of the input.
+    shape: Shape of the tensor you are generating a mask for.
+
+    Return
+    ------
+    Float tensor consisting of the binary mask scaled by 1/ (1 - dropout_probability).
+    (this scaling ensures expected values and variances of the output of
+     applying this mask and the original tensor are the same).
+    """
+    binary_mask = torch.rand(shape) > dropout_probability
+    # Scale mask by 1/keep_prob to preserve output statistics.
+    dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
+    return dropout_mask
