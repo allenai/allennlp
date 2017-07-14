@@ -19,6 +19,7 @@ class TestDataset(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("a")
         self.vocab.add_token_to_namespace("sentence")
         self.vocab.add_token_to_namespace(".")
+        self.token_indexer = {"tokens": token_indexers["single id"]()}
         super(TestDataset, self).setUp()
 
     def test_instances_must_have_homogeneous_fields(self):
@@ -47,13 +48,10 @@ class TestDataset(AllenNlpTestCase):
                                                                     [2, 3, 1, 0, 0, 0]]))
 
     def get_dataset(self):
-        field1 = TextField(["this", "is", "a", "sentence", "."],
-                           {"tokens": token_indexers["single id"]()})
-        field2 = TextField(["this", "is", "a", "different", "sentence", "."],
-                           {"tokens": token_indexers["single id"]()})
-        field3 = TextField(["here", "is", "a", "sentence", "."],
-                           {"tokens": token_indexers["single id"]()})
-        field4 = TextField(["this", "is", "short"], {"tokens": token_indexers["single id"]()})
+        field1 = TextField(["this", "is", "a", "sentence", "."], self.token_indexer)
+        field2 = TextField(["this", "is", "a", "different", "sentence", "."], self.token_indexer)
+        field3 = TextField(["here", "is", "a", "sentence", "."], self.token_indexer)
+        field4 = TextField(["this", "is", "short"], self.token_indexer)
         instances = [Instance({"text1": field1, "text2": field2}),
                      Instance({"text1": field3, "text2": field4})]
 

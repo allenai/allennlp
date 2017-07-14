@@ -83,11 +83,11 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
     def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.array]:
         arrays = {}
         desired_num_tokens = padding_lengths['num_tokens']
-        for (indexer_name, indexer) in self._token_indexers.items():
+        for indexer_name, indexer in self._token_indexers.items():
             padded_array = indexer.pad_token_sequence(self._indexed_tokens[indexer_name],
                                                       desired_num_tokens, padding_lengths)
-            # Use the namespace of the indexer as a key to recognise what
-            # the array corresponds to in a model.
+            # Use the key of the indexer to recognise what the array corresponds to within the field
+            # (i.e. the result of word indexing, or the result of character indexing, for example).
             arrays[indexer_name] = padded_array
         return arrays
 
@@ -95,7 +95,7 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
     def empty_field(self):
         # pylint: disable=protected-access
         text_field = TextField([], self._token_indexers)
-        # This needs to be a list of empty lists for each token_indexer,
+        # This needs to be a dict of empty lists for each token_indexer,
         # for padding reasons in ListField.
         text_field._indexed_tokens = {name: [] for name in self._token_indexers.keys()}
         return text_field

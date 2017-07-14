@@ -60,6 +60,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
         token_indexer_params = params.pop('token_indexers', Params({}))
         for name, indexer_params in token_indexer_params.items():
             token_indexers[name] = TokenIndexer.from_params(indexer_params)
+        # The default parameters are contained within the class,
+        # so if no parameters are given we must pass None.
         if token_indexers == {}:
             token_indexers = None
         params.assert_empty(cls.__name__)

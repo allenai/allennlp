@@ -10,7 +10,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.util import pad_sequence_to_length
 
 
-class ListField(SequenceField):
+class ListField(SequenceField[DataArray]):
     """
     A ``ListField`` is a list of other fields.  You would use this to represent, e.g., a list of
     answer options that are themselves ``TextFields``.
@@ -25,11 +25,11 @@ class ListField(SequenceField):
         A list of ``Field`` objects to be concatenated into a single input tensor.  All of the
         contained ``Field`` objects must be of the same type.
     """
-    def __init__(self, field_list: List[Field]) -> None:  # pylint: disable=super-init-not-called
+    def __init__(self, field_list: List[Field]) -> None:
         field_class_set = set([field.__class__ for field in field_list])
         assert len(field_class_set) == 1, "ListFields must contain a single field type, found " +\
                                           str(field_class_set)
-        self._field_list = field_list
+        self._field_list = field_list  # type: List[Field]
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

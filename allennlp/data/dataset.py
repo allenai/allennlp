@@ -77,7 +77,9 @@ class Dataset:
 
     def as_arrays(self,
                   padding_lengths: Dict[str, Dict[str, int]] = None,
-                  verbose: bool = True) -> Dict[str, Union[numpy.array, Dict[str, numpy.array]]]:
+                  verbose: bool = True) ->Dict[str, Union[numpy.array, Dict[str, numpy.array]]]:
+        # This complex return type is actually predefined elsewhere as a DataArray,
+        # but we can't use it because mypy doesn't like it.
         """
         This method converts this ``Dataset`` into a set of numpy arrays that can be passed through
         a model.  In order for the numpy arrays to be valid arrays, all ``Instances`` in this
@@ -108,9 +110,10 @@ class Dataset:
             field and an "answer" field, the "question" fields for all of the instances will be
             grouped together into a single array, and the "answer" fields for all instances will be
             similarly grouped in a parallel set of arrays, for batched computation. Additionally,
-            for TextFields, the value of the dictionary key is no longer a list, but another
-            dictionary mapping namespaces to arrays. The number of elements in this sub-dictionary
-            corresponds to the number of ``TokenIndexers`` used to index the Field.
+            for TextFields, the value of the dictionary key is no longer a single array, but another
+            dictionary mapping TokenIndexer keys to arrays. The number of elements in this
+            sub-dictionary therefore corresponds to the number of ``TokenIndexers`` used to index
+            the Field.
         """
         if padding_lengths is None:
             padding_lengths = defaultdict(dict)
@@ -148,15 +151,14 @@ class Dataset:
         # of arrays) per field.
         for field_name, field_array_list in field_arrays.items():
             if isinstance(field_array_list[0], dict):
-                # This is creating a dict of {namespace: batch_array} for each
-                # namespace within this field. This is mostly utilised by TextFields,
-                # which will have one namespace per TokenIndexer used within the Field.
-                namespace_batch_dict = defaultdict(list)  # type: Dict[str, List[numpy.array]]
+                # This is creating a dict of {token_indexer_key: batch_array} for each
+                # token indexer used to index this field. This is mostly utilised by TextFields.
+                token_indexer_key_to_batch_dict = defaultdict(list)  # type: Dict[str, List[numpy.array]]
                 for namespace_dict in field_array_list:
-                    for namespace, array in namespace_dict.items():
-                        namespace_batch_dict[namespace].append(array)
-                field_arrays[field_name] = {namespace: numpy.asarray(array_list) for  # type: ignore
-                                            namespace, array_list in namespace_batch_dict.items()}
+                    for indexer_name, array in namespace_dict.items():
+                        token_indexer_key_to_batch_dict[indexer_name].append(array)
+                field_arrays[field_name] = {indexer_name: numpy.asarray(array_list) for  # type: ignore
+                                            indexer_name, array_list in token_indexer_key_to_batch_dict.items()}
             else:
                 field_arrays[field_name] = numpy.asarray(field_array_list)
         # Unpack into a standard dict to remove defaultdict functionality.
