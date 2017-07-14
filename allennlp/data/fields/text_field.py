@@ -25,7 +25,7 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
     Each ``TokenIndexer`` could represent each token as a single ID, or a list of character IDs, or
     something else.
 
-    This field will get converted into apy dictionary of arrays, one for each ``TokenIndexer``.  A
+    This field will get converted into a dictionary of arrays, one for each ``TokenIndexer``.  A
     ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
