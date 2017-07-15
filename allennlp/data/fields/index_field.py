@@ -1,4 +1,5 @@
-from typing import Dict, List
+# pylint: disable=no-self-use
+from typing import Dict
 
 from overrides import overrides
 import numpy
@@ -7,7 +8,7 @@ from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
 
 
-class IndexField(Field):
+class IndexField(Field[numpy.array]):
     """
     An ``IndexField`` is an index into a :class:`SequenceField`, as might be used for
     representing a correct answer option in a list, or a span begin and span end position in a
@@ -36,7 +37,7 @@ class IndexField(Field):
         return {'num_options': self._sequence_field.sequence_length()}
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.array:
         one_hot_index = numpy.zeros(padding_lengths['num_options'])
         one_hot_index[self._index] = 1
         return one_hot_index

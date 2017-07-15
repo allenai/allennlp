@@ -1,8 +1,7 @@
-from typing import Dict, List
+from typing import Dict
 
-import numpy
 
-from allennlp.data.fields import Field
+from allennlp.data.fields import Field, DataArray
 from allennlp.data.vocabulary import Vocabulary
 
 
@@ -47,7 +46,7 @@ class Instance:
             lengths[field_name] = field.get_padding_lengths()
         return lengths
 
-    def pad(self, padding_lengths: Dict[str, Dict[str, int]]) -> Dict[str, List[numpy.array]]:
+    def as_array(self, padding_lengths: Dict[str, Dict[str, int]]) -> Dict[str, DataArray]:
         """
         Pads each ``Field`` in this instance to the lengths given in ``padding_lengths`` (which is
         keyed by field name, then by padding key, the same as the return value in
@@ -55,7 +54,7 @@ class Instance:
         """
         arrays = {}
         for field_name, field in self._fields.items():
-            arrays[field_name] = field.pad(padding_lengths[field_name])
+            arrays[field_name] = field.as_array(padding_lengths[field_name])
         return arrays
 
     def fields(self):
