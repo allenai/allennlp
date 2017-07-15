@@ -31,14 +31,14 @@ class SimpleTaggerTest(AllenNlpTestCase):
         training_arrays = self.dataset.as_arrays()
 
         # TODO(Mark): clean this up once the Trainer is finalised.
-        sequence = training_arrays["tokens"][0]
+        sequence = training_arrays["tokens"]["tokens"]
         tags = training_arrays["tags"]
-        training_arrays = {"tokens": Variable(torch.from_numpy(sequence)),  # pylint: disable=no-member
+        training_arrays = {"tokens": {"tokens": Variable(torch.from_numpy(sequence))},  # pylint: disable=no-member
                            "tags": Variable(torch.from_numpy(tags))}  # pylint: disable=no-member
         _ = self.model.forward(**training_arrays)
 
     def test_tag_returns_distributions_per_token(self):
-        text = TextField(["This", "is", "a", "sentence"], token_indexers=[SingleIdTokenIndexer()])
+        text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})
         output = self.model.tag(text)
         possible_tags = self.vocab.get_index_to_token_vocabulary("tags").values()
         for tag in output["tags"]:

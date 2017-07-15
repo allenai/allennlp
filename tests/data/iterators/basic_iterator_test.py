@@ -10,7 +10,7 @@ from allennlp.testing.test_case import AllenNlpTestCase
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):
         super(IteratorTest, self).setUp()
-        self.token_indexers = [SingleIdTokenIndexer()]
+        self.token_indexers = {"tokens": SingleIdTokenIndexer()}
         self.vocab = Vocabulary()
         self.this_index = self.vocab.add_token_to_namespace('this')
         self.is_index = self.vocab.add_token_to_namespace('is')
@@ -38,7 +38,8 @@ class IteratorTest(AllenNlpTestCase):
         # First we need to remove padding tokens from the candidates.
         # pylint: disable=protected-access
         candidate_instances = [tuple(w for w in instance if w != 0) for instance in candidate_instances]
-        expected_instances = [tuple(instance.fields()["text"]._indexed_tokens[0]) for instance in self.instances]
+        expected_instances = [tuple(instance.fields()["text"]._indexed_tokens["tokens"])
+                              for instance in self.instances]
         assert set(candidate_instances) == set(expected_instances)
 
 
@@ -48,7 +49,7 @@ class TestBasicIterator(IteratorTest):
         iterator = BasicIterator(batch_size=2)
         batches = list(iterator(self.dataset, num_epochs=1))
         # We just want to get the single-token array for the text field in the instance.
-        instances = [tuple(instance) for batch in batches for instance in batch['text'][0]]
+        instances = [tuple(instance) for batch in batches for instance in batch['text']["tokens"]]
         assert len(instances) == 5
         self.assert_instances_are_correct(instances)
 
@@ -56,7 +57,7 @@ class TestBasicIterator(IteratorTest):
         generator = BasicIterator(batch_size=2)(self.dataset)
         batches = [next(generator) for _ in range(18)]  # going over the data 6 times
         # We just want to get the single-token array for the text field in the instance.
-        instances = [tuple(instance) for batch in batches for instance in batch['text'][0]]
+        instances = [tuple(instance) for batch in batches for instance in batch['text']["tokens"]]
         assert len(instances) == 5 * 6
         self.assert_instances_are_correct(instances)
 
