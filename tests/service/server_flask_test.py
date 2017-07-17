@@ -1,20 +1,20 @@
 # pylint: disable=no-self-use,invalid-name
 import json
 
-from allennlp.service.server import app
+from allennlp.service.server_flask import app
 from allennlp.testing.test_case import AllenNlpTestCase
-
 
 
 class TestApp(AllenNlpTestCase):
 
+    # TODO(joelgrus): this is a fragile test
     def test_list_models(self):
         app.testing = True
         client = app.test_client()
 
         models = client.get("models")
         data = json.loads(models.get_data().decode('utf-8'))
-        assert set(data["models"]) == {"uppercase", "lowercase", "reverse"}
+        assert "reverse" in set(data["models"])
 
     def test_unknown_model(self):
         app.testing = True
