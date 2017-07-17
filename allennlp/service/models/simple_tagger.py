@@ -30,7 +30,7 @@ def simple_tagger_model() -> Model:
     def run(blob: JSON):
         sentence = blob.get("input", "")
         tokens = tokenizer.tokenize(sentence)
-        text = TextField(tokens, token_indexers=[SingleIdTokenIndexer()])
+        text = TextField(tokens, token_indexers={"tokens":SingleIdTokenIndexer()})
         output = model.tag(text)
 
         # convert np array to serializable list
