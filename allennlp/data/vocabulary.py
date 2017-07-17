@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, Union, Sequence
 
 import codecs
 import logging
@@ -8,6 +8,8 @@ import tqdm
 from allennlp.common.util import namespace_match
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
 
 
 class _NamespaceDependentDefaultDict(defaultdict):
@@ -46,7 +48,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
         padded.
     """
     def __init__(self,
-                 non_padded_namespaces: List[str],
+                 non_padded_namespaces: Sequence[str],
                  padded_function: Callable[[], Any],
                  non_padded_function: Callable[[], Any]) -> None:
         self._non_padded_namespaces = non_padded_namespaces
@@ -64,14 +66,14 @@ class _NamespaceDependentDefaultDict(defaultdict):
 
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
-    def __init__(self, non_padded_namespaces: List[str], padding_token: str, oov_token: str) -> None:
+    def __init__(self, non_padded_namespaces: Sequence[str], padding_token: str, oov_token: str) -> None:
         super(_TokenToIndexDefaultDict, self).__init__(non_padded_namespaces,
                                                        lambda: {padding_token: 0, oov_token: 1},
                                                        lambda: {})
 
 
 class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
-    def __init__(self, non_padded_namespaces: List[str], padding_token: str, oov_token: str) -> None:
+    def __init__(self, non_padded_namespaces: Sequence[str], padding_token: str, oov_token: str) -> None:
         super(_IndexToTokenDefaultDict, self).__init__(non_padded_namespaces,
                                                        lambda: {0: padding_token, 1: oov_token},
                                                        lambda: {})
@@ -126,11 +128,9 @@ class Vocabulary:
                  counter: Dict[str, Dict[str, int]] = None,
                  min_count: int = 1,
                  max_vocab_size: Union[int, Dict[str, int]] = None,
-                 non_padded_namespaces: List[str] = None) -> None:
+                 non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES) -> None:
         self._padding_token = "@@PADDING@@"
         self._oov_token = "@@UNKOWN@@"
-        if non_padded_namespaces is None:
-            non_padded_namespaces = ["*tags", "*labels"]
         if not isinstance(max_vocab_size, dict):
             max_vocab_size = defaultdict(lambda: max_vocab_size)  # type: ignore
         self._token_to_index = _TokenToIndexDefaultDict(non_padded_namespaces,
@@ -184,7 +184,7 @@ class Vocabulary:
                      dataset,
                      min_count: int = 1,
                      max_vocab_size: Union[int, Dict[str, int]] = None,
-                     non_padded_namespaces: List[str] = None) -> 'Vocabulary':
+                     non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES) -> 'Vocabulary':
         """
         Constructs a vocabulary given a :class:`.Dataset` and some parameters.  We count all of the
         vocabulary items in the dataset, then pass those counts, and the other parameters, to
