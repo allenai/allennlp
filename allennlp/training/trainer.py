@@ -26,7 +26,7 @@ class Trainer:
                  num_epochs: int = 20,
                  model_serialization_prefix: str = None,
                  save_models: bool = False,
-                 cuda_device: int = -1):
+                 cuda_device: int = -1) -> None:
         """
         Parameters
         ----------

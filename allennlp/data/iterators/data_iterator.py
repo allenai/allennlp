@@ -55,4 +55,3 @@ class DataIterator:
         # to retrieve the scaling function etc.
         iterator_type = params.pop_choice("type", list(iterators.keys()), default_to_first_choice=True)
         return iterators[iterator_type](**params.as_dict())  # type: ignore
-

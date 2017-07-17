@@ -14,7 +14,7 @@ from allennlp.data.fields import TextField, ListField, IndexField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
-logger = logging.getLogger(__name__) # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class SquadSentenceSelectionReader(DatasetReader):
@@ -172,7 +172,7 @@ class SquadSentenceSelectionReader(DatasetReader):
 
                     # There may be multiple answer annotations, so pick the one
                     # that occurs the most.
-                    candidate_answer_start_indices = Counter()
+                    candidate_answer_start_indices = Counter() # type: Counter
                     for answer in question_answer["answers"]:
                         candidate_answer_start_indices[answer["answer_start"]] += 1
                     answer_start_index, _ = candidate_answer_start_indices.most_common(1)[0]

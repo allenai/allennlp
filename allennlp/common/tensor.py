@@ -4,8 +4,8 @@ import torch
 from torch.autograd import Variable
 import numpy
 
-ArrayOrDictOfArrays = Union[numpy.array, Dict[str, numpy.array]]
-RecursiveDictOfArrays = Union[ArrayOrDictOfArrays, Dict[str, ArrayOrDictOfArrays]]
+ArrayOrDictOfArrays = Union[numpy.array, Dict[str, numpy.array]]  # pylint: disable=invalid-name
+RecursiveDictOfArrays = Union[ArrayOrDictOfArrays, Dict[str, ArrayOrDictOfArrays]]  # pylint: disable=invalid-name
 
 
 def data_structure_as_variables(data_structure: RecursiveDictOfArrays,

@@ -4,12 +4,12 @@ import torch
 
 from ..common.checks import ConfigurationError
 
-optimizers = {
-    "adam": torch.optim.Adam,
-    "adagrad": torch.optim.Adagrad,
-    "adadelta": torch.optim.Adadelta,
-    "sgd": torch.optim.SGD,
-    "rmsprop": torch.optim.RMSprop,
+optimizers = {  # pylint: disable=invalid-name
+        "adam": torch.optim.Adam,
+        "adagrad": torch.optim.Adagrad,
+        "adadelta": torch.optim.Adadelta,
+        "sgd": torch.optim.SGD,
+        "rmsprop": torch.optim.RMSprop,
 
 }
 

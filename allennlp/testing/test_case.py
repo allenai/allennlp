@@ -59,7 +59,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         # Our loading tests work better if you're not using complex iterators, so by
         # default we use the basic one unless you pass an iterator into this function.
         # If you _do_ use them, we'll skip some of the stuff below that isn't compatible.
-        additional_trainer_args = additional_trainer_args or {}
+        additional_trainer_args = additional_trainer_args or Params({})
 
         dataset = dataset_reader.read(self.TRAIN_FILE)
         additional_trainer_args["save_models"] = True
