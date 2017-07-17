@@ -67,6 +67,11 @@ class OntonotesReader(DatasetReader):
         We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
+
+    Return
+    ------
+    A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
+
     """
     def __init__(self,
                  ontonotes_filename: str,
@@ -132,17 +137,23 @@ class OntonotesReader(DatasetReader):
                 # called filename.gold_conll.
                 if 'gold_conll' not in file:
                     continue
-                # print root, dirs, f
                 dpath = root.split('/')
                 domain = '_'.join(dpath[dpath.index('annotations') + 1:-1])
                 with codecs.open(root + "/" + file, 'r', encoding='utf8') as open_file:
                     for line in open_file:
                         line = line.strip()
-                        if line == '':
+                        if line == '' or line.beginswith("#"):
 
+                            # Conll format data begins and ends with lines containing a hash,
+                            # which may or may not occur after an empty line. To deal with this
+                            # we check if the sentence is empty or not and if it is, we just skip
+                            # adding instances, because there aren't any to add.
+                            if not sentence:
+                                continue
                             instances.extend(self.process_sentence(sentence,
                                                                    verbal_predicates,
                                                                    predicate_argument_labels))
+                            # Reset everything for the next sentence.
                             sentence = []
                             verbal_predicates = []
                             predicate_argument_labels = []
@@ -189,7 +200,9 @@ class OntonotesReader(DatasetReader):
                             if ")" in annotation:
                                 current_span_label[annotation_index] = None
                             # If any annotation contains this word as a verb predicate,
-                            # we need to record its index.
+                            # we need to record its index. This also has the side effect
+                            # of ordering the verbal predicates by their location in the
+                            # sentence, automatically aligning them with the annotations.
                             if "(V" in annotation:
                                 is_verbal_predicate = True
 
