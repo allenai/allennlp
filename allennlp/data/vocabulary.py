@@ -26,18 +26,18 @@ class _NamespaceDependentDefaultDict(defaultdict):
     specify filters on the namespace (the key used in the ``defaultdict``), and use different
     default values depending on whether the namespace passes the filter.
 
-    To do filtering, we take a list of ``non_padded_namespaces``.  This is a list of strings that
-    are either matched exactly against the keys, or treated as suffixes, if the string starts with
-    `*`.  In other words, if "*tags" is in non_padded_namespaces then "passage_tags",
-    "question_tags", etc. (anything that ends with "tags") will have the ``non_padded`` default
-    value.
+    To do filtering, we take a sequence of ``non_padded_namespaces``.  This is a list or tuple of
+    strings that are either matched exactly against the keys, or treated as suffixes, if the
+    string starts with `*`.  In other words, if "*tags" is in non_padded_namespaces then
+    "passage_tags", "question_tags", etc. (anything that ends with "tags") will have the
+    ``non_padded`` default value.
 
     Parameters
     ----------
-    non_padded_namespaces : ``List[str]``
-        A list of strings describing which namespaces are not padded.  If a namespace (key) is
-        missing from this dictionary, we will use :func:`namespace_match` to see whether the
-        namespace should be padded.  If the given namespace matches any of the strings in this
+    non_padded_namespaces : ``Sequence[str]``
+        A list or tuple of strings describing which namespaces are not padded.  If a namespace
+        (key) is missing from this dictionary, we will use :func:`namespace_match` to see whether
+        the namespace should be padded.  If the given namespace matches any of the strings in this
         list, we will use ``non_padded_function`` to initialize the value for that namespace, and
         we will use ``padded_function`` otherwise.
     padded_function : ``Callable[[], Any]``
@@ -110,7 +110,7 @@ class Vocabulary:
         to be no larger than this.  If you specify a dictionary, then each namespace in the
         ``counter`` can have a separate maximum vocabulary size.  Any missing key will have a value
         of ``None``, which means no cap on the vocabulary size.
-    non_padded_namespaces : ``List[str]``, optional (default=``["*tags", "*labels"]``)
+    non_padded_namespaces : ``Sequence[str]``, optional (default=``("*tags", "*labels")``)
         By default, we assume you are mapping word / character tokens to integers, and so you want
         to reserve word indices for padding and out-of-vocabulary tokens.  However, if you are
         mapping NER or SRL tags, or class labels, to integers, you probably do not want to reserve
