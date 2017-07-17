@@ -18,7 +18,7 @@ def simple_tagger_model() -> Model:
     test_case = AllenNlpTestCase()
     test_case.setUp()
     test_case.write_sequence_tagging_data()
-    dataset = SequenceTaggingDatasetReader(test_case.TRAIN_FILE).read()
+    dataset = SequenceTaggingDatasetReader().read(test_case.TRAIN_FILE)
 
     vocab = Vocabulary.from_dataset(dataset)
     dataset.index_instances(vocab)
@@ -30,7 +30,7 @@ def simple_tagger_model() -> Model:
     def run(blob: JSON):
         sentence = blob.get("input", "")
         tokens = tokenizer.tokenize(sentence)
-        text = TextField(tokens, token_indexers={"tokens":SingleIdTokenIndexer()})
+        text = TextField(tokens, token_indexers={"tokens": SingleIdTokenIndexer()})
         output = model.tag(text)
 
         # convert np array to serializable list
@@ -45,6 +45,7 @@ def simple_tagger_model() -> Model:
                }
 
     return run
+
 
 def models() -> Dict[str, Model]:
     return {'simple_tagger': simple_tagger_model()}

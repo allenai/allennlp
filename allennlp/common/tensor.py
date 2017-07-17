@@ -4,11 +4,10 @@ import torch
 from torch.autograd import Variable
 import numpy
 
-ArrayOrDictOfArrays = Union[numpy.array, Dict[str, numpy.array]]  # pylint: disable=invalid-name
-RecursiveDictOfArrays = Union[ArrayOrDictOfArrays, Dict[str, ArrayOrDictOfArrays]]  # pylint: disable=invalid-name
+DictOfArrays = Dict[str, Union['DictOfArrays', numpy.array]]  # pylint: disable=invalid-name
 
 
-def data_structure_as_variables(data_structure: RecursiveDictOfArrays,
+def data_structure_as_variables(data_structure: DictOfArrays,
                                 cuda_device: Optional[int] = -1):
 
     if isinstance(data_structure, dict):
