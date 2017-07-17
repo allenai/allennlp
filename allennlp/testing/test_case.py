@@ -11,6 +11,7 @@ from numpy.testing import assert_allclose
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
+from allennlp.common.tensor import data_structure_as_variables
 from allennlp.training.trainer import Trainer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.iterators import BasicIterator, DataIterator
@@ -81,15 +82,14 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         data_iterator = iterator or BasicIterator()
         single_batch = next(data_iterator(dataset))
 
-
-        print(single_batch)
+        single_batch = data_structure_as_variables(single_batch)
         model_predictions = model.forward(**single_batch)
         loaded_model_predictions = loaded_model.forward(**single_batch)
 
         # Both outputs should have the same keys and the values
         # for these keys should be close.
         for key in model_predictions.keys():
-            assert_allclose(model_predictions[key], loaded_model_predictions[key])
+            assert_allclose(model_predictions[key].data.numpy(), loaded_model_predictions[key].data.numpy())
 
         return model, loaded_model
 
