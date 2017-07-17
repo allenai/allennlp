@@ -12,7 +12,6 @@ from numpy.testing import assert_allclose
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tensor import data_structure_as_variables
-from allennlp.training.trainer import Trainer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.iterators import BasicIterator, DataIterator
 from allennlp.training.model import Model
