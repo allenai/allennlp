@@ -8,11 +8,11 @@ import numpy
 from tqdm import tqdm
 
 from allennlp.common import Params
-from allennlp.data import Dataset, DatasetReader, Instance
+from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokenizer
 from allennlp.experiments import Registry
 from allennlp.data.fields import TextField, ListField, IndexField
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.tokenizers import WordTokenizer
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 

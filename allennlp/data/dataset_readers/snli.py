@@ -4,10 +4,10 @@ import json
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.data import Dataset, DatasetReader, Instance
+from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokenizer
 from allennlp.data.fields import TextField, LabelField
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.tokenizers import WordTokenizer
 from allennlp.experiments import Registry
 
 

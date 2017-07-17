@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
 
-from allennlp.data.token_indexers import token_indexers
+from allennlp.data.token_indexers import TokenCharactersIndexer
 from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.testing.test_case import AllenNlpTestCase
@@ -10,13 +10,13 @@ from allennlp.testing.test_case import AllenNlpTestCase
 class CharacterTokenIndexerTest(AllenNlpTestCase):
 
     def test_count_vocab_items_respects_casing(self):
-        indexer = token_indexers["characters"]("characters")
+        indexer = TokenCharactersIndexer("characters")
         counter = defaultdict(lambda: defaultdict(int))
         indexer.count_vocab_items("Hello", counter)
         indexer.count_vocab_items("hello", counter)
         assert counter["characters"] == {"h": 1, "H": 1, "e": 2, "l": 4, "o": 2}
 
-        indexer = token_indexers["characters"]("characters",
+        indexer = TokenCharactersIndexer("characters",
                                                CharacterTokenizer(lowercase_characters=True))
         counter = defaultdict(lambda: defaultdict(int))
         indexer.count_vocab_items("Hello", counter)
@@ -24,7 +24,7 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         assert counter["characters"] == {"h": 2, "e": 2, "l": 4, "o": 2}
 
     def test_pad_token_sequence(self):
-        indexer = token_indexers["characters"]("characters")
+        indexer = TokenCharactersIndexer("characters")
         padded_tokens = indexer.pad_token_sequence([[1, 2, 3, 4, 5], [1, 2, 3], [1]],
                                                    desired_num_tokens=4,
                                                    padding_lengths={"num_token_characters": 10})
@@ -42,6 +42,6 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         vocab.add_token_to_namespace("t", namespace='characters')
         vocab.add_token_to_namespace("c", namespace='characters')
 
-        indexer = token_indexers["characters"]("characters")
+        indexer = TokenCharactersIndexer("characters")
         indices = indexer.token_to_indices("sentential", vocab)
         assert indices == [3, 4, 5, 6, 4, 5, 6, 1, 1, 1]

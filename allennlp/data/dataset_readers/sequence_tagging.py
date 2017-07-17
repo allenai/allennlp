@@ -3,9 +3,9 @@ from typing import Dict
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.data import Dataset, DatasetReader, Instance
+from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer
 from allennlp.data.fields import TextField, TagField
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.experiments import Registry
 
 

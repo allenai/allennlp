@@ -75,6 +75,6 @@ class TokenIndexer(Generic[TokenType]):
 
     @classmethod
     def from_params(cls, params: Params):  # type: ignore
-        from allennlp.data.token_indexers import token_indexers
-        choice = params.pop_choice('type', list(token_indexers.keys()), default_to_first_choice=True)
-        return token_indexers[choice].from_params(params)
+        from allennlp.experiments.registry import Registry
+        choice = params.pop_choice('type', Registry.get_token_indexers(), default_to_first_choice=True)
+        return Registry.get_token_indexer(choice).from_params(params)

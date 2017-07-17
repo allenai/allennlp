@@ -1,7 +1,7 @@
 from typing import Dict, List, Type
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import DataIterator, DatasetReader
+from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
 
 
 def _registry_decorator(registry_name: str, registry_dict: Dict[str, Type]):
@@ -77,3 +77,31 @@ class Registry:
     def get_data_iterator(cls, name: str) -> Type[DataIterator]:
         import allennlp.data.iterators  # pylint: disable=unused-variable
         return cls._data_iterators[name]
+
+    _tokenizers = {}  # type: Dict[str, Type[Tokenizer]]
+    register_tokenizer = _registry_decorator("tokenizer", _tokenizers)
+    default_tokenizer = "word"
+
+    @classmethod
+    def get_tokenizers(cls) -> List[str]:
+        import allennlp.data.tokenizers  # pylint: disable=unused-variable
+        return _get_keys_with_default(cls._tokenizers, "tokenizer", cls.default_tokenizer)
+
+    @classmethod
+    def get_tokenizer(cls, name: str) -> Type[Tokenizer]:
+        import allennlp.data.tokenizers  # pylint: disable=unused-variable
+        return cls._tokenizers[name]
+
+    _token_indexers = {}  # type: Dict[str, Type[TokenIndexer]]
+    register_token_indexer = _registry_decorator("token indexer", _token_indexers)
+    default_token_indexer = "single_id"
+
+    @classmethod
+    def get_token_indexers(cls) -> List[str]:
+        import allennlp.data.token_indexers  # pylint: disable=unused-variable
+        return _get_keys_with_default(cls._token_indexers, "token indexer", cls.default_token_indexer)
+
+    @classmethod
+    def get_token_indexer(cls, name: str) -> Type[TokenIndexer]:
+        import allennlp.data.token_indexers  # pylint: disable=unused-variable
+        return cls._token_indexers[name]
