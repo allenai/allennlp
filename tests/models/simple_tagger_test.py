@@ -30,8 +30,8 @@ class SimpleTaggerTest(AllenNlpTestCase):
     def test_simple_tagger_trains_and_loads(self):
 
         dataset_reader = SequenceTaggingDatasetReader()
-        self.ensure_model_trains_and_loads(model=self.model,
-                                           dataset_reader=dataset_reader)
+        self.ensure_model_saves_and_loads(model=self.model,
+                                          dataset_reader=dataset_reader)
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = self.dataset.as_arrays()

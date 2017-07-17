@@ -43,7 +43,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     def get_trainer_params(self, additional_arguments=None):
         params = Params({})
         params['save_models'] = False
-        params['model_serialization_prefix'] = self.MODEL_FILE
+        params['serialization_prefix'] = self.MODEL_FILE
         params['num_epochs'] = 1
 
         if additional_arguments:
@@ -51,27 +51,14 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
                 params[key] = value
         return params
 
-    def ensure_model_trains_and_loads(self,
-                                      model: Model,
-                                      dataset_reader: DatasetReader,
-                                      additional_trainer_args: Params = None,
-                                      iterator: DataIterator = None):
-        # Our loading tests work better if you're not using complex iterators, so by
-        # default we use the basic one unless you pass an iterator into this function.
-        # If you _do_ use them, we'll skip some of the stuff below that isn't compatible.
-        additional_trainer_args = additional_trainer_args or Params({})
-
-        dataset = dataset_reader.read(self.TRAIN_FILE)
-        additional_trainer_args["save_models"] = True
-        additional_trainer_args["dataset"] = dataset
-        additional_trainer_args["model"] = model
-        trainer = Trainer.from_params(self.get_trainer_params(additional_trainer_args))
-
-        # Load the model that we serialized.
-
-        trainer.save_model(self.MODEL_FILE)
+    def ensure_model_saves_and_loads(self,
+                                     model: Model,
+                                     dataset_reader: DatasetReader,
+                                     iterator: DataIterator = None):
+        # Save and load the model.
+        torch.save(model.state_dict(), self.MODEL_FILE)
         loaded_model = model
-        loaded_model.load_state_dict(torch.load(trainer.model_serialization_prefix))
+        loaded_model.load_state_dict(torch.load(self.MODEL_FILE))
 
         dataset = dataset_reader.read(self.TRAIN_FILE)
         vocab = Vocabulary.from_dataset(dataset)
