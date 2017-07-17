@@ -67,3 +67,6 @@ pypandoc
 
 # Pypi uploads
 twine
+
+# Tutorial notebooks
+jupyter
