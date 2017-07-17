@@ -1,5 +1,4 @@
 # pylint: disable=invalid-name,protected-access
-from copy import deepcopy
 from unittest import TestCase
 import codecs
 import gzip
