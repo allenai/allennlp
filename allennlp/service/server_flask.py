@@ -33,7 +33,7 @@ def predict(model_name: str) -> Response:
     if model is None:
         raise UnknownModel(model_name)
 
-    # TODO: error handling
+    # TODO(joelgrus): error handling
     data = request.get_json()
     prediction = model(data)
 

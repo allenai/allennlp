@@ -78,5 +78,5 @@ class TestApp(AllenNlpTestCase):
                                  data="""{"input": "the cat is here"}""",
                                  content_type='application/json')
         data = json.loads(prediction.get_data().decode('utf-8'))
-        # TODO: write a better test
+        # TODO(joelgrus): write a better test
         assert set(data.keys()) == {'model_name', 'input', 'output', 'tokens', 'possible_tags'}
