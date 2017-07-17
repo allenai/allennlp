@@ -8,7 +8,7 @@ from allennlp.testing.test_case import AllenNlpTestCase
 
 
 class TestNotebooks(AllenNlpTestCase):
-    def test_vocabulary_notebook_runs_without_errors(self):
+    def test_vocabulary_tutorial(self):
         assert self.execute_notebook("allennlp/notebooks/vocabulary.ipynb")
 
     @staticmethod
