@@ -7,10 +7,12 @@ from overrides import overrides
 
 from allennlp.data import Dataset, Instance
 from allennlp.data.iterators.bucket_iterator import BucketIterator
+from allennlp.experiments import Registry
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+@Registry.register_data_iterator("adaptive")
 class AdaptiveIterator(BucketIterator):
     """
     An ``AdaptiveIterator`` is a ``DataIterator`` that varies the batch size to try to optimize
