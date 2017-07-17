@@ -14,7 +14,7 @@ from allennlp.service.models.types import Model, JSON
 def simple_tagger_model() -> Model:
     """create a simple tagger model."""
     # this is a bad hack to get the same data as the test case
-    # TODO: replace this
+    # TODO(joelgrus): replace this
     test_case = AllenNlpTestCase()
     test_case.setUp()
     test_case.write_sequence_tagging_data()
