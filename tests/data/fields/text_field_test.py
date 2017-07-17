@@ -27,7 +27,7 @@ class TestTextField(AllenNlpTestCase):
 
     def test_field_counts_vocab_items_correctly(self):
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["single id"]("words")])
+                          token_indexers={"words": token_indexers["single id"]("words")})
         namespace_token_counts = defaultdict(lambda: defaultdict(int))
         field.count_vocab_items(namespace_token_counts)
 
@@ -39,7 +39,7 @@ class TestTextField(AllenNlpTestCase):
         assert list(namespace_token_counts.keys()) == ["words"]
 
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["characters"]("characters")])
+                          token_indexers={"characters": token_indexers["characters"]("characters")})
         namespace_token_counts = defaultdict(lambda: defaultdict(int))
         field.count_vocab_items(namespace_token_counts)
 
@@ -56,8 +56,8 @@ class TestTextField(AllenNlpTestCase):
         assert list(namespace_token_counts.keys()) == ["characters"]
 
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["single id"]("words"),
-                                          token_indexers["characters"]("characters")])
+                          token_indexers={"words": token_indexers["single id"]("words"),
+                                          "characters": token_indexers["characters"]("characters")})
         namespace_token_counts = defaultdict(lambda: defaultdict(int))
         field.count_vocab_items(namespace_token_counts)
         assert namespace_token_counts["characters"]["T"] == 1
@@ -88,96 +88,97 @@ class TestTextField(AllenNlpTestCase):
         t_index = vocab.add_token_to_namespace("t", namespace='characters')
         c_index = vocab.add_token_to_namespace("c", namespace='characters')
 
-        field = TextField(["A", "sentence"], [token_indexers["single id"](token_namespace="words")])
+        field = TextField(["A", "sentence"], {"words": token_indexers["single id"](namespace="words")})
         field.index(vocab)
         # pylint: disable=protected-access
-        assert field._indexed_tokens == [[capital_a_index, sentence_index]]
+        assert field._indexed_tokens["words"] == [capital_a_index, sentence_index]
 
-        field1 = TextField(["A", "sentence"], [token_indexers["characters"](character_namespace="characters")])
+        field1 = TextField(["A", "sentence"], {"characters": token_indexers["characters"](namespace="characters")})
         field1.index(vocab)
-        assert field1._indexed_tokens == [[[capital_a_char_index],
-                                           [s_index, e_index, n_index, t_index,
-                                            e_index, n_index, c_index, e_index]]]
+        assert field1._indexed_tokens["characters"] == [[capital_a_char_index],
+                                                        [s_index, e_index, n_index, t_index,
+                                                         e_index, n_index, c_index, e_index]]
         field2 = TextField(["A", "sentence"],
-                           token_indexers=[token_indexers["single id"](token_namespace="words"),
-                                           token_indexers["characters"](character_namespace="characters")])
+                           token_indexers={"words": token_indexers["single id"](namespace="words"),
+                                           "characters": token_indexers["characters"](namespace="characters")})
         field2.index(vocab)
-        assert field2._indexed_tokens == [[capital_a_index, sentence_index],
-                                          [[capital_a_char_index],
-                                           [s_index, e_index, n_index, t_index,
-                                            e_index, n_index, c_index, e_index]]]
+        assert field2._indexed_tokens["words"] == [capital_a_index, sentence_index]
+        assert field2._indexed_tokens["characters"] == [[capital_a_char_index],
+                                                        [s_index, e_index, n_index, t_index,
+                                                         e_index, n_index, c_index, e_index]]
         # pylint: enable=protected-access
 
     def test_get_padding_lengths_raises_if_no_indexed_tokens(self):
 
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["single id"]("words")])
+                          token_indexers={"words": token_indexers["single id"]("words")})
         with pytest.raises(ConfigurationError):
             field.get_padding_lengths()
 
     def test_padding_lengths_are_computed_correctly(self):
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["single id"]("words")])
+                          token_indexers={"words": token_indexers["single id"]("words")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {"num_tokens": 5}
 
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["characters"]("characters")])
+                          token_indexers={"characters": token_indexers["characters"]("characters")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {"num_tokens": 5, "num_token_characters": 8}
 
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["characters"]("characters"),
-                                          token_indexers["single id"]("words")])
+                          token_indexers={"characters": token_indexers["characters"]("characters"),
+                                          "words": token_indexers["single id"]("words")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {"num_tokens": 5, "num_token_characters": 8}
 
     def test_pad_handles_words(self):
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["single id"]("words")])
+                          token_indexers={"words": token_indexers["single id"]("words")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
-        arrays = field.pad(padding_lengths)
-        numpy.testing.assert_array_almost_equal(arrays[0], numpy.array([1, 1, 1, 2, 1]))
+        array_dict = field.as_array(padding_lengths)
+        numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 1, 1, 2, 1]))
 
     def test_pad_handles_longer_lengths(self):
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["single id"]("words")])
+                          token_indexers={"words": token_indexers["single id"]("words")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         padding_lengths["num_tokens"] = 10
-        arrays = field.pad(padding_lengths)
-        numpy.testing.assert_array_almost_equal(arrays[0], numpy.array([1, 1, 1, 2, 1, 0, 0, 0, 0, 0]))
+        array_dict = field.as_array(padding_lengths)
+        numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 1, 1, 2, 1, 0, 0, 0, 0, 0]))
 
     def test_pad_handles_characters(self):
         field = TextField(["This", "is", "a", "sentence", "."],
-                          token_indexers=[token_indexers["characters"]("characters")])
+                          token_indexers={"characters": token_indexers["characters"]("characters")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
-        arrays = field.pad(padding_lengths)
+        array_dict = field.as_array(padding_lengths)
         expected_character_array = numpy.array([[1, 1, 1, 3, 0, 0, 0, 0],
                                                 [1, 3, 0, 0, 0, 0, 0, 0],
                                                 [1, 0, 0, 0, 0, 0, 0, 0],
                                                 [3, 4, 5, 6, 4, 5, 7, 4],
                                                 [1, 0, 0, 0, 0, 0, 0, 0]])
-        numpy.testing.assert_array_almost_equal(arrays[0], expected_character_array)
+        numpy.testing.assert_array_almost_equal(array_dict["characters"], expected_character_array)
 
     def test_pad_handles_words_and_characters_with_longer_lengths(self):
         field = TextField(["a", "sentence", "."],
-                          token_indexers=[token_indexers["single id"]("words"),
-                                          token_indexers["characters"]("characters")])
+                          token_indexers={"words": token_indexers["single id"]("words"),
+                                          "characters": token_indexers["characters"]("characters")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         padding_lengths["num_tokens"] = 5
         padding_lengths["num_token_characters"] = 10
-        arrays = field.pad(padding_lengths)
+        array_dict = field.as_array(padding_lengths)
 
-        numpy.testing.assert_array_almost_equal(arrays[0], numpy.array([1, 2, 1, 0, 0]))
-        numpy.testing.assert_array_almost_equal(arrays[1], numpy.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                                                        [3, 4, 5, 6, 4, 5, 7, 4, 0, 0],
-                                                                        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                                                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                                                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))
+        numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 2, 1, 0, 0]))
+        numpy.testing.assert_array_almost_equal(array_dict["characters"],
+                                                numpy.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                                             [3, 4, 5, 6, 4, 5, 7, 4, 0, 0],
+                                                             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                                             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                                             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))

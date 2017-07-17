@@ -14,14 +14,14 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
 
     Parameters
     ----------
-    token_namespace : ``str``, optional (default=``tokens``)
+    namespace : ``str``, optional (default=``tokens``)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     lowercase_tokens : ``bool``, optional (default=``False``)
         If ``True``, we will call ``token.lower()`` before getting an index for the token from the
         vocabulary.
     """
-    def __init__(self, token_namespace: str = 'tokens', lowercase_tokens: bool = False) -> None:
-        self.token_namespace = token_namespace
+    def __init__(self, namespace: str = 'tokens', lowercase_tokens: bool = False) -> None:
+        self.namespace = namespace
         self.lowercase_tokens = lowercase_tokens
 
     # TODO(joelgrus) uncomment these once fix is merged to overrides library
@@ -29,13 +29,13 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
         if self.lowercase_tokens:
             token = token.lower()
-        counter[self.token_namespace][token] += 1
+        counter[self.namespace][token] += 1
 
     # @overrides
     def token_to_indices(self, token: str, vocabulary: Vocabulary) -> int:
         if self.lowercase_tokens:
             token = token.lower()
-        return vocabulary.get_token_index(token, self.token_namespace)
+        return vocabulary.get_token_index(token, self.namespace)
 
     # @overrides
     def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):  # pylint: disable=unused-argument
@@ -61,13 +61,13 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
         """
         Parameters
         ----------
-        token_namespace : ``str``, optional (default=``tokens``)
+        namespace : ``str``, optional (default=``tokens``)
             We will use this namespace in the :class:`Vocabulary` to map strings to indices.
         lowercase_tokens : ``bool``, optional (default=``False``)
             If ``True``, we will call ``token.lower()`` before getting an index for the token from the
             vocabulary.
         """
-        token_namespace = params.pop('token_namespace', 'tokens')
+        namespace = params.pop('namespace', 'tokens')
         lowercase_tokens = params.pop('lowercase_tokens', False)
         params.assert_empty(cls.__name__)
-        return cls(token_namespace=token_namespace, lowercase_tokens=lowercase_tokens)
+        return cls(namespace=namespace, lowercase_tokens=lowercase_tokens)

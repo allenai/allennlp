@@ -14,16 +14,17 @@ from allennlp.testing.test_case import AllenNlpTestCase
 class TestDataset(AllenNlpTestCase):
     def setUp(self):
         self.vocab = Vocabulary()
-        self.vocab.add_token_to_namespace("this", "words")
-        self.vocab.add_token_to_namespace("is", "words")
-        self.vocab.add_token_to_namespace("a", "words")
-        self.vocab.add_token_to_namespace("sentence", "words")
-        self.vocab.add_token_to_namespace(".", "words")
+        self.vocab.add_token_to_namespace("this")
+        self.vocab.add_token_to_namespace("is")
+        self.vocab.add_token_to_namespace("a")
+        self.vocab.add_token_to_namespace("sentence")
+        self.vocab.add_token_to_namespace(".")
+        self.token_indexer = {"tokens": token_indexers["single id"]()}
         super(TestDataset, self).setUp()
 
     def test_instances_must_have_homogeneous_fields(self):
         instance1 = Instance({"tag": (LabelField(1))})
-        instance2 = Instance({"words": TextField(["hello"], [])})
+        instance2 = Instance({"words": TextField(["hello"], {})})
         with pytest.raises(ConfigurationError):
             _ = Dataset([instance1, instance2])
 
@@ -38,22 +39,19 @@ class TestDataset(AllenNlpTestCase):
         dataset.index_instances(self.vocab)
         padding_lengths = dataset.get_padding_lengths()
         arrays = dataset.as_arrays(padding_lengths)
+        text1 = arrays["text1"]["tokens"]
+        text2 = arrays["text2"]["tokens"]
 
-        text1 = arrays["text1"][0]
-        text2 = arrays["text2"][0]
         numpy.testing.assert_array_almost_equal(text1, numpy.array([[2, 3, 4, 5, 6],
                                                                     [1, 3, 4, 5, 6]]))
         numpy.testing.assert_array_almost_equal(text2, numpy.array([[2, 3, 4, 1, 5, 6],
                                                                     [2, 3, 1, 0, 0, 0]]))
 
     def get_dataset(self):
-        field1 = TextField(["this", "is", "a", "sentence", "."],
-                           [token_indexers["single id"]("words")])
-        field2 = TextField(["this", "is", "a", "different", "sentence", "."],
-                           [token_indexers["single id"]("words")])
-        field3 = TextField(["here", "is", "a", "sentence", "."],
-                           [token_indexers["single id"]("words")])
-        field4 = TextField(["this", "is", "short"], [token_indexers["single id"]("words")])
+        field1 = TextField(["this", "is", "a", "sentence", "."], self.token_indexer)
+        field2 = TextField(["this", "is", "a", "different", "sentence", "."], self.token_indexer)
+        field3 = TextField(["here", "is", "a", "sentence", "."], self.token_indexer)
+        field4 = TextField(["this", "is", "short"], self.token_indexer)
         instances = [Instance({"text1": field1, "text2": field2}),
                      Instance({"text1": field3, "text2": field4})]
 
