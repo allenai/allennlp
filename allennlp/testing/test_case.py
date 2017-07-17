@@ -1,5 +1,4 @@
 # pylint: disable=invalid-name,protected-access
-from copy import deepcopy
 from unittest import TestCase
 import codecs
 import gzip
@@ -7,14 +6,22 @@ import logging
 import os
 import shutil
 
+import torch
 from numpy.testing import assert_allclose
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
+from allennlp.common.tensor import data_structure_as_variables
+from allennlp.training.trainer import Trainer
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.iterators import BasicIterator, DataIterator
+from allennlp.training.model import Model
+from allennlp.data.dataset_readers import DatasetReader
 
 
 class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     TEST_DIR = './TMP_TEST/'
+    MODEL_FILE = TEST_DIR + "model.th"
     TRAIN_FILE = TEST_DIR + 'train_file'
     VALIDATION_FILE = TEST_DIR + 'validation_file'
     TEST_FILE = TEST_DIR + 'test_file'
@@ -33,63 +40,44 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     def tearDown(self):
         shutil.rmtree(self.TEST_DIR)
 
-    def get_model_params(self, additional_arguments=None):
+    def get_trainer_params(self, additional_arguments=None):
         params = Params({})
         params['save_models'] = False
-        params['model_serialization_prefix'] = self.TEST_DIR
-        params['train_files'] = [self.TRAIN_FILE]
-        params['validation_files'] = [self.VALIDATION_FILE]
-        params['embeddings'] = {'words': {'dimension': 6}, 'characters': {'dimension': 2}}
-        params['encoder'] = {"default": {'type': 'bow'}}
+        params['serialization_prefix'] = self.MODEL_FILE
         params['num_epochs'] = 1
-        params['validation_split'] = 0.0
 
         if additional_arguments:
             for key, value in additional_arguments.items():
-                params[key] = deepcopy(value)
+                params[key] = value
         return params
 
-    def get_model(self, model_class, additional_arguments=None):
-        params = self.get_model_params(additional_arguments)
-        return model_class(params)
+    def ensure_model_saves_and_loads(self,
+                                     model: Model,
+                                     dataset_reader: DatasetReader,
+                                     iterator: DataIterator = None):
+        # Save and load the model.
+        torch.save(model.state_dict(), self.MODEL_FILE)
+        loaded_model = model
+        loaded_model.load_state_dict(torch.load(self.MODEL_FILE))
 
-    def ensure_model_trains_and_loads(self, model_class, args: Params):
-        args['save_models'] = True
-        # Our loading tests work better if you're not using data generators.  Unless you
-        # specifically request it in your test, we'll avoid using them here, and if you _do_ use
-        # them, we'll skip some of the stuff below that isn't compatible.
-        args.setdefault('data_generator', None)
-        model = self.get_model(model_class, args)
-        model.train()
+        dataset = dataset_reader.read(self.TRAIN_FILE)
+        vocab = Vocabulary.from_dataset(dataset)
+        dataset.index_instances(vocab)
+        # Our loading tests work better if you're not using complex iterators, so by
+        # default we use the basic one unless you pass an iterator into this function.
+        # If you _do_ use them, we'll skip some of the stuff below that isn't compatible.
+        data_iterator = iterator or BasicIterator()
+        single_batch = next(data_iterator(dataset))
 
-        # load the model that we serialized
-        loaded_model = self.get_model(model_class, args)
-        loaded_model.load_model()
+        single_batch = data_structure_as_variables(single_batch)
+        model_predictions = model.forward(**single_batch)
+        loaded_model_predictions = loaded_model.forward(**single_batch)
 
-        # verify that original model and the loaded model predict the same outputs
-        if model._uses_data_generators():
-            # We shuffle the data in the data generator.  Instead of making that logic more
-            # complicated, we'll just pass on the loading tests here.  See comment above.
-            pass
-        else:
-            model_predictions = model.model.predict(model.validation_arrays[0])
-            loaded_model_predictions = loaded_model.model.predict(model.validation_arrays[0])
+        # Both outputs should have the same keys and the values
+        # for these keys should be close.
+        for key in model_predictions.keys():
+            assert_allclose(model_predictions[key].data.numpy(), loaded_model_predictions[key].data.numpy())
 
-            for model_prediction, loaded_prediction in zip(model_predictions, loaded_model_predictions):
-                assert_allclose(model_prediction, loaded_prediction)
-
-        # We should get the same result if we index the data from the original model and the loaded
-        # model.
-        _, indexed_validation_arrays = loaded_model.load_data_arrays(model.validation_files)
-        if model._uses_data_generators():
-            # As above, we'll just pass on this.
-            pass
-        else:
-            model_predictions = model.model.predict(model.validation_arrays[0])
-            loaded_model_predictions = loaded_model.model.predict(indexed_validation_arrays[0])
-
-            for model_prediction, loaded_prediction in zip(model_predictions, loaded_model_predictions):
-                assert_allclose(model_prediction, loaded_prediction)
         return model, loaded_model
 
     def write_pretrained_vector_files(self):

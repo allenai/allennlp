@@ -11,8 +11,8 @@ class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
 
     def test_read_from_file(self):
 
-        reader = SequenceTaggingDatasetReader(self.TRAIN_FILE)
-        dataset = reader.read()
+        reader = SequenceTaggingDatasetReader()
+        dataset = reader.read(self.TRAIN_FILE)
 
         assert len(dataset.instances) == 4
         fields = dataset.instances[0].fields()

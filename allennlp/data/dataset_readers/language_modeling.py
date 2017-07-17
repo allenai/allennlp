@@ -20,7 +20,6 @@ class LanguageModelingReader(DatasetReader):
 
     Parameters
     ----------
-    filename : ``str``
     tokens_per_instance : ``int``, optional (default=``None``)
         If this is ``None``, we will have each training instance be a single sentence.  If this is
         not ``None``, we will instead take all sentences, including their start and stop tokens,
@@ -35,11 +34,10 @@ class LanguageModelingReader(DatasetReader):
         one with default parameters.
     """
     def __init__(self,
-                 filename: str,
                  tokens_per_instance: int = None,
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        self._filename = filename
+
         self._tokens_per_instance = tokens_per_instance
         self._tokenizer = tokenizer
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
@@ -47,8 +45,8 @@ class LanguageModelingReader(DatasetReader):
         self._end_token = '</S>'
 
     @overrides
-    def read(self):
-        with open(self._filename, "r") as text_file:
+    def read(self, file_path: str):
+        with open(file_path, "r") as text_file:
             instance_strings = text_file.readlines()
         if self._tokens_per_instance is not None:
             all_text = " ".join([x.replace("\n", " ").strip() for x in instance_strings])
@@ -97,7 +95,6 @@ class LanguageModelingReader(DatasetReader):
         tokenizer : ``Params``, optional
         token_indexers: ``List[Params]``, optional
         """
-        filename = params.pop('filename')
         tokens_per_instance = params.pop('tokens_per_instance', None)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = {}
@@ -109,7 +106,6 @@ class LanguageModelingReader(DatasetReader):
         if token_indexers == {}:
             token_indexers = None
         params.assert_empty(cls.__name__)
-        return LanguageModelingReader(filename=filename,
-                                      tokens_per_instance=tokens_per_instance,
+        return LanguageModelingReader(tokens_per_instance=tokens_per_instance,
                                       tokenizer=tokenizer,
                                       token_indexers=token_indexers)

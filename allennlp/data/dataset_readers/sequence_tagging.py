@@ -19,21 +19,18 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
     Parameters
     ----------
-    filename : ``str``
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
     """
     def __init__(self,
-                 filename: str,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        self._filename = filename
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
-    def read(self):
-        with open(self._filename, "r") as data_file:
+    def read(self, file_path):
+        with open(file_path, "r") as data_file:
 
             instances = []
             for line in data_file:
@@ -52,10 +49,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
         """
         Parameters
         ----------
-        filename : ``str``
         token_indexers: ``Dict[Params]``, optional
         """
-        filename = params.pop('filename')
         token_indexers = {}
         token_indexer_params = params.pop('token_indexers', Params({}))
         for name, indexer_params in token_indexer_params.items():
@@ -65,5 +60,4 @@ class SequenceTaggingDatasetReader(DatasetReader):
         if token_indexers == {}:
             token_indexers = None
         params.assert_empty(cls.__name__)
-        return SequenceTaggingDatasetReader(filename=filename,
-                                            token_indexers=token_indexers)
+        return SequenceTaggingDatasetReader(token_indexers=token_indexers)
