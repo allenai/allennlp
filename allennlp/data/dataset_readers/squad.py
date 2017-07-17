@@ -2,18 +2,17 @@ from collections import Counter
 import json
 import logging
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Set  # pylint: disable=unused-import
 
 import numpy
 from tqdm import tqdm
 
-from . import DatasetReader
-from .. import Dataset
-from .. import Instance
-from ...common import Params
-from ..fields import TextField, ListField, IndexField
-from ..token_indexers import TokenIndexer, SingleIdTokenIndexer
-from ..tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data import Dataset, Instance
+from allennlp.common import Params
+from allennlp.data.fields import TextField, ListField, IndexField
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -43,39 +42,37 @@ class SquadSentenceSelectionReader(DatasetReader):
         sense as the last option.
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this ``Tokenizer`` for both the question and the sentences.  See :class:`Tokenizer`.
-    token_indexers : ``List[TokenIndexer]``, optional (default=``[SingleIdTokenIndexer()]``)
+    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the question and the sentences.  See :class:`TokenIndexer`.
     """
     def __init__(self,
                  negative_sentence_selection: str = "paragraph",
                  tokenizer: Tokenizer = WordTokenizer(),
-                 token_indexers: List[TokenIndexer] = None):
+                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
         self._tokenizer = tokenizer
-        if token_indexers is None:
-            token_indexers = [SingleIdTokenIndexer()]
-        self._token_indexers = token_indexers
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
         # Initializing some data structures here that will be useful when reading a file.
         # Maps sentence strings to sentence indices
-        self._sentence_to_id = {}
+        self._sentence_to_id = {}  # type: Dict[str, int]
         # Maps sentence indices to sentence strings
-        self._id_to_sentence = {}
+        self._id_to_sentence = {}  # type: Dict[int, str]
         # Maps paragraph ids to lists of contained sentence ids
-        self._paragraph_sentences = {}
+        self._paragraph_sentences = {}  # type: Dict[int, List[int]]
         # Maps sentence ids to the containing paragraph id.
-        self._sentence_paragraph_map = {}
+        self._sentence_paragraph_map = {}  # type: Dict[int, int]
         # Maps question strings to question indices
-        self._question_to_id = {}
+        self._question_to_id = {}  # type: Dict[str, int]
         # Maps question indices to question strings
-        self._id_to_question = {}
+        self._id_to_question = {}  # type: Dict[int, str]
 
     def _get_sentence_choices(self,
                               question_id: int,
                               answer_id: int) -> Tuple[List[str], int]:  # pylint: disable=invalid-sequence-index
         # Because sentences and questions have different indices, we need this to hold tuples of
         # ("sentence", id) or ("question", id), instead of just single ids.
-        negative_sentences = set()
+        negative_sentences = set()  # type: Set[Tuple[str, int]]
         for selection_method in self._negative_sentence_selection_methods:
             if selection_method == 'paragraph':
                 paragraph_id = self._sentence_paragraph_map[answer_id]
@@ -230,8 +227,14 @@ class SquadSentenceSelectionReader(DatasetReader):
         """
         negative_sentence_selection = params.pop('negative_sentence_selection', 'paragraph')
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = [TokenIndexer.from_params(p)
-                          for p in params.pop('token_indexers', [Params({})])]
+        token_indexers = {}
+        token_indexer_params = params.pop('token_indexers', Params({}))
+        for name, indexer_params in token_indexer_params.items():
+            token_indexers[name] = TokenIndexer.from_params(indexer_params)
+        # The default parameters are contained within the class,
+        # so if no parameters are given we must pass None.
+        if token_indexers == {}:
+            token_indexers = None
         params.assert_empty(cls.__name__)
         return SquadSentenceSelectionReader(negative_sentence_selection=negative_sentence_selection,
                                             tokenizer=tokenizer,

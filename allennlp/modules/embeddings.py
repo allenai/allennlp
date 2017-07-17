@@ -4,8 +4,8 @@ import logging
 import numpy
 import torch
 
-from ..data.vocabulary import Vocabulary
-from ..common.checks import ConfigurationError
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -52,7 +52,7 @@ class Embedding(torch.nn.Module):
                  max_norm: float = None,
                  norm_type: float = 2.,
                  scale_grad_by_freq: bool = False,
-                 sparse: bool = False):
+                 sparse: bool = False) -> None:
         super(Embedding, self).__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
@@ -148,7 +148,7 @@ def get_pretrained_embedding_layer(embeddings_filename: str,
     # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
     # then filling in the word vectors we just read.
     logger.info("Initializing pre-trained embedding layer")
-    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).uniform_(-0.05, 0.05)
+    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(0, 1)
 
     for i in range(0, vocab_size):
         word = vocab.get_token_from_index(i, namespace)

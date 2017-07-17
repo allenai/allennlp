@@ -1,9 +1,13 @@
 from collections import OrderedDict
-from typing import List
+from typing import List, Dict, Type  # pylint: disable=unused-import
 
 from overrides import overrides
 
-from ...common import Params
+from allennlp.common import Params
+
+# pylint: disable=invalid-name
+word_filters = OrderedDict()  # type: Dict[str, Type[WordFilter]]
+# pylint: enable=invalid-name
 
 
 class WordFilter:
@@ -70,6 +74,5 @@ class StopwordFilter(WordFilter):
         return [word for word in words if word not in self.stopwords]
 
 
-word_filters = OrderedDict()  # pylint: disable=invalid-name
 word_filters['pass_through'] = PassThroughWordFilter
 word_filters['stopwords'] = StopwordFilter

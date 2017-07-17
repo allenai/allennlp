@@ -1,5 +1,6 @@
-from typing import Dict, Any, Callable
-from flask import Flask, jsonify, Response, request, send_from_directory
+from typing import Any, Callable, Dict
+
+from flask import Flask, Response, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_url_path='')  # pylint: disable=invalid-name
 
@@ -51,6 +52,8 @@ def list_models() -> Response:
     """list the available models"""
     return jsonify({"models": list(models.keys())})
 
+# placeholder models
+# TODO: replace with actual models
 
 def string2string(model_name: str, transform: Callable[[str], str]) -> Model:
     """helper function to wrap string to string transformations"""
@@ -60,9 +63,6 @@ def string2string(model_name: str, transform: Callable[[str], str]) -> Model:
         return {'model_name': model_name, 'input': input_text, 'output': output_text}
     return wrapped
 
-
-# placeholder models
-# TODO: replace with actual models
 models['uppercase'] = string2string('uppercase', lambda s: s.upper())
 models['lowercase'] = string2string('lowercase', lambda s: s.lower())
 models['reverse'] = string2string('reverse', lambda s: ''.join(reversed(s)))

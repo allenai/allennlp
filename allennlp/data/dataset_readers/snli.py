@@ -1,15 +1,14 @@
-from typing import List
+from typing import Dict
 import json
 
 from overrides import overrides
 
-from . import DatasetReader
-from .. import Dataset
-from .. import Instance
-from ...common import Params
-from ..fields import TextField, LabelField
-from ..token_indexers import TokenIndexer, SingleIdTokenIndexer
-from ..tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data import Dataset, Instance
+from allennlp.common import Params
+from allennlp.data.fields import TextField, LabelField
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
 
 class SnliReader(DatasetReader):
@@ -23,16 +22,14 @@ class SnliReader(DatasetReader):
     ----------
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
-    token_indexers : ``List[TokenIndexer]``, optional (default=``[SingleIdTokenIndexer()]``)
+    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
     """
     def __init__(self,
                  tokenizer: Tokenizer = WordTokenizer(),
-                 token_indexers: List[TokenIndexer] = None):
+                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._tokenizer = tokenizer
-        if token_indexers is None:
-            token_indexers = [SingleIdTokenIndexer()]
-        self._token_indexers = token_indexers
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
     def read(self, file_path: str):
@@ -63,8 +60,14 @@ class SnliReader(DatasetReader):
         token_indexers: ``List[Params]``, optional
         """
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = [TokenIndexer.from_params(p)
-                          for p in params.pop('token_indexers', [Params({})])]
+        token_indexers = {}
+        token_indexer_params = params.pop('token_indexers', Params({}))
+        for name, indexer_params in token_indexer_params.items():
+            token_indexers[name] = TokenIndexer.from_params(indexer_params)
+        # The default parameters are contained within the class,
+        # so if no parameters are given we must pass None.
+        if token_indexers == {}:
+            token_indexers = None
         params.assert_empty(cls.__name__)
         return SnliReader(tokenizer=tokenizer,
                           token_indexers=token_indexers)

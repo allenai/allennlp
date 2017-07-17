@@ -1,22 +1,22 @@
 from typing import Dict, List
 import itertools
 
-from overrides import overrides
+from allennlp.common.params import Params
+from allennlp.common.util import pad_sequence_to_length
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.tokenizers import CharacterTokenizer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
-from ...common.params import Params
-from ...common.util import pad_sequence_to_length
-from ...data.vocabulary import Vocabulary
-from ...data.tokenizers import CharacterTokenizer
-from ...data.token_indexers.token_indexer import TokenIndexer, TokenType
+# pylint: disable=no-self-use
 
 
-class TokenCharactersIndexer(TokenIndexer):
+class TokenCharactersIndexer(TokenIndexer[List[int]]):
     """
     This :class:`TokenIndexer` represents tokens as lists of character indices.
 
     Parameters
     ----------
-    character_namespace : ``str``, optional (default=``token_characters``)
+    namespace : ``str``, optional (default=``token_characters``)
         We will use this namespace in the :class:`Vocabulary` to map the characters in each token
         to indices.
     character_tokenizer : ``CharacterTokenizer``, optional (default=``CharacterTokenizer()``)
@@ -26,40 +26,41 @@ class TokenCharactersIndexer(TokenIndexer):
         retains casing.
     """
     def __init__(self,
-                 character_namespace: str = 'token_characters',
-                 character_tokenizer: CharacterTokenizer = CharacterTokenizer()):
-        self.character_namespace = character_namespace
+                 namespace: str = 'token_characters',
+                 character_tokenizer: CharacterTokenizer = CharacterTokenizer()) -> None:
+        self.namespace = namespace
         self.character_tokenizer = character_tokenizer
 
-    @overrides
+    # TODO(joelgrus) uncomment these once fix is merged to overrides library
+    # @overrides
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
         for character in self.character_tokenizer.tokenize(token):
-            counter[self.character_namespace][character] += 1
+            counter[self.namespace][character] += 1
 
-    @overrides
-    def token_to_indices(self, token: str, vocabulary: Vocabulary) -> TokenType:
+    # @overrides
+    def token_to_indices(self, token: str, vocabulary: Vocabulary) -> List[int]:
         indices = []
         for character in self.character_tokenizer.tokenize(token):
-            indices.append(vocabulary.get_token_index(character, self.character_namespace))
+            indices.append(vocabulary.get_token_index(character, self.namespace))
         return indices
 
-    @overrides
-    def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
+    # @overrides
+    def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
         return {'num_token_characters': len(token)}
 
-    @overrides
+    # overrides
     def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):
         return (num_tokens, padding_lengths['num_token_characters'])
 
-    @overrides
-    def get_padding_token(self) -> TokenType:
+    # @overrides
+    def get_padding_token(self) -> List[int]:
         return []
 
-    @overrides
+    # @overrides
     def pad_token_sequence(self,
                            tokens: List[List[int]],
                            desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[TokenType]:
+                           padding_lengths: Dict[str, int]) -> List[List[int]]:
         padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=lambda: [])
         desired_token_length = padding_lengths['num_token_characters']
         longest_token = max(tokens, key=len)
@@ -81,7 +82,7 @@ class TokenCharactersIndexer(TokenIndexer):
         """
         Parameters
         ----------
-        character_namespace : ``str``, optional (default=``token_characters``)
+        namespace : ``str``, optional (default=``token_characters``)
             We will use this namespace in the :class:`Vocabulary` to map the characters in each token
             to indices.
         character_tokenizer : ``Params``, optional (default=``Params({})``)
@@ -89,8 +90,8 @@ class TokenCharactersIndexer(TokenIndexer):
             options for byte encoding and other things.  These parameters get passed to the character
             tokenizer.  The default is to use unicode characters and to retain casing.
         """
-        character_namespace = params.pop('character_namespace', 'token_characters')
+        namespace = params.pop('namespace', 'token_characters')
         character_tokenizer_params = params.pop('character_tokenizer', {})
         character_tokenizer = CharacterTokenizer.from_params(character_tokenizer_params)
         params.assert_empty(cls.__name__)
-        return cls(character_namespace=character_namespace, character_tokenizer=character_tokenizer)
+        return cls(namespace=namespace, character_tokenizer=character_tokenizer)

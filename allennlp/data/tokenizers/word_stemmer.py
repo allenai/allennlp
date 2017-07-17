@@ -1,10 +1,14 @@
 from collections import OrderedDict
+from typing import Dict, Type  # pylint: disable=unused-import
 
 from nltk.stem import PorterStemmer as NltkPorterStemmer
 from overrides import overrides
 
-from ...common import Params
+from allennlp.common import Params
 
+# pylint: disable=invalid-name
+word_stemmers = OrderedDict()  # type: Dict[str, Type[WordStemmer]]
+# pylint: enable=invalid-name
 
 class WordStemmer:
     """
@@ -48,6 +52,5 @@ class PorterStemmer(WordStemmer):
         return self.stemmer.stem(word)
 
 
-word_stemmers = OrderedDict()  # pylint: disable=invalid-name
 word_stemmers['pass_through'] = PassThroughWordStemmer
 word_stemmers['porter'] = PorterStemmer

@@ -1,15 +1,16 @@
+# pylint: disable=no-self-use
 from typing import Dict, List
 
 from overrides import overrides
 import numpy
 
-from .field import Field
-from .sequence_field import SequenceField
-from ..vocabulary import Vocabulary
-from ...common.util import pad_sequence_to_length
+from allennlp.data.fields.field import Field, DataArray
+from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.util import pad_sequence_to_length
 
 
-class ListField(SequenceField):
+class ListField(SequenceField[DataArray]):
     """
     A ``ListField`` is a list of other fields.  You would use this to represent, e.g., a list of
     answer options that are themselves ``TextFields``.
@@ -24,11 +25,11 @@ class ListField(SequenceField):
         A list of ``Field`` objects to be concatenated into a single input tensor.  All of the
         contained ``Field`` objects must be of the same type.
     """
-    def __init__(self, field_list: List[Field]):
+    def __init__(self, field_list: List[Field]) -> None:
         field_class_set = set([field.__class__ for field in field_list])
         assert len(field_class_set) == 1, "ListFields must contain a single field type, found " +\
                                           str(field_class_set)
-        self._field_list = field_list
+        self._field_list = field_list  # type: List[Field]
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
@@ -53,18 +54,20 @@ class ListField(SequenceField):
         return len(self._field_list)
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> DataArray:
         padded_field_list = pad_sequence_to_length(self._field_list,
                                                    padding_lengths['num_fields'],
                                                    self._field_list[0].empty_field)
-        padded_fields = [field.pad(padding_lengths) for field in padded_field_list]
-        if isinstance(padded_fields[0], (list, tuple)):
-            return [numpy.asarray(x) for x in zip(*padded_fields)]
+        padded_fields = [field.as_array(padding_lengths) for field in padded_field_list]
+        if isinstance(padded_fields[0], dict):
+            namespaces = list(padded_fields[0].keys())
+            return {namespace: numpy.array([field[namespace] for field in padded_fields])
+                    for namespace in namespaces}
         else:
-            return [numpy.asarray(padded_fields)]
+            return numpy.asarray(padded_fields)
 
     @overrides
-    def empty_field(self):
+    def empty_field(self):  # pylint: disable=no-self-use
         raise RuntimeError("Nested ListFields are not implemented, and if you want this "
                            "you should probably try to simplify your data type, anyway")
 

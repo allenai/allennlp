@@ -14,7 +14,7 @@ class TestVocabulary(AllenNlpTestCase):
 
     def setUp(self):
         token_indexer = SingleIdTokenIndexer("tokens")
-        text_field = TextField(["a", "a", "a", "a", "b", "b", "c", "c", "c"], [token_indexer])
+        text_field = TextField(["a", "a", "a", "a", "b", "b", "c", "c", "c"], {"tokens": token_indexer})
         self.instance = Instance({"text": text_field})
         self.dataset = Dataset([self.instance])
         super(TestVocabulary, self).setUp()

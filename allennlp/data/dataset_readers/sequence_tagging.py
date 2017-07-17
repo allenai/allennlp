@@ -1,8 +1,8 @@
-from typing import List
+from typing import Dict
 
 from overrides import overrides
 
-from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data import Dataset, Instance
 from allennlp.common import Params
 from allennlp.data.fields import TextField, TagField
@@ -19,14 +19,14 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
     Parameters
     ----------
-    token_indexers : ``List[TokenIndexer]``, optional (default=``[SingleIdTokenIndexer()]``)
+    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
     """
     def __init__(self,
-                 token_indexers: List[TokenIndexer] = None):
-        self._token_indexers = token_indexers or [SingleIdTokenIndexer()]
+                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
     def read(self, file_path):
@@ -49,9 +49,15 @@ class SequenceTaggingDatasetReader(DatasetReader):
         """
         Parameters
         ----------
-        token_indexers: ``List[Params]``, optional
+        token_indexers: ``Dict[Params]``, optional
         """
-        token_indexers = [TokenIndexer.from_params(p)
-                          for p in params.pop('token_indexers', [Params({})])]
+        token_indexers = {}
+        token_indexer_params = params.pop('token_indexers', Params({}))
+        for name, indexer_params in token_indexer_params.items():
+            token_indexers[name] = TokenIndexer.from_params(indexer_params)
+        # The default parameters are contained within the class,
+        # so if no parameters are given we must pass None.
+        if token_indexers == {}:
+            token_indexers = None
         params.assert_empty(cls.__name__)
         return SequenceTaggingDatasetReader(token_indexers=token_indexers)
