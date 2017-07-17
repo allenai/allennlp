@@ -32,7 +32,7 @@ def shared_pytorch_model() -> Model:
         y_pred = model(input_var)
         output = y_pred.data.tolist()
 
-        return {"output": output}
+        return {"input": i, "model_name": "pytorch", "output": output}
 
     return run
 
