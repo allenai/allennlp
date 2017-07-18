@@ -38,6 +38,9 @@ awscli>=1.11.91
 # REST interface for models
 flask>=0.12
 
+# Alternative REST interface for models
+sanic>=0.5.4
+
 #### LIBRARIES USED IN SCRIPTS ####
 # argument parsing in for data cleaning scripts
 argparse
@@ -67,3 +70,6 @@ pypandoc
 
 # Pypi uploads
 twine
+
+# Tutorial notebooks
+jupyter
