@@ -54,5 +54,5 @@ class DataIterator:
         from allennlp.experiments.registry import Registry
         # TODO(Mark): The adaptive iterator will need a bit of work here,
         # to retrieve the scaling function etc.
-        iterator_type = params.pop_choice("type", Registry.get_data_iterators())
+        iterator_type = params.pop_choice("type", Registry.list_data_iterators())
         return Registry.get_data_iterator(iterator_type)(**params.as_dict())  # type: ignore

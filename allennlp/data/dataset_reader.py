@@ -17,5 +17,5 @@ class DatasetReader:
     @classmethod
     def from_params(cls, params: Params):
         from allennlp.experiments.registry import Registry
-        choice = params.pop_choice('type', Registry.get_dataset_readers())
+        choice = params.pop_choice('type', Registry.list_dataset_readers())
         return Registry.get_dataset_reader(choice).from_params(params)

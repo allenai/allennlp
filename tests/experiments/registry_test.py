@@ -24,7 +24,7 @@ class TestRegistry(AllenNlpTestCase):
                 pass
 
     def test_register_dataset_reader_adds_new_reader_with_decorator(self):
-        assert 'fake' not in Registry.get_dataset_readers()
+        assert 'fake' not in Registry.list_dataset_readers()
         @Registry.register_dataset_reader('fake')
         class Fake:
             pass
@@ -46,7 +46,7 @@ class TestRegistry(AllenNlpTestCase):
                 pass
 
     def test_register_data_iterator_adds_new_iterator_with_decorator(self):
-        assert 'fake' not in Registry.get_data_iterators()
+        assert 'fake' not in Registry.list_data_iterators()
         @Registry.register_data_iterator('fake')
         class Fake:
             pass
@@ -55,12 +55,12 @@ class TestRegistry(AllenNlpTestCase):
 
     def test_default_data_iterator_is_first_in_list(self):
         default_iterator = Registry.default_data_iterator
-        assert Registry.get_data_iterators()[0] == default_iterator
+        assert Registry.list_data_iterators()[0] == default_iterator
         Registry.default_data_iterator = "basic"
-        assert Registry.get_data_iterators()[0] == "basic"
+        assert Registry.list_data_iterators()[0] == "basic"
         with pytest.raises(ConfigurationError):
             Registry.default_data_iterator = "fake"
-            Registry.get_data_iterators()
+            Registry.list_data_iterators()
         Registry.default_data_iterator = default_iterator
 
     # Tokenizers
@@ -77,7 +77,7 @@ class TestRegistry(AllenNlpTestCase):
                 pass
 
     def test_register_tokenizer_adds_new_iterator_with_decorator(self):
-        assert 'fake' not in Registry.get_tokenizers()
+        assert 'fake' not in Registry.list_tokenizers()
         @Registry.register_tokenizer('fake')
         class Fake:
             pass
@@ -86,9 +86,9 @@ class TestRegistry(AllenNlpTestCase):
 
     def test_default_tokenizer_is_first_in_list(self):
         default_iterator = Registry.default_tokenizer
-        assert Registry.get_tokenizers()[0] == default_iterator
+        assert Registry.list_tokenizers()[0] == default_iterator
         Registry.default_tokenizer = "character"
-        assert Registry.get_tokenizers()[0] == "character"
+        assert Registry.list_tokenizers()[0] == "character"
         Registry.default_tokenizer = default_iterator
 
     # Token indexers
@@ -105,7 +105,7 @@ class TestRegistry(AllenNlpTestCase):
                 pass
 
     def test_register_token_indexer_adds_new_token_indexer_with_decorator(self):
-        assert 'fake' not in Registry.get_token_indexers()
+        assert 'fake' not in Registry.list_token_indexers()
         @Registry.register_token_indexer('fake')
         class Fake:
             pass
@@ -114,7 +114,7 @@ class TestRegistry(AllenNlpTestCase):
 
     def test_default_token_indexer_is_first_in_list(self):
         default_iterator = Registry.default_token_indexer
-        assert Registry.get_token_indexers()[0] == default_iterator
+        assert Registry.list_token_indexers()[0] == default_iterator
         Registry.default_token_indexer = "characters"
-        assert Registry.get_token_indexers()[0] == "characters"
+        assert Registry.list_token_indexers()[0] == "characters"
         Registry.default_token_indexer = default_iterator
