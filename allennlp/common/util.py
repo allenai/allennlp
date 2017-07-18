@@ -106,6 +106,7 @@ def clean_layer_name(input_name: str,
 
     return input_name
 
+
 def namespace_match(pattern: str, namespace: str):
     """
     Matches a namespace pattern against a namespace string.  For example, "*tags" matches

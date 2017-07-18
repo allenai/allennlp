@@ -4,8 +4,7 @@ import logging
 from overrides import overrides
 import numpy
 
-from allennlp.data.fields.field import Field
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import Field, Vocabulary
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

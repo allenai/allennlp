@@ -3,11 +3,13 @@ from typing import Dict, List
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data import TokenIndexer
+from allennlp.experiments import Registry
 
 # pylint: disable=no-self-use
 
 
+@Registry.register_token_indexer("single_id")
 class SingleIdTokenIndexer(TokenIndexer[int]):
     """
     This :class:`TokenIndexer` represents tokens as single integers.
