@@ -129,7 +129,7 @@ class OntonotesReader(DatasetReader):
         predicate_argument_labels = []
         current_span_label = []
 
-        for root, directories, files in os.walk(self._ontonotes_filename):
+        for root, _, files in os.walk(self._ontonotes_filename):
             for file in files:
                 # These are a relic of the dataset pre-processing. Every file will be duplicated
                 # - one file called filename.gold_skel and one generated from the preprocessing
@@ -171,9 +171,10 @@ class OntonotesReader(DatasetReader):
                             predicate_argument_labels = [[] for _ in conll_components[11:-1]]
                             current_span_label = [None for _ in conll_components[11:-1]]
 
+                        num_annotations = len(predicate_argument_labels)
                         is_verbal_predicate = False
                         # Iterate over all verb annotations for the current sentence.
-                        for annotation_index in range(len(predicate_argument_labels)):
+                        for annotation_index in range(num_annotations):
                             annotation = conll_components[11 + annotation_index]
                             label = annotation.strip("()*")
 

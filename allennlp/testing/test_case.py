@@ -138,6 +138,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
             # pylint: enable=line-too-long
 
     def write_conll_2012_data(self):
+        # pylint: disable=line-too-long
         with codecs.open(self.CONLL_TRAIN_DIR + 'english/annotations/test_topic/test_source/01/train.gold_conll', 'w', 'utf-8') as train_file:
             train_file.write("""#begin document (bn/cnn/01/cnn_0115); part 000
 test/test/01/test_001  0    0          Mali   NNP  (TOP(S(NP(NML*          -    -   -   -    (GPE)  (ARG0*         *       -
@@ -198,3 +199,4 @@ test/test/01/test_002  0   14             .     .           *))        -    -   
 
 #end document
             """)
+# pylint: enable=line-too-long
