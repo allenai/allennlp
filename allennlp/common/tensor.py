@@ -4,7 +4,7 @@ import torch
 from torch.autograd import Variable
 import numpy
 
-DictOfArrays = Dict[str, Union['DictOfArrays', numpy.array]]  # pylint: disable=invalid-name
+DictOfArrays = Dict[str, Union['DictOfArrays', numpy.ndarray]]  # pylint: disable=invalid-name
 
 
 def data_structure_as_variables(data_structure: DictOfArrays,

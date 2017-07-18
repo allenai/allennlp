@@ -15,7 +15,7 @@ class DataIterator:
     def __call__(self,
                  dataset: Dataset,
                  num_epochs: int = None,
-                 shuffle: bool = True) -> Generator[Dict[str, List[numpy.array]], None, None]:
+                 shuffle: bool = True) -> Generator[Dict[str, List[numpy.ndarray]], None, None]:
         """
         Returns a generator that yields batches over the given dataset, forever.
 

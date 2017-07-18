@@ -77,7 +77,7 @@ class Dataset:
 
     def as_arrays(self,
                   padding_lengths: Dict[str, Dict[str, int]] = None,
-                  verbose: bool = True) ->Dict[str, Union[numpy.array, Dict[str, numpy.array]]]:
+                  verbose: bool = True) ->Dict[str, Union[numpy.ndarray, Dict[str, numpy.ndarray]]]:
         # This complex return type is actually predefined elsewhere as a DataArray,
         # but we can't use it because mypy doesn't like it.
         """
@@ -153,7 +153,7 @@ class Dataset:
             if isinstance(field_array_list[0], dict):
                 # This is creating a dict of {token_indexer_key: batch_array} for each
                 # token indexer used to index this field. This is mostly utilised by TextFields.
-                token_indexer_key_to_batch_dict = defaultdict(list)  # type: Dict[str, List[numpy.array]]
+                token_indexer_key_to_batch_dict = defaultdict(list)  # type: Dict[str, List[numpy.ndarray]]
                 for namespace_dict in field_array_list:
                     for indexer_name, array in namespace_dict.items():
                         token_indexer_key_to_batch_dict[indexer_name].append(array)
