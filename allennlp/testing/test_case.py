@@ -13,9 +13,10 @@ from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tensor import data_structure_as_variables
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.iterators import BasicIterator, DataIterator
+from allennlp.data.iterators import BasicIterator
+from allennlp.data.data_iterator import DataIterator
 from allennlp.training.model import Model
-from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.dataset_reader import DatasetReader
 
 
 class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
