@@ -66,6 +66,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         dataset.index_instances(vocab)
 
         single_batch = next(data_iterator(dataset))
+        print(single_batch)
         single_batch = data_structure_as_variables(single_batch)
         model_predictions = model.forward(**single_batch)
 

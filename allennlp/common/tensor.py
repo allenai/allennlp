@@ -4,10 +4,8 @@ import torch
 from torch.autograd import Variable
 import numpy
 
-DictOfArrays = Dict[str, Union['DictOfArrays', numpy.ndarray]]  # pylint: disable=invalid-name
 
-
-def data_structure_as_variables(data_structure: DictOfArrays,
+def data_structure_as_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
                                 cuda_device: Optional[int] = -1):
 
     if isinstance(data_structure, dict):

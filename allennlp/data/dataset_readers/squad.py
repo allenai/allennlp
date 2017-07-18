@@ -11,6 +11,7 @@ from allennlp.common import Params
 from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokenizer
 from allennlp.experiments import Registry
 from allennlp.data.fields import TextField, ListField, IndexField
+from allennlp.data.field import Field  # pylint: disable=unused-import
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 
@@ -202,7 +203,7 @@ class SquadSentenceSelectionReader(DatasetReader):
         for question_id, answer_id in tqdm(questions):
             sentence_choices, correct_choice = self._get_sentence_choices(question_id, answer_id)
             question_text = self._id_to_question[question_id]
-            sentence_fields = []
+            sentence_fields = []  # type: List[Field]
             for sentence in sentence_choices:
                 tokenized_sentence = self._tokenizer.tokenize(sentence)
                 sentence_field = TextField(tokenized_sentence, self._token_indexers)

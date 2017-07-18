@@ -27,7 +27,7 @@ class SimpleTaggerTest(AllenNlpTestCase):
                                   hidden_size=7,
                                   vocabulary=self.vocab)
 
-    def test_simple_tagger_trains_and_loads(self):
+    def test_simple_tagger_saves_and_loads(self):
 
         dataset_reader = SequenceTaggingDatasetReader()
         self.ensure_model_saves_and_loads(model=self.model,
