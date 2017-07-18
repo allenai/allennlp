@@ -3,12 +3,14 @@ import os
 import codecs
 from overrides import overrides
 
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_reader import DatasetReader
 from allennlp.data import Dataset, Instance
 from allennlp.common import Params
 from allennlp.data.fields import TextField, TagField, IndexField
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.token_indexer import TokenIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.tokenizer import Tokenizer
+from allennlp.data.tokenizers import WordTokenizer
 
 
 class OntonotesReader(DatasetReader):
