@@ -4,10 +4,11 @@ import random
 from overrides import overrides
 
 from allennlp.common.util import group_by_count
-from allennlp.data import Dataset, Instance
-from allennlp.data.iterators import DataIterator
+from allennlp.data import DataIterator, Dataset, Instance
+from allennlp.experiments import Registry
 
 
+@Registry.register_data_iterator("basic")
 class BasicIterator(DataIterator):
     """
     A very basic iterator, which takes a dataset, pads all of it's instances to the maximum lengths
@@ -18,7 +19,7 @@ class BasicIterator(DataIterator):
     batch_size : int, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
     """
-    def __init__(self, batch_size: int = 32):
+    def __init__(self, batch_size: int = 32) -> None:
         self._batch_size = batch_size
 
     @overrides

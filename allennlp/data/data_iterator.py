@@ -2,7 +2,8 @@ from typing import Dict, List, Generator
 
 import numpy
 
-from allennlp.data import Dataset, Instance
+from allennlp.data.dataset import Dataset
+from allennlp.data.instance import Instance
 from allennlp.common import Params
 
 
@@ -50,8 +51,8 @@ class DataIterator:
 
     @classmethod
     def from_params(cls, params: Params):
-        from . import iterators
+        from allennlp.experiments.registry import Registry
         # TODO(Mark): The adaptive iterator will need a bit of work here,
         # to retrieve the scaling function etc.
-        iterator_type = params.pop_choice("type", iterators.keys())
-        return iterators[iterator_type](**params.as_dict())
+        iterator_type = params.pop_choice("type", Registry.list_data_iterators())
+        return Registry.get_data_iterator(iterator_type)(**params.as_dict())  # type: ignore

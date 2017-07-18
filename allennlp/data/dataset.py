@@ -1,13 +1,13 @@
 import logging
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy
 import tqdm
 
-from .instance import Instance
-from .vocabulary import Vocabulary
-from ..common.checks import ConfigurationError
+from allennlp.data.instance import Instance
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -18,7 +18,7 @@ class Dataset:
     could be in an indexed or unindexed state - the ``Dataset`` has methods around indexing the
     data and converting the data into arrays.
     """
-    def __init__(self, instances: List[Instance]):
+    def __init__(self, instances: List[Instance]) -> None:
         """
         A Dataset just takes a list of instances in its constructor.  It's important that all
         subclasses have an identical constructor to this (though possibly with different Instance
@@ -26,7 +26,7 @@ class Dataset:
         class that call the constructor, such as `truncate()`.
         """
         all_instance_fields_and_types = [{k: v.__class__.__name__ for k, v in x.fields().items()}
-                                         for x in instances]
+                                         for x in instances]  # type: List[Dict[str, str]]
         # Check all the field names and Field types are the same for every instance.
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
             raise ConfigurationError("You cannot construct a Dataset with non-homogeneous Instances.")
@@ -60,11 +60,12 @@ class Dataset:
         This can then be used to convert this dataset into arrays of consistent length, or to set
         model parameters, etc.
         """
-        padding_lengths = defaultdict(dict)
-        all_instance_lengths = [instance.get_padding_lengths() for instance in self.instances]
+        padding_lengths = defaultdict(dict)  # type: Dict[str, Dict[str, int]]
+        all_instance_lengths = [instance.get_padding_lengths()
+                                for instance in self.instances]  # type: List[Dict[str, Dict[str, int]]]
         if not all_instance_lengths:
             return {**padding_lengths}
-        all_field_lengths = defaultdict(list)
+        all_field_lengths = defaultdict(list)  # type: Dict[str, List[Dict[str, int]]]
         for instance_lengths in all_instance_lengths:
             for field_name, instance_field_lengths in instance_lengths.items():
                 all_field_lengths[field_name].append(instance_field_lengths)
@@ -76,7 +77,9 @@ class Dataset:
 
     def as_arrays(self,
                   padding_lengths: Dict[str, Dict[str, int]] = None,
-                  verbose: bool = True) -> Dict[str, List[numpy.array]]:
+                  verbose: bool = True) ->Dict[str, Union[numpy.array, Dict[str, numpy.array]]]:
+        # This complex return type is actually predefined elsewhere as a DataArray,
+        # but we can't use it because mypy doesn't like it.
         """
         This method converts this ``Dataset`` into a set of numpy arrays that can be passed through
         a model.  In order for the numpy arrays to be valid arrays, all ``Instances`` in this
@@ -101,12 +104,16 @@ class Dataset:
 
         Returns
         -------
-        data_arrays : ``Dict[str, List[numpy.array]]``
+        data_arrays : ``Dict[str, DataArray]``
             A dictionary of data arrays, keyed by field name, suitable for passing as input to a
             model.  This is a `batch` of instances, so, e.g., if the instances have a "question"
             field and an "answer" field, the "question" fields for all of the instances will be
             grouped together into a single array, and the "answer" fields for all instances will be
-            similarly grouped in a parallel set of arrays, for batched computation.
+            similarly grouped in a parallel set of arrays, for batched computation. Additionally,
+            for TextFields, the value of the dictionary key is no longer a single array, but another
+            dictionary mapping TokenIndexer keys to arrays. The number of elements in this
+            sub-dictionary therefore corresponds to the number of ``TokenIndexers`` used to index
+            the Field.
         """
         if padding_lengths is None:
             padding_lengths = defaultdict(dict)
@@ -120,7 +127,7 @@ class Dataset:
         instance_padding_lengths = self.get_padding_lengths()
         if verbose:
             logger.info("Instance max lengths: %s", str(instance_padding_lengths))
-        lengths_to_use = defaultdict(dict)
+        lengths_to_use = defaultdict(dict)  # type: Dict[str, Dict[str, int]]
         for field_name, instance_field_lengths in instance_padding_lengths.items():
             for padding_key in instance_field_lengths.keys():
                 if padding_lengths[field_name].get(padding_key) is not None:
@@ -129,22 +136,29 @@ class Dataset:
                     lengths_to_use[field_name][padding_key] = instance_field_lengths[padding_key]
 
         # Now we actually pad the instances to numpy arrays.
-        field_arrays = defaultdict(list)
+        field_arrays = defaultdict(list)  # type: Dict[str, list]
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
             for instance in tqdm.tqdm(self.instances):
-                for field, arrays in instance.pad(lengths_to_use).items():
+                for field, arrays in instance.as_array(lengths_to_use).items():
                     field_arrays[field].append(arrays)
         else:
             for instance in self.instances:
-                for field, arrays in instance.pad(lengths_to_use).items():
+                for field, arrays in instance.as_array(lengths_to_use).items():
                     field_arrays[field].append(arrays)
 
         # Finally, we combine the arrays that we got for each instance into one big array (or set
         # of arrays) per field.
         for field_name, field_array_list in field_arrays.items():
-            if isinstance(field_array_list[0], (list, tuple)):
-                field_arrays[field_name] = [numpy.asarray(x) for x in zip(*field_array_list)]
+            if isinstance(field_array_list[0], dict):
+                # This is creating a dict of {token_indexer_key: batch_array} for each
+                # token indexer used to index this field. This is mostly utilised by TextFields.
+                token_indexer_key_to_batch_dict = defaultdict(list)  # type: Dict[str, List[numpy.array]]
+                for namespace_dict in field_array_list:
+                    for indexer_name, array in namespace_dict.items():
+                        token_indexer_key_to_batch_dict[indexer_name].append(array)
+                field_arrays[field_name] = {indexer_name: numpy.asarray(array_list) for  # type: ignore
+                                            indexer_name, array_list in token_indexer_key_to_batch_dict.items()}
             else:
                 field_arrays[field_name] = numpy.asarray(field_array_list)
         # Unpack into a standard dict to remove defaultdict functionality.

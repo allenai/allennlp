@@ -1,5 +1,5 @@
-from .. import Dataset
-from ...common import Params
+from allennlp.data.dataset import Dataset
+from allennlp.common import Params
 
 
 class DatasetReader:
@@ -14,8 +14,8 @@ class DatasetReader:
         """
         raise NotImplementedError
 
-    @staticmethod
-    def from_params(params: Params):
-        from . import dataset_readers
-        choice = params.pop_choice('type', list(dataset_readers.keys()))
-        return dataset_readers[choice].from_params(params)
+    @classmethod
+    def from_params(cls, params: Params):
+        from allennlp.experiments.registry import Registry
+        choice = params.pop_choice('type', Registry.list_dataset_readers())
+        return Registry.get_dataset_reader(choice).from_params(params)

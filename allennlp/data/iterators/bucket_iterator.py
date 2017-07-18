@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict, cast
 import random
 
 from overrides import overrides
@@ -6,8 +6,10 @@ from overrides import overrides
 from allennlp.common.util import add_noise_to_dict_values
 from allennlp.data import Dataset, Instance
 from allennlp.data.iterators.basic_iterator import BasicIterator
+from allennlp.experiments import Registry
 
 
+@Registry.register_data_iterator("bucket")
 class BucketIterator(BasicIterator):
     """
     An iterator which by default, pads batches with respect to the maximum input lengths `per
@@ -53,7 +55,7 @@ class BucketIterator(BasicIterator):
                  sorting_keys: List[Tuple[str, str]] = None,
                  padding_noise: float = 0.1,
                  biggest_batch_first: bool = False,
-                 batch_size: int = 32):
+                 batch_size: int = 32) -> None:
         self._sorting_keys = sorting_keys or []
         self._padding_noise = padding_noise
         self._biggest_batch_first = biggest_batch_first
@@ -88,7 +90,7 @@ class BucketIterator(BasicIterator):
         """
         instances_with_lengths = []
         for instance in dataset.instances:
-            padding_lengths = instance.get_padding_lengths()
+            padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
             print("Instance:", instance)
             print("padding lengths:", padding_lengths)
             if padding_noise > 0.0:
@@ -96,8 +98,9 @@ class BucketIterator(BasicIterator):
                 for field_name, field_lengths in padding_lengths.items():
                     noisy_lengths[field_name] = add_noise_to_dict_values(field_lengths, padding_noise)
                 padding_lengths = noisy_lengths
-            instance_with_lengths = [padding_lengths[field_name][padding_key]
-                                     for (field_name, padding_key) in sorting_keys] + [instance]
+            instance_with_lengths = ([padding_lengths[field_name][padding_key]
+                                      for (field_name, padding_key) in sorting_keys],
+                                     instance)
             instances_with_lengths.append(instance_with_lengths)
-        instances_with_lengths.sort(key=lambda x: x[:-1])
+        instances_with_lengths.sort(key=lambda x: x[0])
         return Dataset([instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths])
