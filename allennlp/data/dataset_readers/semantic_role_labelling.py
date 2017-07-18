@@ -9,8 +9,6 @@ from allennlp.common import Params
 from allennlp.data.fields import TextField, TagField, IndexField
 from allennlp.data.token_indexer import TokenIndexer
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data.tokenizer import Tokenizer
-from allennlp.data.tokenizers import WordTokenizer
 from allennlp.experiments import Registry
 
 
