@@ -1,8 +1,6 @@
 from itertools import zip_longest
-from typing import Any, Callable, Dict, List, Type, TypeVar
+from typing import Any, Callable, Dict, List, TypeVar
 import random
-
-from allennlp.common.checks import ConfigurationError
 
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:

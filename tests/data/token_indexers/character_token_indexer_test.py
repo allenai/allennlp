@@ -16,8 +16,7 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         indexer.count_vocab_items("hello", counter)
         assert counter["characters"] == {"h": 1, "H": 1, "e": 2, "l": 4, "o": 2}
 
-        indexer = TokenCharactersIndexer("characters",
-                                               CharacterTokenizer(lowercase_characters=True))
+        indexer = TokenCharactersIndexer("characters", CharacterTokenizer(lowercase_characters=True))
         counter = defaultdict(lambda: defaultdict(int))
         indexer.count_vocab_items("Hello", counter)
         indexer.count_vocab_items("hello", counter)
