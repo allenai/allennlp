@@ -67,8 +67,6 @@ class SrlReader(DatasetReader):
     Parameters
     ----------
     ontonotes_filename : ``str``
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
-        We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
 
@@ -79,10 +77,8 @@ class SrlReader(DatasetReader):
     """
     def __init__(self,
                  ontonotes_filename: str,
-                 tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._ontonotes_filename = ontonotes_filename
-        self._tokenizer = tokenizer
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     def process_sentence(self,
@@ -218,11 +214,9 @@ class SrlReader(DatasetReader):
         Parameters
         ----------
         filename : ``str``
-        tokenizer : ``Params``, optional
         token_indexers: ``List[Params]``, optional
         """
         filename = params.pop('filename')
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = {}
         token_indexer_params = params.pop('token_indexers', Params({}))
         for name, indexer_params in token_indexer_params.items():
@@ -233,5 +227,4 @@ class SrlReader(DatasetReader):
             token_indexers = None
         params.assert_empty(cls.__name__)
         return SrlReader(ontonotes_filename=filename,
-                         tokenizer=tokenizer,
                          token_indexers=token_indexers)
