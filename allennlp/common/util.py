@@ -1,5 +1,5 @@
 from itertools import zip_longest
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, TypeVar
 import random
 
 
@@ -57,8 +57,9 @@ def pad_sequence_to_length(sequence: List,
             padded_sequence.insert(0, default_value())
     return padded_sequence
 
+A = TypeVar('A')
 
-def add_noise_to_dict_values(dictionary: Dict[Any, float], noise_param: float) -> Dict[Any, float]:
+def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> Dict[A, float]:
     """
     Returns a new dictionary with noise added to every key in ``dictionary``.  The noise is
     uniformly distributed within ``noise_param`` percent of the value for every value in the
@@ -104,6 +105,7 @@ def clean_layer_name(input_name: str,
         input_name = '_'.join(input_name.split('_')[:-1])
 
     return input_name
+
 
 def namespace_match(pattern: str, namespace: str):
     """

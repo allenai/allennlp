@@ -33,7 +33,7 @@ class SimpleTagger(Model):
                  vocabulary: Vocabulary,
                  embedding_dim: int = 100,
                  hidden_size: int = 200,
-                 num_layers: int = 2):
+                 num_layers: int = 2) -> None:
         super(SimpleTagger, self).__init__()
 
         self.vocabulary = vocabulary
@@ -53,14 +53,21 @@ class SimpleTagger(Model):
                                                            self.num_classes))
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
-    def forward(self,  # pylint: disable=arguments-differ
-                tokens: torch.LongTensor,
-                tags: torch.LongTensor = None):
+    # pylint: disable=arguments-differ
+    def forward(self,  # type: ignore
+                tokens: Dict[str, torch.LongTensor],
+                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         """
         Parameters
         ----------
-        tokens : torch.LongTensor, required
-            A torch tensor representing the indices of the
+        tokens : Dict[str, torch.LongTensor], required
+            The output of TextField.as_array() which should typically be passed directly to a
+            ``TokenEmbedder``. Concretely, it is a dictionary of namespaces which have been indexed
+            to their corresponding tensors. At its most basic, using a SingleIdTokenIndexer this is:
+            {"tokens": Tensor(batch_size, sequence_length)}. This dictionary will have as many
+            items as you have used token indexers in the ``TextField`` representing your sequence.
+            This dictionary is designed to be passed directly to a ``TokenEmbedder``, which knows
+            how to combine different word representations into a single one per token in your input.
         tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of gold labels.
             These can either be integer indexes or one hot arrays of
@@ -77,9 +84,10 @@ class SimpleTagger(Model):
             A scalar loss to be optimised.
 
         """
-        batch_size = tokens.size()[0]
-        # TODO(Mark): Change to use NlpApi.
-        embedded_text_input = self.embedding(tokens)
+        # TODO(Mark): Change to use NlpApi/TokenEmbedder once it exists.
+        word_tokens = tokens["tokens"]
+        batch_size = word_tokens.size()[0]
+        embedded_text_input = self.embedding(word_tokens)
         encoded_text, _ = self.stacked_encoders(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)
@@ -96,6 +104,8 @@ class SimpleTagger(Model):
             output_dict["loss"] = loss
 
         return output_dict
+
+    # pylint: enable=arguments-differ
 
     def tag(self, text_field: TextField) -> Dict[str, Any]:
         """
@@ -120,11 +130,11 @@ class SimpleTagger(Model):
         """
         text_field.index(self.vocabulary)
         padding_lengths = text_field.get_padding_lengths()
-        array_input = text_field.pad(padding_lengths)
+        array_input = text_field.as_array(padding_lengths)
         # TODO(Mark): Generalise how the array is transformed into a variable after settling the data API.
         # Add a batch dimension by unsqueezing, because pytorch
         # doesn't support inputs without one.
-        array_input = torch.autograd.Variable(torch.LongTensor(array_input[0])).unsqueeze(0)
+        array_input = {"tokens": torch.autograd.Variable(torch.LongTensor(array_input["tokens"])).unsqueeze(0)}
         output_dict = self.forward(tokens=array_input)
 
         # Remove batch dimension, as we only had one input.

@@ -7,10 +7,12 @@ from overrides import overrides
 
 from allennlp.data import Dataset, Instance
 from allennlp.data.iterators.bucket_iterator import BucketIterator
+from allennlp.experiments import Registry
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+@Registry.register_data_iterator("adaptive")
 class AdaptiveIterator(BucketIterator):
     """
     An ``AdaptiveIterator`` is a ``DataIterator`` that varies the batch size to try to optimize
@@ -79,7 +81,7 @@ class AdaptiveIterator(BucketIterator):
                  biggest_batch_first: bool = False,
                  batch_size: int = None,
                  sorting_keys: List[Tuple[str, str]] = None,
-                 padding_noise: float = 0.2):
+                 padding_noise: float = 0.2) -> None:
         self._padding_memory_scaling = padding_memory_scaling
         self._maximum_batch_size = maximum_batch_size
         self._adaptive_memory_usage_constant = adaptive_memory_usage_constant
@@ -93,13 +95,11 @@ class AdaptiveIterator(BucketIterator):
         if self._biggest_batch_first:
             return super(AdaptiveIterator, self)._create_batches(dataset, shuffle)
         if self._sorting_keys:
-            instances = self._sort_dataset_by_padding(dataset,
-                                                      self._sorting_keys,
-                                                      self._padding_noise)
-        else:
-            instances = dataset.instances
+            dataset = self._sort_dataset_by_padding(dataset,
+                                                    self._sorting_keys,
+                                                    self._padding_noise)
         # Group the instances into different sized batches, depending on how padded they are.
-        grouped_instances = self._adaptive_grouping(instances)
+        grouped_instances = self._adaptive_grouping(dataset)
         if shuffle:
             random.shuffle(grouped_instances)
         return grouped_instances
@@ -107,7 +107,7 @@ class AdaptiveIterator(BucketIterator):
     def _adaptive_grouping(self, dataset: Dataset):
         batches = []
         current_batch = []
-        current_lengths = defaultdict(dict)
+        current_lengths = defaultdict(dict)  # type: Dict[str, Dict[str, int]]
         logger.debug("Creating adaptive groups")
         for instance in dataset.instances:
             current_batch.append(instance)

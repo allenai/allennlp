@@ -1,16 +1,16 @@
-from typing import List
+from typing import Dict
 
 from overrides import overrides
 
-from . import DatasetReader
-from .. import Dataset
-from .. import Instance
-from ...common import Params
-from ..fields import TextField
-from ..token_indexers import TokenIndexer, SingleIdTokenIndexer
-from ..tokenizers import Tokenizer, WordTokenizer
+from allennlp.common import Params
+from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokenizer
+from allennlp.data.fields import TextField
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.tokenizers import WordTokenizer
+from allennlp.experiments.registry import Registry
 
 
+@Registry.register_dataset_reader("language_modeling")
 class LanguageModelingReader(DatasetReader):
     """
     Reads a text file and converts it into a ``Dataset`` suitable for training a language model.
@@ -29,7 +29,7 @@ class LanguageModelingReader(DatasetReader):
         of the language model.
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
-    token_indexers : ``List[TokenIndexer]``, optional (default=``[SingleIdTokenIndexer()]``)
+    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` representation will always be single token IDs - if you've specified
         a ``SingleIdTokenIndexer`` here, we use the first one you specify.  Otherwise, we create
@@ -39,13 +39,11 @@ class LanguageModelingReader(DatasetReader):
                  filename: str,
                  tokens_per_instance: int = None,
                  tokenizer: Tokenizer = WordTokenizer(),
-                 token_indexers: List[TokenIndexer] = None):
+                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._filename = filename
         self._tokens_per_instance = tokens_per_instance
         self._tokenizer = tokenizer
-        if token_indexers is None:
-            token_indexers = [SingleIdTokenIndexer()]
-        self._token_indexers = token_indexers
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._start_token = '<S>'
         self._end_token = '</S>'
 
@@ -75,17 +73,17 @@ class LanguageModelingReader(DatasetReader):
         # embeddings with character-level encoders, in order to predict the word token that comes
         # next.
         output_indexer = None
-        for indexer in self._token_indexers:
+        for name, indexer in self._token_indexers.items():
             if isinstance(indexer, SingleIdTokenIndexer):
-                output_indexer = indexer
+                output_indexer = {name: indexer}
                 break
         else:
-            output_indexer = SingleIdTokenIndexer()
+            output_indexer = {"tokens": SingleIdTokenIndexer()}
 
         instances = []
         for tokenized_string in tokenized_strings:
             input_field = TextField(tokenized_string[:-1], self._token_indexers)
-            output_field = TextField(tokenized_string[1:], [output_indexer])
+            output_field = TextField(tokenized_string[1:], output_indexer)
             instances.append(Instance({'input_tokens': input_field,
                                        'output_tokens': output_field}))
         return Dataset(instances)
@@ -103,8 +101,14 @@ class LanguageModelingReader(DatasetReader):
         filename = params.pop('filename')
         tokens_per_instance = params.pop('tokens_per_instance', None)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = [TokenIndexer.from_params(p)
-                          for p in params.pop('token_indexers', [Params({})])]
+        token_indexers = {}
+        token_indexer_params = params.pop('token_indexers', Params({}))
+        for name, indexer_params in token_indexer_params.items():
+            token_indexers[name] = TokenIndexer.from_params(indexer_params)
+        # The default parameters are contained within the class,
+        # so if no parameters are given we must pass None.
+        if token_indexers == {}:
+            token_indexers = None
         params.assert_empty(cls.__name__)
         return LanguageModelingReader(filename=filename,
                                       tokens_per_instance=tokens_per_instance,

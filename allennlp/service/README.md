@@ -1,15 +1,24 @@
 # Service
 
-This service uses Flask to serve AllenNLP models through a REST API.
+This service serves AllenNLP models through a REST API.
 (Or it will once they're ready; right now it serves one-line placeholder models.)
 
-To start the server just run
+Right now we are considering both Flask and Sanic. Accordingly, there are two
+versions of the server.
 
-```
-FLASK_APP=allennlp/service/server.py flask run --port 5001
+To start the flask version run
+
+```bash
+FLASK_APP=allennlp/service/server_flask.py flask run --port 5001
 ```
 
-(or whatever port you want).
+(substitute whatever port you want).
+
+To start the sanic version run
+
+```bash
+python -m sanic --workers 4 --port 5001 allennlp.service.server_sanic.app
+```
 
 Right now the API has two routes.
 

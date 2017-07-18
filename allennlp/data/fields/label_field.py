@@ -1,16 +1,15 @@
-from typing import Dict, List, Union
+from typing import Dict, Union
 import logging
 
 from overrides import overrides
 import numpy
 
-from .field import Field
-from ..vocabulary import Vocabulary
+from allennlp.data import Field, Vocabulary
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class LabelField(Field):
+class LabelField(Field[numpy.array]):
     """
     A ``LabelField`` is a categorical label of some kind, where the labels are either strings of
     text or 0-indexed integers.  If the labels need indexing, we will use a :class:`Vocabulary` to
@@ -38,7 +37,7 @@ class LabelField(Field):
     def __init__(self,
                  label: Union[str, int],
                  label_namespace: str = 'labels',
-                 num_labels: int = None):
+                 num_labels: int = None) -> None:
         self._label = label
         self._label_namespace = label_namespace
         if num_labels is None:
@@ -57,23 +56,23 @@ class LabelField(Field):
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         if self._label_id is None:
-            counter[self._label_namespace][self._label] += 1
+            counter[self._label_namespace][self._label] += 1  # type: ignore
 
     @overrides
     def index(self, vocab: Vocabulary):
         if self._label_id is None:
-            self._label_id = vocab.get_token_index(self._label, self._label_namespace)
+            self._label_id = vocab.get_token_index(self._label, self._label_namespace)  # type: ignore
             self._num_labels = vocab.get_vocab_size(self._label_namespace)
 
     @overrides
-    def get_padding_lengths(self) -> Dict[str, int]:
+    def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
         return {}
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.array:  # pylint: disable=unused-argument
         label_array = numpy.zeros(self._num_labels)
         label_array[self._label_id] = 1
-        return [label_array]
+        return label_array
 
     @overrides
     def empty_field(self):

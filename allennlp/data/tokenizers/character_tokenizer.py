@@ -1,10 +1,12 @@
 from typing import List
 from overrides import overrides
 
-from ...common import Params
-from .tokenizer import Tokenizer
+from allennlp.common import Params
+from allennlp.data.tokenizer import Tokenizer
+from allennlp.experiments import Registry
 
 
+@Registry.register_tokenizer("character")
 class CharacterTokenizer(Tokenizer):
     """
     A ``CharacterTokenizer`` splits strings into character tokens.
@@ -25,7 +27,7 @@ class CharacterTokenizer(Tokenizer):
         operation.  You probably do not want to do this, as character vocabularies are generally
         not very large to begin with, but it's an option if you really want it.
     """
-    def __init__(self, byte_encoding: str = None, lowercase_characters: bool = False):
+    def __init__(self, byte_encoding: str = None, lowercase_characters: bool = False) -> None:
         self.byte_encoding = byte_encoding
         self.lowercase_characters = lowercase_characters
 
@@ -34,7 +36,7 @@ class CharacterTokenizer(Tokenizer):
         if self.lowercase_characters:
             text = text.lower()
         if self.byte_encoding is not None:
-            text = text.encode(self.byte_encoding)
+            text = text.encode(self.byte_encoding)  # type: ignore
         return list(text)
 
     @classmethod
