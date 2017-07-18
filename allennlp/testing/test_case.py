@@ -54,22 +54,24 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
                                      model: Model,
                                      dataset_reader: DatasetReader,
                                      iterator: DataIterator = None):
-        # Save and load the model.
-        torch.save(model.state_dict(), self.MODEL_FILE)
-        loaded_model = model
-        loaded_model.load_state_dict(torch.load(self.MODEL_FILE))
 
-        dataset = dataset_reader.read(self.TRAIN_FILE)
-        vocab = Vocabulary.from_dataset(dataset)
-        dataset.index_instances(vocab)
         # Our loading tests work better if you're not using complex iterators, so by
         # default we use the basic one unless you pass an iterator into this function.
         # If you _do_ use them, we'll skip some of the stuff below that isn't compatible.
         data_iterator = iterator or BasicIterator()
-        single_batch = next(data_iterator(dataset))
 
+        dataset = dataset_reader.read(self.TRAIN_FILE)
+        vocab = Vocabulary.from_dataset(dataset)
+        dataset.index_instances(vocab)
+
+        single_batch = next(data_iterator(dataset))
         single_batch = data_structure_as_variables(single_batch)
         model_predictions = model.forward(**single_batch)
+
+        torch.save(model.state_dict(), self.MODEL_FILE)
+        loaded_model = model
+        loaded_model.load_state_dict(torch.load(self.MODEL_FILE))
+
         loaded_model_predictions = loaded_model.forward(**single_batch)
 
         # Both outputs should have the same keys and the values
