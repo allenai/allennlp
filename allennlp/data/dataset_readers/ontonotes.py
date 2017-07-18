@@ -131,18 +131,15 @@ class OntonotesReader(DatasetReader):
 
         for root, directories, files in os.walk(self._ontonotes_filename):
             for file in files:
-
                 # These are a relic of the dataset pre-processing. Every file will be duplicated
                 # - one file called filename.gold_skel and one generated from the preprocessing
                 # called filename.gold_conll.
                 if 'gold_conll' not in file:
                     continue
-                dpath = root.split('/')
-                domain = '_'.join(dpath[dpath.index('annotations') + 1:-1])
-                with codecs.open(root + "/" + file, 'r', encoding='utf8') as open_file:
+                with codecs.open(os.path.join(root, file), 'r', encoding='utf8') as open_file:
                     for line in open_file:
                         line = line.strip()
-                        if line == '' or line.beginswith("#"):
+                        if line == '' or line.startswith("#"):
 
                             # Conll format data begins and ends with lines containing a hash,
                             # which may or may not occur after an empty line. To deal with this
@@ -208,7 +205,6 @@ class OntonotesReader(DatasetReader):
 
                         if is_verbal_predicate:
                             verbal_predicates.append(word_index)
-
         return Dataset(instances)
 
     @classmethod
