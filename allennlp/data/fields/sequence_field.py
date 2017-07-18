@@ -1,4 +1,4 @@
-from allennlp.data.fields.field import Field, DataArray
+from allennlp.data import DataArray, Field
 
 
 class SequenceField(Field[DataArray]):

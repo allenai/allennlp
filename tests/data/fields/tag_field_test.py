@@ -6,7 +6,7 @@ import numpy
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import TextField, TagField
-from allennlp.data.token_indexers import token_indexers
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.common.checks import ConfigurationError
 from allennlp.testing.test_case import AllenNlpTestCase
 
@@ -20,7 +20,7 @@ class TestTagField(AllenNlpTestCase):
             _ = TagField(wrong_tags, text)
 
     def test_count_vocab_items_correctly_indexes_tags(self):
-        text = TextField(["here", "are", "some", "words", "."], [token_indexers["single id"]("words")])
+        text = TextField(["here", "are", "some", "words", "."], [SingleIdTokenIndexer("words")])
         tags = ["B", "I", "O", "O", "O"]
         tag_field = TagField(tags, text, tag_namespace="tags")
 
@@ -38,7 +38,7 @@ class TestTagField(AllenNlpTestCase):
         i_index = vocab.add_token_to_namespace("I", namespace='*tags')
         o_index = vocab.add_token_to_namespace("O", namespace='*tags')
 
-        text = TextField(["here", "are", "some", "words", "."], [token_indexers["single id"]("words")])
+        text = TextField(["here", "are", "some", "words", "."], [SingleIdTokenIndexer("words")])
         tags = ["B", "I", "O", "O", "O"]
         tag_field = TagField(tags, text, tag_namespace="*tags")
         tag_field.index(vocab)
@@ -54,7 +54,7 @@ class TestTagField(AllenNlpTestCase):
         vocab.add_token_to_namespace("I", namespace='*tags')
         vocab.add_token_to_namespace("O", namespace='*tags')
 
-        text = TextField(["here", "are", "some", "words", "."], [token_indexers["single id"]("words")])
+        text = TextField(["here", "are", "some", "words", "."], [SingleIdTokenIndexer("words")])
         tags = ["B", "I", "O", "O", "O"]
         tag_field = TagField(tags, text, tag_namespace="*tags")
         tag_field.index(vocab)

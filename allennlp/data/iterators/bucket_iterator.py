@@ -6,8 +6,10 @@ from overrides import overrides
 from allennlp.common.util import add_noise_to_dict_values
 from allennlp.data import Dataset, Instance
 from allennlp.data.iterators.basic_iterator import BasicIterator
+from allennlp.experiments import Registry
 
 
+@Registry.register_data_iterator("bucket")
 class BucketIterator(BasicIterator):
     """
     An iterator which by default, pads batches with respect to the maximum input lengths `per

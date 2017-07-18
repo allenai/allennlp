@@ -2,9 +2,11 @@ from typing import List
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.data.tokenizers.tokenizer import Tokenizer
+from allennlp.data.tokenizer import Tokenizer
+from allennlp.experiments import Registry
 
 
+@Registry.register_tokenizer("character")
 class CharacterTokenizer(Tokenizer):
     """
     A ``CharacterTokenizer`` splits strings into character tokens.
