@@ -7,16 +7,17 @@ from typing import List, Tuple, Dict, Set  # pylint: disable=unused-import
 import numpy
 from tqdm import tqdm
 
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data import Dataset, Instance
 from allennlp.common import Params
+from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokenizer
+from allennlp.experiments import Registry
 from allennlp.data.fields import TextField, ListField, IndexField
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.tokenizers import WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+@Registry.register_dataset_reader("squad_sentence_selection")
 class SquadSentenceSelectionReader(DatasetReader):
     """
     Parameters

@@ -2,13 +2,14 @@ from typing import Dict
 
 from overrides import overrides
 
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data import Dataset, Instance
 from allennlp.common import Params
+from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer
 from allennlp.data.fields import TextField, TagField
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.experiments import Registry
 
 
+@Registry.register_dataset_reader("sequence_tagging")
 class SequenceTaggingDatasetReader(DatasetReader):
     """
     Reads instances from a pretokenised file where each line is in the following format:

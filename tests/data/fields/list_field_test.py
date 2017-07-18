@@ -3,7 +3,7 @@ import numpy
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import TextField, ListField
-from allennlp.data.token_indexers import token_indexers
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
@@ -21,9 +21,9 @@ class TestListField(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("t", 'characters')
         self.vocab.add_token_to_namespace("c", 'characters')
 
-        self.word_indexer = {"words": token_indexers["single id"]("words")}
-        self.words_and_characters_indexer = {"words": token_indexers["single id"]("words"),
-                                             "characters": token_indexers["characters"]("characters")}
+        self.word_indexer = {"words": SingleIdTokenIndexer("words")}
+        self.words_and_characters_indexer = {"words": SingleIdTokenIndexer("words"),
+                                             "characters": TokenCharactersIndexer("characters")}
         super(TestListField, self).setUp()
 
     def test_get_padding_lengths(self):
