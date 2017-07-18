@@ -1,18 +1,16 @@
 # pylint: disable=no-self-use,invalid-name
 
-from allennlp.data.dataset_readers.ontonotes import OntonotesReader
+from allennlp.data.dataset_readers.semantic_role_labelling import SrlReader
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestOntonotesReader(AllenNlpTestCase):
-
+class TestSrlReader(AllenNlpTestCase):
     def setUp(self):
-        super(TestOntonotesReader, self).setUp()
-
+        super(TestSrlReader, self).setUp()
         self.write_conll_2012_data()
 
     def test_read_from_file(self):
-        conll_reader = OntonotesReader(self.CONLL_TRAIN_DIR)
+        conll_reader = SrlReader(self.CONLL_TRAIN_DIR)
         dataset = conll_reader.read()
         instances = dataset.instances
         fields = instances[0].fields()

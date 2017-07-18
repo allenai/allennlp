@@ -11,9 +11,11 @@ from allennlp.data.token_indexer import TokenIndexer
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizer import Tokenizer
 from allennlp.data.tokenizers import WordTokenizer
+from allennlp.experiments import Registry
 
 
-class OntonotesReader(DatasetReader):
+@Registry.register_dataset_reader("srl")
+class SrlReader(DatasetReader):
     """
     This DatasetReader is designed to read in the English OntoNotes v5.0 data
     in the format used by the CoNLL 2011/2012 shared tasks.
@@ -230,6 +232,6 @@ class OntonotesReader(DatasetReader):
         if token_indexers == {}:
             token_indexers = None
         params.assert_empty(cls.__name__)
-        return OntonotesReader(ontonotes_filename=filename,
-                               tokenizer=tokenizer,
-                               token_indexers=token_indexers)
+        return SrlReader(ontonotes_filename=filename,
+                         tokenizer=tokenizer,
+                         token_indexers=token_indexers)
