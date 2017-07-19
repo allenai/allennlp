@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 
 import torch
 from torch.autograd import Variable
@@ -6,7 +6,7 @@ import numpy
 
 
 def data_structure_as_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
-                                cuda_device: Optional[int] = -1):
+                                cuda_device: int = -1):
 
     if isinstance(data_structure, dict):
         for key, value in data_structure.items():

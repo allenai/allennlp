@@ -7,7 +7,7 @@ from allennlp.testing.test_case import AllenNlpTestCase
 from allennlp.common.tensor import data_structure_as_variables
 
 
-class TestTesor(AllenNlpTestCase):
+class TestTensor(AllenNlpTestCase):
 
     def test_data_structure_as_variables_handles_recursion(self):
 
