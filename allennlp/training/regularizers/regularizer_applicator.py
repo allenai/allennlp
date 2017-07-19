@@ -74,7 +74,7 @@ class RegularizerApplicator:
         for parameter_regex, regularizer_params in all_regularizer_params.items():
 
             if isinstance(regularizer_params, str):
-                instanciated_regularizers[parameter_regex] = Registry.get_regularizer(regularizer_params)
+                instanciated_regularizers[parameter_regex] = Registry.get_regularizer(regularizer_params)()
             else:
                 regularizer_type = Registry.get_regularizer(regularizer_params.pop("type"))
                 instanciated_regularizers[parameter_regex] = regularizer_type(**regularizer_params)
