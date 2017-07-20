@@ -1,10 +1,11 @@
 # pylint: disable=no-self-use, invalid-name
 import torch
 from torch.nn.init import constant
+import numpy
 
 from allennlp.training.initializers import InitializerApplicator
 from allennlp.testing.test_case import AllenNlpTestCase
-
+from allennlp.common.params import Params
 
 class TestInitializers(AllenNlpTestCase):
 
@@ -43,3 +44,22 @@ class TestInitializers(AllenNlpTestCase):
 
         for parameter in conv_layer.parameters():
             assert torch.equal(parameter.data, torch.ones(parameter.size()) * 5)
+
+    def test_from_params(self):
+
+        params = Params({
+                "initializers": {
+                        "conv": "orthogonal",
+                        "linear": {
+                                "type": "constant",
+                                "val": 1
+                        }
+                    }
+            })
+        initializer_applicator = InitializerApplicator.from_params(params)
+        initializers = initializer_applicator._initializers  # pylint: disable=protected-access
+        assert initializers["conv"] == torch.nn.init.orthogonal
+
+        tensor = torch.FloatTensor([0, 0, 0, 0, 0])
+        initializers["linear"](tensor)
+        numpy.testing.assert_array_equal(tensor.numpy(), numpy.array([1, 1, 1, 1, 1]))

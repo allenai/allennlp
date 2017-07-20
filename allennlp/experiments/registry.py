@@ -1,5 +1,7 @@
-from typing import Dict, List, Type
+from typing import Dict, Callable, List, Type
 
+import torch
+import torch.nn.init
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
 from allennlp.training.regularizer import Regularizer
@@ -230,3 +232,36 @@ class Registry:
     #: This decorator adds a :class:`Regularizer` to the registry, with the given name.
     register_regularizer = _registry_decorator("regularizer", _regularizers)
     default_regularizer = "l2"
+
+
+    @classmethod
+    def list_initializers(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`Regularizer` names.
+        """
+        return _get_keys_with_default(cls._initializers, "initializer", cls.default_initializer)
+
+    @classmethod
+    def get_initializer(cls, name) -> Callable[[torch.Tensor], None]:
+        """
+        Returns the :class:`Regularizer` that has been registered with ``name``.
+        """
+        return cls._initializers[name]
+
+    # pylint: disable=line-too-long
+    _initializers = {
+            "normal": torch.nn.init.normal,
+            "uniform": torch.nn.init.uniform,
+            "orthogonal": torch.nn.init.orthogonal,
+            "constant": torch.nn.init.constant,
+            "dirac": torch.nn.init.dirac,
+            "xavier_normal": torch.nn.init.xavier_normal,
+            "xavier_uniform": torch.nn.init.xavier_uniform,
+            "kaiming_normal": torch.nn.init.kaiming_normal,
+            "kaiming_uniform": torch.nn.init.kaiming_uniform,
+            "sparse": torch.nn.init.sparse,
+            "eye": torch.nn.init.eye,
+    }
+    #: This decorator adds a :func:`initializer` to the registry, with the given name.
+    register_initializer = _registry_decorator("initializer", _initializers)
+    default_initializer = "normal"

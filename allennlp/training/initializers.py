@@ -5,7 +5,7 @@ import re
 import torch.nn.init
 
 from allennlp.common.params import Params
-
+from allennlp.experiments.registry import Registry
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -93,23 +93,23 @@ class InitializerApplicator:
         An InitializerApplicator containing the specified initializers.
         """
         # Construct a dictionary of available initializers from the torch.nn.init package.
-        torch_initalizer_names = [func for func in dir(torch.nn.init)
-                                  if not func.startswith("_") and not func[0].isupper()]
-        initializers = {name: getattr(torch.nn.init, name) for name in torch_initalizer_names}
-
         all_initializer_params = params.pop("initializers", {}).as_dict()
         instantiated_initializers = {}
         for name, initializer_params in all_initializer_params.items():
             # Just a string - corresponds to the name of an initializer.
             if isinstance(initializer_params, str):
-                instantiated_initializers[name] = initializers[initializer_params]
+                instantiated_initializers[name] = Registry.get_initializer(initializer_params)
             else:
                 initializer_type = initializer_params.pop("type")
+                # This is to avoid passing by reference inside the curried function.
+                # Without creating a new dict, we would pass the value of initializer_params
+                # when it is called, which could be different as it is a loop variable.
+                init_params = {**initializer_params}
 
+                # pylint: disable=cell-var-from-loop
                 def curried_initializer(tensor: torch.Tensor):
-                    # pylint: disable=cell-var-from-loop
-                    return initializers[initializer_type](tensor, **initializer_params)
-                    # pylint: enable=cell-var-from-loop
+                    return Registry.get_initializer(initializer_type)(tensor, **init_params)  # type: ignore
+                # pylint: enable=cell-var-from-loop
                 instantiated_initializers[name] = curried_initializer
         try:
             default = instantiated_initializers.pop("default")

@@ -42,12 +42,9 @@ class TestRegularizers(AllenNlpTestCase):
         assert value.data.numpy() == 65.0
 
     def test_from_params(self):
-
         params = Params({"regularizers": {"conv": "l1", "linear": {"type": "l2", "alpha": 10}}})
-
         regularizer_applicator = RegularizerApplicator.from_params(params)
-
-        regularizers = regularizer_applicator._regularizers
+        regularizers = regularizer_applicator._regularizers  # pylint: disable=protected-access
 
         assert isinstance(regularizers["conv"], L1Regularizer)
         assert isinstance(regularizers["linear"], L2Regularizer)
