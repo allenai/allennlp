@@ -72,5 +72,5 @@ class RegularizerApplicator:
                 instantiated_regularizers[parameter_regex] = Registry.get_regularizer(regularizer_params)()
             else:
                 regularizer_type = Registry.get_regularizer(regularizer_params.pop("type"))
-                instantiated_regularizers[parameter_regex] = regularizer_type(**regularizer_params)
+                instantiated_regularizers[parameter_regex] = regularizer_type(**regularizer_params)  # type: ignore
         return RegularizerApplicator(instantiated_regularizers)

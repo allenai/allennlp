@@ -7,7 +7,7 @@ from allennlp.training.regularizer import Regularizer
 @Registry.register_regularizer("l1")
 class L1Regularizer(Regularizer):
 
-    def __init__(self, alpha: float = 0.01) -> None:  # pylint: disable=super-init-not-called
+    def __init__(self, alpha: float = 0.01) -> None:
         self.alpha = alpha
 
     def __call__(self, parameter: torch.Tensor) -> torch.Tensor:
@@ -17,7 +17,7 @@ class L1Regularizer(Regularizer):
 @Registry.register_regularizer("l2")
 class L2Regularizer(Regularizer):
 
-    def __init__(self, alpha: float = 0.01) -> None:  # pylint: disable=super-init-not-called
+    def __init__(self, alpha: float = 0.01) -> None:
         self.alpha = alpha
 
     def __call__(self, parameter: torch.Tensor) -> torch.Tensor:
