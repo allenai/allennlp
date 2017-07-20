@@ -8,7 +8,7 @@ from allennlp.data import Field
 from allennlp.data.fields.sequence_field import SequenceField
 
 
-class IndexField(Field[numpy.array]):
+class IndexField(Field[numpy.ndarray]):
     """
     An ``IndexField`` is an index into a :class:`SequenceField`, as might be used for
     representing a correct answer option in a list, or a span begin and span end position in a
@@ -37,7 +37,7 @@ class IndexField(Field[numpy.array]):
         return {'num_options': self._sequence_field.sequence_length()}
 
     @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.array:
+    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:
         one_hot_index = numpy.zeros(padding_lengths['num_options'])
         one_hot_index[self._index] = 1
         return one_hot_index
