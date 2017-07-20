@@ -54,8 +54,8 @@ class TestInitializers(AllenNlpTestCase):
                                 "type": "constant",
                                 "val": 1
                         }
-                    }
-            })
+                }
+        })
         initializer_applicator = InitializerApplicator.from_params(params)
         initializers = initializer_applicator._initializers  # pylint: disable=protected-access
         assert initializers["conv"] == torch.nn.init.orthogonal
