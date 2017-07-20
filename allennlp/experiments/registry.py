@@ -1,7 +1,10 @@
-from typing import Dict, List, Type
+from typing import Dict, Callable, List, Type
 
+import torch
+import torch.nn.init
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
+from allennlp.training.regularizer import Regularizer
 
 
 def _registry_decorator(registry_name: str, registry_dict: Dict[str, Type]):
@@ -82,7 +85,7 @@ class Registry:
     To see all of the options available for a particular type, you can use the
     ``Registry.list_*()`` methods::
 
-        >>> from allennlp.experiments import Regsitry
+        >>> from allennlp.experiments import Registry
         >>> Registry.list_data_iterators()
         ["bucket", "basic", "adaptive"]  # the default options show up here (this list may be out-dated)
 
@@ -128,7 +131,7 @@ class Registry:
     # they've been imported so they are in the registry by default.
 
     _dataset_readers = {}  # type: Dict[str, Type[DatasetReader]]
-    #: This decorator adds a :class:`DatasetReader` to the regsitry, with the given name.
+    #: This decorator adds a :class:`DatasetReader` to the registry, with the given name.
     register_dataset_reader = _registry_decorator("dataset reader", _dataset_readers)
 
     @classmethod
@@ -148,7 +151,7 @@ class Registry:
         return cls._dataset_readers[name]
 
     _data_iterators = {}  # type: Dict[str, Type[DataIterator]]
-    #: This decorator adds a :class:`DataIterator` to the regsitry, with the given name.
+    #: This decorator adds a :class:`DataIterator` to the registry, with the given name.
     register_data_iterator = _registry_decorator("data iterator", _data_iterators)
     default_data_iterator = "bucket"
 
@@ -169,7 +172,7 @@ class Registry:
         return cls._data_iterators[name]
 
     _tokenizers = {}  # type: Dict[str, Type[Tokenizer]]
-    #: This decorator adds a :class:`Tokenizer` to the regsitry, with the given name.
+    #: This decorator adds a :class:`Tokenizer` to the registry, with the given name.
     register_tokenizer = _registry_decorator("tokenizer", _tokenizers)
     default_tokenizer = "word"
 
@@ -190,7 +193,7 @@ class Registry:
         return cls._tokenizers[name]
 
     _token_indexers = {}  # type: Dict[str, Type[TokenIndexer]]
-    #: This decorator adds a :class:`TokenIndexer` to the regsitry, with the given name.
+    #: This decorator adds a :class:`TokenIndexer` to the registry, with the given name.
     register_token_indexer = _registry_decorator("token indexer", _token_indexers)
     default_token_indexer = "single_id"
 
@@ -209,3 +212,57 @@ class Registry:
         """
         import allennlp.data.token_indexers  # pylint: disable=unused-variable
         return cls._token_indexers[name]
+
+    @classmethod
+    def list_regularizers(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`Regularizer` names.
+        """
+        import allennlp.training.regularizers  # pylint: disable=unused-variable
+        return _get_keys_with_default(cls._regularizers, "regularizer", cls.default_regularizer)
+
+    @classmethod
+    def get_regularizer(cls, name) -> Type[Regularizer]:
+        """
+        Returns the :class:`Regularizer` that has been registered with ``name``.
+        """
+        import allennlp.training.regularizers  # pylint: disable=unused-variable
+        return cls._regularizers[name]
+
+    _regularizers = {}  # type: Dict[str, Type[Regularizer]]
+    #: This decorator adds a :class:`Regularizer` to the registry, with the given name.
+    register_regularizer = _registry_decorator("regularizer", _regularizers)
+    default_regularizer = "l2"
+
+
+    @classmethod
+    def list_initializers(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered initializer names.
+        """
+        return _get_keys_with_default(cls._initializers, "initializer", cls.default_initializer)
+
+    @classmethod
+    def get_initializer(cls, name) -> Callable[[torch.Tensor], None]:
+        """
+        Returns the initializer that has been registered with ``name``.
+        """
+        return cls._initializers[name]
+
+    # pylint: disable=line-too-long
+    _initializers = {
+            "normal": torch.nn.init.normal,
+            "uniform": torch.nn.init.uniform,
+            "orthogonal": torch.nn.init.orthogonal,
+            "constant": torch.nn.init.constant,
+            "dirac": torch.nn.init.dirac,
+            "xavier_normal": torch.nn.init.xavier_normal,
+            "xavier_uniform": torch.nn.init.xavier_uniform,
+            "kaiming_normal": torch.nn.init.kaiming_normal,
+            "kaiming_uniform": torch.nn.init.kaiming_uniform,
+            "sparse": torch.nn.init.sparse,
+            "eye": torch.nn.init.eye,
+    }
+    #: This decorator adds a :func:`initializer` to the registry, with the given name.
+    register_initializer = _registry_decorator("initializer", _initializers)
+    default_initializer = "normal"
