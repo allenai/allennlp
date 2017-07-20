@@ -10,5 +10,5 @@ class Regularizer:
     def __init__(self, **kwargs):
         raise NotImplementedError
 
-    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+    def __call__(self, parameter: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError

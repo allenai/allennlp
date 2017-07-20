@@ -13,7 +13,7 @@ class TestInitializers(AllenNlpTestCase):
                 torch.nn.Linear(5, 10),
                 torch.nn.Linear(10, 5)
         )
-        initializer = InitializerApplicator({"default": lambda tensor: constant(tensor, 5)})
+        initializer = InitializerApplicator(default_initializer=lambda tensor: constant(tensor, 5))
         initializer(model)
         for parameter in model.parameters():
             assert torch.equal(parameter.data, torch.ones(parameter.size()) * 5)
@@ -30,8 +30,8 @@ class TestInitializers(AllenNlpTestCase):
             def forward(self, inputs):  # pylint: disable=arguments-differ
                 pass
 
-        initializers = InitializerApplicator({"conv": lambda tensor: constant(tensor, 5),
-                                              "default": lambda tensor: constant(tensor, 10)})
+        initializers = InitializerApplicator({"conv": lambda tensor: constant(tensor, 5)},
+                                             default_initializer=lambda tensor: constant(tensor, 10))
         model = Net()
         initializers(model)
         layers = list(model.children())

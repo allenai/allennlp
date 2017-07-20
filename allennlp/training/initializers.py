@@ -13,21 +13,22 @@ class InitializerApplicator:
     """
     Applies initializers to the parameters of a Module based on regex matches.
     All parameters in the Module will be initialized.
-
     """
-    def __init__(self, all_initializers: Dict[str, Callable[[torch.Tensor], None]] = None) -> None:
+    def __init__(self,
+                 initializers: Dict[str, Callable[[torch.Tensor], None]] = None,
+                 default_initializer: Callable[[torch.Tensor], None] = torch.nn.init.normal) -> None:
         """
         Parameters
         ----------
-        all_initializers : Dict[str, Callable[[torch.Tensor], None]], optional (default = None)
+        initializers : Dict[str, Callable[[torch.Tensor], None]], optional (default = {})
             A dictionary mapping parameter regexes to initializers to be applied to parameters
-            matching the regex. Additionally, it may include a "default" field containing a
-            initializer, which will be used in the case that the Applicator encounters a parameter
+            matching the regex.
+        default_initializer : Callable[[torch.Tensor], None], optional, (default = torch.nn.init.normal)
+            A default initializer, which will be used in the case that the Applicator encounters a parameter
             which does not match any of the regexes provided.
-
         """
-        self._initializers = all_initializers or {}
-        self._default_initializer = self._initializers.pop("default", torch.nn.init.normal)
+        self._initializers = initializers or {}
+        self._default_initializer = default_initializer
 
     def __call__(self, module: torch.nn.Module) -> None:
         """
@@ -44,7 +45,7 @@ class InitializerApplicator:
         for name, parameter in module.named_parameters():
             is_initialized = False
             for initializer_regex, initializer in self._initializers.items():
-                if self.parameter_name_matches_regex(initializer_regex, name):
+                if re.search(initializer_regex, name):
                     initializer(parameter)
                     logger.info("Initializing %s using %s "
                                 "Intitializer.", name, initializer_regex)
@@ -56,10 +57,6 @@ class InitializerApplicator:
             self._default_initializer(parameter)
             logger.info("Initializing %s using the Default "
                         "Intitializer. (Normal(0, 1) unless user specified.)", name)
-
-    @staticmethod
-    def parameter_name_matches_regex(regex: str, parameter_name: str):
-        return re.search(regex, parameter_name) is not None
 
     @classmethod
     def from_params(cls, params: Params) -> "InitializerApplicator":
@@ -114,4 +111,8 @@ class InitializerApplicator:
                     return initializers[initializer_type](tensor, **initializer_params)
                     # pylint: enable=cell-var-from-loop
                 instantiated_initializers[name] = curried_initializer
-        return InitializerApplicator(instantiated_initializers)
+        try:
+            default = instantiated_initializers.pop("default")
+        except KeyError:
+            default = torch.nn.init.normal
+        return InitializerApplicator(instantiated_initializers, default)

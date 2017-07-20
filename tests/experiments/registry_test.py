@@ -118,3 +118,31 @@ class TestRegistry(AllenNlpTestCase):
         Registry.default_token_indexer = "characters"
         assert Registry.list_token_indexers()[0] == "characters"
         Registry.default_token_indexer = default_iterator
+
+    # Regularizers
+
+    def test_registry_has_builtin_regularizers(self):
+        assert Registry.get_regularizer('l1').__name__ == 'L1Regularizer'
+        assert Registry.get_regularizer('l2').__name__ == 'L2Regularizer'
+
+    def test_register_regularizer_fails_on_duplicate(self):
+        with pytest.raises(ConfigurationError):
+            # pylint: disable=unused-variable
+            @Registry.register_regularizer("l1")
+            class NewL1Regularizer:
+                pass
+
+    def test_register_regularizer_adds_new_regularizer_with_decorator(self):
+        assert 'fake' not in Registry.list_regularizers()
+        @Registry.register_regularizer('fake')
+        class Fake:
+            pass
+        assert Registry.get_regularizer('fake') == Fake
+        del Registry._regularizers['fake']  # pylint: disable=protected-access
+
+    def test_default_regularizer_is_first_in_list(self):
+        default_regularizer = Registry.default_regularizer
+        assert Registry.list_regularizers()[0] == default_regularizer
+        Registry.default_regularizer = "l1"
+        assert Registry.list_regularizers()[0] == "l1"
+        Registry.default_regularizer = default_regularizer

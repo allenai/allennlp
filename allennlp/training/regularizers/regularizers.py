@@ -10,7 +10,7 @@ class L1Regularizer(Regularizer):
     def __init__(self, alpha: float = 0.01) -> None:  # pylint: disable=super-init-not-called
         self.alpha = alpha
 
-    def __call__(self, parameter: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
+    def __call__(self, parameter: torch.Tensor) -> torch.Tensor:
         return self.alpha * torch.sum(torch.abs(parameter))
 
 
@@ -20,5 +20,5 @@ class L2Regularizer(Regularizer):
     def __init__(self, alpha: float = 0.01) -> None:  # pylint: disable=super-init-not-called
         self.alpha = alpha
 
-    def __call__(self, parameter: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
+    def __call__(self, parameter: torch.Tensor) -> torch.Tensor:
         return self.alpha * torch.sum(torch.pow(parameter, 2))

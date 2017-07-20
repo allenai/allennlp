@@ -217,7 +217,6 @@ class Registry:
         Returns a list of all currently-registered :class:`Regularizer` names.
         """
         import allennlp.training.regularizers  # pylint: disable=unused-variable
-
         return _get_keys_with_default(cls._regularizers, "regularizer", cls.default_regularizer)
 
     @classmethod
@@ -228,6 +227,6 @@ class Registry:
         return cls._regularizers[name]
 
     _regularizers = {}  # type: Dict[str, Type[Regularizer]]
-    #: This decorator adds a :class:`TokenIndexer` to the registry, with the given name.
+    #: This decorator adds a :class:`Regularizer` to the registry, with the given name.
     register_regularizer = _registry_decorator("regularizer", _regularizers)
     default_regularizer = "l2"
