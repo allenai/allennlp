@@ -4,7 +4,7 @@ import numpy
 
 from allennlp.data.vocabulary import Vocabulary
 
-DataArray = TypeVar("DataArray", numpy.array, Dict[str, numpy.array])  # pylint: disable=invalid-name
+DataArray = TypeVar("DataArray", numpy.ndarray, Dict[str, numpy.ndarray])  # pylint: disable=invalid-name
 
 
 class Field(Generic[DataArray]):

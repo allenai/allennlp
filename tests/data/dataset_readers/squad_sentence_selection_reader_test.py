@@ -102,8 +102,8 @@ class TestSquadSentenceSelectionReader(AllenNlpTestCase):
         assert index_field.sequence_index() == tokens_list.index(sentence_tokens)
 
     def test_default_squad_sentence_selection_reader(self):
-        reader = SquadSentenceSelectionReader(self.squad_file)
-        instances = reader.read().instances
+        reader = SquadSentenceSelectionReader()
+        instances = reader.read(self.squad_file).instances
         assert instances[0].fields()["question"].tokens() == self.tokenizer.tokenize(self.question0)
         self.assert_list_field_contains_correct_sentences(instances[0].fields()["sentences"],
                                                           self.sentences[:7])
@@ -116,8 +116,8 @@ class TestSquadSentenceSelectionReader(AllenNlpTestCase):
                                                            self.sentences[2])
 
     def test_negative_question_choice_works(self):
-        reader = SquadSentenceSelectionReader(self.squad_file, negative_sentence_selection="question")
-        instances = reader.read().instances
+        reader = SquadSentenceSelectionReader(negative_sentence_selection="question")
+        instances = reader.read(self.squad_file).instances
         self.assert_list_field_contains_correct_sentences(instances[0].fields()["sentences"],
                                                           [self.sentences[5], self.question0])
         self.assert_index_field_points_to_correct_sentence(instances[0].fields()['correct_sentence'],
@@ -128,9 +128,8 @@ class TestSquadSentenceSelectionReader(AllenNlpTestCase):
                                                            self.sentences[2])
 
     def test_negative_random_question_choice_works(self):
-        reader = SquadSentenceSelectionReader(self.squad_file,
-                                              negative_sentence_selection="questions-random-2")
-        instances = reader.read().instances
+        reader = SquadSentenceSelectionReader(negative_sentence_selection="questions-random-2")
+        instances = reader.read(self.squad_file).instances
         self.assert_list_field_contains_correct_sentences(instances[0].fields()["sentences"],
                                                           [self.sentences[5], self.question0, self.question1])
         self.assert_index_field_points_to_correct_sentence(instances[0].fields()['correct_sentence'],
@@ -143,9 +142,8 @@ class TestSquadSentenceSelectionReader(AllenNlpTestCase):
     def test_negative_random_and_pad_work(self):
         # We aren't going to try to guess _which_ random sentences get selected, but we will at
         # least make sure that we get the expected number of results.
-        reader = SquadSentenceSelectionReader(self.squad_file,
-                                              negative_sentence_selection="random-2,pad-to-5")
-        instances = reader.read().instances
+        reader = SquadSentenceSelectionReader(negative_sentence_selection="random-2,pad-to-5")
+        instances = reader.read(self.squad_file).instances
         assert instances[0].fields()['sentences'].sequence_length() == 6
         self.assert_index_field_points_to_correct_sentence(instances[0].fields()['correct_sentence'],
                                                            self.sentences[5])

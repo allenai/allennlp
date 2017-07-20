@@ -8,7 +8,7 @@ from allennlp.data import Field
 from allennlp.data.fields.sequence_field import SequenceField
 
 
-class IndexField(Field[numpy.array]):
+class IndexField(Field[numpy.ndarray]):
     """
     An ``IndexField`` is an optional index into a :class:`SequenceField`, as might be used for
     representing a correct answer option in a list, or a span begin and span end position in a
