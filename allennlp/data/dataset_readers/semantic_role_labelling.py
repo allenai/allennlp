@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional  # pylint: disable=unused-import
 import os
 import codecs
 from overrides import overrides
@@ -110,7 +110,6 @@ class SrlReader(DatasetReader):
 
     Parameters
     ----------
-    ontonotes_filename : ``str``
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
 
@@ -120,9 +119,7 @@ class SrlReader(DatasetReader):
 
     """
     def __init__(self,
-                 ontonotes_filename: str,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        self._ontonotes_filename = ontonotes_filename
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     def _process_sentence(self,
@@ -165,22 +162,22 @@ class SrlReader(DatasetReader):
             return instances
 
     @overrides
-    def read(self):
+    def read(self, file_path: str):
         instances = []
 
-        sentence = []
-        verbal_predicates = []
-        predicate_argument_labels = []
-        current_span_label = []
+        sentence = []  # type: List[str]
+        verbal_predicates = []  # type: List[int]
+        predicate_argument_labels = []  # type: List[List[str]]
+        current_span_label = []  # type: List[Optional[str]]
 
-        for root, _, files in os.walk(self._ontonotes_filename):
-            for filename in files:
+        for root, _, files in os.walk(file_path):
+            for data_file in files:
                 # These are a relic of the dataset pre-processing. Every file will be duplicated
                 # - one file called filename.gold_skel and one generated from the preprocessing
                 # called filename.gold_conll.
-                if 'gold_conll' not in filename:
+                if 'gold_conll' not in data_file:
                     continue
-                with codecs.open(os.path.join(root, filename), 'r', encoding='utf8') as open_file:
+                with codecs.open(os.path.join(root, data_file), 'r', encoding='utf8') as open_file:
                     for line in open_file:
                         line = line.strip()
                         if line == '' or line.startswith("#"):
@@ -257,10 +254,8 @@ class SrlReader(DatasetReader):
         """
         Parameters
         ----------
-        filename : ``str``
         token_indexers: ``List[Params]``, optional
         """
-        filename = params.pop('filename')
         token_indexers = {}
         token_indexer_params = params.pop('token_indexers', Params({}))
         for name, indexer_params in token_indexer_params.items():
@@ -270,5 +265,4 @@ class SrlReader(DatasetReader):
         if token_indexers == {}:
             token_indexers = None
         params.assert_empty(cls.__name__)
-        return SrlReader(ontonotes_filename=filename,
-                         token_indexers=token_indexers)
+        return SrlReader(token_indexers=token_indexers)

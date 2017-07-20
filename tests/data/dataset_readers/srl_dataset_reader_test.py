@@ -10,8 +10,8 @@ class TestSrlReader(AllenNlpTestCase):
         self.write_conll_2012_data()
 
     def test_read_from_file(self):
-        conll_reader = SrlReader(self.CONLL_TRAIN_DIR)
-        dataset = conll_reader.read()
+        conll_reader = SrlReader()
+        dataset = conll_reader.read(self.CONLL_TRAIN_DIR)
         instances = dataset.instances
         fields = instances[0].fields()
         assert fields["tokens"].tokens() == ["Mali", "government", "officials", "say",
