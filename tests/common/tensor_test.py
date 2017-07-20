@@ -4,7 +4,7 @@ import torch
 import pytest
 
 from allennlp.testing.test_case import AllenNlpTestCase
-from allennlp.common.tensor import data_structure_as_variables
+from allennlp.common.tensor import arrays_to_variables
 
 
 class TestTensor(AllenNlpTestCase):
@@ -18,7 +18,7 @@ class TestTensor(AllenNlpTestCase):
                         },
                 "tags": numpy.ones([2, 3])
         }
-        torch_array_dict = data_structure_as_variables(array_dict)
+        torch_array_dict = arrays_to_variables(array_dict)
 
         assert torch_array_dict["sentence"]["words"].data.equal(
                 torch.DoubleTensor(numpy.zeros([3, 4])))
@@ -36,7 +36,7 @@ class TestTensor(AllenNlpTestCase):
                         },
                 "tags": numpy.ones([2, 3], dtype="uint8")
         }
-        torch_array_dict = data_structure_as_variables(array_dict)
+        torch_array_dict = arrays_to_variables(array_dict)
 
         assert torch_array_dict["sentence"]["words"].data.equal(
                 torch.FloatTensor(numpy.zeros([3, 4])))
@@ -55,7 +55,7 @@ class TestTensor(AllenNlpTestCase):
                         },
                 "tags": numpy.ones([2, 3], dtype="uint8")
         }
-        torch_array_dict = data_structure_as_variables(array_dict, cuda_device=1)
+        torch_array_dict = arrays_to_variables(array_dict, cuda_device=1)
 
         assert torch_array_dict["sentence"]["words"].data.equal(
                 torch.cuda.FloatTensor(numpy.zeros([3, 4])))

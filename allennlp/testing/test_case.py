@@ -11,7 +11,7 @@ from numpy.testing import assert_allclose
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
-from allennlp.common.tensor import data_structure_as_variables
+from allennlp.common.tensor import arrays_to_variables
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.data_iterator import DataIterator
@@ -55,19 +55,13 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
                                      model: Model,
                                      dataset_reader: DatasetReader,
                                      iterator: DataIterator = None):
-
-        # Our loading tests work better if you're not using complex iterators, so by
-        # default we use the basic one unless you pass an iterator into this function.
-        # If you _do_ use them, we'll skip some of the stuff below that isn't compatible.
         data_iterator = iterator or BasicIterator()
-
         dataset = dataset_reader.read(self.TRAIN_FILE)
         vocab = Vocabulary.from_dataset(dataset)
         dataset.index_instances(vocab)
 
         single_batch = next(data_iterator(dataset))
-        print(single_batch)
-        single_batch = data_structure_as_variables(single_batch)
+        single_batch = arrays_to_variables(single_batch)
         model_predictions = model.forward(**single_batch)
 
         torch.save(model.state_dict(), self.MODEL_FILE)
