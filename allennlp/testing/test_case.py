@@ -167,6 +167,12 @@ test/test/02/test_002  0   10             of     IN        (PP*             -   
 test/test/02/test_002  0   11       hearings    NNS    (NP*)))))       hearing  01   1   -        *            *)   (V*)    -
 test/test/02/test_002  0   12              .      .          *))            -    -   -   -        *            *      *     -
 
+test/test/03/test_003  0   0      Denise   NNP  (TOP(FRAG(NP*   -   -   -   -        (PERSON*   (2
+test/test/03/test_003  0   1      Dillon   NNP              *)  -   -   -   -               *)   2)
+test/test/03/test_003  0   4    Headline   NNP           (NP*   -   -   -   -   (WORK_OF_ART*    -
+test/test/03/test_003  0   5        News   NNP              *)  -   -   -   -               *)   -
+test/test/03/test_003  0   7           .     .             *))  -   -   -   -               *    -
+
 #end document
             """)
 

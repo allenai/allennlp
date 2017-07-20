@@ -79,10 +79,10 @@ class SrlReader(DatasetReader):
         self._ontonotes_filename = ontonotes_filename
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
-    def process_sentence(self,
-                         sentence: List[str],
-                         verbal_predicates: List[int],
-                         predicate_argument_labels: List[List[str]]) -> List[Instance]:
+    def _process_sentence(self,
+                          sentence: List[str],
+                          verbal_predicates: List[int],
+                          predicate_argument_labels: List[List[str]]) -> List[Instance]:
         """
         Parameters
         ---------
@@ -128,13 +128,13 @@ class SrlReader(DatasetReader):
         current_span_label = []
 
         for root, _, files in os.walk(self._ontonotes_filename):
-            for file in files:
+            for filename in files:
                 # These are a relic of the dataset pre-processing. Every file will be duplicated
                 # - one file called filename.gold_skel and one generated from the preprocessing
                 # called filename.gold_conll.
-                if 'gold_conll' not in file:
+                if 'gold_conll' not in filename:
                     continue
-                with codecs.open(os.path.join(root, file), 'r', encoding='utf8') as open_file:
+                with codecs.open(os.path.join(root, filename), 'r', encoding='utf8') as open_file:
                     for line in open_file:
                         line = line.strip()
                         if line == '' or line.startswith("#"):
@@ -145,9 +145,9 @@ class SrlReader(DatasetReader):
                             # adding instances, because there aren't any to add.
                             if not sentence:
                                 continue
-                            instances.extend(self.process_sentence(sentence,
-                                                                   verbal_predicates,
-                                                                   predicate_argument_labels))
+                            instances.extend(self._process_sentence(sentence,
+                                                                    verbal_predicates,
+                                                                    predicate_argument_labels))
                             # Reset everything for the next sentence.
                             sentence = []
                             verbal_predicates = []

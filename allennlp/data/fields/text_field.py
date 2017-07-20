@@ -76,6 +76,7 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
 
     # @overrides
     def sequence_length(self) -> int:
+        print(len(self._tokens))
         return len(self._tokens)
 
     # @overrides

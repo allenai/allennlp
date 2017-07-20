@@ -37,3 +37,9 @@ class TestSrlReader(AllenNlpTestCase):
                                              'after', 'four', 'months', 'of', 'hearings', '.']
         assert fields["verb_indicator"].sequence_index() == 11
         assert fields["tags"].tags() == ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B-V', 'O']
+
+        # Tests a sentence with no verbal predicates.
+        fields = instances[4].fields()
+        assert fields["tokens"].tokens() == ["Denise", "Dillon", "Headline", "News", "."]
+        assert fields["verb_indicator"].sequence_index() is None
+        assert fields["tags"].tags() == ['O', 'O', 'O', 'O', 'O']
