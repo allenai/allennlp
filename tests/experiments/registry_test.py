@@ -159,3 +159,39 @@ class TestRegistry(AllenNlpTestCase):
                              Registry.register_text_field_embedder,
                              Registry._text_field_embedders,  # pylint: disable=protected-access
                              'default_text_field_embedder')
+
+    # Seq2Seq encoders
+
+    def test_registry_has_builtin_seq2seq_encoders(self):
+        # pylint: disable=protected-access
+        from allennlp.modules.seq2seq_encoders.wrapped_pytorch_rnn import WrappedPytorchRnn
+        assert Registry.get_seq2seq_encoder('gru')._module_class.__name__ == 'GRU'
+        assert isinstance(Registry.get_seq2seq_encoder('gru'), WrappedPytorchRnn._Wrapper)
+        assert Registry.get_seq2seq_encoder('lstm')._module_class.__name__ == 'LSTM'
+        assert isinstance(Registry.get_seq2seq_encoder('lstm'), WrappedPytorchRnn._Wrapper)
+        assert Registry.get_seq2seq_encoder('rnn')._module_class.__name__ == 'RNN'
+        assert isinstance(Registry.get_seq2seq_encoder('rnn'), WrappedPytorchRnn._Wrapper)
+
+    def test_seq2seq_encoders_use_correct_fields(self):
+        self.registry_helper(Registry.list_seq2seq_encoders,
+                             Registry.get_seq2seq_encoder,
+                             Registry.register_seq2seq_encoder,
+                             Registry._seq2seq_encoders)  # pylint: disable=protected-access
+
+    # Seq2Vec encoders
+
+    def test_registry_has_builtin_seq2vec_encoders(self):
+        # pylint: disable=protected-access
+        from allennlp.modules.seq2vec_encoders.wrapped_pytorch_rnn import WrappedPytorchRnn
+        assert Registry.get_seq2vec_encoder('gru')._module_class.__name__ == 'GRU'
+        assert isinstance(Registry.get_seq2vec_encoder('gru'), WrappedPytorchRnn._Wrapper)
+        assert Registry.get_seq2vec_encoder('lstm')._module_class.__name__ == 'LSTM'
+        assert isinstance(Registry.get_seq2vec_encoder('lstm'), WrappedPytorchRnn._Wrapper)
+        assert Registry.get_seq2vec_encoder('rnn')._module_class.__name__ == 'RNN'
+        assert isinstance(Registry.get_seq2vec_encoder('rnn'), WrappedPytorchRnn._Wrapper)
+
+    def test_seq2vec_encoders_use_correct_fields(self):
+        self.registry_helper(Registry.list_seq2vec_encoders,
+                             Registry.get_seq2vec_encoder,
+                             Registry.register_seq2vec_encoder,
+                             Registry._seq2vec_encoders)  # pylint: disable=protected-access
