@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import torch
 from torch.nn.init import constant
+from allennlp.common.params import Params
 from allennlp.training.initializers import InitializerApplicator
 from allennlp.training.regularizers import L1Regularizer, L2Regularizer, RegularizerApplicator
 from allennlp.testing.test_case import AllenNlpTestCase
@@ -39,3 +40,15 @@ class TestRegularizers(AllenNlpTestCase):
         value = RegularizerApplicator({"weight": L2Regularizer(0.5),
                                        "bias": L1Regularizer(1.0)})(model)
         assert value.data.numpy() == 65.0
+
+    def test_from_params(self):
+
+        params = Params({"regularizers": {"conv": "l1", "linear": {"type": "l2", "alpha": 10}}})
+
+        regularizer_applicator = RegularizerApplicator.from_params(params)
+
+        regularizers = regularizer_applicator._regularizers
+
+        assert isinstance(regularizers["conv"], L1Regularizer)
+        assert isinstance(regularizers["linear"], L2Regularizer)
+        assert regularizers["linear"].alpha == 10
