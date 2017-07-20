@@ -30,14 +30,32 @@ def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
 
 
 def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.LongTensor):
+    """
+    Sort a batch first tensor by some specified lengths.
+
+    Parameters
+    ----------
+    tensor : torch.FloatTensor, required
+        A batch first Pytorch tensor.
+    sequence_lengths : torch.LongTensor, required.
+        A tensor representing the lengths of some dimension of the tensor which
+        we want to sort by.
+
+    Returns
+    -------
+    sorted_tensor : torch.FloatTensor
+        The original tensor sorted along the batch dimension with respect to sequence_lengths.
+    restoration_indices : torch.LongTensor
+        Indices into the sorted_tensor such that ``sorted_tensor[restoration_indices] == original_tensor``
+    """
 
     seq_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
     sorted_tensor = tensor[permutation_index]
 
-    indices = torch.range(0, len(sequence_lengths) - 1)
-    _, reverse_mapping = permutation_index.sort(0, descending=True)
-
-    restoration_indices = indices[reverse_mapping]
+    # This is the equivalent of zipping with index, sorting
+    index_range = torch.range(0, len(sequence_lengths) - 1).long()
+    _, reverse_mapping = permutation_index.sort(0, descending=False)
+    restoration_indices = index_range[reverse_mapping]
 
     return sorted_tensor, restoration_indices
 
