@@ -171,12 +171,12 @@ class TestRegistry(AllenNlpTestCase):
     def test_register_initializers_fails_on_duplicate(self):
         with pytest.raises(ConfigurationError):
             # pylint: disable=unused-variable
-            @Registry.register_regularizer("l1")
+            @Registry.register_initializer("normal")
             class NewL1Regularizer:
                 pass
 
     def test_register_initializers_adds_new_initializers_with_decorator(self):
-        assert 'fake' not in Registry.list_regularizers()
+        assert 'fake' not in Registry.list_initializers()
         @Registry.register_initializer('fake')
         def fake_initializer():
             pass
@@ -184,8 +184,8 @@ class TestRegistry(AllenNlpTestCase):
         del Registry._initializers['fake']  # pylint: disable=protected-access
 
     def test_default_initializer_is_first_in_list(self):
-        default_initializer = Registry.default_regularizer
-        assert Registry.list_regularizers()[0] == default_initializer
+        default_initializer = Registry.default_initializer
+        assert Registry.list_initializers()[0] == default_initializer
         Registry.default_initializer = "orthogonal"
         assert Registry.list_initializers()[0] == "orthogonal"
-        Registry.default_regularizer = default_initializer
+        Registry.default_initializer = default_initializer

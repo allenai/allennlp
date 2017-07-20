@@ -226,6 +226,7 @@ class Registry:
         """
         Returns the :class:`Regularizer` that has been registered with ``name``.
         """
+        import allennlp.training.regularizers  # pylint: disable=unused-variable
         return cls._regularizers[name]
 
     _regularizers = {}  # type: Dict[str, Type[Regularizer]]
@@ -237,14 +238,14 @@ class Registry:
     @classmethod
     def list_initializers(cls) -> List[str]:
         """
-        Returns a list of all currently-registered :class:`Regularizer` names.
+        Returns a list of all currently-registered initializer names.
         """
         return _get_keys_with_default(cls._initializers, "initializer", cls.default_initializer)
 
     @classmethod
     def get_initializer(cls, name) -> Callable[[torch.Tensor], None]:
         """
-        Returns the :class:`Regularizer` that has been registered with ``name``.
+        Returns the initializer that has been registered with ``name``.
         """
         return cls._initializers[name]
 
