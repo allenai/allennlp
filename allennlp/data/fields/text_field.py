@@ -14,7 +14,7 @@ from allennlp.common.checks import ConfigurationError
 TokenList = List[TokenType]  # pylint: disable=invalid-name
 
 
-class TextField(SequenceField[Dict[str, numpy.array]]):
+class TextField(SequenceField[Dict[str, numpy.ndarray]]):
     """
     This ``Field`` represents a list of string tokens.  Before constructing this object, you need
     to tokenize raw strings using a :class:`..tokenizers.Tokenizer`.
@@ -79,7 +79,7 @@ class TextField(SequenceField[Dict[str, numpy.array]]):
         return len(self._tokens)
 
     # @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.array]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.ndarray]:
         arrays = {}
         desired_num_tokens = padding_lengths['num_tokens']
         for indexer_name, indexer in self._token_indexers.items():
