@@ -5,11 +5,11 @@ from torch.nn.modules.linear import Linear
 from torch.nn.modules import LSTM
 import torch.nn.functional as F
 
-from allennlp.training.model import Model
-from allennlp.modules.embeddings import Embedding
-from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.common import Params
+from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
+from allennlp.modules import TimeDistributed, TokenEmbedder
+from allennlp.training import Model
 
 
 class SimpleTagger(Model):
@@ -19,38 +19,34 @@ class SimpleTagger(Model):
 
     Parameters
     ----------
-    vocabulary : Vocabulary, required
+    vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
-    embedding_dim : int, optional (default = 100)
-        The dimensionality of the embedding space used to embed the input sequence.
+    token_embedder : ``TokenEmbedder``, required
+        Used to embed the ``tokens`` ``TextField`` we get as input to the model.
     hidden_size : int, optional (default = 200)
         The dimensionality of the hidden state of the LSTM encoder.
     num_layers : int, optional (default = 2)
         The number of stacked LSTM encoders to use.
     """
 
-    def __init__(self,
-                 vocabulary: Vocabulary,
-                 embedding_dim: int = 100,
+    def __init__(self, vocab: Vocabulary,
+                 token_embedder: TokenEmbedder,
                  hidden_size: int = 200,
                  num_layers: int = 2) -> None:
         super(SimpleTagger, self).__init__()
 
-        self.vocabulary = vocabulary
-        self.embedding_dim = embedding_dim
+        self.vocab = vocab
+        self.token_embedder = token_embedder
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.num_classes = self.vocabulary.get_vocab_size("tags")
+        self.num_classes = self.vocab.get_vocab_size("tags")
 
-        self.embedding = Embedding(self.vocabulary.get_vocab_size("tokens"),
-                                   self.embedding_dim)
         # TODO(Mark): support masking once utility functions are merged.
-        self.stacked_encoders = LSTM(self.embedding_dim,
+        self.stacked_encoders = LSTM(self.token_embedder.get_output_dim(),
                                      self.hidden_size,
                                      self.num_layers,
                                      batch_first=True)
-        self.tag_projection_layer = TimeDistributed(Linear(self.hidden_size,
-                                                           self.num_classes))
+        self.tag_projection_layer = TimeDistributed(Linear(self.hidden_size, self.num_classes))
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
     # pylint: disable=arguments-differ
@@ -84,10 +80,8 @@ class SimpleTagger(Model):
             A scalar loss to be optimised.
 
         """
-        # TODO(Mark): Change to use NlpApi/TokenEmbedder once it exists.
-        word_tokens = tokens["tokens"]
-        batch_size = word_tokens.size()[0]
-        embedded_text_input = self.embedding(word_tokens)
+        embedded_text_input = self.token_embedder(tokens)
+        batch_size = embedded_text_input.size()[0]
         encoded_text, _ = self.stacked_encoders(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)
@@ -128,7 +122,7 @@ class SimpleTagger(Model):
             An array of shape (text_input_length, num_classes), where each row is a
             distribution over classes for a given token in the sentence.
         """
-        text_field.index(self.vocabulary)
+        text_field.index(self.vocab)
         padding_lengths = text_field.get_padding_lengths()
         array_input = text_field.as_array(padding_lengths)
         # TODO(Mark): Generalise how the array is transformed into a variable after settling the data API.
@@ -141,6 +135,16 @@ class SimpleTagger(Model):
         predictions = output_dict["class_probabilities"].data.squeeze(0)
         _, argmax = predictions.max(-1)
         indices = argmax.squeeze(1).numpy()
-        tags = [self.vocabulary.get_token_from_index(x, namespace="tags") for x in indices]
+        tags = [self.vocab.get_token_from_index(x, namespace="tags") for x in indices]
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}
+
+    @classmethod
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SimpleTagger':
+        hidden_size = params.pop("hidden_size", 200)
+        num_layers = params.pop("num_layers", 2)
+        token_embedder = TokenEmbedder.from_params(vocab, params.pop("token_embedder"))
+        return cls(vocab=vocab,
+                   token_embedder=token_embedder,
+                   hidden_size=hidden_size,
+                   num_layers=num_layers)

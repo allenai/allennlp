@@ -1,5 +1,6 @@
 from typing import Dict
 
+from allennlp.common import Params
 from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
@@ -22,9 +23,18 @@ def simple_tagger_model() -> Model:
 
     vocab = Vocabulary.from_dataset(dataset)
     dataset.index_instances(vocab)
-    model = SimpleTagger(embedding_dim=5,
-                         hidden_size=7,
-                         vocabulary=vocab)
+
+    params = Params({
+            "token_embedder": {
+                    "tokens": {
+                            "type": "embedding",
+                            "embedding_dim": 5
+                            }
+                    },
+            "hidden_size": 7,
+            "num_layers": 2
+            })
+    model = SimpleTagger.from_params(vocab, params)
     tokenizer = WordTokenizer()
 
     def run(blob: JSON):
@@ -45,7 +55,6 @@ def simple_tagger_model() -> Model:
                }
 
     return run
-
 
 def models() -> Dict[str, Model]:
     return {'simple_tagger': simple_tagger_model()}

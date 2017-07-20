@@ -1,2 +1,3 @@
-from allennlp.modules.embeddings import Embedding
 from allennlp.modules.time_distributed import TimeDistributed
+from allennlp.modules.token_embedder import TokenEmbedder
+from allennlp.modules.token_vectorizer import TokenVectorizer

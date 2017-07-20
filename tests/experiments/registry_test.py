@@ -189,3 +189,59 @@ class TestRegistry(AllenNlpTestCase):
         Registry.default_initializer = "orthogonal"
         assert Registry.list_initializers()[0] == "orthogonal"
         Registry.default_initializer = default_initializer
+
+    # Token vectorizers
+
+    def test_registry_has_builtin_token_vectorizers(self):
+        assert Registry.get_token_vectorizer("embedding").__name__ == 'Embedding'
+
+    def test_register_token_vectorizers_fails_on_duplicate(self):
+        Registry.register_token_vectorizer("duplicate")(lambda: 1)
+        with pytest.raises(ConfigurationError):
+            Registry.register_token_vectorizer("duplicate")(lambda: 2)
+        del Registry._token_vectorizers['duplicate']  # pylint: disable=protected-access
+
+    def test_register_token_vectorizers_adds_new_token_vectorizers_with_decorator(self):
+        assert 'fake' not in Registry.list_token_vectorizers()
+        @Registry.register_token_vectorizer('fake')
+        def fake_token_vectorizer():
+            pass
+        assert Registry.get_token_vectorizer('fake') == fake_token_vectorizer
+        del Registry._token_vectorizers['fake']  # pylint: disable=protected-access
+
+    def test_default_token_vectorizer_is_first_in_list(self):
+        Registry.register_token_vectorizer("fake")(lambda: 1)
+        default_token_vectorizer = Registry.default_token_vectorizer
+        assert Registry.list_token_vectorizers()[0] == default_token_vectorizer
+        Registry.default_token_vectorizer = "fake"
+        assert Registry.list_token_vectorizers()[0] == "fake"
+        Registry.default_token_vectorizer = default_token_vectorizer
+        del Registry._token_vectorizers['fake']  # pylint: disable=protected-access
+
+    # Token embedders
+
+    def test_registry_has_builtin_token_embedders(self):
+        assert Registry.get_token_embedder("basic").__name__ == 'BasicTokenEmbedder'
+
+    def test_register_token_embedders_fails_on_duplicate(self):
+        Registry.register_token_embedder("duplicate")(lambda: 1)
+        with pytest.raises(ConfigurationError):
+            Registry.register_token_embedder("duplicate")(lambda: 2)
+        del Registry._token_embedders['duplicate']  # pylint: disable=protected-access
+
+    def test_register_token_embedders_adds_new_token_embedders_with_decorator(self):
+        assert 'fake' not in Registry.list_token_embedders()
+        @Registry.register_token_embedder('fake')
+        def fake_token_embedder():
+            pass
+        assert Registry.get_token_embedder('fake') == fake_token_embedder
+        del Registry._token_embedders['fake']  # pylint: disable=protected-access
+
+    def test_default_token_embedder_is_first_in_list(self):
+        Registry.register_token_embedder("fake")(lambda: 1)
+        default_token_embedder = Registry.default_token_embedder
+        assert Registry.list_token_embedders()[0] == default_token_embedder
+        Registry.default_token_embedder = "fake"
+        assert Registry.list_token_embedders()[0] == "fake"
+        Registry.default_token_embedder = default_token_embedder
+        del Registry._token_embedders['fake']  # pylint: disable=protected-access
