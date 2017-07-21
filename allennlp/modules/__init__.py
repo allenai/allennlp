@@ -1,2 +1,3 @@
-from allennlp.modules.embeddings import Embedding
+from allennlp.modules.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
+from allennlp.modules.token_embedder import TokenEmbedder

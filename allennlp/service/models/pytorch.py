@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Callable, Dict
 
 import torch
 import torch.nn
@@ -36,5 +36,5 @@ def shared_pytorch_model() -> Model:
 
     return run
 
-def models() -> Dict[str, Model]:
-    return {'pytorch': shared_pytorch_model()}
+def models() -> Dict[str, Callable[[], Model]]:
+    return {'pytorch': shared_pytorch_model}
