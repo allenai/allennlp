@@ -1,1 +1,1 @@
-from allennlp.modules.token_embedders.basic_token_embedder import BasicTokenEmbedder
+from allennlp.modules.token_embedders.embedding import Embedding

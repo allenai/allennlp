@@ -6,13 +6,13 @@ from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.modules.token_embedders import BasicTokenEmbedder
+from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestBasicTokenEmbedder(AllenNlpTestCase):
+class TestBasicTextFieldEmbedder(AllenNlpTestCase):
     def setUp(self):
-        super(TestBasicTokenEmbedder, self).setUp()
+        super(TestBasicTextFieldEmbedder, self).setUp()
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("1")
         self.vocab.add_token_to_namespace("2")
@@ -32,7 +32,7 @@ class TestBasicTokenEmbedder(AllenNlpTestCase):
                         "embedding_dim": 3
                         }
                 })
-        self.token_embedder = BasicTokenEmbedder.from_params(self.vocab, params)
+        self.token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         self.inputs = {
                 "words1": Variable(torch.LongTensor([[0, 2, 3, 5]])),
                 "words2": Variable(torch.LongTensor([[1, 4, 3, 2]])),

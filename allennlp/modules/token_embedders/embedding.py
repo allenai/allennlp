@@ -9,21 +9,20 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.experiments import Registry
-from allennlp.modules import TokenVectorizer
+from allennlp.modules import TokenEmbedder
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@Registry.register_token_vectorizer("embedding")
-class Embedding(TokenVectorizer):
+@Registry.register_token_embedder("embedding")
+class Embedding(TokenEmbedder):
     """
     A more featureful embedding module than the default in Pytorch.  Adds the ability to
     pre-specify the weight matrix or use a non-trainable embedding.
 
-    Note that it is not recommended that you use this directly when building models.  Instead, you
-    should use a :class:`~allennlp.modules.TokenEmbedder`, which itself uses one or more of these
-    ``Embedding`` layers.  Using a ``TokenEmbedder`` allows you to more easily change your word
-    representations later, or combine word and character level representations.
+    Note that if you are using our data API and are trying to embed a
+    :class:`~allennlp.data.fields.TextField`, you should use a
+    :class:`~allennlp.modules.TextFieldEmbedder` instead of using this directly.
 
     Parameters
     ----------

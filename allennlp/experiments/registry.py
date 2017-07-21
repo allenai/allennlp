@@ -5,7 +5,7 @@ import torch.nn.init
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
-from allennlp.modules import TokenEmbedder, TokenVectorizer
+from allennlp.modules import TextFieldEmbedder, TokenEmbedder
 from allennlp.training import Regularizer
 
 
@@ -292,47 +292,19 @@ class Registry:
     # Module-related registries
     ###########################
 
-    # Token Vectorizers
-
-    _token_vectorizers = {}  # type: Dict[str, Type[TokenVectorizer]]
-    #: This decorator adds a :class:`TokenVectorizer` to the regsitry, with the given name.
-    register_token_vectorizer = _registry_decorator("token vectorizer", _token_vectorizers)
-    default_token_vectorizer = "embedding"
-
-    @classmethod
-    def list_token_vectorizers(cls) -> List[str]:
-        """
-        Returns a list of all currently-registered :class:`TokenVectorizer` names.  These take
-        a tensor with ids (either single token ids or token character id lists) and return a tensor
-        with vectors.
-        """
-        import allennlp.modules.token_vectorizers  # pylint: disable=unused-variable
-        return _get_keys_with_default(cls._token_vectorizers, "token vectorizer",
-                                      cls.default_token_vectorizer)
-
-    @classmethod
-    def get_token_vectorizer(cls, name: str) -> Type[TokenVectorizer]:
-        """
-        Returns the :clases:`TokenVectorizer` that has been registered with ``name``.  This module
-        must take a tensor with ids (either single token ids or token character id lists) and
-        return a tensor with vectors.
-        """
-        import allennlp.modules.token_vectorizers  # pylint: disable=unused-variable
-        return cls._token_vectorizers[name]
-
     # Token Embedders
 
     _token_embedders = {}  # type: Dict[str, Type[TokenEmbedder]]
-    #: This decorator adds a :class:`TokenEmbedder` to the regsitry, with the given name.
+    #: This decorator adds a :class:`TokenEmbedder` to the registry, with the given name.
     register_token_embedder = _registry_decorator("token embedder", _token_embedders)
-    default_token_embedder = "basic"
+    default_token_embedder = "embedding"
 
     @classmethod
     def list_token_embedders(cls) -> List[str]:
         """
-        Returns a list of all currently-registered :class:`TokenEmbedder` names.  These take the
-        arrays corresponding to a single ``TextField``, and return a tensor of shape ``(batch_size,
-        num_tokens, embedding_dim)``.
+        Returns a list of all currently-registered :class:`TokenEmbedder` names.  These take
+        a tensor with ids (either single token ids or token character id lists) and return a tensor
+        with vectors.
         """
         import allennlp.modules.token_embedders  # pylint: disable=unused-variable
         return _get_keys_with_default(cls._token_embedders, "token embedder",
@@ -341,9 +313,37 @@ class Registry:
     @classmethod
     def get_token_embedder(cls, name: str) -> Type[TokenEmbedder]:
         """
-        Returns the :class:`TokenEmbedder` that has been registered with ``name``.  This module
-        must take the arrays corresponding to a single ``TextField``, and return a tensor of shape
-        ``(batch_size, num_tokens, embedding_dim)``.
+        Returns the :clases:`TokenEmbedder` that has been registered with ``name``.  This module
+        must take a tensor with ids (either single token ids or token character id lists) and
+        return a tensor with vectors.
         """
         import allennlp.modules.token_embedders  # pylint: disable=unused-variable
         return cls._token_embedders[name]
+
+    # Text Field Embedders
+
+    _text_field_embedders = {}  # type: Dict[str, Type[TextFieldEmbedder]]
+    #: This decorator adds a :class:`TextFieldEmbedder` to the registry, with the given name.
+    register_text_field_embedder = _registry_decorator("text field embedder", _text_field_embedders)
+    default_text_field_embedder = "basic"
+
+    @classmethod
+    def list_text_field_embedders(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`TextFieldEmbedder` names.  These take the
+        dictionary of arrays corresponding to a single ``TextField``, and return a tensor of shape
+        ``(batch_size, num_tokens, embedding_dim)``.
+        """
+        import allennlp.modules.text_field_embedders  # pylint: disable=unused-variable
+        return _get_keys_with_default(cls._text_field_embedders, "text field embedder",
+                                      cls.default_text_field_embedder)
+
+    @classmethod
+    def get_text_field_embedder(cls, name: str) -> Type[TextFieldEmbedder]:
+        """
+        Returns the :class:`TextFieldEmbedder` that has been registered with ``name``.  This module
+        must take the dictionary of arrays corresponding to a single ``TextField``, and return a
+        tensor of shape ``(batch_size, num_tokens, embedding_dim)``.
+        """
+        import allennlp.modules.text_field_embedders  # pylint: disable=unused-variable
+        return cls._text_field_embedders[name]

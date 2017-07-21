@@ -1,5 +1,3 @@
-from typing import Dict
-
 import torch
 
 from allennlp.common import Params
@@ -7,32 +5,27 @@ from allennlp.data import Vocabulary
 
 class TokenEmbedder(torch.nn.Module):
     """
-    A ``TokenEmbedder`` is a ``Module`` that takes as input the :class:`~allennlp.data.DataArray`
-    produced by a :class:`~allennlp.data.fields.TextField` and returns as output an embedded
-    representation of the tokens in that field.
+    A ``TokenEmbedder`` is a ``Module`` that takes as input a tensor with integer ids that have
+    been output from a :class:`~allennlp.data.TokenIndexer` and outputs a vector per token in the
+    input.  The input typically has shape ``(batch_size, num_tokens)`` or ``(batch_size,
+    num_tokens, num_characters)``, and the output is of shape ``(batch_size, num_tokens,
+    output_dim)``.  The simplest ``TokenEmbedder`` is just an embedding layer, but for
+    character-level input, it could also be some kind of character encoder.
 
-    The ``DataArrays`` produced by ``TextFields`` are `dictionaries` with named representations,
-    like "words" and "characters".  When you create a ``TextField``, you pass in a dictionary of
-    :class:`~allennlp.data.TokenIndexer` objects, telling the field how exactly the tokens in the
-    field should be represented.  This class changes the type signature of ``Module.forward``,
-    restricting ``TokenEmbedders`` to take inputs corresponding to a single ``TextField``.  We also
-    add a method to the basic ``Module`` API: :func:`get_output_dim()`.  You might need this if you
-    want to construct a ``Linear`` layer using the output of this embedder, for instance.
+    We add a single method to the basic ``Module`` API: :func:`get_output_dim()`.  This lets us
+    more easily compute output dimensions for the :class:`~allennlp.modules.TextFieldEmbedder`,
+    which we might need when defining model parameters such as LSTMs or linear layers, which need
+    to know their input dimension before the layers are called.
     """
-    def forward(self,  # pylint: disable=arguments-differ
-                text_field_input: Dict[str, torch.Tensor]) -> torch.Tensor:
-        raise NotImplementedError
-
     def get_output_dim(self) -> int:
         """
-        Returns the dimension of the vector representing each token in the output of this
-        ``TokenEmbedder``.  This is `not` the shape of the returned tensor, but the last element of
-        that shape.
+        Returns the final output dimension that this ``TokenEmbedder`` uses to represent each
+        token.  This is `not` the shape of the returned tensor, but the last element of that shape.
         """
         raise NotImplementedError
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params):
         from allennlp.experiments.registry  import Registry
-        choice = params.pop_choice('type', Registry.list_token_embedders(), default_to_first_choice=True)
+        choice = params.pop_choice('type', Registry.list_token_embedders())
         return Registry.get_token_embedder(choice).from_params(vocab, params)

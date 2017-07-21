@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
-from allennlp.modules import TimeDistributed, TokenEmbedder
+from allennlp.modules import TimeDistributed, TextFieldEmbedder
 from allennlp.training import Model
 
 
@@ -21,7 +21,7 @@ class SimpleTagger(Model):
     ----------
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
-    token_embedder : ``TokenEmbedder``, required
+    text_field_embedder : ``TextFieldEmbedder``, required
         Used to embed the ``tokens`` ``TextField`` we get as input to the model.
     hidden_size : int, optional (default = 200)
         The dimensionality of the hidden state of the LSTM encoder.
@@ -30,19 +30,19 @@ class SimpleTagger(Model):
     """
 
     def __init__(self, vocab: Vocabulary,
-                 token_embedder: TokenEmbedder,
+                 text_field_embedder: TextFieldEmbedder,
                  hidden_size: int = 200,
                  num_layers: int = 2) -> None:
         super(SimpleTagger, self).__init__()
 
         self.vocab = vocab
-        self.token_embedder = token_embedder
+        self.text_field_embedder = text_field_embedder
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.num_classes = self.vocab.get_vocab_size("tags")
 
         # TODO(Mark): support masking once utility functions are merged.
-        self.stacked_encoders = LSTM(self.token_embedder.get_output_dim(),
+        self.stacked_encoders = LSTM(self.text_field_embedder.get_output_dim(),
                                      self.hidden_size,
                                      self.num_layers,
                                      batch_first=True)
@@ -58,12 +58,13 @@ class SimpleTagger(Model):
         ----------
         tokens : Dict[str, torch.LongTensor], required
             The output of TextField.as_array() which should typically be passed directly to a
-            ``TokenEmbedder``. Concretely, it is a dictionary of namespaces which have been indexed
-            to their corresponding tensors. At its most basic, using a SingleIdTokenIndexer this is:
-            {"tokens": Tensor(batch_size, sequence_length)}. This dictionary will have as many
-            items as you have used token indexers in the ``TextField`` representing your sequence.
-            This dictionary is designed to be passed directly to a ``TokenEmbedder``, which knows
-            how to combine different word representations into a single one per token in your input.
+            ``TextFieldEmbedder``. Concretely, it is a dictionary of namespaces which have been
+            indexed to their corresponding tensors. At its most basic, using a SingleIdTokenIndexer
+            this is: {"tokens": Tensor(batch_size, sequence_length)}. This dictionary will have as
+            many items as you have used token indexers in the ``TextField`` representing your
+            sequence.  This dictionary is designed to be passed directly to a
+            ``TextFieldEmbedder``, which knows how to combine different word representations into a
+            single one per token in your input.
         tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of gold labels.
             These can either be integer indexes or one hot arrays of
@@ -80,7 +81,7 @@ class SimpleTagger(Model):
             A scalar loss to be optimised.
 
         """
-        embedded_text_input = self.token_embedder(tokens)
+        embedded_text_input = self.text_field_embedder(tokens)
         batch_size = embedded_text_input.size()[0]
         encoded_text, _ = self.stacked_encoders(embedded_text_input)
 
@@ -143,8 +144,8 @@ class SimpleTagger(Model):
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SimpleTagger':
         hidden_size = params.pop("hidden_size", 200)
         num_layers = params.pop("num_layers", 2)
-        token_embedder = TokenEmbedder.from_params(vocab, params.pop("token_embedder"))
+        text_field_embedder = TextFieldEmbedder.from_params(vocab, params.pop("text_field_embedder"))
         return cls(vocab=vocab,
-                   token_embedder=token_embedder,
+                   text_field_embedder=text_field_embedder,
                    hidden_size=hidden_size,
                    num_layers=num_layers)

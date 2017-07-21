@@ -10,9 +10,10 @@ app.static('/index.html', 'allennlp/service/index.html')
 @app.route('/predict/<model_name>', methods=['POST'])
 async def predict(req: request.Request, model_name: str) -> response.HTTPResponse:
     """make a prediction using the specified model and return the results"""
-    model = models.get(model_name.lower())
-    if model is None:
+    model_fn = models.get(model_name.lower())
+    if model_fn is None:
         raise ServerError("unknown model: {}".format(model_name), status_code=400)
+    model = model_fn()
 
     # TODO(joelgrus): error handling
     data = req.json

@@ -25,7 +25,7 @@ class SimpleTaggerTest(AllenNlpTestCase):
         self.dataset = dataset
 
         params = Params({
-                "token_embedder": {
+                "text_field_embedder": {
                         "tokens": {
                                 "type": "embedding",
                                 "embedding_dim": 5

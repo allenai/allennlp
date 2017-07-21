@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Callable, Dict
 
 from allennlp.common import Params
 from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatasetReader
@@ -25,7 +25,7 @@ def simple_tagger_model() -> Model:
     dataset.index_instances(vocab)
 
     params = Params({
-            "token_embedder": {
+            "text_field_embedder": {
                     "tokens": {
                             "type": "embedding",
                             "embedding_dim": 5
@@ -56,5 +56,5 @@ def simple_tagger_model() -> Model:
 
     return run
 
-def models() -> Dict[str, Model]:
-    return {'simple_tagger': simple_tagger_model()}
+def models() -> Dict[str, Callable[[], Model]]:
+    return {'simple_tagger': simple_tagger_model}
