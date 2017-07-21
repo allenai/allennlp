@@ -1,9 +1,5 @@
-from typing import Type
-
 import torch
 
-from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.modules import Seq2VecEncoder
 
 
@@ -11,10 +7,10 @@ class WrappedPytorchRnn(Seq2VecEncoder):
     """
     Pytorch's RNNs have two outputs: the hidden state for every time step, and the hidden state at
     the last time step for every layer.  We just want the second one as a single output.  This
-    wrapper pulls out that output, and allows us to instantiate the pytorch RNN from parameters.
-
-    This is actually slightly more complicated than that, because the LSTM's second output is a
-    tuple of (hidden state, cell state), and we just return the hidden state.
+    wrapper pulls out that output, and adds a :func:`get_output_dim` method, which is useful if you
+    want to, e.g., define a linear + softmax layer on top of this to get some distribution over a
+    set of labels.  The linear layer needs to know its input dimension before it is called, and you
+    can get that from ``get_output_dim``.
 
     Also, there are lots of ways you could imagine going from an RNN hidden state at every
     timestep to a single vector - you could take the last vector at all layers in the stack, do
@@ -22,7 +18,6 @@ class WrappedPytorchRnn(Seq2VecEncoder):
     We just take the final hidden state vector.  TODO(mattg): allow for other ways of wrapping
     RNNs.
     """
-
     def __init__(self, module: torch.nn.modules.RNNBase) -> None:
         super(WrappedPytorchRnn, self).__init__()
         self._module = module
@@ -32,22 +27,3 @@ class WrappedPytorchRnn(Seq2VecEncoder):
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
         return self._module(inputs)[0][-1]
-
-    class _Wrapper:
-        """
-        This wrapper gives us something with a ``__call__`` method and a ``from_params`` method
-        that we can use to instantiate a ``WrappedPytorchRnn``.  We use this when registering
-        built-in pytorch RNNs in the registry.
-        """
-        def __init__(self, module_class: Type[torch.nn.Module]) -> None:
-            self._module_class = module_class
-
-        def __call__(self, **kwargs) -> 'WrappedPytorchRnn':
-            if not kwargs.pop('batch_first', True):
-                raise ConfigurationError("Our encoder semantics assumes batch is always first!")
-            kwargs['batch_first'] = True
-            module = self._module_class(**kwargs)
-            return WrappedPytorchRnn(module)
-
-        def from_params(self, params: Params) -> 'WrappedPytorchRnn':
-            return self(**params.as_dict())
