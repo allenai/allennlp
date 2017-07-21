@@ -41,7 +41,7 @@ class TestRegistry(AllenNlpTestCase):
                 setattr(Registry, default_attr_name, 'not present')
                 list_fn()
             setattr(Registry, default_attr_name, current_default)
-        del dictionary['fake']  # pylint: disable=protected-access
+        del dictionary['fake']
 
     # Dataset readers
 
