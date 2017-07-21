@@ -1,5 +1,7 @@
-from typing import List
+from typing import List,Dict, Union
 import torch
+from torch.autograd import Variable
+import numpy
 
 
 def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
@@ -77,3 +79,22 @@ def get_dropout_mask(dropout_probability: float, shape: List[int]):
     # Scale mask by 1/keep_prob to preserve output statistics.
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask
+
+
+def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
+                        cuda_device: int = -1):
+    """
+    Convert an (optionally) nested dictionary of arrays to Pytorch ``Variables``,
+    suitable for use in a computation graph.
+    """
+    if isinstance(data_structure, dict):
+        for key, value in data_structure.items():
+            data_structure[key] = arrays_to_variables(value)
+        return data_structure
+    else:
+        torch_variable = Variable(torch.from_numpy(data_structure))
+        if cuda_device == -1:
+            return torch_variable
+        else:
+            return torch_variable.cuda(cuda_device)
+

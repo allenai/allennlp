@@ -1,6 +1,8 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,too-many-public-methods
 import pytest
 
+import torch
+import torch.nn.init
 from allennlp.common.checks import ConfigurationError
 from allennlp.experiments import Registry
 from allennlp.testing.test_case import AllenNlpTestCase
@@ -118,3 +120,72 @@ class TestRegistry(AllenNlpTestCase):
         Registry.default_token_indexer = "characters"
         assert Registry.list_token_indexers()[0] == "characters"
         Registry.default_token_indexer = default_iterator
+
+    # Regularizers
+
+    def test_registry_has_builtin_regularizers(self):
+        assert Registry.get_regularizer('l1').__name__ == 'L1Regularizer'
+        assert Registry.get_regularizer('l2').__name__ == 'L2Regularizer'
+
+    def test_register_regularizer_fails_on_duplicate(self):
+        with pytest.raises(ConfigurationError):
+            # pylint: disable=unused-variable
+            @Registry.register_regularizer("l1")
+            class NewL1Regularizer:
+                pass
+
+    def test_register_regularizer_adds_new_regularizer_with_decorator(self):
+        assert 'fake' not in Registry.list_regularizers()
+        @Registry.register_regularizer('fake')
+        class Fake:
+            pass
+        assert Registry.get_regularizer('fake') == Fake
+        del Registry._regularizers['fake']  # pylint: disable=protected-access
+
+    def test_default_regularizer_is_first_in_list(self):
+        default_regularizer = Registry.default_regularizer
+        assert Registry.list_regularizers()[0] == default_regularizer
+        Registry.default_regularizer = "l1"
+        assert Registry.list_regularizers()[0] == "l1"
+        Registry.default_regularizer = default_regularizer
+
+    # Initializers
+
+    def test_registry_has_builtin_initializers(self):
+        all_initializers = {
+                "normal": torch.nn.init.normal,
+                "uniform": torch.nn.init.uniform,
+                "orthogonal": torch.nn.init.orthogonal,
+                "constant": torch.nn.init.constant,
+                "dirac": torch.nn.init.dirac,
+                "xavier_normal": torch.nn.init.xavier_normal,
+                "xavier_uniform": torch.nn.init.xavier_uniform,
+                "kaiming_normal": torch.nn.init.kaiming_normal,
+                "kaiming_uniform": torch.nn.init.kaiming_uniform,
+                "sparse": torch.nn.init.sparse,
+                "eye": torch.nn.init.eye,
+        }
+        for key, value in all_initializers.items():
+            assert Registry.get_initializer(key) == value
+
+    def test_register_initializers_fails_on_duplicate(self):
+        with pytest.raises(ConfigurationError):
+            # pylint: disable=unused-variable
+            @Registry.register_initializer("normal")
+            class NewL1Regularizer:
+                pass
+
+    def test_register_initializers_adds_new_initializers_with_decorator(self):
+        assert 'fake' not in Registry.list_initializers()
+        @Registry.register_initializer('fake')
+        def fake_initializer():
+            pass
+        assert Registry.get_initializer('fake') == fake_initializer
+        del Registry._initializers['fake']  # pylint: disable=protected-access
+
+    def test_default_initializer_is_first_in_list(self):
+        default_initializer = Registry.default_initializer
+        assert Registry.list_initializers()[0] == default_initializer
+        Registry.default_initializer = "orthogonal"
+        assert Registry.list_initializers()[0] == "orthogonal"
+        Registry.default_initializer = default_initializer

@@ -9,7 +9,7 @@ from allennlp.data import Field, Vocabulary
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class LabelField(Field[numpy.array]):
+class LabelField(Field[numpy.ndarray]):
     """
     A ``LabelField`` is a categorical label of some kind, where the labels are either strings of
     text or 0-indexed integers.  If the labels need indexing, we will use a :class:`Vocabulary` to
@@ -69,7 +69,7 @@ class LabelField(Field[numpy.array]):
         return {}
 
     @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.array:  # pylint: disable=unused-argument
+    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:  # pylint: disable=unused-argument
         label_array = numpy.zeros(self._num_labels)
         label_array[self._label_id] = 1
         return label_array
