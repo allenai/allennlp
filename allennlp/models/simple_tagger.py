@@ -14,8 +14,8 @@ from allennlp.training import Model
 
 class SimpleTagger(Model):
     """
-    This ``SimpleTagger`` simply encodes a sequence of text with some number of stacked
-    ``seq2seq_encoders``, then predicts a tag for each token in the sequence.
+    This ``SimpleTagger`` simply encodes a sequence of text with a stacked ``Seq2SeqEncoder``, then
+    predicts a tag for each token in the sequence.
 
     Parameters
     ----------
@@ -57,27 +57,26 @@ class SimpleTagger(Model):
         Parameters
         ----------
         tokens : Dict[str, torch.LongTensor], required
-            The output of TextField.as_array() which should typically be passed directly to a
-            ``TextFieldEmbedder``. Concretely, it is a dictionary of namespaces which have been
-            indexed to their corresponding tensors. At its most basic, using a SingleIdTokenIndexer
-            this is: {"tokens": Tensor(batch_size, sequence_length)}. This dictionary will have as
-            many items as you have used token indexers in the ``TextField`` representing your
-            sequence.  This dictionary is designed to be passed directly to a
-            ``TextFieldEmbedder``, which knows how to combine different word representations into a
-            single one per token in your input.
+            The output of ``TextField.as_array()``, which should typically be passed directly to a
+            ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
+            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
+            Tensor(batch_size, num_tokens)}``. This dictionary will have the same keys as were used
+            for the ``TokenIndexers`` when you created the ``TextField`` representing your
+            sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
+            which knows how to combine different word representations into a single vector per
+            token in your input.
         tags : torch.LongTensor, optional (default = None)
-            A torch tensor representing the sequence of gold labels.
-            These can either be integer indexes or one hot arrays of
-            labels, so of shape (batch_size, sequence_length) or of
-            shape (batch_size, sequence_length, vocabulary_size).
+            A torch tensor representing the sequence of gold labels.  These can either be integer
+            indexes or one hot arrays of labels, so of shape ``(batch_size, num_tokens)`` or of
+            shape ``(batch_size, num_tokens, num_tags)``.
 
         Returns
         -------
         An output dictionary consisting of:
         logits : torch.FloatTensor
-            A tensor of shape (batch_size, sequence_length, tag_vocab_size)
-            representing unnormalised log probabilities of the tag classes.
-        loss: : torch.FloatTensor, optional
+            A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
+            unnormalised log probabilities of the tag classes.
+        loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
 
         """
