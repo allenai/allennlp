@@ -350,7 +350,7 @@ class Registry:
     # Seq2Seq Encoders
 
     _seq2seq_encoders = {}  # type: Dict[str, Type[Seq2SeqEncoder]]
-    #: This decorator adds a :class:`Seq2SeqEncoder` to the regsitry, with the given name.
+    #: This decorator adds a :class:`Seq2SeqEncoder` to the registry, with the given name.
     register_seq2seq_encoder = _registry_decorator("seq2seq encoder", _seq2seq_encoders)
 
     @classmethod
@@ -376,7 +376,7 @@ class Registry:
     # Seq2Vec Encoders
 
     _seq2vec_encoders = {}  # type: Dict[str, Type[Seq2VecEncoder]]
-    #: This decorator adds a :class:`Seq2VecEncoder` to the regsitry, with the given name.
+    #: This decorator adds a :class:`Seq2VecEncoder` to the registry, with the given name.
     register_seq2vec_encoder = _registry_decorator("seq2vec encoder", _seq2vec_encoders)
 
     @classmethod
