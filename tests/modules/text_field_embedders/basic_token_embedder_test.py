@@ -5,6 +5,7 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.testing.test_case import AllenNlpTestCase
@@ -45,7 +46,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
     def test_forward_asserts_input_field_match(self):
         self.inputs['words4'] = self.inputs['words3']
         del self.inputs['words3']
-        with pytest.raises(AssertionError):
+        with pytest.raises(ConfigurationError):
             self.token_embedder.forward(self.inputs)
         self.inputs['words3'] = self.inputs['words4']
         del self.inputs['words4']
