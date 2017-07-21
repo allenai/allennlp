@@ -49,7 +49,7 @@ def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.Long
         Indices into the sorted_tensor such that ``sorted_tensor[restoration_indices] == original_tensor``
     """
 
-    seq_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
+    _, permutation_index = sequence_lengths.sort(0, descending=True)
     sorted_tensor = tensor[permutation_index]
 
     # This is the equivalent of zipping with index, sorting

@@ -44,7 +44,7 @@ class AugmentedLstm(torch.nn.Module):
                  output_size: int,
                  direction: str = "forward",
                  recurrent_dropout_probability: float = 0.0,
-                 use_highway: bool = True):
+                 use_highway: bool = True) -> None:
         super(AugmentedLstm, self).__init__()
         self.input_size = input_size
         self.output_size = output_size
@@ -60,7 +60,7 @@ class AugmentedLstm(torch.nn.Module):
 
         self.recurrent_droppout_probability = recurrent_dropout_probability
 
-    def forward(self, inputs: PackedSequence):
+    def forward(self, inputs: PackedSequence):  # pylint: disable=arguments-differ
         assert isinstance(inputs, PackedSequence), 'inputs must be PackedSequence but got %s' % (type(inputs))
 
         inputs, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
@@ -68,9 +68,13 @@ class AugmentedLstm(torch.nn.Module):
         batch_size = inputs.size()[0]
         total_timesteps = inputs.size()[1]
 
-        output_accumulator = Variable(inputs.data.new().resize_(batch_size, total_timesteps, self.output_size).fill_(0))
-        full_batch_previous_memory = Variable(inputs.data.new().resize_(batch_size, self.output_size).fill_(0))
-        full_batch_previous_state = Variable(inputs.data.new().resize_(batch_size, self.output_size).fill_(0))
+        output_accumulator = Variable(inputs.data.new().resize_(batch_size,
+                                                                total_timesteps,
+                                                                self.output_size).fill_(0))
+        full_batch_previous_memory = Variable(inputs.data.new().resize_(batch_size,
+                                                                        self.output_size).fill_(0))
+        full_batch_previous_state = Variable(inputs.data.new().resize_(batch_size,
+                                                                       self.output_size).fill_(0))
 
         current_length_index = batch_size - 1 if self.direction == "forward" else 0
 
