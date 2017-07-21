@@ -37,16 +37,16 @@ class _Wrapper:
         self._module_class = module_class
 
     def __call__(self, **kwargs) -> WrappedPytorchRnn:
-        if not kwargs.pop('batch_first', True):
-            raise ConfigurationError("Our encoder semantics assumes batch is always first!")
-        kwargs['batch_first'] = True
-        module = self._module_class(**kwargs)
-        return WrappedPytorchRnn(module)
+        return self.from_params(Params(kwargs))
 
     def from_params(self, params: Params) -> WrappedPytorchRnn:
-        return self(**params.as_dict())
+        if not params.pop('batch_first', True):
+            raise ConfigurationError("Our encoder semantics assumes batch is always first!")
+        params['batch_first'] = True
+        module = self._module_class(**params.as_dict())
+        return WrappedPytorchRnn(module)
 
 # pylint: disable=protected-access
-Registry.register_seq2vec_encoder("gru")(WrappedPytorchRnn._Wrapper(torch.nn.GRU))
-Registry.register_seq2vec_encoder("lstm")(WrappedPytorchRnn._Wrapper(torch.nn.LSTM))
-Registry.register_seq2vec_encoder("rnn")(WrappedPytorchRnn._Wrapper(torch.nn.RNN))
+Registry.register_seq2vec_encoder("gru")(_Wrapper(torch.nn.GRU))
+Registry.register_seq2vec_encoder("lstm")(_Wrapper(torch.nn.LSTM))
+Registry.register_seq2vec_encoder("rnn")(_Wrapper(torch.nn.RNN))
