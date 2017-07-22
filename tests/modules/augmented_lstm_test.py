@@ -16,7 +16,6 @@ from allennlp.training.initializers import InitializerApplicator
 class TestAugmentedLSTM(AllenNlpTestCase):
     def setUp(self):
         super(TestAugmentedLSTM, self).setUp()
-
         tensor = torch.rand([5, 7, 10])
         tensor[0, 3:, :] = 0
         tensor[1, 4:, :] = 0

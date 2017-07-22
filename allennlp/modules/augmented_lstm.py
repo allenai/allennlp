@@ -14,13 +14,13 @@ class AugmentedLstm(torch.nn.Module):
 
     Parameters
     ----------
-    input_size : int, required
+    input_size : int, required.
         The dimension of the inputs to the LSTM.
-    output_size : int, required
+    output_size : int, required.
         The dimension of the outputs of the LSTM.
     direction: str, optional (default = "forward")
-        The direction in which the LSTM is applied to the sequence. Can
-        be either "forward" or "backward".
+        The direction in which the LSTM is applied to the sequence.
+        Can be either "forward" or "backward".
     recurrent_dropout_probability: float, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
@@ -32,7 +32,6 @@ class AugmentedLstm(torch.nn.Module):
         reparameterising the normal output of an LSTM as:
             gate = sigmoid(W_x1 * x_t + W_h * h_t)
             output = gate * h_t  + (1 - gate) * (W_x2 * x_t)
-
     Return
     ------
     output_accumulator : PackedSequence
@@ -68,16 +67,17 @@ class AugmentedLstm(torch.nn.Module):
         Parameters
         ----------
         inputs : PackedSequence, required.
-            A tensor of shape (batch_size, num_timesteps, input_size) to apply
-            the LSTM over.
+            A tensor of shape (batch_size, num_timesteps, input_size)
+            to apply the LSTM over.
 
         initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
-            A tuple (state, memory) representing the initial hidden state and memory of the
-            LSTM. Each tensor has shape (batch_size, output_dimension).
+            A tuple (state, memory) representing the initial hidden state and memory
+            of the LSTM. Each tensor has shape (batch_size, output_dimension).
 
         Returns
         -------
-        A 3D torch.Tensor of shape (batch_size, num_timesteps, output_dimension) representing
+        A PackedSequence containing a torch.FloatTensor of shape
+        (batch_size, num_timesteps, output_dimension) representing
         the outputs of the LSTM per timestep.
         """
         if not isinstance(inputs, PackedSequence):
@@ -126,7 +126,6 @@ class AugmentedLstm(torch.nn.Module):
             if self.direction == "forward":
                 while batch_lengths[current_length_index] <= index:
                     current_length_index -= 1
-
             # If we're going backwards, we are _picking up_ more indices.
             elif self.direction == "backward":
                 # First conditional: Are we already at the maximum number of elements in the batch?

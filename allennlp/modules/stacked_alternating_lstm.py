@@ -1,4 +1,3 @@
-
 import torch
 from torch.nn.utils.rnn import PackedSequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
@@ -39,7 +38,6 @@ class StackedAlternatingLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  use_highway: bool = True) -> None:
         super(StackedAlternatingLstm, self).__init__()
-
         layers = []
         lstm_input_size = input_size
         for layer_index in range(num_layers):
