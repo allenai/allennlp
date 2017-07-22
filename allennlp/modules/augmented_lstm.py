@@ -1,8 +1,10 @@
+from typing import Optional, Tuple
 import torch
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, PackedSequence
 
 from allennlp.common.tensor import get_dropout_mask
+from allennlp.common.checks import ConfigurationError
 
 
 class AugmentedLstm(torch.nn.Module):
@@ -58,33 +60,53 @@ class AugmentedLstm(torch.nn.Module):
             self.input_linearity = torch.nn.Linear(input_size, 4 * output_size, bias=True)
             self.state_linearity = torch.nn.Linear(output_size, 4 * output_size, bias=True)
 
-        self.recurrent_droppout_probability = recurrent_dropout_probability
+        self.recurrent_dropout_probability = recurrent_dropout_probability
 
-    def forward(self, inputs: PackedSequence):  # pylint: disable=arguments-differ
-        assert isinstance(inputs, PackedSequence), 'inputs must be PackedSequence but got %s' % (type(inputs))
+    def forward(self, inputs: PackedSequence,  # pylint: disable=arguments-differ
+                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+        """
+        Parameters
+        ----------
+        inputs : PackedSequence, required.
+            A tensor of shape (batch_size, num_timesteps, input_size) to apply
+            the LSTM over.
+
+        initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
+            A tuple (state, memory) representing the initial hidden state and memory of the
+            LSTM. Each tensor has shape (batch_size, output_dimension).
+
+        Returns
+        -------
+        A 3D torch.Tensor of shape (batch_size, num_timesteps, output_dimension) representing
+        the outputs of the LSTM per timestep.
+        """
+        if not isinstance(inputs, PackedSequence):
+            raise ConfigurationError('inputs must be PackedSequence but got %s' % (type(inputs)))
 
         inputs, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
-
         batch_size = inputs.size()[0]
         total_timesteps = inputs.size()[1]
 
         output_accumulator = Variable(inputs.data.new().resize_(batch_size,
                                                                 total_timesteps,
                                                                 self.output_size).fill_(0))
-        full_batch_previous_memory = Variable(inputs.data.new().resize_(batch_size,
-                                                                        self.output_size).fill_(0))
-        full_batch_previous_state = Variable(inputs.data.new().resize_(batch_size,
-                                                                       self.output_size).fill_(0))
+        if initial_state is None:
+            full_batch_previous_memory = Variable(inputs.data.new().resize_(batch_size,
+                                                                            self.output_size).fill_(0))
+            full_batch_previous_state = Variable(inputs.data.new().resize_(batch_size,
+                                                                           self.output_size).fill_(0))
+        else:
+            full_batch_previous_state = initial_state[0]
+            full_batch_previous_memory = initial_state[1]
 
         current_length_index = batch_size - 1 if self.direction == "forward" else 0
 
-        if self.recurrent_droppout_probability > 0.0:
-            dropout_mask = get_dropout_mask(self.recurrent_droppout_probability, [batch_size, self.output_size])
+        if self.recurrent_dropout_probability > 0.0:
+            dropout_mask = get_dropout_mask(self.recurrent_dropout_probability, [batch_size, self.output_size])
         else:
             dropout_mask = None
 
         for timestep in range(total_timesteps):
-
             # The index depends on which end we start.
             index = timestep if self.direction == "forward" else total_timesteps - timestep - 1
 
@@ -107,24 +129,21 @@ class AugmentedLstm(torch.nn.Module):
 
             # If we're going backwards, we are _picking up_ more indices.
             elif self.direction == "backward":
-                # Complicated logic, hence the overly verbose while loop variables.
-                not_at_max_number_of_sequences = current_length_index < (len(batch_lengths) - 1)
-                next_shortest_sequence_uses_this_timestep = batch_lengths[current_length_index + 1] > index
-
-                while not_at_max_number_of_sequences and next_shortest_sequence_uses_this_timestep:
+                # First conditional: Are we already at the maximum number of elements in the batch?
+                # Second conditional: Does the next shortest sequence beyond the current batch
+                # index require computation use this timestep?
+                while current_length_index < (len(batch_lengths) - 1) and \
+                                batch_lengths[current_length_index + 1] > index:
                     current_length_index += 1
-                    not_at_max_number_of_sequences = current_length_index < (len(batch_lengths) - 1)
-                    next_shortest_sequence_uses_this_timestep = batch_lengths[current_length_index + 1] > index
 
             # Actually get the slices of the batch which we need for the computation at this timestep.
             previous_memory = full_batch_previous_memory[0: current_length_index + 1].clone()
             previous_state = full_batch_previous_state[0: current_length_index + 1].clone()
             timestep_input = inputs[0: current_length_index + 1, index]
 
-            # Do the projections for all the gates all at
-            # once to make use of GPU parallelism.
+            # Do the projections for all the gates all at once.
             projected_input = self.input_linearity(timestep_input)
-            projected_state = self.input_linearity(previous_state)
+            projected_state = self.state_linearity(previous_state)
 
             # Main LSTM equations using relevant chunks of the big linear
             # projections of the hidden state and inputs.

@@ -82,13 +82,15 @@ class TestTensor(AllenNlpTestCase):
         tensor[3, 5:, :] = 0
 
         sequence_lengths = torch.LongTensor([3, 4, 1, 5, 7])
-        sorted_tensor, reverse_indices = sort_batch_by_length(tensor, sequence_lengths)
+        sorted_tensor, sorted_lengths, reverse_indices = sort_batch_by_length(tensor, sequence_lengths)
 
         # Test sorted indices are padded correctly.
         numpy.testing.assert_array_equal(sorted_tensor[1, 5:, :].numpy(), 0.0)
         numpy.testing.assert_array_equal(sorted_tensor[2, 4:, :].numpy(), 0.0)
         numpy.testing.assert_array_equal(sorted_tensor[3, 3:, :].numpy(), 0.0)
         numpy.testing.assert_array_equal(sorted_tensor[4, 1:, :].numpy(), 0.0)
+
+        assert sorted_lengths.equal(torch.LongTensor([7, 5, 4, 3, 1]))
 
         # Test restoration indices correctly recover the original tensor.
         assert sorted_tensor[reverse_indices].equal(tensor)

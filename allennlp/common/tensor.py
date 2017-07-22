@@ -1,4 +1,4 @@
-from typing import List,Dict, Union
+from typing import Dict, List, Union
 import torch
 from torch.autograd import Variable
 import numpy
@@ -47,11 +47,13 @@ def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.Long
     -------
     sorted_tensor : torch.FloatTensor
         The original tensor sorted along the batch dimension with respect to sequence_lengths.
+    sorted_sequence_lengths : torch.LongTensor
+        The original sequence_lengths sorted by decreasing size.
     restoration_indices : torch.LongTensor
         Indices into the sorted_tensor such that ``sorted_tensor[restoration_indices] == original_tensor``
     """
 
-    _, permutation_index = sequence_lengths.sort(0, descending=True)
+    sorted_sequence_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
     sorted_tensor = tensor[permutation_index]
 
     # This is the equivalent of zipping with index, sorting
@@ -59,7 +61,7 @@ def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.Long
     _, reverse_mapping = permutation_index.sort(0, descending=False)
     restoration_indices = index_range[reverse_mapping]
 
-    return sorted_tensor, restoration_indices
+    return sorted_tensor, sorted_sequence_lengths, restoration_indices
 
 
 def get_dropout_mask(dropout_probability: float, shape: List[int]):
@@ -97,4 +99,3 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
             return torch_variable
         else:
             return torch_variable.cuda(cuda_device)
-
