@@ -86,21 +86,17 @@ class AugmentedLstm(torch.nn.Module):
         inputs, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
         batch_size = inputs.size()[0]
         total_timesteps = inputs.size()[1]
-
         output_accumulator = Variable(inputs.data.new().resize_(batch_size,
                                                                 total_timesteps,
                                                                 self.output_size).fill_(0))
         if initial_state is None:
-            full_batch_previous_memory = Variable(inputs.data.new().resize_(batch_size,
-                                                                            self.output_size).fill_(0))
-            full_batch_previous_state = Variable(inputs.data.new().resize_(batch_size,
-                                                                           self.output_size).fill_(0))
+            full_batch_previous_memory = Variable(torch.zeros([batch_size, self.output_size]))
+            full_batch_previous_state = Variable(torch.zeros([batch_size, self.output_size]))
         else:
             full_batch_previous_state = initial_state[0]
             full_batch_previous_memory = initial_state[1]
 
         current_length_index = batch_size - 1 if self.direction == "forward" else 0
-
         if self.recurrent_dropout_probability > 0.0:
             dropout_mask = get_dropout_mask(self.recurrent_dropout_probability, [batch_size, self.output_size])
         else:
@@ -114,15 +110,11 @@ class AugmentedLstm(torch.nn.Module):
             # which we need to use for this timestep, because the sequences have
             # variable length, so once the index is greater than the length of this
             # particular batch sequence, we no longer need to do the computation for
-            # this sequence. The key thing to recognise here is that:
-            #
-            #    ****   the batch inputs must be _ordered_ by length   ****
-            #    **** from longest (first in batch) to shortest (last) ****
-            #
-            # so initially, we are going forwards with every sequence and as we
+            # this sequence. The key thing to recognise here is that _the batch inputs
+            # must be _ordered_ by length from longest (first in batch) to shortest
+            # (last) so initially, we are going forwards with every sequence and as we
             # pass the index at which the shortest elements of the batch finish,
             # we stop picking them up for the computation.
-
             if self.direction == "forward":
                 while batch_lengths[current_length_index] <= index:
                     current_length_index -= 1
@@ -166,8 +158,11 @@ class AugmentedLstm(torch.nn.Module):
             if dropout_mask:
                 timestep_output = timestep_output * dropout_mask[0: current_length_index + 1]
 
-            full_batch_previous_memory = Variable(inputs.data.new().resize_(batch_size, self.output_size).fill_(0))
-            full_batch_previous_state = Variable(inputs.data.new().resize_(batch_size, self.output_size).fill_(0))
+            # We've been doing computation with less than the full batch, so here we create a new
+            # variable for the the whole batch at this timestep and insert the result for the
+            # relevant elements of the batch into it.
+            full_batch_previous_memory = Variable(torch.zeros([batch_size, self.output_size]))
+            full_batch_previous_state = Variable(torch.zeros([batch_size, self.output_size]))
             full_batch_previous_memory[0: current_length_index + 1] = memory
             full_batch_previous_state[0: current_length_index + 1] = timestep_output
             output_accumulator[0: current_length_index + 1, index] = timestep_output
