@@ -34,4 +34,5 @@ class TestSeq2VecEncoder(AllenNlpTestCase):
                 "batch_first": False,
                 })
         with pytest.raises(ConfigurationError):
+            # pylint: disable=unused-variable
             encoder = Seq2VecEncoder.from_params(params)

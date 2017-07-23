@@ -4,7 +4,6 @@ import torch
 from torch.autograd import Variable
 from torch.nn import LSTM
 
-from allennlp.common import Params
 from allennlp.modules.seq2seq_encoders import WrappedPytorchRnn
 from allennlp.testing.test_case import AllenNlpTestCase
 

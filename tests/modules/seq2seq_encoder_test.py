@@ -34,4 +34,5 @@ class TestSeq2SeqEncoder(AllenNlpTestCase):
                 "batch_first": False,
                 })
         with pytest.raises(ConfigurationError):
+            # pylint: disable=unused-variable
             encoder = Seq2SeqEncoder.from_params(params)
