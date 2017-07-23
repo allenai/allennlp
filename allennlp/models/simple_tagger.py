@@ -2,7 +2,6 @@ from typing import Dict, Any
 
 import torch
 from torch.nn.modules.linear import Linear
-from torch.nn.modules import LSTM
 import torch.nn.functional as F
 
 from allennlp.common import Params
@@ -35,8 +34,6 @@ class SimpleTagger(Model):
 
         self.vocab = vocab
         self.text_field_embedder = text_field_embedder
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
         self.num_classes = self.vocab.get_vocab_size("tags")
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),

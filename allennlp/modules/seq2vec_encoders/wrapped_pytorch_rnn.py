@@ -23,7 +23,7 @@ class WrappedPytorchRnn(Seq2VecEncoder):
         self._module = module
 
     def get_output_dim(self) -> int:
-        return self._module.hidden_size * self._module.num_directions
+        return self._module.hidden_size * (2 if self._module.bidirectional else 1)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
         return self._module(inputs)[0][-1]

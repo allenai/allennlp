@@ -360,7 +360,7 @@ class Registry:
         tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a tensor of shape
         ``(batch_size, sequence_length, input_dim)``.
         """
-        import allennlp.modules  # pylint: disable=unused-variable
+        import allennlp.modules.seq2seq_encoders  # pylint: disable=unused-variable
         return list(cls._seq2seq_encoders.keys())
 
     @classmethod
@@ -370,7 +370,7 @@ class Registry:
         must take a tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a
         tensor of shape ``(batch_size, sequence_length, input_dim)``.
         """
-        import allennlp.modules  # pylint: disable=unused-variable
+        import allennlp.modules.seq2seq_encoders  # pylint: disable=unused-variable
         return cls._seq2seq_encoders[name]
 
     # Seq2Vec Encoders
@@ -386,7 +386,7 @@ class Registry:
         tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a tensor of shape
         ``(batch_size, input_dim)``.
         """
-        import allennlp.modules  # pylint: disable=unused-variable
+        import allennlp.modules.seq2vec_encoders  # pylint: disable=unused-variable
         return list(cls._seq2vec_encoders.keys())
 
     @classmethod
@@ -396,5 +396,5 @@ class Registry:
         must take a tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a
         tensor of shape ``(batch_size, input_dim)``.
         """
-        import allennlp.modules  # pylint: disable=unused-variable
+        import allennlp.modules.seq2vec_encoders  # pylint: disable=unused-variable
         return cls._seq2vec_encoders[name]
