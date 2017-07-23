@@ -1,5 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
+
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules import Seq2SeqEncoder
 from allennlp.testing.test_case import AllenNlpTestCase
 
@@ -24,3 +27,11 @@ class TestSeq2SeqEncoder(AllenNlpTestCase):
         assert encoder._module.hidden_size == 7
         assert encoder._module.bidirectional is True
         assert encoder._module.batch_first is True
+
+    def test_from_params_requires_batch_first(self):
+        params = Params({
+                "type": "lstm",
+                "batch_first": False,
+                })
+        with pytest.raises(ConfigurationError):
+            encoder = Seq2SeqEncoder.from_params(params)
