@@ -8,10 +8,12 @@ from allennlp.experiments.driver import Driver
 from allennlp.training import Model, Trainer
 from allennlp.data import Dataset
 from allennlp.data.dataset_reader import DatasetReader
+from allennlp.experiments.registry import Registry
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 
+@Registry.register_driver("train")
 class TrainDriver(Driver):
     def __init__(self,
                  model: Model,

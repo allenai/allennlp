@@ -7,6 +7,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
 from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TokenEmbedder
 from allennlp.training import Regularizer
+from allennlp.experiments import Driver
 
 
 def _registry_decorator(registry_name: str, registry_dict: Dict[str, Type]):
@@ -161,7 +162,7 @@ class Registry:
     # Data Iterators
 
     _data_iterators = {}  # type: Dict[str, Type[DataIterator]]
-    #: This decorator adds a :class:`DataIterator` to the registry, with the given name.
+    # This decorator adds a :class:`DataIterator` to the registry, with the given name.
     register_data_iterator = _registry_decorator("data iterator", _data_iterators)
     default_data_iterator = "bucket"
 
@@ -184,7 +185,7 @@ class Registry:
     # Tokenizers
 
     _tokenizers = {}  # type: Dict[str, Type[Tokenizer]]
-    #: This decorator adds a :class:`Tokenizer` to the registry, with the given name.
+    # This decorator adds a :class:`Tokenizer` to the registry, with the given name.
     register_tokenizer = _registry_decorator("tokenizer", _tokenizers)
     default_tokenizer = "word"
 
@@ -207,7 +208,7 @@ class Registry:
     # Token Indexers
 
     _token_indexers = {}  # type: Dict[str, Type[TokenIndexer]]
-    #: This decorator adds a :class:`TokenIndexer` to the registry, with the given name.
+    # This decorator adds a :class:`TokenIndexer` to the registry, with the given name.
     register_token_indexer = _registry_decorator("token indexer", _token_indexers)
     default_token_indexer = "single_id"
 
@@ -269,7 +270,7 @@ class Registry:
             "sparse": torch.nn.init.sparse,
             "eye": torch.nn.init.eye,
     }
-    #: This decorator adds an ``initializer`` to the registry, with the given name.
+    # This decorator adds an ``initializer`` to the registry, with the given name.
     register_initializer = _registry_decorator("initializer", _initializers)
     default_initializer = "normal"
 
@@ -294,7 +295,7 @@ class Registry:
     # Token Embedders
 
     _token_embedders = {}  # type: Dict[str, Type[TokenEmbedder]]
-    #: This decorator adds a :class:`TokenEmbedder` to the registry, with the given name.
+    # This decorator adds a :class:`TokenEmbedder` to the registry, with the given name.
     register_token_embedder = _registry_decorator("token embedder", _token_embedders)
     default_token_embedder = "embedding"
 
@@ -322,7 +323,7 @@ class Registry:
     # Text Field Embedders
 
     _text_field_embedders = {}  # type: Dict[str, Type[TextFieldEmbedder]]
-    #: This decorator adds a :class:`TextFieldEmbedder` to the registry, with the given name.
+    # This decorator adds a :class:`TextFieldEmbedder` to the registry, with the given name.
     register_text_field_embedder = _registry_decorator("text field embedder", _text_field_embedders)
     default_text_field_embedder = "basic"
 
@@ -350,7 +351,7 @@ class Registry:
     # Seq2Seq Encoders
 
     _seq2seq_encoders = {}  # type: Dict[str, Type[Seq2SeqEncoder]]
-    #: This decorator adds a :class:`Seq2SeqEncoder` to the registry, with the given name.
+    # This decorator adds a :class:`Seq2SeqEncoder` to the registry, with the given name.
     register_seq2seq_encoder = _registry_decorator("seq2seq encoder", _seq2seq_encoders)
 
     @classmethod
@@ -376,7 +377,7 @@ class Registry:
     # Seq2Vec Encoders
 
     _seq2vec_encoders = {}  # type: Dict[str, Type[Seq2VecEncoder]]
-    #: This decorator adds a :class:`Seq2VecEncoder` to the registry, with the given name.
+    # This decorator adds a :class:`Seq2VecEncoder` to the registry, with the given name.
     register_seq2vec_encoder = _registry_decorator("seq2vec encoder", _seq2vec_encoders)
 
     @classmethod
@@ -398,3 +399,24 @@ class Registry:
         """
         import allennlp.modules.seq2vec_encoders  # pylint: disable=unused-variable
         return cls._seq2vec_encoders[name]
+
+    # Drivers
+    _drivers = {}  # type: Dict[str, Type[Driver]]
+    # This decorator adds a :class:`Driver` to the registry, with the given name.
+    register_driver = _registry_decorator("driver", _drivers)
+
+    @classmethod
+    def list_drivers(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`Driver` names.
+        """
+        import allennlp.experiments.drivers  # pylint: disable=unused-variable
+        return list(cls._drivers.keys())
+
+    @classmethod
+    def get_driver(cls, name: str) -> Type[Driver]:
+        """
+        Returns the :class:`Driver` that has been registered with ``name``.
+        """
+        import allennlp.experiments.drivers  # pylint: disable=unused-variable
+        return cls._drivers[name]

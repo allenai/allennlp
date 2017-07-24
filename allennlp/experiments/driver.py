@@ -19,7 +19,5 @@ class Driver:
     @classmethod
     def from_params(cls, params: Params):
         from allennlp.experiments.registry import Registry
-
         operation = params.pop_choice("operation", Registry.list_drivers(), default_to_first_choice=True)
-
         return Registry.get_driver(operation).from_params(params)
