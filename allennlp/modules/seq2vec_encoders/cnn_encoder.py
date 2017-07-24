@@ -9,9 +9,9 @@ from allennlp.experiments import Registry
 from allennlp.modules import Seq2VecEncoder
 
 @Registry.register_seq2vec_encoder("cnn")
-class CNNEncoder(Seq2VecEncoder):
+class CnnEncoder(Seq2VecEncoder):
     """
-    CNNEncoder is a combination of multiple convolution layers and max pooling layers.  As a
+    CnnEncoder is a combination of multiple convolution layers and max pooling layers.  As a
     :class:`Seq2VecEncoder`, the input to this module is of shape ``(batch_size, num_tokens,
     input_dim)``, and the output is of shape ``(batch_size, output_dim)``.
 
@@ -51,20 +51,20 @@ class CNNEncoder(Seq2VecEncoder):
                  num_filters: int,
                  ngram_filter_sizes: Tuple[int, ...] = (2, 3, 4, 5),  # pylint: disable=bad-whitespace
                  output_dim: Optional[int] = None) -> None:
-        super(CNNEncoder, self).__init__()
+        super(CnnEncoder, self).__init__()
         self._embedding_dim = embedding_dim
         self._num_filters = num_filters
         self._ngram_filter_sizes = ngram_filter_sizes
         self._output_dim = output_dim
 
-        self.convolution_layers = [Conv1d(in_channels=self._embedding_dim,
+        self._convolution_layers = [Conv1d(in_channels=self._embedding_dim,
                                           out_channels=self._num_filters,
                                           kernel_size=ngram_size)
-                                   for ngram_size in self.ngram_filter_sizes]
-        for i, conv_layer in enumerate(self.convolution_layers):
+                                   for ngram_size in self._ngram_filter_sizes]
+        for i, conv_layer in enumerate(self._convolution_layers):
             self.add_module('conv_layer_%d' % i, conv_layer)
 
-        maxpool_output_dim = self.num_filters * len(self.ngram_filter_sizes)
+        maxpool_output_dim = self._num_filters * len(self._ngram_filter_sizes)
         if self._output_dim:
             self.projection_layer = Linear(maxpool_output_dim, self._output_dim)
         else:
@@ -91,8 +91,9 @@ class CNNEncoder(Seq2VecEncoder):
         # TODO(mattg): allow specifying the activation function to use here.
         activation = torch.nn.functional.relu
 
-        filter_outputs = [torch.max(activation(convolution_layer(tokens), inplace=True), axis=2)
-                          for convolution_layer in self.convolution_layers]
+        filter_outputs = [torch.max(activation(convolution_layer(tokens), inplace=True),
+                                    dim=2)[0].squeeze(dim=2)  # not really sure why max isn't squeezing...
+                          for convolution_layer in self._convolution_layers]
 
         # Now we have a list of `num_conv_layers` tensors of shape `(batch_size, num_filters)`.
         # Concatenating them gives us a tensor of shape
@@ -110,7 +111,7 @@ class CNNEncoder(Seq2VecEncoder):
         embedding_dim = params.pop('embedding_dim')
         output_dim = params.pop('output_dim', None)
         num_filters = params.pop('num_filters')
-        ngram_filter_sizes = params.pop('ngram_filter_sizes', (2, 3, 4, 5))
+        ngram_filter_sizes = tuple(params.pop('ngram_filter_sizes', [2, 3, 4, 5]))
         params.assert_empty(cls.__name__)
         return cls(embedding_dim=embedding_dim,
                    num_filters=num_filters,
