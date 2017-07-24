@@ -3,7 +3,7 @@ import torch
 from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.experiments import Registry
-from allennlp.modules.token_vectorizers.embedding import Embedding
+from allennlp.modules.token_embedders import Embedding
 from allennlp.modules import Seq2VecEncoder, TimeDistributed, TokenEmbedder
 
 
@@ -23,7 +23,7 @@ class TokenCharactersEncoder(TokenEmbedder):
         self._encoder = TimeDistributed(encoder)
 
     def get_output_dim(self) -> int:
-        return self._encoder.get_output_dim()
+        return self._encoder._module.get_output_dim()
 
     def forward(self, token_characters: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
         return self._encoder(self._embedding(token_characters))
@@ -31,7 +31,7 @@ class TokenCharactersEncoder(TokenEmbedder):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params):
         embedding_params = params.pop("embedding")  # type: Params
-        # Embeddings.from_params() uses "tokens" as the default namespace, but we need to change
+        # Embedding.from_params() uses "tokens" as the default namespace, but we need to change
         # that to be "token_characters" by default.
         embedding_params.setdefault("vocab_namespace", "token_characters")
         embedding = Embedding.from_params(vocab, embedding_params)
