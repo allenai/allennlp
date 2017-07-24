@@ -358,7 +358,7 @@ class Registry:
         """
         Returns a list of all currently-registered :class:`Seq2SeqEncoder` names.  These take a
         tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a tensor of shape
-        ``(batch_size, sequence_length, input_dim)``.
+        ``(batch_size, sequence_length, output_dim)``.
         """
         import allennlp.modules.seq2seq_encoders  # pylint: disable=unused-variable
         return list(cls._seq2seq_encoders.keys())
@@ -368,7 +368,7 @@ class Registry:
         """
         Returns the :class:`Seq2SeqEncoder` that has been registered with ``name``.  This module
         must take a tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a
-        tensor of shape ``(batch_size, sequence_length, input_dim)``.
+        tensor of shape ``(batch_size, sequence_length, output_dim)``.
         """
         import allennlp.modules.seq2seq_encoders  # pylint: disable=unused-variable
         return cls._seq2seq_encoders[name]
@@ -384,7 +384,7 @@ class Registry:
         """
         Returns a list of all currently-registered :class:`Seq2VecEncoder` names.  These take a
         tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a tensor of shape
-        ``(batch_size, input_dim)``.
+        ``(batch_size, output_dim)``.
         """
         import allennlp.modules.seq2vec_encoders  # pylint: disable=unused-variable
         return list(cls._seq2vec_encoders.keys())
@@ -394,7 +394,7 @@ class Registry:
         """
         Returns the :class:`Seq2VecEncoder` that has been registered with ``name``.  This module
         must take a tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a
-        tensor of shape ``(batch_size, input_dim)``.
+        tensor of shape ``(batch_size, output_dim)``.
         """
         import allennlp.modules.seq2vec_encoders  # pylint: disable=unused-variable
         return cls._seq2vec_encoders[name]
