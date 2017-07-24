@@ -3,7 +3,7 @@ import torch
 from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.experiments import Registry
-from allennlp.modules.token_embedders import Embedding
+from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules import Seq2VecEncoder, TimeDistributed, TokenEmbedder
 
 
@@ -23,7 +23,7 @@ class TokenCharactersEncoder(TokenEmbedder):
         self._encoder = TimeDistributed(encoder)
 
     def get_output_dim(self) -> int:
-        return self._encoder._module.get_output_dim()
+        return self._encoder._module.get_output_dim()  # pylint: disable=protected-access
 
     def forward(self, token_characters: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
         return self._encoder(self._embedding(token_characters))

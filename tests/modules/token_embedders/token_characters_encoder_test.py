@@ -7,7 +7,6 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2VecEncoder
 from allennlp.modules.token_embedders import Embedding, TokenCharactersEncoder
