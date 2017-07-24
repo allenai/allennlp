@@ -10,7 +10,6 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.simple_tagger import SimpleTagger
-from allennlp.testing.test_case import AllenNlpTestCase
 from allennlp.service.models.types import Model, JSON
 
 
