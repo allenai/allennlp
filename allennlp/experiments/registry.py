@@ -2,9 +2,11 @@ from typing import Dict, Callable, List, Type
 
 import torch
 import torch.nn.init
+
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
-from allennlp.training.regularizer import Regularizer
+from allennlp.modules import TextFieldEmbedder, TokenEmbedder
+from allennlp.training import Regularizer
 
 
 def _registry_decorator(registry_name: str, registry_dict: Dict[str, Type]):
@@ -130,6 +132,12 @@ class Registry:
     # because we use the registry for internal implementations of things, too, and need to be sure
     # they've been imported so they are in the registry by default.
 
+    #########################
+    # Data-related registries
+    #########################
+
+    # Dataset Readers
+
     _dataset_readers = {}  # type: Dict[str, Type[DatasetReader]]
     #: This decorator adds a :class:`DatasetReader` to the registry, with the given name.
     register_dataset_reader = _registry_decorator("dataset reader", _dataset_readers)
@@ -149,6 +157,8 @@ class Registry:
         """
         import allennlp.data.dataset_readers  # pylint: disable=unused-variable
         return cls._dataset_readers[name]
+
+    # Data Iterators
 
     _data_iterators = {}  # type: Dict[str, Type[DataIterator]]
     #: This decorator adds a :class:`DataIterator` to the registry, with the given name.
@@ -171,6 +181,8 @@ class Registry:
         import allennlp.data.iterators  # pylint: disable=unused-variable
         return cls._data_iterators[name]
 
+    # Tokenizers
+
     _tokenizers = {}  # type: Dict[str, Type[Tokenizer]]
     #: This decorator adds a :class:`Tokenizer` to the registry, with the given name.
     register_tokenizer = _registry_decorator("tokenizer", _tokenizers)
@@ -191,6 +203,8 @@ class Registry:
         """
         import allennlp.data.tokenizers  # pylint: disable=unused-variable
         return cls._tokenizers[name]
+
+    # Token Indexers
 
     _token_indexers = {}  # type: Dict[str, Type[TokenIndexer]]
     #: This decorator adds a :class:`TokenIndexer` to the registry, with the given name.
@@ -213,6 +227,17 @@ class Registry:
         import allennlp.data.token_indexers  # pylint: disable=unused-variable
         return cls._token_indexers[name]
 
+    #############################
+    # Training-related registries
+    #############################
+
+    # Regularizers
+
+    _regularizers = {}  # type: Dict[str, Type[Regularizer]]
+    #: This decorator adds a :class:`Regularizer` to the registry, with the given name.
+    register_regularizer = _registry_decorator("regularizer", _regularizers)
+    default_regularizer = "l2"
+
     @classmethod
     def list_regularizers(cls) -> List[str]:
         """
@@ -229,25 +254,7 @@ class Registry:
         import allennlp.training.regularizers  # pylint: disable=unused-variable
         return cls._regularizers[name]
 
-    _regularizers = {}  # type: Dict[str, Type[Regularizer]]
-    #: This decorator adds a :class:`Regularizer` to the registry, with the given name.
-    register_regularizer = _registry_decorator("regularizer", _regularizers)
-    default_regularizer = "l2"
-
-
-    @classmethod
-    def list_initializers(cls) -> List[str]:
-        """
-        Returns a list of all currently-registered initializer names.
-        """
-        return _get_keys_with_default(cls._initializers, "initializer", cls.default_initializer)
-
-    @classmethod
-    def get_initializer(cls, name) -> Callable[[torch.Tensor], None]:
-        """
-        Returns the initializer that has been registered with ``name``.
-        """
-        return cls._initializers[name]
+    # Initializers
 
     # pylint: disable=line-too-long
     _initializers = {
@@ -263,6 +270,80 @@ class Registry:
             "sparse": torch.nn.init.sparse,
             "eye": torch.nn.init.eye,
     }
-    #: This decorator adds a :func:`initializer` to the registry, with the given name.
+    #: This decorator adds an ``initializer`` to the registry, with the given name.
     register_initializer = _registry_decorator("initializer", _initializers)
     default_initializer = "normal"
+
+    @classmethod
+    def list_initializers(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered initializer names.
+        """
+        return _get_keys_with_default(cls._initializers, "initializer", cls.default_initializer)
+
+    @classmethod
+    def get_initializer(cls, name) -> Callable[[torch.Tensor], None]:
+        """
+        Returns the initializer that has been registered with ``name``.
+        """
+        return cls._initializers[name]
+
+    ###########################
+    # Module-related registries
+    ###########################
+
+    # Token Embedders
+
+    _token_embedders = {}  # type: Dict[str, Type[TokenEmbedder]]
+    #: This decorator adds a :class:`TokenEmbedder` to the registry, with the given name.
+    register_token_embedder = _registry_decorator("token embedder", _token_embedders)
+    default_token_embedder = "embedding"
+
+    @classmethod
+    def list_token_embedders(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`TokenEmbedder` names.  These take
+        a tensor with ids (either single token ids or token character id lists) and return a tensor
+        with vectors.
+        """
+        import allennlp.modules.token_embedders  # pylint: disable=unused-variable
+        return _get_keys_with_default(cls._token_embedders, "token embedder",
+                                      cls.default_token_embedder)
+
+    @classmethod
+    def get_token_embedder(cls, name: str) -> Type[TokenEmbedder]:
+        """
+        Returns the :clases:`TokenEmbedder` that has been registered with ``name``.  This module
+        must take a tensor with ids (either single token ids or token character id lists) and
+        return a tensor with vectors.
+        """
+        import allennlp.modules.token_embedders  # pylint: disable=unused-variable
+        return cls._token_embedders[name]
+
+    # Text Field Embedders
+
+    _text_field_embedders = {}  # type: Dict[str, Type[TextFieldEmbedder]]
+    #: This decorator adds a :class:`TextFieldEmbedder` to the registry, with the given name.
+    register_text_field_embedder = _registry_decorator("text field embedder", _text_field_embedders)
+    default_text_field_embedder = "basic"
+
+    @classmethod
+    def list_text_field_embedders(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`TextFieldEmbedder` names.  These take the
+        dictionary of arrays corresponding to a single ``TextField``, and return a tensor of shape
+        ``(batch_size, num_tokens, embedding_dim)``.
+        """
+        import allennlp.modules.text_field_embedders  # pylint: disable=unused-variable
+        return _get_keys_with_default(cls._text_field_embedders, "text field embedder",
+                                      cls.default_text_field_embedder)
+
+    @classmethod
+    def get_text_field_embedder(cls, name: str) -> Type[TextFieldEmbedder]:
+        """
+        Returns the :class:`TextFieldEmbedder` that has been registered with ``name``.  This module
+        must take the dictionary of arrays corresponding to a single ``TextField``, and return a
+        tensor of shape ``(batch_size, num_tokens, embedding_dim)``.
+        """
+        import allennlp.modules.text_field_embedders  # pylint: disable=unused-variable
+        return cls._text_field_embedders[name]

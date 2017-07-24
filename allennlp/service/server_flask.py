@@ -29,9 +29,10 @@ def handle_unknown_model(error: UnknownModel) -> Response:
 @app.route('/predict/<model_name>', methods=['POST'])
 def predict(model_name: str) -> Response:
     """make a prediction using the specified model and return the results"""
-    model = models.get(model_name.lower())
-    if model is None:
+    model_fn = models.get(model_name.lower())
+    if model_fn is None:
         raise UnknownModel(model_name)
+    model = model_fn()
 
     # TODO(joelgrus): error handling
     data = request.get_json()

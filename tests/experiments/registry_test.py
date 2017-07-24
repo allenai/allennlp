@@ -10,6 +10,39 @@ from allennlp.testing.test_case import AllenNlpTestCase
 
 class TestRegistry(AllenNlpTestCase):
 
+    # Helper functions to make the registry tests less repetitive
+
+    @staticmethod
+    def registry_helper(list_fn, get_fn, decorator_fn, dictionary, default_attr_name: str = None):
+        """
+        This function tests all of the things that should be hooked up correctly given a collection
+        of related registry functions:
+
+            1. The decorator should add things to the list.
+            2. The decorator should crash when adding a duplicate.
+            3. If a default is given, it should show up first in the list.
+
+        What we don't test here is that built-in items are registered correctly.  You should test
+        that yourself in a separate test method.
+        """
+        assert 'fake' not in list_fn()
+        @decorator_fn('fake')
+        def fake():
+            return 1
+        assert get_fn('fake') == fake
+        with pytest.raises(ConfigurationError):
+            decorator_fn('fake')(lambda: 2)
+        if default_attr_name:
+            current_default = getattr(Registry, default_attr_name)
+            assert list_fn()[0] == current_default
+            setattr(Registry, default_attr_name, 'fake')
+            assert list_fn()[0] == 'fake'
+            with pytest.raises(ConfigurationError):
+                setattr(Registry, default_attr_name, 'not present')
+                list_fn()
+            setattr(Registry, default_attr_name, current_default)
+        del dictionary['fake']
+
     # Dataset readers
 
     def test_registry_has_builtin_readers(self):
@@ -18,20 +51,11 @@ class TestRegistry(AllenNlpTestCase):
         assert Registry.get_dataset_reader('language_modeling').__name__ == 'LanguageModelingReader'
         assert Registry.get_dataset_reader('squad_sentence_selection').__name__ == 'SquadSentenceSelectionReader'
 
-    def test_register_dataset_reader_fails_on_duplicate(self):
-        with pytest.raises(ConfigurationError):
-            # pylint: disable=unused-variable
-            @Registry.register_dataset_reader("snli")
-            class NewSnliReader:
-                pass
-
-    def test_register_dataset_reader_adds_new_reader_with_decorator(self):
-        assert 'fake' not in Registry.list_dataset_readers()
-        @Registry.register_dataset_reader('fake')
-        class Fake:
-            pass
-        assert Registry.get_dataset_reader('fake') == Fake
-        del Registry._dataset_readers['fake']  # pylint: disable=protected-access
+    def test_dataset_readers_use_correct_fields(self):
+        self.registry_helper(Registry.list_dataset_readers,
+                             Registry.get_dataset_reader,
+                             Registry.register_dataset_reader,
+                             Registry._dataset_readers)  # pylint: disable=protected-access
 
     # Data iterators
 
@@ -40,30 +64,12 @@ class TestRegistry(AllenNlpTestCase):
         assert Registry.get_data_iterator('basic').__name__ == 'BasicIterator'
         assert Registry.get_data_iterator('bucket').__name__ == 'BucketIterator'
 
-    def test_register_data_iterator_fails_on_duplicate(self):
-        with pytest.raises(ConfigurationError):
-            # pylint: disable=unused-variable
-            @Registry.register_data_iterator("bucket")
-            class NewBucketIterator:
-                pass
-
-    def test_register_data_iterator_adds_new_iterator_with_decorator(self):
-        assert 'fake' not in Registry.list_data_iterators()
-        @Registry.register_data_iterator('fake')
-        class Fake:
-            pass
-        assert Registry.get_data_iterator('fake') == Fake
-        del Registry._data_iterators['fake']  # pylint: disable=protected-access
-
-    def test_default_data_iterator_is_first_in_list(self):
-        default_iterator = Registry.default_data_iterator
-        assert Registry.list_data_iterators()[0] == default_iterator
-        Registry.default_data_iterator = "basic"
-        assert Registry.list_data_iterators()[0] == "basic"
-        with pytest.raises(ConfigurationError):
-            Registry.default_data_iterator = "fake"
-            Registry.list_data_iterators()
-        Registry.default_data_iterator = default_iterator
+    def test_data_iterators_use_correct_fields(self):
+        self.registry_helper(Registry.list_data_iterators,
+                             Registry.get_data_iterator,
+                             Registry.register_data_iterator,
+                             Registry._data_iterators,  # pylint: disable=protected-access
+                             'default_data_iterator')
 
     # Tokenizers
 
@@ -71,27 +77,12 @@ class TestRegistry(AllenNlpTestCase):
         assert Registry.get_tokenizer('word').__name__ == 'WordTokenizer'
         assert Registry.get_tokenizer('character').__name__ == 'CharacterTokenizer'
 
-    def test_register_tokenizer_fails_on_duplicate(self):
-        with pytest.raises(ConfigurationError):
-            # pylint: disable=unused-variable
-            @Registry.register_tokenizer("word")
-            class NewWordTokenizer:
-                pass
-
-    def test_register_tokenizer_adds_new_iterator_with_decorator(self):
-        assert 'fake' not in Registry.list_tokenizers()
-        @Registry.register_tokenizer('fake')
-        class Fake:
-            pass
-        assert Registry.get_tokenizer('fake') == Fake
-        del Registry._tokenizers['fake']  # pylint: disable=protected-access
-
-    def test_default_tokenizer_is_first_in_list(self):
-        default_iterator = Registry.default_tokenizer
-        assert Registry.list_tokenizers()[0] == default_iterator
-        Registry.default_tokenizer = "character"
-        assert Registry.list_tokenizers()[0] == "character"
-        Registry.default_tokenizer = default_iterator
+    def test_tokenizers_use_correct_fields(self):
+        self.registry_helper(Registry.list_tokenizers,
+                             Registry.get_tokenizer,
+                             Registry.register_tokenizer,
+                             Registry._tokenizers,  # pylint: disable=protected-access
+                             'default_tokenizer')
 
     # Token indexers
 
@@ -99,27 +90,12 @@ class TestRegistry(AllenNlpTestCase):
         assert Registry.get_token_indexer('single_id').__name__ == 'SingleIdTokenIndexer'
         assert Registry.get_token_indexer('characters').__name__ == 'TokenCharactersIndexer'
 
-    def test_register_token_indexer_fails_on_duplicate(self):
-        with pytest.raises(ConfigurationError):
-            # pylint: disable=unused-variable
-            @Registry.register_token_indexer("single_id")
-            class NewSingleIdTokenIndexer:
-                pass
-
-    def test_register_token_indexer_adds_new_token_indexer_with_decorator(self):
-        assert 'fake' not in Registry.list_token_indexers()
-        @Registry.register_token_indexer('fake')
-        class Fake:
-            pass
-        assert Registry.get_token_indexer('fake') == Fake
-        del Registry._token_indexers['fake']  # pylint: disable=protected-access
-
-    def test_default_token_indexer_is_first_in_list(self):
-        default_iterator = Registry.default_token_indexer
-        assert Registry.list_token_indexers()[0] == default_iterator
-        Registry.default_token_indexer = "characters"
-        assert Registry.list_token_indexers()[0] == "characters"
-        Registry.default_token_indexer = default_iterator
+    def test_token_indexers_use_correct_fields(self):
+        self.registry_helper(Registry.list_token_indexers,
+                             Registry.get_token_indexer,
+                             Registry.register_token_indexer,
+                             Registry._token_indexers,  # pylint: disable=protected-access
+                             'default_token_indexer')
 
     # Regularizers
 
@@ -127,27 +103,12 @@ class TestRegistry(AllenNlpTestCase):
         assert Registry.get_regularizer('l1').__name__ == 'L1Regularizer'
         assert Registry.get_regularizer('l2').__name__ == 'L2Regularizer'
 
-    def test_register_regularizer_fails_on_duplicate(self):
-        with pytest.raises(ConfigurationError):
-            # pylint: disable=unused-variable
-            @Registry.register_regularizer("l1")
-            class NewL1Regularizer:
-                pass
-
-    def test_register_regularizer_adds_new_regularizer_with_decorator(self):
-        assert 'fake' not in Registry.list_regularizers()
-        @Registry.register_regularizer('fake')
-        class Fake:
-            pass
-        assert Registry.get_regularizer('fake') == Fake
-        del Registry._regularizers['fake']  # pylint: disable=protected-access
-
-    def test_default_regularizer_is_first_in_list(self):
-        default_regularizer = Registry.default_regularizer
-        assert Registry.list_regularizers()[0] == default_regularizer
-        Registry.default_regularizer = "l1"
-        assert Registry.list_regularizers()[0] == "l1"
-        Registry.default_regularizer = default_regularizer
+    def test_regularizers_use_correct_fields(self):
+        self.registry_helper(Registry.list_regularizers,
+                             Registry.get_regularizer,
+                             Registry.register_regularizer,
+                             Registry._regularizers,  # pylint: disable=protected-access
+                             'default_regularizer')
 
     # Initializers
 
@@ -168,24 +129,33 @@ class TestRegistry(AllenNlpTestCase):
         for key, value in all_initializers.items():
             assert Registry.get_initializer(key) == value
 
-    def test_register_initializers_fails_on_duplicate(self):
-        with pytest.raises(ConfigurationError):
-            # pylint: disable=unused-variable
-            @Registry.register_initializer("normal")
-            class NewL1Regularizer:
-                pass
+    def test_initializers_use_correct_fields(self):
+        self.registry_helper(Registry.list_initializers,
+                             Registry.get_initializer,
+                             Registry.register_initializer,
+                             Registry._initializers,  # pylint: disable=protected-access
+                             'default_initializer')
 
-    def test_register_initializers_adds_new_initializers_with_decorator(self):
-        assert 'fake' not in Registry.list_initializers()
-        @Registry.register_initializer('fake')
-        def fake_initializer():
-            pass
-        assert Registry.get_initializer('fake') == fake_initializer
-        del Registry._initializers['fake']  # pylint: disable=protected-access
+    # Token embedders
 
-    def test_default_initializer_is_first_in_list(self):
-        default_initializer = Registry.default_initializer
-        assert Registry.list_initializers()[0] == default_initializer
-        Registry.default_initializer = "orthogonal"
-        assert Registry.list_initializers()[0] == "orthogonal"
-        Registry.default_initializer = default_initializer
+    def test_registry_has_builtin_token_embedders(self):
+        assert Registry.get_token_embedder("embedding").__name__ == 'Embedding'
+
+    def test_token_embedders_use_correct_fields(self):
+        self.registry_helper(Registry.list_token_embedders,
+                             Registry.get_token_embedder,
+                             Registry.register_token_embedder,
+                             Registry._token_embedders,  # pylint: disable=protected-access
+                             'default_token_embedder')
+
+    # Text field embedders
+
+    def test_registry_has_builtin_text_field_embedders(self):
+        assert Registry.get_text_field_embedder("basic").__name__ == 'BasicTextFieldEmbedder'
+
+    def test_text_field_embedders_use_correct_fields(self):
+        self.registry_helper(Registry.list_text_field_embedders,
+                             Registry.get_text_field_embedder,
+                             Registry.register_text_field_embedder,
+                             Registry._text_field_embedders,  # pylint: disable=protected-access
+                             'default_text_field_embedder')
