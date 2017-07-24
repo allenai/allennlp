@@ -140,6 +140,7 @@ class TestRegistry(AllenNlpTestCase):
 
     def test_registry_has_builtin_token_embedders(self):
         assert Registry.get_token_embedder("embedding").__name__ == 'Embedding'
+        assert Registry.get_token_embedder("character_encoding").__name__ == 'TokenCharactersEncoder'
 
     def test_token_embedders_use_correct_fields(self):
         self.registry_helper(Registry.list_token_embedders,
