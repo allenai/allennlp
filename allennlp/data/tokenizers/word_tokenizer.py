@@ -1,12 +1,14 @@
 from typing import List
 
 from allennlp.common import Params
-from allennlp.data.tokenizers.tokenizer import Tokenizer
+from allennlp.data.tokenizer import Tokenizer
 from allennlp.data.tokenizers.word_filter import WordFilter, PassThroughWordFilter
 from allennlp.data.tokenizers.word_splitter import WordSplitter, SimpleWordSplitter
 from allennlp.data.tokenizers.word_stemmer import WordStemmer, PassThroughWordStemmer
+from allennlp.experiments import Registry
 
 
+@Registry.register_tokenizer("word")
 class WordTokenizer(Tokenizer):
     """
     A ``WordTokenizer`` handles the splitting of strings into words (with the use of a

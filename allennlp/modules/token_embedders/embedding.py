@@ -1,19 +1,28 @@
 import gzip
 import logging
 
+from overrides import overrides
 import numpy
 import torch
 
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.data import Vocabulary
+from allennlp.experiments import Registry
+from allennlp.modules import TokenEmbedder
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class Embedding(torch.nn.Module):
+@Registry.register_token_embedder("embedding")
+class Embedding(TokenEmbedder):
     """
-    A more featureful embedding module than the default in Pytorch.
-    Adds the ability to pre-specify the weight matrix, use a non-trainable embedding and
-    catches some ill-advised use cases, such as 1 dimensional embeddings.
+    A more featureful embedding module than the default in Pytorch.  Adds the ability to
+    pre-specify the weight matrix or use a non-trainable embedding.
+
+    Note that if you are using our data API and are trying to embed a
+    :class:`~allennlp.data.fields.TextField`, you should use a
+    :class:`~allennlp.modules.TextFieldEmbedder` instead of using this directly.
 
     Parameters
     ----------
@@ -74,6 +83,11 @@ class Embedding(torch.nn.Module):
         if self.padding_index is not None:
             self.weight.data[self.padding_index].fill_(0)
 
+    @overrides
+    def get_output_dim(self) -> int:
+        return self.embedding_dim
+
+    @overrides
     def forward(self, inputs):  # pylint: disable=arguments-differ
         padding_index = self.padding_index if self.padding_index is not None else -1
         return self._backend.Embedding(padding_index,
@@ -81,6 +95,31 @@ class Embedding(torch.nn.Module):
                                        self.norm_type,
                                        self.scale_grad_by_freq,
                                        self.sparse)(inputs, self.weight)
+
+    @classmethod
+    def from_params(cls, vocab: Vocabulary, params: Params):
+        vocab_namespace = params.pop("vocab_namespace", "tokens")
+        pretrained_file = params.pop("pretrained_file", None)
+        if pretrained_file:
+            trainable = params.pop("trainable", True)
+            return get_pretrained_embedding_layer(pretrained_file, vocab, vocab_namespace, trainable)
+        num_embeddings = vocab.get_vocab_size(vocab_namespace)
+        embedding_dim = params.pop('embedding_dim')
+        padding_index = params.pop('padding_index', None)
+        trainable = params.pop('trainable', True)
+        max_norm = params.pop('max_norm', None)
+        norm_type = params.pop('norm_type', 2.)
+        scale_grad_by_freq = params.pop('scale_grad_by_freq', False)
+        sparse = params.pop('sparse', False)
+        params.assert_empty(cls.__name__)
+        return cls(num_embeddings=num_embeddings,
+                   embedding_dim=embedding_dim,
+                   padding_index=padding_index,
+                   trainable=trainable,
+                   max_norm=max_norm,
+                   norm_type=norm_type,
+                   scale_grad_by_freq=scale_grad_by_freq,
+                   sparse=sparse)
 
 
 def get_pretrained_embedding_layer(embeddings_filename: str,

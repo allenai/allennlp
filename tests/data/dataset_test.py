@@ -2,12 +2,12 @@
 import pytest
 import numpy
 
+from allennlp.common.checks import ConfigurationError
+from allennlp.data.dataset import Dataset
 from allennlp.data.fields import TextField, LabelField
 from allennlp.data.instance import Instance
-from allennlp.data.dataset import Dataset
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.token_indexers import token_indexers
-from allennlp.common.checks import ConfigurationError
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
@@ -19,7 +19,7 @@ class TestDataset(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("a")
         self.vocab.add_token_to_namespace("sentence")
         self.vocab.add_token_to_namespace(".")
-        self.token_indexer = {"tokens": token_indexers["single id"]()}
+        self.token_indexer = {"tokens": SingleIdTokenIndexer()}
         super(TestDataset, self).setUp()
 
     def test_instances_must_have_homogeneous_fields(self):
@@ -54,5 +54,4 @@ class TestDataset(AllenNlpTestCase):
         field4 = TextField(["this", "is", "short"], self.token_indexer)
         instances = [Instance({"text1": field1, "text2": field2}),
                      Instance({"text1": field3, "text2": field4})]
-
         return Dataset(instances)

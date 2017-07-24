@@ -1,8 +1,9 @@
-from typing import Dict, List, Generator
+from typing import Dict, List, Generator, Union
 
 import numpy
 
-from allennlp.data import Dataset, Instance
+from allennlp.data.dataset import Dataset
+from allennlp.data.instance import Instance
 from allennlp.common import Params
 
 
@@ -14,7 +15,8 @@ class DataIterator:
     def __call__(self,
                  dataset: Dataset,
                  num_epochs: int = None,
-                 shuffle: bool = True) -> Generator[Dict[str, List[numpy.array]], None, None]:
+                 shuffle: bool = True) -> Generator[Dict[str, Union[numpy.ndarray,
+                                                                    Dict[str, numpy.ndarray]]], None, None]:
         """
         Returns a generator that yields batches over the given dataset, forever.
 
@@ -50,8 +52,9 @@ class DataIterator:
 
     @classmethod
     def from_params(cls, params: Params):
-        from allennlp.data.iterators import iterators
+        from allennlp.experiments.registry import Registry
         # TODO(Mark): The adaptive iterator will need a bit of work here,
         # to retrieve the scaling function etc.
-        iterator_type = params.pop_choice("type", list(iterators.keys()))
-        return iterators[iterator_type](**params.as_dict())  # type: ignore
+
+        iterator_type = params.pop_choice("type", Registry.list_data_iterators())
+        return Registry.get_data_iterator(iterator_type)(**params.as_dict())  # type: ignore

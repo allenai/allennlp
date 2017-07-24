@@ -3,12 +3,13 @@ import numpy
 import torch
 from torch.autograd import Variable
 
-from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data.fields import TextField
-from allennlp.models.simple_tagger import SimpleTagger
+from allennlp.common import Params
+from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.data.fields import TextField
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.testing.test_case import AllenNlpTestCase
-from allennlp.data.vocabulary import Vocabulary
 
 
 class SimpleTaggerTest(AllenNlpTestCase):
@@ -17,15 +18,24 @@ class SimpleTaggerTest(AllenNlpTestCase):
         super(SimpleTaggerTest, self).setUp()
         self.write_sequence_tagging_data()
 
-        dataset = SequenceTaggingDatasetReader(self.TRAIN_FILE).read()
+        dataset = SequenceTaggingDatasetReader().read(self.TRAIN_FILE)
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)
         self.dataset = dataset
 
-        self.model = SimpleTagger(embedding_dim=5,
-                                  hidden_size=7,
-                                  vocabulary=self.vocab)
+        params = Params({
+                "text_field_embedder": {
+                        "tokens": {
+                                "type": "embedding",
+                                "embedding_dim": 5
+                                }
+                        },
+                "hidden_size": 7,
+                "num_layers": 2
+                })
+
+        self.model = SimpleTagger.from_params(self.vocab, params)
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = self.dataset.as_arrays()

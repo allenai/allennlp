@@ -16,7 +16,7 @@ def string2string(model_name: str, transform: Callable[[str], str]) -> Model:
         return {'model_name': model_name, 'input': input_text, 'output': output_text}
     return wrapped
 
-def models() -> Dict[str, Model]:
-    return {'uppercase': string2string('uppercase', lambda s: s.upper()),
-            'lowercase': string2string('lowercase', lambda s: s.lower()),
-            'reverse': string2string('reverse', lambda s: ''.join(reversed(s)))}
+def models() -> Dict[str, Callable[[], Model]]:
+    return {'uppercase': lambda: string2string('uppercase', lambda s: s.upper()),
+            'lowercase': lambda: string2string('lowercase', lambda s: s.lower()),
+            'reverse': lambda: string2string('reverse', lambda s: ''.join(reversed(s)))}

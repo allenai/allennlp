@@ -1,8 +1,9 @@
 import codecs
 import os
 from tempfile import gettempdir
-from typing import Dict
+from typing import Callable, Dict
 
+from allennlp.common import Params
 from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
@@ -28,15 +29,24 @@ def simple_tagger_model() -> Model:
 
     vocab = Vocabulary.from_dataset(dataset)
     dataset.index_instances(vocab)
-    model = SimpleTagger(embedding_dim=5,
-                         hidden_size=7,
-                         vocabulary=vocab)
+
+    params = Params({
+            "text_field_embedder": {
+                    "tokens": {
+                            "type": "embedding",
+                            "embedding_dim": 5
+                            }
+                    },
+            "hidden_size": 7,
+            "num_layers": 2
+            })
+    model = SimpleTagger.from_params(vocab, params)
     tokenizer = WordTokenizer()
 
     def run(blob: JSON):
         sentence = blob.get("input", "")
         tokens = tokenizer.tokenize(sentence)
-        text = TextField(tokens, token_indexers={"tokens":SingleIdTokenIndexer()})
+        text = TextField(tokens, token_indexers={"tokens": SingleIdTokenIndexer()})
         output = model.tag(text)
 
         # convert np array to serializable list
@@ -52,5 +62,5 @@ def simple_tagger_model() -> Model:
 
     return run
 
-def models() -> Dict[str, Model]:
-    return {'simple_tagger': simple_tagger_model()}
+def models() -> Dict[str, Callable[[], Model]]:
+    return {'simple_tagger': simple_tagger_model}
