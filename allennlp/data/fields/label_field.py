@@ -1,16 +1,15 @@
-from typing import Dict, List, Union
+from typing import Dict, Union
 import logging
 
 from overrides import overrides
 import numpy
 
-from allennlp.data.fields.field import Field
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import Field, Vocabulary
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class LabelField(Field):
+class LabelField(Field[numpy.ndarray]):
     """
     A ``LabelField`` is a categorical label of some kind, where the labels are either strings of
     text or 0-indexed integers.  If the labels need indexing, we will use a :class:`Vocabulary` to
@@ -66,14 +65,14 @@ class LabelField(Field):
             self._num_labels = vocab.get_vocab_size(self._label_namespace)
 
     @overrides
-    def get_padding_lengths(self) -> Dict[str, int]:
+    def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
         return {}
 
     @overrides
-    def pad(self, padding_lengths: Dict[str, int]) -> List[numpy.array]:
+    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:  # pylint: disable=unused-argument
         label_array = numpy.zeros(self._num_labels)
         label_array[self._label_id] = 1
-        return [label_array]
+        return label_array
 
     @overrides
     def empty_field(self):

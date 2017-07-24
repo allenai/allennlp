@@ -3,20 +3,21 @@ import itertools
 
 from allennlp.common.params import Params
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TokenIndexer, Vocabulary
 from allennlp.data.tokenizers import CharacterTokenizer
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.experiments import Registry
 
 # pylint: disable=no-self-use
 
 
+@Registry.register_token_indexer("characters")
 class TokenCharactersIndexer(TokenIndexer[List[int]]):
     """
     This :class:`TokenIndexer` represents tokens as lists of character indices.
 
     Parameters
     ----------
-    character_namespace : ``str``, optional (default=``token_characters``)
+    namespace : ``str``, optional (default=``token_characters``)
         We will use this namespace in the :class:`Vocabulary` to map the characters in each token
         to indices.
     character_tokenizer : ``CharacterTokenizer``, optional (default=``CharacterTokenizer()``)
@@ -26,22 +27,22 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         retains casing.
     """
     def __init__(self,
-                 character_namespace: str = 'token_characters',
+                 namespace: str = 'token_characters',
                  character_tokenizer: CharacterTokenizer = CharacterTokenizer()) -> None:
-        self.character_namespace = character_namespace
+        self.namespace = namespace
         self.character_tokenizer = character_tokenizer
 
     # TODO(joelgrus) uncomment these once fix is merged to overrides library
     # @overrides
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
         for character in self.character_tokenizer.tokenize(token):
-            counter[self.character_namespace][character] += 1
+            counter[self.namespace][character] += 1
 
     # @overrides
     def token_to_indices(self, token: str, vocabulary: Vocabulary) -> List[int]:
         indices = []
         for character in self.character_tokenizer.tokenize(token):
-            indices.append(vocabulary.get_token_index(character, self.character_namespace))
+            indices.append(vocabulary.get_token_index(character, self.namespace))
         return indices
 
     # @overrides
@@ -82,7 +83,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         """
         Parameters
         ----------
-        character_namespace : ``str``, optional (default=``token_characters``)
+        namespace : ``str``, optional (default=``token_characters``)
             We will use this namespace in the :class:`Vocabulary` to map the characters in each token
             to indices.
         character_tokenizer : ``Params``, optional (default=``Params({})``)
@@ -90,8 +91,8 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
             options for byte encoding and other things.  These parameters get passed to the character
             tokenizer.  The default is to use unicode characters and to retain casing.
         """
-        character_namespace = params.pop('character_namespace', 'token_characters')
+        namespace = params.pop('namespace', 'token_characters')
         character_tokenizer_params = params.pop('character_tokenizer', {})
         character_tokenizer = CharacterTokenizer.from_params(character_tokenizer_params)
         params.assert_empty(cls.__name__)
-        return cls(character_namespace=character_namespace, character_tokenizer=character_tokenizer)
+        return cls(namespace=namespace, character_tokenizer=character_tokenizer)

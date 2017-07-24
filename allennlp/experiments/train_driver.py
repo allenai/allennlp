@@ -7,7 +7,7 @@ from allennlp.common import Params
 from allennlp.experiments.driver import Driver
 from allennlp.training import Model, Trainer
 from allennlp.data import Dataset
-from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.dataset_reader import DatasetReader
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 

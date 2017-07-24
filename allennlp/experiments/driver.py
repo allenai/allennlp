@@ -1,5 +1,4 @@
 from allennlp.common import Params
-from allennlp.experiments import drivers
 
 
 class Driver:
@@ -19,6 +18,8 @@ class Driver:
 
     @classmethod
     def from_params(cls, params: Params):
-        # TODO(mattg)
-        operation = params.pop_choice("operation", list(drivers.keys()), default_to_first_choice=True)
-        return drivers[operation].from_params(params)
+        from allennlp.experiments.registry import Registry
+
+        operation = params.pop_choice("operation", Registry.list_drivers(), default_to_first_choice=True)
+
+        return Registry.get_driver(operation).from_params(params)

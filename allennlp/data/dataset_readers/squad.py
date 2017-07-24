@@ -7,21 +7,22 @@ from typing import List, Tuple, Dict, Set  # pylint: disable=unused-import
 import numpy
 from tqdm import tqdm
 
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data import Dataset, Instance
 from allennlp.common import Params
+from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokenizer
+from allennlp.experiments import Registry
 from allennlp.data.fields import TextField, ListField, IndexField
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.field import Field  # pylint: disable=unused-import
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.tokenizers import WordTokenizer
 
-logger = logging.getLogger(__name__) # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+@Registry.register_dataset_reader("squad_sentence_selection")
 class SquadSentenceSelectionReader(DatasetReader):
     """
     Parameters
     ----------
-    squad_filename : ``str``
     negative_sentence_selection : ``str``, optional (default=``"paragraph"``)
         A comma-separated list of methods to use to generate negative sentences in the data.
 
@@ -43,20 +44,16 @@ class SquadSentenceSelectionReader(DatasetReader):
         sense as the last option.
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this ``Tokenizer`` for both the question and the sentences.  See :class:`Tokenizer`.
-    token_indexers : ``List[TokenIndexer]``, optional (default=``[SingleIdTokenIndexer()]``)
+    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the question and the sentences.  See :class:`TokenIndexer`.
     """
     def __init__(self,
-                 squad_filename: str,
                  negative_sentence_selection: str = "paragraph",
                  tokenizer: Tokenizer = WordTokenizer(),
-                 token_indexers: List[TokenIndexer] = None) -> None:
-        self._squad_filename = squad_filename
+                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
         self._tokenizer = tokenizer
-        if token_indexers is None:
-            token_indexers = [SingleIdTokenIndexer()]
-        self._token_indexers = token_indexers
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
         # Initializing some data structures here that will be useful when reading a file.
         # Maps sentence strings to sentence indices
@@ -129,14 +126,14 @@ class SquadSentenceSelectionReader(DatasetReader):
                 sentence_choices.append(self._id_to_question[index])
         return sentence_choices, correct_choice
 
-    def read(self):
+    def read(self, file_path: str):
         # Import is here, since it isn't necessary by default.
         import nltk
 
         # Holds tuples of (question_text, answer_sentence_id)
         questions = []
-        logger.info("Reading file at %s", self._squad_filename)
-        with open(self._squad_filename) as dataset_file:
+        logger.info("Reading file at %s", file_path)
+        with open(file_path) as dataset_file:
             dataset_json = json.load(dataset_file)
             dataset = dataset_json['data']
         logger.info("Reading the dataset")
@@ -177,7 +174,7 @@ class SquadSentenceSelectionReader(DatasetReader):
 
                     # There may be multiple answer annotations, so pick the one
                     # that occurs the most.
-                    candidate_answer_start_indices = Counter()
+                    candidate_answer_start_indices = Counter() # type: Counter
                     for answer in question_answer["answers"]:
                         candidate_answer_start_indices[answer["answer_start"]] += 1
                     answer_start_index, _ = candidate_answer_start_indices.most_common(1)[0]
@@ -206,7 +203,7 @@ class SquadSentenceSelectionReader(DatasetReader):
         for question_id, answer_id in tqdm(questions):
             sentence_choices, correct_choice = self._get_sentence_choices(question_id, answer_id)
             question_text = self._id_to_question[question_id]
-            sentence_fields = []
+            sentence_fields = []  # type: List[Field]
             for sentence in sentence_choices:
                 tokenized_sentence = self._tokenizer.tokenize(sentence)
                 sentence_field = TextField(tokenized_sentence, self._token_indexers)
@@ -230,13 +227,17 @@ class SquadSentenceSelectionReader(DatasetReader):
         tokenizer : ``Params``, optional
         token_indexers: ``List[Params]``, optional
         """
-        squad_filename = params.pop('squad_filename')
         negative_sentence_selection = params.pop('negative_sentence_selection', 'paragraph')
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = [TokenIndexer.from_params(p)
-                          for p in params.pop('token_indexers', [Params({})])]
+        token_indexers = {}
+        token_indexer_params = params.pop('token_indexers', Params({}))
+        for name, indexer_params in token_indexer_params.items():
+            token_indexers[name] = TokenIndexer.from_params(indexer_params)
+        # The default parameters are contained within the class,
+        # so if no parameters are given we must pass None.
+        if token_indexers == {}:
+            token_indexers = None
         params.assert_empty(cls.__name__)
-        return SquadSentenceSelectionReader(squad_filename=squad_filename,
-                                            negative_sentence_selection=negative_sentence_selection,
+        return SquadSentenceSelectionReader(negative_sentence_selection=negative_sentence_selection,
                                             tokenizer=tokenizer,
                                             token_indexers=token_indexers)

@@ -24,3 +24,6 @@ flaky
 # Allows codecov to generate coverage reports
 coverage
 codecov
+
+# Required to run sanic tests
+aiohttp

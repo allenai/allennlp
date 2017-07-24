@@ -1,0 +1,54 @@
+from typing import Dict
+
+from overrides import overrides
+import torch
+
+from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
+from allennlp.data import Vocabulary
+from allennlp.experiments import Registry
+from allennlp.modules import TextFieldEmbedder, TokenEmbedder
+
+
+@Registry.register_text_field_embedder("basic")
+class BasicTextFieldEmbedder(TextFieldEmbedder):
+    """
+    This is a ``TextFieldEmbedder`` that wraps a collection of :class:`TokenEmbedder` objects.  Each
+    ``TokenEmbedder`` embeds or encodes the representation output from one
+    :class:`~allennlp.data.TokenIndexer`.  As the data produced by a
+    :class:`~allennlp.data.fields.TextField` is a dictionary mapping names to these
+    representations, we take ``TokenEmbedders`` with corresponding names.  Each ``TokenEmbedders``
+    embeds its input, and the result is concatenated in an arbitrary order.
+    """
+    def __init__(self, token_embedders: Dict[str, TokenEmbedder]) -> None:
+        super(BasicTextFieldEmbedder, self).__init__()
+        self._token_embedders = token_embedders
+
+    @overrides
+    def get_output_dim(self) -> int:
+        output_dim = 0
+        for embedder in self._token_embedders.values():
+            output_dim += embedder.get_output_dim()
+        return output_dim
+
+    def forward(self, text_field_input: Dict[str, torch.Tensor]) -> torch.Tensor:
+        if self._token_embedders.keys() != text_field_input.keys():
+            message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
+                                                            str(text_field_input.keys()))
+            raise ConfigurationError(message)
+        embedded_representations = []
+        for key, tensor in text_field_input.items():
+            embedder = self._token_embedders[key]
+            token_vectors = embedder(tensor)
+            embedded_representations.append(token_vectors)
+        return torch.cat(embedded_representations, dim=-1)
+
+    @classmethod
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenEmbedder':
+        token_embedders = {}
+        keys = list(params.keys())
+        for key in keys:
+            embedder_params = params.pop(key)
+            token_embedders[key] = TokenEmbedder.from_params(vocab, embedder_params)
+        params.assert_empty(cls.__name__)
+        return cls(token_embedders)
