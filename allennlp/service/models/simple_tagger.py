@@ -25,7 +25,7 @@ def simple_tagger_model() -> Model:
         train_file.write('snakes###N\tare###V\tanimals###N\t.###N\n')
         train_file.write('birds###N\tare###V\tanimals###N\t.###N\n')
 
-    dataset = SequenceTaggingDatasetReader(train_fn).read()
+    dataset = SequenceTaggingDatasetReader().read(train_fn)
 
     vocab = Vocabulary.from_dataset(dataset)
     dataset.index_instances(vocab)
