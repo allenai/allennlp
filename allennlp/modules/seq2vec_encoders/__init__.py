@@ -5,6 +5,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.experiments import Registry
+from allennlp.modules.seq2vec_encoders.cnn_encoder import CnnEncoder
 from allennlp.modules.seq2vec_encoders.wrapped_pytorch_rnn import WrappedPytorchRnn
 
 class _Wrapper:
