@@ -11,7 +11,7 @@ from allennlp.modules import Seq2VecEncoder
 @Registry.register_seq2vec_encoder("cnn")
 class CnnEncoder(Seq2VecEncoder):
     """
-    CnnEncoder is a combination of multiple convolution layers and max pooling layers.  As a
+    A ``CnnEncoder`` is a combination of multiple convolution layers and max pooling layers.  As a
     :class:`Seq2VecEncoder`, the input to this module is of shape ``(batch_size, num_tokens,
     input_dim)``, and the output is of shape ``(batch_size, output_dim)``.
 
@@ -37,12 +37,12 @@ class CnnEncoder(Seq2VecEncoder):
         After doing convolutions and pooling, we'll project the collected features into a vector of
         this size.  If this value is ``None``, we will just return the result of the max pooling,
         giving an output of shape ``len(ngram_filter_sizes) * num_filters``.
-    num_filters: int
+    num_filters: ``int``
         This is the output dim for each convolutional layer, which is the number of "filters"
         learned by that layer.
-    ngram_filter_sizes: Tuple[int], optional (default=(2, 3, 4, 5))
+    ngram_filter_sizes: ``Tuple[int]``, optional (default=``(2, 3, 4, 5)``)
         This specifies both the number of convolutional layers we will create and their sizes.  The
-        default of (2, 3, 4, 5) will have four convolutional layers, corresponding to encoding
+        default of ``(2, 3, 4, 5)`` will have four convolutional layers, corresponding to encoding
         ngrams of size 2 to 5 with some number of filters.
     conv_layer_activation: str, optional (default='relu')
     """
@@ -84,20 +84,19 @@ class CnnEncoder(Seq2VecEncoder):
 
         # Each convolution layer returns output of size `(batch_size, num_filters, pool_length)`,
         # where `pool_length = num_tokens - ngram_size + 1`.  We then do an activation function
-        # (currently hard-coded to RELU), then do max pooling over each
-        # filter for the whole input sequence.  Because our max pooling is simple, we just use
-        # `torch.max`.  The resultant tensor of has shape `(batch_size, num_conv_layers *
-        # num_filters)`, which then gets projected using the projection layer, if requested.
+        # (currently hard-coded to RELU), then do max pooling over each filter for the whole input
+        # sequence.  Because our max pooling is simple, we just use `torch.max`.  The resultant
+        # tensor of has shape `(batch_size, num_conv_layers * num_filters)`, which then gets
+        # projected using the projection layer, if requested.
         # TODO(mattg): allow specifying the activation function to use here.
         activation = torch.nn.functional.relu
 
-        filter_outputs = [torch.max(activation(convolution_layer(tokens), inplace=True),
-                                    dim=2)[0].squeeze(dim=2)  # not really sure why max isn't squeezing...
+        # Not really sure why max isn't squeezing...
+        filter_outputs = [activation(convolution_layer(tokens), inplace=True).max(dim=2)[0].squeeze(dim=2)
                           for convolution_layer in self._convolution_layers]
 
         # Now we have a list of `num_conv_layers` tensors of shape `(batch_size, num_filters)`.
-        # Concatenating them gives us a tensor of shape
-        # `(batch_size, num_filters * num_conv_layers)`.
+        # Concatenating them gives us a tensor of shape `(batch_size, num_filters * num_conv_layers)`.
         maxpool_output = torch.cat(filter_outputs, dim=1) if len(filter_outputs) > 1 else filter_outputs[0]
 
         if self.projection_layer:
