@@ -177,6 +177,7 @@ class TestRegistry(AllenNlpTestCase):
     # Seq2Vec encoders
 
     def test_registry_has_builtin_seq2vec_encoders(self):
+        assert Registry.get_seq2vec_encoder('cnn').__name__ == 'CnnEncoder'
         # pylint: disable=protected-access
         assert Registry.get_seq2vec_encoder('gru')._module_class.__name__ == 'GRU'
         assert Registry.get_seq2vec_encoder('lstm')._module_class.__name__ == 'LSTM'
