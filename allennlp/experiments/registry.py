@@ -1,11 +1,11 @@
-from typing import Dict, Callable, List, Type
+from typing import Callable, Dict, List, Type
 
 import torch
 import torch.nn.init
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
-from allennlp.modules import TextFieldEmbedder, TokenEmbedder
+from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TokenEmbedder
 from allennlp.training import Regularizer
 
 
@@ -128,9 +128,9 @@ class Registry:
     still get logged with a special ``PARAM`` logging level, so you can still recover a full
     configuration just from examining the log file, even if the default value changes over time.
     """
-    # Throughout this class, in the `get_*` methods, we have unused import statements.  That is
-    # because we use the registry for internal implementations of things, too, and need to be sure
-    # they've been imported so they are in the registry by default.
+    # Throughout this class, in the `get_*` and `list_*` methods, we have unused import statements.
+    # That is because we use the registry for internal implementations of things, too, and need to
+    # be sure they've been imported so they are in the registry by default.
 
     #########################
     # Data-related registries
@@ -256,7 +256,6 @@ class Registry:
 
     # Initializers
 
-    # pylint: disable=line-too-long
     _initializers = {
             "normal": torch.nn.init.normal,
             "uniform": torch.nn.init.uniform,
@@ -347,3 +346,55 @@ class Registry:
         """
         import allennlp.modules.text_field_embedders  # pylint: disable=unused-variable
         return cls._text_field_embedders[name]
+
+    # Seq2Seq Encoders
+
+    _seq2seq_encoders = {}  # type: Dict[str, Type[Seq2SeqEncoder]]
+    #: This decorator adds a :class:`Seq2SeqEncoder` to the registry, with the given name.
+    register_seq2seq_encoder = _registry_decorator("seq2seq encoder", _seq2seq_encoders)
+
+    @classmethod
+    def list_seq2seq_encoders(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`Seq2SeqEncoder` names.  These take a
+        tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a tensor of shape
+        ``(batch_size, sequence_length, output_dim)``.
+        """
+        import allennlp.modules.seq2seq_encoders  # pylint: disable=unused-variable
+        return list(cls._seq2seq_encoders.keys())
+
+    @classmethod
+    def get_seq2seq_encoder(cls, name: str) -> Type[Seq2SeqEncoder]:
+        """
+        Returns the :class:`Seq2SeqEncoder` that has been registered with ``name``.  This module
+        must take a tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a
+        tensor of shape ``(batch_size, sequence_length, output_dim)``.
+        """
+        import allennlp.modules.seq2seq_encoders  # pylint: disable=unused-variable
+        return cls._seq2seq_encoders[name]
+
+    # Seq2Vec Encoders
+
+    _seq2vec_encoders = {}  # type: Dict[str, Type[Seq2VecEncoder]]
+    #: This decorator adds a :class:`Seq2VecEncoder` to the registry, with the given name.
+    register_seq2vec_encoder = _registry_decorator("seq2vec encoder", _seq2vec_encoders)
+
+    @classmethod
+    def list_seq2vec_encoders(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`Seq2VecEncoder` names.  These take a
+        tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a tensor of shape
+        ``(batch_size, output_dim)``.
+        """
+        import allennlp.modules.seq2vec_encoders  # pylint: disable=unused-variable
+        return list(cls._seq2vec_encoders.keys())
+
+    @classmethod
+    def get_seq2vec_encoder(cls, name: str) -> Type[Seq2VecEncoder]:
+        """
+        Returns the :class:`Seq2VecEncoder` that has been registered with ``name``.  This module
+        must take a tensor of shape ``(batch_size, sequence_length, input_dim)`` and return a
+        tensor of shape ``(batch_size, output_dim)``.
+        """
+        import allennlp.modules.seq2vec_encoders  # pylint: disable=unused-variable
+        return cls._seq2vec_encoders[name]

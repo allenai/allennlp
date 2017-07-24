@@ -117,7 +117,8 @@ class Params(MutableMapping):
         default = choices[0] if default_to_first_choice else self.DEFAULT
         value = self.pop(key, default)
         if value not in choices:
-            message = '%s not in acceptable choices for %s: %s' % (value, self.history, str(choices))
+            key_str = self.history + key
+            message = '%s not in acceptable choices for %s: %s' % (value, key_str, str(choices))
             raise ConfigurationError(message)
         return value
 

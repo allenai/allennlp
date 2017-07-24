@@ -31,8 +31,12 @@ def simple_tagger_model() -> Model:
                             "embedding_dim": 5
                             }
                     },
-            "hidden_size": 7,
-            "num_layers": 2
+            "stacked_encoder": {
+                    "type": "lstm",
+                    "input_size": 5,
+                    "hidden_size": 7,
+                    "num_layers": 2
+                    }
             })
     model = SimpleTagger.from_params(vocab, params)
     tokenizer = WordTokenizer()
