@@ -27,3 +27,7 @@ codecov
 
 # Required to run sanic tests
 aiohttp
+
+# Required to run ipynb tests
+nbformat
+nbconvert
