@@ -2,6 +2,7 @@
 from copy import deepcopy
 
 import numpy
+from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
@@ -24,13 +25,15 @@ class TestTokenCharactersEncoder(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("4", "token_characters")
         params = Params({
                 "embedding": {
-                        "embedding_dim": 2
+                        "embedding_dim": 2,
+                        "vocab_namespace": "token_characters"
                         },
                 "encoder": {
-                        "type": "lstm",
-                        "input_size": 2,
-                        "hidden_size": 3,
-                        "num_layers": 1
+                        "type": "cnn",
+                        "embedding_dim": 2,
+                        "num_filters": 4,
+                        "ngram_filter_sizes": [1, 2],
+                        "output_dim": 3
                         }
                 })
         self.encoder = TokenCharactersEncoder.from_params(self.vocab, deepcopy(params))
@@ -50,6 +53,7 @@ class TestTokenCharactersEncoder(AllenNlpTestCase):
         inputs = Variable(torch.from_numpy(numpy_tensor))
         encoder_output = self.encoder(inputs)
         reshaped_input = inputs.view(12, 7)
-        reshaped_manual_output = self.inner_encoder(self.embedding(reshaped_input))
-        manual_output = reshaped_manual_output.view(3, 4, 7)
+        embedded = self.embedding(reshaped_input)
+        reshaped_manual_output = self.inner_encoder(embedded)
+        manual_output = reshaped_manual_output.view(3, 4, 3)
         assert_almost_equal(encoder_output.data.numpy(), manual_output.data.numpy())
