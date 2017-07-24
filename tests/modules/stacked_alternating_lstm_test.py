@@ -25,6 +25,6 @@ class TestStackedAlternatingLstm(AllenNlpTestCase):
         lstm = StackedAlternatingLstm(3, 7, 8)
         for i, layer in enumerate(lstm.lstm_layers):
             if i % 2 == 0:
-                assert layer.direction == "forward"
+                assert layer.go_forward
             else:
-                assert layer.direction == "backward"
+                assert not layer.go_forward

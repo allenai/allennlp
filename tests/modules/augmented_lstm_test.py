@@ -41,7 +41,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
     def test_variable_length_sequences_run_backward_return_correctly_padded_outputs(self):
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
         tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.tolist(), batch_first=True)
-        lstm = AugmentedLstm(10, 11, direction="backward")
+        lstm = AugmentedLstm(10, 11, go_forward=False)
         output = lstm(tensor)
         output_sequence, _ = pad_packed_sequence(output, batch_first=True)
 

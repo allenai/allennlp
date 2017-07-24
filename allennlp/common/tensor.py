@@ -20,14 +20,8 @@ def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
     A torch.LongTensor of shape (batch_size,) representing the lengths
     of the sequences in the batch.
     """
-    # Flip mask to make padded elements equal to one.
-    inverse_mask = mask == 0
-    # Number of padded elements in sequence.
-    num_padded_elements = inverse_mask.sum(1)
-    # Sequence length is max sequence length minus
-    # the number of padded elements.
-    length_indices = mask.size()[1] - num_padded_elements
-    return length_indices.squeeze().long()
+    return mask.sum(-1).squeeze()
+
 
 
 def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.LongTensor):
@@ -63,6 +57,9 @@ def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.Long
 
 def get_dropout_mask(dropout_probability: float, shape: List[int]):
     """
+    Computes an element-wise dropout mask for an arbitrarily sized tensor, where
+    each element in the mask is dropped out with probability dropout_probability.
+
     Parameters
     ----------
     dropout_probability: float, Probability of dropping a dimension of the input.
@@ -71,8 +68,8 @@ def get_dropout_mask(dropout_probability: float, shape: List[int]):
     Return
     ------
     A torch.FloatTensor consisting of the binary mask scaled by 1/ (1 - dropout_probability).
-    (this scaling ensures expected values and variances of the output of applying this mask
-     and the original tensor are the same).
+    This scaling ensures expected values and variances of the output of applying this mask
+     and the original tensor are the same.
     """
     binary_mask = torch.rand(shape) > dropout_probability
     # Scale mask by 1/keep_prob to preserve output statistics.
