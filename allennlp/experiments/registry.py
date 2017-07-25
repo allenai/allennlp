@@ -53,6 +53,7 @@ def _get_keys_with_default(registry_dict: Dict[str, Type],
 
 
 class Registry:
+    # pylint: disable=too-many-public-methods
     """
     The ``Registry`` is where we store mappings from names that appear in JSON configuration files
     to classes that we can instantiate.  This class underpins the whole ``from_params()`` paradigm

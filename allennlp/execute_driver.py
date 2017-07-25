@@ -112,6 +112,6 @@ def execute_driver(param_dict: Dict[str, any],
         if unused_driver_key:
             logger.warning("driver_override: %s passed to execute_driver;"
                            " ignoring 'operation' key present in params: %s",
-                           (driver_operation_override, unused_driver_key))
+                           driver_operation_override, unused_driver_key)
         driver = Registry.get_driver(driver_operation_override).from_params(params)
     driver.run()
