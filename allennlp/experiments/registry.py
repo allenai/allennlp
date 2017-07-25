@@ -7,7 +7,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
 from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TokenEmbedder
 from allennlp.training import Regularizer
-from allennlp.experiments import Driver
+from allennlp.experiments.driver import Driver
 
 
 def _registry_decorator(registry_name: str, registry_dict: Dict[str, Type]):
