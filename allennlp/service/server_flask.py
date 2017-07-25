@@ -1,9 +1,12 @@
-from allennlp.service.models import models
+# TODO(joelgrus): don't load all models, specify in some configuration
+from allennlp.service.servable import ServableCollection
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_url_path='')  # pylint: disable=invalid-name
 
+# TODO(joelgrus): make this configurable
+servables = ServableCollection.default()  # pylint: disable=invalid-name
 
 @app.route('/')
 def root() -> Response:
@@ -29,14 +32,13 @@ def handle_unknown_model(error: UnknownModel) -> Response:
 @app.route('/predict/<model_name>', methods=['POST'])
 def predict(model_name: str) -> Response:
     """make a prediction using the specified model and return the results"""
-    model_fn = models.get(model_name.lower())
-    if model_fn is None:
+    model = servables.get(model_name.lower())
+    if model is None:
         raise UnknownModel(model_name)
-    model = model_fn()
 
     # TODO(joelgrus): error handling
     data = request.get_json()
-    prediction = model(data)
+    prediction = model.predict_json(data)
 
     return jsonify(prediction)
 
@@ -44,4 +46,4 @@ def predict(model_name: str) -> Response:
 @app.route('/models')
 def list_models() -> Response:
     """list the available models"""
-    return jsonify({"models": list(models.keys())})
+    return jsonify({"models": servables.list_available()})
