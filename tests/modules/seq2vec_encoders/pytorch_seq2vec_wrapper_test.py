@@ -4,23 +4,23 @@ import torch
 from torch.autograd import Variable
 from torch.nn import LSTM
 
-from allennlp.modules.seq2seq_encoders import WrappedPytorchRnn
+from allennlp.modules.seq2vec_encoders import PytorchSeq2VecWrapper
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestWrappedPytorchSeq2SeqRnn(AllenNlpTestCase):
+class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
     def test_get_output_dim_is_correct(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7)
-        encoder = WrappedPytorchRnn(lstm)
+        encoder = PytorchSeq2VecWrapper(lstm)
         assert encoder.get_output_dim() == 14
         lstm = LSTM(bidirectional=False, num_layers=3, input_size=2, hidden_size=7)
-        encoder = WrappedPytorchRnn(lstm)
+        encoder = PytorchSeq2VecWrapper(lstm)
         assert encoder.get_output_dim() == 7
 
     def test_forward_pulls_out_correct_tensor(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7)
-        encoder = WrappedPytorchRnn(lstm)
+        encoder = PytorchSeq2VecWrapper(lstm)
         input_tensor = Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
         lstm_output = lstm(input_tensor)
         encoder_output = encoder(input_tensor)
-        assert_almost_equal(encoder_output.data.numpy(), lstm_output[0].data.numpy())
+        assert_almost_equal(encoder_output.data.numpy(), lstm_output[0].data.numpy()[:, :, -1])
