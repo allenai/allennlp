@@ -1,5 +1,5 @@
 import torch
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from torch.nn.utils.rnn import pack_padded_sequence
 
 from allennlp.common.tensor import sort_batch_by_length
 from allennlp.modules import Seq2VecEncoder
@@ -27,18 +27,18 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._module.hidden_size * (2 if self._module.bidirectional else 1)
 
-    def forward(self,
+    def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
-                sequence_lengths: torch.LongTensor = None) -> torch.Tensor:  # pylint: disable=arguments-differ
+                sequence_lengths: torch.LongTensor = None) -> torch.Tensor:
 
         if sequence_lengths is None:
             return self._module(inputs)[0][:, :, -1]
-        sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs, sequence_lengths)
+        sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
+                                                                                           sequence_lengths)
         packed_sequence_input = pack_padded_sequence(sorted_inputs, sorted_sequence_lengths, batch_first=True)
 
         # Actually call the module on the sorted PackedSequence.
-        packed_sequence_output, state = self._module(packed_sequence_input)
-        unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
+        _, state = self._module(packed_sequence_input)
 
         # Deal with the fact the LSTM state is a tuple of (state, memory)
         if isinstance(state, tuple):
