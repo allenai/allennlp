@@ -29,7 +29,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             return self._module(inputs)[0]
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
-        packed_sequence_input = pack_padded_sequence(sorted_inputs, sorted_sequence_lengths, batch_first=True)
+        packed_sequence_input = pack_padded_sequence(sorted_inputs,
+                                                     sorted_sequence_lengths.tolist(),
+                                                     batch_first=True)
 
         # Actually call the module on the sorted PackedSequence.
         packed_sequence_output, _ = self._module(packed_sequence_input)
