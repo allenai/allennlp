@@ -27,12 +27,12 @@ class SimpleTaggerServable(Servable):
         self.dataset.index_instances(self.vocab)
 
         self.params = Params({
-            "text_field_embedder": {
-                "tokens": {
-                    "type": "embedding",
-                "embedding_dim": 5
-                                }
-                        },
+                "text_field_embedder": {
+                        "tokens": {
+                                "type": "embedding",
+                                "embedding_dim": 5
+                        }
+                },
                 "stacked_encoder": {
                         "type": "lstm",
                         "input_size": 5,
