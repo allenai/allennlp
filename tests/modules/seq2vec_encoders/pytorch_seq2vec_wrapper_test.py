@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
 from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
@@ -8,14 +9,15 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from allennlp.modules.seq2vec_encoders import PytorchSeq2VecWrapper
 from allennlp.common.tensor import sort_batch_by_length
 from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.checks import ConfigurationError
 
 
 class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
     def test_get_output_dim_is_correct(self):
-        lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7)
+        lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2VecWrapper(lstm)
         assert encoder.get_output_dim() == 14
-        lstm = LSTM(bidirectional=False, num_layers=3, input_size=2, hidden_size=7)
+        lstm = LSTM(bidirectional=False, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2VecWrapper(lstm)
         assert encoder.get_output_dim() == 7
 
@@ -68,3 +70,8 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         reshaped_state = sorted_transposed_state[:, -2:, :].contiguous().view(-1, 14)
         encoder_output = encoder(input_tensor, sequence_lengths)
         assert_almost_equal(encoder_output.data.numpy(), reshaped_state.data.numpy())
+
+    def test_wrapper_raises_if_batch_first_is_false(self):
+        with pytest.raises(ConfigurationError):
+            lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7)
+            _ = PytorchSeq2VecWrapper(lstm)

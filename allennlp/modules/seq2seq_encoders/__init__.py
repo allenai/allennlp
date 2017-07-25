@@ -3,7 +3,6 @@ from typing import Type
 import torch
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.experiments import Registry
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
 
@@ -40,9 +39,6 @@ class _Seq2SeqWrapper:
         return self.from_params(Params(kwargs))
 
     def from_params(self, params: Params) -> PytorchSeq2SeqWrapper:
-        if not params.pop('batch_first', True):
-            raise ConfigurationError("Our encoder semantics assumes batch is always first!")
-        params['batch_first'] = True
         module = self._module_class(**params.as_dict())
         return PytorchSeq2SeqWrapper(module)
 

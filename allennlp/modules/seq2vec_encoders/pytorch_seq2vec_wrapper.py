@@ -3,6 +3,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 from allennlp.common.tensor import sort_batch_by_length
 from allennlp.modules import Seq2VecEncoder
+from allennlp.common.checks import ConfigurationError
 
 
 class PytorchSeq2VecWrapper(Seq2VecEncoder):
@@ -23,6 +24,8 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     def __init__(self, module: torch.nn.modules.RNNBase) -> None:
         super(PytorchSeq2VecWrapper, self).__init__()
         self._module = module
+        if not self._module.batch_first:
+            raise ConfigurationError("Our encoder semantics assumes batch is always first!")
 
     def get_output_dim(self) -> int:
         return self._module.hidden_size * (2 if self._module.bidirectional else 1)
