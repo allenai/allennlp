@@ -1,3 +1,5 @@
+# pylint: disable=no-self-use,invalid-name
+
 import json
 import os
 import tempfile
