@@ -44,5 +44,3 @@ class TestApp(TestCase):
         assert len(available) == 2
         assert "test1" in available
         assert "test2" in available
-
-
