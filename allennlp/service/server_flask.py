@@ -1,4 +1,3 @@
-# TODO(joelgrus): don't load all models, specify in some configuration
 from allennlp.service.servable import ServableCollection
 
 from flask import Flask, Response, jsonify, request, send_from_directory

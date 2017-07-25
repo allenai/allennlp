@@ -1,4 +1,3 @@
-# TODO(joelgrus): don't load all models, specify in some configuration
 from allennlp.service.servable import ServableCollection
 
 from sanic import Sanic, response, request
