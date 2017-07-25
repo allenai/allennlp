@@ -140,6 +140,7 @@ class TestRegistry(AllenNlpTestCase):
 
     def test_registry_has_builtin_token_embedders(self):
         assert Registry.get_token_embedder("embedding").__name__ == 'Embedding'
+        assert Registry.get_token_embedder("character_encoding").__name__ == 'TokenCharactersEncoder'
 
     def test_token_embedders_use_correct_fields(self):
         self.registry_helper(Registry.list_token_embedders,
@@ -159,3 +160,32 @@ class TestRegistry(AllenNlpTestCase):
                              Registry.register_text_field_embedder,
                              Registry._text_field_embedders,  # pylint: disable=protected-access
                              'default_text_field_embedder')
+
+    # Seq2Seq encoders
+
+    def test_registry_has_builtin_seq2seq_encoders(self):
+        # pylint: disable=protected-access
+        assert Registry.get_seq2seq_encoder('gru')._module_class.__name__ == 'GRU'
+        assert Registry.get_seq2seq_encoder('lstm')._module_class.__name__ == 'LSTM'
+        assert Registry.get_seq2seq_encoder('rnn')._module_class.__name__ == 'RNN'
+
+    def test_seq2seq_encoders_use_correct_fields(self):
+        self.registry_helper(Registry.list_seq2seq_encoders,
+                             Registry.get_seq2seq_encoder,
+                             Registry.register_seq2seq_encoder,
+                             Registry._seq2seq_encoders)  # pylint: disable=protected-access
+
+    # Seq2Vec encoders
+
+    def test_registry_has_builtin_seq2vec_encoders(self):
+        assert Registry.get_seq2vec_encoder('cnn').__name__ == 'CnnEncoder'
+        # pylint: disable=protected-access
+        assert Registry.get_seq2vec_encoder('gru')._module_class.__name__ == 'GRU'
+        assert Registry.get_seq2vec_encoder('lstm')._module_class.__name__ == 'LSTM'
+        assert Registry.get_seq2vec_encoder('rnn')._module_class.__name__ == 'RNN'
+
+    def test_seq2vec_encoders_use_correct_fields(self):
+        self.registry_helper(Registry.list_seq2vec_encoders,
+                             Registry.get_seq2vec_encoder,
+                             Registry.register_seq2vec_encoder,
+                             Registry._seq2vec_encoders)  # pylint: disable=protected-access

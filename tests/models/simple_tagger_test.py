@@ -31,8 +31,12 @@ class SimpleTaggerTest(AllenNlpTestCase):
                                 "embedding_dim": 5
                                 }
                         },
-                "hidden_size": 7,
-                "num_layers": 2
+                "stacked_encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2
+                        }
                 })
 
         self.model = SimpleTagger.from_params(self.vocab, params)

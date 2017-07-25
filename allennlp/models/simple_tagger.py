@@ -2,13 +2,12 @@ from typing import Dict, Any
 
 import torch
 from torch.nn.modules.linear import Linear
-from torch.nn.modules import LSTM
 import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
-from allennlp.modules import TimeDistributed, TextFieldEmbedder
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.training import Model
 
 
@@ -23,30 +22,24 @@ class SimpleTagger(Model):
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
         Used to embed the ``tokens`` ``TextField`` we get as input to the model.
-    hidden_size : int, optional (default = 200)
-        The dimensionality of the hidden state of the LSTM encoder.
-    num_layers : int, optional (default = 2)
-        The number of stacked LSTM encoders to use.
+    stacked_encoder : ``Seq2SeqEncoder``
+        The encoder (with its own internal stacking) that we will use in between embedding tokens
+        and predicting output tags.
     """
 
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 hidden_size: int = 200,
-                 num_layers: int = 2) -> None:
+                 stacked_encoder: Seq2SeqEncoder) -> None:
         super(SimpleTagger, self).__init__()
 
         self.vocab = vocab
         self.text_field_embedder = text_field_embedder
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
         self.num_classes = self.vocab.get_vocab_size("tags")
+        self.stacked_encoder = stacked_encoder
+        self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
+                                                           self.num_classes))
 
         # TODO(Mark): support masking once utility functions are merged.
-        self.stacked_encoders = LSTM(self.text_field_embedder.get_output_dim(),
-                                     self.hidden_size,
-                                     self.num_layers,
-                                     batch_first=True)
-        self.tag_projection_layer = TimeDistributed(Linear(self.hidden_size, self.num_classes))
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
     # pylint: disable=arguments-differ
@@ -82,7 +75,7 @@ class SimpleTagger(Model):
         """
         embedded_text_input = self.text_field_embedder(tokens)
         batch_size = embedded_text_input.size()[0]
-        encoded_text, _ = self.stacked_encoders(embedded_text_input)
+        encoded_text = self.stacked_encoder(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)
         reshaped_log_probs = logits.view(-1, self.num_classes)
@@ -141,10 +134,8 @@ class SimpleTagger(Model):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SimpleTagger':
-        hidden_size = params.pop("hidden_size", 200)
-        num_layers = params.pop("num_layers", 2)
         text_field_embedder = TextFieldEmbedder.from_params(vocab, params.pop("text_field_embedder"))
+        stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
-                   hidden_size=hidden_size,
-                   num_layers=num_layers)
+                   stacked_encoder=stacked_encoder)
