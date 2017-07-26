@@ -22,7 +22,7 @@ class TestApp(AllenNlpTestCase):
 
         _, response = client.get("/models")
         data = json.loads(response.text)
-        assert "reverse" in set(data["models"])
+        assert "reverser" in set(data["models"])
 
     def test_unknown_model(self):
         app.testing = True
@@ -35,10 +35,10 @@ class TestApp(AllenNlpTestCase):
     def test_known_model(self):
         app.testing = True
         client = app.test_client
-        _, response = client.post("/predict/reverse",
+        _, response = client.post("/predict/reverser",
                                   json={"input": "not broken"})
         data = json.loads(response.text)
         assert set(data.keys()) == {"input", "model_name", "output"}
-        assert data["model_name"] == "reverse"
+        assert data["model_name"] == "reverser"
         assert data["input"] == "not broken"
         assert data["output"] == "nekorb ton"
