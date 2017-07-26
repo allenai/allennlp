@@ -45,9 +45,11 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         _, state = lstm(packed_sequence)
         # Transpose output state, extract the last forward and backward states and
         # reshape to be of dimension (batch_size, 2 * hidden_size).
-        reshaped_state = state[0].transpose(0, 1)[:, -2:, :].contiguous().view(-1, 14)
+        reshaped_state = state[0].transpose(0, 1)[:, -2:, :].contiguous()
+        explicitly_concatenated_state = torch.cat([reshaped_state[:, 0, :].squeeze(1),
+                                                   reshaped_state[:, 1, :].squeeze(1)], -1)
         encoder_output = encoder(input_tensor, sequence_lengths)
-        assert_almost_equal(encoder_output.data.numpy(), reshaped_state.data.numpy())
+        assert_almost_equal(encoder_output.data.numpy(), explicitly_concatenated_state.data.numpy())
 
     def test_forward_pulls_out_correct_tensor_with_unsorted_batches(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
@@ -67,9 +69,11 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         # Transpose output state, extract the last forward and backward states and
         # reshape to be of dimension (batch_size, 2 * hidden_size).
         sorted_transposed_state = state[0].transpose(0, 1)[restoration_indices]
-        reshaped_state = sorted_transposed_state[:, -2:, :].contiguous().view(-1, 14)
+        reshaped_state = sorted_transposed_state[:, -2:, :].contiguous()
+        explicitly_concatenated_state = torch.cat([reshaped_state[:, 0, :].squeeze(1),
+                                                   reshaped_state[:, 1, :].squeeze(1)], -1)
         encoder_output = encoder(input_tensor, sequence_lengths)
-        assert_almost_equal(encoder_output.data.numpy(), reshaped_state.data.numpy())
+        assert_almost_equal(encoder_output.data.numpy(), explicitly_concatenated_state.data.numpy())
 
     def test_wrapper_raises_if_batch_first_is_false(self):
         with pytest.raises(ConfigurationError):
