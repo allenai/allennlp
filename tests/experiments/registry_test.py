@@ -136,6 +136,26 @@ class TestRegistry(AllenNlpTestCase):
                              Registry._initializers,  # pylint: disable=protected-access
                              'default_initializer')
 
+    # Optimizers
+
+    def test_registry_has_builtin_optimizers(self):
+        all_optimizers = {
+            "adam": torch.optim.Adam,
+            "adagrad": torch.optim.Adagrad,
+            "adadelta": torch.optim.Adadelta,
+            "sgd": torch.optim.SGD,
+            "rmsprop": torch.optim.RMSprop,
+        }
+        for key, value in all_optimizers.items():
+            assert Registry.get_optimizer(key) == value
+
+    def test_optimizers_use_correct_fields(self):
+        self.registry_helper(Registry.list_optimizers,
+                             Registry.get_optimizer,
+                             Registry.register_optimizer,
+                             Registry._optimizers,  # pylint: disable=protected-access
+                             'default_optimizer')
+
     # Token embedders
 
     def test_registry_has_builtin_token_embedders(self):

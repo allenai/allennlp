@@ -289,6 +289,35 @@ class Registry:
         """
         return cls._initializers[name]
 
+    # Optimizers
+
+    _optimizers = {
+            "adam": torch.optim.Adam,
+            "adagrad": torch.optim.Adagrad,
+            "adadelta": torch.optim.Adadelta,
+            "sgd": torch.optim.SGD,
+            "rmsprop": torch.optim.RMSprop,
+    }
+    # This decorator adds an ``optimizer`` to the registry, with the given name.
+    register_optimizer = _registry_decorator("optimizer", _optimizers)
+    default_optimizer = "adam"
+
+    @classmethod
+    def list_optimizers(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered optimizer names.
+        """
+        return _get_keys_with_default(cls._optimizers, "optimizer", cls.default_optimizer)
+
+    @classmethod
+    def get_optimizer(cls, name) -> torch.optim.Optimizer:
+        """
+        Returns the optimizer that has been registered with ``name``.
+        """
+        return cls._optimizers[name]
+
+
+
     ###########################
     # Module-related registries
     ###########################

@@ -3,14 +3,7 @@ from typing import List, Union
 import torch
 
 from allennlp.common.params import Params  # pylint: disable=unused-import
-
-optimizers = {  # pylint: disable=invalid-name
-        "adam": torch.optim.Adam,
-        "adagrad": torch.optim.Adagrad,
-        "adadelta": torch.optim.Adadelta,
-        "sgd": torch.optim.SGD,
-        "rmsprop": torch.optim.RMSprop,
-}
+from allennlp.experiments import Registry
 
 
 def get_optimizer_from_params(model_parameters: List[torch.Tensor],
@@ -30,6 +23,6 @@ def get_optimizer_from_params(model_parameters: List[torch.Tensor],
         optimizer = params
         params = Params({})
     else:
-        optimizer = params.pop_choice("type", list(optimizers.keys()),
+        optimizer = params.pop_choice("type", Registry.list_optimizers(),
                                       default_to_first_choice=True)
-    return optimizers[optimizer](model_parameters, **params.as_dict())
+    return Registry.get_optimizer(optimizer)(model_parameters, **params.as_dict())
