@@ -6,10 +6,11 @@ import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.modules.similarity_functions import LinearSimilarity
 from allennlp.testing import AllenNlpTestCase
 
-class TestLinearSimilarityFunction:
+class TestLinearSimilarityFunction(AllenNlpTestCase):
     # pylint: disable=protected-access
     def test_weights_are_correct_sizes(self):
         linear = LinearSimilarity(tensor_1_dim=3, tensor_2_dim=6, combination='x,y')
@@ -80,3 +81,12 @@ class TestLinearSimilarityFunction:
         result = linear(a_vectors, b_vectors).data.numpy()
         assert result.shape == (2,)
         assert_almost_equal(result, [.5, -.7])
+
+    def test_can_construct_from_params(self):
+        params = Params({
+                'tensor_1_dim': 4,
+                'tensor_2_dim': 4,
+                'combination': 'x,y,x*y,y-x'
+                })
+        linear = LinearSimilarity.from_params(params)
+        assert list(linear._weight_vector.size()) == [16]

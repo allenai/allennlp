@@ -5,6 +5,7 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.modules.similarity_functions import CosineSimilarity
 from allennlp.testing import AllenNlpTestCase
 
@@ -36,3 +37,6 @@ class TestCosineSimilarityFunction(AllenNlpTestCase):
         # We're cutting this down here with a random partial index, so that if this test fails the
         # output isn't so huge and slow.
         assert_almost_equal(result[2, 3, 1], desired_result[2, 3, 1])
+
+    def test_can_construct_from_params(self):
+        assert CosineSimilarity.from_params(Params({})).__class__.__name__ == 'CosineSimilarity'

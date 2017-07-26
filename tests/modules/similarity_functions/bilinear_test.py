@@ -6,6 +6,7 @@ import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.modules.similarity_functions import BilinearSimilarity
 from allennlp.testing import AllenNlpTestCase
 
@@ -42,3 +43,11 @@ class TestBilinearSimilarityFunction(AllenNlpTestCase):
         expected_result = numpy.dot(numpy.dot(numpy.transpose(a_vectors[3, 2, 1, 3]), weights),
                                     b_vectors[3, 2, 1, 3])
         assert_almost_equal(result[3, 2, 1, 3], expected_result, decimal=5)
+
+    def test_can_construct_from_params(self):
+        params = Params({
+                'tensor_1_dim': 3,
+                'tensor_2_dim': 4
+                })
+        bilinear = BilinearSimilarity.from_params(params)
+        assert list(bilinear._weight_matrix.size()) == [3, 4]
