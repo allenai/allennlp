@@ -127,7 +127,7 @@ class SpacyWordSplitter(WordSplitter):
 
     @overrides
     def split_words(self, sentence: str) -> List[str]:
-        return [str(token.lower_) for token in self.en_nlp.tokenizer(sentence)]
+        return [str(token) for token in self.en_nlp.tokenizer(sentence)]
 
 
 word_splitters['simple'] = SimpleWordSplitter
