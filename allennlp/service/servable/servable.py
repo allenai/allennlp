@@ -1,5 +1,7 @@
 from typing import Dict, Any, Optional, List
 
+from allennlp.common.params import Params
+
 JSONDict = Dict[str, Any]  # pylint: disable=invalid-name
 
 
@@ -14,7 +16,7 @@ class Servable:
     # TODO(joelgrus): add a predict_tensor method maybe?
 
     @classmethod
-    def from_config(cls, config: JSONDict = None) -> 'Servable':  # pylint: disable=unused-argument
+    def from_params(cls, params: Params) -> 'Servable':  # pylint: disable=unused-argument
         # default implementation calls no-argument constructor, you probably want to override this
         return cls()
 
@@ -54,6 +56,6 @@ class ServableCollection:
         return ServableCollection(all_models)
 
     @staticmethod
-    def from_config(config: JSONDict = None) -> 'ServableCollection':  # pylint: disable=unused-argument
+    def from_params(params: Params) -> 'ServableCollection':  # pylint: disable=unused-argument
         # TODO(joelgrus) implement this
         return ServableCollection.default()
