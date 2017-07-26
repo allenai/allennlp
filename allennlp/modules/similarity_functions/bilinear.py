@@ -43,10 +43,22 @@ class BilinearSimilarity(SimilarityFunction):
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
         # The '@' operator here is torch.matmul, but that's only available in pytorch-0.2.
         # TODO(mattg): switch to using torch.matmul when a version of pytorch with it is released.
-        # I think it's more clear and less magical.
+        # I think it's more clear and less magical, and won't require us to have to special case
+        # the higher-order version.
         # Also, broadcasting this simple addition is only available in pytorch-0.2.  When that's
         # ready, change this back to `(dot_product + self._bias)`.
-        intermediate = tensor_1 @ self._weight_matrix
+        if tensor_1.dim() <= 2:
+            intermediate = tensor_1 @ self._weight_matrix
+        else:
+            view_args = [-1] + list(tensor_1.size()[-2:])
+            reshaped_tensor = tensor_1.view(*view_args)
+            unsqueezed_weight = self._weight_matrix.unsqueeze(0)
+            reshaped_weight = unsqueezed_weight.expand(reshaped_tensor.size()[0],
+                                                       self._weight_matrix.size()[0],
+                                                       self._weight_matrix.size()[1])
+            reshaped_intermediate = reshaped_tensor.bmm(reshaped_weight)
+            view_args = tensor_1.size()[:-1] + self._weight_matrix.size()[1:]
+            intermediate = reshaped_intermediate.view(*view_args)
         result = (intermediate * tensor_2).sum(dim=-1).squeeze(dim=-1)
         return self._activation(result + self._bias.expand_as(result))
 

@@ -31,11 +31,13 @@ class TestBilinearSimilarityFunction(AllenNlpTestCase):
         # pylint: disable=protected-access
         bilinear = BilinearSimilarity(4, 7)
         weights = numpy.random.rand(4, 7)
-        bilinear._weight_matrix = Parameter(torch.from_numpy(weights))
-        bilinear._bias = Parameter(torch.from_numpy(numpy.asarray([0])))
-        a_vectors = Variable(torch.from_numpy(numpy.random.rand(5, 4, 3, 6, 4)))
-        b_vectors = Variable(torch.from_numpy(numpy.random.rand(5, 4, 3, 6, 7)))
-        result = bilinear(a_vectors, b_vectors).data.numpy()
+        bilinear._weight_matrix = Parameter(torch.from_numpy(weights).float())
+        bilinear._bias = Parameter(torch.from_numpy(numpy.asarray([0])).float())
+        a_vectors = numpy.random.rand(5, 4, 3, 6, 4)
+        b_vectors = numpy.random.rand(5, 4, 3, 6, 7)
+        a_variables = Variable(torch.from_numpy(a_vectors).float())
+        b_variables = Variable(torch.from_numpy(b_vectors).float())
+        result = bilinear(a_variables, b_variables).data.numpy()
         assert result.shape == (5, 4, 3, 6)
         expected_result = numpy.dot(numpy.dot(numpy.transpose(a_vectors[3, 2, 1, 3]), weights),
                                     b_vectors[3, 2, 1, 3])

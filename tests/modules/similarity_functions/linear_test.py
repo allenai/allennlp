@@ -18,22 +18,23 @@ class TestLinearSimilarityFunction:
 
     def test_forward_does_a_weighted_product(self):
         linear = LinearSimilarity(3, 1, combination='x,y')
-        linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5], [2.0], [-1.0]]))
+        linear._weight_vector = Parameter(torch.FloatTensor([-.3, .5, 2.0, -1.0]))
         linear._bias = Parameter(torch.FloatTensor([.1]))
         a_vectors = torch.FloatTensor([[[1, 1, 1], [-1, -1, 0]]])
         b_vectors = torch.FloatTensor([[[0], [1]]])
-        result = linear(Variable(a_vectors), Variable(b_vectors))
+        result = linear(Variable(a_vectors), Variable(b_vectors)).data.numpy()
         assert result.shape == (1, 2,)
         assert_almost_equal(result, [[2.3, -1.1]])
 
     def test_forward_works_with_higher_order_tensors(self):
         linear = LinearSimilarity(7, 7, combination='x,y')
-        weights = numpy.random.rand(14, 1)
-        linear._weight_vector = Parameter(torch.from_numpy(weights))
+        weights = numpy.random.rand(14)
+        linear._weight_vector = Parameter(torch.from_numpy(weights).float())
         linear._bias = Parameter(torch.FloatTensor([0.]))
         a_vectors = numpy.random.rand(5, 4, 3, 6, 7)
         b_vectors = numpy.random.rand(5, 4, 3, 6, 7)
-        result = linear(Variable(torch.from_numpy(a_vectors)), Variable(torch.from_numpy(b_vectors)))
+        result = linear(Variable(torch.from_numpy(a_vectors).float()),
+                        Variable(torch.from_numpy(b_vectors).float()))
         result = result.data.numpy()
         assert result.shape == (5, 4, 3, 6)
         combined_vectors = numpy.concatenate([a_vectors[3, 2, 1, 3, :], b_vectors[3, 2, 1, 3, :]])
@@ -42,7 +43,7 @@ class TestLinearSimilarityFunction:
 
     def test_forward_works_with_multiply_combinations(self):
         linear = LinearSimilarity(2, 2, combination='x*y')
-        linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5]]))
+        linear._weight_vector = Parameter(torch.FloatTensor([-.3, .5]))
         linear._bias = Parameter(torch.FloatTensor([0]))
         a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
         b_vectors = Variable(torch.FloatTensor([[1, 0], [0, 1]]))
@@ -52,7 +53,7 @@ class TestLinearSimilarityFunction:
 
     def test_forward_works_with_divide_combinations(self):
         linear = LinearSimilarity(2, 2, combination='x/y')
-        linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5]]))
+        linear._weight_vector = Parameter(torch.FloatTensor([-.3, .5]))
         linear._bias = Parameter(torch.FloatTensor([0]))
         a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
         b_vectors = Variable(torch.FloatTensor([[1, 2], [2, 1]]))
@@ -62,7 +63,7 @@ class TestLinearSimilarityFunction:
 
     def test_forward_works_with_add_combinations(self):
         linear = LinearSimilarity(2, 2, combination='x+y')
-        linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5]]))
+        linear._weight_vector = Parameter(torch.FloatTensor([-.3, .5]))
         linear._bias = Parameter(torch.FloatTensor([0]))
         a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
         b_vectors = Variable(torch.FloatTensor([[1, 0], [0, 1]]))
@@ -72,7 +73,7 @@ class TestLinearSimilarityFunction:
 
     def test_forward_works_with_subtract_combinations(self):
         linear = LinearSimilarity(2, 2, combination='x-y')
-        linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5]]))
+        linear._weight_vector = Parameter(torch.FloatTensor([-.3, .5]))
         linear._bias = Parameter(torch.FloatTensor([0]))
         a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
         b_vectors = Variable(torch.FloatTensor([[1, 0], [0, 1]]))
