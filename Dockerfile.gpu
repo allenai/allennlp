@@ -36,7 +36,14 @@ ENV PYTHONHASHSEED 2157
 
 COPY . .
 
-RUN /bin/bash -c 'source activate runenv && scripts/install_requirements.sh &&\
- pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.1.11.post5-cp35-cp35m-linux_x86_64.whl'
+# Get rid of pycache or .pyc files that you might have accidentally copied
+RUN find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
 
-CMD ["/bin/sh", "-c]
+# Remove file to avoid a "GOMP_4.0 not found" error
+# https://github.com/pytorch/pytorch/issues/643#issuecomment-314949320
+RUN rm /opt/conda/envs/runenv/lib/python3.5/site-packages/torch/lib/libgomp.so.1
+
+RUN /bin/bash -c 'source activate runenv && scripts/install_requirements.sh &&\
+ pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.1.12.post2-cp35-cp35m-linux_x86_64.whl'
+
+CMD ["/bin/sh", "-c"]
