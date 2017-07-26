@@ -27,7 +27,7 @@ class TimeDistributed(torch.nn.Module):
         reshaped_outputs = self._module(reshaped_inputs)
 
         # Now get the output back into the right shape.
-        # (batch_size, time_steps, [output_size])
+        # (batch_size, time_steps, [hidden_size])
         new_shape = [input_size[0], input_size[1]] + [x for x in reshaped_outputs.size()[1:]]
         outputs = reshaped_outputs.contiguous().view(*new_shape)
 
