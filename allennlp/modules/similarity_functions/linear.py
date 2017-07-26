@@ -11,7 +11,7 @@ from allennlp.modules import SimilarityFunction
 
 
 @Registry.register_similarity_function("linear")
-class Linear(SimilarityFunction):
+class LinearSimilarity(SimilarityFunction):
     """
     This similarity function performs a dot product between a vector of weights and some
     combination of the two input vectors, followed by an (optional) activation function.  The
@@ -49,7 +49,7 @@ class Linear(SimilarityFunction):
                  tensor_2_dim: int,
                  combination: str = 'x,y',
                  activation: Callable[[torch.Tensor], torch.Tensor] = lambda x: x) -> None:
-        super(Linear, self).__init__()
+        super(LinearSimilarity, self).__init__()
         self._combinations = combination.split(',')
         combined_dim = self._get_combined_dim(tensor_1_dim, tensor_2_dim)
         self._weight_vector = Parameter(torch.Tensor(combined_dim))

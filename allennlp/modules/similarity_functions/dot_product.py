@@ -7,7 +7,7 @@ from allennlp.modules import SimilarityFunction
 
 
 @Registry.register_similarity_function("dot_product")
-class DotProduct(SimilarityFunction):
+class DotProductSimilarity(SimilarityFunction):
     """
     This similarity function simply computes the dot product between each pair of vectors.  It has
     no parameters.

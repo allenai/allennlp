@@ -193,9 +193,9 @@ class TestRegistry(AllenNlpTestCase):
     # Similarity functions
 
     def test_registry_has_builtin_similarity_functions(self):
-        assert Registry.get_similarity_function("dot_product").__name__ == 'DotProduct'
-        assert Registry.get_similarity_function("bilinear").__name__ == 'Bilinear'
-        assert Registry.get_similarity_function("linear").__name__ == 'Linear'
+        assert Registry.get_similarity_function("dot_product").__name__ == 'DotProductSimilarity'
+        assert Registry.get_similarity_function("bilinear").__name__ == 'BilinearSimilarity'
+        assert Registry.get_similarity_function("linear").__name__ == 'LinearSimilarity'
         assert Registry.get_similarity_function("cosine").__name__ == 'CosineSimilarity'
 
     def test_similarity_functions_use_correct_fields(self):

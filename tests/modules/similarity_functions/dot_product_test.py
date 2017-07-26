@@ -5,13 +5,13 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
-from allennlp.modules.similarity_functions import CosineSimilarity, DotProduct
+from allennlp.modules.similarity_functions import CosineSimilarity, DotProductSimilarity
 from allennlp.testing import AllenNlpTestCase
 
 
 class TestDotProductSimilarityFunction(AllenNlpTestCase):
     def test_forward_does_a_dot_product(self):
-        dot_product = DotProduct()
+        dot_product = DotProductSimilarity()
         a_vectors = torch.LongTensor([[1, 1, 1], [-1, -1, -1]])
         b_vectors = torch.LongTensor([[1, 0, 1], [1, 0, 0]])
         result = dot_product(Variable(a_vectors), Variable(b_vectors)).data.numpy()
@@ -19,7 +19,7 @@ class TestDotProductSimilarityFunction(AllenNlpTestCase):
         assert numpy.all(result == [2, -1])
 
     def test_forward_works_with_higher_order_tensors(self):
-        dot_product = DotProduct()
+        dot_product = DotProductSimilarity()
         a_vectors = numpy.random.rand(5, 4, 3, 6, 7)
         b_vectors = numpy.random.rand(5, 4, 3, 6, 7)
         desired_result = numpy.sum(a_vectors * b_vectors, axis=-1)

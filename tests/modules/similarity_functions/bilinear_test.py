@@ -6,19 +6,19 @@ import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
 
-from allennlp.modules.similarity_functions import Bilinear
+from allennlp.modules.similarity_functions import BilinearSimilarity
 from allennlp.testing import AllenNlpTestCase
 
 class TestBilinearSimilarityFunction(AllenNlpTestCase):
     def test_weights_are_correct_sizes(self):
         # pylint: disable=protected-access
-        bilinear = Bilinear(tensor_1_dim=5, tensor_2_dim=2)
+        bilinear = BilinearSimilarity(tensor_1_dim=5, tensor_2_dim=2)
         assert list(bilinear._weight_matrix.size()) == [5, 2]
         assert list(bilinear._bias.size()) == [1]
 
     def test_forward_does_a_bilinear_product(self):
         # pylint: disable=protected-access
-        bilinear = Bilinear(2, 2)
+        bilinear = BilinearSimilarity(2, 2)
         bilinear._weight_matrix = Parameter(torch.FloatTensor([[-.3, .5], [2.0, -1.0]]))
         bilinear._bias = Parameter(torch.FloatTensor([.1]))
         a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
@@ -29,7 +29,7 @@ class TestBilinearSimilarityFunction(AllenNlpTestCase):
 
     def test_forward_works_with_higher_order_tensors(self):
         # pylint: disable=protected-access
-        bilinear = Bilinear(4, 7)
+        bilinear = BilinearSimilarity(4, 7)
         weights = numpy.random.rand(4, 7)
         bilinear._weight_matrix = Parameter(torch.from_numpy(weights))
         bilinear._bias = Parameter(torch.from_numpy(numpy.asarray([0])))

@@ -6,18 +6,18 @@ import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
 
-from allennlp.modules.similarity_functions import Linear
+from allennlp.modules.similarity_functions import LinearSimilarity
 from allennlp.testing import AllenNlpTestCase
 
 class TestLinearSimilarityFunction:
     # pylint: disable=protected-access
     def test_weights_are_correct_sizes(self):
-        linear = Linear(tensor_1_dim=3, tensor_2_dim=6, combination='x,y')
+        linear = LinearSimilarity(tensor_1_dim=3, tensor_2_dim=6, combination='x,y')
         assert list(linear._weight_vector.size()) == [9]
         assert list(linear._bias.size()) == [1]
 
     def test_forward_does_a_weighted_product(self):
-        linear = Linear(3, 1, combination='x,y')
+        linear = LinearSimilarity(3, 1, combination='x,y')
         linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5], [2.0], [-1.0]]))
         linear._bias = Parameter(torch.FloatTensor([.1]))
         a_vectors = torch.FloatTensor([[[1, 1, 1], [-1, -1, 0]]])
@@ -27,7 +27,7 @@ class TestLinearSimilarityFunction:
         assert_almost_equal(result, [[2.3, -1.1]])
 
     def test_forward_works_with_higher_order_tensors(self):
-        linear = Linear(7, 7, combination='x,y')
+        linear = LinearSimilarity(7, 7, combination='x,y')
         weights = numpy.random.rand(14, 1)
         linear._weight_vector = Parameter(torch.from_numpy(weights))
         linear._bias = Parameter(torch.FloatTensor([0.]))
@@ -41,7 +41,7 @@ class TestLinearSimilarityFunction:
         assert_almost_equal(result[3, 2, 1, 3], expected_result, decimal=6)
 
     def test_forward_works_with_multiply_combinations(self):
-        linear = Linear(2, 2, combination='x*y')
+        linear = LinearSimilarity(2, 2, combination='x*y')
         linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5]]))
         linear._bias = Parameter(torch.FloatTensor([0]))
         a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
@@ -51,7 +51,7 @@ class TestLinearSimilarityFunction:
         assert_almost_equal(result, [-.3, -.5])
 
     def test_forward_works_with_divide_combinations(self):
-        linear = Linear(2, 2, combination='x/y')
+        linear = LinearSimilarity(2, 2, combination='x/y')
         linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5]]))
         linear._bias = Parameter(torch.FloatTensor([0]))
         a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
@@ -61,7 +61,7 @@ class TestLinearSimilarityFunction:
         assert_almost_equal(result, [-.05, -.35])
 
     def test_forward_works_with_add_combinations(self):
-        linear = Linear(2, 2, combination='x+y')
+        linear = LinearSimilarity(2, 2, combination='x+y')
         linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5]]))
         linear._bias = Parameter(torch.FloatTensor([0]))
         a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
@@ -71,7 +71,7 @@ class TestLinearSimilarityFunction:
         assert_almost_equal(result, [-.1, .3])
 
     def test_forward_works_with_subtract_combinations(self):
-        linear = Linear(2, 2, combination='x-y')
+        linear = LinearSimilarity(2, 2, combination='x-y')
         linear._weight_vector = Parameter(torch.FloatTensor([[-.3], [.5]]))
         linear._bias = Parameter(torch.FloatTensor([0]))
         a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))

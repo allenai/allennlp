@@ -5,7 +5,7 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
-from allennlp.modules.similarity_functions import CosineSimilarity, DotProduct
+from allennlp.modules.similarity_functions import CosineSimilarity
 from allennlp.testing import AllenNlpTestCase
 
 
