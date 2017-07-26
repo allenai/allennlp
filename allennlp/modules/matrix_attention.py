@@ -1,7 +1,7 @@
 import torch
 from overrides import overrides
 
-from allennlp.common import Params, tensor
+from allennlp.common import Params
 from allennlp.modules.similarity_function import SimilarityFunction
 
 
@@ -32,7 +32,7 @@ class MatrixAttention(torch.nn.Module):
     similarity_function: ``SimilarityFunction``, optional (default=``DotProductSimilarity``)
         The similarity function to use when computing the attention.
     '''
-    def __init__(self, similarity_function: SimilarityFunction = None):
+    def __init__(self, similarity_function: SimilarityFunction = None) -> None:
         super(MatrixAttention, self).__init__()
 
         # This import is here to avoid circular import problems with the registry...
@@ -41,6 +41,7 @@ class MatrixAttention(torch.nn.Module):
 
     @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ
         tiled_matrix_1 = matrix_1.unsqueeze(2).expand(matrix_1.size()[0],
                                                       matrix_1.size()[1],
                                                       matrix_2.size()[1],

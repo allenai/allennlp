@@ -1,11 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
-import numpy
 from numpy.testing import assert_allclose
 import torch
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.modules import MatrixAttention
-from allennlp.modules.similarity_functions import LinearSimilarity
 from allennlp.testing import AllenNlpTestCase
 
 
@@ -17,3 +16,9 @@ class TestMatrixAttention(AllenNlpTestCase):
         result = attention(sentence_1_tensor, sentence_2_tensor).data.numpy()
         assert result.shape == (1, 2, 3)
         assert_allclose(result, [[[3, 0, -3], [0, 2, 0]]])
+
+    def test_can_build_from_params(self):
+        params = Params({'similarity_function': {'type': 'cosine'}})
+        attention = MatrixAttention.from_params(params)
+        # pylint: disable=protected-access
+        assert attention._similarity_function.__class__.__name__ == 'CosineSimilarity'

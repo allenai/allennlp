@@ -4,6 +4,7 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.modules import Attention
 from allennlp.testing import AllenNlpTestCase
 
@@ -77,3 +78,10 @@ class TestAttention(AllenNlpTestCase):
         query_tensor = Variable(torch.FloatTensor([[.1, .8, .5]]))
         result = attention(query_tensor, sentence_tensor).data.numpy()
         assert_almost_equal(result, [[1.9, 1.4, 1.9, -.6]])
+
+    def test_can_build_from_params(self):
+        params = Params({'similarity_function': {'type': 'cosine'}, 'normalize': False})
+        attention = Attention.from_params(params)
+        # pylint: disable=protected-access
+        assert attention._similarity_function.__class__.__name__ == 'CosineSimilarity'
+        assert attention._normalize is False

@@ -34,7 +34,7 @@ class Attention(torch.nn.Module):
     """
     def __init__(self,
                  similarity_function: SimilarityFunction = None,
-                 normalize: bool = True):
+                 normalize: bool = True) -> None:
         super(Attention, self).__init__()
 
         # This import is here to avoid circular import problems with the registry...
@@ -43,7 +43,7 @@ class Attention(torch.nn.Module):
         self._normalize = normalize
 
     @overrides
-    def forward(self,
+    def forward(self,  # pylint: disable=arguments-differ
                 vector: torch.Tensor,
                 matrix: torch.Tensor,
                 matrix_mask: torch.Tensor = None) -> torch.Tensor:
@@ -59,6 +59,6 @@ class Attention(torch.nn.Module):
     @classmethod
     def from_params(cls, params: Params):
         similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
-        normalize - params.pop('normalize', True)
+        normalize = params.pop('normalize', True)
         return cls(similarity_function=similarity_function,
                    normalize=normalize)
