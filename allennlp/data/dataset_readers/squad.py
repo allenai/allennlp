@@ -23,7 +23,7 @@ def _char_span_to_token_span(sentence: str,
                              tokenized_sentence: List[str],
                              span: Tuple[int, int],
                              tokenizer: Tokenizer,
-                             slack: int=3) -> Tuple[int, int]:
+                             slack: int = 3) -> Tuple[int, int]:
     """
     Converts a character span from a sentence into the corresponding token span in the
     tokenized version of the sentence.  If you pass in a character span that does not

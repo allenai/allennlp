@@ -1,9 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-from typing import List
-from os.path import join
-
-from overrides import overrides
-
 from allennlp.common import Params
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.dataset_readers.squad import _char_span_to_token_span
