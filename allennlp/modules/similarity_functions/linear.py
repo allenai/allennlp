@@ -15,7 +15,7 @@ class LinearSimilarity(SimilarityFunction):
     """
     This similarity function performs a dot product between a vector of weights and some
     combination of the two input vectors, followed by an (optional) activation function.  The
-    combination done is configurable.
+    combination used is configurable.
 
     If the two vectors are ``x`` and ``y``, we allow the following kinds of combinations: ``x``,
     ``y``, ``x*y``, ``x+y``, ``x-y``, ``x/y``, where each of those binary operations is performed
