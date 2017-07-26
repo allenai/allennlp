@@ -25,10 +25,10 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 class TrainDriver(Driver):
     def __init__(self,
                  model: Model,
-                 train_data: Dataset,
-                 validation_data: Optional[Dataset],
-                 iterator: DataIterator,
                  optimizer: torch.optim.Optimizer,
+                 iterator: DataIterator,
+                 train_dataset: Dataset,
+                 validation_dataset: Optional[Dataset] = None,
                  patience: int = 2,
                  batch_size: int = 32,
                  num_epochs: int = 20,
@@ -37,6 +37,19 @@ class TrainDriver(Driver):
         """
         Parameters
         ----------
+        model : ``Model``, required.
+            An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
+            their ``forward`` method returns a dictionary with a "loss" key, containing a
+            scalar tensor representing the loss function to be optimized.
+        optimizer : ``torch.nn.Optimzier``, required.
+            An instance of a Pytorch Optimizer, instantiated with the parameters of the
+            model to be optimized.
+        iterator : ``DataIterator``, required.
+            A method for iterating over a ``Dataset``, yielding padded indexed batches.
+        train_dataset : ``Dataset``, required.
+            A ``Dataset`` to train on.
+        validation_dataset : ``Dataset``, optional, (default = None).
+            A ``Dataset`` to evaluate on.
         patience : int, optional (default=2)
             Number of epochs to be patient before early stopping.  I.e., if the ``validation_metric``
             does not improve for this many epochs, we will stop training.
@@ -47,12 +60,14 @@ class TrainDriver(Driver):
         serialization_prefix : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-
+        cuda_device : int, optional (default = -1)
+            An integer specifying the CUDA device to use. If -1, the CPU is used.
+            Multi-gpu training is not currently supported, but will be once the
+            Pytorch DataParallel API stabilises.
         """
-
         self._model = model
-        self._train_data = train_data
-        self._validation_data = validation_data
+        self._train_dataset = train_dataset
+        self._validation_dataset = validation_dataset
 
         self._iterator = iterator
         self._optimizer = optimizer
@@ -67,7 +82,6 @@ class TrainDriver(Driver):
 
     @overrides
     def run(self):
-
         epoch_counter = 0
         # Resume from serialization path if it contains a saved model.
         if self._serialization_prefix is not None:
@@ -78,7 +92,7 @@ class TrainDriver(Driver):
         for epoch in range(epoch_counter, self._num_epochs):
             train_loss = 0.0
             val_loss = 0.0
-            train_generator = self._iterator(self._train_data, num_epochs=1)
+            train_generator = self._iterator(self._train_dataset, num_epochs=1)
 
             for batch in tqdm.tqdm(train_generator):
                 tensor_batch = arrays_to_variables(batch, self._cuda_device)
@@ -93,7 +107,7 @@ class TrainDriver(Driver):
                                              " 'loss' key in the output of model.forward(inputs).")
                 self._optimizer.step()
 
-            val_generator = self._iterator(self._validation_data, num_epochs=1)
+            val_generator = self._iterator(self._validation_dataset, num_epochs=1)
 
             for batch in tqdm.tqdm(val_generator):
                 tensor_batch = arrays_to_variables(batch, self._cuda_device)
@@ -103,12 +117,13 @@ class TrainDriver(Driver):
                 # TODO(): metrics here.
 
             logger.log("Training Loss: %3f    Validation Loss: %3f ", train_loss, val_loss)
+            self._save_checkpoint(self._model, self._optimizer, epoch)
 
     def _save_checkpoint(self,
                          model: Model,
                          optimizer: torch.optim.Optimizer,
                          epoch: int,
-                         is_best: bool):
+                         is_best: Optional[bool] = None):
         model_path = os.path.join(self.serialization_prefix, "model_state_epoch_{}.th".format(epoch))
         model_state = model.state_dict()
         torch.save(model_state, model_path)
@@ -131,7 +146,6 @@ class TrainDriver(Driver):
                                                  "training_state_epoch_{}.th".format(epoch_to_load)))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
-
         return training_state["epoch"]
 
     @classmethod
