@@ -5,7 +5,7 @@ import torch.nn.init
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
-from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TokenEmbedder
+from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, SimilarityFunction, TextFieldEmbedder, TokenEmbedder
 from allennlp.training import Regularizer
 
 
@@ -128,6 +128,7 @@ class Registry:
     still get logged with a special ``PARAM`` logging level, so you can still recover a full
     configuration just from examining the log file, even if the default value changes over time.
     """
+    # pylint: disable=too-many-public-methods
     # Throughout this class, in the `get_*` and `list_*` methods, we have unused import statements.
     # That is because we use the registry for internal implementations of things, too, and need to
     # be sure they've been imported so they are in the registry by default.
@@ -398,3 +399,31 @@ class Registry:
         """
         import allennlp.modules.seq2vec_encoders  # pylint: disable=unused-variable
         return cls._seq2vec_encoders[name]
+
+    # Similarity functions
+
+    _similarity_functions = {}  # type: Dict[str, Type[SimilarityFunction]]
+    #: This decorator adds a :class:`SimilarityFunction` to the registry, with the given name.
+    register_similarity_function = _registry_decorator("similarity function", _similarity_functions)
+    default_similarity_function = "dot_product"
+
+    @classmethod
+    def list_similarity_functions(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`SimilarityFunction` names.  These take
+        two tensors of the same shape and compute a (possibly parameterized) similarity measure on
+        the last dimension.
+        """
+        import allennlp.modules.similarity_functions  # pylint: disable=unused-variable
+        return _get_keys_with_default(cls._similarity_functions, "similarity function",
+                                      cls.default_similarity_function)
+
+    @classmethod
+    def get_similarity_function(cls, name: str) -> Type[SimilarityFunction]:
+        """
+        Returns the :class:`SimilarityFunction` that has been registered with ``name``.  This
+        module must takes two tensors of the same shape and compute a (possibly parameterized)
+        similarity measure on the last dimension.
+        """
+        import allennlp.modules.similarity_functions  # pylint: disable=unused-variable
+        return cls._similarity_functions[name]

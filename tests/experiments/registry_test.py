@@ -189,3 +189,18 @@ class TestRegistry(AllenNlpTestCase):
                              Registry.get_seq2vec_encoder,
                              Registry.register_seq2vec_encoder,
                              Registry._seq2vec_encoders)  # pylint: disable=protected-access
+
+    # Similarity functions
+
+    def test_registry_has_builtin_similarity_functions(self):
+        assert Registry.get_similarity_function("dot_product").__name__ == 'DotProductSimilarity'
+        assert Registry.get_similarity_function("bilinear").__name__ == 'BilinearSimilarity'
+        assert Registry.get_similarity_function("linear").__name__ == 'LinearSimilarity'
+        assert Registry.get_similarity_function("cosine").__name__ == 'CosineSimilarity'
+
+    def test_similarity_functions_use_correct_fields(self):
+        self.registry_helper(Registry.list_similarity_functions,
+                             Registry.get_similarity_function,
+                             Registry.register_similarity_function,
+                             Registry._similarity_functions,  # pylint: disable=protected-access
+                             'default_similarity_function')
