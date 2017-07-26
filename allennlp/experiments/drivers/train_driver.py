@@ -4,9 +4,11 @@ import os
 import shutil
 
 import torch
+import tqdm
 from overrides import overrides
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.experiments.driver import Driver
 from allennlp.data.data_iterator import DataIterator
 from allennlp.training import Model
@@ -45,6 +47,7 @@ class TrainDriver(Driver):
         serialization_prefix : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
+
         """
 
         self._model = model
@@ -59,40 +62,83 @@ class TrainDriver(Driver):
         self._serialization_prefix = serialization_prefix
         self._cuda_device = cuda_device
 
+        if self._cuda_device >= 0:
+            self._model = self._model.cuda(self._cuda_device)
+
     @overrides
     def run(self):
 
-        train_generator = self._iterator(self._train_data, self._num_epochs)
+        epoch_counter = 0
+        # Resume from serialization path if it contains a saved model.
+        if self._serialization_prefix is not None:
+            if any(["model_state_epoch_" in x
+                    for x in os.listdir(self._serialization_prefix)]):
+                epoch_counter = self._restore_checkpoint()
 
-        for batch in train_generator:
-            tensor_batch = arrays_to_variables(batch, self._cuda_device)
+        for epoch in range(epoch_counter, self._num_epochs):
+            train_loss = 0.0
+            val_loss = 0.0
+            train_generator = self._iterator(self._train_data, num_epochs=1)
 
-        self._model.save()
+            for batch in tqdm.tqdm(train_generator):
+                tensor_batch = arrays_to_variables(batch, self._cuda_device)
+                self._optimizer.zero_grad()
+                output_dict = self._model.forward(tensor_batch)
+                try:
+                    loss = output_dict["loss"]
+                    loss.backward()
+                    train_loss += loss.data.numpy()
+                except KeyError:
+                    raise ConfigurationError("The model you are trying to optimize does not contain a"
+                                             " 'loss' key in the output of model.forward(inputs).")
+                self._optimizer.step()
 
-    def save_checkpoint(self,
-                        model: Model,
-                        optimizer: torch.optim.Optimizer,
-                        epoch: int,
-                        is_best: bool):
-        model_path = os.path.join(self.serialization_prefix, "model_state")
+            val_generator = self._iterator(self._validation_data, num_epochs=1)
+
+            for batch in tqdm.tqdm(val_generator):
+                tensor_batch = arrays_to_variables(batch, self._cuda_device)
+                val_output_dict = self._model.forward(tensor_batch)
+                loss = val_output_dict["loss"]
+                val_loss += loss.data.numpy()
+                # TODO(): metrics here.
+
+            logger.log("Training Loss: %3f    Validation Loss: %3f ", train_loss, val_loss)
+
+    def _save_checkpoint(self,
+                         model: Model,
+                         optimizer: torch.optim.Optimizer,
+                         epoch: int,
+                         is_best: bool):
+        model_path = os.path.join(self.serialization_prefix, "model_state_epoch_{}.th".format(epoch))
         model_state = model.state_dict()
-        torch.save(model_state, os.path.join(model_path, "epoch_{}.th".format(epoch)))
+        torch.save(model_state, model_path)
 
-        training_state = {
-                'epoch': epoch,
-                'optimizer': optimizer.state_dict()
-        }
+        training_state = {'epoch': epoch, 'optimizer': optimizer.state_dict()}
         torch.save(training_state, os.path.join(self.serialization_prefix,
                                                 "training_state_epoch_{}.th".format(epoch)))
-
         if is_best:
             shutil.copy(model_path, os.path.join(model_path, "best.th"))
+
+    def _restore_checkpoint(self):
+
+        serialization_files = os.listdir(self._serialization_prefix)
+        model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
+        epoch_to_load = max([int(x.split("model_state_epoch_")[-1].strip(".th")) for x in model_checkpoints])
+
+        model_state = torch.load(os.path.join(self.serialization_prefix,
+                                              "model_state_epoch_{}.th".format(epoch_to_load)))
+        training_state = torch.load(os.path.join(self.serialization_prefix,
+                                                 "training_state_epoch_{}.th".format(epoch_to_load)))
+        self._model.load_state_dict(model_state)
+        self._optimizer.load_state_dict(training_state["optimizer"])
+
+        return training_state["epoch"]
 
     @classmethod
     def from_params(cls, params: Params) -> 'TrainDriver':
 
-        model = Model.from_params(params['model'])
-        dataset_reader = DatasetReader.from_params(params['dataset_reader'])
+        model = Model.from_params(params.pop('model'))
+        dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
 
         train_data_path = params.pop('train_data_path')
         logger.info("Reading training data from %s", train_data_path)
