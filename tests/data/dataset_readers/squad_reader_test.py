@@ -4,10 +4,11 @@ from os.path import join
 
 from overrides import overrides
 
+from allennlp.common import Params
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.dataset_readers.squad import _char_span_to_token_span
-from allennlp.testing.test_case import AllenNlpTestCase
 from allennlp.data.tokenizers import WordTokenizer
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
 class TestSquadReader(AllenNlpTestCase):
@@ -42,3 +43,9 @@ class TestSquadReader(AllenNlpTestCase):
         assert instances[1].fields()["passage"].tokens()[-3:] == ["Mary", ".", "@@STOP@@"]
         assert instances[1].fields()["span_start"].sequence_index() == 17
         assert instances[1].fields()["span_end"].sequence_index() == 24
+
+    def test_can_build_from_params(self):
+        reader = SquadReader.from_params(Params({}))
+        # pylint: disable=protected-access
+        assert reader._tokenizer.__class__.__name__ == 'WordTokenizer'
+        assert reader._token_indexers["tokens"].__class__.__name__ == 'SingleIdTokenIndexer'
