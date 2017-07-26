@@ -93,3 +93,33 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
             return torch_variable
         else:
             return torch_variable.cuda(cuda_device)
+
+
+def masked_softmax(vector, mask):
+    """
+    ``torch.nn.functional.softmax(vector)`` does not work if some elements of ``vector`` should be
+    masked.  This performs a softmax on just the non-masked portions of ``vector``.  Passing
+    ``None`` in for the mask is also acceptable; you'll just get a regular softmax.
+
+    We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
+
+    In the case that the input vector is completely masked, this function returns an array
+    of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
+    that uses categorial cross-entropy loss.
+    """
+    # We calculate masked softmax in a numerically stable fashion, as done
+    # in https://github.com/rkadlec/asreader/blob/master/asreader/custombricks/softmax_mask_bricks.py
+    if mask is not None:
+        # TODO(mattg): a bunch of this logic can be simplified once pytorch-0.2 is out.
+        # torch.max(keepdim=True), for instance, simplifies things here.
+        # Here we get normalized log probabilities for enhanced numerical stability.
+        input_masked = mask * vector
+        shifted = mask * (input_masked - torch.max(input_masked, dim=1)[0].expand_as(input_masked))
+        # We add epsilon to avoid numerical instability when the sum in the log yields 0.
+        normalization_constant = ((mask * shifted.exp()).sum(dim=1) + 1e-7).log()
+        normalized_log_probabilities = (shifted - normalization_constant.expand_as(shifted))
+        probabilities = normalized_log_probabilities.exp()
+        return mask * probabilities
+    else:
+        # There is no mask, so we use the provided ``torch.nn.functional.softmax`` function.
+        return torch.nn.functional.softmax(vector)
