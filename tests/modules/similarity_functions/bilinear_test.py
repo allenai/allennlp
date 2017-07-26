@@ -50,4 +50,4 @@ class TestBilinearSimilarityFunction(AllenNlpTestCase):
                 'tensor_2_dim': 4
                 })
         bilinear = BilinearSimilarity.from_params(params)
-        assert list(bilinear._weight_matrix.size()) == [3, 4]
+        assert list(bilinear._weight_matrix.size()) == [3, 4]  # pylint: disable=protected-access
