@@ -1,4 +1,5 @@
 from collections import Counter
+from copy import deepcopy
 import json
 import logging
 import random
@@ -16,6 +17,158 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+def _char_span_to_token_span(sentence: str,
+                             tokenized_sentence: List[str],
+                             span: Tuple[int, int],
+                             tokenizer: Tokenizer,
+                             slack: int=3) -> Tuple[int, int]:
+    """
+    Converts a character span from a sentence into the corresponding token span in the
+    tokenized version of the sentence.  If you pass in a character span that does not
+    correspond to complete tokens in the tokenized version, we'll do our best, but the behavior
+    is officially undefined.
+
+    The basic outline of this method is to find the token that starts the same number of
+    characters into the sentence as the given character span.  We try to handle a bit of error
+    in the tokenization by checking `slack` tokens in either direction from that initial
+    estimate.
+
+    The returned ``(begin, end)`` indices are `inclusive` for ``begin``, and `exclusive` for
+    ``end``.  So, for example, ``(2, 2)`` is an empty span, ``(2, 3)`` is the one-word span
+    beginning at token index 2, and so on.
+    """
+    # First we'll tokenize the span and the sentence, so we can count tokens and check for
+    # matches.
+    span_chars = sentence[span[0]:span[1]]
+    tokenized_span = tokenizer.tokenize(span_chars)
+    # Then we'll find what we think is the first token in the span
+    chars_seen = 0
+    index = 0
+    while index < len(tokenized_sentence) and chars_seen < span[0]:
+        chars_seen += len(tokenized_sentence[index]) + 1
+        index += 1
+    # index is now the span start index.  Is it a match?
+    if _spans_match(tokenized_sentence, tokenized_span, index):
+        return (index, index + len(tokenized_span))
+    for i in range(1, slack + 1):
+        if _spans_match(tokenized_sentence, tokenized_span, index + i):
+            return (index + i, index + i+ len(tokenized_span))
+        if _spans_match(tokenized_sentence, tokenized_span, index - i):
+            return (index - i, index - i + len(tokenized_span))
+    # No match; we'll just return our best guess.
+    return (index, index + len(tokenized_span))
+
+
+def _spans_match(sentence_tokens: List[str], span_tokens: List[str], index: int) -> bool:
+    if index < 0 or index >= len(sentence_tokens):
+        return False
+    if sentence_tokens[index] == span_tokens[0]:
+        span_index = 1
+        while (span_index < len(span_tokens) and
+               sentence_tokens[index + span_index] == span_tokens[span_index]):
+            span_index += 1
+        if span_index == len(span_tokens):
+            return True
+    return False
+
+
+@Registry.register_dataset_reader("squad")
+class SquadReader(DatasetReader):
+    """
+    Reads a JSON-formatted SQuAD file and returns a ``Dataset`` where the ``Instances`` have four
+    fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
+    and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.
+
+    Parameters
+    ----------
+    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+        We use this ``Tokenizer`` for both the question and the passage.  See :class:`Tokenizer`.
+    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+        We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
+    """
+    def __init__(self,
+                 tokenizer: Tokenizer = WordTokenizer(),
+                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        self._tokenizer = tokenizer
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+
+    def read(self, file_path: str):
+
+        logger.info("Reading file at %s", file_path)
+        with open(file_path) as dataset_file:
+            dataset_json = json.load(dataset_file)
+            dataset = dataset_json['data']
+        logger.info("Reading the dataset")
+        instances = []
+        for article in tqdm(dataset):
+            for paragraph_json in article['paragraphs']:
+                paragraph = paragraph_json["context"]
+                # replace newlines in the paragraph
+                cleaned_paragraph = paragraph.replace("\n", " ")
+
+                # We add a special token to the end of the passage.  This is because our span
+                # labels are end-exclusive, and we do a softmax over the passage to determine span
+                # end.  So if we want to be able to include the last token of the passage, we need
+                # to have a special symbol at the end.
+                tokenized_paragraph = self._tokenizer.tokenize(cleaned_paragraph) + ['@@STOP@@']
+
+                for question_answer in paragraph_json['qas']:
+                    question_text = question_answer["question"].strip().replace("\n", "")
+                    tokenized_question = self._tokenizer.tokenize(question_text)
+                    print("question_text:", question_text)
+                    print("tokenized:", tokenized_question)
+
+                    # There may be multiple answer annotations, so pick the one that occurs the
+                    # most.
+                    candidate_answers = Counter() # type: Counter
+                    for answer in question_answer["answers"]:
+                        candidate_answers[(answer["answer_start"], answer["text"])] += 1
+                    char_span_start, answer_text = candidate_answers.most_common(1)[0][0]
+
+                    # SQuAD gives answer annotations as a character index into the paragraph, but
+                    # we need a token index for our models.  We convert them here.
+                    char_span_end = char_span_start + len(answer_text)
+                    span_start, span_end = _char_span_to_token_span(paragraph,
+                                                                    tokenized_paragraph,
+                                                                    (char_span_start, char_span_end),
+                                                                    self._tokenizer)
+
+                    # We do a deepcopy here to avoid any weird issues with shared state between
+                    # fields.  This might not be necessary, though...
+                    paragraph_field = TextField(deepcopy(tokenized_paragraph), self._token_indexers)
+                    question_field = TextField(tokenized_question, self._token_indexers)
+                    span_start_field = IndexField(span_start, paragraph_field)
+                    span_end_field = IndexField(span_end, paragraph_field)
+                    instance = Instance({
+                            'question': question_field,
+                            'passage': paragraph_field,
+                            'span_start': span_start_field,
+                            'span_end': span_end_field
+                            })
+                    instances.append(instance)
+        return Dataset(instances)
+
+    @classmethod
+    def from_params(cls, params: Params):
+        """
+        Parameters
+        ----------
+        tokenizer : ``Params``, optional
+        token_indexers: ``List[Params]``, optional
+        """
+        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
+        token_indexers = {}
+        token_indexer_params = params.pop('token_indexers', Params({}))
+        for name, indexer_params in token_indexer_params.items():
+            token_indexers[name] = TokenIndexer.from_params(indexer_params)
+        # The default parameters are contained within the class, so if no parameters are given we
+        # must pass None.
+        if token_indexers == {}:
+            token_indexers = None
+        params.assert_empty(cls.__name__)
+        return cls(tokenizer=tokenizer, token_indexers=token_indexers)
 
 
 @Registry.register_dataset_reader("squad_sentence_selection")
@@ -222,7 +375,6 @@ class SquadSentenceSelectionReader(DatasetReader):
         """
         Parameters
         ----------
-        squad_filename : ``str``
         negative_sentence_selection : ``str``, optional (default=``"paragraph"``)
         tokenizer : ``Params``, optional
         token_indexers: ``List[Params]``, optional

@@ -56,7 +56,7 @@ class SimpleWordSplitter(WordSplitter):
         to after the word itself has been added.  Before stripping off any part of a token, we
         first check to be sure the token isn't in our list of special cases.
         """
-        fields = sentence.lower().split()
+        fields = sentence.split()
         tokens = []
         for field in fields:  # type: str
             add_at_end = []  # type: List[str]
@@ -74,9 +74,9 @@ class SimpleWordSplitter(WordSplitter):
             while remove_contractions:
                 remove_contractions = False
                 for contraction in self.contractions:
-                    if self._can_split(field) and field.endswith(contraction):
+                    if self._can_split(field) and field.lower().endswith(contraction):
+                        add_at_end.insert(0, field[-len(contraction):])
                         field = field[:-len(contraction)]
-                        add_at_end.insert(0, contraction)
                         remove_contractions = True
             if field:
                 tokens.append(field)
@@ -84,7 +84,7 @@ class SimpleWordSplitter(WordSplitter):
         return tokens
 
     def _can_split(self, token: str):
-        return token and token not in self.special_cases
+        return token and token.lower() not in self.special_cases
 
 
 class SpaceWordSplitter(WordSplitter):
