@@ -6,7 +6,7 @@ import torch.nn.init
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import DataIterator, DatasetReader, TokenIndexer, Tokenizer
 from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TokenEmbedder
-from allennlp.training import Regularizer
+from allennlp.training import Regularizer, Model
 from allennlp.experiments.driver import Driver
 
 
@@ -450,3 +450,24 @@ class Registry:
         """
         import allennlp.experiments.drivers  # pylint: disable=unused-variable
         return cls._drivers[name]
+
+    # Models
+    _models = {}  # type: Dict[str, Type[Model]]
+    # This decorator adds a :class:`Model` to the registry, with the given name.
+    register_model = _registry_decorator("model", _models)
+
+    @classmethod
+    def list_models(cls) -> List[str]:
+        """
+        Returns a list of all currently-registered :class:`Model` names.
+        """
+        import allennlp.models  # pylint: disable=unused-variable
+        return list(cls._drivers.keys())
+
+    @classmethod
+    def get_model(cls, name: str) -> Type[Driver]:
+        """
+        Returns the :class:`Model` that has been registered with ``name``.
+        """
+        import allennlp.models  # pylint: disable=unused-variable
+        return cls._models[name]

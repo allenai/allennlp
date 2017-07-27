@@ -3,7 +3,6 @@ from typing import List, Union
 import torch
 
 from allennlp.common.params import Params  # pylint: disable=unused-import
-from allennlp.experiments import Registry
 
 
 def get_optimizer_from_params(model_parameters: List[torch.Tensor],
@@ -19,6 +18,9 @@ def get_optimizer_from_params(model_parameters: List[torch.Tensor],
     where the value for "type" must be one of those strings above. We take the rest
     of the parameters and pass them to the optimizer's constructor.
     """
+    # Avoid circular imports from the Registry....
+    from allennlp.experiments import Registry
+
     if isinstance(params, str):
         optimizer = params
         params = Params({})

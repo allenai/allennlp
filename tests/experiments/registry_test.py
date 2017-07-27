@@ -221,3 +221,14 @@ class TestRegistry(AllenNlpTestCase):
                              Registry.get_driver,
                              Registry.register_driver,
                              Registry._drivers)  # pylint: disable=protected-access
+    # Drivers
+
+    def test_registry_has_builtin_models(self):
+        assert Registry.get_model("simple_tagger").__name__ == "SimpleTagger"
+
+    def test_models_use_correct_fields(self):
+
+        self.registry_helper(Registry.list_models,
+                             Registry.get_model,
+                             Registry.register_model,
+                             Registry._models)  # pylint: disable=protected-access

@@ -1,6 +1,7 @@
 from typing import Dict
 import torch
 
+from allennlp.common.params import Params
 
 class Model(torch.nn.Module):
     """
@@ -60,3 +61,9 @@ class Model(torch.nn.Module):
             key pointing to a scalar torch.Tensor representing the loss to be optimized.
         """
         raise NotImplementedError
+
+    @classmethod
+    def from_params(cls, params: Params):
+        from allennlp.experiments.registry import Registry
+        choice = params.pop_choice("type", Registry.list_models())
+        return Registry.get_model(choice).from_params(params)
