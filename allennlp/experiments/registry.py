@@ -501,4 +501,3 @@ class Registry:
         """
         import allennlp.modules.similarity_functions  # pylint: disable=unused-variable
         return cls._similarity_functions[name]
-

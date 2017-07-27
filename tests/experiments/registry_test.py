@@ -247,4 +247,3 @@ class TestRegistry(AllenNlpTestCase):
                              Registry.register_similarity_function,
                              Registry._similarity_functions,  # pylint: disable=protected-access
                              'default_similarity_function')
-

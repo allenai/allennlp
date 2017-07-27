@@ -162,9 +162,7 @@ class TrainDriver(Driver):
 
         # TODO(Mark): work out how this is going to be built with different options.
         vocab = Vocabulary.from_dataset(train_data)
-
         train_data.index_instances(vocab)
-
         model = Model.from_params(vocab, params.pop('model'))
 
         validation_data_path = params.pop('validation_data_path', None)
@@ -178,5 +176,16 @@ class TrainDriver(Driver):
         iterator = DataIterator.from_params(params.pop("iterator"))
         optimizer = get_optimizer_from_params(model.parameters(), params.pop("optimizer"))
 
+        patience = params.pop("patience", 2)
+        batch_size = params.pop("batch_size", 32)
+        num_epochs = params.pop("num_epochs", 20)
+        serialization_prefix = params.pop("serialization_prefix", None)
+        cuda_device = params.pop("cuda_device", -1)
         params.assert_empty(cls.__name__)
-        return TrainDriver(model, optimizer, iterator, train_data, validation_data)
+        return TrainDriver(model, optimizer, iterator,
+                           train_data, validation_data,
+                           patience=patience,
+                           batch_size=batch_size,
+                           num_epochs=num_epochs,
+                           serialization_prefix=serialization_prefix,
+                           cuda_device=cuda_device)
