@@ -4,13 +4,14 @@
 
 A [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) natural language processing toolkit using state-of-the-art deep learning models.
 
+## Running AllenNLP
 
 ### Setting up a development environment
 
-DeepQA is built using Python 3.  The easiest way to set up a compatible
+AllenNLP is built using Python 3.  The easiest way to set up a compatible
 environment is to use [Conda](https://conda.io/).  This will set up a virtual
 environment with the exact version of Python used for development along with all the
-dependencies needed to run DeepQA.
+dependencies needed to run AllenNLP.
 
 1.  [Download and install Conda](https://conda.io/docs/download.html).
 2.  Create a Conda environment with Python 3.
@@ -49,7 +50,7 @@ You should now be able to test your installation with `pytest -v`.  Congratulati
 
 ### Setting up a Kubernetes development environment
 
-1. Follow the instructions for installing and setting up
+1. Follow the instructions for getting started with
 [Kubernetes](https://github.com/allenai/infrastructure/tree/master/kubernetes).
 
 2. Fill in the [yaml file](./kubernetes-dev-machine.yaml). You need to add:
@@ -67,5 +68,3 @@ You should now be able to test your installation with `pytest -v`.  Congratulati
 5. Get a shell inside the container using `kubectl exec -it <PODNAME> --container dev-environment -- /bin/bash`
 
 6. When you are done, don't forget to kill your job using `kubectl delete -f /path/to/kubernetes-dev-machine.yaml`
-
-
