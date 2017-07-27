@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Union
 import random
 import logging
 import sys
@@ -10,7 +10,16 @@ import pyhocon
 import numpy
 import torch
 
+from allennlp.training.optimizers import get_optimizer_from_params
+from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params, replace_none
+from allennlp.common.tee_logger import TeeLogger
+from allennlp.data.dataset_reader import DatasetReader
+from allennlp.data.data_iterator import DataIterator
+from allennlp.training.trainer import Trainer
+from allennlp.data import Vocabulary
+from allennlp.training import Model
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -43,29 +52,22 @@ def prepare_environment(params: Union[Params, Dict[str, Any]]):
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(torch_seed)
 
-    from allennlp.common.checks import log_pytorch_version_info
     log_pytorch_version_info()
 
 
-def execute_driver_from_file(param_path: str,
-                             driver_operation_override: Optional[str] = None):
+def train_model_from_file(param_path: str):
     """
     A wrapper around :func:`execute_driver` which loads json from a file.
     Parameters
     ----------
     param_path: str, required.
         A json parameter file specifying an AllenNLP experiment.
-    driver_operation_override: Optional[str], optional, (default = None).
-        Frequently, you will want to run the same parameters using different drivers,
-        such as for training and evaluation. In order to specify this from the command
-        line, this parameter will override the "operation" key in the parameter JSON.
     """
     param_dict = pyhocon.ConfigFactory.parse_file(param_path)
-    execute_driver(param_dict, driver_operation_override)
+    train_model(param_dict)
 
 
-def execute_driver(param_dict: Dict[str, any],
-                   driver_operation_override: Optional[str] = None):
+def train_model(param_dict: Dict[str, Any]):
     """
     This function can be used as an entry point to running models in AllenNLP
     directly from a JSON specification using a :class:`Driver`. Note that if
@@ -80,18 +82,9 @@ def execute_driver(param_dict: Dict[str, any],
     ----------
     param_dict: Dict[str, any], required.
         A parameter file specifying an AllenNLP Experiment.
-    driver_operation_override: Optional[str], optional, (default = None).
-        Frequently, you will want to run the same parameters using different drivers,
-        such as for training and evaluation. In order to specify this from the command
-        line, this parameter will override the "operation" key in the parameter JSON.
     """
     params = Params(replace_none(param_dict))
     prepare_environment(params)
-    # These have to be imported _after_ we set the random seeds.
-    # TODO(Mark): check this is correct/see if we need to move tensor.py out of common.
-    from allennlp.common.tee_logger import TeeLogger
-    from allennlp.experiments.driver import Driver
-    from allennlp.experiments import Registry
 
     log_dir = params.get("serialization_prefix", None)  # pylint: disable=no-member
     if log_dir is not None:
@@ -105,13 +98,31 @@ def execute_driver(param_dict: Dict[str, any],
         with open(os.path.join(log_dir, "_model_params.json"), "w") as param_file:
             json.dump(serialisation_params, param_file)
 
-    if driver_operation_override is None:
-        driver = Driver.from_params(params)
+    # Now we begin assembling the required parts for the Trainer.
+    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
+
+    train_data_path = params.pop('train_data_path')
+    logger.info("Reading training data from %s", train_data_path)
+    train_data = dataset_reader.read(train_data_path)
+
+    # TODO(Mark): work out how this is going to be built with different options.
+    vocab = Vocabulary.from_dataset(train_data)
+    train_data.index_instances(vocab)
+    model = Model.from_params(vocab, params.pop('model'))
+
+    validation_data_path = params.pop('validation_data_path', None)
+    if validation_data_path is not None:
+        logger.info("Reading validation data from %s", validation_data_path)
+        validation_data = dataset_reader.read(validation_data_path)
+        validation_data.index_instances(vocab)
     else:
-        unused_driver_key = params.pop("operation", None)
-        if unused_driver_key:
-            logger.warning("driver_override: %s passed to execute_driver;"
-                           " ignoring 'operation' key present in params: %s",
-                           driver_operation_override, unused_driver_key)
-        driver = Registry.get_driver(driver_operation_override).from_params(params)
-    driver.run()
+        validation_data = None
+
+    iterator = DataIterator.from_params(params.pop("iterator"))
+    optimizer = get_optimizer_from_params(model.parameters(), params.pop("optimizer"))
+
+    trainer = Trainer.from_params(model, optimizer, iterator,
+                                  train_data, validation_data,
+                                  params)
+
+    trainer.train()

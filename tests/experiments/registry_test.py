@@ -210,18 +210,7 @@ class TestRegistry(AllenNlpTestCase):
                              Registry.register_seq2vec_encoder,
                              Registry._seq2vec_encoders)  # pylint: disable=protected-access
 
-    # Drivers
-
-    def test_registry_has_builtin_drivers(self):
-        assert Registry.get_driver("train").__name__ == "TrainDriver"
-
-    def test_drivers_use_correct_fields(self):
-
-        self.registry_helper(Registry.list_drivers,
-                             Registry.get_driver,
-                             Registry.register_driver,
-                             Registry._drivers)  # pylint: disable=protected-access
-    # Drivers
+    # Models
 
     def test_registry_has_builtin_models(self):
         assert Registry.get_model("simple_tagger").__name__ == "SimpleTagger"
