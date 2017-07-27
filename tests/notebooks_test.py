@@ -13,7 +13,7 @@ class TestNotebooks(AllenNlpTestCase):
 
     @staticmethod
     def execute_notebook(notebook_path: str):
-        with open(notebook_path) as notebook:
+        with open(notebook_path, encoding='utf-8') as notebook:
             contents = nbformat.read(notebook, as_version=4)
 
         execution_processor = ExecutePreprocessor(timeout=60, kernel_name="python3")
