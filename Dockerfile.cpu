@@ -1,0 +1,49 @@
+FROM ubuntu:16.04
+
+# Install base packages.
+RUN apt-get update --fix-missing && apt-get install -y \
+    bzip2 \
+    ca-certificates \
+    gcc \
+    git \
+    libc-dev \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    mercurial \
+    subversion \
+    wget \
+    python-dev \
+    python3-dev \
+    libevent-dev \
+    build-essential
+
+# Install Anaconda.
+RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
+    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
+    rm ~/miniconda.sh
+ENV PATH /opt/conda/bin:$PATH
+
+# Setup AllenNLP
+ENTRYPOINT ["/bin/bash", "-c"]
+
+WORKDIR /stage
+
+RUN conda create -n runenv --yes python=3.5
+ENV PYTHONHASHSEED 2157
+
+COPY . .
+
+# Get rid of pycache or .pyc files that you might have accidentally copied
+RUN find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
+
+RUN /bin/bash -c 'source activate runenv && scripts/install_requirements.sh &&\
+ pip install --no-cache-dir -q http://download.pytorch.org/whl/cu75/torch-0.1.12.post2-cp35-cp35m-linux_x86_64.whl'
+
+# Remove file to avoid a "GOMP_4.0 not found" error
+# https://github.com/pytorch/pytorch/issues/643#issuecomment-314949320
+RUN rm /opt/conda/envs/runenv/lib/python3.5/site-packages/torch/lib/libgomp.so.1
+
+CMD ["/bin/sh", "-c"]
