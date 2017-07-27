@@ -1,36 +1,11 @@
-from collections import defaultdict
 from typing import List, Dict, TypeVar, Type, Generic  # pylint: disable=unused-import
 
 from allennlp.data.dataset import Dataset
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
+from allennlp.common.registryable import Registryable
 
-T = TypeVar('T')
 
-class Registry0:
-    _registry = defaultdict(dict)  # type: Dict[type, Dict[str, type]]
-
-    @classmethod
-    def register(cls: Type[T], name: str):
-        registry = Registry0._registry[cls]
-        def add_subclass_to_registry(subclass: Type[T]):
-            if name in registry:
-                message = "Cannot register %s; name already in use for %s" % (
-                        name, registry[name].__name__)
-                raise ConfigurationError(message)
-            registry[name] = subclass
-            return subclass
-        return add_subclass_to_registry
-
-    @classmethod
-    def by_name(cls: Type[T], name: str) -> Type[T]:
-        return Registry0._registry[cls].get(name)
-
-    @classmethod
-    def list_available(cls) -> List[str]:
-        return list(Registry0._registry[cls].keys())
-
-class DatasetReader(Registry0):
+class DatasetReader(Registryable):
     """
     A ``DatasetReader`` reads data from some location and constructs a :class:`Dataset`.  All
     parameters necessary to read the data apart from the filepath should be passed to the
