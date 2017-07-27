@@ -5,10 +5,9 @@ import torch
 from torch.nn import Conv1d, Linear
 
 from allennlp.common import Params
-from allennlp.experiments import Registry
 from allennlp.modules import Seq2VecEncoder
 
-@Registry.register_seq2vec_encoder("cnn")
+@Seq2VecEncoder.register("cnn")
 class CnnEncoder(Seq2VecEncoder):
     """
     A ``CnnEncoder`` is a combination of multiple convolution layers and max pooling layers.  As a

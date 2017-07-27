@@ -2,10 +2,10 @@ from typing import List, Dict, TypeVar, Type, Generic  # pylint: disable=unused-
 
 from allennlp.data.dataset import Dataset
 from allennlp.common import Params
-from allennlp.common.registryable import Registryable
+from allennlp.common.registrable import Registrable
 
 
-class DatasetReader(Registryable):
+class DatasetReader(Registrable):
     """
     A ``DatasetReader`` reads data from some location and constructs a :class:`Dataset`.  All
     parameters necessary to read the data apart from the filepath should be passed to the

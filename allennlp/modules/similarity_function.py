@@ -1,9 +1,9 @@
 import torch
 
-from allennlp.common import Params
+from allennlp.common import Params, Registrable
 
 
-class SimilarityFunction(torch.nn.Module):
+class SimilarityFunction(torch.nn.Module, Registrable):
     """
     A ``SimilarityFunction`` takes a pair of tensors with the same shape, and computes a similarity
     function on the vectors in the last dimension.  For example, the tensors might both have shape
@@ -19,6 +19,8 @@ class SimilarityFunction(torch.nn.Module):
     The :class:`~allennlp.modules.Attention` and :class:`~allennlp.modules.MatrixAttention` modules
     do this.
     """
+    default_implementation = 'dot_product'
+
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
         # pylint: disable=arguments-differ
         """
@@ -30,6 +32,5 @@ class SimilarityFunction(torch.nn.Module):
 
     @classmethod
     def from_params(cls, params: Params):
-        from allennlp.experiments.registry import Registry
-        choice = params.pop_choice('type', Registry.list_similarity_functions())
-        return Registry.get_similarity_function(choice).from_params(params)
+        choice = params.pop_choice('type', cls.list_available())
+        return cls.by_name(choice).from_params(params)

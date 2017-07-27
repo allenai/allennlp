@@ -2,7 +2,6 @@ from typing import Dict
 import re
 import torch
 
-from allennlp.experiments.registry import Registry
 from allennlp.common.params import Params
 from allennlp.training.regularizer import Regularizer
 
@@ -69,8 +68,8 @@ class RegularizerApplicator:
         instantiated_regularizers = {}
         for parameter_regex, regularizer_params in all_regularizer_params.items():
             if isinstance(regularizer_params, str):
-                instantiated_regularizers[parameter_regex] = Registry.get_regularizer(regularizer_params)()
+                instantiated_regularizers[parameter_regex] = Regularizer.by_name(regularizer_params)()
             else:
-                regularizer_type = Registry.get_regularizer(regularizer_params.pop("type"))
+                regularizer_type = Regularizer.by_name(regularizer_params.pop("type"))
                 instantiated_regularizers[parameter_regex] = regularizer_type(**regularizer_params)  # type: ignore
         return RegularizerApplicator(instantiated_regularizers)

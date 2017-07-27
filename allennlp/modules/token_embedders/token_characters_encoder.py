@@ -2,12 +2,11 @@ import torch
 
 from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.experiments import Registry
 from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules import Seq2VecEncoder, TimeDistributed, TokenEmbedder
 
 
-@Registry.register_token_embedder("character_encoding")
+@TokenEmbedder.register("character_encoding")
 class TokenCharactersEncoder(TokenEmbedder):
     """
     A ``TokenCharactersEncoder`` takes the output of a

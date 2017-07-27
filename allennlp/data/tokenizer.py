@@ -1,9 +1,10 @@
 from typing import List
 
 from allennlp.common import Params
+from allennlp.common.registrable import Registrable
 
 
-class Tokenizer:
+class Tokenizer(Registrable):
     """
     A ``Tokenizer`` splits strings of text into tokens.  Typically, this either splits text into
     word tokens or character tokens, and those are the two tokenizer subclasses we have implemented
@@ -20,6 +21,8 @@ class Tokenizer:
     token.  Splitting word tokens into character arrays is handled separately, in the
     :class:`..token_representations.TokenRepresentation` class.
     """
+    default_implementation = 'word'
+
     def tokenize(self, text: str) -> List[str]:
         """
         The only public method for this class.  Actually implements splitting words into tokens.
@@ -28,6 +31,5 @@ class Tokenizer:
 
     @classmethod
     def from_params(cls, params: Params):
-        from allennlp.experiments.registry import Registry
-        choice = params.pop_choice('type', Registry.list_tokenizers(), default_to_first_choice=True)
-        return Registry.get_tokenizer(choice).from_params(params)
+        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
+        return cls.by_name(choice).from_params(params)

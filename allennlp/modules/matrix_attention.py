@@ -3,6 +3,7 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
 
 
 class MatrixAttention(torch.nn.Module):
@@ -35,8 +36,6 @@ class MatrixAttention(torch.nn.Module):
     def __init__(self, similarity_function: SimilarityFunction = None) -> None:
         super(MatrixAttention, self).__init__()
 
-        # This import is here to avoid circular import problems with the registry...
-        from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
         self._similarity_function = similarity_function or DotProductSimilarity()
 
     @overrides

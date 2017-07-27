@@ -2,11 +2,10 @@ from overrides import overrides
 import torch
 
 from allennlp.common import Params
-from allennlp.experiments import Registry
-from allennlp.modules import SimilarityFunction
+from allennlp.modules.similarity_function import SimilarityFunction
 
 
-@Registry.register_similarity_function("dot_product")
+@SimilarityFunction.register("dot_product")
 class DotProductSimilarity(SimilarityFunction):
     """
     This similarity function simply computes the dot product between each pair of vectors.  It has

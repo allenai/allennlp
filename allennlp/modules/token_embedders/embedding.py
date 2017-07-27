@@ -8,13 +8,12 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.experiments import Registry
 from allennlp.modules import TokenEmbedder
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@Registry.register_token_embedder("embedding")
+@TokenEmbedder.register("embedding")
 class Embedding(TokenEmbedder):
     """
     A more featureful embedding module than the default in Pytorch.  Adds the ability to

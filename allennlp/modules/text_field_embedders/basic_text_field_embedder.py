@@ -6,11 +6,10 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.experiments import Registry
 from allennlp.modules import TextFieldEmbedder, TokenEmbedder
 
 
-@Registry.register_text_field_embedder("basic")
+@TextFieldEmbedder.register("basic")
 class BasicTextFieldEmbedder(TextFieldEmbedder):
     """
     This is a ``TextFieldEmbedder`` that wraps a collection of :class:`TokenEmbedder` objects.  Each

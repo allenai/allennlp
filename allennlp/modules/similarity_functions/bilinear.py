@@ -5,11 +5,10 @@ import torch
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
-from allennlp.experiments import Registry
-from allennlp.modules import SimilarityFunction
+from allennlp.modules.similarity_function import SimilarityFunction
 
 
-@Registry.register_similarity_function("bilinear")
+@SimilarityFunction.register("bilinear")
 class BilinearSimilarity(SimilarityFunction):
     """
     This similarity function performs a bilinear transformation of the two input vectors.  This
