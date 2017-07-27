@@ -72,7 +72,7 @@ class TestSpacyWordSplitter:
     def test_tokenize_handles_special_cases(self):
         # note that the etc. doesn't quite work --- we can special case this if we want.
         sentence = "Mr. and Mrs. Jones, etc., went to, e.g., the store"
-        expected_tokens = ["mr.", "and", "mrs.", "jones", ",", "etc", ".", ",", "went", "to", ",",
+        expected_tokens = ["Mr.", "and", "Mrs.", "Jones", ",", "etc", ".", ",", "went", "to", ",",
                            "e.g.", ",", "the", "store"]
         tokens = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
