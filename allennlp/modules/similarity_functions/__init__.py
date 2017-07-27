@@ -1,0 +1,4 @@
+from allennlp.modules.similarity_functions.bilinear import BilinearSimilarity
+from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
+from allennlp.modules.similarity_functions.linear import LinearSimilarity
+from allennlp.modules.similarity_functions.cosine import CosineSimilarity

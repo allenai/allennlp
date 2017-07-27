@@ -28,4 +28,6 @@ class Tokenizer:
 
     @classmethod
     def from_params(cls, params: Params):
-        raise NotImplementedError
+        from allennlp.experiments.registry import Registry
+        choice = params.pop_choice('type', Registry.list_tokenizers(), default_to_first_choice=True)
+        return Registry.get_tokenizer(choice).from_params(params)
