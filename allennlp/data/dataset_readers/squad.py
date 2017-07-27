@@ -117,8 +117,6 @@ class SquadReader(DatasetReader):
                 for question_answer in paragraph_json['qas']:
                     question_text = question_answer["question"].strip().replace("\n", "")
                     tokenized_question = self._tokenizer.tokenize(question_text)
-                    print("question_text:", question_text)
-                    print("tokenized:", tokenized_question)
 
                     # There may be multiple answer annotations, so pick the one that occurs the
                     # most.
@@ -135,8 +133,11 @@ class SquadReader(DatasetReader):
                                                                     (char_span_start, char_span_end),
                                                                     self._tokenizer)
 
-                    # We do a deepcopy here to avoid any weird issues with shared state between
-                    # fields.  This might not be necessary, though...
+                    # Because the paragraph is shared across multiple questions, we do a deepcopy
+                    # here to avoid any weird issues with shared state between instances (e.g.,
+                    # when indexing is done, and when padding is done).  I _think_ all of those
+                    # operations would be safe with shared objects, but I'd rather just be safe by
+                    # doing a copy here.  Extra memory usage should be minimal.
                     paragraph_field = TextField(deepcopy(tokenized_paragraph), self._token_indexers)
                     question_field = TextField(tokenized_question, self._token_indexers)
                     span_start_field = IndexField(span_start, paragraph_field)
@@ -155,12 +156,12 @@ class SquadReader(DatasetReader):
         """
         Parameters
         ----------
-        tokenizer : ``Params``, optional
-        token_indexers: ``List[Params]``, optional
+        tokenizer : ``Params``, optional (default=``{}``)
+        token_indexers: ``Params``, optional (default=``{}``)
         """
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = {}
-        token_indexer_params = params.pop('token_indexers', Params({}))
+        token_indexer_params = params.pop('token_indexers', {})
         for name, indexer_params in token_indexer_params.items():
             token_indexers[name] = TokenIndexer.from_params(indexer_params)
         # The default parameters are contained within the class, so if no parameters are given we
