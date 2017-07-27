@@ -7,10 +7,9 @@ from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokeni
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
-from allennlp.experiments.registry import Registry
 
 
-@Registry.register_dataset_reader("language_modeling")
+@DatasetReader.register("language_modeling")
 class LanguageModelingReader(DatasetReader):
     """
     Reads a text file and converts it into a ``Dataset`` suitable for training a language model.

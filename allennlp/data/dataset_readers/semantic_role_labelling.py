@@ -9,10 +9,9 @@ from allennlp.common import Params
 from allennlp.data.fields import TextField, TagField, IndexField
 from allennlp.data.token_indexer import TokenIndexer
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.experiments import Registry
 
 
-@Registry.register_dataset_reader("srl")
+@DatasetReader.register("srl")
 class SrlReader(DatasetReader):
     """
     This DatasetReader is designed to read in the English OntoNotes v5.0 data

@@ -10,7 +10,6 @@ from tqdm import tqdm
 
 from allennlp.common import Params
 from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokenizer
-from allennlp.experiments import Registry
 from allennlp.data.fields import TextField, ListField, IndexField
 from allennlp.data.field import Field  # pylint: disable=unused-import
 from allennlp.data.token_indexers import SingleIdTokenIndexer
@@ -74,7 +73,7 @@ def _spans_match(sentence_tokens: List[str], span_tokens: List[str], index: int)
     return False
 
 
-@Registry.register_dataset_reader("squad")
+@DatasetReader.register("squad")
 class SquadReader(DatasetReader):
     """
     Reads a JSON-formatted SQuAD file and returns a ``Dataset`` where the ``Instances`` have four
@@ -172,7 +171,7 @@ class SquadReader(DatasetReader):
         return cls(tokenizer=tokenizer, token_indexers=token_indexers)
 
 
-@Registry.register_dataset_reader("squad_sentence_selection")
+@DatasetReader.register("squad_sentence_selection")
 class SquadSentenceSelectionReader(DatasetReader):
     """
     Parameters

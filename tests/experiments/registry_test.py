@@ -6,6 +6,7 @@ import torch.nn.init
 from allennlp.common.checks import ConfigurationError
 from allennlp.experiments import Registry
 from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.data.dataset_reader import DatasetReader
 
 
 class TestRegistry(AllenNlpTestCase):
@@ -46,10 +47,10 @@ class TestRegistry(AllenNlpTestCase):
     # Dataset readers
 
     def test_registry_has_builtin_readers(self):
-        assert Registry.get_dataset_reader('snli').__name__ == 'SnliReader'
-        assert Registry.get_dataset_reader('sequence_tagging').__name__ == 'SequenceTaggingDatasetReader'
-        assert Registry.get_dataset_reader('language_modeling').__name__ == 'LanguageModelingReader'
-        assert Registry.get_dataset_reader('squad_sentence_selection').__name__ == 'SquadSentenceSelectionReader'
+        assert DatasetReader.by_name('snli').__name__ == 'SnliReader'
+        assert DatasetReader.by_name('sequence_tagging').__name__ == 'SequenceTaggingDatasetReader'
+        assert DatasetReader.by_name('language_modeling').__name__ == 'LanguageModelingReader'
+        assert DatasetReader.by_name('squad_sentence_selection').__name__ == 'SquadSentenceSelectionReader'
 
     def test_dataset_readers_use_correct_fields(self):
         self.registry_helper(Registry.list_dataset_readers,
