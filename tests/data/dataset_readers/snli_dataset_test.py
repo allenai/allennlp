@@ -13,20 +13,20 @@ class TestSnliDataset(AllenNlpTestCase):
         reader = SnliReader()
         dataset = reader.read(self.TRAIN_FILE)
 
-        instance1 = {"premise": ["a", "person", "on", "a", "horse",
+        instance1 = {"premise": ["A", "person", "on", "a", "horse",
                                  "jumps", "over", "a", "broken", "down", "airplane", "."],
-                     "hypothesis": ["a", "person", "is", "training",
+                     "hypothesis": ["A", "person", "is", "training",
                                     "his", "horse", "for", "a", "competition", "."],
                      "label": "neutral"}
 
-        instance2 = {"premise": ["a", "person", "on", "a", "horse",
+        instance2 = {"premise": ["A", "person", "on", "a", "horse",
                                  "jumps", "over", "a", "broken", "down", "airplane", "."],
-                     "hypothesis": ["a", "person", "is", "at", "a", "diner",
+                     "hypothesis": ["A", "person", "is", "at", "a", "diner",
                                     ",", "ordering", "an", "omelette", "."],
                      "label": "contradiction"}
-        instance3 = {"premise": ["a", "person", "on", "a", "horse",
+        instance3 = {"premise": ["A", "person", "on", "a", "horse",
                                  "jumps", "over", "a", "broken", "down", "airplane", "."],
-                     "hypothesis": ["a", "person", "is", "outdoors", ",", "on", "a", "horse", "."],
+                     "hypothesis": ["A", "person", "is", "outdoors", ",", "on", "a", "horse", "."],
                      "label": "entailment"}
 
         assert len(dataset.instances) == 3
