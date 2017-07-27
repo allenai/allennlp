@@ -19,7 +19,7 @@ def get_optimizer_from_params(model_parameters: List[torch.Tensor],
     of the parameters and pass them to the optimizer's constructor.
     """
     # Avoid circular imports from the Registry....
-    from allennlp.experiments import Registry
+    from allennlp.experiments.registry import Registry
 
     if isinstance(params, str):
         optimizer = params

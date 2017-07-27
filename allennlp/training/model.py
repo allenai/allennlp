@@ -2,6 +2,7 @@ from typing import Dict
 import torch
 
 from allennlp.common.params import Params
+from allennlp.data import Vocabulary
 
 class Model(torch.nn.Module):
     """
@@ -63,7 +64,7 @@ class Model(torch.nn.Module):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, vocab: Vocabulary, params: Params):
         from allennlp.experiments.registry import Registry
         choice = params.pop_choice("type", Registry.list_models())
-        return Registry.get_model(choice).from_params(params)
+        return Registry.get_model(choice).from_params(vocab, params)

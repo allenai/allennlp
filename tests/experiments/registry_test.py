@@ -140,11 +140,11 @@ class TestRegistry(AllenNlpTestCase):
 
     def test_registry_has_builtin_optimizers(self):
         all_optimizers = {
-            "adam": torch.optim.Adam,
-            "adagrad": torch.optim.Adagrad,
-            "adadelta": torch.optim.Adadelta,
-            "sgd": torch.optim.SGD,
-            "rmsprop": torch.optim.RMSprop,
+                "adam": torch.optim.Adam,
+                "adagrad": torch.optim.Adagrad,
+                "adadelta": torch.optim.Adadelta,
+                "sgd": torch.optim.SGD,
+                "rmsprop": torch.optim.RMSprop,
         }
         for key, value in all_optimizers.items():
             assert Registry.get_optimizer(key) == value

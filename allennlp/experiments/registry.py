@@ -462,10 +462,10 @@ class Registry:
         Returns a list of all currently-registered :class:`Model` names.
         """
         import allennlp.models  # pylint: disable=unused-variable
-        return list(cls._drivers.keys())
+        return list(cls._models.keys())
 
     @classmethod
-    def get_model(cls, name: str) -> Type[Driver]:
+    def get_model(cls, name: str) -> Type[Model]:
         """
         Returns the :class:`Model` that has been registered with ``name``.
         """
