@@ -1,10 +1,10 @@
 # pylint: disable=invalid-name,protected-access
-from unittest import TestCase
 import codecs
 import gzip
 import logging
 import os
 import shutil
+from unittest import TestCase
 
 import torch
 from numpy.testing import assert_allclose
@@ -12,11 +12,11 @@ from numpy.testing import assert_allclose
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tensor import arrays_to_variables
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import BasicIterator
-from allennlp.data.data_iterator import DataIterator
-from allennlp.training.model import Model
-from allennlp.data.dataset_reader import DatasetReader
+from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.models.model import Model
 
 
 class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods

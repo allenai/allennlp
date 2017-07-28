@@ -1,13 +1,13 @@
-from typing import List, Tuple, Dict, cast
 import random
+from typing import List, Tuple, Dict, cast
 
 from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.util import add_noise_to_dict_values
 from allennlp.data import Dataset, Instance
-from allennlp.data.data_iterator import DataIterator
 from allennlp.data.iterators.basic_iterator import BasicIterator
+from allennlp.data.iterators.data_iterator import DataIterator
 
 
 @DataIterator.register("bucket")

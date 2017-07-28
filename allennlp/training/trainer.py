@@ -1,17 +1,17 @@
-from typing import Optional
 import logging
 import os
 import shutil
+from typing import Optional
 
 import torch
 import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.data_iterator import DataIterator
-from allennlp.training.model import Model
-from allennlp.data import Dataset
 from allennlp.common.tensor import arrays_to_variables
+from allennlp.data import Dataset
+from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.models.model import Model
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

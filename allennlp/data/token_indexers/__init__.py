@@ -1,2 +1,3 @@
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.token_indexers.token_characters_indexer import TokenCharactersIndexer
 from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
