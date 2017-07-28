@@ -45,4 +45,4 @@ RUN /bin/bash -c 'source activate runenv && pip install --no-cache-dir -q http:/
 RUN rm /opt/conda/envs/runenv/lib/python3.5/site-packages/torch/lib/libgomp.so.1
 
 ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["/bin/bash -c source conda runenv"]
+CMD ["/bin/bash"]
