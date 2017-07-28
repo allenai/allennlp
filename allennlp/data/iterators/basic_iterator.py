@@ -5,10 +5,9 @@ from overrides import overrides
 
 from allennlp.common.util import group_by_count
 from allennlp.data import DataIterator, Dataset, Instance
-from allennlp.experiments import Registry
 
 
-@Registry.register_data_iterator("basic")
+@DataIterator.register("basic")
 class BasicIterator(DataIterator):
     """
     A very basic iterator, which takes a dataset, pads all of it's instances to the maximum lengths

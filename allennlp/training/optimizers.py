@@ -1,30 +1,32 @@
-from typing import List, Union
+from typing import List
 
 import torch
 
 from allennlp.common.params import Params  # pylint: disable=unused-import
+from allennlp.common.registrable import Registrable
 
 
-def get_optimizer_from_params(model_parameters: List[torch.Tensor],
-                              params: Union[Params, str]) -> torch.optim.Optimizer:
+class Optimizer(Registrable):
     """
-    This function converts a set of model parameters to be optimized and a
-    dictionary of optimizer parameters (or a string name of one of the optimizers above)
-    into a Pytorch optimizer object which can apply gradient updates to the model
-    parameters following ``model.backward()`` calls.
-    The simplest case for both of these is a string that shows up in `optimizers`
-    above - if ``params`` is just one of those strings, we return it, and everyone
-    is happy. If not, we assume ``params`` is a Dict[str, Any], with a "type" key,
-    where the value for "type" must be one of those strings above. We take the rest
-    of the parameters and pass them to the optimizer's constructor.
+    This class just allows us to implement ``Registerable`` for Pytorch Optimizers.
     """
-    # Avoid circular imports from the Registry....
-    from allennlp.experiments.registry import Registry
+    default_implementation = "adam"
 
-    if isinstance(params, str):
-        optimizer = params
-        params = Params({})
-    else:
-        optimizer = params.pop_choice("type", Registry.list_optimizers(),
-                                      default_to_first_choice=True)
-    return Registry.get_optimizer(optimizer)(model_parameters, **params.as_dict())
+    @classmethod
+    def from_params(cls, model_parameters: List[torch.nn.Parameter], params: Params):
+        if isinstance(params, str):
+            optimizer = params
+            params = Params({})
+        else:
+            optimizer = params.pop_choice("type", Optimizer.list_available())
+        return Optimizer.by_name(optimizer)(model_parameters, **params.as_dict()) # type: ignore
+
+# We just use the Pytorch optimizers, so here we force them into
+# Registry._registry so we can build them from params.
+Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
+        "adam": torch.optim.Adam,
+        "adagrad": torch.optim.Adagrad,
+        "adadelta": torch.optim.Adadelta,
+        "sgd": torch.optim.SGD,
+        "rmsprop": torch.optim.RMSprop,
+}

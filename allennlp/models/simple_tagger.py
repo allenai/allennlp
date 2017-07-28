@@ -5,15 +5,15 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
+from allennlp.common import Registrable
 from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.training import Model
-from allennlp.experiments.registry import Registry
 
 
-@Registry.register_model("simple_tagger")
-class SimpleTagger(Model):
+@Model.register("simple_tagger")
+class SimpleTagger(Model, Registrable):
     """
     This ``SimpleTagger`` simply encodes a sequence of text with a stacked ``Seq2SeqEncoder``, then
     predicts a tag for each token in the sequence.

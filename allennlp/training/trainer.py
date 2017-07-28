@@ -137,8 +137,8 @@ class Trainer:
         torch.save(training_state, os.path.join(self._serialization_prefix,
                                                 "training_state_epoch_{}.th".format(epoch)))
         if is_best:
-            logger.log("Best validation performance so far. "
-                       "Copying weights to %s/best.th'.", self._serialization_prefix)
+            logger.info("Best validation performance so far. "
+                        "Copying weights to %s/best.th'.", self._serialization_prefix)
             shutil.copy(model_path, os.path.join(model_path, "best.th"))
 
     def _restore_checkpoint(self) -> int:

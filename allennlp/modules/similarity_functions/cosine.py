@@ -2,11 +2,10 @@ from overrides import overrides
 import torch
 
 from allennlp.common import Params
-from allennlp.experiments import Registry
-from allennlp.modules import SimilarityFunction
+from allennlp.modules.similarity_function import SimilarityFunction
 
 
-@Registry.register_similarity_function("cosine")
+@SimilarityFunction.register("cosine")
 class CosineSimilarity(SimilarityFunction):
     """
     This similarity function simply computes the cosine similarity between each pair of vectors.  It has
@@ -21,6 +20,6 @@ class CosineSimilarity(SimilarityFunction):
         return (normalized_tensor_1 * normalized_tensor_2).sum(dim=-1).squeeze(dim=-1)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'CosineSimilarity':
         params.assert_empty(cls.__name__)
         return cls()

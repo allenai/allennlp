@@ -5,13 +5,16 @@ import numpy
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.common import Params
+from allennlp.common.registrable import Registrable
 
 
-class DataIterator:
+class DataIterator(Registrable):
     """
     An abstract ``DataIterator`` class. ``DataIterators`` must implement __call__, which yields
     batched examples.
     """
+    default_implementation = 'bucket'
+
     def __call__(self,
                  dataset: Dataset,
                  num_epochs: int = None,
@@ -51,10 +54,10 @@ class DataIterator:
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
-        from allennlp.experiments.registry import Registry
+    def from_params(cls, params: Params) -> 'DataIterator':
         # TODO(Mark): The adaptive iterator will need a bit of work here,
         # to retrieve the scaling function etc.
 
-        iterator_type = params.pop_choice("type", Registry.list_data_iterators())
-        return Registry.get_data_iterator(iterator_type)(**params.as_dict())  # type: ignore
+        iterator_type = params.pop_choice("type", cls.list_available())
+        # TODO(joelgrus): implement `from_params` methods on subclasses + change
+        return cls.by_name(iterator_type)(**params.as_dict())  # type: ignore

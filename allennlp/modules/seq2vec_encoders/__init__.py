@@ -4,28 +4,28 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.experiments import Registry
+from allennlp.modules.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.seq2vec_encoders.cnn_encoder import CnnEncoder
 from allennlp.modules.seq2vec_encoders.pytorch_seq2vec_wrapper import PytorchSeq2VecWrapper
 
 
 class _Seq2VecWrapper:
     """
-    The :class:`Registry` needs to have a ``Type[Seq2VecEncoder]`` as the value registered for each
+    For :class:`Registrable` we need to have a ``Type[Seq2VecEncoder]`` as the value registered for each
     key.  What that means is that we need to be able to ``__call__`` these values (as is done with
     ``__init__`` on the class), and be able to call ``from_params()`` on the value.
 
     In order to accomplish this, we have two options: (1) we create a ``Seq2VecEncoder`` class for
     all of pytorch's RNN modules individually, with our own parallel classes that we register in
     the registry; or (2) we wrap pytorch's RNNs with something that `mimics` the required
-    ``Registry`` API.  We've gone with the second option here.
+    API.  We've gone with the second option here.
 
     This is a two-step approach: first, we have the :class:`PytorchSeq2VecWrapper` class that handles
     the interface between a pytorch RNN and our ``Seq2VecEncoder`` API.  Our ``PytorchSeq2VecWrapper``
     takes an instantiated pytorch RNN and just does some interface changes.  Second, we need a way
     to create one of these ``PytorchSeq2VecWrappers``, with an instantiated pytorch RNN, from the
     registry.  That's what this ``_Wrapper`` does.  The only thing this class does is instantiate
-    the pytorch RNN in a way that's compatible with the ``Registry``, then pass it off to the
+    the pytorch RNN in a way that's compatible with ``Registrable``, then pass it off to the
     ``PytorchSeq2VecWrapper`` class.
 
     When you instantiate a ``_Wrapper`` object, you give it an ``RNNBase`` subclass, which we save
@@ -49,6 +49,6 @@ class _Seq2VecWrapper:
         return PytorchSeq2VecWrapper(module)
 
 # pylint: disable=protected-access
-Registry.register_seq2vec_encoder("gru")(_Seq2VecWrapper(torch.nn.GRU))
-Registry.register_seq2vec_encoder("lstm")(_Seq2VecWrapper(torch.nn.LSTM))
-Registry.register_seq2vec_encoder("rnn")(_Seq2VecWrapper(torch.nn.RNN))
+Seq2VecEncoder.register("gru")(_Seq2VecWrapper(torch.nn.GRU))
+Seq2VecEncoder.register("lstm")(_Seq2VecWrapper(torch.nn.LSTM))
+Seq2VecEncoder.register("rnn")(_Seq2VecWrapper(torch.nn.RNN))

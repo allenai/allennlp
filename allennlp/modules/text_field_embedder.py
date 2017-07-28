@@ -2,10 +2,10 @@ from typing import Dict
 
 import torch
 
-from allennlp.common import Params
+from allennlp.common import Params, Registrable
 from allennlp.data import Vocabulary
 
-class TextFieldEmbedder(torch.nn.Module):
+class TextFieldEmbedder(torch.nn.Module, Registrable):
     """
     A ``TextFieldEmbedder`` is a ``Module`` that takes as input the
     :class:`~allennlp.data.DataArray` produced by a :class:`~allennlp.data.fields.TextField` and
@@ -22,6 +22,8 @@ class TextFieldEmbedder(torch.nn.Module):
     this if you want to construct a ``Linear`` layer using the output of this embedder, for
     instance.
     """
+    default_implementation = 'basic'
+
     def forward(self,  # pylint: disable=arguments-differ
                 text_field_input: Dict[str, torch.Tensor]) -> torch.Tensor:
         raise NotImplementedError
@@ -35,7 +37,6 @@ class TextFieldEmbedder(torch.nn.Module):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params):
-        from allennlp.experiments.registry  import Registry
-        choice = params.pop_choice('type', Registry.list_text_field_embedders(), default_to_first_choice=True)
-        return Registry.get_text_field_embedder(choice).from_params(vocab, params)
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TextFieldEmbedder':
+        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
+        return cls.by_name(choice).from_params(vocab, params)

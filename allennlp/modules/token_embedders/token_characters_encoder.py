@@ -2,12 +2,11 @@ import torch
 
 from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.experiments import Registry
 from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules import Seq2VecEncoder, TimeDistributed, TokenEmbedder
 
 
-@Registry.register_token_embedder("character_encoding")
+@TokenEmbedder.register("character_encoding")
 class TokenCharactersEncoder(TokenEmbedder):
     """
     A ``TokenCharactersEncoder`` takes the output of a
@@ -29,7 +28,7 @@ class TokenCharactersEncoder(TokenEmbedder):
         return self._encoder(self._embedding(token_characters))
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params):
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':
         embedding_params = params.pop("embedding")  # type: Params
         # Embedding.from_params() uses "tokens" as the default namespace, but we need to change
         # that to be "token_characters" by default.

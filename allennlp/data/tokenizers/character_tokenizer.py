@@ -3,10 +3,9 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.data.tokenizer import Tokenizer
-from allennlp.experiments import Registry
 
 
-@Registry.register_tokenizer("character")
+@Tokenizer.register("character")
 class CharacterTokenizer(Tokenizer):
     """
     A ``CharacterTokenizer`` splits strings into character tokens.
@@ -40,7 +39,7 @@ class CharacterTokenizer(Tokenizer):
         return list(text)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'CharacterTokenizer':
         byte_encoding = params.pop('byte_encoding', None)
         lowercase_characters = params.pop('lowercase_characters', False)
         params.assert_empty(cls.__name__)

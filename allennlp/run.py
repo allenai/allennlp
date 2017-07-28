@@ -10,7 +10,7 @@ import pyhocon
 import numpy
 import torch
 
-from allennlp.training.optimizers import get_optimizer_from_params
+from allennlp.training.optimizers import Optimizer
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params, replace_none
 from allennlp.common.tee_logger import TeeLogger
@@ -119,7 +119,7 @@ def train_model(param_dict: Dict[str, Any]):
         validation_data = None
 
     iterator = DataIterator.from_params(params.pop("iterator"))
-    optimizer = get_optimizer_from_params(model.parameters(), params.pop("optimizer"))
+    optimizer = Optimizer.from_params(model.parameters(), params.pop("optimizer"))
 
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,
