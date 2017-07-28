@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from typing import List
 
+from allennlp.common import Params
 from allennlp.data import Dataset, Instance, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
@@ -68,3 +69,13 @@ class TestBasicIterator(IteratorTest):
         assert grouped_instances == [[self.instances[0], self.instances[1]],
                                      [self.instances[2], self.instances[3]],
                                      [self.instances[4]]]
+
+    def test_from_params(self):
+        # pylint: disable=protected-access
+        params = Params({})
+        iterator = BasicIterator.from_params(params)
+        assert iterator._batch_size == 32  # default value
+
+        params = Params({"batch_size": 10})
+        iterator = BasicIterator.from_params(params)
+        assert iterator._batch_size == 10
