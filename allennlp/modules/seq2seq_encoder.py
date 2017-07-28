@@ -1,9 +1,9 @@
 import torch
 
-from allennlp.common import Params
+from allennlp.common import Params, Registrable
 
 
-class Seq2SeqEncoder(torch.nn.Module):
+class Seq2SeqEncoder(torch.nn.Module, Registrable):
     """
     A ``Seq2SeqEncoder`` is a ``Module`` that takes as input a sequence of vectors and returns a
     modified sequence of vectors.  Input shape: ``(batch_size, sequence_length, input_dim)``; output
@@ -21,7 +21,6 @@ class Seq2SeqEncoder(torch.nn.Module):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
-        from allennlp.experiments.registry import Registry
-        choice = params.pop_choice('type', Registry.list_seq2seq_encoders())
-        return Registry.get_seq2seq_encoder(choice).from_params(params)
+    def from_params(cls, params: Params) -> 'Seq2SeqEncoder':
+        choice = params.pop_choice('type', cls.list_available())
+        return cls.by_name(choice).from_params(params)

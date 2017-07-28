@@ -4,12 +4,11 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data import TokenIndexer
-from allennlp.experiments import Registry
 
 # pylint: disable=no-self-use
 
 
-@Registry.register_token_indexer("single_id")
+@TokenIndexer.register("single_id")
 class SingleIdTokenIndexer(TokenIndexer[int]):
     """
     This :class:`TokenIndexer` represents tokens as single integers.
@@ -59,7 +58,7 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
         return pad_sequence_to_length(tokens, desired_num_tokens)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SingleIdTokenIndexer':
         """
         Parameters
         ----------

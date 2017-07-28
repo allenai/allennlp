@@ -6,11 +6,10 @@ from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.experiments import Registry
-from allennlp.modules import SimilarityFunction
+from allennlp.modules.similarity_function import SimilarityFunction
 
 
-@Registry.register_similarity_function("linear")
+@SimilarityFunction.register("linear")
 class LinearSimilarity(SimilarityFunction):
     """
     This similarity function performs a dot product between a vector of weights and some
@@ -130,7 +129,7 @@ class LinearSimilarity(SimilarityFunction):
             return first_tensor_dim
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'LinearSimilarity':
         tensor_1_dim = params.pop("tensor_1_dim")
         tensor_2_dim = params.pop("tensor_2_dim")
         combination = params.pop("combination", "x,y")

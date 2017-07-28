@@ -5,12 +5,11 @@ from allennlp.common.params import Params
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import TokenIndexer, Vocabulary
 from allennlp.data.tokenizers import CharacterTokenizer
-from allennlp.experiments import Registry
 
 # pylint: disable=no-self-use
 
 
-@Registry.register_token_indexer("characters")
+@TokenIndexer.register("characters")
 class TokenCharactersIndexer(TokenIndexer[List[int]]):
     """
     This :class:`TokenIndexer` represents tokens as lists of character indices.
