@@ -6,13 +6,9 @@ import tempfile
 from unittest import TestCase
 
 from allennlp.service.cli.run import main
-from allennlp.common.registrable import Registrable
 
 
 class TestMain(TestCase):
-    def setUp(self):
-        # hack to clear the registry to make sure it's not loaded by previous tests.
-        Registrable._registry.clear()  # pylint: disable=protected-access
 
     def test_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()

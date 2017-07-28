@@ -17,6 +17,7 @@ from allennlp.data.iterators import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
+from allennlp.common.registrable import Registrable
 
 
 class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
@@ -42,6 +43,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         os.makedirs(self.CONLL_VAL_DIR + "english/annotations/test_topic/test_source/01/", exist_ok=True)
 
     def tearDown(self):
+        Registrable._registry.clear()
         shutil.rmtree(self.TEST_DIR)
 
     def get_trainer_params(self, additional_arguments=None):
