@@ -59,5 +59,4 @@ class DataIterator(Registrable):
         # to retrieve the scaling function etc.
 
         iterator_type = params.pop_choice("type", cls.list_available())
-        # TODO(joelgrus): implement `from_params` methods on subclasses + change
-        return cls.by_name(iterator_type)(**params.as_dict())  # type: ignore
+        return cls.by_name(iterator_type).from_params(params)
