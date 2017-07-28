@@ -20,7 +20,7 @@ class Registrable:
     If it is set, it will be the first element of ``list_available()``.
     """
 
-    _registry = defaultdict(dict)  # type: Dict[type, Dict[str, type]]
+    _registry = defaultdict(dict)  # type: Dict[Type, Dict[str, Type]]
     default_implementation = None  # type: str
 
     @classmethod

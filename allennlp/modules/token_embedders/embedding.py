@@ -96,7 +96,7 @@ class Embedding(TokenEmbedder):
                                        self.sparse)(inputs, self.weight)
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params):
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         pretrained_file = params.pop("pretrained_file", None)
         if pretrained_file:

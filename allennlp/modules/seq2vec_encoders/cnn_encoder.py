@@ -105,7 +105,7 @@ class CnnEncoder(Seq2VecEncoder):
         return result
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'CnnEncoder':
         embedding_dim = params.pop('embedding_dim')
         output_dim = params.pop('output_dim', None)
         num_filters = params.pop('num_filters')

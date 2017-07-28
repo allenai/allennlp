@@ -249,7 +249,7 @@ class SrlReader(DatasetReader):
         return Dataset(instances)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SrlReader':
         """
         Parameters
         ----------

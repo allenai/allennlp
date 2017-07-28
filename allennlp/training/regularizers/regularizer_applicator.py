@@ -35,7 +35,7 @@ class RegularizerApplicator:
         return accumulator
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'RegularizerApplicator':
         """
         Converts a Params object into an RegularizerApplicator. The json should
         be formatted as follows:

@@ -39,7 +39,7 @@ class CharacterTokenizer(Tokenizer):
         return list(text)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'CharacterTokenizer':
         byte_encoding = params.pop('byte_encoding', None)
         lowercase_characters = params.pop('lowercase_characters', False)
         params.assert_empty(cls.__name__)

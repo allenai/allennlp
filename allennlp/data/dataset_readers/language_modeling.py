@@ -86,7 +86,7 @@ class LanguageModelingReader(DatasetReader):
         return Dataset(instances)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'LanguageModelingReader':
         """
         Parameters
         ----------

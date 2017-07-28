@@ -129,7 +129,7 @@ class LinearSimilarity(SimilarityFunction):
             return first_tensor_dim
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'LinearSimilarity':
         tensor_1_dim = params.pop("tensor_1_dim")
         tensor_2_dim = params.pop("tensor_2_dim")
         combination = params.pop("combination", "x,y")

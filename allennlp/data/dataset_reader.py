@@ -1,5 +1,3 @@
-from typing import List, Dict, TypeVar, Type, Generic  # pylint: disable=unused-import
-
 from allennlp.data.dataset import Dataset
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
@@ -18,6 +16,6 @@ class DatasetReader(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'DatasetReader':
         choice = params.pop_choice('type', cls.list_available())
         return cls.by_name(choice).from_params(params)

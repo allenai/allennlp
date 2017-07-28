@@ -16,6 +16,6 @@ class DotProductSimilarity(SimilarityFunction):
         return (tensor_1 * tensor_2).sum(dim=-1).squeeze(dim=-1)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'DotProductSimilarity':
         params.assert_empty(cls.__name__)
         return cls()

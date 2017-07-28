@@ -45,7 +45,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
         return Dataset(instances)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SequenceTaggingDatasetReader':
         """
         Parameters
         ----------

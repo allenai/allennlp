@@ -31,6 +31,6 @@ class SimilarityFunction(torch.nn.Module, Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SimilarityFunction':
         choice = params.pop_choice('type', cls.list_available())
         return cls.by_name(choice).from_params(params)

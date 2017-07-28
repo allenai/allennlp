@@ -151,7 +151,7 @@ class SquadReader(DatasetReader):
         return Dataset(instances)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SquadReader':
         """
         Parameters
         ----------
@@ -371,7 +371,7 @@ class SquadSentenceSelectionReader(DatasetReader):
         return Dataset(instances)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SquadSentenceSelectionReader':
         """
         Parameters
         ----------

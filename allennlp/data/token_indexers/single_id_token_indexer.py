@@ -58,7 +58,7 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
         return pad_sequence_to_length(tokens, desired_num_tokens)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SingleIdTokenIndexer':
         """
         Parameters
         ----------

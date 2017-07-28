@@ -54,7 +54,7 @@ class DataIterator(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'DataIterator':
         # TODO(Mark): The adaptive iterator will need a bit of work here,
         # to retrieve the scaling function etc.
 
