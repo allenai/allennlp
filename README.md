@@ -67,7 +67,7 @@ You can run the image with `docker run --rm -it allennlp-cpu`.  The `--rm` flag 
 
 The Docker environment uses Conda to install Python.  You can enter the Conda environment with `source activate runenv`.
 
-You can test your installation with `pytest -v`.
+You can test your installation by entering the Conda environment with `source activate allennlp` and running  `pytest -v`.
 
 ### Setting up a Kubernetes development environment
 
