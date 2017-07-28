@@ -3,9 +3,13 @@ from allennlp.common import Registrable
 import torch
 
 class Initializer(Registrable):
+    """
+    An initializer is really just a bare pytorch function. This class
+    is a proxy that allows us to implement `Registerable` for those functions.
+    """
     default_implementation = 'normal'
 
-# We don't have classes to decorate, so we hack these into Registrable._registry
+# There are no classes to decorate, so we hack these into Registrable._registry
 Registrable._registry[Initializer] = {  # pylint: disable=protected-access
         "normal": torch.nn.init.normal,
         "uniform": torch.nn.init.uniform,
