@@ -11,6 +11,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.training import Model
 
 
+@Model.register("simple_tagger")
 class SimpleTagger(Model):
     """
     This ``SimpleTagger`` simply encodes a sequence of text with a stacked ``Seq2SeqEncoder``, then
