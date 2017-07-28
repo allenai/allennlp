@@ -35,12 +35,6 @@ class BasicIterator(DataIterator):
 
     @classmethod
     def from_params(cls, params: Params) -> 'BasicIterator':
-        """
-        Parameters
-        ----------
-        batch_size : int, optional, (default = 32)
-            The size of each batch of instances yielded when calling the iterator.
-        """
         batch_size = params.pop('batch_size', 32)
         params.assert_empty(cls.__name__)
         return cls(batch_size=batch_size)
