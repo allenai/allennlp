@@ -3,6 +3,7 @@ import random
 
 from overrides import overrides
 
+from allennlp.common import Params
 from allennlp.common.util import group_by_count
 from allennlp.data import DataIterator, Dataset, Instance
 
@@ -31,3 +32,15 @@ class BasicIterator(DataIterator):
         # are None, which is how group_by_count pads non-complete batches.
         grouped_instances[-1] = [instance for instance in grouped_instances[-1] if instance is not None]
         return grouped_instances
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'BasicIterator':
+        """
+        Parameters
+        ----------
+        batch_size : int, optional, (default = 32)
+            The size of each batch of instances yielded when calling the iterator.
+        """
+        batch_size = params.pop('batch_size', 32)
+        params.assert_empty(cls.__name__)
+        return cls(batch_size=batch_size)
