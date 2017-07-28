@@ -45,8 +45,7 @@ class Trainer:
         validation_dataset : ``Dataset``, optional, (default = None).
             A ``Dataset`` to evaluate on. The dataset should have already been indexed.
         patience : int, optional (default=2)
-            Number of epochs to be patient before early stopping.  I.e., if the ``validation_metric``
-            does not improve for this many epochs, we will stop training.
+            Number of epochs to be patient before early stopping.
         batch_size : int, optional (default = 32)
             Batch size to use when training.
         num_epochs : int, optional (default = 20)
@@ -65,7 +64,7 @@ class Trainer:
         self._train_dataset = train_dataset
         self._validation_dataset = validation_dataset
 
-        self._patience = patience
+        self._patience = patience  # TODO(Mark): add this to training loop with validation metrics.
         self._batch_size = batch_size
         self._num_epochs = num_epochs
         self._serialization_prefix = serialization_prefix
@@ -120,6 +119,16 @@ class Trainer:
     def _save_checkpoint(self,
                          epoch: int,
                          is_best: Optional[bool] = None) -> None:
+        """
+        Parameters
+        ----------
+        epoch : int, required.
+            The epoch of training.
+        is_best: bool, optional (default = None)
+            A flag which causes the model weights at the given epoch to
+            be copied to a "best.th" file. The value of this flag should
+            be based on some validation metric computed by your model.
+        """
         model_path = os.path.join(self._serialization_prefix, "model_state_epoch_{}.th".format(epoch))
         model_state = self._model.state_dict()
         torch.save(model_state, model_path)
@@ -128,9 +137,27 @@ class Trainer:
         torch.save(training_state, os.path.join(self._serialization_prefix,
                                                 "training_state_epoch_{}.th".format(epoch)))
         if is_best:
+            logger.log("Best validation performance so far. "
+                       "Copying weights to %s/best.th'.", self._serialization_prefix)
             shutil.copy(model_path, os.path.join(model_path, "best.th"))
 
     def _restore_checkpoint(self) -> int:
+        """
+        Restores a model from a serialization_prefix to the last saved checkpoint.
+        This includes an epoch count and optimizer state, which is serialized separately
+        from  model parameters. This function should only be used to continue training -
+        if you wish to load a model for inference/load parts of a model into a new
+        computation graph, you should use the native Pytorch functions:
+        `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
+
+        Returns
+        -------
+        epoch: int
+            The epoch at which to resume training.
+        """
+        if not self._serialization_prefix:
+            raise ConfigurationError("serialization_prefix not specified - cannot "
+                                     "restore a model without a directory path.")
 
         serialization_files = os.listdir(self._serialization_prefix)
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
