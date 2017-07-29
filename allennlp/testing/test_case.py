@@ -60,7 +60,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         # tests to fail as the registry does not have the correct keys.
 
         # This clears the registry in between each test file (due to the 'module'
-        # level scope), preventing # this behaviour and # making the tests as
+        # level scope), preventing this behaviour and # making the tests as
         # maximally isolated as feasible.
 
         del sys.modules['allennlp.common.registrable']
