@@ -46,8 +46,23 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     def tearDown(self):
         shutil.rmtree(self.TEST_DIR)
 
+    @staticmethod
     @pytest.fixture(scope='module')
-    def unload_registrable(self):
+    def unload_registrable():
+        # Each test class which tests registrable subclasses registers the
+        # subclasses when they are imported into the test file, which is
+        # modifying a class attribute of "Registrable". In order to test that
+        # subclasses are being correctly registered for each set of registrable
+        # things, we want to clear the registry in the tests between each test.
+        # However, if we do this between individual tests, we clear the registry
+        # prematurely, as the imports at the top of a file containing a test class
+        # are not re-run for every individual test within a test class, causing some
+        # tests to fail as the registry does not have the correct keys.
+
+        # This clears the registry in between each test file (due to the 'module'
+        # level scope), preventing # this behaviour and # making the tests as
+        # maximally isolated as feasible.
+
         del sys.modules['allennlp.common.registrable']
 
     def get_trainer_params(self, additional_arguments=None):

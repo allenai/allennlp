@@ -3,11 +3,8 @@ from typing import TypeVar, Type, Dict, List  # pylint: disable=unused-import
 
 from allennlp.common.checks import ConfigurationError
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 T = TypeVar('T')
+
 
 class Registrable:
     """
@@ -44,7 +41,6 @@ class Registrable:
                         name, cls.__name__, registry[name].__name__)
                 raise ConfigurationError(message)
             registry[name] = subclass
-            logger.info("Registering {} to {} with name {}".format(str(subclass), str(cls), name))
             return subclass
         return add_subclass_to_registry
 
