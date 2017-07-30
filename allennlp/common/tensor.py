@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 import torch
 from torch.autograd import Variable
 import numpy
@@ -123,3 +123,68 @@ def masked_softmax(vector, mask):
     else:
         # There is no mask, so we use the provided ``torch.nn.functional.softmax`` function.
         return torch.nn.functional.softmax(vector)
+
+
+def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Tensor:
+    """
+    Takes the dictionary of tensors produced by a ``TextField`` and returns a mask of shape
+    ``(batch_size, num_tokens)``.  This mask will be 0 where the tokens are padding, and 1
+    otherwise.
+
+    We assume that there's a key in the tensor dictionary called "tokens".
+    """
+    # TODO(mattg): handle more general cases than this (e.g., renamed token field, higher-order
+    # input).
+    token_tensor = text_field_tensors["tokens"]
+    return token_tensor != 0
+
+
+def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    """
+    Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
+    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
+    has shape ``(batch_size, sequence_length)``.  We first unsqueeze and expand the mask so that it
+    has the same shape as the tensor, then flatten them both to be 2D, pass them through
+    :func:`masked_softmax`, then put the tensor back in its original shape.
+    """
+    tensor_shape = tensor.size()
+    reshaped_tensor = tensor.view(-1, tensor.size()[-1])
+    if mask:
+        mask = mask.expand_as(tensor).contiguous().float()
+        mask = mask.view(-1, mask.size()[-1])
+    reshaped_result = masked_softmax(reshaped_tensor, mask)
+    return reshaped_result.view(*tensor_shape)
+
+
+def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
+    """
+    Takes a matrix of vectors and a set of weights over the rows in the matrix (which we call an
+    "attention" vector), and returns a weighted sum of the rows in the matrix.  This is the typical
+    computation performed after an attention mechanism.
+
+    Note that while we call this a "matrix" of vectors and an attention "vector", we also handle
+    higher-order tensors.  We always sum over the second-to-last dimension of the "matrix", and we
+    assume that all dimensions in the "matrix" prior to the last dimension are matched in the
+    "vector".  Non-matched dimensions in the "vector" must be `directly after the batch dimension`.
+
+    For example, say I have a "matrix" with dimensions ``(batch_size, num_queries, num_words,
+    embedding_dim)``, representing some kind of embedding or encoding of several multi-word
+    queries.  My attention "vector" must then have at least those dimensions, and could have more.
+    So I could have an attention over words per query, with shape ``(batch_size, num_queries,
+    num_words)``, or I could have an attention over query words for every document in some list,
+    with shape ``(batch_size, num_documents, num_queries, num_words)``.  Both of these cases are
+    fine.  In the first case, the returned tensor will have shape ``(batch_size, num_queries,
+    embedding_dim)``, and in the second case, it will have shape ``(batch_size, num_documents,
+    num_queries, embedding_dim)``.  But you `can't` have an attention "vector" that does not
+    include all of the queries, so shape ``(batch_size, num_words)`` is not allowed - you haven't
+    specified how to handle that dimension in the "matrix", so we can't do anything with this
+    input.
+    """
+    if matrix.dim() - 1 < attention.dim():
+        expanded_size = list(matrix.size())
+        for i in range(attention.dim() - matrix.dim() + 1):
+            matrix = matrix.unsqueeze(1)
+            expanded_size.insert(i + 1, attention.size(i + 1))
+        matrix = matrix.expand(*expanded_size)
+    intermediate = attention.unsqueeze(-1).expand_as(matrix) * matrix
+    return intermediate.sum(dim=-2).squeeze(-2)
