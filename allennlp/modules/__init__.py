@@ -1,4 +1,5 @@
 from allennlp.modules.attention import Attention
+from allennlp.modules.highway import Highway
 from allennlp.modules.matrix_attention import MatrixAttention
 from allennlp.modules.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoder import Seq2VecEncoder
