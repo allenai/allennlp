@@ -5,6 +5,7 @@ from allennlp.common.checks import ConfigurationError
 
 T = TypeVar('T')
 
+
 class Registrable:
     """
     Any class that inherits from ``Registrable`` gains access to a named registry for its
@@ -18,6 +19,13 @@ class Registrable:
 
     You can specify a default by setting ``BaseClass.default_implementation``.
     If it is set, it will be the first element of ``list_available()``.
+
+    Note that if you use this class to implement a new ``Registrable`` abstract class,
+    you must ensure that all subclasses of the abstract class are loaded when the module is
+    loaded, because the subclasses register themselves in their respective files. You can
+    achieve this by having the abstract class and all subclasses in the __init__.py of the
+    module in which they reside (as this causes any import of either the abstract class or
+    a subclass to load all other subclasses and the abstract class).
     """
 
     _registry = defaultdict(dict)  # type: Dict[Type, Dict[str, Type]]

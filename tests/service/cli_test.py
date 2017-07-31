@@ -7,7 +7,9 @@ from unittest import TestCase
 
 from allennlp.service.cli.run import main
 
+
 class TestMain(TestCase):
+
     def test_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()
         infile = os.path.join(tempdir, "inputs.txt")

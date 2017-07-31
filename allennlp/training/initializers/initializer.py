@@ -1,6 +1,6 @@
 from allennlp.common import Registrable
 
-import torch
+import torch.nn.init
 
 class Initializer(Registrable):
     """

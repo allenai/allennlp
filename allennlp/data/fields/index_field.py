@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from overrides import overrides
 import numpy
 
-from allennlp.data import Field
+from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
 
 

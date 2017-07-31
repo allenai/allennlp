@@ -5,7 +5,9 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.util import group_by_count
-from allennlp.data import DataIterator, Dataset, Instance
+from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.dataset import Dataset
+from allennlp.data.instance import Instance
 
 
 @DataIterator.register("basic")
