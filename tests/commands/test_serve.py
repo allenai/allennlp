@@ -2,7 +2,6 @@
 import argparse
 from unittest import TestCase
 
-from allennlp.__main__ import main
 from allennlp.commands.serve import add_serve_subparser, serve
 
 
