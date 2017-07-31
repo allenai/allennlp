@@ -164,8 +164,8 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     # Construct the most likely sequence backwards.
     _, best_path = torch.max(path_scores[-1], 0)
     viterbi_path = [int(best_path.numpy())]
-    for timestep in reversed(path_indices):
-        viterbi_path.append(int(timestep[viterbi_path[-1]]))
+    for backward_timestep in reversed(path_indices):
+        viterbi_path.append(int(backward_timestep[viterbi_path[-1]]))
 
     # Reverse the backward path and find the actual
     # score of the most likely sequence.
@@ -239,4 +239,3 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
         matrix = matrix.expand(*expanded_size)
     intermediate = attention.unsqueeze(-1).expand_as(matrix) * matrix
     return intermediate.sum(dim=-2).squeeze(-2)
-
