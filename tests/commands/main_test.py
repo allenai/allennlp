@@ -14,4 +14,4 @@ class TestMain(TestCase):
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
             main(args)
 
-        assert cm.exception.code == -1
+        assert cm.exception.code == 2  # argparse code for incorrect usage

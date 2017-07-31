@@ -17,7 +17,7 @@ class TestMain(TestCase):
         add_bulk_subparser(subparsers)
 
         raw_args = ["bulk",     # command
-                    "reverser", # model_name
+                    "reverser", # model
                     "infile",   # input_file
                     "--output-file", "outfile",
                     "--print"]
@@ -25,7 +25,7 @@ class TestMain(TestCase):
         args = parser.parse_args(raw_args)
 
         assert args.func == bulk
-        assert args.model_name == "reverser"
+        assert args.model == "reverser"
         assert args.input_file == "infile"
         assert args.output_file == "outfile"
         assert args.print
@@ -64,7 +64,7 @@ class TestMain(TestCase):
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
             main(args)
 
-        assert cm.exception.code == -1
+        assert cm.exception.code == 2  # argparse code for incorrect usage
 
 
     def test_fails_on_unknown_model(self):
