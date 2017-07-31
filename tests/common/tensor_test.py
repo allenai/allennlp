@@ -216,7 +216,7 @@ class TestTensor(AllenNlpTestCase):
                 }
         text_field_tensors = arrays_to_variables(text_field_arrays)
         assert_almost_equal(get_text_field_mask(text_field_tensors).data.numpy(),
-                                                [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]])
+                            [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]])
 
     def test_last_dim_softmax_does_softmax_on_last_dim(self):
         batch_size = 1
