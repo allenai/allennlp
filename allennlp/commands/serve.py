@@ -7,7 +7,7 @@ def add_serve_subparser(parser: argparse._SubParsersAction) -> argparse.Argument
     subparser = parser.add_parser(
         'serve', description=description, help='Run the web service and demo.')
 
-    subparser.add_argument('--backend', metavar='backend', type=str, choices=['flask','sanic'], default='flask',
+    subparser.add_argument('--backend', metavar='backend', type=str, choices=['flask', 'sanic'], default='flask',
                            help='The backend for the web service.')
     subparser.add_argument('--port', type=int, default=8000)
 
