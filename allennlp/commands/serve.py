@@ -22,4 +22,3 @@ def serve(args: argparse.Namespace) -> None:
         server_sanic.run(args.port)
     else:
         raise Exception("Please specify either flask or sanic for the backend.")
-
