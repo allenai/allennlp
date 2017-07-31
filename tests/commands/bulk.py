@@ -36,6 +36,17 @@ class TestMain(TestCase):
         assert lines[0] == {"model_name": "reverser", "input": "forward", "output": "drawrof"}
         assert lines[1] == {"model_name": "reverser", "input": "drawkcab", "output": "backward"}
 
+    def test_fails_without_required_args(self):
+        args = ["bulk",          # command
+                "reverser",      # model_name, but no input file
+               ]
+
+        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+            main(args)
+
+        assert cm.exception.code == -1
+
+
     def test_fails_on_unknown_model(self):
         args = ["bulk",          # command
                 "unknown_model", # model_name
