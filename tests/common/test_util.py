@@ -9,8 +9,8 @@ class TestCommonUtils(AllenNlpTestCase):
 
     def test_pad_sequence_to_length(self):
         assert util.pad_sequence_to_length([1, 2, 3], 5) == [1, 2, 3, 0, 0]
-        assert util.pad_sequence_to_length([1, 2, 3], 5, default_value = lambda: 2) == [1, 2, 3, 2, 2]
-        assert util.pad_sequence_to_length([1, 2, 3], 5, padding_on_right = False) == [0, 0, 1, 2, 3]
+        assert util.pad_sequence_to_length([1, 2, 3], 5, default_value=lambda: 2) == [1, 2, 3, 2, 2]
+        assert util.pad_sequence_to_length([1, 2, 3], 5, padding_on_right=False) == [0, 0, 1, 2, 3]
 
     def test_namespace_match(self):
         assert util.namespace_match("*tags", "passage_tags")
