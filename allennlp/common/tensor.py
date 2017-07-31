@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 import torch
 from torch.autograd import Variable
 import numpy
@@ -167,3 +167,71 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     viterbi_path.reverse()
     viterbi_score, _ = torch.max(path_scores[-1], 0)
     return viterbi_path, viterbi_score
+
+
+def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Tensor:
+    """
+    Takes the dictionary of tensors produced by a ``TextField`` and returns a mask of shape
+    ``(batch_size, num_tokens)``.  This mask will be 0 where the tokens are padding, and 1
+    otherwise.
+
+    There could be several entries in the tensor dictionary with different shapes (e.g., one for
+    word ids, one for character ids).  In order to get a token mask, we assume that the tensor in
+    the dictionary with the lowest number of dimensions has plain token ids.  This allows us to
+    also handle cases where the input is actually a ``ListField[TextField]``.
+    """
+    tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
+    tensor_dims.sort(key=lambda x: x[0])
+    token_tensor = tensor_dims[0][1]
+    return token_tensor != 0
+
+
+def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    """
+    Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
+    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
+    has shape ``(batch_size, sequence_length)``.  We first unsqueeze and expand the mask so that it
+    has the same shape as the tensor, then flatten them both to be 2D, pass them through
+    :func:`masked_softmax`, then put the tensor back in its original shape.
+    """
+    tensor_shape = tensor.size()
+    reshaped_tensor = tensor.view(-1, tensor.size()[-1])
+    if mask:
+        mask = mask.expand_as(tensor).contiguous().float()
+        mask = mask.view(-1, mask.size()[-1])
+    reshaped_result = masked_softmax(reshaped_tensor, mask)
+    return reshaped_result.view(*tensor_shape)
+
+
+def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
+    """
+    Takes a matrix of vectors and a set of weights over the rows in the matrix (which we call an
+    "attention" vector), and returns a weighted sum of the rows in the matrix.  This is the typical
+    computation performed after an attention mechanism.
+
+    Note that while we call this a "matrix" of vectors and an attention "vector", we also handle
+    higher-order tensors.  We always sum over the second-to-last dimension of the "matrix", and we
+    assume that all dimensions in the "matrix" prior to the last dimension are matched in the
+    "vector".  Non-matched dimensions in the "vector" must be `directly after the batch dimension`.
+
+    For example, say I have a "matrix" with dimensions ``(batch_size, num_queries, num_words,
+    embedding_dim)``.  The attention "vector" then must have at least those dimensions, and could
+    have more. Both:
+
+        - ``(batch_size, num_queries, num_words)`` (distribution over words for each query)
+        - ``(batch_size, num_documents, num_queries, num_words)`` (distribution over words in a
+          query for each document)
+
+    are valid input "vectors", producing tensors of shape:
+    ``(batch_size, num_queries, embedding_dim)`` and
+    ``(batch_size, num_documents, num_queries, embedding_dim)`` respectively.
+    """
+    if matrix.dim() - 1 < attention.dim():
+        expanded_size = list(matrix.size())
+        for i in range(attention.dim() - matrix.dim() + 1):
+            matrix = matrix.unsqueeze(1)
+            expanded_size.insert(i + 1, attention.size(i + 1))
+        matrix = matrix.expand(*expanded_size)
+    intermediate = attention.unsqueeze(-1).expand_as(matrix) * matrix
+    return intermediate.sum(dim=-2).squeeze(-2)
+
