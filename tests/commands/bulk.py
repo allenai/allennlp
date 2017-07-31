@@ -1,14 +1,34 @@
 # pylint: disable=no-self-use,invalid-name
-
+import argparse
 import json
 import os
 import tempfile
 from unittest import TestCase
 
 from allennlp.__main__ import main
+from allennlp.commands.bulk import add_bulk_subparser, bulk
 
 
 class TestMain(TestCase):
+
+    def test_add_bulk_subparser(self):
+        parser = argparse.ArgumentParser(description="Testing")
+        subparsers = parser.add_subparsers(title='Commands', metavar='')
+        add_bulk_subparser(subparsers)
+
+        raw_args = ["bulk",     # command
+                    "reverser", # model_name
+                    "infile",   # input_file
+                    "--output-file", "outfile",
+                    "--print"]
+
+        args = parser.parse_args(raw_args)
+
+        assert args.func == bulk
+        assert args.model_name == "reverser"
+        assert args.input_file == "infile"
+        assert args.output_file == "outfile"
+        assert args.print
 
     def test_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()
