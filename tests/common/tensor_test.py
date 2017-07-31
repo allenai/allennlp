@@ -210,7 +210,7 @@ class TestTensor(AllenNlpTestCase):
         # Test Viterbi decoding is equal to greedy decoding with no pairwise potentials.
         sequence_predictions = torch.nn.functional.softmax(Variable(torch.rand([5, 9])))
         transition_matrix = torch.zeros([9, 9])
-        indices, value = viterbi_decode(sequence_predictions.data, transition_matrix)
+        indices, _ = viterbi_decode(sequence_predictions.data, transition_matrix)
         _, argmax_indices = torch.max(sequence_predictions, 1)
         assert indices == argmax_indices.data.squeeze().tolist()
 
@@ -222,9 +222,24 @@ class TestTensor(AllenNlpTestCase):
                                                   [0, 0, 0, 3, 4],
                                                   [0, 0, 0, 3, 4],
                                                   [0, 0, 0, 3, 4]])
-        # The same tags shouldn't appear in sequence.
+        # The same tags shouldn't appear sequentially.
         transition_matrix = torch.zeros([5, 5])
         for i in range(5):
             transition_matrix[i, i] = float("-inf")
-        indices, value = viterbi_decode(sequence_predictions, transition_matrix)
+        indices, _ = viterbi_decode(sequence_predictions, transition_matrix)
         assert indices == [4, 3, 4, 3, 4, 3]
+
+        # Test that unbalanced pairwise potentials break ties
+        # between paths with equal unary potentials.
+        sequence_predictions = torch.FloatTensor([[0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4]])
+        # The 5th tag has a penalty for appearing sequentially.
+        transition_matrix = torch.zeros([5, 5])
+        transition_matrix[4, 4] = -10
+
+        indices, _ = viterbi_decode(sequence_predictions, transition_matrix)
+        assert indices == [3, 3, 3, 3, 3, 3]

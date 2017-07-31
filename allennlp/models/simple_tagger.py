@@ -5,6 +5,7 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
+from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
@@ -119,11 +120,11 @@ class SimpleTagger(Model):
         text_field.index(self.vocab)
         padding_lengths = text_field.get_padding_lengths()
         array_input = text_field.as_array(padding_lengths)
-        # TODO(Mark): Generalise how the array is transformed into a variable after settling the data API.
-        # Add a batch dimension by unsqueezing, because pytorch
-        # doesn't support inputs without one.
-        array_input = {"tokens": torch.autograd.Variable(torch.LongTensor(array_input["tokens"])).unsqueeze(0)}
-        output_dict = self.forward(tokens=array_input)
+        # TODO(Mark): Make the data API always return tensors with batch dimensions at every abstraction level.
+        # Add a batch dimension by unsqueezing, because pytorch doesn't support inputs without one.
+        model_input = arrays_to_variables(array_input)
+        model_input["tokens"].data.unsqueeze_(0)
+        output_dict = self.forward(tokens=model_input)
 
         # Remove batch dimension, as we only had one input.
         predictions = output_dict["class_probabilities"].data.squeeze(0)

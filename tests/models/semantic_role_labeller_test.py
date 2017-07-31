@@ -16,7 +16,7 @@ class SemanticRoleLabellerTest(AllenNlpTestCase):
         super(SemanticRoleLabellerTest, self).setUp()
         self.write_conll_2012_data()
 
-        dataset = SrlReader().read(self.TRAIN_FILE)
+        dataset = SrlReader().read(self.CONLL_TRAIN_DIR)
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)
@@ -31,7 +31,7 @@ class SemanticRoleLabellerTest(AllenNlpTestCase):
                         },
                 "stacked_encoder": {
                         "type": "lstm",
-                        "input_size": 5,
+                        "input_size": 6,
                         "hidden_size": 7,
                         "num_layers": 2
                         }
@@ -41,7 +41,8 @@ class SemanticRoleLabellerTest(AllenNlpTestCase):
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = self.dataset.as_arrays()
-        _ = self.model.forward(**arrays_to_variables(training_arrays))
+        model_inputs = arrays_to_variables(training_arrays)
+        _ = self.model.forward(**model_inputs)
 
     def test_tag_returns_distributions_per_token(self):
         text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})

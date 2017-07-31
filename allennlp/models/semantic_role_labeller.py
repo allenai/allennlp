@@ -10,7 +10,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields import IndexField, TextField
 from allennlp.data import Instance
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
-from allennlp.training import Model
+from allennlp.models.model import Model
 
 
 class SemanticRoleLabeller(Model):
@@ -89,10 +89,10 @@ class SemanticRoleLabeller(Model):
 
         """
         embedded_text_input = self.text_field_embedder(tokens)
+        expanded_verb_indicator = verb_indicator.unsqueeze(-1).float()
         # Concatenate the verb feature onto the embedded text. This now
         # has shape (batch_size, sequence_length, embedding_dim + 1).
-        embedded_text_with_verb_indicator = torch.cat([embedded_text_input,
-                                                       verb_indicator.unsqueeze(-1)], -1)
+        embedded_text_with_verb_indicator = torch.cat([embedded_text_input, expanded_verb_indicator], -1)
         batch_size = embedded_text_with_verb_indicator.size()[0]
         encoded_text = self.stacked_encoder(embedded_text_with_verb_indicator)
 
@@ -140,15 +140,19 @@ class SemanticRoleLabeller(Model):
         instance = Instance({"tokens": text_field, "verb_indicator": verb_indicator})
         instance.index_fields(self.vocab)
         model_input = instance.as_array(instance.get_padding_lengths())
-
         torch_input = arrays_to_variables(model_input)
+        # TODO(Mark): Make the data API always return tensors with batch dimensions at every abstraction level.
+        # Add a batch dimension by unsqueezing, because pytorch doesn't support inputs without one.
+        torch_input["tokens"]["tokens"].data.unsqueeze_(0)
+        torch_input["verb_indicator"].data.unsqueeze_(0)
+
         output_dict = self.forward(**torch_input)
 
         # Remove batch dimension, as we only had one input.
         predictions = output_dict["class_probabilities"].data.squeeze(0)
         transition_matrix = self.get_viterbi_pairwise_potentials()
 
-        max_likelihood_sequence, score = viterbi_decode(predictions, transition_matrix)
+        max_likelihood_sequence, _ = viterbi_decode(predictions, transition_matrix)
         tags = [self.vocab.get_token_from_index(x, namespace="tags")
                 for x in max_likelihood_sequence]
 
