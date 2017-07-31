@@ -13,6 +13,7 @@ class TestCommonUtils(AllenNlpTestCase):
         assert util.pad_sequence_to_length([1, 2, 3], 5, padding_on_right=False) == [0, 0, 1, 2, 3]
 
     def test_namespace_match(self):
+        assert util.namespace_match("*tags", "tags")
         assert util.namespace_match("*tags", "passage_tags")
         assert util.namespace_match("*tags", "question_tags")
         assert util.namespace_match("tokens", "tokens")
