@@ -10,7 +10,7 @@ app = Sanic(__name__)  # pylint: disable=invalid-name
 app.static('/', 'allennlp/service/index.html')
 app.static('/index.html', 'allennlp/service/index.html')
 
-def run(port):
+def run(port: int) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
     app.run(port=port)

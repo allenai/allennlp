@@ -7,7 +7,7 @@ app = Flask(__name__, static_url_path='')  # pylint: disable=invalid-name
 # TODO(joelgrus): make this configurable
 servables = ServableCollection.default()  # pylint: disable=invalid-name
 
-def run(port):
+def run(port: int) -> None:
     """Run the server programatically"""
     print("Starting a flask server on port {}.".format(port))
     app.run(port=port)
