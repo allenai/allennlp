@@ -1,6 +1,11 @@
 import argparse
+import logging
 
 from allennlp.commands.bulk import add_bulk_subparser
+from allennlp.common.params import PARAMETER
+
+# disable parameter logging
+logging.disable(PARAMETER)
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]')
