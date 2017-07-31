@@ -6,14 +6,13 @@ A [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) natural 
 
 ## Running AllenNLP
 
-### Setting up a development environment
+### Setting up a Conda development environment
 
-AllenNLP is built using Python 3.  The easiest way to set up a compatible
-environment is to use [Conda](https://conda.io/).  This will set up a virtual
-environment with the exact version of Python used for development along with all the
-dependencies needed to run AllenNLP.
+[Conda](https://conda.io/) will set up a virtual environment with the exact version of Python
+used for development along with all the dependencies needed to run AllenNLP.
 
 1.  [Download and install Conda](https://conda.io/docs/download.html).
+
 2.  Create a Conda environment with Python 3.
 
     ```
@@ -26,13 +25,7 @@ dependencies needed to run AllenNLP.
     source activate allennlp
     ```
 
-4.  Install the required dependencies. To install only the runtime dependencies, run
-
-    ```
-    ./scripts/install_requirements.sh
-    ```
-
-    If you want to install all of the testing/linting/type-checking dependencies, run instead
+4.  Install the required dependencies.
 
     ```
     INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
@@ -47,6 +40,34 @@ dependencies needed to run AllenNLP.
     ```
 
 You should now be able to test your installation with `pytest -v`.  Congratulations!
+
+### Setting up a Docker development environment
+
+Docker provides a virtual machine with everything set up to run AllenNLP--whether you will leverage a GPU or just
+run on a CPU.  Docker provides more isolation and consistency, and also makes it easy to distribute your environment
+to a compute cluster.
+
+Following are instructions on creating a Docker environment that use the CPU.  To use the GPU, use the same instructions
+but substitute `gpu` for `cpu`.  The following command will take some time, as it completely builds the environment
+needed to run AllenNLP.
+
+```bash
+docker build --file Dockerfile.cpu --tag allennlp-cpu .
+```
+
+You should now be able to see this image listed by running `docker images allennlp-cpu`.
+
+```
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+allennlp-cpu        latest              b66aee6cb593        5 minutes ago       2.38GB
+```
+
+You can run the image with `docker run --rm -it allennlp-cpu`.  The `--rm` flag cleans up the image on exit and the
+`-it` flags make the session interactive so you can use the bash shell the Docker image starts.
+
+The Docker environment uses Conda to install Python.  You can enter the Conda environment with `source activate runenv`.
+
+You can test your installation by entering the Conda environment with `source activate allennlp` and running  `pytest -v`.
 
 ### Setting up a Kubernetes development environment
 
@@ -68,3 +89,4 @@ You should now be able to test your installation with `pytest -v`.  Congratulati
 5. Get a shell inside the container using `kubectl exec -it <PODNAME> --container dev-environment -- /bin/bash`
 
 6. When you are done, don't forget to kill your job using `kubectl delete -f /path/to/kubernetes-dev-machine.yaml`
+
