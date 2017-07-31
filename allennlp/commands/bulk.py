@@ -7,7 +7,7 @@ from typing import Optional, IO
 from allennlp.service.servable import Servable, ServableCollection
 
 def add_bulk_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
-    description = '''Run the specified model against a JSONL input file.'''
+    description = '''Run the specified model against a JSON-lines input file.'''
     subparser = parser.add_parser(
             'bulk', description=description, help='Run a model in bulk.')
     subparser.add_argument('model', type=str, help='the name of the model to run')
