@@ -13,13 +13,11 @@ class TestServe(TestCase):
         add_serve_subparser(subparsers)
 
         raw_args = ["serve",
-                    "--backend",
-                    "flask",
-                    "--port",
-                    "--8000"]
+                    "--backend", "flask",
+                    "--port", "8000"]
 
         args = parser.parse_args(raw_args)
 
         assert args.func == serve
         assert args.backend == "flask"
-        assert args.port == "8000"
+        assert args.port == 8000
