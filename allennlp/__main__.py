@@ -4,6 +4,7 @@ import logging
 import sys
 
 from allennlp.commands.bulk import add_bulk_subparser
+from allennlp.commands.serve import add_serve_subparser
 from allennlp.common.params import PARAMETER
 
 # disable parameter logging
@@ -15,6 +16,7 @@ def main(raw_args: Sequence[str]) -> None:
 
     # Add sub-commands
     add_bulk_subparser(subparsers)
+    add_serve_subparser(subparsers)
 
     args = parser.parse_args(raw_args)
     if 'func' in dir(args):
