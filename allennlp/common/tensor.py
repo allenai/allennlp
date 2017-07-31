@@ -23,7 +23,6 @@ def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
     return mask.sum(-1).squeeze()
 
 
-
 def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.LongTensor):
     """
     Sort a batch first tensor by some specified lengths.
@@ -123,3 +122,48 @@ def masked_softmax(vector, mask):
     else:
         # There is no mask, so we use the provided ``torch.nn.functional.softmax`` function.
         return torch.nn.functional.softmax(vector)
+
+
+def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
+    """
+    Parameters
+    ----------
+    tag_sequence : torch.Tensor, required.
+        A tensor of shape (sequence_length, num_tags) representing scores for
+        a set of tags over a given sequence.
+    transition_matrix : torch.Tensor, required.
+        A tensor of shape (num_tags, num_tags) representing the binary potentials
+        for transitioning between a given pair of tags.
+
+    Returns
+    -------
+    viterbi_path : List[int]
+        The tag indices of the maximum likelihood tag sequence.
+    viterbi_score : float
+        The score of the viterbi path.
+    """
+    sequence_length, _ = list(tag_sequence.size())
+    path_scores = []
+    path_indices = []
+    path_scores.append(tag_sequence[0, :].squeeze())
+
+    # Evaluate the scores for all possible paths.
+    for timestep in range(1, sequence_length):
+        # TODO(Mark): Use broadcasting here once Pytorch 0.2 is released.
+        tiled_path_scores = path_scores[timestep - 1].expand_as(transition_matrix).transpose(0, 1)
+        summed_potentials = tiled_path_scores + transition_matrix
+        scores, paths = torch.max(summed_potentials, 0)
+        path_scores.append(tag_sequence[timestep, :].squeeze() + scores.squeeze())
+        path_indices.append(paths.squeeze())
+
+    # Construct the most likely sequence backwards.
+    _, best_path = torch.max(path_scores[-1], 0)
+    viterbi_path = [int(best_path.numpy())]
+    for timestep in reversed(path_indices):
+        viterbi_path.append(int(timestep[viterbi_path[-1]]))
+
+    # Reverse the backward path and find the actual
+    # score of the most likely sequence.
+    viterbi_path.reverse()
+    viterbi_score, _ = torch.max(path_scores[-1], 0)
+    return viterbi_path, viterbi_score

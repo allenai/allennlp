@@ -9,6 +9,7 @@ from allennlp.common.tensor import arrays_to_variables
 from allennlp.common.tensor import get_lengths_from_binary_sequence_mask
 from allennlp.common.tensor import masked_softmax
 from allennlp.common.tensor import sort_batch_by_length
+from allennlp.common.tensor import viterbi_decode
 from allennlp.testing import AllenNlpTestCase
 
 
@@ -204,3 +205,26 @@ class TestTensor(AllenNlpTestCase):
         assert_array_almost_equal(masked_matrix_softmaxed,
                                   numpy.array([[0.0, 0.0, 0.0],
                                                [0.11920292, 0.0, 0.88079708]]))
+
+    def test_viterbi_decode(self):
+        # Test Viterbi decoding is equal to greedy decoding with no pairwise potentials.
+        sequence_predictions = torch.nn.functional.softmax(Variable(torch.rand([5, 9])))
+        transition_matrix = torch.zeros([9, 9])
+        indices, value = viterbi_decode(sequence_predictions.data, transition_matrix)
+        _, argmax_indices = torch.max(sequence_predictions, 1)
+        assert indices == argmax_indices.data.squeeze().tolist()
+
+        # Test that pairwise potentials effect the sequence correctly and that
+        # viterbi_decode can handle -inf values.
+        sequence_predictions = torch.FloatTensor([[0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4]])
+        # The same tags shouldn't appear in sequence.
+        transition_matrix = torch.zeros([5, 5])
+        for i in range(5):
+            transition_matrix[i, i] = float("-inf")
+        indices, value = viterbi_decode(sequence_predictions, transition_matrix)
+        assert indices == [4, 3, 4, 3, 4, 3]
