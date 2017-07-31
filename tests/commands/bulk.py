@@ -5,7 +5,7 @@ import os
 import tempfile
 from unittest import TestCase
 
-from allennlp.service.cli.run import main
+from allennlp.__main__ import main
 
 
 class TestMain(TestCase):
@@ -19,7 +19,8 @@ class TestMain(TestCase):
             f.write("""{"input": "forward"}\n""")
             f.write("""{"input": "drawkcab"}\n""")
 
-        args = ["reverser", # model_name
+        args = ["bulk",     # command
+                "reverser", # model_name
                 infile,     # input_file
                 "--output-file", outfile,
                 "--print"]
@@ -36,7 +37,8 @@ class TestMain(TestCase):
         assert lines[1] == {"model_name": "reverser", "input": "drawkcab", "output": "backward"}
 
     def test_fails_on_unknown_model(self):
-        args = ["unknown_model", # model_name
+        args = ["bulk",          # command
+                "unknown_model", # model_name
                 "bogus file",    # input_file
                 "--output-file", "bogus out file",
                 "--print"]
