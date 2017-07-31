@@ -1,17 +1,21 @@
-from collections import Counter
-from copy import deepcopy
 import json
 import logging
 import random
+from collections import Counter
+from copy import deepcopy
 from typing import List, Tuple, Dict, Set  # pylint: disable=unused-import
 
 import numpy
 from tqdm import tqdm
 
 from allennlp.common import Params
-from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokenizer
+from allennlp.data.dataset import Dataset
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.instance import Instance
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.fields import TextField, ListField, IndexField
-from allennlp.data.field import Field  # pylint: disable=unused-import
+from allennlp.data.fields.field import Field  # pylint: disable=unused-import
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 

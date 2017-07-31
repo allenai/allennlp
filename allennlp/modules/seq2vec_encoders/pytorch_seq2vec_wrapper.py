@@ -2,7 +2,7 @@ import torch
 from torch.nn.utils.rnn import pack_padded_sequence
 
 from allennlp.common.tensor import sort_batch_by_length
-from allennlp.modules import Seq2VecEncoder
+from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.common.checks import ConfigurationError
 
 

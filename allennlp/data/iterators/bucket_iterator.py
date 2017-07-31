@@ -1,12 +1,13 @@
-from typing import List, Tuple, Dict, cast
 import random
+from typing import List, Tuple, Dict, cast
 
 from overrides import overrides
 
+from allennlp.common import Params
 from allennlp.common.util import add_noise_to_dict_values
 from allennlp.data import Dataset, Instance
-from allennlp.data.data_iterator import DataIterator
 from allennlp.data.iterators.basic_iterator import BasicIterator
+from allennlp.data.iterators.data_iterator import DataIterator
 
 
 @DataIterator.register("bucket")
@@ -104,3 +105,15 @@ class BucketIterator(BasicIterator):
             instances_with_lengths.append(instance_with_lengths)
         instances_with_lengths.sort(key=lambda x: x[0])
         return Dataset([instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths])
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'BucketIterator':
+        sorting_keys = params.pop('sorting_keys', [])
+        padding_noise = params.pop('padding_noise', 0.1)
+        biggest_batch_first = params.pop('biggest_batch_first', False)
+        batch_size = params.pop('batch_size', 32)
+        params.assert_empty(cls.__name__)
+        return cls(sorting_keys=sorting_keys,
+                   padding_noise=padding_noise,
+                   biggest_batch_first=biggest_batch_first,
+                   batch_size=batch_size)

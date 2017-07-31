@@ -4,9 +4,9 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.seq2vec_encoders.cnn_encoder import CnnEncoder
 from allennlp.modules.seq2vec_encoders.pytorch_seq2vec_wrapper import PytorchSeq2VecWrapper
+from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 
 
 class _Seq2VecWrapper:

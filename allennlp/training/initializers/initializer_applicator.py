@@ -1,11 +1,12 @@
-from typing import Dict, Callable
 import logging
 import re
+from typing import Dict, Callable
 
 import torch.nn.init
 
 from allennlp.common.params import Params
-from allennlp.training.initializer import Initializer
+from allennlp.training.initializers.initializer import Initializer
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 

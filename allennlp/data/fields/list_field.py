@@ -4,7 +4,8 @@ from typing import Dict, List
 from overrides import overrides
 import numpy
 
-from allennlp.data import DataArray, Field, Vocabulary
+from allennlp.data.fields.field import DataArray, Field
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.common.util import pad_sequence_to_length
 

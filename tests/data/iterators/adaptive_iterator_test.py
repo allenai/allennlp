@@ -1,4 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
+from pytest import raises
+
+from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.iterators import AdaptiveIterator
 from tests.data.iterators.basic_iterator_test import IteratorTest
 
@@ -37,3 +41,20 @@ class TestAdaptiveIterator(IteratorTest):
         assert grouped_instances == [[self.instances[3]],
                                      [self.instances[0], self.instances[1]],
                                      [self.instances[4], self.instances[2]]]
+
+    def test_from_params(self):
+        # pylint: disable=protected-access
+        params = Params({})
+        # not all params have default values
+        with raises(ConfigurationError):
+            _ = AdaptiveIterator.from_params(params)
+
+        param_dict = {
+                "adaptive_memory_usage_constant": 10,
+                "padding_memory_scaling": lambda x: 2.4
+        }
+
+        iterator = AdaptiveIterator.from_params(Params(param_dict))
+        assert iterator._adaptive_memory_usage_constant == 10
+        assert iterator._padding_memory_scaling({}) == 2.4
+        assert iterator._maximum_batch_size == 10000
