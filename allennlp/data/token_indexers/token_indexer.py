@@ -1,12 +1,11 @@
 from typing import Dict, List, TypeVar, Generic
 
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common import Params
-
+from allennlp.common import Params, Registrable
 
 TokenType = TypeVar("TokenType", int, List[int])  # pylint: disable=invalid-name
 
-class TokenIndexer(Generic[TokenType]):
+class TokenIndexer(Generic[TokenType], Registrable):
     """
     A ``TokenIndexer`` determines how string tokens get represented as arrays of indices in a model.
     This class both converts strings into numerical values, with the help of a :class:`Vocabulary`,
@@ -17,6 +16,8 @@ class TokenIndexer(Generic[TokenType]):
     or in some other way that you can come up with (e.g., if you have some structured input you
     want to represent in a special way in your data arrays, you can do that here).
     """
+    default_implementation = 'single_id'
+
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
         """
         The :class:`Vocabulary` needs to assign indices to whatever strings we see in the training
@@ -74,7 +75,6 @@ class TokenIndexer(Generic[TokenType]):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):  # type: ignore
-        from allennlp.experiments.registry import Registry
-        choice = params.pop_choice('type', Registry.list_token_indexers(), default_to_first_choice=True)
-        return Registry.get_token_indexer(choice).from_params(params)
+    def from_params(cls, params: Params) -> 'TokenIndexer':  # type: ignore
+        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
+        return cls.by_name(choice).from_params(params)

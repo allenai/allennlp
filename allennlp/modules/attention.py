@@ -3,6 +3,7 @@ from overrides import overrides
 
 from allennlp.common import Params, tensor
 from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
 
 
 class Attention(torch.nn.Module):
@@ -37,8 +38,6 @@ class Attention(torch.nn.Module):
                  normalize: bool = True) -> None:
         super(Attention, self).__init__()
 
-        # This import is here to avoid circular import problems with the registry...
-        from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
         self._similarity_function = similarity_function or DotProductSimilarity()
         self._normalize = normalize
 
@@ -57,7 +56,7 @@ class Attention(torch.nn.Module):
             return similarities
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'Attention':
         similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
         normalize = params.pop('normalize', True)
         return cls(similarity_function=similarity_function,

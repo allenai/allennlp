@@ -1,16 +1,16 @@
 from typing import Dict
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.experiments import Registry
-from allennlp.modules import TextFieldEmbedder, TokenEmbedder
+from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 
-@Registry.register_text_field_embedder("basic")
+@TextFieldEmbedder.register("basic")
 class BasicTextFieldEmbedder(TextFieldEmbedder):
     """
     This is a ``TextFieldEmbedder`` that wraps a collection of :class:`TokenEmbedder` objects.  Each
@@ -44,7 +44,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         return torch.cat(embedded_representations, dim=-1)
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenEmbedder':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':
         token_embedders = {}
         keys = list(params.keys())
         for key in keys:

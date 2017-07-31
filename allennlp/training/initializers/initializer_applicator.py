@@ -1,11 +1,12 @@
-from typing import Dict, Callable
 import logging
 import re
+from typing import Dict, Callable
 
 import torch.nn.init
 
 from allennlp.common.params import Params
-from allennlp.experiments.registry import Registry
+from allennlp.training.initializers.initializer import Initializer
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -98,7 +99,7 @@ class InitializerApplicator:
         for name, initializer_params in all_initializer_params.items():
             # Just a string - corresponds to the name of an initializer.
             if isinstance(initializer_params, str):
-                instantiated_initializers[name] = Registry.get_initializer(initializer_params)
+                instantiated_initializers[name] = Initializer.by_name(initializer_params)
             else:
                 initializer_type = initializer_params.pop("type")
                 # This is to avoid passing by reference inside the curried function.
@@ -108,11 +109,11 @@ class InitializerApplicator:
 
                 # pylint: disable=cell-var-from-loop
                 def curried_initializer(tensor: torch.Tensor):
-                    return Registry.get_initializer(initializer_type)(tensor, **init_params)  # type: ignore
+                    return Initializer.by_name(initializer_type)(tensor, **init_params)  # type: ignore
                 # pylint: enable=cell-var-from-loop
-                instantiated_initializers[name] = curried_initializer
+                instantiated_initializers[name] = curried_initializer  # type: ignore
         try:
             default = instantiated_initializers.pop("default")
         except KeyError:
             default = torch.nn.init.normal
-        return InitializerApplicator(instantiated_initializers, default)
+        return InitializerApplicator(instantiated_initializers, default)  # type: ignore

@@ -8,9 +8,10 @@ from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
-from allennlp.training import Model
+from allennlp.models.model import Model
 
 
+@Model.register("simple_tagger")
 class SimpleTagger(Model):
     """
     This ``SimpleTagger`` simply encodes a sequence of text with a stacked ``Seq2SeqEncoder``, then
