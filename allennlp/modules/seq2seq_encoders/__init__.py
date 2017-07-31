@@ -4,26 +4,26 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.experiments import Registry
+from allennlp.modules import Seq2SeqEncoder
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
 
 class _Seq2SeqWrapper:
     """
-    The :class:`Registry` needs to have a ``Type[Seq2SeqEncoder]`` as the value registered for each
+    For :class:`Registrable` we need to have a ``Type[Seq2SeqEncoder]`` as the value registered for each
     key.  What that means is that we need to be able to ``__call__`` these values (as is done with
     ``__init__`` on the class), and be able to call ``from_params()`` on the value.
 
     In order to accomplish this, we have two options: (1) we create a ``Seq2SeqEncoder`` class for
     all of pytorch's RNN modules individually, with our own parallel classes that we register in
     the registry; or (2) we wrap pytorch's RNNs with something that `mimics` the required
-    ``Registry`` API.  We've gone with the second option here.
+    API.  We've gone with the second option here.
 
     This is a two-step approach: first, we have the :class:`PytorchSeq2SeqWrapper` class that handles
     the interface between a pytorch RNN and our ``Seq2SeqEncoder`` API.  Our ``PytorchSeq2SeqWrapper``
     takes an instantiated pytorch RNN and just does some interface changes.  Second, we need a way
     to create one of these ``PytorchSeq2SeqWrappers``, with an instantiated pytorch RNN, from the
     registry.  That's what this ``_Wrapper`` does.  The only thing this class does is instantiate
-    the pytorch RNN in a way that's compatible with the ``Registry``, then pass it off to the
+    the pytorch RNN in a way that's compatible with ``Registrable``, then pass it off to the
     ``PytorchSeq2SeqWrapper`` class.
 
     When you instantiate a ``_Wrapper`` object, you give it an ``RNNBase`` subclass, which we save
@@ -47,6 +47,6 @@ class _Seq2SeqWrapper:
         return PytorchSeq2SeqWrapper(module)
 
 # pylint: disable=protected-access
-Registry.register_seq2seq_encoder("gru")(_Seq2SeqWrapper(torch.nn.GRU))
-Registry.register_seq2seq_encoder("lstm")(_Seq2SeqWrapper(torch.nn.LSTM))
-Registry.register_seq2seq_encoder("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
+Seq2SeqEncoder.register("gru")(_Seq2SeqWrapper(torch.nn.GRU))
+Seq2SeqEncoder.register("lstm")(_Seq2SeqWrapper(torch.nn.LSTM))
+Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))

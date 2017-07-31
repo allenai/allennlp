@@ -8,10 +8,9 @@ from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokeni
 from allennlp.data.fields import TextField, LabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
-from allennlp.experiments import Registry
 
 
-@Registry.register_dataset_reader("snli")
+@DatasetReader.register("snli")
 class SnliReader(DatasetReader):
     """
     Reads a file from the Stanford Natural Language Inference (SNLI) dataset.  This data is
@@ -52,7 +51,7 @@ class SnliReader(DatasetReader):
         return Dataset(instances)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SnliReader':
         """
         Parameters
         ----------

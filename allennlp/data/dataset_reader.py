@@ -1,8 +1,9 @@
 from allennlp.data.dataset import Dataset
 from allennlp.common import Params
+from allennlp.common.registrable import Registrable
 
 
-class DatasetReader:
+class DatasetReader(Registrable):
     """
     A ``DatasetReader`` reads data from some location and constructs a :class:`Dataset`.  All
     parameters necessary to read the data apart from the filepath should be passed to the
@@ -15,7 +16,6 @@ class DatasetReader:
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
-        from allennlp.experiments.registry import Registry
-        choice = params.pop_choice('type', Registry.list_dataset_readers())
-        return Registry.get_dataset_reader(choice).from_params(params)
+    def from_params(cls, params: Params) -> 'DatasetReader':
+        choice = params.pop_choice('type', cls.list_available())
+        return cls.by_name(choice).from_params(params)

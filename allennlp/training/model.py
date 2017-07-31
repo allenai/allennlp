@@ -1,8 +1,12 @@
 from typing import Dict
 import torch
 
+from allennlp.common.params import Params
+from allennlp.common.registrable import Registrable
+from allennlp.data import Vocabulary
 
-class Model(torch.nn.Module):
+
+class Model(torch.nn.Module, Registrable):
     """
     This abstract class represents a model to be trained. Rather than relying completely
     on the Pytorch Module, we modify the output spec of ``forward`` to be a dictionary.
@@ -60,3 +64,8 @@ class Model(torch.nn.Module):
             key pointing to a scalar torch.Tensor representing the loss to be optimized.
         """
         raise NotImplementedError
+
+    @classmethod
+    def from_params(cls, vocab: Vocabulary, params: Params):
+        choice = params.pop_choice("type", cls.list_available())
+        return cls.by_name(choice).from_params(vocab, params)
