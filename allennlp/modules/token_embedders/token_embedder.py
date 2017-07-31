@@ -1,9 +1,9 @@
 import torch
 
-from allennlp.common import Params
+from allennlp.common import Params, Registrable
 from allennlp.data import Vocabulary
 
-class TokenEmbedder(torch.nn.Module):
+class TokenEmbedder(torch.nn.Module, Registrable):
     """
     A ``TokenEmbedder`` is a ``Module`` that takes as input a tensor with integer ids that have
     been output from a :class:`~allennlp.data.TokenIndexer` and outputs a vector per token in the
@@ -17,6 +17,8 @@ class TokenEmbedder(torch.nn.Module):
     which we might need when defining model parameters such as LSTMs or linear layers, which need
     to know their input dimension before the layers are called.
     """
+    default_implementation = "embedding"
+
     def get_output_dim(self) -> int:
         """
         Returns the final output dimension that this ``TokenEmbedder`` uses to represent each
@@ -25,7 +27,6 @@ class TokenEmbedder(torch.nn.Module):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params):
-        from allennlp.experiments.registry  import Registry
-        choice = params.pop_choice('type', Registry.list_token_embedders())
-        return Registry.get_token_embedder(choice).from_params(vocab, params)
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenEmbedder':
+        choice = params.pop_choice('type', cls.list_available())
+        return cls.by_name(choice).from_params(vocab, params)

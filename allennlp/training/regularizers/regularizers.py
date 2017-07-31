@@ -1,10 +1,9 @@
 import torch
 
-from allennlp.experiments.registry import Registry
-from allennlp.training.regularizer import Regularizer
+from allennlp.training.regularizers.regularizer import Regularizer
 
 
-@Registry.register_regularizer("l1")
+@Regularizer.register("l1")
 class L1Regularizer(Regularizer):
 
     def __init__(self, alpha: float = 0.01) -> None:
@@ -14,7 +13,7 @@ class L1Regularizer(Regularizer):
         return self.alpha * torch.sum(torch.abs(parameter))
 
 
-@Registry.register_regularizer("l2")
+@Regularizer.register("l2")
 class L2Regularizer(Regularizer):
 
     def __init__(self, alpha: float = 0.01) -> None:

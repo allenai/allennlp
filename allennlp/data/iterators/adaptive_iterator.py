@@ -1,18 +1,19 @@
+import logging
+import random
 from collections import defaultdict
 from typing import Callable, Dict, List, Tuple
-import random
-import logging
 
 from overrides import overrides
 
+from allennlp.common import Params
 from allennlp.data import Dataset, Instance
 from allennlp.data.iterators.bucket_iterator import BucketIterator
-from allennlp.experiments import Registry
+from allennlp.data.iterators.data_iterator import DataIterator
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@Registry.register_data_iterator("adaptive")
+@DataIterator.register('adaptive')
 class AdaptiveIterator(BucketIterator):
     """
     An ``AdaptiveIterator`` is a ``DataIterator`` that varies the batch size to try to optimize
@@ -131,3 +132,22 @@ class AdaptiveIterator(BucketIterator):
             logger.debug("Batch size: %d; padding: %s", len(current_batch), padding_lengths)
         batches.append(current_batch)
         return batches
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'AdaptiveIterator':
+        adaptive_memory_usage_constant = params.pop('adaptive_memory_usage_constant')
+        padding_memory_scaling = params.pop('padding_memory_scaling')
+        maximum_batch_size = params.pop('maximum_batch_size', 10000)
+        biggest_batch_first = params.pop('biggest_batch_first', False)
+        batch_size = params.pop('batch_size', None)
+        sorting_keys = params.pop('sorting_keys', None)
+        padding_noise = params.pop('sorting_noise', 0.2)
+        params.assert_empty(cls.__name__)
+
+        return cls(adaptive_memory_usage_constant=adaptive_memory_usage_constant,
+                   padding_memory_scaling=padding_memory_scaling,
+                   maximum_batch_size=maximum_batch_size,
+                   biggest_batch_first=biggest_batch_first,
+                   batch_size=batch_size,
+                   sorting_keys=sorting_keys,
+                   padding_noise=padding_noise)

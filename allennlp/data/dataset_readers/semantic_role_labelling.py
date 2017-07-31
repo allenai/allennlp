@@ -1,18 +1,19 @@
-from typing import Dict, List, Optional  # pylint: disable=unused-import
-import os
 import codecs
+import os
+from typing import Dict, List, Optional  # pylint: disable=unused-import
+
 from overrides import overrides
 
-from allennlp.data.dataset_reader import DatasetReader
-from allennlp.data import Dataset, Instance
 from allennlp.common import Params
+from allennlp.data.dataset import Dataset
+from allennlp.data.instance import Instance
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, TagField, IndexField
-from allennlp.data.token_indexer import TokenIndexer
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.experiments import Registry
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
 
-@Registry.register_dataset_reader("srl")
+@DatasetReader.register("srl")
 class SrlReader(DatasetReader):
     """
     This DatasetReader is designed to read in the English OntoNotes v5.0 data
@@ -250,7 +251,7 @@ class SrlReader(DatasetReader):
         return Dataset(instances)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SrlReader':
         """
         Parameters
         ----------

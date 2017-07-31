@@ -4,14 +4,17 @@ import json
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.data import Dataset, DatasetReader, Instance, TokenIndexer, Tokenizer
+from allennlp.data.dataset import Dataset
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.instance import Instance
+from allennlp.data.tokenizers.tokenizer import Tokenizer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField, LabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
-from allennlp.experiments import Registry
 
 
-@Registry.register_dataset_reader("snli")
+@DatasetReader.register("snli")
 class SnliReader(DatasetReader):
     """
     Reads a file from the Stanford Natural Language Inference (SNLI) dataset.  This data is
@@ -52,7 +55,7 @@ class SnliReader(DatasetReader):
         return Dataset(instances)
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'SnliReader':
         """
         Parameters
         ----------

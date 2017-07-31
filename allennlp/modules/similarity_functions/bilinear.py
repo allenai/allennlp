@@ -5,11 +5,10 @@ import torch
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
-from allennlp.experiments import Registry
-from allennlp.modules import SimilarityFunction
+from allennlp.modules.similarity_function import SimilarityFunction
 
 
-@Registry.register_similarity_function("bilinear")
+@SimilarityFunction.register("bilinear")
 class BilinearSimilarity(SimilarityFunction):
     """
     This similarity function performs a bilinear transformation of the two input vectors.  This
@@ -63,7 +62,7 @@ class BilinearSimilarity(SimilarityFunction):
         return self._activation(result + self._bias.expand_as(result))
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'BilinearSimilarity':
         tensor_1_dim = params.pop("tensor_1_dim")
         tensor_2_dim = params.pop("tensor_2_dim")
         # TODO(mattg): figure out activation from_params.

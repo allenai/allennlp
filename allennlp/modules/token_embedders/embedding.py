@@ -8,13 +8,12 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.experiments import Registry
-from allennlp.modules import TokenEmbedder
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@Registry.register_token_embedder("embedding")
+@TokenEmbedder.register("embedding")
 class Embedding(TokenEmbedder):
     """
     A more featureful embedding module than the default in Pytorch.  Adds the ability to
@@ -97,7 +96,7 @@ class Embedding(TokenEmbedder):
                                        self.sparse)(inputs, self.weight)
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params):
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         pretrained_file = params.pop("pretrained_file", None)
         if pretrained_file:

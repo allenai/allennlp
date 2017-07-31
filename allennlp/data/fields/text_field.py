@@ -8,7 +8,8 @@ from typing import Dict, List, Optional  # pylint: disable=unused-import
 import numpy
 
 from allennlp.data.fields.sequence_field import SequenceField
-from allennlp.data import TokenIndexer, TokenType, Vocabulary
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
 
 TokenList = List[TokenType]  # pylint: disable=invalid-name
