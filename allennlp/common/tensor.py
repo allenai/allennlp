@@ -131,11 +131,14 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Te
     ``(batch_size, num_tokens)``.  This mask will be 0 where the tokens are padding, and 1
     otherwise.
 
-    We assume that there's a key in the tensor dictionary called "tokens".
+    There could be several entries in the tensor dictionary with different shapes (e.g., one for
+    word ids, one for character ids).  In order to get a token mask, we assume that the tensor in
+    the dictionary with the lowest number of dimensions has plain token ids.  This allows us to
+    also handle cases where the input is actually a ``ListField[TextField]``.
     """
-    # TODO(mattg): handle more general cases than this (e.g., renamed token field, higher-order
-    # input).
-    token_tensor = text_field_tensors["tokens"]
+    tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
+    tensor_dims.sort(key=lambda x: x[0])
+    token_tensor = tensor_dims[0][1]
     return token_tensor != 0
 
 
@@ -168,17 +171,16 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     "vector".  Non-matched dimensions in the "vector" must be `directly after the batch dimension`.
 
     For example, say I have a "matrix" with dimensions ``(batch_size, num_queries, num_words,
-    embedding_dim)``, representing some kind of embedding or encoding of several multi-word
-    queries.  My attention "vector" must then have at least those dimensions, and could have more.
-    So I could have an attention over words per query, with shape ``(batch_size, num_queries,
-    num_words)``, or I could have an attention over query words for every document in some list,
-    with shape ``(batch_size, num_documents, num_queries, num_words)``.  Both of these cases are
-    fine.  In the first case, the returned tensor will have shape ``(batch_size, num_queries,
-    embedding_dim)``, and in the second case, it will have shape ``(batch_size, num_documents,
-    num_queries, embedding_dim)``.  But you `can't` have an attention "vector" that does not
-    include all of the queries, so shape ``(batch_size, num_words)`` is not allowed - you haven't
-    specified how to handle that dimension in the "matrix", so we can't do anything with this
-    input.
+    embedding_dim)``.  The attention "vector" then must have at least those dimensions, and could
+    have more. Both:
+
+        - ``(batch_size, num_queries, num_words)`` (distribution over words for each query)
+        - ``(batch_size, num_documents, num_queries, num_words)`` (distribution over words in a
+          query for each document)
+
+    are valid input "vectors", producing tensors of shape:
+    ``(batch_size, num_queries, embedding_dim)`` and
+    ``(batch_size, num_documents, num_queries, embedding_dim)`` respectively.
     """
     if matrix.dim() - 1 < attention.dim():
         expanded_size = list(matrix.size())
