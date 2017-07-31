@@ -1,13 +1,12 @@
-from typing import Dict, Any
+from typing import Dict
 
 import torch
-from torch.nn.modules.linear import Linear
-import torch.nn.functional as F
 
-from allennlp.common import Params
+from allennlp.common import Params, constants
+from allennlp.common.tensor import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
 from allennlp.data import Vocabulary
-from allennlp.data.fields.text_field import TextField
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.modules import Highway, MatrixAttention
+from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.training import Model
 
 
@@ -22,6 +21,10 @@ class BidirectionalAttentionFlow(Model):
     attentions to put question information into the passage word representations (this is the only
     part that is at all non-standard), pass this through another few layers of bi-LSTMs/GRUs, and
     do a softmax over span start and span end.
+
+    To instantiate this model with parameters matching those in the original paper, simply use
+    ``BidirectionalAttentionFlow.from_params(vocab, Params({}))``.  This will construct all of the
+    various dependencies needed for the constructor for you.
 
     Parameters
     ----------
@@ -76,11 +79,14 @@ class BidirectionalAttentionFlow(Model):
         # TODO(Mark): support masking once utility functions are merged.
         self._loss = torch.nn.CrossEntropyLoss()
 
-    def forward(self,  # pylint: disable=arguments-differ
+        # TODO(mattg): figure out default initialization here
+
+    def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 passage: Dict[str, torch.LongTensor],
                 span_start: torch.IntTensor = None,
                 span_end: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
         """
         Parameters
         ----------
@@ -109,10 +115,9 @@ class BidirectionalAttentionFlow(Model):
         embedded_question = self._highway_layer(self._text_field_embedder(question))
         embedded_passage = self._highway_layer(self._text_field_embedder(passage))
         batch_size = embedded_question.size(0)
-        question_length = embedded_question.size(1)
         passage_length = embedded_passage.size(1)
-        question_mask = get_text_field_mask(question)
-        passage_mask = get_text_field_mask(passage)
+        question_mask = get_text_field_mask(question).float()
+        passage_mask = get_text_field_mask(passage).float()
 
         encoded_question = self._phrase_layer(embedded_question)
         encoded_passage = self._phrase_layer(embedded_passage)
@@ -127,13 +132,13 @@ class BidirectionalAttentionFlow(Model):
 
         # TODO(mattg): this needs to mask things before doing this max.
         # Shape: (batch_size, passage_length)
-        question_passage_similarity = passage_question_similarity.max(dim=-1).squeeze(-1)
+        question_passage_similarity = passage_question_similarity.max(dim=-1)[0].squeeze(-1)
         # Shape: (batch_size, passage_length)
         question_passage_attention = masked_softmax(question_passage_similarity, passage_mask)
         # Shape: (batch_size, encoding_dim)
         question_passage_vector = weighted_sum(encoded_passage, question_passage_attention)
         # Shape: (batch_size, passage_length, encoding_dim)
-        tiled_question_passage_vector = question_passage_vector.unsqueeze(2).expand(batch_size,
+        tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size,
                                                                                     passage_length,
                                                                                     encoding_dim)
 
@@ -170,7 +175,7 @@ class BidirectionalAttentionFlow(Model):
         # Shape: (batch_size, passage_length, encoding_dim)
         encoded_span_end = self._span_end_encoder(span_end_representation)
         # Shape: (batch_size, passage_length, encoding_dim * 4 + span_end_encoding_dim)
-        span_end_input = torch.cat([final_merged_passage, span_end_representation], dim=-1)
+        span_end_input = torch.cat([final_merged_passage, encoded_span_end], dim=-1)
         span_end_logits = self._span_end_predictor(span_end_input).squeeze(-1)
         span_end_probs = masked_softmax(span_end_logits, passage_mask)
 
@@ -182,36 +187,86 @@ class BidirectionalAttentionFlow(Model):
             # Negative log likelihood criterion takes integer labels, not one hot.
             if span_start.dim() == 2:
                 _, span_start = span_start.max(-1)
-            loss = self._loss(span_start_logits, span_start)
+            loss = self._loss(span_start_logits, span_start.view(-1))
             if span_end.dim() == 2:
-                _, span_end = span_end.max(-2)
-            loss += self._loss(span_end_logits, span_end)
+                _, span_end = span_end.max(-1)
+            loss += self._loss(span_end_logits, span_end.view(-1))
             output_dict["loss"] = loss
 
         return output_dict
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SimpleTagger':
-        default_embedder_params = {}  # TODO(mattg)
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
+        """
+        With an empty ``params`` argument, this will instantiate a BiDAF model with the same
+        configuration as published in the original BiDAF paper, as long as you've set
+        ``allennlp.common.constants.GLOVE_PATH`` to the location of your gzipped 100-dimensional
+        glove vectors.
+
+        If you want to change parameters, the keys in the ``params`` object must match the
+        constructor arguments above.
+        """
+        default_embedder_params = {
+                'tokens': {
+                        'type': 'embedding',
+                        'pretrained_file': constants.GLOVE_PATH,
+                        'trainable': False
+                        },
+                'token_characters': {
+                        'type': 'character_encoding',
+                        'embedding': {
+                                'embedding_dim': 8
+                                },
+                        'encoder': {
+                                'type': 'cnn',
+                                'embedding_dim': 8,
+                                'num_filters': 100,
+                                'ngram_filter_sizes': [5]
+                                }
+                        }
+                }
         embedder_params = params.pop("text_field_embedder", default_embedder_params)
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         num_highway_layers = params.pop("num_highway_layers", 2)
-        default_phrase_layer_params = {}  # TODO(mattg)
+        default_phrase_layer_params = {
+                'type': 'lstm',
+                'bidirectional': True,
+                'input_size': 200,
+                'hidden_size': 100,
+                'num_layers': 1,
+                }
         phrase_layer_params = params.pop("phrase_layer", default_phrase_layer_params)
         phrase_layer = Seq2SeqEncoder.from_params(phrase_layer_params)
-        default_modeling_layer_params = {}  # TODO(mattg)
+        default_similarity_function_params = {
+                'type': 'linear',
+                'combination': 'x,y,x*y',
+                'tensor_1_dim': 200,
+                'tensor_2_dim': 200
+                }
+        similarity_function_params = params.pop("similarity_function", default_similarity_function_params)
+        similarity_function = SimilarityFunction.from_params(similarity_function_params)
+        default_modeling_layer_params = {
+                'type': 'lstm',
+                'bidirectional': True,
+                'input_size': 800,
+                'hidden_size': 100,
+                'num_layers': 2,
+                }
         modeling_layer_params = params.pop("modeling_layer", default_modeling_layer_params)
         modeling_layer = Seq2SeqEncoder.from_params(modeling_layer_params)
-        default_similarity_function_params = {}  # TODO(mattg)
-        similarity_function_params = params.pop("similarity_function", default_similarity_function_params)
-        similarity_function = Seq2SeqEncoder.from_params(similarity_function_params)
-        default_span_end_encoder_params = {}  # TODO(mattg)
+        default_span_end_encoder_params = {
+                'type': 'lstm',
+                'bidirectional': True,
+                'input_size': 1400,
+                'hidden_size': 100,
+                'num_layers': 2,
+                }
         span_end_encoder_params = params.pop("span_end_encoder", default_span_end_encoder_params)
         span_end_encoder = Seq2SeqEncoder.from_params(span_end_encoder_params)
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    num_highway_layers=num_highway_layers,
                    phrase_layer=phrase_layer,
-                   modeling_layer=modeling_layer,
                    attention_similarity_function=similarity_function,
+                   modeling_layer=modeling_layer,
                    span_end_encoder=span_end_encoder)
