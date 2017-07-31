@@ -9,7 +9,7 @@ from allennlp.__main__ import main
 from allennlp.commands.bulk import add_bulk_subparser, bulk
 
 
-class TestMain(TestCase):
+class TestBulk(TestCase):
 
     def test_add_bulk_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
