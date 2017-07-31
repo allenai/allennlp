@@ -1,8 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
 import argparse
-import json
-import os
-import tempfile
 from unittest import TestCase
 
 from allennlp.__main__ import main
