@@ -1,8 +1,9 @@
 from typing import List
+
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.data.tokenizer import Tokenizer
+from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 
 @Tokenizer.register("character")

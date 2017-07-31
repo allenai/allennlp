@@ -1,7 +1,6 @@
 from typing import Dict
 
-
-from allennlp.data.field import DataArray, Field
+from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
 
 

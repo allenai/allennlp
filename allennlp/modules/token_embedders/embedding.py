@@ -8,7 +8,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.modules import TokenEmbedder
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

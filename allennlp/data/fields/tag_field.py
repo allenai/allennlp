@@ -6,8 +6,9 @@ import numpy
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.data import Field, Vocabulary
+from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

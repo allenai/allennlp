@@ -2,23 +2,23 @@
 from typing import Type
 
 import pytest
-
 import torch
 import torch.nn.init
-from allennlp.common.checks import ConfigurationError
+
 from allennlp.common import Registrable
-from allennlp.testing.test_case import AllenNlpTestCase
-from allennlp.data.dataset_reader import DatasetReader
-from allennlp.data.data_iterator import DataIterator
-from allennlp.data.tokenizer import Tokenizer
-from allennlp.data.token_indexer import TokenIndexer
-from allennlp.training.regularizer import Regularizer
-from allennlp.training.initializer import Initializer
-from allennlp.modules.token_embedder import TokenEmbedder
-from allennlp.modules.text_field_embedder import TextFieldEmbedder
-from allennlp.modules.seq2seq_encoder import Seq2SeqEncoder
-from allennlp.modules.seq2vec_encoder import Seq2VecEncoder
+from allennlp.common.checks import ConfigurationError
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.tokenizers.tokenizer import Tokenizer
+from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.training.initializers.initializer import Initializer
+from allennlp.training.regularizers.regularizer import Regularizer
 
 
 class TestRegistrable(AllenNlpTestCase):

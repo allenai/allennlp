@@ -1,14 +1,14 @@
+import logging
+import random
 from collections import defaultdict
 from typing import Callable, Dict, List, Tuple
-import random
-import logging
 
 from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.data import Dataset, Instance
-from allennlp.data.data_iterator import DataIterator
 from allennlp.data.iterators.bucket_iterator import BucketIterator
+from allennlp.data.iterators.data_iterator import DataIterator
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
