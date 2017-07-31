@@ -1,0 +1,19 @@
+import argparse
+
+from allennlp.commands.bulk import add_bulk_subparser
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]')
+    subparsers = parser.add_subparsers(title='Commands', metavar='')
+
+    # Add sub-commands
+    add_bulk_subparser(subparsers)
+
+    args = parser.parse_args()
+    if 'func' in dir(args):
+        args.func(args)
+    else:
+        parser.print_help()
+
+if __name__ == "__main__":
+    main()
