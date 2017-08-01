@@ -46,6 +46,8 @@ class Registrable:
 
     @classmethod
     def by_name(cls: Type[T], name: str) -> Type[T]:
+        if name not in Registrable._registry[cls]:
+            raise ConfigurationError("%s is not a registered name for %s" % (name, cls.__name__))
         return Registrable._registry[cls].get(name)
 
     @classmethod

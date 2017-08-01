@@ -10,7 +10,7 @@ from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.models import BidirectionalAttentionFlow
-from allennlp.training.initializers import InitializerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.testing.test_case import AllenNlpTestCase
 
 

@@ -6,7 +6,7 @@ from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.modules.seq2vec_encoders import CnnEncoder
-from allennlp.training.initializers import InitializerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.testing.test_case import AllenNlpTestCase
 
 

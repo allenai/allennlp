@@ -2,7 +2,7 @@
 import torch
 from torch.nn.init import constant
 from allennlp.common.params import Params
-from allennlp.training.initializers import InitializerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.training.regularizers import L1Regularizer, L2Regularizer, RegularizerApplicator
 from allennlp.testing.test_case import AllenNlpTestCase
 

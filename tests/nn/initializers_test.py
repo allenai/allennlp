@@ -3,7 +3,7 @@ import torch
 from torch.nn.init import constant
 import numpy
 
-from allennlp.training.initializers import InitializerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.testing.test_case import AllenNlpTestCase
 from allennlp.common.params import Params
 

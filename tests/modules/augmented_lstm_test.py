@@ -10,7 +10,7 @@ from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.testing.test_case import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tensor import sort_batch_by_length
-from allennlp.training.initializers import InitializerApplicator
+from allennlp.nn import InitializerApplicator
 
 
 class TestAugmentedLSTM(AllenNlpTestCase):
