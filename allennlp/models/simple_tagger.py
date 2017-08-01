@@ -42,9 +42,6 @@ class SimpleTagger(Model):
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
 
-        # TODO(Mark): support masking once utility functions are merged.
-        self.sequence_loss = torch.nn.CrossEntropyLoss()
-
     # pylint: disable=arguments-differ
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
@@ -95,7 +92,7 @@ class SimpleTagger(Model):
             # Negative log likelihood criterion takes integer labels, not one hot.
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
-            loss = self.sequence_loss(reshaped_log_probs, tags.view(-1))
+            loss = weighted_cross_entropy_with_logits(logits, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict

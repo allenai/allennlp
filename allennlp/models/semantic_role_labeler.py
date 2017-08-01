@@ -8,6 +8,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tensor import arrays_to_variables, viterbi_decode
 from allennlp.common.tensor import get_text_field_mask
+from allennlp.common.tensor import get_text_field_mask, weighted_cross_entropy_with_logits
 from allennlp.data import Vocabulary
 from allennlp.data.fields import IndexField, TextField
 from allennlp.data import Instance
@@ -118,7 +119,7 @@ class SemanticRoleLabeler(Model):
             # Negative log likelihood criterion takes integer labels, not one hot.
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
-            loss = self.sequence_loss(reshaped_log_probs, tags.view(-1))
+            loss = weighted_cross_entropy_with_logits(logits, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict
