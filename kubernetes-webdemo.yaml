@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: allennlp-webdemo
-          image: "896129387501.dkr.ecr.us-west-2.amazonaws.com/allennlp/allennlp-cpu:25764bce367a130ac6fde91a85955f1eece25b6a"
+          image: "896129387501.dkr.ecr.us-west-2.amazonaws.com/allennlp/allennlp-cpu:98d99ea096d0b4944296adac5fe9fc96f9383c14"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
           # for documentation on the resources section.
@@ -33,7 +33,7 @@ spec:
           command:
             - /bin/bash
             - -c
-            - "source activate allennlp && FLASK_APP=allennlp/service/server_flask.py flask run --port 8000"
+            - "source activate allennlp && export PYTHONPATH=. && python allennlp serve"
 ---
 apiVersion: v1
 kind: Service
