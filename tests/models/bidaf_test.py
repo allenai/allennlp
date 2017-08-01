@@ -43,7 +43,6 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = arrays_to_variables(self.dataset.as_arrays())
-
         _ = self.model.forward(**training_arrays)
 
     def test_predict_span_gives_reasonable_outputs(self):

@@ -50,7 +50,6 @@ class BidirectionalAttentionFlow(Model):
         The encoder that we will use to incorporate span start predictions into the passage state
         before predicting span end.
     """
-
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  num_highway_layers: int,
@@ -93,13 +92,21 @@ class BidirectionalAttentionFlow(Model):
         Parameters
         ----------
         question : Dict[str, torch.LongTensor]
-            From a ``TextField``
+            From a ``TextField``.
         passage : Dict[str, torch.LongTensor]
-            From a ``TextField``
+            From a ``TextField``.  The model assumes that this passage contains the answer to the
+            question, and predicts the beginning and ending positions of the answer within the
+            passage.  The ending position is `exclusive`, so our
+            :class:`~allennlp.data.dataset_readers.SquadReader` adds a special ending token to the
+            end of the passage, to allow for the last token to be included in the answer span.
         span_start : torch.IntTensor, optional (default = None)
-            From an ``IndexField``
+            From an ``IndexField``.  This is one of the things we are trying to predict - the
+            beginning position of the answer with the passage.  This is an `inclusive` index.  If
+            this is given, we will compute a loss that gets included in the output dictionary.
         span_end : torch.IntTensor, optional (default = None)
-            From an ``IndexField``
+            From an ``IndexField``.  This is one of the things we are trying to predict - the
+            ending position of the answer with the passage.  This is an `exclusive` index.  If
+            this is given, we will compute a loss that gets included in the output dictionary.
 
         Returns
         -------
@@ -107,9 +114,13 @@ class BidirectionalAttentionFlow(Model):
         span_start_logits : torch.FloatTensor
             A tensor of shape ``(batch_size, passage_length)`` representing unnormalised log
             probabilities of the span start position.
+        span_start_probs : torch.FloatTensor
+            The result of ``softmax(span_start_logits)``.
         span_end_logits : torch.FloatTensor
             A tensor of shape ``(batch_size, passage_length)`` representing unnormalised log
             probabilities of the span end position (exclusive).
+        span_end_probs : torch.FloatTensor
+            The result of ``softmax(span_end_logits)``.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
 
@@ -205,6 +216,9 @@ class BidirectionalAttentionFlow(Model):
         ----------
         question : ``TextField``
         passage : ``TextField``
+            A ``TextField`` containing the tokens in the passage.  Note that we typically add
+            ``SquadReader.STOP_TOKEN`` as the final token in the passage, because we use exclusive
+            span indices.  Be sure you've added that to the passage you pass in here.
 
         Returns
         -------
@@ -219,6 +233,8 @@ class BidirectionalAttentionFlow(Model):
         # TODO(mattg): we should make the lengths an optional parameter to Instance.as_array()
         question_lengths = question.get_padding_lengths()
         question_input = arrays_to_variables(question.as_array(question_lengths))
+        # TODO(mattg): once arrays_to_variables has an option to add the batch dimension, this can
+        # be removed (and similar for passage_input).
         for input_array in question_input.values():
             input_array.data.unsqueeze_(0)
 
