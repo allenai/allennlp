@@ -39,8 +39,8 @@ class SimpleTaggerTest(AllenNlpTestCase):
 
         self.model = SimpleTagger.from_params(self.vocab, params)
 
-    def test_simple_tagger_saves_and_loads(self):
-        self.ensure_model_saves_and_loads(self.model, self.dataset)
+    def test_simple_tagger_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(self.model, self.dataset)
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = self.dataset.as_arrays()

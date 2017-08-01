@@ -76,10 +76,10 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
                 params[key] = value
         return params
 
-    def ensure_model_saves_and_loads(self,
-                                     model: Model,
-                                     dataset: Dataset,
-                                     iterator: DataIterator = None):
+    def ensure_model_can_train_save_and_load(self,
+                                             model: Model,
+                                             dataset: Dataset,
+                                             iterator: DataIterator = None):
         data_iterator = iterator or BasicIterator()
         single_batch = next(data_iterator(dataset))
         single_batch = arrays_to_variables(single_batch)

@@ -346,3 +346,15 @@ class TestTensor(AllenNlpTestCase):
 
         indices, _ = viterbi_decode(sequence_predictions, transition_matrix)
         assert indices == [3, 3, 3, 3, 3, 3]
+
+        sequence_predictions = torch.FloatTensor([[1, 0, 0, 4],
+                                                  [1, 0, 6, 2],
+                                                  [0, 3, 0, 4]])
+        # Best path would normally be [3, 2, 3] but we add a
+        # potential from 2 -> 1, making [3, 2, 1] the best path.
+        transition_matrix = torch.zeros([4, 4])
+        transition_matrix[0, 0] = 1
+        transition_matrix[2, 1] = 5
+        indices, value = viterbi_decode(sequence_predictions, transition_matrix)
+        assert indices == [3, 2, 1]
+        assert value == 18

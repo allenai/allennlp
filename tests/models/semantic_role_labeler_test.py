@@ -1,7 +1,6 @@
 import numpy
 
 from allennlp.common import Params
-from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SrlReader
 from allennlp.data.fields import TextField, IndexField
@@ -39,13 +38,8 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
 
         self.model = SemanticRoleLabeler.from_params(self.vocab, params)
 
-    def test_srl_tagger_saves_and_loads(self):
-        self.ensure_model_saves_and_loads(self.model, self.dataset)
-
-    def test_forward_pass_runs_correctly(self):
-        training_arrays = self.dataset.as_arrays()
-        model_inputs = arrays_to_variables(training_arrays)
-        _ = self.model.forward(**model_inputs)
+    def test_srl_model_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(self.model, self.dataset)
 
     def test_tag_returns_distributions_per_token(self):
         text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})
