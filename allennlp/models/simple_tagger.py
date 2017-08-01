@@ -123,10 +123,7 @@ class SimpleTagger(Model):
         text_field.index(self.vocab)
         padding_lengths = text_field.get_padding_lengths()
         array_input = text_field.as_array(padding_lengths)
-        # TODO(Mark): Make the data API always return tensors with batch dimensions at every abstraction level.
-        # Add a batch dimension by unsqueezing, because pytorch doesn't support inputs without one.
-        model_input = arrays_to_variables(array_input)
-        model_input["tokens"].data.unsqueeze_(0)
+        model_input = arrays_to_variables(array_input, add_batch_dimension=True)
         output_dict = self.forward(tokens=model_input)
 
         # Remove batch dimension, as we only had one input.
