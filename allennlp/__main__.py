@@ -3,7 +3,9 @@ import argparse
 import logging
 import sys
 
+import allennlp.commands.serve as serve
 import allennlp.commands.bulk as bulk
+
 from allennlp.common.params import PARAMETER
 
 # TODO(joelgrus): we probably don't want this always disabled
@@ -15,6 +17,7 @@ def main(raw_args: Sequence[str]) -> None:
 
     # Add sub-commands
     bulk.add_bulk_subparser(subparsers)
+    serve.add_serve_subparser(subparsers)
 
     args = parser.parse_args(raw_args)
 
