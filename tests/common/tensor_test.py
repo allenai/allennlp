@@ -405,4 +405,3 @@ class TestTensor(AllenNlpTestCase):
                                                          batch_average=False)
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.data.sum() / 4
-

@@ -7,7 +7,6 @@ import torch.nn.functional as F
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tensor import arrays_to_variables, viterbi_decode
-from allennlp.common.tensor import get_text_field_mask
 from allennlp.common.tensor import get_text_field_mask, weighted_cross_entropy_with_logits
 from allennlp.data import Vocabulary
 from allennlp.data.fields import IndexField, TextField
