@@ -9,6 +9,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.modules.time_distributed import TimeDistributed
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -16,8 +17,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @TokenEmbedder.register("embedding")
 class Embedding(TokenEmbedder):
     """
-    A more featureful embedding module than the default in Pytorch.  Adds the ability to
-    pre-specify the weight matrix or use a non-trainable embedding.
+    A more featureful embedding module than the default in Pytorch.  Adds the ability to:
+
+        1. embed higher-order inputs
+        2. pre-specify the weight matrix
+        3. use a non-trainable embedding
+        4. project the resultant embeddings to some other dimension (which only makes sense with
+           non-trainable embeddings).
+        5. build all of this easily ``from_params``
 
     Note that if you are using our data API and are trying to embed a
     :class:`~allennlp.data.fields.TextField`, you should use a
@@ -29,6 +36,9 @@ class Embedding(TokenEmbedder):
         Size of the dictionary of embeddings (vocabulary size).
     embedding_dim : int
         The size of each embedding vector.
+    projection_dim : int, (optional, default=None)
+        If given, we add a projection layer after the embedding layer.  This really only makes
+        sense if ``trainable`` is ``False``.
     weight : torch.FloatTensor, (optional, default=None)
         A pre-initialised weight matrix for the embedding lookup, allowing the use of
         pretrained vectors.
@@ -54,6 +64,7 @@ class Embedding(TokenEmbedder):
     def __init__(self,
                  num_embeddings: int,
                  embedding_dim: int,
+                 projection_dim: int = None,
                  weight: torch.FloatTensor = None,
                  padding_index: int = None,
                  trainable: bool = True,
@@ -63,12 +74,13 @@ class Embedding(TokenEmbedder):
                  sparse: bool = False) -> None:
         super(Embedding, self).__init__()
         self.num_embeddings = num_embeddings
-        self.embedding_dim = embedding_dim
         self.padding_index = padding_index
         self.max_norm = max_norm
         self.norm_type = norm_type
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
+
+        self.output_dim = projection_dim or embedding_dim
 
         if weight is None:
             weight = torch.FloatTensor(num_embeddings, embedding_dim)
@@ -82,26 +94,47 @@ class Embedding(TokenEmbedder):
         if self.padding_index is not None:
             self.weight.data[self.padding_index].fill_(0)
 
+        self._projection = None
+        if projection_dim:
+            self._projection = torch.nn.Linear(embedding_dim, projection_dim)
+
     @overrides
     def get_output_dim(self) -> int:
-        return self.embedding_dim
+        return self.output_dim
 
     @overrides
     def forward(self, inputs):  # pylint: disable=arguments-differ
         padding_index = self.padding_index if self.padding_index is not None else -1
-        return self._backend.Embedding(padding_index,
-                                       self.max_norm,
-                                       self.norm_type,
-                                       self.scale_grad_by_freq,
-                                       self.sparse)(inputs, self.weight)
+        original_inputs = inputs
+        if original_inputs.dim() > 2:
+            inputs = inputs.view(-1, inputs.size(-1))
+        embedded = self._backend.Embedding(padding_index,
+                                           self.max_norm,
+                                           self.norm_type,
+                                           self.scale_grad_by_freq,
+                                           self.sparse)(inputs, self.weight)
+        if original_inputs.dim() > 2:
+            view_args = list(original_inputs.size()) + [embedded.size(-1)]
+            embedded = embedded.view(*view_args)
+        if self._projection:
+            projection = self._projection
+            for _ in range(embedded.dim() - 2):
+                projection = TimeDistributed(projection)
+            embedded = projection(embedded)
+        return embedded
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         pretrained_file = params.pop("pretrained_file", None)
+        projection_dim = params.pop("projection_dim", None)
         if pretrained_file:
             trainable = params.pop("trainable", True)
-            return get_pretrained_embedding_layer(pretrained_file, vocab, vocab_namespace, trainable)
+            return get_pretrained_embedding_layer(pretrained_file,
+                                                  vocab,
+                                                  vocab_namespace,
+                                                  projection_dim,
+                                                  trainable)
         num_embeddings = vocab.get_vocab_size(vocab_namespace)
         embedding_dim = params.pop('embedding_dim')
         padding_index = params.pop('padding_index', None)
@@ -124,6 +157,7 @@ class Embedding(TokenEmbedder):
 def get_pretrained_embedding_layer(embeddings_filename: str,
                                    vocab: Vocabulary,
                                    namespace: str = "tokens",
+                                   projection_dim: int = None,
                                    trainable: bool = True):
     """
     Reads a pre-trained embedding file and generates an Embedding layer that has weights
@@ -201,6 +235,7 @@ def get_pretrained_embedding_layer(embeddings_filename: str,
     # The weight matrix is initialized, so we construct and return the actual Embedding.
     return Embedding(num_embeddings=vocab_size,
                      embedding_dim=embedding_dim,
+                     projection_dim=projection_dim,
                      padding_index=0,
                      weight=embedding_matrix,
                      trainable=trainable)
