@@ -1,15 +1,9 @@
 from typing import Sequence
 import argparse
-import logging
 
 import allennlp.commands.serve as serve
 import allennlp.commands.bulk as bulk
 import allennlp.commands.train as train
-from allennlp.common.params import PARAMETER
-
-
-# TODO(joelgrus): we probably don't want this always disabled
-logging.disable(PARAMETER)
 
 def main(raw_args: Sequence[str]) -> None:
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]')
