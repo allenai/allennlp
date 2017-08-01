@@ -145,7 +145,9 @@ class SemanticRoleLabeler(Model):
         torch_input = arrays_to_variables(model_input)
         # TODO(Mark): Make the data API always return tensors with batch dimensions at every abstraction level.
         # Add a batch dimension by unsqueezing, because pytorch doesn't support inputs without one.
-        torch_input["tokens"]["tokens"].data.unsqueeze_(0)
+
+        for tensor in torch_input["tokens"].values():
+            tensor.data.unsqueeze_(0)
         torch_input["verb_indicator"].data.unsqueeze_(0)
 
         output_dict = self.forward(**torch_input)
@@ -186,7 +188,7 @@ class SemanticRoleLabeler(Model):
         return transition_matrix
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SemanticRoleLabeller':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SemanticRoleLabeler':
         text_field_embedder = TextFieldEmbedder.from_params(vocab, params.pop("text_field_embedder"))
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
         return cls(vocab=vocab,

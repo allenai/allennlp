@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 import numpy
 
 from allennlp.common import Params

@@ -209,8 +209,6 @@ class TestTensor(AllenNlpTestCase):
                                   numpy.array([[0.0, 0.0, 0.0],
                                                [0.11920292, 0.0, 0.88079708]]))
 
-
-
     def test_get_text_field_mask_returns_a_correct_mask(self):
         text_field_arrays = {
                 "tokens": numpy.asarray([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
@@ -357,4 +355,4 @@ class TestTensor(AllenNlpTestCase):
         transition_matrix[2, 1] = 5
         indices, value = viterbi_decode(sequence_predictions, transition_matrix)
         assert indices == [3, 2, 1]
-        assert value == 18
+        assert value.numpy() == 18

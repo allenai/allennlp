@@ -17,7 +17,6 @@ from allennlp.common.tensor import arrays_to_variables
 from allennlp.data.dataset import Dataset
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 
 

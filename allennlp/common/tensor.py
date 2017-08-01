@@ -126,8 +126,8 @@ def masked_softmax(vector, mask):
 
 def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     """
-    Perform Viterbi decoding over a sequence given a transition matrix specifying
-    pairwise (transition) potentials between tags and a matrix of shape
+    Perform Viterbi decoding in log space over a sequence given a transition matrix
+    specifying pairwise (transition) potentials between tags and a matrix of shape
     (sequence_length, num_tags) specifying unary potentials for possible tags per
     timestep.
 
