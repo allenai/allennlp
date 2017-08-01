@@ -2,19 +2,22 @@ import argparse
 from contextlib import ExitStack
 import json
 import sys
-from typing import Sequence, Optional, IO
+from typing import Optional, IO
 
 from allennlp.service.servable import Servable, ServableCollection
 
+def add_bulk_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
+    description = '''Run the specified model against a JSON-lines input file.'''
+    subparser = parser.add_parser(
+            'bulk', description=description, help='Run a model in bulk.')
+    subparser.add_argument('model', type=str, help='the name of the model to run')
+    subparser.add_argument('input_file', metavar='input-file', type=str, help='path to input file')
+    subparser.add_argument('--output-file', type=str, help='path to output file')
+    subparser.add_argument('--print', action='store_true', help='print results to string')
 
-def parse_args(args: Sequence[str]):
-    parser = argparse.ArgumentParser(description="Run a model")  # pylint: disable=invalid-name
-    parser.add_argument('model', type=str, help='the name of the model to run')
-    parser.add_argument('input_file', metavar='input-file', type=str, help='path to input file')
-    parser.add_argument('--output-file', type=str, help='path to output file')
-    parser.add_argument('--print', action='store_true', help='print results to string')
+    subparser.set_defaults(func=bulk)
 
-    return parser.parse_args(args)
+    return subparser
 
 def get_model(args: argparse.Namespace) -> Optional[Servable]:
     # TODO(joelgrus): use the args to instantiate the model
@@ -33,8 +36,7 @@ def run(servable: Servable, input_file: IO, output_file: Optional[IO], print_to_
         if output_file:
             output_file.write(output + "\n")
 
-def main(argv: Sequence[str]):
-    args = parse_args(argv)
+def bulk(args: argparse.Namespace) -> None:
     model = get_model(args)
     if model is None:
         print("unknown model:", args.model)
@@ -49,6 +51,3 @@ def main(argv: Sequence[str]):
             output_file = None
 
         run(model, input_file, output_file, args.print)
-
-if __name__ == "__main__":
-    main(sys.argv)
