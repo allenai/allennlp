@@ -5,7 +5,7 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
-from allennlp.common.tensor import arrays_to_variables, weighted_cross_entropy_with_logits
+from allennlp.common.tensor import arrays_to_variables, sequence_cross_entropy_with_logits
 from allennlp.common.tensor import get_text_field_mask
 from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
@@ -92,7 +92,7 @@ class SimpleTagger(Model):
             # Negative log likelihood criterion takes integer labels, not one hot.
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
-            loss = weighted_cross_entropy_with_logits(logits, tags, mask)
+            loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict

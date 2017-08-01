@@ -14,7 +14,7 @@ from allennlp.common.tensor import masked_log_softmax
 from allennlp.common.tensor import sort_batch_by_length
 from allennlp.common.tensor import viterbi_decode
 from allennlp.common.tensor import weighted_sum
-from allennlp.common.tensor import weighted_cross_entropy_with_logits
+from allennlp.common.tensor import sequence_cross_entropy_with_logits
 from allennlp.testing import AllenNlpTestCase
 
 
@@ -385,7 +385,7 @@ class TestTensor(AllenNlpTestCase):
         assert indices == [3, 2, 1]
         assert value.numpy() == 18
 
-    def test_weighted_cross_entropy_with_logits_masks_loss_correctly(self):
+    def test_sequence_cross_entropy_with_logits_masks_loss_correctly(self):
 
         # test weight masking by checking that a tensor with non-zero values in
         # masked positions returns the same loss as a tensor with zeros in those
@@ -408,11 +408,11 @@ class TestTensor(AllenNlpTestCase):
         tensor2 = Variable(tensor2)
         targets = Variable(targets)
         weights = Variable(weights)
-        loss = weighted_cross_entropy_with_logits(tensor, targets, weights)
-        loss2 = weighted_cross_entropy_with_logits(tensor2, targets, weights)
+        loss = sequence_cross_entropy_with_logits(tensor, targets, weights)
+        loss2 = sequence_cross_entropy_with_logits(tensor2, targets, weights)
         assert loss.data.numpy() == loss2.data.numpy()
 
-    def test_weighted_cross_entropy_with_logits_averages_batch_correctly(self):
+    def test_sequence_cross_entropy_with_logits_averages_batch_correctly(self):
         # test batch average is the same as dividing the batch averaged
         # loss by the number of batches containing any non-padded tokens.
         tensor = torch.rand([5, 7, 4])
@@ -427,9 +427,9 @@ class TestTensor(AllenNlpTestCase):
         tensor = Variable(tensor)
         targets = Variable(targets)
         weights = Variable(weights)
-        loss = weighted_cross_entropy_with_logits(tensor, targets, weights)
+        loss = sequence_cross_entropy_with_logits(tensor, targets, weights)
 
-        vector_loss = weighted_cross_entropy_with_logits(tensor, targets, weights,
+        vector_loss = sequence_cross_entropy_with_logits(tensor, targets, weights,
                                                          batch_average=False)
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.data.sum() / 4

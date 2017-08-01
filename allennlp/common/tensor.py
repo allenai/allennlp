@@ -99,7 +99,6 @@ def _get_normalized_masked_log_probablities(vector, mask):
     # in https://github.com/rkadlec/asreader/blob/master/asreader/custombricks/softmax_mask_bricks.py
     # TODO(mattg): a bunch of this logic can be simplified once pytorch-0.2 is out.
     # torch.max(keepdim=True), for instance, simplifies things here.
-    # Here we get normalized log probabilities for enhanced numerical stability.
     input_masked = mask * vector
     shifted = mask * (input_masked - torch.max(input_masked, dim=1)[0].expand_as(input_masked))
     # We add epsilon to avoid numerical instability when the sum in the log yields 0.
@@ -262,7 +261,7 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     return intermediate.sum(dim=-2).squeeze(-2)
 
 
-def weighted_cross_entropy_with_logits(logits: torch.FloatTensor,
+def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
                                        batch_average: bool = True) -> torch.FloatTensor:
