@@ -240,7 +240,7 @@ class TestTensor(AllenNlpTestCase):
 
     def test_last_dim_softmax_handles_mask_correctly(self):
         batch_size = 1
-        length_1 = 5
+        length_1 = 4
         length_2 = 3
         num_options = 5
         options_array = numpy.zeros((batch_size, length_1, length_2, num_options))

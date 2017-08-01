@@ -199,6 +199,8 @@ def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) 
     tensor_shape = tensor.size()
     reshaped_tensor = tensor.view(-1, tensor.size()[-1])
     if mask:
+        while mask.dim() < tensor.dim():
+            mask = mask.unsqueeze(1)
         mask = mask.expand_as(tensor).contiguous().float()
         mask = mask.view(-1, mask.size()[-1])
     reshaped_result = masked_softmax(reshaped_tensor, mask)
