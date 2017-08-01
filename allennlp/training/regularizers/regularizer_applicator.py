@@ -1,9 +1,10 @@
-from typing import Dict
 import re
+from typing import Dict
+
 import torch
 
 from allennlp.common.params import Params
-from allennlp.training.regularizer import Regularizer
+from allennlp.training.regularizers.regularizer import Regularizer
 
 
 class RegularizerApplicator:

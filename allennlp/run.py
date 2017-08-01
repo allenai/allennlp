@@ -1,25 +1,24 @@
-from typing import Any, Dict, Union
-import random
-import logging
-import sys
-import os
 import json
+import logging
+import os
+import random
+import sys
 from copy import deepcopy
+from typing import Any, Dict, Union
 
-import pyhocon
 import numpy
+import pyhocon
 import torch
 
-from allennlp.training.optimizers import Optimizer
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params, replace_none
 from allennlp.common.tee_logger import TeeLogger
-from allennlp.data.dataset_reader import DatasetReader
-from allennlp.data.data_iterator import DataIterator
-from allennlp.training.trainer import Trainer
 from allennlp.data import Vocabulary
-from allennlp.training import Model
-
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.models.model import Model
+from allennlp.training.optimizers import Optimizer
+from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

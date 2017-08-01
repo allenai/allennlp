@@ -1,13 +1,13 @@
-from typing import List, Tuple, Dict, cast
 import random
+from typing import List, Tuple, Dict, cast
 
 from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.util import add_noise_to_dict_values
 from allennlp.data import Dataset, Instance
-from allennlp.data.data_iterator import DataIterator
 from allennlp.data.iterators.basic_iterator import BasicIterator
+from allennlp.data.iterators.data_iterator import DataIterator
 
 
 @DataIterator.register("bucket")
@@ -92,8 +92,6 @@ class BucketIterator(BasicIterator):
         instances_with_lengths = []
         for instance in dataset.instances:
             padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
-            print("Instance:", instance)
-            print("padding lengths:", padding_lengths)
             if padding_noise > 0.0:
                 noisy_lengths = {}
                 for field_name, field_lengths in padding_lengths.items():

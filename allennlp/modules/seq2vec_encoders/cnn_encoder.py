@@ -5,7 +5,8 @@ import torch
 from torch.nn import Conv1d, Linear
 
 from allennlp.common import Params
-from allennlp.modules import Seq2VecEncoder
+from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
+
 
 @Seq2VecEncoder.register("cnn")
 class CnnEncoder(Seq2VecEncoder):
@@ -69,6 +70,10 @@ class CnnEncoder(Seq2VecEncoder):
         else:
             self.projection_layer = None
             self._output_dim = maxpool_output_dim
+
+    @overrides
+    def get_input_dim(self) -> int:
+        return self._embedding_dim
 
     @overrides
     def get_output_dim(self) -> int:
