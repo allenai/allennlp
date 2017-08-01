@@ -228,19 +228,13 @@ class BidirectionalAttentionFlow(Model):
         passage.index(self._vocab)
         # TODO(mattg): we should make the lengths an optional parameter to Instance.as_array()
         question_lengths = question.get_padding_lengths()
-        question_input = arrays_to_variables(question.as_array(question_lengths))
-        # TODO(mattg): once arrays_to_variables has an option to add the batch dimension, this can
-        # be removed (and similar for passage_input).
-        for input_array in question_input.values():
-            input_array.data.unsqueeze_(0)
-
         passage_lengths = passage.get_padding_lengths()
-        passage_input = arrays_to_variables(passage.as_array(passage_lengths))
-        for input_array in passage_input.values():
-            input_array.data.unsqueeze_(0)
+        question_input = arrays_to_variables(question.as_array(question_lengths),
+                                             add_batch_dimension=True)
+        passage_input = arrays_to_variables(passage.as_array(passage_lengths),
+                                            add_batch_dimension=True)
 
         output_dict = self.forward(question=question_input, passage=passage_input)
-
         # Remove batch dimension, as we only had one input.
         span_start_probs = output_dict["span_start_probs"].data.squeeze(0)
         span_end_probs = output_dict["span_end_probs"].data.squeeze(0)
