@@ -1,15 +1,18 @@
-from typing import Dict
+from typing import Any, Dict
 
 import torch
 
 from allennlp.common import Params, constants
 from allennlp.common.tensor import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
+from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Vocabulary
+from allennlp.data.fields import TextField
+from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
-from allennlp.training import Model
 
 
+@Model.register("bidaf")
 class BidirectionalAttentionFlow(Model):
     """
     This class implements Minjoon Seo's `Bidirectional Attention Flow model
@@ -194,6 +197,79 @@ class BidirectionalAttentionFlow(Model):
             output_dict["loss"] = loss
 
         return output_dict
+
+    def predict_span(self, question: TextField, passage: TextField) -> Dict[str, Any]:
+        """
+        Given a question and a passage, predicts the span in the passage that answers the question.
+
+        Parameters
+        ----------
+        question : ``TextField``
+        passage : ``TextField``
+
+        Returns
+        -------
+        A Dict containing:
+
+        span_start_probs : numpy.ndarray
+        span_end_probs : numpy.ndarray
+        best_span : (int, int)
+        """
+        question.index(self._vocab)
+        passage.index(self._vocab)
+        # TODO(mattg): we should make the lengths an optional parameter to Instance.as_array()
+        question_lengths = question.get_padding_lengths()
+        question_input = arrays_to_variables(question.as_array(question_lengths))
+        for input_array in question_input.values():
+            input_array.data.unsqueeze_(0)
+
+        passage_lengths = passage.get_padding_lengths()
+        passage_input = arrays_to_variables(passage.as_array(passage_lengths))
+        for input_array in passage_input.values():
+            input_array.data.unsqueeze_(0)
+
+        output_dict = self.forward(question=question_input, passage=passage_input)
+
+        # Remove batch dimension, as we only had one input.
+        span_start_probs = output_dict["span_start_probs"].data.squeeze(0)
+        span_end_probs = output_dict["span_end_probs"].data.squeeze(0)
+        best_span = self._get_best_span(span_start_probs, span_end_probs)
+
+        return {
+                "span_start_probs": span_start_probs.numpy(),
+                "span_end_probs": span_end_probs.numpy(),
+                "best_span": best_span,
+                }
+
+    @staticmethod
+    def _get_best_span(span_start_probs: torch.Tensor, span_end_probs: torch.Tensor) -> (int, int):
+        if span_start_probs.dim() > 2 or span_end_probs.dim() > 2:
+            raise ValueError("Input shapes must be (X,) or (1,X)")
+        if span_start_probs.dim() == 2:
+            assert span_start_probs.size(0) == 1, "2D input must have an initial dimension of 1"
+            span_start_probs = span_start_probs.squeeze()
+        if span_end_probs.dim() == 2:
+            assert span_end_probs.size(0) == 1, "2D input must have an initial dimension of 1"
+            span_end_probs = span_end_probs.squeeze()
+        max_span_probability = 0
+        best_word_span = (0, 1)
+        begin_span_argmax = 0
+        for j, _ in enumerate(span_start_probs):
+            val1 = span_start_probs[begin_span_argmax]
+            val2 = span_end_probs[j]
+
+            if val1 * val2 > max_span_probability:
+                best_word_span = (begin_span_argmax, j)
+                max_span_probability = val1 * val2
+
+            # We need to update best_span_argmax here _after_ we've checked the current span
+            # position, so that we don't allow things like (1, 1), which are empty spans.  We've
+            # added a special stop symbol to the end of the passage, so this still allows for all
+            # valid spans over the passage.
+            if val1 < span_start_probs[j]:
+                val1 = span_start_probs[j]
+                begin_span_argmax = j
+        return (best_word_span[0], best_word_span[1])
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
