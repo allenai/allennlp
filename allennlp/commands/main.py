@@ -1,23 +1,18 @@
 from typing import Sequence
 import argparse
-import logging
-import sys
 
 import allennlp.commands.serve as serve
 import allennlp.commands.bulk as bulk
-
-from allennlp.common.params import PARAMETER
-
-# TODO(joelgrus): we probably don't want this always disabled
-logging.disable(PARAMETER)
+import allennlp.commands.train as train
 
 def main(raw_args: Sequence[str]) -> None:
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]')
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 
     # Add sub-commands
-    bulk.add_bulk_subparser(subparsers)
-    serve.add_serve_subparser(subparsers)
+    bulk.add_subparser(subparsers)
+    train.add_subparser(subparsers)
+    serve.add_subparser(subparsers)
 
     args = parser.parse_args(raw_args)
 
@@ -28,7 +23,3 @@ def main(raw_args: Sequence[str]) -> None:
         args.func(args)
     else:
         parser.print_help()
-
-if __name__ == "__main__":
-    # sys.argv[0] is the name of the script, throw it away
-    main(sys.argv[1:])

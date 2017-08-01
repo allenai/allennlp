@@ -2,7 +2,7 @@
 import argparse
 from unittest import TestCase
 
-from allennlp.commands.serve import add_serve_subparser, serve
+from allennlp.commands.serve import add_subparser, serve
 
 
 class TestServe(TestCase):
@@ -10,7 +10,7 @@ class TestServe(TestCase):
     def test_add_serve(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
-        add_serve_subparser(subparsers)
+        add_subparser(subparsers)
 
         raw_args = ["serve",
                     "--backend", "flask",

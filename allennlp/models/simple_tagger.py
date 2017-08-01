@@ -5,7 +5,8 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
-from allennlp.common.tensor import arrays_to_variables
+from allennlp.common.tensor import arrays_to_variables, sequence_cross_entropy_with_logits
+from allennlp.common.tensor import get_text_field_mask
 from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
@@ -40,9 +41,6 @@ class SimpleTagger(Model):
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
-
-        # TODO(Mark): support masking once utility functions are merged.
-        self.sequence_loss = torch.nn.CrossEntropyLoss()
 
     # pylint: disable=arguments-differ
     def forward(self,  # type: ignore
@@ -80,6 +78,8 @@ class SimpleTagger(Model):
         """
         embedded_text_input = self.text_field_embedder(tokens)
         batch_size, sequence_length, _ = embedded_text_input.size()
+        mask = get_text_field_mask(tokens)
+        # TODO(Mark): Use mask in encoder once all registered encoders have the same API.
         encoded_text = self.stacked_encoder(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)
@@ -92,7 +92,7 @@ class SimpleTagger(Model):
             # Negative log likelihood criterion takes integer labels, not one hot.
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
-            loss = self.sequence_loss(reshaped_log_probs, tags.view(-1))
+            loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict
