@@ -1,5 +1,7 @@
 FROM ubuntu:16.04
 
+EXPOSE 8000
+
 # Install base packages.
 RUN apt-get update --fix-missing && apt-get install -y \
     bzip2 \
