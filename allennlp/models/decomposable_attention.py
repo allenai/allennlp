@@ -165,6 +165,37 @@ class DecomposableAttention(Model):
 
         return output_dict
 
+    def predict_entailment(self, premise: TextField, hypothesis: TextField) -> Dict[str, torch.Tensor]:
+        """
+        Given a premise and a hypothesis sentence, predict the entailment relationship between
+        them.
+
+        Parameters
+        ----------
+        premise : ``TextField``
+        hypothesis : ``TextField``
+
+        Returns
+        -------
+        A Dict containing:
+
+        label_probs : torch.FloatTensor
+            A tensor of shape ``(num_labels,)`` representing probabilities of the entailment label.
+        """
+        instance = Instance({"premise": premise, "hypothesis": hypothesis})
+        instance.index_fields(self._vocab)
+        model_input = arrays_to_variables(instance.as_array(instance.get_padding_lengths()))
+        for tensor in model_input["premise"].values():
+            tensor.data.unsqueeze_(0)
+        for tensor in model_input["hypothesis"].values():
+            tensor.data.unsqueeze_(0)
+
+        output_dict = self.forward(**torch_input)
+
+        # Remove batch dimension, as we only had one input.
+        label_probs = output_dict["label_probs"].data.squeeze(0)
+        return {'label_probs': label_probs}
+
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
         """
