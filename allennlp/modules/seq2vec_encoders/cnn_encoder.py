@@ -72,6 +72,10 @@ class CnnEncoder(Seq2VecEncoder):
             self._output_dim = maxpool_output_dim
 
     @overrides
+    def get_input_dim(self) -> int:
+        return self._embedding_dim
+
+    @overrides
     def get_output_dim(self) -> int:
         return self._output_dim
 

@@ -28,6 +28,9 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         if not self._module.batch_first:
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
 
+    def get_input_dim(self) -> int:
+        return self._module.input_size
+
     def get_output_dim(self) -> int:
         return self._module.hidden_size * (2 if self._module.bidirectional else 1)
 

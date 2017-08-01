@@ -5,6 +5,7 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.tensor import arrays_to_variables, viterbi_decode
 from allennlp.data import Vocabulary
 from allennlp.data.fields import IndexField, TextField
@@ -96,7 +97,14 @@ class SemanticRoleLabeler(Model):
         # Concatenate the verb feature onto the embedded text. This now
         # has shape (batch_size, sequence_length, embedding_dim + 1).
         embedded_text_with_verb_indicator = torch.cat([embedded_text_input, expanded_verb_indicator], -1)
-        batch_size, sequence_length, _ = embedded_text_with_verb_indicator.size()
+        batch_size, sequence_length, embedding_dim_with_binary_feature = embedded_text_with_verb_indicator.size()
+
+        if self.stacked_encoder.get_input_dim() != embedding_dim_with_binary_feature:
+            raise ConfigurationError("The SRL model uses an indicator feature, which makes "
+                                     "the embedding dimension one larger than the value "
+                                     "specified. Therefore, the 'input_dim' of the stacked_encoder "
+                                     "must be equal to total_embedding_dim + 1.")
+
         encoded_text = self.stacked_encoder(embedded_text_with_verb_indicator)
 
         logits = self.tag_projection_layer(encoded_text)

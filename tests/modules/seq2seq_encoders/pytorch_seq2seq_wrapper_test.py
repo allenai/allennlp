@@ -12,13 +12,15 @@ from allennlp.testing.test_case import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 
 class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
-    def test_get_output_dim_is_correct(self):
+    def test_get_dimension_is_correct(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
         assert encoder.get_output_dim() == 14
+        assert encoder.get_input_dim() == 2
         lstm = LSTM(bidirectional=False, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
         assert encoder.get_output_dim() == 7
+        assert encoder.get_input_dim() == 2
 
     def test_forward_pulls_out_correct_tensor_without_sequence_lengths(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
