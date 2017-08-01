@@ -11,6 +11,7 @@ from allennlp.common.tensor import get_text_field_mask
 from allennlp.common.tensor import last_dim_softmax
 from allennlp.common.tensor import masked_softmax
 from allennlp.common.tensor import sort_batch_by_length
+from allennlp.common.tensor import viterbi_decode
 from allennlp.common.tensor import weighted_sum
 from allennlp.testing import AllenNlpTestCase
 
@@ -305,3 +306,53 @@ class TestTensor(AllenNlpTestCase):
                                   attention_array[0, i, j, 1] * sentence_array[0, 1])
                 numpy.testing.assert_almost_equal(aggregated_array[0, i, j], expected_array,
                                                   decimal=5)
+
+    def test_viterbi_decode(self):
+        # Test Viterbi decoding is equal to greedy decoding with no pairwise potentials.
+        sequence_predictions = torch.nn.functional.softmax(Variable(torch.rand([5, 9])))
+        transition_matrix = torch.zeros([9, 9])
+        indices, _ = viterbi_decode(sequence_predictions.data, transition_matrix)
+        _, argmax_indices = torch.max(sequence_predictions, 1)
+        assert indices == argmax_indices.data.squeeze().tolist()
+
+        # Test that pairwise potentials effect the sequence correctly and that
+        # viterbi_decode can handle -inf values.
+        sequence_predictions = torch.FloatTensor([[0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4],
+                                                  [0, 0, 0, 3, 4]])
+        # The same tags shouldn't appear sequentially.
+        transition_matrix = torch.zeros([5, 5])
+        for i in range(5):
+            transition_matrix[i, i] = float("-inf")
+        indices, _ = viterbi_decode(sequence_predictions, transition_matrix)
+        assert indices == [4, 3, 4, 3, 4, 3]
+
+        # Test that unbalanced pairwise potentials break ties
+        # between paths with equal unary potentials.
+        sequence_predictions = torch.FloatTensor([[0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4]])
+        # The 5th tag has a penalty for appearing sequentially.
+        transition_matrix = torch.zeros([5, 5])
+        transition_matrix[4, 4] = -10
+
+        indices, _ = viterbi_decode(sequence_predictions, transition_matrix)
+        assert indices == [3, 3, 3, 3, 3, 3]
+
+        sequence_predictions = torch.FloatTensor([[1, 0, 0, 4],
+                                                  [1, 0, 6, 2],
+                                                  [0, 3, 0, 4]])
+        # Best path would normally be [3, 2, 3] but we add a
+        # potential from 2 -> 1, making [3, 2, 1] the best path.
+        transition_matrix = torch.zeros([4, 4])
+        transition_matrix[0, 0] = 1
+        transition_matrix[2, 1] = 5
+        indices, value = viterbi_decode(sequence_predictions, transition_matrix)
+        assert indices == [3, 2, 1]
+        assert value.numpy() == 18

@@ -31,6 +31,8 @@ WORKDIR /stage
 
 RUN conda create -n allennlp --yes python=3.5
 ENV PYTHONHASHSEED 2157
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
 
 COPY requirements.txt .
 COPY requirements_test.txt .
