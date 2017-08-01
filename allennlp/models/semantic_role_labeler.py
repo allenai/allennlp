@@ -51,8 +51,6 @@ class SemanticRoleLabeler(Model):
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
-        # TODO(Mark): support masking once utility functions are merged.
-        self.sequence_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],

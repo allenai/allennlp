@@ -358,7 +358,7 @@ class TestTensor(AllenNlpTestCase):
         assert indices == [3, 2, 1]
         assert value.numpy() == 18
 
-    def test_weighted_cross_entropy_with_logits(self):
+    def test_weighted_cross_entropy_with_logits_masks_loss_correctly(self):
 
         # test weight masking by checking that a tensor with non-zero values in
         # masked positions returns the same loss as a tensor with zeros in those
@@ -385,6 +385,7 @@ class TestTensor(AllenNlpTestCase):
         loss2 = weighted_cross_entropy_with_logits(tensor2, targets, weights)
         assert loss.data.numpy() == loss2.data.numpy()
 
+    def test_weighted_cross_entropy_with_logits_averages_batch_correctly(self):
         # test batch average is the same as dividing the batch averaged
         # loss by the number of batches containing any non-padded tokens.
         tensor = torch.rand([5, 7, 4])

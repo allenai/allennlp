@@ -243,13 +243,19 @@ def weighted_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        weights: torch.FloatTensor,
                                        batch_average: bool = True) -> torch.FloatTensor:
     """
+    Computes the cross entropy loss of a sequence, weighted with respect to
+    some user provided weights. Note that the weighting here is not the same as
+    in the :func:`torch.nn.CrossEntropyLoss()` criterion, which is weighting
+    classes; here we are weighting the loss contribution from particular elements
+    in the sequence. This allows loss computations for models which use padding.
+
     Parameters
     ----------
     logits : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch_size, sequence_length, num_classes)
         which contains the unnormalized probability for each class.
     targets : ``torch.LongTensor``, required.
-        A ``torch.longTensor`` of size (batch, sequence_length) which contains the
+        A ``torch.LongTensor`` of size (batch, sequence_length) which contains the
         index of the true class for each corresponding step.
     weights : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch, sequence_length)
@@ -271,9 +277,9 @@ def weighted_cross_entropy_with_logits(logits: torch.FloatTensor,
     # shape : (batch * max_len, 1)
     targets_flat = targets.view(-1, 1).long()
 
-    # Contribution to NLL only comes from the exact indices of the targets, as
-    # the target distributions are one-hot. Here we use torch.gather to extract
-    # the indices of the num_classes dimension which contribute to the loss.
+    # Contribution to the negative log likelihood only comes from the exact indices
+    # of the targets, as the target distributions are one-hot. Here we use torch.gather
+    # to extract the indices of the num_classes dimension which contribute to the loss.
     # shape : (batch * sequence_length, 1)
     negative_log_likelihood_flat = - torch.gather(log_probs_flat, dim=1, index=targets_flat)
     # shape : (batch, sequence_length)
@@ -284,6 +290,6 @@ def weighted_cross_entropy_with_logits(logits: torch.FloatTensor,
     per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
 
     if batch_average:
-        non_empty_batches = ((weights.sum(1) > 0).float().sum() + 1e-13)
-        return per_batch_loss.sum() / non_empty_batches
+        num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
+        return per_batch_loss.sum() / num_non_empty_sequences
     return per_batch_loss.squeeze(1)
