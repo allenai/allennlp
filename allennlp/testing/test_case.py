@@ -14,7 +14,7 @@ from numpy.testing import assert_allclose
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tensor import arrays_to_variables
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset import Dataset
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
@@ -78,22 +78,28 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
 
     def ensure_model_saves_and_loads(self,
                                      model: Model,
-                                     dataset_reader: DatasetReader,
+                                     dataset: Dataset,
                                      iterator: DataIterator = None):
         data_iterator = iterator or BasicIterator()
-        dataset = dataset_reader.read(self.TRAIN_FILE)
-        vocab = Vocabulary.from_dataset(dataset)
-        dataset.index_instances(vocab)
-
         single_batch = next(data_iterator(dataset))
         single_batch = arrays_to_variables(single_batch)
         model_predictions = model.forward(**single_batch)
 
+        # Check loss exists and we can compute gradients.
+        model_loss = model_predictions["loss"]
+        assert model_loss
+        model_loss.backward()
+
         torch.save(model.state_dict(), self.MODEL_FILE)
         loaded_model = model
+        loaded_model.zero_grad()
         loaded_model.load_state_dict(torch.load(self.MODEL_FILE))
-
         loaded_model_predictions = loaded_model.forward(**single_batch)
+
+        # Check loaded model's loss exists and we can compute gradients.
+        loaded_model_loss = loaded_model_predictions["loss"]
+        assert loaded_model_loss
+        loaded_model_loss.backward()
 
         # Both outputs should have the same keys and the values
         # for these keys should be close.

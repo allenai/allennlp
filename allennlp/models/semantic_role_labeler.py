@@ -13,10 +13,10 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 
 
-class SemanticRoleLabeller(Model):
+class SemanticRoleLabeler(Model):
     """
-    This model performs semantic role labelling using BIO tags using Propbank semantic roles.
-    Specifically, it is an implmentation of `Deep Semantic Role Labelling - What works
+    This model performs semantic role labeling using BIO tags using Propbank semantic roles.
+    Specifically, it is an implmentation of `Deep Semantic Role Labeling - What works
     and what's next <https://homes.cs.washington.edu/~luheng/files/acl2017_hllz.pdf>`_ .
 
     This implementation is effectively a series of stacked interleaved LSTMs with highway
@@ -38,7 +38,7 @@ class SemanticRoleLabeller(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder) -> None:
-        super(SemanticRoleLabeller, self).__init__()
+        super(SemanticRoleLabeler, self).__init__()
 
         self.vocab = vocab
         self.text_field_embedder = text_field_embedder
@@ -52,11 +52,11 @@ class SemanticRoleLabeller(Model):
         # TODO(Mark): support masking once utility functions are merged.
         self.sequence_loss = torch.nn.CrossEntropyLoss()
 
-    # pylint: disable=arguments-differ
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 verb_indicator: torch.LongTensor,
                 tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
         """
         Parameters
         ----------
@@ -84,6 +84,9 @@ class SemanticRoleLabeller(Model):
         logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
             unnormalised log probabilities of the tag classes.
+        class_probabilities : torch.FloatTensor
+            A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
+            a distribution of the tag classes per word.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
 
@@ -93,12 +96,12 @@ class SemanticRoleLabeller(Model):
         # Concatenate the verb feature onto the embedded text. This now
         # has shape (batch_size, sequence_length, embedding_dim + 1).
         embedded_text_with_verb_indicator = torch.cat([embedded_text_input, expanded_verb_indicator], -1)
-        batch_size = embedded_text_with_verb_indicator.size()[0]
+        batch_size, sequence_length, _ = embedded_text_with_verb_indicator.size()
         encoded_text = self.stacked_encoder(embedded_text_with_verb_indicator)
 
         logits = self.tag_projection_layer(encoded_text)
         reshaped_log_probs = logits.view(-1, self.num_classes)
-        class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, -1, self.num_classes])
+        class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, sequence_length, self.num_classes])
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
         if tags:
             # Negative log likelihood criterion takes integer labels, not one hot.
@@ -108,7 +111,6 @@ class SemanticRoleLabeller(Model):
             output_dict["loss"] = loss
 
         return output_dict
-    # pylint: enable=arguments-differ
 
     def tag(self, text_field: TextField, verb_indicator: IndexField) -> Dict[str, Any]:
         """
@@ -124,7 +126,7 @@ class SemanticRoleLabeller(Model):
         text_field : ``TextField``, required.
             A ``TextField`` containing the text to be tagged.
         verb_indicator: ``IndexField``, required.
-            The index of the verb whose arguments we are labelling.
+            The index of the verb whose arguments we are labeling.
 
         Returns
         -------
@@ -162,8 +164,9 @@ class SemanticRoleLabeller(Model):
         """
         Generate a matrix of pairwise transition potentials for the BIO labels.
         The only constraint implemented here is that I-XXX tags must be preceded
-        by either an identical I-XXX tag or a B-XXX tag (i.e they have a pairwise
-        potential of -inf).
+        by either an identical I-XXX tag or a B-XXX tag. In order to achieve this
+        constraint, pairs of tags which do not satisfy this constraint have a
+        pairwise potential of -inf.
 
         Returns
         -------

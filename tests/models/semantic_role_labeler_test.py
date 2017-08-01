@@ -6,14 +6,14 @@ from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SrlReader
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.models.semantic_role_labeller import SemanticRoleLabeller
+from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class SemanticRoleLabellerTest(AllenNlpTestCase):
+class SemanticRoleLabelerTest(AllenNlpTestCase):
 
     def setUp(self):
-        super(SemanticRoleLabellerTest, self).setUp()
+        super(SemanticRoleLabelerTest, self).setUp()
         self.write_conll_2012_data()
 
         dataset = SrlReader().read(self.CONLL_TRAIN_DIR)
@@ -37,7 +37,10 @@ class SemanticRoleLabellerTest(AllenNlpTestCase):
                         }
                 })
 
-        self.model = SemanticRoleLabeller.from_params(self.vocab, params)
+        self.model = SemanticRoleLabeler.from_params(self.vocab, params)
+
+    def test_srl_tagger_saves_and_loads(self):
+        self.ensure_model_saves_and_loads(self.model, self.dataset)
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = self.dataset.as_arrays()

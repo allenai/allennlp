@@ -71,17 +71,20 @@ class SimpleTagger(Model):
         logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
             unnormalised log probabilities of the tag classes.
+        class_probabilities : torch.FloatTensor
+            A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
+            a distribution of the tag classes per word.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
 
         """
         embedded_text_input = self.text_field_embedder(tokens)
-        batch_size = embedded_text_input.size()[0]
+        batch_size, sequence_length, _ = embedded_text_input.size()
         encoded_text = self.stacked_encoder(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)
         reshaped_log_probs = logits.view(-1, self.num_classes)
-        class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, -1, self.num_classes])
+        class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, sequence_length, self.num_classes])
 
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
