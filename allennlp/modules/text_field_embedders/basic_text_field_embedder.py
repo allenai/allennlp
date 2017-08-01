@@ -23,6 +23,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     def __init__(self, token_embedders: Dict[str, TokenEmbedder]) -> None:
         super(BasicTextFieldEmbedder, self).__init__()
         self._token_embedders = token_embedders
+        for key, embedder in token_embedders.items():
+            name = 'token_embedder_%s' % key
+            self.add_module(name, embedder)
 
     @overrides
     def get_output_dim(self) -> int:

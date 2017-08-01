@@ -91,6 +91,10 @@ class SquadReader(DatasetReader):
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
     """
+    #: This gets added to the end of every passage, because we use an exclusive span end index.  In
+    #: order to be able to include the last token in the passage in the predicted span, we need a
+    #: special marker at the end.
+    STOP_TOKEN = '@@STOP@@'
     def __init__(self,
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
@@ -115,7 +119,7 @@ class SquadReader(DatasetReader):
                 # labels are end-exclusive, and we do a softmax over the passage to determine span
                 # end.  So if we want to be able to include the last token of the passage, we need
                 # to have a special symbol at the end.
-                tokenized_paragraph = self._tokenizer.tokenize(cleaned_paragraph) + ['@@STOP@@']
+                tokenized_paragraph = self._tokenizer.tokenize(cleaned_paragraph) + [self.STOP_TOKEN]
 
                 for question_answer in paragraph_json['qas']:
                     question_text = question_answer["question"].strip().replace("\n", "")
