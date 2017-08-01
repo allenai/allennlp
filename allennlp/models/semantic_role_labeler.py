@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tensor import arrays_to_variables, viterbi_decode
+from allennlp.common.tensor import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.data import Vocabulary
 from allennlp.data.fields import IndexField, TextField
 from allennlp.data import Instance
@@ -50,8 +51,6 @@ class SemanticRoleLabeler(Model):
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
-        # TODO(Mark): support masking once utility functions are merged.
-        self.sequence_loss = torch.nn.CrossEntropyLoss()
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
@@ -93,6 +92,8 @@ class SemanticRoleLabeler(Model):
 
         """
         embedded_text_input = self.text_field_embedder(tokens)
+        # TODO(Mark): Use mask in encoder once all registered encoders have the same API.
+        mask = get_text_field_mask(tokens)
         expanded_verb_indicator = verb_indicator.unsqueeze(-1).float()
         # Concatenate the verb feature onto the embedded text. This now
         # has shape (batch_size, sequence_length, embedding_dim + 1).
@@ -115,7 +116,7 @@ class SemanticRoleLabeler(Model):
             # Negative log likelihood criterion takes integer labels, not one hot.
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
-            loss = self.sequence_loss(reshaped_log_probs, tags.view(-1))
+            loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict

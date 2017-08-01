@@ -1,10 +1,10 @@
 from typing import Any, Dict, Tuple
 
 import torch
-
+from torch.nn.functional import nll_loss
 from allennlp.common import Params, constants
 from allennlp.common.tensor import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
-from allennlp.common.tensor import arrays_to_variables
+from allennlp.common.tensor import arrays_to_variables, masked_log_softmax
 from allennlp.data import Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
@@ -76,10 +76,6 @@ class BidirectionalAttentionFlow(Model):
         span_end_encoding_dim = span_end_encoder.get_output_dim()
         span_end_input_dim = encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
-
-        # TODO(Mark): support masking once utility functions are merged.
-        self._loss = torch.nn.CrossEntropyLoss()
-
         # TODO(mattg): figure out default initialization here
 
     def forward(self,  # type: ignore
@@ -200,10 +196,10 @@ class BidirectionalAttentionFlow(Model):
             # Negative log likelihood criterion takes integer labels, not one hot.
             if span_start.dim() == 2:
                 _, span_start = span_start.max(-1)
-            loss = self._loss(span_start_logits, span_start.view(-1))
+            loss = nll_loss(masked_log_softmax(span_start_logits, passage_mask), span_start.view(-1))
             if span_end.dim() == 2:
                 _, span_end = span_end.max(-1)
-            loss += self._loss(span_end_logits, span_end.view(-1))
+            loss += nll_loss(masked_log_softmax(span_end_logits, passage_mask), span_end.view(-1))
             output_dict["loss"] = loss
 
         return output_dict
