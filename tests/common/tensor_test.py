@@ -18,7 +18,7 @@ from allennlp.testing import AllenNlpTestCase
 
 class TestTensor(AllenNlpTestCase):
 
-    def test_data_structure_as_variables_handles_recursion(self):
+    def test_arrays_to_variables_handles_recursion(self):
 
         array_dict = {
                 "sentence": {
@@ -36,7 +36,25 @@ class TestTensor(AllenNlpTestCase):
         assert torch_array_dict["tags"].data.equal(
                 torch.DoubleTensor(numpy.ones([2, 3])))
 
-    def test_data_structure_as_variables_correctly_converts_mixed_types(self):
+    def test_arrays_to_variables_can_expand_batch_dimensions(self):
+
+        array_dict = {
+                "sentence": {
+                        "words": numpy.zeros([4]),
+                        "characters": numpy.ones([5])
+                        },
+                "tags": numpy.ones([3])
+        }
+        torch_array_dict = arrays_to_variables(array_dict, ensure_batch_dimension=True)
+
+        assert torch_array_dict["sentence"]["words"].data.equal(
+                torch.DoubleTensor(numpy.zeros([1, 4])))
+        assert torch_array_dict["sentence"]["characters"].data.equal(
+                torch.DoubleTensor(numpy.ones([1, 5])))
+        assert torch_array_dict["tags"].data.equal(
+                torch.DoubleTensor(numpy.ones([1, 3])))
+
+    def test_arrays_to_variables_correctly_converts_mixed_types(self):
 
         array_dict = {
                 "sentence": {

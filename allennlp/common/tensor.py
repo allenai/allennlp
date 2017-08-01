@@ -77,17 +77,38 @@ def get_dropout_mask(dropout_probability: float, shape: List[int]):
 
 
 def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
-                        cuda_device: int = -1):
+                        cuda_device: int = -1,
+                        ensure_batch_dimension: bool = False):
     """
     Convert an (optionally) nested dictionary of arrays to Pytorch ``Variables``,
     suitable for use in a computation graph.
+
+    Parameters
+    ----------
+    data_structure : Dict[str, Union[dict, numpy.ndarray]], required.
+        The nested dictionary of arrays to convert to Pytorch ``Variables``.
+    cuda_device : int, optional (default = -1)
+        If cuda_device <= 0, GPUs are available and Pytorch was compiled with
+        CUDA support, the tensor will be copied to the cuda_device specified.
+    ensure_batch_dimension : bool, optional (default = False).
+        Optionally check that tensors converted to ``Variables`` using this
+        function have a batch dimension. This is useful during inference for
+        passing tensors representing a single example to a Pytorch model
+        which would otherwise not have a batch dimension.
+
+    Returns
+    -------
+    The original data structure or tensor converted to a Pytorch ``Variable``.
     """
     if isinstance(data_structure, dict):
         for key, value in data_structure.items():
-            data_structure[key] = arrays_to_variables(value)
+            data_structure[key] = arrays_to_variables(value, cuda_device, ensure_batch_dimension)
         return data_structure
     else:
-        torch_variable = Variable(torch.from_numpy(data_structure))
+        tensor = torch.from_numpy(data_structure)
+        if tensor.dim() < 2 and ensure_batch_dimension:
+            tensor.unsqueeze_(0)
+        torch_variable = Variable(tensor)
         if cuda_device == -1:
             return torch_variable
         else:

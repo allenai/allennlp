@@ -150,14 +150,7 @@ class SemanticRoleLabeler(Model):
         instance = Instance({"tokens": text_field, "verb_indicator": verb_indicator})
         instance.index_fields(self.vocab)
         model_input = instance.as_array(instance.get_padding_lengths())
-        torch_input = arrays_to_variables(model_input)
-        # TODO(Mark): Make the data API always return tensors with batch dimensions at every abstraction level.
-        # Add a batch dimension by unsqueezing, because pytorch doesn't support inputs without one.
-
-        for tensor in torch_input["tokens"].values():
-            tensor.data.unsqueeze_(0)
-        torch_input["verb_indicator"].data.unsqueeze_(0)
-
+        torch_input = arrays_to_variables(model_input, ensure_batch_dimension=True)
         output_dict = self.forward(**torch_input)
 
         # Remove batch dimension, as we only had one input.
