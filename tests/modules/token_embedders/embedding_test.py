@@ -3,6 +3,8 @@ import gzip
 
 import numpy
 import pytest
+import torch
+from torch.autograd import Variable
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders.embedding import get_pretrained_embedding_layer
@@ -18,15 +20,29 @@ class TestPretrainedEmbeddings(AllenNlpTestCase):
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
         embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
-        assert embedding_layer.embedding_dim == 3
+        assert embedding_layer.get_output_dim() == 3
 
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word1 1.0 2.3 -1.0 3.1\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 -4.0 -1.2\n".encode('utf-8'))
         embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
-        assert embedding_layer.embedding_dim == 4
+        assert embedding_layer.get_output_dim() == 4
 
-    def test_get_embedding_layer_crashes_when_embedding_dim_is_one(self):
+        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab, projection_dim=2)
+        assert embedding_layer.get_output_dim() == 2
+
+    def test_forward_works_with_projection_layer(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('the')
+        vocab.add_token_to_namespace('a')
+        embedding_layer = get_pretrained_embedding_layer('tests/fixtures/glove.6B.300d.sample.txt.gz',
+                                                         vocab,
+                                                         projection_dim=20)
+        input_tensor = Variable(torch.LongTensor([[3, 2, 1, 0]]))
+        embedded = embedding_layer(input_tensor).data.numpy()
+        assert embedded.shape == (1, 4, 20)
+
+    def test_get_embedding_layer_crashes_when_embedding_file_has_header(self):
         vocab = Vocabulary()
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
