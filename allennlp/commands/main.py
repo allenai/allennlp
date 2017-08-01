@@ -2,6 +2,7 @@ from typing import Sequence
 import argparse
 import logging
 
+import allennlp.commands.serve as serve
 import allennlp.commands.bulk as bulk
 import allennlp.commands.train as train
 from allennlp.common.params import PARAMETER
@@ -17,6 +18,7 @@ def main(raw_args: Sequence[str]) -> None:
     # Add sub-commands
     bulk.add_subparser(subparsers)
     train.add_subparser(subparsers)
+    serve.add_subparser(subparsers)
 
     args = parser.parse_args(raw_args)
 
