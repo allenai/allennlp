@@ -4,6 +4,7 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn import Activation
 
 
 class FeedForward(torch.nn.Module):
@@ -31,10 +32,11 @@ class FeedForward(torch.nn.Module):
                  num_layers: int,
                  hidden_dims: Union[int, Sequence[int]],
                  activations: Union[Callable, Sequence[Callable]]) -> None:
+        super(FeedForward, self).__init__()
         if not isinstance(hidden_dims, list):
-            hidden_dims = [hidden_dims] * num_layers
+            hidden_dims = [hidden_dims] * num_layers  # type: ignore
         if not isinstance(activations, list):
-            activations = [activations] * num_layers
+            activations = [activations] * num_layers  # type: ignore
         if len(hidden_dims) != num_layers:
             raise ConfigurationError("len(hidden_dims) (%d) != num_layers (%d)" %
                                      (len(hidden_dims), num_layers))
@@ -44,15 +46,16 @@ class FeedForward(torch.nn.Module):
         self._activations = activations
         input_dims = [input_dim] + hidden_dims[:-1]
         linear_layers = []
-        for input_dim, output_dim in zip(input_dims, hidden_dims):
-            linear_layers.append(torch.nn.Linear(input_dim, output_dim))
+        for layer_input_dim, layer_output_dim in zip(input_dims, hidden_dims):
+            linear_layers.append(torch.nn.Linear(layer_input_dim, layer_output_dim))
         self._linear_layers = torch.nn.ModuleList(linear_layers)
         self._output_dim = hidden_dims[-1]
 
     def get_output_dim(self):
         return self._output_dim
 
-    def forward(self, inputs):
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ
         output = inputs
         for layer, activation in zip(self._linear_layers, self._activations):
             output = activation(layer(output))
@@ -65,9 +68,9 @@ class FeedForward(torch.nn.Module):
         hidden_dims = params.pop('hidden_dims')
         activations = params.pop('activations')
         if isinstance(activations, list):
-            activations = [Activation.by_name(name) for name in activations]
+            activations = [Activation.by_name(name)() for name in activations]
         else:
-            activations = Activation.by_name(activations)
+            activations = Activation.by_name(activations)()
         params.assert_empty(cls.__name__)
         return cls(input_dim=input_dim,
                    num_layers=num_layers,
