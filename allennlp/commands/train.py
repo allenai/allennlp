@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import os
@@ -10,7 +11,7 @@ import numpy
 import pyhocon
 import torch
 
-from allennlp.common.checks import log_pytorch_version_info
+from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set
 from allennlp.common.params import Params, replace_none
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.data import Vocabulary
@@ -22,6 +23,16 @@ from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
+    description = '''Train the specified model on the specified dataset.'''
+    subparser = parser.add_parser(
+            'train', description=description, help='Train a model')
+    subparser.add_argument('param_path',
+                           type=str,
+                           help='path to parameter file describing the model to be trained')
+    subparser.set_defaults(func=train_model_from_file)
+
+    return subparser
 
 def prepare_environment(params: Union[Params, Dict[str, Any]]):
     """
@@ -54,7 +65,7 @@ def prepare_environment(params: Union[Params, Dict[str, Any]]):
     log_pytorch_version_info()
 
 
-def train_model_from_file(param_path: str):
+def train_model_from_file(args: argparse.Namespace):
     """
     A wrapper around :func:`execute_driver` which loads json from a file.
     Parameters
@@ -62,6 +73,14 @@ def train_model_from_file(param_path: str):
     param_path: str, required.
         A json parameter file specifying an AllenNLP experiment.
     """
+    # We need the python hashseed to be set if we're training a model
+    ensure_pythonhashseed_set()
+
+    # Set logging format
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+                        level=logging.INFO)
+
+    param_path = args.param_path
     param_dict = pyhocon.ConfigFactory.parse_file(param_path)
     train_model(param_dict)
 

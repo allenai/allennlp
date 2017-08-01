@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from allennlp.__main__ import main
+from allennlp.commands.main import main
 
 class TestMain(TestCase):
 
