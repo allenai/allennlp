@@ -1,12 +1,12 @@
 
 
 from allennlp.testing.test_case import AllenNlpTestCase
-from allennlp.run import train_model
+from allennlp.commands.train import train_model
 
 
-class TestRun(AllenNlpTestCase):
+class TestTrain(AllenNlpTestCase):
     def setUp(self):
-        super(TestRun, self).setUp()
+        super().setUp()
         self.write_sequence_tagging_data()
 
     def test_train_model(self):

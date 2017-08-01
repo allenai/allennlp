@@ -1,10 +1,11 @@
 from typing import Sequence
 import argparse
 import logging
-import sys
 
 import allennlp.commands.bulk as bulk
+import allennlp.commands.train as train
 from allennlp.common.params import PARAMETER
+
 
 # TODO(joelgrus): we probably don't want this always disabled
 logging.disable(PARAMETER)
@@ -14,7 +15,8 @@ def main(raw_args: Sequence[str]) -> None:
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 
     # Add sub-commands
-    bulk.add_bulk_subparser(subparsers)
+    bulk.add_subparser(subparsers)
+    train.add_subparser(subparsers)
 
     args = parser.parse_args(raw_args)
 
@@ -25,7 +27,3 @@ def main(raw_args: Sequence[str]) -> None:
         args.func(args)
     else:
         parser.print_help()
-
-if __name__ == "__main__":
-    # sys.argv[0] is the name of the script, throw it away
-    main(sys.argv[1:])
