@@ -32,7 +32,6 @@ class BidirectionalAttentionFlow(Model):
     Parameters
     ----------
     vocab : ``Vocabulary``
-        A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the ``question`` and ``passage`` ``TextFields`` we get as input to the model.
     num_highway_layers : ``int``
@@ -339,6 +338,7 @@ class BidirectionalAttentionFlow(Model):
                 }
         span_end_encoder_params = params.pop("span_end_encoder", default_span_end_encoder_params)
         span_end_encoder = Seq2SeqEncoder.from_params(span_end_encoder_params)
+        params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    num_highway_layers=num_highway_layers,
