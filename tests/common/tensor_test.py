@@ -45,7 +45,7 @@ class TestTensor(AllenNlpTestCase):
                         },
                 "tags": numpy.ones([3])
         }
-        torch_array_dict = arrays_to_variables(array_dict, ensure_batch_dimension=True)
+        torch_array_dict = arrays_to_variables(array_dict, add_batch_dimension=True)
 
         assert torch_array_dict["sentence"]["words"].data.equal(
                 torch.DoubleTensor(numpy.zeros([1, 4])))

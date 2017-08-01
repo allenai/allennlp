@@ -150,7 +150,7 @@ class SemanticRoleLabeler(Model):
         instance = Instance({"tokens": text_field, "verb_indicator": verb_indicator})
         instance.index_fields(self.vocab)
         model_input = instance.as_array(instance.get_padding_lengths())
-        torch_input = arrays_to_variables(model_input, ensure_batch_dimension=True)
+        torch_input = arrays_to_variables(model_input, add_batch_dimension=True)
         output_dict = self.forward(**torch_input)
 
         # Remove batch dimension, as we only had one input.

@@ -123,7 +123,7 @@ class SimpleTagger(Model):
         text_field.index(self.vocab)
         padding_lengths = text_field.get_padding_lengths()
         array_input = text_field.as_array(padding_lengths)
-        model_input = arrays_to_variables(array_input, ensure_batch_dimension=True)
+        model_input = arrays_to_variables(array_input, add_batch_dimension=True)
         output_dict = self.forward(tokens=model_input)
 
         # Remove batch dimension, as we only had one input.
