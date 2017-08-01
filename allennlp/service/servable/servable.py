@@ -1,6 +1,7 @@
 from typing import Dict, Any, Optional, List
+import logging
 
-from allennlp.common.params import Params
+from allennlp.common.params import Params, PARAMETER
 
 JSONDict = Dict[str, Any]  # pylint: disable=invalid-name
 
@@ -41,6 +42,10 @@ class ServableCollection:
     @staticmethod
     def default() -> 'ServableCollection':
         # TODO(joelgrus): eventually get rid of this
+
+        # disable parameter logging for these models
+        logging.disable(PARAMETER)
+
         import allennlp.service.servable.models.pytorch as pytorch
         import allennlp.service.servable.models.placeholder as placeholder
         import allennlp.service.servable.models.simple_tagger as simple_tagger
@@ -52,6 +57,9 @@ class ServableCollection:
                 'uppercaser': placeholder.Uppercaser(),
                 'lowercaser': placeholder.Lowercaser()
         }  # type: Dict[str, Servable]
+
+        # now re-enable parameter logging
+        logging.disable(logging.NOTSET)
 
         return ServableCollection(all_models)
 
