@@ -17,9 +17,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @TokenEmbedder.register("embedding")
 class Embedding(TokenEmbedder):
     """
-    A more featureful embedding module than the default in Pytorch.  Adds the ability to
-    pre-specify the weight matrix, use a non-trainable embedding, and project the resultant
-    embeddings to some other dimension (which only makes sense with non-trainable embeddings).
+    A more featureful embedding module than the default in Pytorch.  Adds the ability to:
+
+        1. embed higher-order inputs
+        2. pre-specify the weight matrix
+        3. use a non-trainable embedding
+        4. project the resultant embeddings to some other dimension (which only makes sense with
+           non-trainable embeddings).
+        5. build all of this easily ``from_params``
 
     Note that if you are using our data API and are trying to embed a
     :class:`~allennlp.data.fields.TextField`, you should use a
@@ -100,11 +105,17 @@ class Embedding(TokenEmbedder):
     @overrides
     def forward(self, inputs):  # pylint: disable=arguments-differ
         padding_index = self.padding_index if self.padding_index is not None else -1
+        original_inputs = inputs
+        if original_inputs.dim() > 2:
+            inputs = inputs.view(-1, inputs.size(-1))
         embedded = self._backend.Embedding(padding_index,
                                            self.max_norm,
                                            self.norm_type,
                                            self.scale_grad_by_freq,
                                            self.sparse)(inputs, self.weight)
+        if original_inputs.dim() > 2:
+            view_args = list(original_inputs.size()) + [embedded.size(-1)]
+            embedded = embedded.view(*view_args)
         if self._projection:
             projection = self._projection
             for _ in range(embedded.dim() - 2):

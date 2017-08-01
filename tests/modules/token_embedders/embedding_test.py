@@ -42,6 +42,10 @@ class TestPretrainedEmbeddings(AllenNlpTestCase):
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 4, 20)
 
+        input_tensor = Variable(torch.LongTensor([[[3, 2, 1, 0]]]))
+        embedded = embedding_layer(input_tensor).data.numpy()
+        assert embedded.shape == (1, 1, 4, 20)
+
     def test_get_embedding_layer_crashes_when_embedding_file_has_header(self):
         vocab = Vocabulary()
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
