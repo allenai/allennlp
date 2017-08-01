@@ -131,7 +131,7 @@ def masked_log_softmax(vector, mask):
     """
     ``torch.nn.functional.log_softmax(vector)`` does not work if some elements of ``vector`` should be
     masked.  This performs a log_softmax on just the non-masked portions of ``vector``.  Passing
-    ``None`` in for the mask is also acceptable; you'll just get a regular softmax.
+    ``None`` in for the mask is also acceptable; you'll just get a regular log_softmax.
 
     We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
 

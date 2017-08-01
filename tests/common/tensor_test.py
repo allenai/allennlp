@@ -10,6 +10,7 @@ from allennlp.common.tensor import get_lengths_from_binary_sequence_mask
 from allennlp.common.tensor import get_text_field_mask
 from allennlp.common.tensor import last_dim_softmax
 from allennlp.common.tensor import masked_softmax
+from allennlp.common.tensor import masked_log_softmax
 from allennlp.common.tensor import sort_batch_by_length
 from allennlp.common.tensor import viterbi_decode
 from allennlp.common.tensor import weighted_sum
@@ -209,6 +210,32 @@ class TestTensor(AllenNlpTestCase):
         assert_array_almost_equal(masked_matrix_softmaxed,
                                   numpy.array([[0.0, 0.0, 0.0],
                                                [0.11920292, 0.0, 0.88079708]]))
+
+    def test_masked_log_softmax_masked(self):
+        # Tests replicated from test_softmax_masked - we test that exponentiated,
+        # the log softmax contains the correct elements (masked elements should be == 1).
+
+        # Testing the general masked 1D case.
+        vector_1d = Variable(torch.FloatTensor([[1.0, 2.0, 5.0]]))
+        mask_1d = Variable(torch.FloatTensor([[1.0, 0.0, 1.0]]))
+        vector_1d_softmaxed = masked_log_softmax(vector_1d, mask_1d).data.numpy()
+        assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
+                                  numpy.array([[0.01798621, 1.0, 0.98201382]]))
+
+        vector_1d = Variable(torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]]))
+        mask_1d = Variable(torch.FloatTensor([[1.0, 0.0, 1.0, 1.0]]))
+        vector_1d_softmaxed = masked_log_softmax(vector_1d, mask_1d).data.numpy()
+        assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
+                                  numpy.array([[0.01321289, 1.0,
+                                                0.26538793, 0.72139918]]))
+
+        # Testing the masked 1D case where the input is all 0s and the mask
+        # is not all 0s.
+        vector_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]]))
+        mask_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 1.0]]))
+        vector_1d_softmaxed = masked_log_softmax(vector_1d, mask_1d).data.numpy()
+        assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
+                                  numpy.array([[1., 1., 1., 1.]]))
 
     def test_get_text_field_mask_returns_a_correct_mask(self):
         text_field_arrays = {
