@@ -88,7 +88,7 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
                                                       desired_num_tokens, padding_lengths)
             # Use the key of the indexer to recognise what the array corresponds to within the field
             # (i.e. the result of word indexing, or the result of character indexing, for example).
-            arrays[indexer_name] = padded_array
+            arrays[indexer_name] = numpy.array(padded_array)
         return arrays
 
     # @overrides

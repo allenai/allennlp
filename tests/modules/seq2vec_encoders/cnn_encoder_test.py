@@ -11,11 +11,13 @@ from allennlp.testing.test_case import AllenNlpTestCase
 
 
 class TestCnnEncoder(AllenNlpTestCase):
-    def test_get_output_dim_is_correct(self):
+    def test_get_dimension_is_correct(self):
         encoder = CnnEncoder(embedding_dim=5, num_filters=4, ngram_filter_sizes=(3, 5))
         assert encoder.get_output_dim() == 8
+        assert encoder.get_input_dim() == 5
         encoder = CnnEncoder(embedding_dim=5, num_filters=4, ngram_filter_sizes=(3, 5), output_dim=7)
         assert encoder.get_output_dim() == 7
+        assert encoder.get_input_dim() == 5
 
     def test_can_construct_from_params(self):
         params = Params({
