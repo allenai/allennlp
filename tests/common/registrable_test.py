@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
-from typing import Type
-
 import pytest
 import torch
 import torch.nn.init
@@ -17,30 +15,30 @@ from allennlp.modules.similarity_function import SimilarityFunction
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.testing.test_case import AllenNlpTestCase
-from allennlp.training.initializers.initializer import Initializer
+from allennlp.nn import Initializer
 from allennlp.training.regularizers.regularizer import Regularizer
 
 
 class TestRegistrable(AllenNlpTestCase):
 
-    # Helper functions to make the tests less repetitive
-    @staticmethod
-    def registrable_helper(base_class: Type[Registrable]):
-        """
-        This function tests all of the things that should be hooked up correctly given a collection
-        of related registry functions:
-
-            1. The decorator should add things to the list.
-            2. The decorator should crash when adding a duplicate.
-            3. If a default is given, it should show up first in the list.
-
-        What we don't test here is that built-in items are registered correctly.  You should test
-        that yourself in a separate test method.
-        """
+    def test_registrable_functionality_works(self):
+        # This function tests the basic `Registrable` functionality:
+        #
+        #   1. The decorator should add things to the list.
+        #   2. The decorator should crash when adding a duplicate.
+        #   3. If a default is given, it should show up first in the list.
+        #
+        # What we don't test here is that built-in items are registered correctly.  Those are
+        # tested in the other tests below.
+        #
+        # We'll test this with the Tokenizer class, just to have a concrete class to use, and one
+        # that has a default.
+        base_class = Tokenizer
         assert 'fake' not in base_class.list_available()
 
         @base_class.register('fake')
         class Fake(base_class):
+            # pylint: disable=abstract-method
             pass
 
         assert base_class.by_name('fake') == Fake
@@ -58,57 +56,30 @@ class TestRegistrable(AllenNlpTestCase):
 
         del Registrable._registry[base_class]['fake']  # pylint: disable=protected-access
 
+    # TODO(mattg): maybe move all of these into tests for the base class?
 
-
-    # Dataset readers
-
-    def test_registry_has_builtin_readers(self):
+    def test_registry_has_builtin_dataset_readers(self):
         assert DatasetReader.by_name('snli').__name__ == 'SnliReader'
         assert DatasetReader.by_name('sequence_tagging').__name__ == 'SequenceTaggingDatasetReader'
         assert DatasetReader.by_name('language_modeling').__name__ == 'LanguageModelingReader'
         assert DatasetReader.by_name('squad_sentence_selection').__name__ == 'SquadSentenceSelectionReader'
-
-    def test_dataset_readers_use_correct_fields(self):
-        self.registrable_helper(DatasetReader)
-
-    # Data iterators
 
     def test_registry_has_builtin_iterators(self):
         assert DataIterator.by_name('adaptive').__name__ == 'AdaptiveIterator'
         assert DataIterator.by_name('basic').__name__ == 'BasicIterator'
         assert DataIterator.by_name('bucket').__name__ == 'BucketIterator'
 
-    def test_data_iterators_use_correct_fields(self):
-        self.registrable_helper(DataIterator)
-
-    # Tokenizers
-
     def test_registry_has_builtin_tokenizers(self):
         assert Tokenizer.by_name('word').__name__ == 'WordTokenizer'
         assert Tokenizer.by_name('character').__name__ == 'CharacterTokenizer'
-
-    def test_tokenizers_use_correct_fields(self):
-        self.registrable_helper(Tokenizer)
-
-    # Token indexers
 
     def test_registry_has_builtin_token_indexers(self):
         assert TokenIndexer.by_name('single_id').__name__ == 'SingleIdTokenIndexer'
         assert TokenIndexer.by_name('characters').__name__ == 'TokenCharactersIndexer'
 
-    def test_token_indexers_use_correct_fields(self):
-        self.registrable_helper(TokenIndexer)
-
-    # Regularizers
-
     def test_registry_has_builtin_regularizers(self):
         assert Regularizer.by_name('l1').__name__ == 'L1Regularizer'
         assert Regularizer.by_name('l2').__name__ == 'L2Regularizer'
-
-    def test_regularizers_use_correct_fields(self):
-        self.registrable_helper(Regularizer)
-
-    # Initializers
 
     def test_registry_has_builtin_initializers(self):
         all_initializers = {
@@ -127,38 +98,18 @@ class TestRegistrable(AllenNlpTestCase):
         for key, value in all_initializers.items():
             assert Initializer.by_name(key) == value
 
-    def test_initializers_use_correct_fields(self):
-        self.registrable_helper(Initializer)
-
-    # Token embedders
-
     def test_registry_has_builtin_token_embedders(self):
         assert TokenEmbedder.by_name("embedding").__name__ == 'Embedding'
         assert TokenEmbedder.by_name("character_encoding").__name__ == 'TokenCharactersEncoder'
 
-    def test_token_embedders_use_correct_fields(self):
-        self.registrable_helper(TokenEmbedder)
-
-    # Text field embedders
-
     def test_registry_has_builtin_text_field_embedders(self):
         assert TextFieldEmbedder.by_name("basic").__name__ == 'BasicTextFieldEmbedder'
-
-    def test_text_field_embedders_use_correct_fields(self):
-        self.registrable_helper(TextFieldEmbedder)
-
-    # Seq2Seq encoders
 
     def test_registry_has_builtin_seq2seq_encoders(self):
         # pylint: disable=protected-access
         assert Seq2SeqEncoder.by_name('gru')._module_class.__name__ == 'GRU'
         assert Seq2SeqEncoder.by_name('lstm')._module_class.__name__ == 'LSTM'
         assert Seq2SeqEncoder.by_name('rnn')._module_class.__name__ == 'RNN'
-
-    def test_seq2seq_encoders_use_correct_fields(self):
-        self.registrable_helper(Seq2SeqEncoder)
-
-    # Seq2Vec encoders
 
     def test_registry_has_builtin_seq2vec_encoders(self):
         assert Seq2VecEncoder.by_name('cnn').__name__ == 'CnnEncoder'
@@ -167,16 +118,8 @@ class TestRegistrable(AllenNlpTestCase):
         assert Seq2VecEncoder.by_name('lstm')._module_class.__name__ == 'LSTM'
         assert Seq2VecEncoder.by_name('rnn')._module_class.__name__ == 'RNN'
 
-    def test_seq2vec_encoders_use_correct_fields(self):
-        self.registrable_helper(Seq2VecEncoder)
-
-    # Similarity functions
-
     def test_registry_has_builtin_similarity_functions(self):
         assert SimilarityFunction.by_name("dot_product").__name__ == 'DotProductSimilarity'
         assert SimilarityFunction.by_name("bilinear").__name__ == 'BilinearSimilarity'
         assert SimilarityFunction.by_name("linear").__name__ == 'LinearSimilarity'
         assert SimilarityFunction.by_name("cosine").__name__ == 'CosineSimilarity'
-
-    def test_similarity_functions_use_correct_fields(self):
-        self.registrable_helper(SimilarityFunction)

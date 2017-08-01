@@ -15,12 +15,12 @@ class Activation(Registrable):
     """
 
 # There are no classes to decorate, so we hack these into Registrable._registry
-Registrable._registry[Activation] = {  # pylint: disable=protected-access
+# pylint: disable=protected-access
+Registrable._registry[Activation] = {  # type: ignore
         "linear": lambda x: x,
         "relu": torch.nn.ReLU,
         "relu6": torch.nn.ReLU6,
         "elu": torch.nn.ELU,
-        "selu": torch.nn.SELU,
         "prelu": torch.nn.PReLU,
         "leaky_relu": torch.nn.LeakyReLU,
         "threshold": torch.nn.Threshold,
