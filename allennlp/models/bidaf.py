@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import torch
 
@@ -242,7 +242,7 @@ class BidirectionalAttentionFlow(Model):
                 }
 
     @staticmethod
-    def _get_best_span(span_start_probs: torch.Tensor, span_end_probs: torch.Tensor) -> (int, int):
+    def _get_best_span(span_start_probs: torch.Tensor, span_end_probs: torch.Tensor) -> Tuple[int, int]:
         if span_start_probs.dim() > 2 or span_end_probs.dim() > 2:
             raise ValueError("Input shapes must be (X,) or (1,X)")
         if span_start_probs.dim() == 2:

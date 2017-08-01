@@ -1,3 +1,4 @@
+# pylint: disable=no-self-use,invalid-name
 import numpy
 from numpy.testing import assert_almost_equal
 import torch
@@ -61,22 +62,21 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         assert span_start < span_end
         assert span_end < passage.sequence_length()
 
-
     def test_get_best_span(self):
+        # pylint: disable=protected-access
+
         # Note that the best span cannot be (1, 0) since even though 0.3 * 0.5 is the greatest
         # value, the end span index is constrained to occur after the begin span index.
         span_begin_probs = torch.FloatTensor([0.1, 0.3, 0.05, 0.3, 0.25])
         span_end_probs = torch.FloatTensor([0.5, 0.1, 0.2, 0.05, 0.15])
-        begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs,
-                                                                   span_end_probs)
+        begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
         assert begin_end_idxs == (1, 2)
 
         # Testing an edge case of the dynamic program here, for the order of when you update the
         # best previous span position.  We should not get (1, 1), because that's an empty span.
         span_begin_probs = torch.FloatTensor([0.4, 0.5, 0.1])
         span_end_probs = torch.FloatTensor([0.3, 0.6, 0.1])
-        begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs,
-                                                                   span_end_probs)
+        begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
         assert begin_end_idxs == (0, 1)
 
         # test higher-order input
@@ -84,6 +84,5 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         # value, the end span index is constrained to occur after the begin span index.
         span_begin_probs = torch.FloatTensor([[0.1, 0.3, 0.05, 0.3, 0.25]])
         span_end_probs = torch.FloatTensor([[0.1, 0.5, 0.2, 0.05, 0.15]])
-        begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs,
-                                                                   span_end_probs)
+        begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
         assert begin_end_idxs == (1, 2)
