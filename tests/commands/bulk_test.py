@@ -5,8 +5,8 @@ import os
 import tempfile
 from unittest import TestCase
 
-from allennlp.__main__ import main
-from allennlp.commands.bulk import add_bulk_subparser, bulk
+from allennlp.commands.main import main
+from allennlp.commands.bulk import add_subparser, bulk
 
 
 class TestBulk(TestCase):
@@ -14,7 +14,7 @@ class TestBulk(TestCase):
     def test_add_bulk_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
-        add_bulk_subparser(subparsers)
+        add_subparser(subparsers)
 
         raw_args = ["bulk",     # command
                     "reverser", # model
