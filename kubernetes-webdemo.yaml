@@ -1,0 +1,49 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: allennlp-webdemo
+  namespace: allennlp
+  labels:
+    contact: allennlp
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: allennlp-webdemo
+    spec:
+      containers:
+        - name: allennlp-webdemo
+          image: "896129387501.dkr.ecr.us-west-2.amazonaws.com/allennlp/allennlp-cpu:25764bce367a130ac6fde91a85955f1eece25b6a"
+          # See
+          # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+          # for documentation on the resources section.
+          resources:
+            limits:
+              # One-half of a CPU.
+              cpu: 500m
+              # 500 megabytes.
+              memory: 500Mi
+            # "requests" specify how much your container will be granted as a baseline.
+            requests:
+              # One-fifth of a CPU.
+              cpu: 200m
+              # 250 megabytes.
+              memory: 250Mi
+          command:
+            - /bin/bash
+            - -c
+            - "source activate allennlp && FLASK_APP=allennlp/service/server_flask.py flask run --port 8000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: allennlp-webdemo
+  namespace: allennlp
+spec:
+  type: LoadBalancer
+  selector:
+    app: allennlp-webdemo
+  ports:
+    - port: 8000
+      targetPort: 8000
