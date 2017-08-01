@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tensor import arrays_to_variables, viterbi_decode
+from allennlp.common.tensor import get_text_field_mask
 from allennlp.data import Vocabulary
 from allennlp.data.fields import IndexField, TextField
 from allennlp.data import Instance
@@ -93,6 +94,8 @@ class SemanticRoleLabeler(Model):
 
         """
         embedded_text_input = self.text_field_embedder(tokens)
+        # TODO(Mark): Use mask in encoder once all registered encoders have the same API.
+        mask = get_text_field_mask(tokens)
         expanded_verb_indicator = verb_indicator.unsqueeze(-1).float()
         # Concatenate the verb feature onto the embedded text. This now
         # has shape (batch_size, sequence_length, embedding_dim + 1).

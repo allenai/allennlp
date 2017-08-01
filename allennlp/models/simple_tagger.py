@@ -5,7 +5,8 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
-from allennlp.common.tensor import arrays_to_variables
+from allennlp.common.tensor import arrays_to_variables, weighted_cross_entropy_with_logits
+from allennlp.common.tensor import get_text_field_mask
 from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
@@ -80,6 +81,8 @@ class SimpleTagger(Model):
         """
         embedded_text_input = self.text_field_embedder(tokens)
         batch_size, sequence_length, _ = embedded_text_input.size()
+        mask = get_text_field_mask(tokens)
+        # TODO(Mark): Use mask in encoder once all registered encoders have the same API.
         encoded_text = self.stacked_encoder(embedded_text_input)
 
         logits = self.tag_projection_layer(encoded_text)
