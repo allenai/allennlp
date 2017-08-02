@@ -45,6 +45,9 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         training_arrays = arrays_to_variables(self.dataset.as_arrays())
         _ = self.model.forward(**training_arrays)
 
+    def test_model_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(self.model, self.dataset)
+
     def test_predict_span_gives_reasonable_outputs(self):
         # TODO(mattg): "What", "is", "?" crashed, because the CNN encoder expected at least 5
         # characters.  We need to fix that somehow.
@@ -75,6 +78,13 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         # best previous span position.  We should not get (1, 1), because that's an empty span.
         span_begin_probs = torch.FloatTensor([0.4, 0.5, 0.1])
         span_end_probs = torch.FloatTensor([0.3, 0.6, 0.1])
+        begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
+        assert begin_end_idxs == (0, 1)
+
+        # Testing another edge case of the dynamic program here, where (0, 0) is the best solution
+        # without constraints.
+        span_begin_probs = torch.FloatTensor([0.8, 0.1, 0.1])
+        span_end_probs = torch.FloatTensor([0.8, 0.1, 0.1])
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
         assert begin_end_idxs == (0, 1)
 

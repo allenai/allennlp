@@ -260,6 +260,7 @@ class BidirectionalAttentionFlow(Model):
         best_word_span = (0, 1)
         begin_span_argmax = 0
         for j, _ in enumerate(span_start_probs):
+            if j == 0: continue  # 0 is not a valid end index
             val1 = span_start_probs[begin_span_argmax]
             val2 = span_end_probs[j]
 
