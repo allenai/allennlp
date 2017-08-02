@@ -48,8 +48,10 @@ class AugmentedLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  use_highway: bool = True) -> None:
         super(AugmentedLstm, self).__init__()
+        # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
+
         self.go_forward = go_forward
         self.use_highway = use_highway
         self.recurrent_dropout_probability = recurrent_dropout_probability
@@ -64,7 +66,8 @@ class AugmentedLstm(torch.nn.Module):
             self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=True)
             self.state_linearity = torch.nn.Linear(hidden_size, 4 * hidden_size, bias=True)
 
-    def forward(self, inputs: PackedSequence,  # pylint: disable=arguments-differ
+    def forward(self,  # pylint: disable=arguments-differ
+                inputs: PackedSequence,
                 initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         """
         Parameters
@@ -75,13 +78,15 @@ class AugmentedLstm(torch.nn.Module):
 
         initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
-            of the LSTM. Each tensor has shape (batch_size, output_dimension).
+            of the LSTM. Each tensor has shape (1, batch_size, output_dimension).
 
         Returns
         -------
         A PackedSequence containing a torch.FloatTensor of shape
         (batch_size, num_timesteps, output_dimension) representing
-        the outputs of the LSTM per timestep.
+        the outputs of the LSTM per timestep and a tuple containing
+        the LSTM state, with shape (1, batch_size, hidden_size) to
+        match the Pytorch API.
         """
         if not isinstance(inputs, PackedSequence):
             raise ConfigurationError('inputs must be PackedSequence but got %s' % (type(inputs)))
@@ -94,8 +99,8 @@ class AugmentedLstm(torch.nn.Module):
             full_batch_previous_memory = Variable(torch.zeros([batch_size, self.hidden_size]))
             full_batch_previous_state = Variable(torch.zeros([batch_size, self.hidden_size]))
         else:
-            full_batch_previous_state = initial_state[0]
-            full_batch_previous_memory = initial_state[1]
+            full_batch_previous_state = initial_state[0].squeeze(0)
+            full_batch_previous_memory = initial_state[1].squeeze(0)
 
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0:
@@ -163,11 +168,18 @@ class AugmentedLstm(torch.nn.Module):
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the
             # relevant elements of the batch into it.
-            full_batch_previous_memory = Variable(torch.zeros([batch_size, self.hidden_size]))
-            full_batch_previous_state = Variable(torch.zeros([batch_size, self.hidden_size]))
+            full_batch_previous_memory = Variable(full_batch_previous_memory.data.clone())
+            full_batch_previous_state = Variable(full_batch_previous_state.data.clone())
             full_batch_previous_memory[0:current_length_index + 1] = memory
             full_batch_previous_state[0:current_length_index + 1] = timestep_output
             output_accumulator[0:current_length_index + 1, index] = timestep_output
 
         output_accumulator = pack_padded_sequence(output_accumulator, batch_lengths, batch_first=True)
-        return output_accumulator
+
+        # Mimic the pytorch API by returning state in the following shape:
+        # (num_layers * num_directions, batch_size, hidden_size). As this
+        # LSTM cannot be stacked, the first dimension here is just 1.
+        final_state = (full_batch_previous_state.unsqueeze(0),
+                       full_batch_previous_memory.unsqueeze(0))
+
+        return output_accumulator, final_state

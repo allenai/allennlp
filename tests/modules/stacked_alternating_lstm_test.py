@@ -15,7 +15,7 @@ class TestStackedAlternatingLstm(AllenNlpTestCase):
         input_tensor[3, 1:, :] = 0.
         input_tensor = pack_padded_sequence(input_tensor, [5, 4, 2, 1], batch_first=True)
         lstm = StackedAlternatingLstm(3, 7, 3)
-        output = lstm(input_tensor)
+        output, _ = lstm(input_tensor)
         output_sequence, _ = pad_packed_sequence(output, batch_first=True)
         numpy.testing.assert_array_equal(output_sequence.data[1, 4:, :].numpy(), 0.0)
         numpy.testing.assert_array_equal(output_sequence.data[2, 2:, :].numpy(), 0.0)

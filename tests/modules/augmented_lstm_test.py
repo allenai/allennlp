@@ -30,7 +30,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
         tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.tolist(), batch_first=True)
         lstm = AugmentedLstm(10, 11)
-        output = lstm(tensor)
+        output, _ = lstm(tensor)
         output_sequence, _ = pad_packed_sequence(output, batch_first=True)
 
         numpy.testing.assert_array_equal(output_sequence.data[1, 6:, :].numpy(), 0.0)
@@ -42,7 +42,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
         tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.tolist(), batch_first=True)
         lstm = AugmentedLstm(10, 11, go_forward=False)
-        output = lstm(tensor)
+        output, _ = lstm(tensor)
         output_sequence, _ = pad_packed_sequence(output, batch_first=True)
 
         numpy.testing.assert_array_equal(output_sequence.data[1, 6:, :].numpy(), 0.0)
@@ -58,22 +58,24 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         initializer(augmented_lstm)
         initializer(pytorch_lstm)
 
-        initial_state = torch.autograd.Variable(torch.zeros([5, 11]))
-        initial_memory = torch.autograd.Variable(torch.zeros([5, 11]))
-        initial_state_pytorch = torch.autograd.Variable(torch.zeros([1, 5, 11]))
-        initial_memory_pytorch = torch.autograd.Variable(torch.zeros([1, 5, 11]))
+        initial_state = torch.autograd.Variable(torch.zeros([1, 5, 11]))
+        initial_memory = torch.autograd.Variable(torch.zeros([1, 5, 11]))
 
         # Use bigger numbers to avoid floating point instability.
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor * 5., self.sequence_lengths)
         lstm_input = pack_padded_sequence(sorted_tensor, sorted_sequence.tolist(), batch_first=True)
 
-        augmented_output = augmented_lstm(lstm_input, (initial_state, initial_memory))
-        pytorch_output, _ = pytorch_lstm(lstm_input, (initial_state_pytorch, initial_memory_pytorch))
+        augmented_output, augmented_state = augmented_lstm(lstm_input, (initial_state, initial_memory))
+        pytorch_output, pytorch_state = pytorch_lstm(lstm_input, (initial_state, initial_memory))
         pytorch_output_sequence, _ = pad_packed_sequence(pytorch_output, batch_first=True)
         augmented_output_sequence, _ = pad_packed_sequence(augmented_output, batch_first=True)
 
         numpy.testing.assert_array_almost_equal(pytorch_output_sequence.data.numpy(),
                                                 augmented_output_sequence.data.numpy(), decimal=4)
+        numpy.testing.assert_array_almost_equal(pytorch_state[0].data.numpy(),
+                                                augmented_state[0].data.numpy(), decimal=4)
+        numpy.testing.assert_array_almost_equal(pytorch_state[1].data.numpy(),
+                                                augmented_state[1].data.numpy(), decimal=4)
 
     def test_augmented_lstm_works_with_highway_connections(self):
         augmented_lstm = AugmentedLstm(10, 11, use_highway=True)

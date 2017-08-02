@@ -1,6 +1,8 @@
+from typing import Optional, Tuple
 import torch
 from torch.nn.utils.rnn import PackedSequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
+from allennlp.common.checks import ConfigurationError
 
 
 class StackedAlternatingLstm(torch.nn.Module):
@@ -38,6 +40,11 @@ class StackedAlternatingLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  use_highway: bool = True) -> None:
         super(StackedAlternatingLstm, self).__init__()
+
+        # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+
         layers = []
         lstm_input_size = input_size
         for layer_index in range(num_layers):
@@ -50,8 +57,41 @@ class StackedAlternatingLstm(torch.nn.Module):
             layers.append(layer)
         self.lstm_layers = layers
 
-    def forward(self, inputs: PackedSequence):  # pylint: disable=arguments-differ
-        current = inputs
-        for layer in self.lstm_layers:
-            current = layer(current)
-        return current
+    def forward(self,  # pylint: disable=arguments-differ
+                inputs: PackedSequence,
+                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+        """
+        Parameters
+        ----------
+        inputs : ``PackedSequence``, required.
+            A batch first ``PackedSequence`` to run the stacked LSTM over.
+        initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
+            A tuple (state, memory) representing the initial hidden state and memory
+            of the LSTM. Each tensor has shape (1, batch_size, output_dimension).
+
+        Returns
+        -------
+        output_sequence : PackedSequence
+            The encoded sequence of shape (batch_size, sequence_length, hidden_size)
+        final_states: torch.Tensor
+            The per-layer final (state, memory) states of the LSTM, each with shape
+            (num_layers, batch_size, hidden_size).
+        """
+        if not initial_state:
+            hidden_states = [None] * len(self.lstm_layers)
+        elif initial_state[0].size()[0] != len(self.lstm_layers):
+            raise ConfigurationError("Initial states were passed to forward() but the number of "
+                                     "initial states does not match the number of layers.")
+        else:
+            hidden_states = list(zip(initial_state[0].split(1, 0),
+                                     initial_state[1].split(1, 0)))
+
+        output_sequence = inputs
+        final_states = []
+        for layer, state in zip(self.lstm_layers, hidden_states):
+            # The state is duplicated to mirror the Pytorch API for LSTMs.
+            output_sequence, final_state = layer(output_sequence, state)
+            final_states.append(final_state)
+
+        final_state_tuple = (torch.cat(state_list, 0) for state_list in zip(*final_states))
+        return output_sequence, final_state_tuple
