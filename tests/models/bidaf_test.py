@@ -38,6 +38,58 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
                                'token_characters': TokenCharactersIndexer()}
 
         self.model = BidirectionalAttentionFlow.from_params(self.vocab, Params({}))
+
+        small_params = Params({
+                'text_field_embedder': {
+                        'tokens': {
+                                'type': 'embedding',
+                                'pretrained_file': constants.GLOVE_PATH,
+                                'trainable': False,
+                                'projection_dim': 4
+                                },
+                        'token_characters': {
+                                'type': 'character_encoding',
+                                'embedding': {
+                                        'embedding_dim': 8
+                                        },
+                                'encoder': {
+                                        'type': 'cnn',
+                                        'embedding_dim': 8,
+                                        'num_filters': 4,
+                                        'ngram_filter_sizes': [5]
+                                        }
+                                }
+                        },
+                'phrase_layer': {
+                        'type': 'lstm',
+                        'bidirectional': True,
+                        'input_size': 8,
+                        'hidden_size': 4,
+                        'num_layers': 1,
+                        },
+                'similarity_function': {
+                        'type': 'linear',
+                        'combination': 'x,y,x*y',
+                        'tensor_1_dim': 8,
+                        'tensor_2_dim': 8
+                        },
+                'modeling_layer': {
+                        'type': 'lstm',
+                        'bidirectional': True,
+                        'input_size': 32,
+                        'hidden_size': 4,
+                        'num_layers': 1,
+                        },
+                'span_end_encoder': {
+                        'type': 'lstm',
+                        'bidirectional': True,
+                        'input_size': 56,
+                        'hidden_size': 4,
+                        'num_layers': 1,
+                        },
+
+                })
+        self.small_model = BidirectionalAttentionFlow.from_params(self.vocab, small_params)
         initializer = InitializerApplicator()
         initializer(self.model)
 
@@ -46,7 +98,7 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         _ = self.model.forward(**training_arrays)
 
     def test_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.model, self.dataset)
+        self.ensure_model_can_train_save_and_load(self.small_model, self.dataset)
 
     def test_predict_span_gives_reasonable_outputs(self):
         # TODO(mattg): "What", "is", "?" crashed, because the CNN encoder expected at least 5
