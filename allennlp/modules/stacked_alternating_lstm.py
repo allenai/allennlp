@@ -56,9 +56,9 @@ class StackedAlternatingLstm(torch.nn.Module):
             layers.append(layer)
         self.lstm_layers = layers
 
-    def forward(self,
+    def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,
-                hidden_state: torch.Tensor = None):  # pylint: disable=arguments-differ
+                hidden_state: torch.Tensor = None):
         """
         Parameters
         ----------

@@ -66,8 +66,8 @@ class AugmentedLstm(torch.nn.Module):
             self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=True)
             self.state_linearity = torch.nn.Linear(hidden_size, 4 * hidden_size, bias=True)
 
-    def forward(self,
-                inputs: PackedSequence,  # pylint: disable=arguments-differ
+    def forward(self,  # pylint: disable=arguments-differ
+                inputs: PackedSequence,
                 hx: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         """
         Parameters
