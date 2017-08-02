@@ -5,6 +5,7 @@ import codecs
 import itertools
 import logging
 import tqdm
+import gzip
 
 from allennlp.common.util import namespace_match
 
@@ -193,7 +194,7 @@ class Vocabulary:
         filename : ``str``
             The file where we save the serialized vocabulary.
         """
-        with codecs.open(filename, 'w', 'utf-8') as output_file:
+        with gzip.open(filename, 'wt', encoding='utf-8') as output_file:
             # First print non-padded namespaces
             write_with_blank(output_file, self._index_to_token._non_padded_namespaces)  # pylint: disable=protected-access
 
@@ -215,7 +216,7 @@ class Vocabulary:
             The file containing the serialized vocabulary.
         """
         vocab = Vocabulary()
-        with codecs.open(filename, 'r', 'utf-8') as input_file:
+        with gzip.open(filename, 'rt', encoding='utf-8') as input_file:
             # get list of non-padded namespaces
             non_padded_namespaces = [namespace for namespace in yield_until_blank(input_file)]
             vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
