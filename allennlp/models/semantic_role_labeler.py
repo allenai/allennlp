@@ -15,6 +15,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 
 
+@Model.register("srl")
 class SemanticRoleLabeler(Model):
     """
     This model performs semantic role labeling using BIO tags using Propbank semantic roles.
