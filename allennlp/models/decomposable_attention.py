@@ -16,12 +16,14 @@ from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed
 @Model.register("decomposable_attention")
 class DecomposableAttention(Model):
     """
-    This ``Model`` implements the Decomposable Attention model described in "A Decomposable
-    Attention Model for Natural Language Inference", by Parikh et al., 2016, with some optional
-    enhancements before the decomposable attention actually happens.  Parikh's original model
-    allowed for computing an "intra-sentence" attention before doing the decomposable entailment
-    step.  We generalize this to any :class:`Seq2SeqEncaoder` that can be applied to the premise
-    and/or the hypothesis before computing entailment.
+    This ``Model`` implements the Decomposable Attention model described in `"A Decomposable
+    Attention Model for Natural Language Inference"
+    <https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27>`_
+    by Parikh et al., 2016, with some optional enhancements before the decomposable attention
+    actually happens.  Parikh's original model allowed for computing an "intra-sentence" attention
+    before doing the decomposable entailment step.  We generalize this to any
+    :class:`Seq2SeqEncoder` that can be applied to the premise and/or the hypothesis before
+    computing entailment.
 
     The basic outline of this model is to get an embedded representation of each word in the
     premise and hypothesis, align words between the two, compare the aligned phrases, and make a
@@ -109,7 +111,6 @@ class DecomposableAttention(Model):
             entailment label.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
-
         """
         embedded_premise = self._text_field_embedder(premise)
         embedded_hypothesis = self._text_field_embedder(hypothesis)
@@ -141,8 +142,6 @@ class DecomposableAttention(Model):
 
         compared_premise = self._compare_feedforward(premise_compare_input)
         # TODO(mattg): use broadcasting once pytorch 0.2 is released.
-        print("compared_premise:", compared_premise)
-        print("premise_mask:", premise_mask)
         compared_premise = compared_premise * premise_mask.unsqueeze(-1).expand_as(compared_premise)
         # Shape: (batch_size, compare_dim)
         compared_premise = compared_premise.sum(dim=1).squeeze(1)
@@ -186,11 +185,8 @@ class DecomposableAttention(Model):
         """
         instance = Instance({"premise": premise, "hypothesis": hypothesis})
         instance.index_fields(self._vocab)
-        model_input = arrays_to_variables(instance.as_array(instance.get_padding_lengths()))
-        for tensor in model_input["premise"].values():
-            tensor.data.unsqueeze_(0)
-        for tensor in model_input["hypothesis"].values():
-            tensor.data.unsqueeze_(0)
+        model_input = arrays_to_variables(instance.as_array(instance.get_padding_lengths()),
+                                          add_batch_dimension=True)
 
         output_dict = self.forward(**model_input)
 
