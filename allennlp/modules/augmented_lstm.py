@@ -68,7 +68,7 @@ class AugmentedLstm(torch.nn.Module):
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,
-                hx: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         """
         Parameters
         ----------
@@ -76,15 +76,17 @@ class AugmentedLstm(torch.nn.Module):
             A tensor of shape (batch_size, num_timesteps, input_size)
             to apply the LSTM over.
 
-        hx : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
+        initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
-            of the LSTM. Each tensor has shape (batch_size, output_dimension).
+            of the LSTM. Each tensor has shape (1, batch_size, output_dimension).
 
         Returns
         -------
         A PackedSequence containing a torch.FloatTensor of shape
         (batch_size, num_timesteps, output_dimension) representing
-        the outputs of the LSTM per timestep.
+        the outputs of the LSTM per timestep and a tuple containing
+        the LSTM state, with shape (1, batch_size, hidden_size) to
+        match the Pytorch API.
         """
         if not isinstance(inputs, PackedSequence):
             raise ConfigurationError('inputs must be PackedSequence but got %s' % (type(inputs)))
@@ -93,12 +95,12 @@ class AugmentedLstm(torch.nn.Module):
         batch_size = sequence_tensor.size()[0]
         total_timesteps = sequence_tensor.size()[1]
         output_accumulator = Variable(torch.zeros([batch_size, total_timesteps, self.hidden_size]))
-        if hx is None:
+        if initial_state is None:
             full_batch_previous_memory = Variable(torch.zeros([batch_size, self.hidden_size]))
             full_batch_previous_state = Variable(torch.zeros([batch_size, self.hidden_size]))
         else:
-            full_batch_previous_state = hx[0]
-            full_batch_previous_memory = hx[1]
+            full_batch_previous_state = initial_state[0].squeeze(0)
+            full_batch_previous_memory = initial_state[1].squeeze(0)
 
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0:

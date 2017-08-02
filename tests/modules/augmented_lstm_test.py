@@ -58,17 +58,15 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         initializer(augmented_lstm)
         initializer(pytorch_lstm)
 
-        initial_state = torch.autograd.Variable(torch.zeros([5, 11]))
-        initial_memory = torch.autograd.Variable(torch.zeros([5, 11]))
-        initial_state_pytorch = torch.autograd.Variable(torch.zeros([1, 5, 11]))
-        initial_memory_pytorch = torch.autograd.Variable(torch.zeros([1, 5, 11]))
+        initial_state = torch.autograd.Variable(torch.zeros([1, 5, 11]))
+        initial_memory = torch.autograd.Variable(torch.zeros([1, 5, 11]))
 
         # Use bigger numbers to avoid floating point instability.
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor * 5., self.sequence_lengths)
         lstm_input = pack_padded_sequence(sorted_tensor, sorted_sequence.tolist(), batch_first=True)
 
         augmented_output, augmented_state = augmented_lstm(lstm_input, (initial_state, initial_memory))
-        pytorch_output, pytorch_state = pytorch_lstm(lstm_input, (initial_state_pytorch, initial_memory_pytorch))
+        pytorch_output, pytorch_state = pytorch_lstm(lstm_input, (initial_state, initial_memory))
         pytorch_output_sequence, _ = pad_packed_sequence(pytorch_output, batch_first=True)
         augmented_output_sequence, _ = pad_packed_sequence(augmented_output, batch_first=True)
 

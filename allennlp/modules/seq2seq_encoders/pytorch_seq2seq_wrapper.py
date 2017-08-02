@@ -49,7 +49,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
                 hidden_state: torch.Tensor = None) -> torch.Tensor:
 
         if sequence_lengths is None:
-            return self._module.forward(inputs, hidden_state)[0]
+            return self._module(inputs, hidden_state)[0]
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
         packed_sequence_input = pack_padded_sequence(sorted_inputs,
@@ -57,7 +57,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
                                                      batch_first=True)
 
         # Actually call the module on the sorted PackedSequence.
-        packed_sequence_output, _ = self._module.forward(packed_sequence_input, hidden_state)
+        packed_sequence_output, _ = self._module(packed_sequence_input, hidden_state)
         unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
         # Restore the original indices and return the sequence.
         return unpacked_sequence_tensor[restoration_indices]
