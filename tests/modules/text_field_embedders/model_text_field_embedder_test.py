@@ -1,12 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
 from numpy.testing import assert_almost_equal
-import pytest
 import torch
 
 from torch.autograd import Variable
 
 from allennlp.common import Params, Registrable
-from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder
 from allennlp.modules.text_field_embedders import ModelTextFieldEmbedder
@@ -22,7 +20,7 @@ class TestModelTextFieldEmbedder(AllenNlpTestCase):
                 super(NoOp, self).__init__()
                 self._dim = dim
 
-            def forward(self, inputs):
+            def forward(self, inputs):  # pylint: disable=arguments-differ
                 return inputs
 
             def get_input_dim(self):

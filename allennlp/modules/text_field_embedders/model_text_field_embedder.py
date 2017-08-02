@@ -4,11 +4,9 @@ import torch
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 
 @TextFieldEmbedder.register("model")
