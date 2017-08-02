@@ -72,8 +72,6 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         pytorch_output_sequence, _ = pad_packed_sequence(pytorch_output, batch_first=True)
         augmented_output_sequence, _ = pad_packed_sequence(augmented_output, batch_first=True)
 
-        print(pytorch_state[0])
-        print(augmented_state[0])
         numpy.testing.assert_array_almost_equal(pytorch_output_sequence.data.numpy(),
                                                 augmented_output_sequence.data.numpy(), decimal=4)
         numpy.testing.assert_array_almost_equal(pytorch_state[0].data.numpy(),
