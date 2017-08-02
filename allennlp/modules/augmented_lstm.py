@@ -48,8 +48,10 @@ class AugmentedLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  use_highway: bool = True) -> None:
         super(AugmentedLstm, self).__init__()
+        # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
+
         self.go_forward = go_forward
         self.use_highway = use_highway
         self.recurrent_dropout_probability = recurrent_dropout_probability
@@ -64,8 +66,9 @@ class AugmentedLstm(torch.nn.Module):
             self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=True)
             self.state_linearity = torch.nn.Linear(hidden_size, 4 * hidden_size, bias=True)
 
-    def forward(self, inputs: PackedSequence,  # pylint: disable=arguments-differ
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+    def forward(self,
+                inputs: PackedSequence,  # pylint: disable=arguments-differ
+                hx: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         """
         Parameters
         ----------
@@ -73,7 +76,7 @@ class AugmentedLstm(torch.nn.Module):
             A tensor of shape (batch_size, num_timesteps, input_size)
             to apply the LSTM over.
 
-        initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
+        hx : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM. Each tensor has shape (batch_size, output_dimension).
 
@@ -90,12 +93,12 @@ class AugmentedLstm(torch.nn.Module):
         batch_size = sequence_tensor.size()[0]
         total_timesteps = sequence_tensor.size()[1]
         output_accumulator = Variable(torch.zeros([batch_size, total_timesteps, self.hidden_size]))
-        if initial_state is None:
+        if hx is None:
             full_batch_previous_memory = Variable(torch.zeros([batch_size, self.hidden_size]))
             full_batch_previous_state = Variable(torch.zeros([batch_size, self.hidden_size]))
         else:
-            full_batch_previous_state = initial_state[0]
-            full_batch_previous_memory = initial_state[1]
+            full_batch_previous_state = hx[0]
+            full_batch_previous_memory = hx[1]
 
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0:
@@ -170,4 +173,11 @@ class AugmentedLstm(torch.nn.Module):
             output_accumulator[0:current_length_index + 1, index] = timestep_output
 
         output_accumulator = pack_padded_sequence(output_accumulator, batch_lengths, batch_first=True)
-        return output_accumulator
+
+        # Mimic the pytorch API by returning state in the following shape:
+        # (num_layers * num_directions, batch_size, hidden_size). As this
+        # LSTM cannot be stacked, the first dimension here is just 1.
+        final_state = (full_batch_previous_state.unsqueeze(0),
+                       full_batch_previous_memory.unsqueeze(0))
+
+        return output_accumulator, final_state

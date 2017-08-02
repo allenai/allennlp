@@ -30,7 +30,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
         tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.tolist(), batch_first=True)
         lstm = AugmentedLstm(10, 11)
-        output = lstm(tensor)
+        output, _ = lstm(tensor)
         output_sequence, _ = pad_packed_sequence(output, batch_first=True)
 
         numpy.testing.assert_array_equal(output_sequence.data[1, 6:, :].numpy(), 0.0)
@@ -42,7 +42,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
         tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.tolist(), batch_first=True)
         lstm = AugmentedLstm(10, 11, go_forward=False)
-        output = lstm(tensor)
+        output, _ = lstm(tensor)
         output_sequence, _ = pad_packed_sequence(output, batch_first=True)
 
         numpy.testing.assert_array_equal(output_sequence.data[1, 6:, :].numpy(), 0.0)
@@ -67,7 +67,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor * 5., self.sequence_lengths)
         lstm_input = pack_padded_sequence(sorted_tensor, sorted_sequence.tolist(), batch_first=True)
 
-        augmented_output = augmented_lstm(lstm_input, (initial_state, initial_memory))
+        augmented_output, _ = augmented_lstm(lstm_input, (initial_state, initial_memory))
         pytorch_output, _ = pytorch_lstm(lstm_input, (initial_state_pytorch, initial_memory_pytorch))
         pytorch_output_sequence, _ = pad_packed_sequence(pytorch_output, batch_first=True)
         augmented_output_sequence, _ = pad_packed_sequence(augmented_output, batch_first=True)
