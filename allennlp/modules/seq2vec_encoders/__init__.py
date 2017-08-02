@@ -7,6 +7,8 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2vec_encoders.cnn_encoder import CnnEncoder
 from allennlp.modules.seq2vec_encoders.pytorch_seq2vec_wrapper import PytorchSeq2VecWrapper
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
+from allennlp.modules.augmented_lstm import AugmentedLstm
+from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 
 
 class _Seq2VecWrapper:
@@ -52,3 +54,5 @@ class _Seq2VecWrapper:
 Seq2VecEncoder.register("gru")(_Seq2VecWrapper(torch.nn.GRU))
 Seq2VecEncoder.register("lstm")(_Seq2VecWrapper(torch.nn.LSTM))
 Seq2VecEncoder.register("rnn")(_Seq2VecWrapper(torch.nn.RNN))
+Seq2VecEncoder.register("augmented_lstm")(_Seq2VecWrapper(AugmentedLstm))
+Seq2VecEncoder.register("alternating_lstm")(_Seq2VecWrapper(StackedAlternatingLstm))

@@ -21,22 +21,41 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     We just take the final hidden state vector, or in the case of a bidirectional RNN cell, we
     concatenate the forward and backward final states together. TODO(mattg): allow for other ways
     of wrapping RNNs.
+
+    In order to use this API wrapper, you must implement a class with the following interface:
+
+    Class:
+        self.input_size
+        self.hidden_size
+        self.bidirectional (optional)
+
+    def forward(inputs: PackedSequence, hidden_state: torch.Tensor)
+        -> outputs: PackedSequence, final_state: torch.Tensor.
     """
     def __init__(self, module: torch.nn.modules.RNNBase) -> None:
         super(PytorchSeq2VecWrapper, self).__init__()
         self._module = module
-        if not self._module.batch_first:
-            raise ConfigurationError("Our encoder semantics assumes batch is always first!")
+        try:
+            if not self._module.batch_first:
+                raise ConfigurationError("Our encoder semantics assumes batch is always first!")
+        except AttributeError:
+            pass
 
     def get_input_dim(self) -> int:
         return self._module.input_size
 
     def get_output_dim(self) -> int:
-        return self._module.hidden_size * (2 if self._module.bidirectional else 1)
+        try:
+            is_bidirectional = self._module.bidirectional
+        except AttributeError:
+            is_bidirectional = False
+        print("is bidirectional: ", is_bidirectional)
+        return self._module.hidden_size * (2 if is_bidirectional else 1)
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
-                sequence_lengths: torch.LongTensor = None) -> torch.Tensor:
+                sequence_lengths: torch.LongTensor = None,
+                hidden_state: torch.Tensor = None) -> torch.Tensor:
 
         if sequence_lengths is None:
             # If sequence_lengths aren't passed, there is no padding in the batch of
@@ -44,7 +63,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             # This doesn't work in the case of variable length sequences, as the last
             # state for each element of the batch won't be at the end of the max sequence
             # length, so we have to use the state of the RNN below.
-            return self._module(inputs)[0][:, -1, :]
+            return self._module(inputs, hidden_state)[0][:, -1, :]
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
         packed_sequence_input = pack_padded_sequence(sorted_inputs,
@@ -52,7 +71,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
                                                      batch_first=True)
 
         # Actually call the module on the sorted PackedSequence.
-        _, state = self._module(packed_sequence_input)
+        _, state = self._module(packed_sequence_input, hidden_state)
 
         # Deal with the fact the LSTM state is a tuple of (state, memory).
         if isinstance(state, tuple):
@@ -72,6 +91,9 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         # if the cell is bidirectional. Then reshape by concatenation (in the case
         # we have bidirectional states) or just squash the 1st dimension in the non-
         # bidirectional case. Return tensor has shape (batch_size, hidden_size * num_directions).
-        last_state_index = 2 if self._module.bidirectional else 1
+        try:
+            last_state_index = 2 if self._module.bidirectional else 1
+        except AttributeError:
+            last_state_index = 1
         last_layer_state = unsorted_state[:, -last_state_index:, :]
         return last_layer_state.contiguous().view([-1, self.get_output_dim()])

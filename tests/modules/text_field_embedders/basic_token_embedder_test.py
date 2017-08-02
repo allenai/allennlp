@@ -47,9 +47,9 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         self.inputs['words4'] = self.inputs['words3']
         del self.inputs['words3']
         with pytest.raises(ConfigurationError):
-            self.token_embedder.forward(self.inputs)
+            self.token_embedder(self.inputs)
         self.inputs['words3'] = self.inputs['words4']
         del self.inputs['words4']
 
     def test_forward_concats_resultant_embeddings(self):
-        assert self.token_embedder.forward(self.inputs).size() == (1, 4, 10)
+        assert self.token_embedder(self.inputs).size() == (1, 4, 10)
