@@ -3,15 +3,11 @@ from allennlp.data.dataset_readers import SnliReader
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
-class TestSnliDataset(AllenNlpTestCase):
-    def setUp(self):
-        super(TestSnliDataset, self).setUp()
-        self.write_snli_data()
-
+class TestSnliReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
         reader = SnliReader()
-        dataset = reader.read(self.TRAIN_FILE)
+        dataset = reader.read('tests/fixtures/snli_example.jsonl')
 
         instance1 = {"premise": ["A", "person", "on", "a", "horse",
                                  "jumps", "over", "a", "broken", "down", "airplane", "."],
