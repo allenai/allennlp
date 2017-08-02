@@ -1,7 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
 from numpy.testing import assert_almost_equal
-import torch
 
 from allennlp.common import Params, constants
 from allennlp.common.tensor import arrays_to_variables
