@@ -17,7 +17,7 @@ class Activation(Registrable):
 # There are no classes to decorate, so we hack these into Registrable._registry
 # pylint: disable=protected-access
 Registrable._registry[Activation] = {  # type: ignore
-        "linear": lambda x: x,
+        "linear": lambda: lambda x: x,
         "relu": torch.nn.ReLU,
         "relu6": torch.nn.ReLU6,
         "elu": torch.nn.ELU,

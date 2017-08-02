@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple
 
 import torch
 from torch.nn.functional import nll_loss
+
 from allennlp.common import Params, constants
 from allennlp.common.tensor import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
 from allennlp.common.tensor import arrays_to_variables, masked_log_softmax
@@ -260,6 +261,9 @@ class BidirectionalAttentionFlow(Model):
         best_word_span = (0, 1)
         begin_span_argmax = 0
         for j, _ in enumerate(span_start_probs):
+            if j == 0:
+                # 0 is not a valid end index.
+                continue
             val1 = span_start_probs[begin_span_argmax]
             val2 = span_end_probs[j]
 
