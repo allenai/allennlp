@@ -73,7 +73,8 @@ class StackedAlternatingLstm(torch.nn.Module):
         current : PackedSequence
             The encoded sequence of shape (batch_size, sequence_length, hidden_size)
         final_states: torch.Tensor
-            The per-layer final states of the LSTM, with shape (num_layers, batch_size, hidden_size).
+            The per-layer final (state, memory) states of the LSTM, each with shape
+            (num_layers, batch_size, hidden_size).
         """
         if not hidden_state:
             hidden_states = [None] * len(self.lstm_layers)
@@ -90,5 +91,8 @@ class StackedAlternatingLstm(torch.nn.Module):
             if state is not None:
                 state = (state, state)
             current, final_state = layer(current, state)
-            final_states.append(final_state[0])
-        return current, torch.cat(final_states, 0)
+            final_states.append(final_state)
+
+        final_state_tuple = (torch.cat(state_list, 0) for state_list in zip(*final_states))
+
+        return current, final_state_tuple

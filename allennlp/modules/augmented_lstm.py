@@ -166,8 +166,8 @@ class AugmentedLstm(torch.nn.Module):
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the
             # relevant elements of the batch into it.
-            full_batch_previous_memory = Variable(torch.zeros([batch_size, self.hidden_size]))
-            full_batch_previous_state = Variable(torch.zeros([batch_size, self.hidden_size]))
+            full_batch_previous_memory = Variable(full_batch_previous_memory.data.clone())
+            full_batch_previous_state = Variable(full_batch_previous_state.data.clone())
             full_batch_previous_memory[0:current_length_index + 1] = memory
             full_batch_previous_state[0:current_length_index + 1] = timestep_output
             output_accumulator[0:current_length_index + 1, index] = timestep_output
