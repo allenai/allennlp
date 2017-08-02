@@ -10,7 +10,7 @@ servables = ServableCollection.default()  # pylint: disable=invalid-name
 def run(port: int) -> None:
     """Run the server programatically"""
     print("Starting a flask server on port {}.".format(port))
-    app.run(port=port)
+    app.run(port=port, host="0.0.0.0")
 
 
 @app.route('/')
