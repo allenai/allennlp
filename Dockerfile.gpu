@@ -1,5 +1,6 @@
 FROM nvidia/cuda:8.0-cudnn5-devel
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+EXPOSE 8000
 
 # Override Nvidia's default LD paths, since they're misconfigured in the base image.
 ENV LD_LIBRARY_PATH /usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
