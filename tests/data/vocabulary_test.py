@@ -119,3 +119,40 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab.get_token_from_index(4) == "a"
         assert vocab.get_token_from_index(5) == "word"
         assert vocab.get_token_from_index(6) == "another"
+
+    def test_saving_and_loading(self):
+        vocab_filename = self.TEST_DIR + 'vocab_file'
+        vocab = Vocabulary(non_padded_namespaces=["a", "c"])
+        vocab.add_token_to_namespace("a0", namespace="a")  # non-padded, should start at 0
+        vocab.add_token_to_namespace("a1", namespace="a")
+        vocab.add_token_to_namespace("a2", namespace="a")
+        vocab.add_token_to_namespace("b2", namespace="b")  # padded, should start at 2
+        vocab.add_token_to_namespace("b3", namespace="b")
+
+        vocab.save_to_file(vocab_filename)              # save to file
+
+        vocab2 = Vocabulary.from_file(vocab_filename)   # load from file
+
+        assert vocab2._index_to_token._non_padded_namespaces == ["a", "c"]
+
+        # check namespace a
+        assert vocab2.get_vocab_size(namespace='a') == 3
+        assert vocab2.get_token_from_index(0, namespace='a') == 'a0'
+        assert vocab2.get_token_from_index(1, namespace='a') == 'a1'
+        assert vocab2.get_token_from_index(2, namespace='a') == 'a2'
+        assert vocab2.get_token_index('a0', namespace='a') == 0
+        assert vocab2.get_token_index('a1', namespace='a') == 1
+        assert vocab2.get_token_index('a2', namespace='a') == 2
+
+        # check namespace b
+        assert vocab2.get_vocab_size(namespace='b') == 4  # (unk + padding + two tokens)
+        assert vocab2.get_token_from_index(0, namespace='b') == vocab._padding_token
+        assert vocab2.get_token_from_index(1, namespace='b') == vocab._oov_token
+        assert vocab2.get_token_from_index(2, namespace='b') == 'b2'
+        assert vocab2.get_token_from_index(3, namespace='b') == 'b3'
+        assert vocab2.get_token_index(vocab._padding_token, namespace='b') == 0
+        assert vocab2.get_token_index(vocab._oov_token, namespace='b') == 1
+        assert vocab2.get_token_index('b2', namespace='b') == 2
+        assert vocab2.get_token_index('b3', namespace='b') == 3
+
+

@@ -1,7 +1,8 @@
 from collections import defaultdict
-from typing import Any, Callable, Dict, Union, Sequence
+from typing import Any, Callable, Dict, Union, Sequence, IO, Iterator, Iterable
 
 import codecs
+import itertools
 import logging
 import tqdm
 
@@ -10,6 +11,23 @@ from allennlp.common.util import namespace_match
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
+
+def yield_until_blank(filelike: IO) -> Iterator[str]:
+    """
+    Helper function that yields stripped lines from a file until it reaches
+    a blank line, at which point it stops.
+    """
+    stripped_lines = (line.strip() for line in filelike)
+    yield from itertools.takewhile(lambda x: x, stripped_lines)
+
+def write_with_blank(filelike: IO, lines: Iterable[str]):
+    """
+    Helper function that writes out lines (with newlines) and adds a blank
+    line at the end.
+    """
+    for line in lines:
+        print(line, file=filelike)
+    print("", file=filelike)
 
 
 class _NamespaceDependentDefaultDict(defaultdict):
@@ -150,13 +168,74 @@ class Vocabulary:
                     if count >= min_count:
                         self.add_token_to_namespace(token, namespace)
 
+    def save_to_file(self, filename: str) -> None:
+        """
+        Persist this Vocabulary to a file so it can be reloaded later. Format is
+
+            non_padded_namespaces[0]
+            ...
+            non_padded_namespaces[n]
+            [blank line]
+            namespace_0
+            token_0_0
+            ...
+            token_0_m
+            [blank line]
+            namespace_1
+            token_1_0
+            ...
+            token_1_k
+            [blank line]
+            ...and so on
+
+        Parameters
+        ----------
+        filename : ``str``
+            The file where we save the serialized vocabulary.
+        """
+        with codecs.open(filename, 'w', 'utf-8') as output_file:
+            # First print non-padded namespaces
+            write_with_blank(output_file, self._index_to_token._non_padded_namespaces)  # pylint: disable=protected-access
+
+            # Now print out each namespace and its ordered tokens
+            for namespace, mapping in self._index_to_token.items():
+                num_tokens = len(mapping)
+                tokens = (mapping[i] for i in range(num_tokens))
+                write_with_blank(output_file, itertools.chain([namespace], tokens))
+
+
+    @classmethod
+    def from_file(cls, filename: str) -> 'Vocabulary':
+        """
+        Load a ``Vocabulary`` that was serialized using ``to_file``.
+
+        Parameters
+        ----------
+        filename : ``str``
+            The file containing the serialized vocabulary.
+        """
+        vocab = Vocabulary()
+        with codecs.open(filename, 'r', 'utf-8') as input_file:
+            # get list of non-padded namespaces
+            non_padded_namespaces = [namespace for namespace in yield_until_blank(input_file)]
+            vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
+
+            batch = yield_until_blank(input_file)
+            namespace = next(batch, None)  # will be None when batch is empty
+            while namespace is not None:
+                for line in batch:
+                    vocab.add_token_to_namespace(line, namespace=namespace)
+                batch = yield_until_blank(input_file)
+                namespace = next(batch, None)  # will be None when batch is empty
+
+        return vocab
+
     def set_from_file(self, filename: str, oov_token: str, namespace: str = "tokens"):
         """
         If you already have a vocabulary file for a trained model somewhere, and you really want to
         use that vocabulary file instead of just setting the vocabulary from a dataset, for
         whatever reason, you can do that with this method.  You must specify the namespace to use,
         and we assume that you want to use padding and OOV tokens for this.
-
         Parameters
         ----------
         filename : ``str``
@@ -178,6 +257,7 @@ class Vocabulary:
                 token = line.strip()
                 self._token_to_index[namespace][token] = i + 1
                 self._index_to_token[namespace].append(token)
+
 
     @classmethod
     def from_dataset(cls,
