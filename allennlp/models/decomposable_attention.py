@@ -1,11 +1,12 @@
-from typing import Any, Dict, Tuple
+from typing import Dict, Optional
 
 import torch
 
 from allennlp.common import Params, constants
-from allennlp.common.tensor import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.tensor import get_text_field_mask, last_dim_softmax, weighted_sum
 from allennlp.common.tensor import arrays_to_variables
-from allennlp.data import Vocabulary
+from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
@@ -33,13 +34,6 @@ class DecomposableAttention(Model):
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the ``premise`` and ``hypothesis`` ``TextFields`` we get as input to the
         model.
-    premise_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
-        After embedding the premise, we can optionally apply an encoder.  If this is ``None``, we
-        will do nothing.
-    hypothesis_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
-        After embedding the hypothesis, we can optionally apply an encoder.  If this is ``None``,
-        we will use the ``premise_encoder`` for the encoding (doing nothing if ``premise_encoder``
-        is also ``None``).
     attend_feedforward : ``FeedForward``
         This feedforward network is applied to the encoded sentence representations before the
         similarity matrix is computed between words in the premise and words in the hypothesis.
@@ -52,25 +46,33 @@ class DecomposableAttention(Model):
     aggregate_feedforward : ``FeedForward``
         This final feedforward network is applied to the concatenated, summed result of the
         ``compare_feedforward`` network, and its output is used as the entailment class logits.
+    premise_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
+        After embedding the premise, we can optionally apply an encoder.  If this is ``None``, we
+        will do nothing.
+    hypothesis_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
+        After embedding the hypothesis, we can optionally apply an encoder.  If this is ``None``,
+        we will use the ``premise_encoder`` for the encoding (doing nothing if ``premise_encoder``
+        is also ``None``).
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 premise_encoder: Optional[Seq2SeqEncoder] = None,
-                 hypothesis_encoder: Optional[Seq2SeqEncoder] = None,
                  attend_feedforward: FeedForward,
                  similarity_function: SimilarityFunction,
                  compare_feedforward: FeedForward,
-                 aggregate_feedforward: FeedForward) -> None:
+                 aggregate_feedforward: FeedForward,
+                 premise_encoder: Optional[Seq2SeqEncoder] = None,
+                 hypothesis_encoder: Optional[Seq2SeqEncoder] = None) -> None:
         super(DecomposableAttention, self).__init__()
 
         self._vocab = vocab
         self._text_field_embedder = text_field_embedder
-        self._premise_encoder = premise_encoder
-        self._hypothesis_encoder = hypothesis_encoder or premise_encoder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
         self._matrix_attention = MatrixAttention(similarity_function)
         self._compare_feedforward = TimeDistributed(compare_feedforward)
         self._aggregate_feedforward = aggregate_feedforward
+        self._premise_encoder = premise_encoder
+        self._hypothesis_encoder = hypothesis_encoder or premise_encoder
+
         self._num_labels = vocab.get_vocab_size(namespace="labels")
         if aggregate_feedforward.get_output_dim() != self._num_labels:
             raise ConfigurationError("Final output dimension (%d) must equal num labels (%d)" %
@@ -111,8 +113,6 @@ class DecomposableAttention(Model):
         """
         embedded_premise = self._text_field_embedder(premise)
         embedded_hypothesis = self._text_field_embedder(hypothesis)
-        batch_size, premise_length, _ = embedded_premise.size()
-        hypothesis_length = embedded_hypothesis.size(1)
         premise_mask = get_text_field_mask(premise).float()
         hypothesis_mask = get_text_field_mask(hypothesis).float()
 
@@ -132,7 +132,7 @@ class DecomposableAttention(Model):
         attended_hypothesis = weighted_sum(embedded_hypothesis, p2h_attention)
 
         # Shape: (batch_size, hypothesis_length, premise_length)
-        h2p_attention = last_dim_softmax(similarity_matrix.transpose(1, 2), premise_mask)
+        h2p_attention = last_dim_softmax(similarity_matrix.transpose(1, 2).contiguous(), premise_mask)
         # Shape: (batch_size, hypothesis_length, embedding_dim)
         attended_premise = weighted_sum(embedded_premise, h2p_attention)
 
@@ -141,13 +141,15 @@ class DecomposableAttention(Model):
 
         compared_premise = self._compare_feedforward(premise_compare_input)
         # TODO(mattg): use broadcasting once pytorch 0.2 is released.
-        compared_premise = compared_premise * premise_mask.expand_as(compared_premise)
+        print("compared_premise:", compared_premise)
+        print("premise_mask:", premise_mask)
+        compared_premise = compared_premise * premise_mask.unsqueeze(-1).expand_as(compared_premise)
         # Shape: (batch_size, compare_dim)
         compared_premise = compared_premise.sum(dim=1).squeeze(1)
 
         compared_hypothesis = self._compare_feedforward(hypothesis_compare_input)
         # TODO(mattg): use broadcasting once pytorch 0.2 is released.
-        compared_hypothesis = compared_hypothesis * hypothesis_mask.expand_as(compared_hypothesis)
+        compared_hypothesis = compared_hypothesis * hypothesis_mask.unsqueeze(-1).expand_as(compared_hypothesis)
         # Shape: (batch_size, compare_dim)
         compared_hypothesis = compared_hypothesis.sum(dim=1).squeeze(1)
 
@@ -160,7 +162,7 @@ class DecomposableAttention(Model):
         if label:
             if label.dim() == 2:
                 _, label = label.max(-1)
-            loss = self._loss(label_logits:, label.view(-1))
+            loss = self._loss(label_logits, label.view(-1))
             output_dict["loss"] = loss
 
         return output_dict
@@ -190,14 +192,14 @@ class DecomposableAttention(Model):
         for tensor in model_input["hypothesis"].values():
             tensor.data.unsqueeze_(0)
 
-        output_dict = self.forward(**torch_input)
+        output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.
         label_probs = output_dict["label_probs"].data.squeeze(0)
-        return {'label_probs': label_probs}
+        return {'label_probs': label_probs.numpy()}
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'DecomposableAttention':
         """
         With an empty ``params`` argument, this will instantiate a decomposable attention model
         with the same configuration as published in the original paper, as long as you've set
@@ -263,9 +265,9 @@ class DecomposableAttention(Model):
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
-                   premise_encoder=premise_encoder,
-                   hypothesis_encoder=hypothesis_encoder,
                    attend_feedforward=attend_feedforward,
                    similarity_function=similarity_function,
                    compare_feedforward=compare_feedforward,
-                   aggregate_feedforward=aggregate_feedforward)
+                   aggregate_feedforward=aggregate_feedforward,
+                   premise_encoder=premise_encoder,
+                   hypothesis_encoder=hypothesis_encoder)
