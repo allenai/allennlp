@@ -10,11 +10,6 @@ class TestApp(AllenNlpTestCase):
 
     def tearDown(self):
         super(TestApp, self).tearDown()
-        try:
-            os.remove('access.log')
-            os.remove('error.log')
-        except FileNotFoundError:
-            pass
 
     # TODO(joelgrus): this is a fragile test
     def test_list_models(self):
