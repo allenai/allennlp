@@ -121,6 +121,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab.get_token_from_index(6) == "another"
 
     def test_saving_and_loading(self):
+        # pylint: disable=protected-access
         vocab_filename = self.TEST_DIR + 'vocab_file'
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
         vocab.add_token_to_namespace("a0", namespace="a")  # non-padded, should start at 0
@@ -154,5 +155,3 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab2.get_token_index(vocab._oov_token, namespace='b') == 1
         assert vocab2.get_token_index('b2', namespace='b') == 2
         assert vocab2.get_token_index('b3', namespace='b') == 3
-
-
