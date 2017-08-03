@@ -67,7 +67,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
         packed_sequence_input = pack_padded_sequence(sorted_inputs,
-                                                     sorted_sequence_lengths.tolist(),
+                                                     sorted_sequence_lengths.data.tolist(),
                                                      batch_first=True)
 
         # Actually call the module on the sorted PackedSequence.
@@ -85,7 +85,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         # and return them as a single (batch_size, self.get_output_dim()) tensor.
 
         # now of shape: (batch_size, num_layers * num_directions, hidden_size).
-        unsorted_state = state.transpose(0, 1)[restoration_indices]
+        unsorted_state = state.transpose(0, 1).index_select(0, restoration_indices)
 
         # Extract the last hidden vector, including both forward and backward states
         # if the cell is bidirectional. Then reshape by concatenation (in the case
