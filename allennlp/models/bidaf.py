@@ -142,10 +142,11 @@ class BidirectionalAttentionFlow(Model):
         passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
 
         print("passage question similarity:", passage_question_similarity)
-        # We replace masked values with -inf here, so they don't affect the max below.
+        # We replace masked values with something really negative here, so they don't affect the
+        # max below.
         masked_similarity = util.replace_masked_values(passage_question_similarity,
                                                        question_mask.unsqueeze(1),
-                                                       float('-inf'))
+                                                       -1e7)
         # Shape: (batch_size, passage_length)
         question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
         print("quesiton passage similarity:", question_passage_similarity)
