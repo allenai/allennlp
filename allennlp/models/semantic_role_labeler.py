@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.tensor import arrays_to_variables, viterbi_decode
+from allennlp.common.tensor import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
 from allennlp.common.tensor import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.data import Vocabulary
 from allennlp.data.fields import IndexField, TextField
@@ -106,7 +106,8 @@ class SemanticRoleLabeler(Model):
                                      "specified. Therefore, the 'input_dim' of the stacked_encoder "
                                      "must be equal to total_embedding_dim + 1.")
 
-        encoded_text = self.stacked_encoder(embedded_text_with_verb_indicator)
+        batch_sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
+        encoded_text = self.stacked_encoder(embedded_text_with_verb_indicator, batch_sequence_lengths)
 
         logits = self.tag_projection_layer(encoded_text)
         reshaped_log_probs = logits.view(-1, self.num_classes)

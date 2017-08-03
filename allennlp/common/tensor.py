@@ -44,6 +44,11 @@ def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.Long
     restoration_indices : torch.LongTensor
         Indices into the sorted_tensor such that ``sorted_tensor[restoration_indices] == original_tensor``
     """
+    # Pytorch can't handle sorting with Variables.
+    # TODO(Mark): Assert whether this is allowed - does it break autograd?
+    if isinstance(sequence_lengths, Variable):
+        sequence_lengths = sequence_lengths.data
+
     sorted_sequence_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
     sorted_tensor = tensor[permutation_index]
     # This is the equivalent of zipping with index, sorting by the original
