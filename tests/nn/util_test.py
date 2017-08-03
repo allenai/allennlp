@@ -460,13 +460,6 @@ class TestNnUtil(AllenNlpTestCase):
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.data.sum() / 4
 
-    def test_replace_masked_values_replaces_masked_values_with_minus_inf(self):
-        tensor = Variable(torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]))
-        mask = Variable(torch.FloatTensor([[1, 1, 0]]))
-        inf = float('-inf')
-        replaced = replace_masked_values(tensor, mask.unsqueeze(-1), inf).data.numpy()
-        assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [inf, inf, inf, inf]]])
-
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = Variable(torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]))
         mask = Variable(torch.FloatTensor([[1, 1, 0]]))
