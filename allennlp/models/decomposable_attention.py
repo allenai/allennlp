@@ -185,9 +185,7 @@ class DecomposableAttention(Model):
         """
         instance = Instance({"premise": premise, "hypothesis": hypothesis})
         instance.index_fields(self._vocab)
-        model_input = arrays_to_variables(instance.as_array(instance.get_padding_lengths()),
-                                          add_batch_dimension=True)
-
+        model_input = arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
         output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.

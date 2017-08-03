@@ -75,9 +75,9 @@ class Dataset:
                 padding_lengths[field_name][padding_key] = max_value
         return {**padding_lengths}
 
-    def as_arrays(self,
-                  padding_lengths: Dict[str, Dict[str, int]] = None,
-                  verbose: bool = True) ->Dict[str, Union[numpy.ndarray, Dict[str, numpy.ndarray]]]:
+    def as_array_dict(self,
+                      padding_lengths: Dict[str, Dict[str, int]] = None,
+                      verbose: bool = True) ->Dict[str, Union[numpy.ndarray, Dict[str, numpy.ndarray]]]:
         # This complex return type is actually predefined elsewhere as a DataArray,
         # but we can't use it because mypy doesn't like it.
         """
@@ -140,11 +140,11 @@ class Dataset:
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
             for instance in tqdm.tqdm(self.instances):
-                for field, arrays in instance.as_array(lengths_to_use).items():
+                for field, arrays in instance.as_array_dict(lengths_to_use).items():
                     field_arrays[field].append(arrays)
         else:
             for instance in self.instances:
-                for field, arrays in instance.as_array(lengths_to_use).items():
+                for field, arrays in instance.as_array_dict(lengths_to_use).items():
                     field_arrays[field].append(arrays)
 
         # Finally, we combine the arrays that we got for each instance into one big array (or set

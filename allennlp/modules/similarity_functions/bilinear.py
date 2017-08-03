@@ -1,11 +1,10 @@
-from typing import Callable
-
 from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
 from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.nn import Activation
 
 
 @SimilarityFunction.register("bilinear")
@@ -25,14 +24,14 @@ class BilinearSimilarity(SimilarityFunction):
         The dimension of the second tensor, ``y``, described above.  This is ``y.size()[-1]`` - the
         length of the vector that will go into the similarity computation.  We need this so we can
         build the weight matrix correctly.
-    activation : ``Callable[[torch.Tensor], torch.Tensor]``, optional (default=``lambda x: x``)
+    activation : ``Activation``, optional (default=linear (i.e. no activation))
         An activation function applied after the ``x^T W y + b`` calculation.  Default is no
         activation.
     """
     def __init__(self,
                  tensor_1_dim: int,
                  tensor_2_dim: int,
-                 activation: Callable[[torch.Tensor], torch.Tensor] = lambda x: x) -> None:
+                 activation: Activation = Activation.by_name('linear')()) -> None:
         super(BilinearSimilarity, self).__init__()
         self._weight_matrix = Parameter(torch.Tensor(tensor_1_dim, tensor_2_dim))
         self._bias = Parameter(torch.Tensor(1))
@@ -65,8 +64,7 @@ class BilinearSimilarity(SimilarityFunction):
     def from_params(cls, params: Params) -> 'BilinearSimilarity':
         tensor_1_dim = params.pop("tensor_1_dim")
         tensor_2_dim = params.pop("tensor_2_dim")
-        # TODO(mattg): figure out activation from_params.
-        activation = lambda x: x
+        activation = Activation.by_name(params.pop("activation", "linear"))()
         params.assert_empty(cls.__name__)
         return cls(tensor_1_dim=tensor_1_dim,
                    tensor_2_dim=tensor_2_dim,

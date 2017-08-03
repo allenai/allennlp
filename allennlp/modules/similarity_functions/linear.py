@@ -1,5 +1,3 @@
-from typing import Callable
-
 from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
@@ -7,6 +5,7 @@ from torch.nn.parameter import Parameter
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.nn import Activation
 
 
 @SimilarityFunction.register("linear")
@@ -39,7 +38,7 @@ class LinearSimilarity(SimilarityFunction):
         build weight vectors correctly.
     combination : ``str``, optional (default=``"x,y"``)
         Described above.
-    activation : ``Callable[[torch.Tensor], torch.Tensor]``, optional (default=``lambda x: x``)
+    activation : ``Activation``, optional (default=linear (i.e. no activation))
         An activation function applied after the ``w^T * [x;y] + b`` calculation.  Default is no
         activation.
     """
@@ -47,7 +46,7 @@ class LinearSimilarity(SimilarityFunction):
                  tensor_1_dim: int,
                  tensor_2_dim: int,
                  combination: str = 'x,y',
-                 activation: Callable[[torch.Tensor], torch.Tensor] = lambda x: x) -> None:
+                 activation: Activation = Activation.by_name('linear')()) -> None:
         super(LinearSimilarity, self).__init__()
         self._combinations = combination.split(',')
         combined_dim = self._get_combined_dim(tensor_1_dim, tensor_2_dim)
@@ -133,8 +132,7 @@ class LinearSimilarity(SimilarityFunction):
         tensor_1_dim = params.pop("tensor_1_dim")
         tensor_2_dim = params.pop("tensor_2_dim")
         combination = params.pop("combination", "x,y")
-        # TODO(mattg): figure out activation from_params.
-        activation = lambda x: x
+        activation = Activation.by_name(params.pop("activation", "linear"))()
         params.assert_empty(cls.__name__)
         return cls(tensor_1_dim=tensor_1_dim,
                    tensor_2_dim=tensor_2_dim,
