@@ -77,21 +77,55 @@ def get_dropout_mask(dropout_probability: float, shape: List[int]):
 
 
 def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
-                        cuda_device: int = -1):
+                        cuda_device: int = -1,
+                        add_batch_dimension: bool = False):
     """
     Convert an (optionally) nested dictionary of arrays to Pytorch ``Variables``,
     suitable for use in a computation graph.
+
+    Parameters
+    ----------
+    data_structure : Dict[str, Union[dict, numpy.ndarray]], required.
+        The nested dictionary of arrays to convert to Pytorch ``Variables``.
+    cuda_device : int, optional (default = -1)
+        If cuda_device <= 0, GPUs are available and Pytorch was compiled with
+        CUDA support, the tensor will be copied to the cuda_device specified.
+    add_batch_dimension : bool, optional (default = False).
+        Optionally add a batch dimension to tensors converted to ``Variables``
+        using this function. This is useful during inference for passing
+        tensors representing a single example to a Pytorch model which
+        would otherwise not have a batch dimension.
+
+    Returns
+    -------
+    The original data structure or tensor converted to a Pytorch ``Variable``.
     """
     if isinstance(data_structure, dict):
         for key, value in data_structure.items():
-            data_structure[key] = arrays_to_variables(value)
+            data_structure[key] = arrays_to_variables(value, cuda_device, add_batch_dimension)
         return data_structure
     else:
-        torch_variable = Variable(torch.from_numpy(data_structure))
+        tensor = torch.from_numpy(data_structure)
+        if add_batch_dimension:
+            tensor.unsqueeze_(0)
+        torch_variable = Variable(tensor)
         if cuda_device == -1:
             return torch_variable
         else:
             return torch_variable.cuda(cuda_device)
+
+
+def _get_normalized_masked_log_probablities(vector, mask):
+    # We calculate normalized log probabilities in a numerically stable fashion, as done
+    # in https://github.com/rkadlec/asreader/blob/master/asreader/custombricks/softmax_mask_bricks.py
+    # TODO(mattg): a bunch of this logic can be simplified once pytorch-0.2 is out.
+    # torch.max(keepdim=True), for instance, simplifies things here.
+    input_masked = mask * vector
+    shifted = mask * (input_masked - torch.max(input_masked, dim=1)[0].expand_as(input_masked))
+    # We add epsilon to avoid numerical instability when the sum in the log yields 0.
+    normalization_constant = ((mask * shifted.exp()).sum(dim=1) + 1e-7).log()
+    normalized_log_probabilities = (shifted - normalization_constant.expand_as(shifted))
+    return normalized_log_probabilities
 
 
 def masked_softmax(vector, mask):
@@ -104,24 +138,32 @@ def masked_softmax(vector, mask):
 
     In the case that the input vector is completely masked, this function returns an array
     of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
-    that uses categorial cross-entropy loss.
+    that uses categorical cross-entropy loss.
     """
-    # We calculate masked softmax in a numerically stable fashion, as done
-    # in https://github.com/rkadlec/asreader/blob/master/asreader/custombricks/softmax_mask_bricks.py
     if mask is not None:
-        # TODO(mattg): a bunch of this logic can be simplified once pytorch-0.2 is out.
-        # torch.max(keepdim=True), for instance, simplifies things here.
-        # Here we get normalized log probabilities for enhanced numerical stability.
-        input_masked = mask * vector
-        shifted = mask * (input_masked - torch.max(input_masked, dim=1)[0].expand_as(input_masked))
-        # We add epsilon to avoid numerical instability when the sum in the log yields 0.
-        normalization_constant = ((mask * shifted.exp()).sum(dim=1) + 1e-7).log()
-        normalized_log_probabilities = (shifted - normalization_constant.expand_as(shifted))
-        probabilities = normalized_log_probabilities.exp()
-        return mask * probabilities
+        return mask * _get_normalized_masked_log_probablities(vector, mask).exp()
     else:
         # There is no mask, so we use the provided ``torch.nn.functional.softmax`` function.
         return torch.nn.functional.softmax(vector)
+
+
+def masked_log_softmax(vector, mask):
+    """
+    ``torch.nn.functional.log_softmax(vector)`` does not work if some elements of ``vector`` should be
+    masked.  This performs a log_softmax on just the non-masked portions of ``vector``.  Passing
+    ``None`` in for the mask is also acceptable; you'll just get a regular log_softmax.
+
+    We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
+
+    In the case that the input vector is completely masked, this function returns an array
+    of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
+    that uses categorical cross-entropy loss.
+    """
+    if mask is not None:
+        return mask * _get_normalized_masked_log_probablities(vector, mask)
+    else:
+        # There is no mask, so we use the provided ``torch.nn.functional.log_softmax`` function.
+        return torch.nn.functional.log_softmax(vector)
 
 
 def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
@@ -199,6 +241,8 @@ def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) 
     tensor_shape = tensor.size()
     reshaped_tensor = tensor.view(-1, tensor.size()[-1])
     if mask:
+        while mask.dim() < tensor.dim():
+            mask = mask.unsqueeze(1)
         mask = mask.expand_as(tensor).contiguous().float()
         mask = mask.view(-1, mask.size()[-1])
     reshaped_result = masked_softmax(reshaped_tensor, mask)
@@ -236,3 +280,60 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
         matrix = matrix.expand(*expanded_size)
     intermediate = attention.unsqueeze(-1).expand_as(matrix) * matrix
     return intermediate.sum(dim=-2).squeeze(-2)
+
+
+def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
+                                       targets: torch.LongTensor,
+                                       weights: torch.FloatTensor,
+                                       batch_average: bool = True) -> torch.FloatTensor:
+    """
+    Computes the cross entropy loss of a sequence, weighted with respect to
+    some user provided weights. Note that the weighting here is not the same as
+    in the :func:`torch.nn.CrossEntropyLoss()` criterion, which is weighting
+    classes; here we are weighting the loss contribution from particular elements
+    in the sequence. This allows loss computations for models which use padding.
+
+    Parameters
+    ----------
+    logits : ``torch.FloatTensor``, required.
+        A ``torch.FloatTensor`` of size (batch_size, sequence_length, num_classes)
+        which contains the unnormalized probability for each class.
+    targets : ``torch.LongTensor``, required.
+        A ``torch.LongTensor`` of size (batch, sequence_length) which contains the
+        index of the true class for each corresponding step.
+    weights : ``torch.FloatTensor``, required.
+        A ``torch.FloatTensor`` of size (batch, sequence_length)
+    batch_average : bool, optional, (default = True).
+        A bool indicating whether the loss should be averaged across the batch,
+        or returned as a vector of losses per batch element.
+
+    Returns
+    -------
+    A torch.FloatTensor representing the cross entropy loss.
+    If ``batch_average == True``, the returned loss is a scalar.
+    If ``batch_average == False``, the returned loss is a vector of shape (batch_size,).
+
+    """
+    # shape : (batch * sequence_length, num_classes)
+    logits_flat = logits.view(-1, logits.size(-1))
+    # shape : (batch * sequence_length, num_classes)
+    log_probs_flat = torch.nn.functional.log_softmax(logits_flat)
+    # shape : (batch * max_len, 1)
+    targets_flat = targets.view(-1, 1).long()
+
+    # Contribution to the negative log likelihood only comes from the exact indices
+    # of the targets, as the target distributions are one-hot. Here we use torch.gather
+    # to extract the indices of the num_classes dimension which contribute to the loss.
+    # shape : (batch * sequence_length, 1)
+    negative_log_likelihood_flat = - torch.gather(log_probs_flat, dim=1, index=targets_flat)
+    # shape : (batch, sequence_length)
+    negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
+    # shape : (batch, sequence_length)
+    negative_log_likelihood = negative_log_likelihood * weights.float()
+    # shape : (batch_size,)
+    per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
+
+    if batch_average:
+        num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
+        return per_batch_loss.sum() / num_non_empty_sequences
+    return per_batch_loss.squeeze(1)
