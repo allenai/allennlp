@@ -5,9 +5,11 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
+from allennlp.common.constants import GLOVE_PATH
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tensor import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
 from allennlp.common.tensor import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.nn.initializers import InitializerApplicator
 from allennlp.data import Vocabulary
 from allennlp.data.fields import IndexField, TextField
 from allennlp.data import Instance
@@ -15,6 +17,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 
 
+@Model.register("srl")
 class SemanticRoleLabeler(Model):
     """
     This model performs semantic role labeling using BIO tags using Propbank semantic roles.
@@ -39,7 +42,8 @@ class SemanticRoleLabeler(Model):
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 stacked_encoder: Seq2SeqEncoder) -> None:
+                 stacked_encoder: Seq2SeqEncoder,
+                 initializer: InitializerApplicator) -> None:
         super(SemanticRoleLabeler, self).__init__()
 
         self.vocab = vocab
@@ -51,6 +55,8 @@ class SemanticRoleLabeler(Model):
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
+        initializer(self.stacked_encoder)
+        initializer(self.tag_projection_layer)
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
@@ -192,8 +198,43 @@ class SemanticRoleLabeler(Model):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SemanticRoleLabeler':
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, params.pop("text_field_embedder"))
-        stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
+        """
+        With an empty ``params`` argument, this will instantiate a SRL model with the same
+        configuration as published in the Deep Semantic Role Labeling - What works and what's
+        next  paper, as long as you've set ``allennlp.common.constants.GLOVE_PATH`` to the
+        location of your gzipped 100-dimensional glove vectors.
+
+        If you want to change parameters, the keys in the ``params`` object must match the
+        constructor arguments above.
+        """
+        default_embedder_params = {
+                'tokens': {
+                        'type': 'embedding',
+                        'pretrained_file': GLOVE_PATH,
+                        'trainable': True
+                        }
+                }
+
+        embedder_params = params.pop("text_field_embedder", default_embedder_params)
+        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
+
+        default_lstm_params = {
+                'type': 'alternating_lstm',
+                'input_size': 100,
+                'hidden_size': 300,
+                'num_layers': 8,
+                'recurrent_dropout_probability': 0.1,
+                'use_highway': True
+                }
+        encoder_params = params.pop("stacked_encoder", default_lstm_params)
+        stacked_encoder = Seq2SeqEncoder.from_params(encoder_params)
+
+        default_initializer_params = {'default': 'orthonormal'}
+
+        initializer_params = params.pop('initializer', default_initializer_params)
+        initializer = InitializerApplicator.from_params(initializer_params)
+
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
-                   stacked_encoder=stacked_encoder)
+                   stacked_encoder=stacked_encoder,
+                   initializer=initializer)
