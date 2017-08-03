@@ -1,34 +1,18 @@
 from collections import defaultdict
-from typing import Any, Callable, Dict, Union, Sequence, IO, Iterator, Iterable
+from typing import Any, Callable, Dict, Union, Sequence
 
 import codecs
-import itertools
 import logging
-import tqdm
 import gzip
+import os
 
 from allennlp.common.util import namespace_match
+
+import tqdm
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
-
-def yield_until_blank(filelike: IO) -> Iterator[str]:
-    """
-    Helper function that yields stripped lines from a file until it reaches
-    a blank line, at which point it stops.
-    """
-    stripped_lines = (line.strip() for line in filelike)
-    yield from itertools.takewhile(lambda x: x, stripped_lines)
-
-def write_with_blank(filelike: IO, lines: Iterable[str]):
-    """
-    Helper function that writes out lines (with newlines) and adds a blank
-    line at the end.
-    """
-    for line in lines:
-        print(line, file=filelike)
-    print("", file=filelike)
 
 
 class _NamespaceDependentDefaultDict(defaultdict):
@@ -169,65 +153,53 @@ class Vocabulary:
                     if count >= min_count:
                         self.add_token_to_namespace(token, namespace)
 
-    def save_to_file(self, filename: str) -> None:
+    def save_to_files(self, directory: str) -> None:
         """
-        Persist this Vocabulary to a file so it can be reloaded later. Format is
-
-            non_padded_namespaces[0]
-            ...
-            non_padded_namespaces[n]
-            [blank line]
-            namespace_0
-            token_0_0
-            ...
-            token_0_m
-            [blank line]
-            namespace_1
-            token_1_0
-            ...
-            token_1_k
-            [blank line]
-            ...and so on
+        Persist this Vocabulary to files so it can be reloaded later.
+        Each namespace corresponds to one file. The specified directory
+        must be empty.
 
         Parameters
         ----------
-        filename : ``str``
-            The file where we save the serialized vocabulary.
+        directory : ``str``
+            The directory where we save the serialized vocabulary.
         """
-        with gzip.open(filename, 'wt', encoding='utf-8') as output_file:
-            # First print non-padded namespaces
-            write_with_blank(output_file, self._index_to_token._non_padded_namespaces)  # pylint: disable=protected-access
 
-            # Now print out each namespace and its ordered tokens
-            for namespace, mapping in self._index_to_token.items():
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        for namespace, mapping in self._index_to_token.items():
+            with gzip.open(os.path.join(directory, namespace), 'wt', encoding='utf-8') as token_file:
                 num_tokens = len(mapping)
-                tokens = (mapping[i] for i in range(num_tokens))
-                write_with_blank(output_file, itertools.chain([namespace], tokens))
-
+                for i in range(num_tokens):
+                    print(mapping[i], file=token_file)
 
     @classmethod
-    def from_file(cls, filename: str) -> 'Vocabulary':
+    def from_files(cls,
+                   directory: str,
+                   non_padded_namespaces: Sequence[str],
+                   namespaces_to_load: Sequence[str] = None) -> 'Vocabulary':
         """
-        Load a ``Vocabulary`` that was serialized using ``to_file``.
+        Load a ``Vocabulary`` that was serialized using ``save_to_files``.
 
         Parameters
         ----------
-        filename : ``str``
-            The file containing the serialized vocabulary.
+        directory : ``str``
+            The directory containing the serialized vocabulary.
+        non_padded_namespaces: ``str``
+            Namespaces that should not be padded.
+        namespaces_to_load: ``str``
+            A list of namespaces to load. If not provided, every file in the
+            specified directory will be loaded as a namespace.
         """
-        vocab = Vocabulary()
-        with gzip.open(filename, 'rt', encoding='utf-8') as input_file:
-            # get list of non-padded namespaces
-            non_padded_namespaces = [namespace for namespace in yield_until_blank(input_file)]
-            vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
+        vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
 
-            batch = yield_until_blank(input_file)
-            namespace = next(batch, None)  # will be None when batch is empty
-            while namespace is not None:
-                for line in batch:
-                    vocab.add_token_to_namespace(line, namespace=namespace)
-                batch = yield_until_blank(input_file)
-                namespace = next(batch, None)  # will be None when batch is empty
+        for namespace in os.listdir(directory):
+            if namespaces_to_load is None or namespace in namespaces_to_load:
+                path = os.path.join(directory, namespace)
+                with gzip.open(path, 'rt', encoding='utf-8') as input_file:
+                    for token in input_file:
+                        vocab.add_token_to_namespace(token.strip(), namespace=namespace)
 
         return vocab
 

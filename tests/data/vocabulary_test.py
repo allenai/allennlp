@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import codecs
+import os
 
 from allennlp.data.dataset import Dataset
 from allennlp.data.fields.text_field import TextField
@@ -122,7 +123,8 @@ class TestVocabulary(AllenNlpTestCase):
 
     def test_saving_and_loading(self):
         # pylint: disable=protected-access
-        vocab_filename = self.TEST_DIR + 'vocab_file'
+        vocab_dir = os.path.join(self.TEST_DIR, 'vocab_save')
+
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
         vocab.add_token_to_namespace("a0", namespace="a")  # non-padded, should start at 0
         vocab.add_token_to_namespace("a1", namespace="a")
@@ -130,9 +132,10 @@ class TestVocabulary(AllenNlpTestCase):
         vocab.add_token_to_namespace("b2", namespace="b")  # padded, should start at 2
         vocab.add_token_to_namespace("b3", namespace="b")
 
-        vocab.save_to_file(vocab_filename)              # save to file
+        vocab.save_to_files(vocab_dir)             # save to file
 
-        vocab2 = Vocabulary.from_file(vocab_filename)   # load from file
+        vocab2 = Vocabulary.from_files(vocab_dir,
+                                       non_padded_namespaces=['a', 'c'])
 
         assert vocab2._index_to_token._non_padded_namespaces == ["a", "c"]
 
