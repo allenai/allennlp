@@ -42,8 +42,8 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         tensor[4, 1:, :] = 0
 
         input_tensor = Variable(tensor)
-        sequence_lengths = torch.LongTensor([7, 6, 4, 2, 1])
-        packed_sequence = pack_padded_sequence(input_tensor, list(sequence_lengths), batch_first=True)
+        sequence_lengths = Variable(torch.LongTensor([7, 6, 4, 2, 1]))
+        packed_sequence = pack_padded_sequence(input_tensor, list(sequence_lengths.data), batch_first=True)
         _, state = lstm(packed_sequence)
         # Transpose output state, extract the last forward and backward states and
         # reshape to be of dimension (batch_size, 2 * hidden_size).
@@ -62,15 +62,17 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         tensor[1, 4:, :] = 0
         tensor[2, 2:, :] = 0
         tensor[3, 6:, :] = 0
-        input_tensor = torch.autograd.Variable(tensor)
-        sequence_lengths = torch.LongTensor([3, 4, 2, 6, 7])
+        input_tensor = Variable(tensor)
+        sequence_lengths = Variable(torch.LongTensor([3, 4, 2, 6, 7]))
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(input_tensor,
                                                                                            sequence_lengths)
-        packed_sequence = pack_padded_sequence(sorted_inputs, list(sorted_sequence_lengths), batch_first=True)
+        packed_sequence = pack_padded_sequence(sorted_inputs,
+                                               sorted_sequence_lengths.data.tolist(),
+                                               batch_first=True)
         _, state = lstm(packed_sequence)
         # Transpose output state, extract the last forward and backward states and
         # reshape to be of dimension (batch_size, 2 * hidden_size).
-        sorted_transposed_state = state[0].transpose(0, 1)[restoration_indices]
+        sorted_transposed_state = state[0].transpose(0, 1).index_select(0, restoration_indices)
         reshaped_state = sorted_transposed_state[:, -2:, :].contiguous()
         explicitly_concatenated_state = torch.cat([reshaped_state[:, 0, :].squeeze(1),
                                                    reshaped_state[:, 1, :].squeeze(1)], -1)

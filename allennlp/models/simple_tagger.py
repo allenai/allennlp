@@ -10,7 +10,7 @@ from allennlp.data.fields.text_field import TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, sequence_cross_entropy_with_logits
-from allennlp.nn.util import get_text_field_mask
+from allennlp.nn.util import get_text_field_mask, get_lengths_from_binary_sequence_mask
 
 
 @Model.register("simple_tagger")
@@ -79,8 +79,8 @@ class SimpleTagger(Model):
         embedded_text_input = self.text_field_embedder(tokens)
         batch_size, sequence_length, _ = embedded_text_input.size()
         mask = get_text_field_mask(tokens)
-        # TODO(Mark): Use mask in encoder once all registered encoders have the same API.
-        encoded_text = self.stacked_encoder(embedded_text_input)
+        batch_sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
+        encoded_text = self.stacked_encoder(embedded_text_input, batch_sequence_lengths)
 
         logits = self.tag_projection_layer(encoded_text)
         reshaped_log_probs = logits.view(-1, self.num_classes)
