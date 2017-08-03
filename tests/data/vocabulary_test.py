@@ -6,8 +6,7 @@ from allennlp.data.dataset import Dataset
 from allennlp.data.fields.text_field import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.vocabulary import _NamespaceDependentDefaultDict
+from allennlp.data.vocabulary import Vocabulary, _NamespaceDependentDefaultDict, DEFAULT_OOV_TOKEN
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
@@ -93,7 +92,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert oov_index == 1
         assert vocab.get_token_index("unseen word") == oov_index
 
-    def test_set_from_file(self):
+    def test_set_from_file_reads_padded_files(self):
         # pylint: disable=protected-access
         vocab_filename = self.TEST_DIR + 'vocab_file'
         with codecs.open(vocab_filename, 'w', 'utf-8') as vocab_file:
@@ -104,22 +103,44 @@ class TestVocabulary(AllenNlpTestCase):
             vocab_file.write('word\n')
             vocab_file.write('another\n')
         vocab = Vocabulary()
-        vocab.set_from_file(vocab_filename, oov_token="<UNK>")
-        assert vocab._oov_token == "<UNK>"
+        vocab.set_from_file(vocab_filename, is_padded=True, oov_token="<UNK>")
+        assert vocab._oov_token == DEFAULT_OOV_TOKEN
         assert vocab.get_token_index("random string") == 3
         assert vocab.get_token_index("<S>") == 1
         assert vocab.get_token_index("</S>") == 2
-        assert vocab.get_token_index("<UNK>") == 3
+        assert vocab.get_token_index(DEFAULT_OOV_TOKEN) == 3
         assert vocab.get_token_index("a") == 4
         assert vocab.get_token_index("word") == 5
         assert vocab.get_token_index("another") == 6
         assert vocab.get_token_from_index(0) == vocab._padding_token
         assert vocab.get_token_from_index(1) == "<S>"
         assert vocab.get_token_from_index(2) == "</S>"
-        assert vocab.get_token_from_index(3) == "<UNK>"
+        assert vocab.get_token_from_index(3) == DEFAULT_OOV_TOKEN
         assert vocab.get_token_from_index(4) == "a"
         assert vocab.get_token_from_index(5) == "word"
         assert vocab.get_token_from_index(6) == "another"
+
+    def test_set_from_file_reads_non_padded_files(self):
+        # pylint: disable=protected-access
+        vocab_filename = self.TEST_DIR + 'vocab_file'
+        with codecs.open(vocab_filename, 'w', 'utf-8') as vocab_file:
+            vocab_file.write('B-PERS\n')
+            vocab_file.write('I-PERS\n')
+            vocab_file.write('O\n')
+            vocab_file.write('B-ORG\n')
+            vocab_file.write('I-ORG\n')
+        vocab = Vocabulary()
+        vocab.set_from_file(vocab_filename, is_padded=False, namespace='tags')
+        assert vocab.get_token_index("B-PERS", namespace='tags') == 0
+        assert vocab.get_token_index("I-PERS", namespace='tags') == 1
+        assert vocab.get_token_index("O", namespace='tags') == 2
+        assert vocab.get_token_index("B-ORG", namespace='tags') == 3
+        assert vocab.get_token_index("I-ORG", namespace='tags') == 4
+        assert vocab.get_token_from_index(0, namespace='tags') == "B-PERS"
+        assert vocab.get_token_from_index(1, namespace='tags') == "I-PERS"
+        assert vocab.get_token_from_index(2, namespace='tags') == "O"
+        assert vocab.get_token_from_index(3, namespace='tags') == "B-ORG"
+        assert vocab.get_token_from_index(4, namespace='tags') == "I-ORG"
 
     def test_saving_and_loading(self):
         # pylint: disable=protected-access
@@ -134,10 +155,9 @@ class TestVocabulary(AllenNlpTestCase):
 
         vocab.save_to_files(vocab_dir)             # save to file
 
-        vocab2 = Vocabulary.from_files(vocab_dir,
-                                       non_padded_namespaces=['a', 'c'])
+        vocab2 = Vocabulary.from_files(vocab_dir)
 
-        assert vocab2._index_to_token._non_padded_namespaces == ["a", "c"]
+        assert vocab2._non_padded_namespaces == ["a", "c"]
 
         # check namespace a
         assert vocab2.get_vocab_size(namespace='a') == 3
