@@ -4,13 +4,13 @@ import torch
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, constants
-from allennlp.data import Vocabulary
+from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
-from allennlp.nn.util import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
 from allennlp.nn.util import arrays_to_variables, masked_log_softmax
+from allennlp.nn.util import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
 
 
 @Model.register("bidaf")
@@ -225,17 +225,11 @@ class BidirectionalAttentionFlow(Model):
         span_end_probs : numpy.ndarray
         best_span : (int, int)
         """
-        question.index(self._vocab)
-        passage.index(self._vocab)
-        # TODO(mattg): we should make the lengths an optional parameter to Instance.as_array()
-        question_lengths = question.get_padding_lengths()
-        passage_lengths = passage.get_padding_lengths()
-        question_input = arrays_to_variables(question.as_array(question_lengths),
-                                             add_batch_dimension=True)
-        passage_input = arrays_to_variables(passage.as_array(passage_lengths),
-                                            add_batch_dimension=True)
+        instance = Instance({'question': question, 'passage': passage})
+        instance.index_fields(self._vocab)
+        model_input = arrays_to_variables(instance.as_arrays(), add_batch_dimension=True)
+        output_dict = self.forward(**model_input)
 
-        output_dict = self.forward(question=question_input, passage=passage_input)
         # Remove batch dimension, as we only had one input.
         span_start_probs = output_dict["span_start_probs"].data.squeeze(0)
         span_end_probs = output_dict["span_end_probs"].data.squeeze(0)

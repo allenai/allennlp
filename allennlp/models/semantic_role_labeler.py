@@ -6,9 +6,8 @@ import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import IndexField, TextField
-from allennlp.data import Instance
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, viterbi_decode
@@ -150,9 +149,8 @@ class SemanticRoleLabeler(Model):
         """
         instance = Instance({"tokens": text_field, "verb_indicator": verb_indicator})
         instance.index_fields(self.vocab)
-        model_input = instance.as_array(instance.get_padding_lengths())
-        torch_input = arrays_to_variables(model_input, add_batch_dimension=True)
-        output_dict = self.forward(**torch_input)
+        model_input = arrays_to_variables(instance.as_arrays(), add_batch_dimension=True)
+        output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.
         predictions = output_dict["class_probabilities"].data.squeeze(0)

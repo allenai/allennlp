@@ -1,4 +1,4 @@
-from typing import Callable, Sequence, Union
+from typing import Sequence, Union
 
 import torch
 
@@ -31,7 +31,7 @@ class FeedForward(torch.nn.Module):
                  input_dim: int,
                  num_layers: int,
                  hidden_dims: Union[int, Sequence[int]],
-                 activations: Union[Callable, Sequence[Callable]]) -> None:
+                 activations: Union[Activation, Sequence[Activation]]) -> None:
         super(FeedForward, self).__init__()
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims] * num_layers  # type: ignore

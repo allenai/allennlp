@@ -140,11 +140,11 @@ class Dataset:
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
             for instance in tqdm.tqdm(self.instances):
-                for field, arrays in instance.as_array(lengths_to_use).items():
+                for field, arrays in instance.as_arrays(lengths_to_use).items():
                     field_arrays[field].append(arrays)
         else:
             for instance in self.instances:
-                for field, arrays in instance.as_array(lengths_to_use).items():
+                for field, arrays in instance.as_arrays(lengths_to_use).items():
                     field_arrays[field].append(arrays)
 
         # Finally, we combine the arrays that we got for each instance into one big array (or set
