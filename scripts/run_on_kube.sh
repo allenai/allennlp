@@ -50,7 +50,7 @@ cat >spec.yaml <<EOF
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: allennlp-dev-env-$ID
+  name: allennlp-job-$ID
   namespace: allennlp
   labels:
     contact: $CONTACT
