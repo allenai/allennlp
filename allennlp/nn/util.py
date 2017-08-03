@@ -351,12 +351,15 @@ def replace_masked_values(tensor: Variable, mask: Variable, replace_with: float)
     """
     Replaces all masked values in ``tensor`` with ``replace_with``.  ``mask`` must be broadcastable
     to the same shape as ``tensor``.
+
+    Until pytorch 0.2 is released, we require that ``tensor.dim() == mask.dim()``.  Otherwise we
+    won't know which dimensions of the mask to unsqueeze.
     """
     # We'll build a tensor of the same shape as `tensor`, subtract away masked values, then add
     # back in the `replace_with` value.
     # TODO(mattg): use broadcasting here when it's available in pytorch 0.2.
-    while mask.dim() < tensor.dim():
-        mask = mask.unsqueeze(-1)
+    if tensor.dim() != mask.dim():
+        raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
     one_minus_mask = 1.0 - mask.expand_as(tensor)
     values_to_subtract = tensor * one_minus_mask
     values_to_add = replace_with * one_minus_mask

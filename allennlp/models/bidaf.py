@@ -9,8 +9,7 @@ from allennlp.data.fields import TextField
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
-from allennlp.nn.util import arrays_to_variables, masked_log_softmax, get_lengths_from_binary_sequence_mask
-from allennlp.nn.util import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
+from allennlp.nn import util
 
 
 @Model.register("bidaf")
@@ -126,11 +125,11 @@ class BidirectionalAttentionFlow(Model):
         embedded_passage = self._highway_layer(self._text_field_embedder(passage))
         batch_size = embedded_question.size(0)
         passage_length = embedded_passage.size(1)
-        question_mask = get_text_field_mask(question).float()
-        passage_mask = get_text_field_mask(passage).float()
+        question_mask = util.get_text_field_mask(question).float()
+        passage_mask = util.get_text_field_mask(passage).float()
 
-        question_sequence_lengths = get_lengths_from_binary_sequence_mask(question_mask)
-        passage_sentence_lengths = get_lengths_from_binary_sequence_mask(passage_mask)
+        question_sequence_lengths = util.get_lengths_from_binary_sequence_mask(question_mask)
+        passage_sentence_lengths = util.get_lengths_from_binary_sequence_mask(passage_mask)
         encoded_question = self._phrase_layer(embedded_question, question_sequence_lengths)
         encoded_passage = self._phrase_layer(embedded_passage, passage_sentence_lengths)
         encoding_dim = encoded_question.size(-1)
@@ -138,17 +137,22 @@ class BidirectionalAttentionFlow(Model):
         # Shape: (batch_size, passage_length, question_length)
         passage_question_similarity = self._matrix_attention(encoded_passage, encoded_question)
         # Shape: (batch_size, passage_length, question_length)
-        passage_question_attention = last_dim_softmax(passage_question_similarity, question_mask)
+        passage_question_attention = util.last_dim_softmax(passage_question_similarity, question_mask)
         # Shape: (batch_size, passage_length, encoding_dim)
-        passage_question_vectors = weighted_sum(encoded_question, passage_question_attention)
+        passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
 
-        # TODO(mattg): this needs to mask things before doing this max.
+        print("passage question similarity:", passage_question_similarity)
+        # We replace masked values with -inf here, so they don't affect the max below.
+        masked_similarity = util.replace_masked_values(passage_question_similarity,
+                                                       question_mask.unsqueeze(1),
+                                                       float('-inf'))
         # Shape: (batch_size, passage_length)
-        question_passage_similarity = passage_question_similarity.max(dim=-1)[0].squeeze(-1)
+        question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
+        print("quesiton passage similarity:", question_passage_similarity)
         # Shape: (batch_size, passage_length)
-        question_passage_attention = masked_softmax(question_passage_similarity, passage_mask)
+        question_passage_attention = util.masked_softmax(question_passage_similarity, passage_mask)
         # Shape: (batch_size, encoding_dim)
-        question_passage_vector = weighted_sum(encoded_passage, question_passage_attention)
+        question_passage_vector = util.weighted_sum(encoded_passage, question_passage_attention)
         # Shape: (batch_size, passage_length, encoding_dim)
         tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size,
                                                                                     passage_length,
@@ -169,10 +173,10 @@ class BidirectionalAttentionFlow(Model):
         # Shape: (batch_size, passage_length)
         span_start_logits = self._span_start_predictor(span_start_input).squeeze(-1)
         # Shape: (batch_size, passage_length)
-        span_start_probs = masked_softmax(span_start_logits, passage_mask)
+        span_start_probs = util.masked_softmax(span_start_logits, passage_mask)
 
         # Shape: (batch_size, modeling_dim)
-        span_start_representation = weighted_sum(modeled_passage, span_start_probs)
+        span_start_representation = util.weighted_sum(modeled_passage, span_start_probs)
         # Shape: (batch_size, passage_length, modeling_dim)
         tiled_start_representation = span_start_representation.unsqueeze(1).expand(batch_size,
                                                                                    passage_length,
@@ -189,7 +193,7 @@ class BidirectionalAttentionFlow(Model):
         # Shape: (batch_size, passage_length, encoding_dim * 4 + span_end_encoding_dim)
         span_end_input = torch.cat([final_merged_passage, encoded_span_end], dim=-1)
         span_end_logits = self._span_end_predictor(span_end_input).squeeze(-1)
-        span_end_probs = masked_softmax(span_end_logits, passage_mask)
+        span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
 
         output_dict = {"span_start_logits": span_start_logits,
                        "span_start_probs": span_start_probs,
@@ -199,10 +203,10 @@ class BidirectionalAttentionFlow(Model):
             # Negative log likelihood criterion takes integer labels, not one hot.
             if span_start.dim() == 2:
                 _, span_start = span_start.max(-1)
-            loss = nll_loss(masked_log_softmax(span_start_logits, passage_mask), span_start.view(-1))
+            loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.view(-1))
             if span_end.dim() == 2:
                 _, span_end = span_end.max(-1)
-            loss += nll_loss(masked_log_softmax(span_end_logits, passage_mask), span_end.view(-1))
+            loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.view(-1))
             output_dict["loss"] = loss
 
         return output_dict
@@ -229,7 +233,7 @@ class BidirectionalAttentionFlow(Model):
         """
         instance = Instance({'question': question, 'passage': passage})
         instance.index_fields(self._vocab)
-        model_input = arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
+        model_input = util.arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
         output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.
