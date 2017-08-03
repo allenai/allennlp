@@ -153,13 +153,12 @@ class TestVocabulary(AllenNlpTestCase):
         vocab.add_token_to_namespace("b2", namespace="b")  # padded, should start at 2
         vocab.add_token_to_namespace("b3", namespace="b")
 
-        vocab.save_to_files(vocab_dir)             # save to file
-
+        vocab.save_to_files(vocab_dir)
         vocab2 = Vocabulary.from_files(vocab_dir)
 
         assert vocab2._non_padded_namespaces == ["a", "c"]
 
-        # check namespace a
+        # Check namespace a.
         assert vocab2.get_vocab_size(namespace='a') == 3
         assert vocab2.get_token_from_index(0, namespace='a') == 'a0'
         assert vocab2.get_token_from_index(1, namespace='a') == 'a1'
@@ -168,7 +167,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab2.get_token_index('a1', namespace='a') == 1
         assert vocab2.get_token_index('a2', namespace='a') == 2
 
-        # check namespace b
+        # Check namespace b.
         assert vocab2.get_vocab_size(namespace='b') == 4  # (unk + padding + two tokens)
         assert vocab2.get_token_from_index(0, namespace='b') == vocab._padding_token
         assert vocab2.get_token_from_index(1, namespace='b') == vocab._oov_token

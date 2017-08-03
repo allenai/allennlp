@@ -1,20 +1,19 @@
 from collections import defaultdict
 from typing import Any, Callable, Dict, Union, Sequence
-
 import codecs
 import logging
 import os
 
-from allennlp.common.util import namespace_match
-
 import tqdm
+
+from allennlp.common.util import namespace_match
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
 DEFAULT_PADDING_TOKEN = "@@PADDING@@"
 DEFAULT_OOV_TOKEN = "@@UNKNOWN@@"
-NAMESPACE_PADDING_FILE = 'non_padded_namespaces'
+NAMESPACE_PADDING_FILE = 'non_padded_namespaces.txt'
 
 
 class _NamespaceDependentDefaultDict(defaultdict):
@@ -129,7 +128,6 @@ class Vocabulary:
         long as your namespace ends in "tags" or "labels" (which is true by default for all tag and
         label fields in this code), you don't have to specify anything here.
     """
-
     def __init__(self,
                  counter: Dict[str, Dict[str, int]] = None,
                  min_count: int = 1,
@@ -167,10 +165,7 @@ class Vocabulary:
         directory : ``str``
             The directory where we save the serialized vocabulary.
         """
-
         os.makedirs(directory, exist_ok=True)
-
-        # warn if isn't empty
         if os.listdir(directory):
             logging.warning("vocabulary serialization directory % is not empty", directory)
 
@@ -179,8 +174,8 @@ class Vocabulary:
                 print(namespace_str, file=namespace_file)
 
         for namespace, mapping in self._index_to_token.items():
-            # each namespace gets written to its own file, in index order
-            with codecs.open(os.path.join(directory, namespace), 'w', 'utf-8') as token_file:
+            # Each namespace gets written to its own file, in index order.
+            with codecs.open(os.path.join(directory, namespace + '.txt'), 'w', 'utf-8') as token_file:
                 num_tokens = len(mapping)
                 start_index = 1 if mapping[0] == self._padding_token else 0
                 for i in range(start_index, num_tokens):
@@ -201,16 +196,16 @@ class Vocabulary:
 
         vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
 
-        # check every file in the directory
-        for namespace in os.listdir(directory):
-            if namespace == NAMESPACE_PADDING_FILE:
+        # Check every file in the directory.
+        for namespace_filename in os.listdir(directory):
+            if namespace_filename == NAMESPACE_PADDING_FILE:
                 continue
+            namespace = namespace_filename.replace('.txt', '')
             if any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces):
                 is_padded = False
             else:
                 is_padded = True
-
-            filename = os.path.join(directory, namespace)
+            filename = os.path.join(directory, namespace_filename)
             vocab.set_from_file(filename, is_padded, namespace=namespace)
 
         return vocab
