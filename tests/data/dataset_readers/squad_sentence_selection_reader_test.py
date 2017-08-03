@@ -6,7 +6,7 @@ from overrides import overrides
 
 from allennlp.data.dataset_readers import SquadSentenceSelectionReader
 from allennlp.data.fields import IndexField, ListField
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import WordTokenizer
 
 

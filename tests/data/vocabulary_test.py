@@ -7,7 +7,7 @@ from allennlp.data.fields.text_field import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.vocabulary import Vocabulary, _NamespaceDependentDefaultDict, DEFAULT_OOV_TOKEN
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestVocabulary(AllenNlpTestCase):
