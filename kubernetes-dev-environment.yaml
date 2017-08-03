@@ -2,10 +2,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name:
-  namespace:
+  name: allennlp-dev-env # TODO: make this unique by appending your username
+  namespace: allennlp
   labels:
-    contact:
+    contact: # TODO: enter your username
 spec:
   template:
     metadata:
@@ -14,8 +14,8 @@ spec:
     spec:
       restartPolicy: Never
       containers:
-        - name: dev-environment
-          image: 896129387501.dkr.ecr.us-west-2.amazonaws.com/allennlp:dev-environment
+        - name: allennlp-dev-env
+          image: 896129387501.dkr.ecr.us-west-2.amazonaws.com/allennlp/allennlp-gpu:latest
           stdin: true
           tty: true
           resources:
