@@ -1,7 +1,7 @@
 {
-  "dataset_reader":,
-  "train_data_path":,
-  "validation_data_path":,
+  "dataset_reader":"srl",
+  "train_data_path": "/path/to/dataset/replace me !",
+  "validation_data_path": "/path/to/dataset/replace me !",
   "model": "srl",
   "iterator": {
     "type": "bucket",
@@ -16,6 +16,6 @@
   "num_epochs": 500,
   "grad_norm": 1.0,
   "patience" : 500,
-  "serialization_prefix" :,
+  "serialization_prefix" : "/path/to/save/directory/replace me!",
   "cuda_device" : 0
 }
