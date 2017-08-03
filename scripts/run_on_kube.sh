@@ -6,7 +6,7 @@ PARAM_FILE=$1
 CONTACT=$2
 CONTAINER_TAG=$(git rev-parse HEAD)
 IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$CONTAINER_TAG
-ID=$(openssl rand -base64 6)
+ID=$(openssl rand -base64 6 | tr '[:upper:]' '[:lower:]')
 
 USAGE="USAGE: ./run_on_kube.sh [PARAM_FILE] [CONTACT]"
 if [ ! -n "$PARAM_FILE" ] ; then
