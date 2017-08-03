@@ -5,13 +5,9 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestSrlReader(AllenNlpTestCase):
-    def setUp(self):
-        super(TestSrlReader, self).setUp()
-        self.write_conll_2012_data()
-
     def test_read_from_file(self):
         conll_reader = SrlReader()
-        dataset = conll_reader.read(self.CONLL_TRAIN_DIR)
+        dataset = conll_reader.read('tests/fixtures/conll_2012/')
         instances = dataset.instances
         fields = instances[0].fields()
         assert fields["tokens"].tokens() == ["Mali", "government", "officials", "say",

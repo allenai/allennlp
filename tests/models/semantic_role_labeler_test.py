@@ -10,12 +10,10 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class SemanticRoleLabelerTest(AllenNlpTestCase):
-
     def setUp(self):
         super(SemanticRoleLabelerTest, self).setUp()
-        self.write_conll_2012_data()
 
-        dataset = SrlReader().read(self.CONLL_TRAIN_DIR)
+        dataset = SrlReader().read('tests/fixtures/conll_2012/')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)
