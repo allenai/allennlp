@@ -5,7 +5,7 @@ from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, constants
 from allennlp.common.tensor import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
-from allennlp.common.tensor import arrays_to_variables, masked_log_softmax
+from allennlp.common.tensor import arrays_to_variables, masked_log_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.data import Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
@@ -129,8 +129,10 @@ class BidirectionalAttentionFlow(Model):
         question_mask = get_text_field_mask(question).float()
         passage_mask = get_text_field_mask(passage).float()
 
-        encoded_question = self._phrase_layer(embedded_question)
-        encoded_passage = self._phrase_layer(embedded_passage)
+        question_sequence_lengths = get_lengths_from_binary_sequence_mask(question_mask)
+        passage_sentence_lengths = get_lengths_from_binary_sequence_mask(passage_mask)
+        encoded_question = self._phrase_layer(embedded_question, question_sequence_lengths)
+        encoded_passage = self._phrase_layer(embedded_passage, passage_sentence_lengths)
         encoding_dim = encoded_question.size(-1)
 
         # Shape: (batch_size, passage_length, question_length)

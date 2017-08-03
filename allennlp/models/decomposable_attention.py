@@ -5,7 +5,7 @@ import torch
 from allennlp.common import Params, constants
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tensor import get_text_field_mask, last_dim_softmax, weighted_sum
-from allennlp.common.tensor import arrays_to_variables
+from allennlp.common.tensor import arrays_to_variables, get_lengths_from_binary_sequence_mask
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
@@ -116,11 +116,13 @@ class DecomposableAttention(Model):
         embedded_hypothesis = self._text_field_embedder(hypothesis)
         premise_mask = get_text_field_mask(premise).float()
         hypothesis_mask = get_text_field_mask(hypothesis).float()
+        premise_sequence_lengths = get_lengths_from_binary_sequence_mask(premise_mask)
+        hypothesis_sequence_lengths = get_lengths_from_binary_sequence_mask(hypothesis_mask)
 
         if self._premise_encoder:
-            embedded_premise = self._premise_encoder(embedded_premise)
+            embedded_premise = self._premise_encoder(embedded_premise, premise_sequence_lengths)
         if self._hypothesis_encoder:
-            embedded_hypothesis = self._hypothesis_encoder(embedded_hypothesis)
+            embedded_hypothesis = self._hypothesis_encoder(embedded_hypothesis, hypothesis_sequence_lengths)
 
         projected_premise = self._attend_feedforward(embedded_premise)
         projected_hypothesis = self._attend_feedforward(embedded_hypothesis)
