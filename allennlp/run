@@ -9,4 +9,3 @@ from allennlp.commands.main import main
 if __name__ == "__main__":
     # sys.argv[0] is the name of the script, throw it away
     main(sys.argv[1:])
-

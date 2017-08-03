@@ -14,6 +14,7 @@ from allennlp.nn.util import arrays_to_variables, viterbi_decode
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 
 
+@Model.register("srl")
 class SemanticRoleLabeler(Model):
     """
     This model performs semantic role labeling using BIO tags using Propbank semantic roles.

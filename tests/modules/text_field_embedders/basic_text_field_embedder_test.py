@@ -33,7 +33,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                         "embedding_dim": 3
                         }
                 })
-        self.token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        self.text_field_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         self.inputs = {
                 "words1": Variable(torch.LongTensor([[0, 2, 3, 5]])),
                 "words2": Variable(torch.LongTensor([[1, 4, 3, 2]])),
@@ -41,15 +41,15 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 }
 
     def test_get_output_dim_aggregates_dimension_from_each_embedding(self):
-        assert self.token_embedder.get_output_dim() == 10
+        assert self.text_field_embedder.get_output_dim() == 10
 
     def test_forward_asserts_input_field_match(self):
         self.inputs['words4'] = self.inputs['words3']
         del self.inputs['words3']
         with pytest.raises(ConfigurationError):
-            self.token_embedder(self.inputs)
+            self.text_field_embedder(self.inputs)
         self.inputs['words3'] = self.inputs['words4']
         del self.inputs['words4']
 
     def test_forward_concats_resultant_embeddings(self):
-        assert self.token_embedder(self.inputs).size() == (1, 4, 10)
+        assert self.text_field_embedder(self.inputs).size() == (1, 4, 10)

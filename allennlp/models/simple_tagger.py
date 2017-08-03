@@ -42,10 +42,10 @@ class SimpleTagger(Model):
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
 
-    # pylint: disable=arguments-differ
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
         """
         Parameters
         ----------
@@ -66,6 +66,11 @@ class SimpleTagger(Model):
         Returns
         -------
         An output dictionary consisting of:
+        encoded_text : torch.FloatTensor
+            A tensor of shape ``(batch_size, num_tokens, encoding_dim)`` which contains the token
+            representations used to predict tags.  Useful if you want to do some kind of multi-task
+            or transfer learning with a
+            :class:`~allennlp.modules.text_field_embedders.ModelTextFieldEmbedder`.
         logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
             unnormalised log probabilities of the tag classes.
@@ -86,7 +91,11 @@ class SimpleTagger(Model):
         reshaped_log_probs = logits.view(-1, self.num_classes)
         class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, sequence_length, self.num_classes])
 
-        output_dict = {"logits": logits, "class_probabilities": class_probabilities}
+        output_dict = {
+                "encoded_text": encoded_text,
+                "logits": logits,
+                "class_probabilities": class_probabilities
+                }
 
         if tags:
             # Negative log likelihood criterion takes integer labels, not one hot.
@@ -96,8 +105,6 @@ class SimpleTagger(Model):
             output_dict["loss"] = loss
 
         return output_dict
-
-    # pylint: enable=arguments-differ
 
     def tag(self, text_field: TextField) -> Dict[str, Any]:
         """
