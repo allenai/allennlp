@@ -1,0 +1,21 @@
+{
+  "dataset_reader":,
+  "train_data_path":,
+  "validation_data_path":,
+  "model": "srl",
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["tokens", "num_tokens"]],
+    "batch_size" : 80
+  },
+  "optimizer": {
+    "type": "adadelta",
+    "lr": 0.000001,
+    "rho": 0.95
+  },
+  "num_epochs": 500,
+  "grad_norm": 1.0,
+  "patience" : 500,
+  "serialization_prefix" :,
+  "cuda_device" : 0
+}
