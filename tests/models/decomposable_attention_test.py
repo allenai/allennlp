@@ -3,13 +3,13 @@ import numpy
 from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params, constants
-from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SnliReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models import DecomposableAttention
 from allennlp.nn import InitializerApplicator
+from allennlp.nn.util import arrays_to_variables
 from allennlp.testing.test_case import AllenNlpTestCase
 
 

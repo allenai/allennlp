@@ -6,10 +6,10 @@ from torch.autograd import Variable
 from torch.nn import LSTM
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
-from allennlp.common.tensor import sort_batch_by_length
-from allennlp.testing.test_case import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
+from allennlp.nn.util import sort_batch_by_length
+from allennlp.testing.test_case import AllenNlpTestCase
 
 class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
     def test_get_dimension_is_correct(self):

@@ -4,13 +4,13 @@ import torch
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, constants
-from allennlp.common.tensor import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
-from allennlp.common.tensor import arrays_to_variables, masked_log_softmax
 from allennlp.data import Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.nn.util import get_text_field_mask, masked_softmax, last_dim_softmax, weighted_sum
+from allennlp.nn.util import arrays_to_variables, masked_log_softmax
 
 
 @Model.register("bidaf")

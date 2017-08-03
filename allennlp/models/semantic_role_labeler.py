@@ -6,13 +6,13 @@ import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.tensor import arrays_to_variables, viterbi_decode
-from allennlp.common.tensor import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.data import Vocabulary
 from allennlp.data.fields import IndexField, TextField
 from allennlp.data import Instance
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
+from allennlp.nn.util import arrays_to_variables, viterbi_decode
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 
 
 class SemanticRoleLabeler(Model):

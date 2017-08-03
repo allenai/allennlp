@@ -13,11 +13,11 @@ from numpy.testing import assert_allclose
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
-from allennlp.common.tensor import arrays_to_variables
 from allennlp.data.dataset import Dataset
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
+from allennlp.nn.util import arrays_to_variables
 
 
 class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
