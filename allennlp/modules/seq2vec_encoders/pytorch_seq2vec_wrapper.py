@@ -49,7 +49,6 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             is_bidirectional = self._module.bidirectional
         except AttributeError:
             is_bidirectional = False
-        print("is bidirectional: ", is_bidirectional)
         return self._module.hidden_size * (2 if is_bidirectional else 1)
 
     def forward(self,  # pylint: disable=arguments-differ
