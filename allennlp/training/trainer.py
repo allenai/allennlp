@@ -57,7 +57,7 @@ class Trainer:
             Multi-gpu training is not currently supported, but will be once the
             Pytorch DataParallel API stabilises.
         grad_norm: float, optional, (default = None).
-            If provided, gradients will be rescaled to have a maximum of this value.
+            If provided, gradient norms will be rescaled to have a maximum of this value.
         """
         self._model = model
         self._iterator = iterator
