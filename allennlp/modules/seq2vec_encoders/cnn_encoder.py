@@ -79,7 +79,10 @@ class CnnEncoder(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
-    def forward(self, tokens: torch.Tensor):  # pylint: disable=arguments-differ
+    def forward(self, tokens: torch.Tensor, **kwargs):  # pylint: disable=arguments-differ, unused-argument
+        # TODO(Mark, Matt): Decide how this fits into the Encoder APIs.
+        # Allow extra arguments to be passed here in order to fit with the :class:`Seq2VecEncoder` API.
+
         # Our input is expected to have shape `(batch_size, num_tokens, embedding_dim)`.  The
         # convolution layers expect input of shape `(batch_size, in_channels, sequence_length)`,
         # where the conv layer `in_channels` is our `embedding_dim`.  We thus need to transpose the
