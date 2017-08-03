@@ -6,6 +6,7 @@ PARAM_FILE=$1
 CONTACT=$2
 CONTAINER_TAG=$(git rev-parse HEAD)
 IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$CONTAINER_TAG
+ID=$(openssl rand -base64 6)
 
 USAGE="USAGE: ./run_on_kube.sh [PARAM_FILE] [CONTACT]"
 if [ ! -n "$PARAM_FILE" ] ; then
@@ -49,7 +50,7 @@ cat >spec.yaml <<EOF
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: allennlp-dev-env
+  name: allennlp-dev-env-$ID
   namespace: allennlp
   labels:
     contact: $CONTACT
