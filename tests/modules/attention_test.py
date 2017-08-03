@@ -6,7 +6,7 @@ from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.modules import Attention
-from allennlp.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestAttention(AllenNlpTestCase):

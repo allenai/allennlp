@@ -8,7 +8,7 @@ from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.nn.util import arrays_to_variables
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class SimpleTaggerTest(AllenNlpTestCase):

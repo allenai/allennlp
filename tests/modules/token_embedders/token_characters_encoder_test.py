@@ -11,7 +11,7 @@ from allennlp.data import Vocabulary
 from allennlp.modules import Seq2VecEncoder
 from allennlp.modules.token_embedders import Embedding, TokenCharactersEncoder
 from allennlp.nn import InitializerApplicator
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestTokenCharactersEncoder(AllenNlpTestCase):

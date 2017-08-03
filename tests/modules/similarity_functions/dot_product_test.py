@@ -7,7 +7,7 @@ from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.modules.similarity_functions import DotProductSimilarity
-from allennlp.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestDotProductSimilarityFunction(AllenNlpTestCase):

@@ -3,7 +3,7 @@ import numpy
 
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestIndexField(AllenNlpTestCase):

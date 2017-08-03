@@ -6,7 +6,7 @@ from allennlp.data import Dataset, Instance, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):

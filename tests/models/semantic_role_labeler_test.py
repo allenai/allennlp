@@ -6,7 +6,7 @@ from allennlp.data.dataset_readers import SrlReader
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class SemanticRoleLabelerTest(AllenNlpTestCase):

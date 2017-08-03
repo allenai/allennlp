@@ -4,7 +4,7 @@ import nbformat
 from nbconvert.preprocessors.execute import CellExecutionError
 from nbconvert.preprocessors import ExecutePreprocessor
 
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestNotebooks(AllenNlpTestCase):

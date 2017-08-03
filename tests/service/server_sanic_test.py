@@ -2,7 +2,7 @@
 import json
 
 from allennlp.service.server_sanic import app
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestApp(AllenNlpTestCase):

@@ -8,7 +8,7 @@ from torch.autograd import Variable
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders.embedding import get_pretrained_embedding_layer
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestPretrainedEmbeddings(AllenNlpTestCase):

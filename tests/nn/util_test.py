@@ -5,6 +5,7 @@ import torch
 from torch.autograd import Variable
 import pytest
 
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.util import arrays_to_variables
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.nn.util import get_text_field_mask
@@ -15,7 +16,6 @@ from allennlp.nn.util import sort_batch_by_length
 from allennlp.nn.util import viterbi_decode
 from allennlp.nn.util import weighted_sum
 from allennlp.nn.util import sequence_cross_entropy_with_logits
-from allennlp.testing import AllenNlpTestCase
 
 
 class TestTensor(AllenNlpTestCase):

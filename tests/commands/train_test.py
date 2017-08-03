@@ -1,6 +1,6 @@
 import argparse
 
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import train_model, add_subparser, train_model_from_file
 
 

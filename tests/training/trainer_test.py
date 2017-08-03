@@ -2,7 +2,7 @@
 import torch
 import pytest
 
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.trainer import Trainer
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
