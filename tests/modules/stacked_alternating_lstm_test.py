@@ -4,7 +4,7 @@ import torch
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestStackedAlternatingLstm(AllenNlpTestCase):

@@ -4,7 +4,7 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.modules import Highway
-from allennlp.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestHighway(AllenNlpTestCase):

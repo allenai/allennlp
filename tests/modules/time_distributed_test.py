@@ -4,7 +4,7 @@ import torch
 from torch.autograd import Variable
 from torch.nn import Embedding, Parameter
 
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules import TimeDistributed
 
 

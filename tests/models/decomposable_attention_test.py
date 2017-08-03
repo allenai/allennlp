@@ -10,7 +10,7 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models import DecomposableAttention
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import arrays_to_variables
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestDecomposableAttention(AllenNlpTestCase):

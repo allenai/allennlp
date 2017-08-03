@@ -8,16 +8,13 @@ from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.nn.util import arrays_to_variables
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class SimpleTaggerTest(AllenNlpTestCase):
-
     def setUp(self):
         super(SimpleTaggerTest, self).setUp()
-        self.write_sequence_tagging_data()
-
-        dataset = SequenceTaggingDatasetReader().read(self.TRAIN_FILE)
+        dataset = SequenceTaggingDatasetReader().read('tests/fixtures/sequence_tagging_example.tsv')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)

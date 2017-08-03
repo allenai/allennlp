@@ -7,9 +7,9 @@ from torch.nn import LSTM
 from torch.nn.utils.rnn import pack_padded_sequence
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2vec_encoders import PytorchSeq2VecWrapper
 from allennlp.nn.util import sort_batch_by_length
-from allennlp.testing.test_case import AllenNlpTestCase
 
 
 class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
