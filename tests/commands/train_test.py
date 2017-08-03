@@ -5,10 +5,6 @@ from allennlp.commands.train import train_model, add_subparser, train_model_from
 
 
 class TestTrain(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-        self.write_sequence_tagging_data()
-
     def test_train_model(self):
         trainer_params = {
                 "model": {
@@ -27,7 +23,7 @@ class TestTrain(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": self.TRAIN_FILE,
+                "train_data_path": 'tests/fixtures/sequence_tagging_example.tsv',
                 "iterator": {"type": "basic", "batch_size": 2},
                 "optimizer": "adam",
                 "num_epochs": 2

@@ -12,12 +12,9 @@ from allennlp.testing.test_case import AllenNlpTestCase
 
 
 class SimpleTaggerTest(AllenNlpTestCase):
-
     def setUp(self):
         super(SimpleTaggerTest, self).setUp()
-        self.write_sequence_tagging_data()
-
-        dataset = SequenceTaggingDatasetReader().read(self.TRAIN_FILE)
+        dataset = SequenceTaggingDatasetReader().read('tests/fixtures/sequence_tagging_example.tsv')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)

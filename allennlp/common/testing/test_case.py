@@ -107,16 +107,6 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
 
         return model, loaded_model
 
-    def write_pretrained_vector_files(self):
-        # write the file
-        with codecs.open(self.PRETRAINED_VECTORS_FILE, 'w', 'utf-8') as vector_file:
-            vector_file.write('word2 0.21 0.57 0.51 0.31\n')
-            vector_file.write('sentence1 0.81 0.48 0.19 0.47\n')
-        # compress the file
-        with open(self.PRETRAINED_VECTORS_FILE, 'rb') as f_in:
-            with gzip.open(self.PRETRAINED_VECTORS_GZIP, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
-
     def write_sequence_tagging_data(self):
         with codecs.open(self.TRAIN_FILE, 'w', 'utf-8') as train_file:
             train_file.write('cats###N\tare###V\tanimals###N\t.###N\n')
