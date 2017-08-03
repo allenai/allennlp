@@ -149,7 +149,7 @@ class SemanticRoleLabeler(Model):
         """
         instance = Instance({"tokens": text_field, "verb_indicator": verb_indicator})
         instance.index_fields(self.vocab)
-        model_input = arrays_to_variables(instance.as_arrays(), add_batch_dimension=True)
+        model_input = arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
         output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.

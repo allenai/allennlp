@@ -44,7 +44,7 @@ class SimpleTaggerTest(AllenNlpTestCase):
         self.ensure_model_can_train_save_and_load(self.model, self.dataset)
 
     def test_forward_pass_runs_correctly(self):
-        training_arrays = self.dataset.as_arrays()
+        training_arrays = self.dataset.as_array_dict()
         _ = self.model.forward(**arrays_to_variables(training_arrays))
 
     def test_tag_returns_distributions_per_token(self):

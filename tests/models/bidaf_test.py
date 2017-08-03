@@ -94,7 +94,7 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         initializer(self.model)
 
     def test_forward_pass_runs_correctly(self):
-        training_arrays = arrays_to_variables(self.dataset.as_arrays())
+        training_arrays = arrays_to_variables(self.dataset.as_array_dict())
         _ = self.model.forward(**training_arrays)
 
     def test_model_can_train_save_and_load(self):

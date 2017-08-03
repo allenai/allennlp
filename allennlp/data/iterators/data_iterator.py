@@ -45,7 +45,7 @@ class DataIterator(Registrable):
         for group in grouped_instances:
             batch = Dataset(group)
             padding_lengths = batch.get_padding_lengths()
-            yield batch.as_arrays(padding_lengths, verbose=False)
+            yield batch.as_array_dict(padding_lengths, verbose=False)
 
     def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
         """

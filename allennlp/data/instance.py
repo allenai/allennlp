@@ -45,7 +45,7 @@ class Instance:
             lengths[field_name] = field.get_padding_lengths()
         return lengths
 
-    def as_arrays(self, padding_lengths: Dict[str, Dict[str, int]] = None) -> Dict[str, DataArray]:
+    def as_array_dict(self, padding_lengths: Dict[str, Dict[str, int]] = None) -> Dict[str, DataArray]:
         """
         Pads each ``Field`` in this instance to the lengths given in ``padding_lengths`` (which is
         keyed by field name, then by padding key, the same as the return value in
