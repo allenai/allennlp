@@ -37,7 +37,7 @@ ENV LANG=C.UTF-8
 
 COPY requirements.txt .
 COPY requirements_test.txt .
-COPY scripts/ scripts/
+COPY scripts/install_requirements.sh scripts/install_requirements.sh
 
 # Get rid of pycache or .pyc files that you might have accidentally copied
 RUN find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
