@@ -9,10 +9,10 @@ import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Dataset
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
+from allennlp.nn.util import arrays_to_variables
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

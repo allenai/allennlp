@@ -4,8 +4,8 @@ import torch
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, PackedSequence
 
-from allennlp.common.tensor import get_dropout_mask
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn.util import get_dropout_mask
 
 
 class AugmentedLstm(torch.nn.Module):

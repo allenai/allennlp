@@ -5,17 +5,17 @@ import torch
 from torch.autograd import Variable
 import pytest
 
-from allennlp.common.tensor import arrays_to_variables
-from allennlp.common.tensor import get_lengths_from_binary_sequence_mask
-from allennlp.common.tensor import get_text_field_mask
-from allennlp.common.tensor import last_dim_softmax
-from allennlp.common.tensor import masked_softmax
-from allennlp.common.tensor import masked_log_softmax
-from allennlp.common.tensor import sort_batch_by_length
-from allennlp.common.tensor import viterbi_decode
-from allennlp.common.tensor import weighted_sum
-from allennlp.common.tensor import sequence_cross_entropy_with_logits
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn.util import arrays_to_variables
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask
+from allennlp.nn.util import get_text_field_mask
+from allennlp.nn.util import last_dim_softmax
+from allennlp.nn.util import masked_softmax
+from allennlp.nn.util import masked_log_softmax
+from allennlp.nn.util import sort_batch_by_length
+from allennlp.nn.util import viterbi_decode
+from allennlp.nn.util import weighted_sum
+from allennlp.nn.util import sequence_cross_entropy_with_logits
 from allennlp.testing import AllenNlpTestCase
 
 

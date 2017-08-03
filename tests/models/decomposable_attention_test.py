@@ -3,13 +3,13 @@ import numpy
 from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params, constants
-from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SnliReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models import DecomposableAttention
 from allennlp.nn import InitializerApplicator
+from allennlp.nn.util import arrays_to_variables
 from allennlp.testing.test_case import AllenNlpTestCase
 
 
@@ -30,7 +30,7 @@ class TestDecomposableAttention(AllenNlpTestCase):
         initializer(self.model)
 
     def test_forward_pass_runs_correctly(self):
-        training_arrays = arrays_to_variables(self.dataset.as_arrays())
+        training_arrays = arrays_to_variables(self.dataset.as_array_dict())
         _ = self.model.forward(**training_arrays)
 
     def test_model_can_train_save_and_load(self):

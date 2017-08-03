@@ -4,13 +4,13 @@ import torch
 
 from allennlp.common import Params, constants
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.tensor import get_text_field_mask, last_dim_softmax, weighted_sum
-from allennlp.common.tensor import arrays_to_variables, get_lengths_from_binary_sequence_mask
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
+from allennlp.nn.util import arrays_to_variables, get_lengths_from_binary_sequence_mask
 
 
 @Model.register("decomposable_attention")
@@ -187,9 +187,7 @@ class DecomposableAttention(Model):
         """
         instance = Instance({"premise": premise, "hypothesis": hypothesis})
         instance.index_fields(self._vocab)
-        model_input = arrays_to_variables(instance.as_array(instance.get_padding_lengths()),
-                                          add_batch_dimension=True)
-
+        model_input = arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
         output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.

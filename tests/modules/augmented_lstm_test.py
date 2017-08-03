@@ -6,11 +6,11 @@ import torch.nn.init
 from torch.nn.modules.rnn import LSTM
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
-from allennlp.modules.augmented_lstm import AugmentedLstm
-from allennlp.testing.test_case import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.tensor import sort_batch_by_length
+from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.nn import InitializerApplicator
+from allennlp.nn.util import sort_batch_by_length
+from allennlp.testing.test_case import AllenNlpTestCase
 
 
 class TestAugmentedLSTM(AllenNlpTestCase):

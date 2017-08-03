@@ -1,11 +1,12 @@
 from typing import Dict, List
 
+from overrides import overrides
+
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
-# pylint: disable=no-self-use
 
 
 @TokenIndexer.register("single_id")
@@ -21,36 +22,36 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
         If ``True``, we will call ``token.lower()`` before getting an index for the token from the
         vocabulary.
     """
+    # pylint: disable=no-self-use
     def __init__(self, namespace: str = 'tokens', lowercase_tokens: bool = False) -> None:
         self.namespace = namespace
         self.lowercase_tokens = lowercase_tokens
 
-    # TODO(joelgrus) uncomment these once fix is merged to overrides library
-    # @overrides
+    @overrides
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
         if self.lowercase_tokens:
             token = token.lower()
         counter[self.namespace][token] += 1
 
-    # @overrides
+    @overrides
     def token_to_indices(self, token: str, vocabulary: Vocabulary) -> int:
         if self.lowercase_tokens:
             token = token.lower()
         return vocabulary.get_token_index(token, self.namespace)
 
-    # @overrides
+    @overrides
     def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):  # pylint: disable=unused-argument
         return (num_tokens,)
 
-    # @overrides
+    @overrides
     def get_padding_token(self) -> int:
         return 0
 
-    # @overrides
+    @overrides
     def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
         return {}
 
-    # @overrides
+    @overrides
     def pad_token_sequence(self,
                            tokens: List[int],
                            desired_num_tokens: int,

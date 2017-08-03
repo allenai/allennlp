@@ -6,6 +6,7 @@ from torch.nn import Conv1d, Linear
 
 from allennlp.common import Params
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
+from allennlp.nn import Activation
 
 
 @Seq2VecEncoder.register("cnn")
@@ -33,10 +34,6 @@ class CnnEncoder(Seq2VecEncoder):
     embedding_dim : ``int``
         This is the input dimension to the encoder.  We need this because we can't do shape
         inference in pytorch, and we need to know what size filters to construct in the CNN.
-    output_dim : ``Optional[int]``, optional (default=``None``)
-        After doing convolutions and pooling, we'll project the collected features into a vector of
-        this size.  If this value is ``None``, we will just return the result of the max pooling,
-        giving an output of shape ``len(ngram_filter_sizes) * num_filters``.
     num_filters: ``int``
         This is the output dim for each convolutional layer, which is the number of "filters"
         learned by that layer.
@@ -44,17 +41,24 @@ class CnnEncoder(Seq2VecEncoder):
         This specifies both the number of convolutional layers we will create and their sizes.  The
         default of ``(2, 3, 4, 5)`` will have four convolutional layers, corresponding to encoding
         ngrams of size 2 to 5 with some number of filters.
-    conv_layer_activation: str, optional (default='relu')
+    conv_layer_activation: ``Activation``, optional (default=``torch.nn.ReLU``)
+        Activation to use after the convolution layers.
+    output_dim : ``Optional[int]``, optional (default=``None``)
+        After doing convolutions and pooling, we'll project the collected features into a vector of
+        this size.  If this value is ``None``, we will just return the result of the max pooling,
+        giving an output of shape ``len(ngram_filter_sizes) * num_filters``.
     """
     def __init__(self,
                  embedding_dim: int,
                  num_filters: int,
                  ngram_filter_sizes: Tuple[int, ...] = (2, 3, 4, 5),  # pylint: disable=bad-whitespace
+                 conv_layer_activation: Activation = Activation.by_name('relu')(),
                  output_dim: Optional[int] = None) -> None:
         super(CnnEncoder, self).__init__()
         self._embedding_dim = embedding_dim
         self._num_filters = num_filters
         self._ngram_filter_sizes = ngram_filter_sizes
+        self._activation = conv_layer_activation
         self._output_dim = output_dim
 
         self._convolution_layers = [Conv1d(in_channels=self._embedding_dim,
@@ -95,11 +99,9 @@ class CnnEncoder(Seq2VecEncoder):
         # sequence.  Because our max pooling is simple, we just use `torch.max`.  The resultant
         # tensor of has shape `(batch_size, num_conv_layers * num_filters)`, which then gets
         # projected using the projection layer, if requested.
-        # TODO(mattg): allow specifying the activation function to use here.
-        activation = torch.nn.functional.relu
 
         # Not really sure why max isn't squeezing...
-        filter_outputs = [activation(convolution_layer(tokens), inplace=True).max(dim=2)[0].squeeze(dim=2)
+        filter_outputs = [self._activation(convolution_layer(tokens)).max(dim=2)[0].squeeze(dim=2)
                           for convolution_layer in self._convolution_layers]
 
         # Now we have a list of `num_conv_layers` tensors of shape `(batch_size, num_filters)`.
@@ -117,9 +119,11 @@ class CnnEncoder(Seq2VecEncoder):
         embedding_dim = params.pop('embedding_dim')
         output_dim = params.pop('output_dim', None)
         num_filters = params.pop('num_filters')
+        conv_layer_activation = Activation.by_name(params.pop("conv_layer_activation", "relu"))()
         ngram_filter_sizes = tuple(params.pop('ngram_filter_sizes', [2, 3, 4, 5]))
         params.assert_empty(cls.__name__)
         return cls(embedding_dim=embedding_dim,
                    num_filters=num_filters,
                    ngram_filter_sizes=ngram_filter_sizes,
+                   conv_layer_activation=conv_layer_activation,
                    output_dim=output_dim)

@@ -7,14 +7,13 @@ import torch.nn.functional as F
 from allennlp.common import Params
 from allennlp.common.constants import GLOVE_PATH
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.tensor import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
-from allennlp.common.tensor import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.initializers import InitializerApplicator
-from allennlp.data import Vocabulary
+from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import IndexField, TextField
-from allennlp.data import Instance
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
+from allennlp.nn.util import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 
 
 @Model.register("srl")
@@ -157,9 +156,8 @@ class SemanticRoleLabeler(Model):
         """
         instance = Instance({"tokens": text_field, "verb_indicator": verb_indicator})
         instance.index_fields(self.vocab)
-        model_input = instance.as_array(instance.get_padding_lengths())
-        torch_input = arrays_to_variables(model_input, add_batch_dimension=True)
-        output_dict = self.forward(**torch_input)
+        model_input = arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
+        output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.
         predictions = output_dict["class_probabilities"].data.squeeze(0)
