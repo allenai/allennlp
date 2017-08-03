@@ -4,13 +4,13 @@ import torch
 
 from allennlp.common import Params, constants
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.tensor import get_text_field_mask, last_dim_softmax, weighted_sum
-from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
+from allennlp.nn.util import arrays_to_variables
 
 
 @Model.register("decomposable_attention")

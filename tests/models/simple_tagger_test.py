@@ -2,12 +2,12 @@
 import numpy
 
 from allennlp.common import Params
-from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.simple_tagger import SimpleTagger
+from allennlp.nn.util import arrays_to_variables
 from allennlp.testing.test_case import AllenNlpTestCase
 
 

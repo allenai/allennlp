@@ -1,9 +1,10 @@
 import torch
 from overrides import overrides
 
-from allennlp.common import Params, tensor
+from allennlp.common import Params
 from allennlp.modules.similarity_function import SimilarityFunction
 from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
+from allennlp.nn.util import masked_softmax
 
 
 class Attention(torch.nn.Module):
@@ -51,7 +52,7 @@ class Attention(torch.nn.Module):
                                                   vector.size()[1])
         similarities = self._similarity_function(tiled_vector, matrix)
         if self._normalize:
-            return tensor.masked_softmax(similarities, matrix_mask)
+            return masked_softmax(similarities, matrix_mask)
         else:
             return similarities
 

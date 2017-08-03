@@ -5,12 +5,12 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
-from allennlp.common.tensor import arrays_to_variables, sequence_cross_entropy_with_logits
-from allennlp.common.tensor import get_text_field_mask
 from allennlp.data import Vocabulary
 from allennlp.data.fields.text_field import TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
+from allennlp.nn.util import arrays_to_variables, sequence_cross_entropy_with_logits
+from allennlp.nn.util import get_text_field_mask
 
 
 @Model.register("simple_tagger")
