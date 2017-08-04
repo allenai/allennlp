@@ -128,8 +128,12 @@ def train_model(param_dict: Dict[str, Any]):
     vocab = Vocabulary.from_dataset(train_data)
     if log_dir:
         vocab.save_to_files(os.path.join(log_dir, "vocabulary"))
-    train_data.index_instances(vocab)
 
+    model = Model.from_params(vocab, params.pop('model'))
+    iterator = DataIterator.from_params(params.pop("iterator"))
+    optimizer = Optimizer.from_params(model.parameters(), params.pop("optimizer"))
+
+    train_data.index_instances(vocab)
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
@@ -137,10 +141,6 @@ def train_model(param_dict: Dict[str, Any]):
         validation_data.index_instances(vocab)
     else:
         validation_data = None
-
-    model = Model.from_params(vocab, params.pop('model'))
-    iterator = DataIterator.from_params(params.pop("iterator"))
-    optimizer = Optimizer.from_params(model.parameters(), params.pop("optimizer"))
 
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,
