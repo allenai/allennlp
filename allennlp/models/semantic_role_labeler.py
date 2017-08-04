@@ -218,7 +218,7 @@ class SemanticRoleLabeler(Model):
 
         default_lstm_params = {
                 'type': 'alternating_lstm',
-                'input_size': 100,
+                'input_size': 101,  # Because of the verb_indicator feature.
                 'hidden_size': 300,
                 'num_layers': 8,
                 'recurrent_dropout_probability': 0.1,
