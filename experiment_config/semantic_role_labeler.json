@@ -1,8 +1,8 @@
 {
-  "dataset_reader":"srl",
-  "train_data_path": "/path/to/dataset/replace me !",
-  "validation_data_path": "/path/to/dataset/replace me !",
-  "model": "srl",
+  "dataset_reader":{"type":"srl"},
+  "train_data_path": "/net/efs/aristo/allennlp/srl/conll-formatted-ontonotes-5.0-12/conll-formatted-ontonotes-5.0/data/train",
+  "validation_data_path": "/net/efs/aristo/allennlp/srl/conll-formatted-ontonotes-5.0-12/conll-formatted-ontonotes-5.0/data/devlopment/",
+  "model": {"type":"srl"},
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["tokens", "num_tokens"]],
@@ -16,6 +16,6 @@
   "num_epochs": 500,
   "grad_norm": 1.0,
   "patience" : 500,
-  "serialization_prefix" : "/path/to/save/directory/replace me!",
+  "serialization_prefix" : "/net/efs/aristo/allennlp/srl/srl-model",
   "cuda_device" : 0
 }
