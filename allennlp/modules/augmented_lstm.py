@@ -94,10 +94,16 @@ class AugmentedLstm(torch.nn.Module):
         sequence_tensor, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
         batch_size = sequence_tensor.size()[0]
         total_timesteps = sequence_tensor.size()[1]
-        output_accumulator = Variable(torch.zeros([batch_size, total_timesteps, self.hidden_size]))
+
+        # We have to use this '.data.new().resize_.fill_' pattern to create tensors with the correct
+        # type - forward has no knowledge of whether these are torch.Tensors or torch.cuda.Tensors.
+        output_accumulator = Variable(sequence_tensor.data.new()
+                                      .resize_(batch_size, total_timesteps, self.hidden_size).fill_(0))
         if initial_state is None:
-            full_batch_previous_memory = Variable(torch.zeros([batch_size, self.hidden_size]))
-            full_batch_previous_state = Variable(torch.zeros([batch_size, self.hidden_size]))
+            full_batch_previous_memory = Variable(sequence_tensor.data.new()
+                                                  .resize_(batch_size, self.hidden_size).fill_(0))
+            full_batch_previous_state = Variable(sequence_tensor.data.new()
+                                                 .resize_(batch_size, self.hidden_size).fill_(0))
         else:
             full_batch_previous_state = initial_state[0].squeeze(0)
             full_batch_previous_memory = initial_state[1].squeeze(0)
