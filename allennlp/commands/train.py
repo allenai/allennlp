@@ -107,9 +107,9 @@ def train_model(param_dict: Dict[str, Any]):
     log_dir = params.get("serialization_prefix", None)  # pylint: disable=no-member
     if log_dir is not None:
         os.makedirs(log_dir, exist_ok=True)
-        sys.stdout = TeeLogger(log_dir + "_stdout.log", sys.stdout)  # type: ignore
-        sys.stderr = TeeLogger(log_dir + "_stderr.log", sys.stderr)  # type: ignore
-        handler = logging.FileHandler(log_dir + "_python_logging.log")
+        sys.stdout = TeeLogger(os.path.join(log_dir, "_stdout.log"), sys.stdout)  # type: ignore
+        sys.stderr = TeeLogger(os.path.join(log_dir, "_stderr.log"), sys.stderr)  # type: ignore
+        handler = logging.FileHandler(os.path.join(log_dir, "_python_logging.log"))
         handler.setLevel(logging.INFO)
         handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
         logging.getLogger().addHandler(handler)
