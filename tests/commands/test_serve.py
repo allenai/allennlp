@@ -23,4 +23,3 @@ class TestServe(TestCase):
         assert args.func == serve
         assert args.backend == "flask"
         assert args.port == "8000"
-
