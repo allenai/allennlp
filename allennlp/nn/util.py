@@ -67,15 +67,18 @@ def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torc
     return sorted_tensor, sorted_sequence_lengths, restoration_indices
 
 
-def get_dropout_mask(dropout_probability: float, shape: List[int]):
+def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autograd.Variable):
     """
-    Computes an element-wise dropout mask for an arbitrarily sized tensor, where
+    Computes and returns an element-wise dropout mask for a given tensor, where
     each element in the mask is dropped out with probability dropout_probability.
+    Note that the mask is NOT applied to the tensor.
 
     Parameters
     ----------
-    dropout_probability: float, Probability of dropping a dimension of the input.
-    shape: Shape of the tensor you are generating a mask for.
+    dropout_probability : float, required.
+        Probability of dropping a dimension of the input.
+    tensor_for_masking : torch.Variable, required.
+
 
     Return
     ------
@@ -83,7 +86,8 @@ def get_dropout_mask(dropout_probability: float, shape: List[int]):
     This scaling ensures expected values and variances of the output of applying this mask
      and the original tensor are the same.
     """
-    binary_mask = torch.rand(shape) > dropout_probability
+    binary_mask = tensor_for_masking.clone()
+    binary_mask.data.copy_(torch.rand(tensor_for_masking.size()) > dropout_probability)
     # Scale mask by 1/keep_prob to preserve output statistics.
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask

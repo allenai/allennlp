@@ -110,7 +110,7 @@ class AugmentedLstm(torch.nn.Module):
 
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0:
-            dropout_mask = get_dropout_mask(self.recurrent_dropout_probability, [batch_size, self.hidden_size])
+            dropout_mask = get_dropout_mask(self.recurrent_dropout_probability, full_batch_previous_memory)
         else:
             dropout_mask = None
 
