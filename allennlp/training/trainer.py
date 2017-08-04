@@ -113,7 +113,7 @@ class Trainer:
                 val_generator = self._iterator(self._validation_dataset, num_epochs=1)
                 for batch in tqdm.tqdm(val_generator):
                     tensor_batch = arrays_to_variables(batch, self._cuda_device)
-                    val_output_dict = self._model.forward(tensor_batch)
+                    val_output_dict = self._model.forward(**tensor_batch)
                     loss = val_output_dict["loss"]
                     val_loss += loss.data.cpu().numpy()
 
