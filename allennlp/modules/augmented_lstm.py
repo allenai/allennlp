@@ -168,7 +168,7 @@ class AugmentedLstm(torch.nn.Module):
                 timestep_output = highway_gate * timestep_output + (1 - highway_gate) * highway_input_projection
 
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
-            if dropout_mask and self.training:
+            if dropout_mask is not None and self.training:
                 timestep_output = timestep_output * dropout_mask[0: current_length_index + 1]
 
             # We've been doing computation with less than the full batch, so here we create a new
