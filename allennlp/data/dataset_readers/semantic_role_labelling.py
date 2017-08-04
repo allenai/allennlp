@@ -172,8 +172,8 @@ class SrlReader(DatasetReader):
         predicate_argument_labels = []  # type: List[List[str]]
         current_span_label = []  # type: List[Optional[str]]
 
-        for root, _, files in os.walk(file_path):
-            for data_file in tqdm.tqdm(files):
+        for root, _, files in tqdm.tqdm(os.walk(file_path)):
+            for data_file in files:
                 # These are a relic of the dataset pre-processing. Every file will be duplicated
                 # - one file called filename.gold_skel and one generated from the preprocessing
                 # called filename.gold_conll.
