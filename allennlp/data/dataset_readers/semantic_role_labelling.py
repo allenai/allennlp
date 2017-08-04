@@ -12,6 +12,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, TagField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.common.checks import ConfigurationError
 
 
 @DatasetReader.register("srl")
@@ -249,6 +250,10 @@ class SrlReader(DatasetReader):
 
                         if is_verbal_predicate:
                             verbal_predicates.append(word_index)
+
+        if not instances:
+            raise ConfigurationError("No instances were read from the given filepath {}. "
+                                     "Is the path correct?".format(file_path))
         return Dataset(instances)
 
     @classmethod

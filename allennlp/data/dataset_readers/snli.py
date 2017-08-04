@@ -5,6 +5,7 @@ from overrides import overrides
 import tqdm
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -53,6 +54,9 @@ class SnliReader(DatasetReader):
                 instances.append(Instance({'label': label_field,
                                            'premise': premise_field,
                                            'hypothesis': hypothesis_field}))
+        if not instances:
+            raise ConfigurationError("No instances were read from the given filepath {}. "
+                                     "Is the path correct?".format(file_path))
         return Dataset(instances)
 
     @classmethod

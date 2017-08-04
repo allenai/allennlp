@@ -4,6 +4,7 @@ from overrides import overrides
 import tqdm
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
@@ -88,6 +89,10 @@ class LanguageModelingReader(DatasetReader):
             output_field = TextField(tokenized_string[1:], output_indexer)
             instances.append(Instance({'input_tokens': input_field,
                                        'output_tokens': output_field}))
+
+        if not instances:
+            raise ConfigurationError("No instances were read from the given filepath {}. "
+                                     "Is the path correct?".format(file_path))
         return Dataset(instances)
 
     @classmethod

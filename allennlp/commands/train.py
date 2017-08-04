@@ -129,7 +129,6 @@ def train_model(param_dict: Dict[str, Any]):
     if log_dir:
         vocab.save_to_files(os.path.join(log_dir, "vocabulary"))
     train_data.index_instances(vocab)
-    model = Model.from_params(vocab, params.pop('model'))
 
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
@@ -139,11 +138,11 @@ def train_model(param_dict: Dict[str, Any]):
     else:
         validation_data = None
 
+    model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
     optimizer = Optimizer.from_params(model.parameters(), params.pop("optimizer"))
 
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,
                                   params)
-
     trainer.train()
