@@ -11,16 +11,16 @@ from allennlp.nn.util import arrays_to_variables
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.nn.util import get_text_field_mask
 from allennlp.nn.util import last_dim_softmax
-from allennlp.nn.util import masked_softmax
 from allennlp.nn.util import masked_log_softmax
+from allennlp.nn.util import masked_softmax
+from allennlp.nn.util import replace_masked_values
+from allennlp.nn.util import sequence_cross_entropy_with_logits
 from allennlp.nn.util import sort_batch_by_length
 from allennlp.nn.util import viterbi_decode
 from allennlp.nn.util import weighted_sum
-from allennlp.nn.util import sequence_cross_entropy_with_logits
 
 
-class TestTensor(AllenNlpTestCase):
-
+class TestNnUtil(AllenNlpTestCase):
     def test_arrays_to_variables_handles_recursion(self):
 
         array_dict = {
@@ -459,3 +459,9 @@ class TestTensor(AllenNlpTestCase):
                                                          batch_average=False)
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.data.sum() / 4
+
+    def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
+        tensor = Variable(torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]))
+        mask = Variable(torch.FloatTensor([[1, 1, 0]]))
+        replaced = replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
+        assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])
