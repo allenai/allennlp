@@ -1,6 +1,7 @@
 from typing import Dict
 
 from overrides import overrides
+import tqdm
 
 from allennlp.common import Params
 from allennlp.data.dataset import Dataset
@@ -36,7 +37,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
         with open(file_path, "r") as data_file:
 
             instances = []
-            for line in data_file:
+            for line in tqdm.tqdm(data_file):
                 tokens_and_tags = [pair.split("###") for pair in line.strip("\n").split("\t")]
                 tokens = [x[0] for x in tokens_and_tags]
                 tags = [x[1] for x in tokens_and_tags]

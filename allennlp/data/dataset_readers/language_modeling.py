@@ -1,6 +1,7 @@
 from typing import Dict
 
 from overrides import overrides
+import tqdm
 
 from allennlp.common import Params
 from allennlp.data.dataset import Dataset
@@ -57,7 +58,7 @@ class LanguageModelingReader(DatasetReader):
             tokenized_text = self._tokenizer.tokenize(all_text)
             num_tokens = self._tokens_per_instance
             tokenized_strings = []
-            for index in range(0, len(tokenized_text) - num_tokens, num_tokens):
+            for index in tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens)):
                 tokenized_strings.append(tokenized_text[index:index + num_tokens])
         else:
             tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]

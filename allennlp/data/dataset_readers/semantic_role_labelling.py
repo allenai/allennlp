@@ -3,6 +3,7 @@ import os
 from typing import Dict, List, Optional  # pylint: disable=unused-import
 
 from overrides import overrides
+import tqdm
 
 from allennlp.common import Params
 from allennlp.data.dataset import Dataset
@@ -172,7 +173,7 @@ class SrlReader(DatasetReader):
         current_span_label = []  # type: List[Optional[str]]
 
         for root, _, files in os.walk(file_path):
-            for data_file in files:
+            for data_file in tqdm.tqdm(files):
                 # These are a relic of the dataset pre-processing. Every file will be duplicated
                 # - one file called filename.gold_skel and one generated from the preprocessing
                 # called filename.gold_conll.

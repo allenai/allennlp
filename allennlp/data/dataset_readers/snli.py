@@ -2,6 +2,7 @@ from typing import Dict
 import json
 
 from overrides import overrides
+import tqdm
 
 from allennlp.common import Params
 from allennlp.data.dataset import Dataset
@@ -39,7 +40,7 @@ class SnliReader(DatasetReader):
     def read(self, file_path: str):
         instances = []
         with open(file_path, 'r') as snli_file:
-            for line in snli_file:
+            for line in tqdm.tqdm(snli_file):
                 example = json.loads(line)
 
                 label = example["gold_label"]
