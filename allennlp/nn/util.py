@@ -126,13 +126,11 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
 def _get_normalized_masked_log_probablities(vector, mask):
     # We calculate normalized log probabilities in a numerically stable fashion, as done
     # in https://github.com/rkadlec/asreader/blob/master/asreader/custombricks/softmax_mask_bricks.py
-    # TODO(mattg): a bunch of this logic can be simplified once pytorch-0.2 is out.
-    # torch.max(keepdim=True), for instance, simplifies things here.
     input_masked = mask * vector
-    shifted = mask * (input_masked - torch.max(input_masked, dim=1)[0].expand_as(input_masked))
+    shifted = mask * (input_masked - input_masked.max(dim=1, keepdim=True)[0])
     # We add epsilon to avoid numerical instability when the sum in the log yields 0.
-    normalization_constant = ((mask * shifted.exp()).sum(dim=1) + 1e-7).log()
-    normalized_log_probabilities = (shifted - normalization_constant.expand_as(shifted))
+    normalization_constant = ((mask * shifted.exp()).sum(dim=1, keepdim=True) + 1e-7).log()
+    normalized_log_probabilities = (shifted - normalization_constant)
     return normalized_log_probabilities
 
 
