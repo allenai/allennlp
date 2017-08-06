@@ -23,7 +23,7 @@ def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
     A torch.LongTensor of shape (batch_size,) representing the lengths
     of the sequences in the batch.
     """
-    return mask.sum(-1).squeeze()
+    return mask.sum(-1)
 
 
 def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torch.autograd.Variable):
@@ -248,7 +248,7 @@ def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) 
     """
     tensor_shape = tensor.size()
     reshaped_tensor = tensor.view(-1, tensor.size()[-1])
-    if mask:
+    if mask is not None:
         while mask.dim() < tensor.dim():
             mask = mask.unsqueeze(1)
         mask = mask.expand_as(tensor).contiguous().float()
@@ -287,7 +287,7 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
             expanded_size.insert(i + 1, attention.size(i + 1))
         matrix = matrix.expand(*expanded_size)
     intermediate = attention.unsqueeze(-1).expand_as(matrix) * matrix
-    return intermediate.sum(dim=-2).squeeze(-2)
+    return intermediate.sum(dim=-2)
 
 
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
@@ -344,7 +344,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     if batch_average:
         num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
         return per_batch_loss.sum() / num_non_empty_sequences
-    return per_batch_loss.squeeze(1)
+    return per_batch_loss
 
 
 def replace_masked_values(tensor: Variable, mask: Variable, replace_with: float) -> Variable:

@@ -17,7 +17,7 @@ class CosineSimilarity(SimilarityFunction):
         # broadcasting implemented for this case.
         normalized_tensor_1 = tensor_1 / tensor_1.norm(dim=-1).expand_as(tensor_1)
         normalized_tensor_2 = tensor_2 / tensor_2.norm(dim=-1).expand_as(tensor_2)
-        return (normalized_tensor_1 * normalized_tensor_2).sum(dim=-1).squeeze(dim=-1)
+        return (normalized_tensor_1 * normalized_tensor_2).sum(dim=-1)
 
     @classmethod
     def from_params(cls, params: Params) -> 'CosineSimilarity':
