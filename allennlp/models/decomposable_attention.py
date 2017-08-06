@@ -160,7 +160,7 @@ class DecomposableAttention(Model):
 
         output_dict = {"label_logits": label_logits, "label_probs": label_probs}
 
-        if label:
+        if label is not None:
             if label.dim() == 2:
                 _, label = label.max(-1)
             loss = self._loss(label_logits, label.view(-1))

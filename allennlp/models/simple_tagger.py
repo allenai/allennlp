@@ -88,7 +88,7 @@ class SimpleTagger(Model):
 
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
-        if tags:
+        if tags is not None:
             # Negative log likelihood criterion takes integer labels, not one hot.
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
