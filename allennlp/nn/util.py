@@ -7,14 +7,14 @@ from torch.autograd import Variable
 from allennlp.common.checks import ConfigurationError
 
 
-def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
+def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     """
     Compute sequence lengths for each batch element in a tensor using a
     binary mask.
 
     Parameters
     ----------
-    mask : torch.ByteTensor, required.
+    mask : torch.Tensor, required.
         A 2D binary mask of shape (batch_size, sequence_length) to
         calculate the per-batch sequence lengths from.
 
@@ -23,7 +23,7 @@ def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
     A torch.LongTensor of shape (batch_size,) representing the lengths
     of the sequences in the batch.
     """
-    return mask.sum(-1).squeeze()
+    return mask.long().sum(-1).squeeze()
 
 
 def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torch.autograd.Variable):
@@ -230,7 +230,7 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     return viterbi_path, viterbi_score
 
 
-def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Tensor:
+def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.LongTensor:
     """
     Takes the dictionary of tensors produced by a ``TextField`` and returns a mask of shape
     ``(batch_size, num_tokens)``.  This mask will be 0 where the tokens are padding, and 1
@@ -240,11 +240,20 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Te
     word ids, one for character ids).  In order to get a token mask, we assume that the tensor in
     the dictionary with the lowest number of dimensions has plain token ids.  This allows us to
     also handle cases where the input is actually a ``ListField[TextField]``.
+
+    NOTE: Our functions for generating masks create torch.LongTensors, because using
+    torch.byteTensors inside Variables makes it easy to run into overflow errors
+    when doing mask manipulation, such as summing to get the lengths of sequences - see below.
+    >>> mask = torch.ones([260]).byte()
+    >>> mask.sum() # equals 260.
+    >>> var_mask = torch.autograd.Variable(mask)
+    >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
     tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
     tensor_dims.sort(key=lambda x: x[0])
     token_tensor = tensor_dims[0][1]
-    return token_tensor != 0
+
+    return (token_tensor != 0).long()
 
 
 def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:

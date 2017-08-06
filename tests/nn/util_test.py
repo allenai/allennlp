@@ -102,6 +102,18 @@ class TestNnUtil(AllenNlpTestCase):
         lengths = get_lengths_from_binary_sequence_mask(binary_mask)
         numpy.testing.assert_array_equal(lengths.numpy(), numpy.array([3, 2, 6, 1]))
 
+    def test_get_sequence_lengths_converts_to_long_tensor_and_avoids_variable_overflow(self):
+        # Tests the following weird behaviour in Pytorch 0.1.12
+        # doesn't happen for our sequence masks:
+        #
+        # mask = torch.ones([260]).byte()
+        # mask.sum() # equals 260.
+        # var_mask = torch.autograd.Variable(mask)
+        # var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
+        binary_mask = Variable(torch.ones(2, 260).byte())
+        lengths = get_lengths_from_binary_sequence_mask(binary_mask)
+        numpy.testing.assert_array_equal(lengths.data.numpy(), numpy.array([260, 260]))
+
     def test_sort_tensor_by_length(self):
         tensor = torch.rand([5, 7, 9])
         tensor[0, 3:, :] = 0
