@@ -463,5 +463,5 @@ class TestNnUtil(AllenNlpTestCase):
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = Variable(torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]))
         mask = Variable(torch.FloatTensor([[1, 1, 0]]))
-        replaced = replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
+        replaced = replace_masked_values(tensor, mask, 2).data.numpy()
         assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])
