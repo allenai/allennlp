@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name, no-self-use
+# pylint: disable=invalid-name, no-self-use,too-many-public-methods
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
