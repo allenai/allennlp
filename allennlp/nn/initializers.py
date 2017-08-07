@@ -133,12 +133,12 @@ class InitializerApplicator:
 
         {
             "initializers": {
-                "[parameter_regex_match1]": {
+                "parameter_regex_match1": {
                     "type": "normal"
                     "mean": 0.01
                     "std": 0.1
                 },
-                "[parameter_regex_match2]": "uniform",
+                "parameter_regex_match2": "uniform",
 
                 "default": "orthogonal"
             },
