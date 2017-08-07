@@ -56,7 +56,7 @@ def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torc
     sorted_tensor = tensor.index_select(0, permutation_index)
     # This is the equivalent of zipping with index, sorting by the original
     # sequence lengths and returning the now sorted indices.
-    index_range = Variable(torch.range(0, len(sequence_lengths) - 1).long())
+    index_range = Variable(torch.arange(0, len(sequence_lengths)).long())
     _, reverse_mapping = permutation_index.sort(0, descending=False)
     restoration_indices = index_range.index_select(0, reverse_mapping)
     return sorted_tensor, sorted_sequence_lengths, restoration_indices

@@ -54,8 +54,7 @@ class SemanticRoleLabeler(Model):
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
-        initializer(self.stacked_encoder)
-        initializer(self.tag_projection_layer)
+        initializer(self)
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
