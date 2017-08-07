@@ -4,7 +4,7 @@ from torch.nn.init import constant
 import numpy
 
 from allennlp.nn import InitializerApplicator
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
 
 class TestInitializers(AllenNlpTestCase):

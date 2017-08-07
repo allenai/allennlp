@@ -3,7 +3,7 @@ from allennlp.common import Params
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.dataset_readers.squad import _char_span_to_token_span
 from allennlp.data.tokenizers import WordTokenizer
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestSquadReader(AllenNlpTestCase):

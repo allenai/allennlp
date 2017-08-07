@@ -4,7 +4,7 @@ from collections import defaultdict
 from allennlp.data.token_indexers import TokenCharactersIndexer
 from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class CharacterTokenIndexerTest(AllenNlpTestCase):

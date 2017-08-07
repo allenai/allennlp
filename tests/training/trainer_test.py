@@ -2,7 +2,7 @@
 import torch
 import pytest
 
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.trainer import Trainer
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
@@ -13,11 +13,9 @@ from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 
 
 class TestTrainer(AllenNlpTestCase):
-
     def setUp(self):
         super(TestTrainer, self).setUp()
-        self.write_sequence_tagging_data()
-        dataset = SequenceTaggingDatasetReader().read(self.TRAIN_FILE)
+        dataset = SequenceTaggingDatasetReader().read('tests/fixtures/sequence_tagging_example.tsv')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)

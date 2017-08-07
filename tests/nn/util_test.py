@@ -5,21 +5,22 @@ import torch
 from torch.autograd import Variable
 import pytest
 
-from allennlp.common.tensor import arrays_to_variables
-from allennlp.common.tensor import get_lengths_from_binary_sequence_mask
-from allennlp.common.tensor import get_text_field_mask
-from allennlp.common.tensor import last_dim_softmax
-from allennlp.common.tensor import masked_softmax
-from allennlp.common.tensor import masked_log_softmax
-from allennlp.common.tensor import sort_batch_by_length
-from allennlp.common.tensor import viterbi_decode
-from allennlp.common.tensor import weighted_sum
-from allennlp.common.tensor import sequence_cross_entropy_with_logits
-from allennlp.testing import AllenNlpTestCase
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.nn.util import arrays_to_variables
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask
+from allennlp.nn.util import get_text_field_mask
+from allennlp.nn.util import last_dim_softmax
+from allennlp.nn.util import masked_log_softmax
+from allennlp.nn.util import masked_softmax
+from allennlp.nn.util import replace_masked_values
+from allennlp.nn.util import sequence_cross_entropy_with_logits
+from allennlp.nn.util import sort_batch_by_length
+from allennlp.nn.util import viterbi_decode
+from allennlp.nn.util import weighted_sum
 
 
-class TestTensor(AllenNlpTestCase):
-
+class TestNnUtil(AllenNlpTestCase):
     def test_arrays_to_variables_handles_recursion(self):
 
         array_dict = {
@@ -108,19 +109,26 @@ class TestTensor(AllenNlpTestCase):
         tensor[2, 1:, :] = 0
         tensor[3, 5:, :] = 0
 
-        sequence_lengths = torch.LongTensor([3, 4, 1, 5, 7])
+        tensor = Variable(tensor)
+        sequence_lengths = Variable(torch.LongTensor([3, 4, 1, 5, 7]))
         sorted_tensor, sorted_lengths, reverse_indices = sort_batch_by_length(tensor, sequence_lengths)
 
         # Test sorted indices are padded correctly.
-        numpy.testing.assert_array_equal(sorted_tensor[1, 5:, :].numpy(), 0.0)
-        numpy.testing.assert_array_equal(sorted_tensor[2, 4:, :].numpy(), 0.0)
-        numpy.testing.assert_array_equal(sorted_tensor[3, 3:, :].numpy(), 0.0)
-        numpy.testing.assert_array_equal(sorted_tensor[4, 1:, :].numpy(), 0.0)
+        numpy.testing.assert_array_equal(sorted_tensor[1, 5:, :].data.numpy(), 0.0)
+        numpy.testing.assert_array_equal(sorted_tensor[2, 4:, :].data.numpy(), 0.0)
+        numpy.testing.assert_array_equal(sorted_tensor[3, 3:, :].data.numpy(), 0.0)
+        numpy.testing.assert_array_equal(sorted_tensor[4, 1:, :].data.numpy(), 0.0)
 
-        assert sorted_lengths.equal(torch.LongTensor([7, 5, 4, 3, 1]))
+        assert sorted_lengths.data.equal(torch.LongTensor([7, 5, 4, 3, 1]))
 
         # Test restoration indices correctly recover the original tensor.
-        assert sorted_tensor[reverse_indices].equal(tensor)
+        assert sorted_tensor.index_select(0, reverse_indices).data.equal(tensor.data)
+
+    def test_sort_tensor_by_length_raises_on_non_variable_inputs(self):
+        tensor = torch.rand([5, 7, 9])
+        sequence_lengths = Variable(torch.LongTensor([3, 4, 1, 5, 7]))
+        with pytest.raises(ConfigurationError):
+            _ = sort_batch_by_length(tensor, sequence_lengths)
 
     def test_masked_softmax_no_mask(self):
         # Testing the general unmasked 1D case.
@@ -451,3 +459,9 @@ class TestTensor(AllenNlpTestCase):
                                                          batch_average=False)
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.data.sum() / 4
+
+    def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
+        tensor = Variable(torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]))
+        mask = Variable(torch.FloatTensor([[1, 1, 0]]))
+        replaced = replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
+        assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])

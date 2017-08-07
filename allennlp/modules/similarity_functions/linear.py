@@ -1,5 +1,3 @@
-from typing import Callable
-
 from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
@@ -7,6 +5,7 @@ from torch.nn.parameter import Parameter
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.nn import Activation
 
 
 @SimilarityFunction.register("linear")
@@ -39,7 +38,7 @@ class LinearSimilarity(SimilarityFunction):
         build weight vectors correctly.
     combination : ``str``, optional (default=``"x,y"``)
         Described above.
-    activation : ``Callable[[torch.Tensor], torch.Tensor]``, optional (default=``lambda x: x``)
+    activation : ``Activation``, optional (default=linear (i.e. no activation))
         An activation function applied after the ``w^T * [x;y] + b`` calculation.  Default is no
         activation.
     """
@@ -47,7 +46,7 @@ class LinearSimilarity(SimilarityFunction):
                  tensor_1_dim: int,
                  tensor_2_dim: int,
                  combination: str = 'x,y',
-                 activation: Callable[[torch.Tensor], torch.Tensor] = lambda x: x) -> None:
+                 activation: Activation = Activation.by_name('linear')()) -> None:
         super(LinearSimilarity, self).__init__()
         self._combinations = combination.split(',')
         combined_dim = self._get_combined_dim(tensor_1_dim, tensor_2_dim)
@@ -58,26 +57,8 @@ class LinearSimilarity(SimilarityFunction):
     @overrides
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
         combined_tensors = self._combine_tensors(tensor_1, tensor_2)
-
-        # The '@' operator here is torch.matmul, but that's only available in pytorch-0.2.
-        # TODO(mattg): switch to using torch.matmul when a version of pytorch with it is released.
-        # I think it's more clear and less magical, and won't require us to have to special case
-        # the higher-order version.
-        # Also, broadcasting this simple addition is only available in pytorch-0.2.  When that's
-        # ready, change this back to `(dot_product + self._bias)`.
-        if combined_tensors.dim() <= 2:
-            dot_product = combined_tensors @ self._weight_vector
-        else:
-            view_args = [-1] + list(combined_tensors.size()[-2:])
-            reshaped_tensor = combined_tensors.view(*view_args)
-            unsqueezed_weight = self._weight_vector.unsqueeze(1).unsqueeze(0)
-            reshaped_weight = unsqueezed_weight.expand(reshaped_tensor.size()[0],
-                                                       self._weight_vector.size()[0],
-                                                       1)
-            reshaped_dot_product = reshaped_tensor.bmm(reshaped_weight)
-            view_args = combined_tensors.size()[:-1]
-            dot_product = reshaped_dot_product.view(*view_args)
-        return self._activation(dot_product + self._bias.expand_as(dot_product)).squeeze(dim=-1)
+        dot_product = torch.matmul(combined_tensors, self._weight_vector)
+        return self._activation(dot_product + self._bias)
 
     def _combine_tensors(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
         combined_tensor = self._get_combination(self._combinations[0], tensor_1, tensor_2)
@@ -133,8 +114,7 @@ class LinearSimilarity(SimilarityFunction):
         tensor_1_dim = params.pop("tensor_1_dim")
         tensor_2_dim = params.pop("tensor_2_dim")
         combination = params.pop("combination", "x,y")
-        # TODO(mattg): figure out activation from_params.
-        activation = lambda x: x
+        activation = Activation.by_name(params.pop("activation", "linear"))()
         params.assert_empty(cls.__name__)
         return cls(tensor_1_dim=tensor_1_dim,
                    tensor_2_dim=tensor_2_dim,

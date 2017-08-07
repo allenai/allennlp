@@ -8,7 +8,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestBasicTextFieldEmbedder(AllenNlpTestCase):

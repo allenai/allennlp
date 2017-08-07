@@ -5,12 +5,12 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
-from allennlp.common.tensor import arrays_to_variables, sequence_cross_entropy_with_logits
-from allennlp.common.tensor import get_text_field_mask
-from allennlp.data import Vocabulary
+from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields.text_field import TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
+from allennlp.nn.util import arrays_to_variables, sequence_cross_entropy_with_logits
+from allennlp.nn.util import get_text_field_mask, get_lengths_from_binary_sequence_mask
 
 
 @Model.register("simple_tagger")
@@ -79,8 +79,8 @@ class SimpleTagger(Model):
         embedded_text_input = self.text_field_embedder(tokens)
         batch_size, sequence_length, _ = embedded_text_input.size()
         mask = get_text_field_mask(tokens)
-        # TODO(Mark): Use mask in encoder once all registered encoders have the same API.
-        encoded_text = self.stacked_encoder(embedded_text_input)
+        batch_sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
+        encoded_text = self.stacked_encoder(embedded_text_input, batch_sequence_lengths)
 
         logits = self.tag_projection_layer(encoded_text)
         reshaped_log_probs = logits.view(-1, self.num_classes)
@@ -88,7 +88,7 @@ class SimpleTagger(Model):
 
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
-        if tags:
+        if tags is not None:
             # Negative log likelihood criterion takes integer labels, not one hot.
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
@@ -120,16 +120,15 @@ class SimpleTagger(Model):
             An array of shape (text_input_length, num_classes), where each row is a
             distribution over classes for a given token in the sentence.
         """
-        text_field.index(self.vocab)
-        padding_lengths = text_field.get_padding_lengths()
-        array_input = text_field.as_array(padding_lengths)
-        model_input = arrays_to_variables(array_input, add_batch_dimension=True)
-        output_dict = self.forward(tokens=model_input)
+        instance = Instance({'tokens': text_field})
+        instance.index_fields(self.vocab)
+        model_input = arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
+        output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.
         predictions = output_dict["class_probabilities"].data.squeeze(0)
         _, argmax = predictions.max(-1)
-        indices = argmax.squeeze(1).numpy()
+        indices = argmax.numpy()
         tags = [self.vocab.get_token_from_index(x, namespace="tags") for x in indices]
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}

@@ -2,22 +2,19 @@
 import numpy
 
 from allennlp.common import Params
-from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.simple_tagger import SimpleTagger
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.nn.util import arrays_to_variables
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class SimpleTaggerTest(AllenNlpTestCase):
-
     def setUp(self):
         super(SimpleTaggerTest, self).setUp()
-        self.write_sequence_tagging_data()
-
-        dataset = SequenceTaggingDatasetReader().read(self.TRAIN_FILE)
+        dataset = SequenceTaggingDatasetReader().read('tests/fixtures/sequence_tagging_example.tsv')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)
@@ -44,7 +41,7 @@ class SimpleTaggerTest(AllenNlpTestCase):
         self.ensure_model_can_train_save_and_load(self.model, self.dataset)
 
     def test_forward_pass_runs_correctly(self):
-        training_arrays = self.dataset.as_arrays()
+        training_arrays = self.dataset.as_array_dict()
         _ = self.model.forward(**arrays_to_variables(training_arrays))
 
     def test_tag_returns_distributions_per_token(self):
