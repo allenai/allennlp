@@ -143,16 +143,14 @@ class DecomposableAttention(Model):
         hypothesis_compare_input = torch.cat([embedded_hypothesis, attended_premise], dim=-1)
 
         compared_premise = self._compare_feedforward(premise_compare_input)
-        # TODO(mattg): use broadcasting once pytorch 0.2 is released.
-        compared_premise = compared_premise * premise_mask.unsqueeze(-1).expand_as(compared_premise)
+        compared_premise = compared_premise * premise_mask.unsqueeze(-1)
         # Shape: (batch_size, compare_dim)
-        compared_premise = compared_premise.sum(dim=1).squeeze(1)
+        compared_premise = compared_premise.sum(dim=1)
 
         compared_hypothesis = self._compare_feedforward(hypothesis_compare_input)
-        # TODO(mattg): use broadcasting once pytorch 0.2 is released.
-        compared_hypothesis = compared_hypothesis * hypothesis_mask.unsqueeze(-1).expand_as(compared_hypothesis)
+        compared_hypothesis = compared_hypothesis * hypothesis_mask.unsqueeze(-1)
         # Shape: (batch_size, compare_dim)
-        compared_hypothesis = compared_hypothesis.sum(dim=1).squeeze(1)
+        compared_hypothesis = compared_hypothesis.sum(dim=1)
 
         aggregate_input = torch.cat([compared_premise, compared_hypothesis], dim=-1)
         label_logits = self._aggregate_feedforward(aggregate_input)
@@ -160,7 +158,7 @@ class DecomposableAttention(Model):
 
         output_dict = {"label_logits": label_logits, "label_probs": label_probs}
 
-        if label:
+        if label is not None:
             if label.dim() == 2:
                 _, label = label.max(-1)
             loss = self._loss(label_logits, label.view(-1))
