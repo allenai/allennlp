@@ -58,14 +58,10 @@ def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torc
     # This is ugly, but required - we are creating a new variable at runtime, so we
     # must ensure it has the correct CUDA vs non-CUDA type. We do this by cloning and
     # refilling one of the inputs to the function.
-    index_range = sequence_lengths.data.clone().copy_(torch.range(0, len(sequence_lengths) - 1))
+    index_range = sequence_lengths.data.clone().copy_(torch.arange(0, len(sequence_lengths)))
     # This is the equivalent of zipping with index, sorting by the original
     # sequence lengths and returning the now sorted indices.
-<<<<<<< HEAD
     index_range = Variable(index_range.long())
-=======
-    index_range = Variable(torch.arange(0, len(sequence_lengths)).long())
->>>>>>> master
     _, reverse_mapping = permutation_index.sort(0, descending=False)
     restoration_indices = index_range.index_select(0, reverse_mapping)
     return sorted_tensor, sorted_sequence_lengths, restoration_indices
