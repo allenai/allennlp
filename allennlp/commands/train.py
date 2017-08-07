@@ -44,6 +44,7 @@ def prepare_environment(params: Union[Params, Dict[str, Any]]):
     project, you will want to call this function before importing Pytorch. Complete determinism
     is very difficult to achieve with libraries doing optimized linear algebra due to massively
     parallel execution, which is exacerbated by using GPUs.
+
     Parameters
     ----------
     params: Params object or dict, required.
@@ -76,6 +77,7 @@ def _train_model_from_args(args: argparse.Namespace):
 def train_model_from_file(parameter_filename: str):
     """
     A wrapper around :func:`train_model` which loads json from a file.
+
     Parameters
     ----------
     param_path: str, required.

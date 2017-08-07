@@ -220,6 +220,7 @@ class Vocabulary:
         use that vocabulary file instead of just setting the vocabulary from a dataset, for
         whatever reason, you can do that with this method.  You must specify the namespace to use,
         and we assume that you want to use padding and OOV tokens for this.
+
         Parameters
         ----------
         filename : ``str``
