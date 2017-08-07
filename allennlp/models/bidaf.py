@@ -198,7 +198,7 @@ class BidirectionalAttentionFlow(Model):
                        "span_start_probs": span_start_probs,
                        "span_end_logits": span_end_logits,
                        "span_end_probs": span_end_probs}
-        if span_start:
+        if span_start is not None:
             # Negative log likelihood criterion takes integer labels, not one hot.
             if span_start.dim() == 2:
                 _, span_start = span_start.max(-1)

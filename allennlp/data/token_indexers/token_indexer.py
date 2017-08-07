@@ -75,6 +75,6 @@ class TokenIndexer(Generic[TokenType], Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params) -> 'TokenIndexer':
+    def from_params(cls, params: Params) -> 'TokenIndexer':  # type: ignore
         choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
         return cls.by_name(choice).from_params(params)

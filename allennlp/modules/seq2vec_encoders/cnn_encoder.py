@@ -100,8 +100,7 @@ class CnnEncoder(Seq2VecEncoder):
         # tensor of has shape `(batch_size, num_conv_layers * num_filters)`, which then gets
         # projected using the projection layer, if requested.
 
-        # Not really sure why max isn't squeezing...
-        filter_outputs = [self._activation(convolution_layer(tokens)).max(dim=2)[0].squeeze(dim=2)
+        filter_outputs = [self._activation(convolution_layer(tokens)).max(dim=2)[0]
                           for convolution_layer in self._convolution_layers]
 
         # Now we have a list of `num_conv_layers` tensors of shape `(batch_size, num_filters)`.

@@ -13,11 +13,9 @@ class CosineSimilarity(SimilarityFunction):
     """
     @overrides
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
-        # TODO(mattg): remove the .expand_as() stuff once we upgrade to pytorch-0.2, which has
-        # broadcasting implemented for this case.
-        normalized_tensor_1 = tensor_1 / tensor_1.norm(dim=-1).expand_as(tensor_1)
-        normalized_tensor_2 = tensor_2 / tensor_2.norm(dim=-1).expand_as(tensor_2)
-        return (normalized_tensor_1 * normalized_tensor_2).sum(dim=-1).squeeze(dim=-1)
+        normalized_tensor_1 = tensor_1 / tensor_1.norm(dim=-1, keepdim=True)
+        normalized_tensor_2 = tensor_2 / tensor_2.norm(dim=-1, keepdim=True)
+        return (normalized_tensor_1 * normalized_tensor_2).sum(dim=-1)
 
     @classmethod
     def from_params(cls, params: Params) -> 'CosineSimilarity':

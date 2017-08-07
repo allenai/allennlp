@@ -88,7 +88,7 @@ class SimpleTagger(Model):
 
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
-        if tags:
+        if tags is not None:
             # Negative log likelihood criterion takes integer labels, not one hot.
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
@@ -128,7 +128,7 @@ class SimpleTagger(Model):
         # Remove batch dimension, as we only had one input.
         predictions = output_dict["class_probabilities"].data.squeeze(0)
         _, argmax = predictions.max(-1)
-        indices = argmax.squeeze(1).numpy()
+        indices = argmax.numpy()
         tags = [self.vocab.get_token_from_index(x, namespace="tags") for x in indices]
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}

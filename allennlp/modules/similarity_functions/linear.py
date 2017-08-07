@@ -57,26 +57,8 @@ class LinearSimilarity(SimilarityFunction):
     @overrides
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
         combined_tensors = self._combine_tensors(tensor_1, tensor_2)
-
-        # The '@' operator here is torch.matmul, but that's only available in pytorch-0.2.
-        # TODO(mattg): switch to using torch.matmul when a version of pytorch with it is released.
-        # I think it's more clear and less magical, and won't require us to have to special case
-        # the higher-order version.
-        # Also, broadcasting this simple addition is only available in pytorch-0.2.  When that's
-        # ready, change this back to `(dot_product + self._bias)`.
-        if combined_tensors.dim() <= 2:
-            dot_product = combined_tensors @ self._weight_vector
-        else:
-            view_args = [-1] + list(combined_tensors.size()[-2:])
-            reshaped_tensor = combined_tensors.view(*view_args)
-            unsqueezed_weight = self._weight_vector.unsqueeze(1).unsqueeze(0)
-            reshaped_weight = unsqueezed_weight.expand(reshaped_tensor.size()[0],
-                                                       self._weight_vector.size()[0],
-                                                       1)
-            reshaped_dot_product = reshaped_tensor.bmm(reshaped_weight)
-            view_args = combined_tensors.size()[:-1]
-            dot_product = reshaped_dot_product.view(*view_args)
-        return self._activation(dot_product + self._bias.expand_as(dot_product)).squeeze(dim=-1)
+        dot_product = torch.matmul(combined_tensors, self._weight_vector)
+        return self._activation(dot_product + self._bias)
 
     def _combine_tensors(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
         combined_tensor = self._get_combination(self._combinations[0], tensor_1, tensor_2)
