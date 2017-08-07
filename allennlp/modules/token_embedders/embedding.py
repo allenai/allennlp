@@ -114,7 +114,6 @@ class Embedding(TokenEmbedder):
                              norm_type=self.norm_type,
                              scale_grad_by_freq=self.scale_grad_by_freq,
                              sparse=self.sparse)
-
         if original_inputs.dim() > 2:
             view_args = list(original_inputs.size()) + [embedded.size(-1)]
             embedded = embedded.view(*view_args)
