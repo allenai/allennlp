@@ -109,7 +109,6 @@ class Embedding(TokenEmbedder):
         if original_inputs.dim() > 2:
             inputs = inputs.view(-1, inputs.size(-1))
         embedded = embedding(inputs, self.weight,
-
                              max_norm=self.max_norm,
                              norm_type=self.norm_type,
                              scale_grad_by_freq=self.scale_grad_by_freq,
