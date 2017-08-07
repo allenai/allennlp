@@ -49,12 +49,15 @@ class SemanticRoleLabeler(Model):
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
 
-        # NOTE: You must make sure that the "input_dim" of the stacked encoder
-        # in your configuration file is equal to self.text_field_embedder.output_dim + 1.
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
         initializer(self)
+
+        if text_field_embedder.get_output_dim() + 1 != stacked_encoder.get_input_dim():
+            raise ConfigurationError("The SRL Model uses a binary verb indicator feature, meaning "
+                                     "the input dimension of the stacked_encoder must be equal to "
+                                     "the output dimension of the text_field_embedder + 1.")
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
@@ -217,7 +220,7 @@ class SemanticRoleLabeler(Model):
 
         default_lstm_params = {
                 'type': 'alternating_lstm',
-                'input_size': 100,
+                'input_size': 101,  # Because of the verb_indicator feature.
                 'hidden_size': 300,
                 'num_layers': 8,
                 'recurrent_dropout_probability': 0.1,

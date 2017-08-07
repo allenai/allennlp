@@ -1,9 +1,12 @@
 from typing import Dict
 import json
+import logging
 
 from overrides import overrides
+import tqdm
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -12,6 +15,8 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField, LabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("snli")
@@ -39,7 +44,8 @@ class SnliReader(DatasetReader):
     def read(self, file_path: str):
         instances = []
         with open(file_path, 'r') as snli_file:
-            for line in snli_file:
+            logger.info("Reading SNLI instances from jsonl dataset at: %s", file_path)
+            for line in tqdm.tqdm(snli_file):
                 example = json.loads(line)
 
                 label = example["gold_label"]
@@ -52,6 +58,9 @@ class SnliReader(DatasetReader):
                 instances.append(Instance({'label': label_field,
                                            'premise': premise_field,
                                            'hypothesis': hypothesis_field}))
+        if not instances:
+            raise ConfigurationError("No instances were read from the given filepath {}. "
+                                     "Is the path correct?".format(file_path))
         return Dataset(instances)
 
     @classmethod

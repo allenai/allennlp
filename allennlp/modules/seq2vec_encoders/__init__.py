@@ -37,6 +37,7 @@ class _Seq2VecWrapper:
     ``PytorchSeq2VecWrapper``.  This lets us use this class in the registry and have everything just
     work.
     """
+    PYTORCH_MODELS = [torch.nn.GRU, torch.nn.LSTM, torch.nn.RNN]
     def __init__(self, module_class: Type[torch.nn.modules.RNNBase]) -> None:
         self._module_class = module_class
 
@@ -46,7 +47,8 @@ class _Seq2VecWrapper:
     def from_params(self, params: Params) -> PytorchSeq2VecWrapper:
         if not params.pop('batch_first', True):
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
-        params['batch_first'] = True
+        if self._module_class in self.PYTORCH_MODELS:
+            params['batch_first'] = True
         module = self._module_class(**params.as_dict())
         return PytorchSeq2VecWrapper(module)
 

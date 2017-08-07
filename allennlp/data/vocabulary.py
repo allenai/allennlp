@@ -167,7 +167,7 @@ class Vocabulary:
         """
         os.makedirs(directory, exist_ok=True)
         if os.listdir(directory):
-            logging.warning("vocabulary serialization directory % is not empty", directory)
+            logging.warning("vocabulary serialization directory %s is not empty", directory)
 
         with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), 'w', 'utf-8') as namespace_file:
             for namespace_str in self._non_padded_namespaces:

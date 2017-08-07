@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
 import numpy
 import torch
@@ -7,14 +7,14 @@ from torch.autograd import Variable
 from allennlp.common.checks import ConfigurationError
 
 
-def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
+def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     """
     Compute sequence lengths for each batch element in a tensor using a
     binary mask.
 
     Parameters
     ----------
-    mask : torch.ByteTensor, required.
+    mask : torch.Tensor, required.
         A 2D binary mask of shape (batch_size, sequence_length) to
         calculate the per-batch sequence lengths from.
 
@@ -23,7 +23,7 @@ def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
     A torch.LongTensor of shape (batch_size,) representing the lengths
     of the sequences in the batch.
     """
-    return mask.sum(-1)
+    return mask.long().sum(-1)
 
 
 def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torch.autograd.Variable):
@@ -54,23 +54,32 @@ def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torc
 
     sorted_sequence_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
     sorted_tensor = tensor.index_select(0, permutation_index)
+
+    # This is ugly, but required - we are creating a new variable at runtime, so we
+    # must ensure it has the correct CUDA vs non-CUDA type. We do this by cloning and
+    # refilling one of the inputs to the function.
+    index_range = sequence_lengths.data.clone().copy_(torch.arange(0, len(sequence_lengths)))
     # This is the equivalent of zipping with index, sorting by the original
     # sequence lengths and returning the now sorted indices.
-    index_range = Variable(torch.arange(0, len(sequence_lengths)).long())
+    index_range = Variable(index_range.long())
     _, reverse_mapping = permutation_index.sort(0, descending=False)
     restoration_indices = index_range.index_select(0, reverse_mapping)
     return sorted_tensor, sorted_sequence_lengths, restoration_indices
 
 
-def get_dropout_mask(dropout_probability: float, shape: List[int]):
+def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autograd.Variable):
     """
-    Computes an element-wise dropout mask for an arbitrarily sized tensor, where
+    Computes and returns an element-wise dropout mask for a given tensor, where
     each element in the mask is dropped out with probability dropout_probability.
+    Note that the mask is NOT applied to the tensor - the tensor is passed to retain
+    the correct CUDA tensor type for the mask.
 
     Parameters
     ----------
-    dropout_probability: float, Probability of dropping a dimension of the input.
-    shape: Shape of the tensor you are generating a mask for.
+    dropout_probability : float, required.
+        Probability of dropping a dimension of the input.
+    tensor_for_masking : torch.Variable, required.
+
 
     Return
     ------
@@ -78,7 +87,8 @@ def get_dropout_mask(dropout_probability: float, shape: List[int]):
     This scaling ensures expected values and variances of the output of applying this mask
      and the original tensor are the same.
     """
-    binary_mask = torch.rand(shape) > dropout_probability
+    binary_mask = tensor_for_masking.clone()
+    binary_mask.data.copy_(torch.rand(tensor_for_masking.size()) > dropout_probability)
     # Scale mask by 1/keep_prob to preserve output statistics.
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask
@@ -219,7 +229,7 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     return viterbi_path, viterbi_score
 
 
-def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Tensor:
+def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.LongTensor:
     """
     Takes the dictionary of tensors produced by a ``TextField`` and returns a mask of shape
     ``(batch_size, num_tokens)``.  This mask will be 0 where the tokens are padding, and 1
@@ -229,11 +239,20 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Te
     word ids, one for character ids).  In order to get a token mask, we assume that the tensor in
     the dictionary with the lowest number of dimensions has plain token ids.  This allows us to
     also handle cases where the input is actually a ``ListField[TextField]``.
+
+    NOTE: Our functions for generating masks create torch.LongTensors, because using
+    torch.byteTensors inside Variables makes it easy to run into overflow errors
+    when doing mask manipulation, such as summing to get the lengths of sequences - see below.
+    >>> mask = torch.ones([260]).byte()
+    >>> mask.sum() # equals 260.
+    >>> var_mask = torch.autograd.Variable(mask)
+    >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
     tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
     tensor_dims.sort(key=lambda x: x[0])
     token_tensor = tensor_dims[0][1]
-    return token_tensor != 0
+
+    return (token_tensor != 0).long()
 
 
 def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:

@@ -1,8 +1,11 @@
 from typing import Dict
+import logging
 
 from overrides import overrides
+import tqdm
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
@@ -11,6 +14,9 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("language_modeling")
@@ -57,7 +63,8 @@ class LanguageModelingReader(DatasetReader):
             tokenized_text = self._tokenizer.tokenize(all_text)
             num_tokens = self._tokens_per_instance
             tokenized_strings = []
-            for index in range(0, len(tokenized_text) - num_tokens, num_tokens):
+            logger.info("Creating dataset from all text in file: %s", file_path)
+            for index in tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens)):
                 tokenized_strings.append(tokenized_text[index:index + num_tokens])
         else:
             tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]
@@ -87,6 +94,10 @@ class LanguageModelingReader(DatasetReader):
             output_field = TextField(tokenized_string[1:], output_indexer)
             instances.append(Instance({'input_tokens': input_field,
                                        'output_tokens': output_field}))
+
+        if not instances:
+            raise ConfigurationError("No instances were read from the given filepath {}. "
+                                     "Is the path correct?".format(file_path))
         return Dataset(instances)
 
     @classmethod
