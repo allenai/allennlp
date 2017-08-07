@@ -118,7 +118,7 @@ class SemanticRoleLabeler(Model):
         reshaped_log_probs = logits.view(-1, self.num_classes)
         class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, sequence_length, self.num_classes])
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
-        if tags:
+        if tags is not None:
             # Negative log likelihood criterion takes integer labels, not one hot.
             if tags.dim() == 3:
                 _, tags = tags.max(-1)

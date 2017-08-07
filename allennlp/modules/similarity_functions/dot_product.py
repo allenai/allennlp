@@ -13,7 +13,7 @@ class DotProductSimilarity(SimilarityFunction):
     """
     @overrides
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
-        return (tensor_1 * tensor_2).sum(dim=-1).squeeze(dim=-1)
+        return (tensor_1 * tensor_2).sum(dim=-1)
 
     @classmethod
     def from_params(cls, params: Params) -> 'DotProductSimilarity':
