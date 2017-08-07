@@ -72,7 +72,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
 
         # Check loss exists and we can compute gradients.
         model_loss = model_predictions["loss"]
-        assert model_loss
+        assert model_loss is not None
         model_loss.backward()
 
         torch.save(model.state_dict(), self.MODEL_FILE)
@@ -83,7 +83,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
 
         # Check loaded model's loss exists and we can compute gradients.
         loaded_model_loss = loaded_model_predictions["loss"]
-        assert loaded_model_loss
+        assert loaded_model_loss is not None
         loaded_model_loss.backward()
 
         # Both outputs should have the same keys and the values
