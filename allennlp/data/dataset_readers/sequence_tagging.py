@@ -13,7 +13,7 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField, TagField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("sequence_tagging")
