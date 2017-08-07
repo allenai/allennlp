@@ -71,7 +71,8 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autog
     """
     Computes and returns an element-wise dropout mask for a given tensor, where
     each element in the mask is dropped out with probability dropout_probability.
-    Note that the mask is NOT applied to the tensor.
+    Note that the mask is NOT applied to the tensor - the tensor is passed to retain
+    the correct CUDA tensor type for the mask.
 
     Parameters
     ----------

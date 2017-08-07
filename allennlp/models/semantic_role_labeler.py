@@ -56,6 +56,11 @@ class SemanticRoleLabeler(Model):
                                                            self.num_classes))
         initializer(self)
 
+        if text_field_embedder.get_output_dim() + 1 != stacked_encoder.get_input_dim():
+            raise ConfigurationError("The SRL Model uses a binary verb indicator feature, meaning "
+                                     "the input dimension of the stacked_encoder must be equal to"
+                                     "the output dimension of the text_field_embedder + 1.")
+
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 verb_indicator: torch.LongTensor,

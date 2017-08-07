@@ -1,4 +1,5 @@
 from typing import Dict
+import logging
 
 from overrides import overrides
 import tqdm
@@ -13,6 +14,9 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+
+
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("language_modeling")
@@ -59,6 +63,7 @@ class LanguageModelingReader(DatasetReader):
             tokenized_text = self._tokenizer.tokenize(all_text)
             num_tokens = self._tokens_per_instance
             tokenized_strings = []
+            logger.info("Creating dataset from all text in file: %s", file_path)
             for index in tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens)):
                 tokenized_strings.append(tokenized_text[index:index + num_tokens])
         else:

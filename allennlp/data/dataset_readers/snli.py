@@ -1,5 +1,6 @@
 from typing import Dict
 import json
+import logging
 
 from overrides import overrides
 import tqdm
@@ -14,6 +15,8 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField, LabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
+
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("snli")
@@ -41,6 +44,7 @@ class SnliReader(DatasetReader):
     def read(self, file_path: str):
         instances = []
         with open(file_path, 'r') as snli_file:
+            logger.info("Reading SNLI instances from jsonl dataset at: %s", file_path)
             for line in tqdm.tqdm(snli_file):
                 example = json.loads(line)
 
