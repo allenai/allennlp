@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 
-from allennlp.data.dataset_readers.semantic_role_labelling import SrlReader
+from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.common.testing import AllenNlpTestCase
 
 

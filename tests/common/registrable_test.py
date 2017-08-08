@@ -96,7 +96,8 @@ class TestRegistrable(AllenNlpTestCase):
                 "eye": torch.nn.init.eye,
         }
         for key, value in all_initializers.items():
-            assert Initializer.by_name(key) == value
+            # pylint: disable=protected-access
+            assert Initializer.by_name(key)()._init_function == value
 
     def test_registry_has_builtin_token_embedders(self):
         assert TokenEmbedder.by_name("embedding").__name__ == 'Embedding'

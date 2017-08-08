@@ -12,9 +12,11 @@ library. We recommend that you walk through them in the following order:
 5. Running experiments from JSON with AllenNLP.
 
 
-To launch a tutorial, follow the [install instructions](../../README.md) and then run
+To load a tutorial, follow the [install instructions](../../README.md) and then launch Jupyter.
 
-```jupyter /path/to/notebook```
+```jupyter notebook```
+
+Jupyter will tell you how to open the website, and from there you can load the tutorial.
 
 Working through these notebooks should provide you with a good understanding of the
 way AllenNLP is structured and how you can get the most out of using it. Enjoy!

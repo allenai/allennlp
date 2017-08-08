@@ -103,14 +103,15 @@ class Trainer:
                 try:
                     loss = output_dict["loss"]
                     loss.backward()
-                    train_loss += loss.data.numpy()
+                    # Make sure Variable is on the cpu before converting to numpy.
+                    # .cpu() is a no-op if you aren't using GPUs.
+                    train_loss += loss.data.cpu().numpy()
                 except KeyError:
                     raise ConfigurationError("The model you are trying to optimize does not contain a"
                                              " 'loss' key in the output of model.forward(inputs).")
 
                 if self._grad_norm:
                     clip_grad_norm(self._model.parameters(), self._grad_norm)
-
                 self._optimizer.step()
             metrics = self._model.get_metrics(reset=True) or {}
 
@@ -120,9 +121,9 @@ class Trainer:
                 val_generator = self._iterator(self._validation_dataset, num_epochs=1)
                 for batch in tqdm.tqdm(val_generator):
                     tensor_batch = arrays_to_variables(batch, self._cuda_device)
-                    val_output_dict = self._model.forward(tensor_batch)
+                    val_output_dict = self._model.forward(**tensor_batch)
                     loss = val_output_dict["loss"]
-                    val_loss += loss.data.numpy()
+                    val_loss += loss.data.cpu().numpy()
 
                 val_metrics = self._model.get_metrics(reset=True) or {}
 
