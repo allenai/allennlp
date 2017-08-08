@@ -5,9 +5,9 @@ ECR_REPOSITORY=896129387501.dkr.ecr.us-west-2.amazonaws.com
 COMMAND=$1
 CONTACT=$2
 
-CONTAINER_TAG=$(git rev-parse HEAD)
-IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$CONTAINER_TAG
-ID=$(openssl rand -base64 6 | tr '[:upper:]' '[:lower:]')
+COMMIT=$(git rev-parse HEAD)
+IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$COMMIT
+ID=${COMMIT:0:8}
 
 USAGE="USAGE: ./run_on_kube.sh [COMMAND] [CONTACT]"
 if [ ! -n "$COMMAND" ] ; then
