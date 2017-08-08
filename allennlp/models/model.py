@@ -16,11 +16,22 @@ class Model(torch.nn.Module, Registrable):
     can be unpacked and passed into other layers. One caveat to this is that if you
     wish to use an AllenNLP model inside a Container (such as nn.Sequential), you must
     interleave the models with a wrapper module which unpacks the dictionary into
-    a list of tensors. TODO(Mark): Implement this.
+    a list of tensors.
 
-    Finally, in order for your model to be trained using the :class:`~allennlp.training.Trainer`
+    Finally, the output dictionary of your model can contain 2 special keys which we
+    use if you train a model using the :class:`~allennlp.training.Trainer`. These are:
+
+    loss : ``torch.Variable``, required.
+        The loss to be optimized. Required for a model to be trained using ``Trainer``.
+
+    has_metrics : bool, optional.
+        If your model has this key in it's output dictionary, :func:`Model.get_metrics`
+        will be called in the training loop after each epoch. This allows you to implement
+        metrics which accumulate as your model trains.
+
+    in order for your model to be trained using the :class:`~allennlp.training.Trainer`
     api, the output dictionary of your Model must include a "loss" key, which will be
-    optimised during the training process.
+    optimised during the training process. Additionally, it may include a
     """
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
@@ -64,6 +75,14 @@ class Model(torch.nn.Module, Registrable):
             key pointing to a scalar torch.Tensor representing the loss to be optimized.
         """
         raise NotImplementedError
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        """
+        Returns a dictionary of metrics. If the ``forward`` call of your model returns a
+        ``has_metrics`` key, this will be called by :class:`allennlp.training.Trainer`
+        in order to compute and use model metrics for early stopping and model serialisation.
+        """
+        pass
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params):

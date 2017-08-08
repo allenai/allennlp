@@ -1,7 +1,7 @@
 import logging
 import os
 import shutil
-from typing import Optional
+from typing import Optional, List
 
 import torch
 from torch.nn.utils.clip_grad import clip_grad_norm
@@ -25,6 +25,7 @@ class Trainer:
                  train_dataset: Dataset,
                  validation_dataset: Optional[Dataset] = None,
                  patience: int = 2,
+                 validation_metric: Optional[str] = None,
                  num_epochs: int = 20,
                  serialization_prefix: Optional[str] = None,
                  cuda_device: int = -1,
@@ -47,6 +48,9 @@ class Trainer:
             A ``Dataset`` to evaluate on. The dataset should have already been indexed.
         patience : int, optional (default=2)
             Number of epochs to be patient before early stopping.
+        validation_metric : str, optional (default="loss")
+            Validation metric to measure for whether to stop training using patience
+            and whether to serialize an ``is_best`` model each epoch.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_prefix : str, optional (default=None)
@@ -65,7 +69,8 @@ class Trainer:
         self._train_dataset = train_dataset
         self._validation_dataset = validation_dataset
 
-        self._patience = patience  # TODO(Mark): add this to training loop with validation metrics.
+        self._patience = patience
+        self._validation_metric = validation_metric
         self._num_epochs = num_epochs
         self._serialization_prefix = serialization_prefix
         self._cuda_device = cuda_device
@@ -80,12 +85,14 @@ class Trainer:
         if self._serialization_prefix is not None:
             if any(["model_state_epoch_" in x
                     for x in os.listdir(self._serialization_prefix)]):
+                logger.info("Loading model from checkpoint.")
                 epoch_counter = self._restore_checkpoint()
 
+        logger.info("Beginning training.")
         for epoch in range(epoch_counter, self._num_epochs):
             train_loss = 0.0
             val_loss = 0.0
-
+            validation_metric_counts = []  # type: List[float]
             # Set the model to "train" mode.
             self._model.train()
             train_generator = self._iterator(self._train_dataset, num_epochs=1)
@@ -105,6 +112,7 @@ class Trainer:
                     clip_grad_norm(self._model.parameters(), self._grad_norm)
 
                 self._optimizer.step()
+            metrics = self._model.get_metrics(reset=True) or {}
 
             if self._validation_dataset is not None:
                 # Switch to evaluation mode.
@@ -116,10 +124,24 @@ class Trainer:
                     loss = val_output_dict["loss"]
                     val_loss += loss.data.numpy()
 
-            # TODO(Mark): Add user specified metrics here, maybe a "metrics" key?
-            logger.info("Training Loss: %3f    Validation Loss: %3f ", train_loss, val_loss)
+                val_metrics = self._model.get_metrics(reset=True) or {}
+
+            message_template = "Training %s : %3f    Validation %s : %3f "
+            for name, value in metrics.items():
+                logger.info(message_template, name, value, name, val_metrics[name])
+            logger.info(message_template, "Loss", train_loss, "Loss", val_loss)
+
+            if self._validation_metric:
+                this_epoch = val_metrics[self._validation_metric]
+            else:
+                this_epoch = val_loss
+            if len(validation_metric_counts) > self._patience:
+                if validation_metric_counts[-self._patience] > this_epoch:
+                    break
+            validation_metric_counts.append(this_epoch)
+            is_best_so_far = this_epoch == max(validation_metric_counts)
             if self._serialization_prefix:
-                self._save_checkpoint(epoch)
+                self._save_checkpoint(epoch, is_best=is_best_so_far)
 
     def _save_checkpoint(self,
                          epoch: int,
@@ -144,7 +166,7 @@ class Trainer:
         if is_best:
             logger.info("Best validation performance so far. "
                         "Copying weights to %s/best.th'.", self._serialization_prefix)
-            shutil.copy(model_path, os.path.join(model_path, "best.th"))
+            shutil.copyfile(model_path, os.path.join(self._serialization_prefix, "best.th"))
 
     def _restore_checkpoint(self) -> int:
         """
@@ -187,6 +209,7 @@ class Trainer:
 
         params = params or Params({})
         patience = params.pop("patience", 2)
+        validation_metric = params.pop("validation_metric", None)
         num_epochs = params.pop("num_epochs", 20)
         serialization_prefix = params.pop("serialization_prefix", None)
         cuda_device = params.pop("cuda_device", -1)
@@ -195,6 +218,7 @@ class Trainer:
         return Trainer(model, optimizer, iterator,
                        train_dataset, validation_dataset,
                        patience=patience,
+                       validation_metric=validation_metric,
                        num_epochs=num_epochs,
                        serialization_prefix=serialization_prefix,
                        cuda_device=cuda_device,

@@ -5,6 +5,7 @@ import torch
 
 from allennlp.common.registrable import Registrable
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
 
 
 class Metric(Registrable):
@@ -28,6 +29,11 @@ class Metric(Registrable):
         Reset any accumulators or internal state.
         """
         raise NotImplementedError
+
+    @classmethod
+    def from_params(cls, params: Params):
+        metric_type = params.pop_choice("type", cls.list_available())
+        return cls.by_name(metric_type)(**params.as_dict())  # type: ignore
 
 
 @Metric.register("categorical_accuracy")
@@ -128,7 +134,7 @@ class F1Measure(Metric):
         if mask is None:
             mask = torch.ones(gold_labels.size())
         mask = mask.float()
-
+        gold_labels = gold_labels.float()
         null_prediction_mask = gold_labels.eq(self._null_prediction_label).float()
         some_prediction_mask = 1.0 - null_prediction_mask
 

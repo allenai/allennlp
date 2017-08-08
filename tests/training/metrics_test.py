@@ -137,4 +137,3 @@ class MetricsTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(f1_metrics["precision"], 0.5)
         numpy.testing.assert_almost_equal(f1_metrics["recall"], 0.5)
         numpy.testing.assert_almost_equal(f1_metrics["f1-measure"], 0.5)
-
