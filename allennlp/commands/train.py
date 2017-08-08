@@ -30,7 +30,7 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     subparser.add_argument('param_path',
                            type=str,
                            help='path to parameter file describing the model to be trained')
-    subparser.set_defaults(func=train_model_from_file)
+    subparser.set_defaults(func=_train_model_from_args)
 
     return subparser
 
@@ -65,9 +65,16 @@ def prepare_environment(params: Union[Params, Dict[str, Any]]):
     log_pytorch_version_info()
 
 
-def train_model_from_file(args: argparse.Namespace):
+def _train_model_from_args(args: argparse.Namespace):
     """
-    A wrapper around :func:`execute_driver` which loads json from a file.
+    Just converts from an ``argparse.Namepsace`` object to a string path.
+    """
+    train_model_from_file(args.param_path)
+
+
+def train_model_from_file(parameter_filename: str):
+    """
+    A wrapper around :func:`train_model` which loads json from a file.
     Parameters
     ----------
     param_path: str, required.
@@ -77,11 +84,8 @@ def train_model_from_file(args: argparse.Namespace):
     ensure_pythonhashseed_set()
 
     # Set logging format
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                        level=logging.INFO)
 
-    param_path = args.param_path
-    param_dict = pyhocon.ConfigFactory.parse_file(param_path)
+    param_dict = pyhocon.ConfigFactory.parse_file(parameter_filename)
     train_model(param_dict)
 
 
