@@ -1,7 +1,6 @@
 from typing import Dict, Any, Optional, List
-import logging
 
-from allennlp.common.params import Params, PARAMETER
+from allennlp.common.params import Params
 
 JSONDict = Dict[str, Any]  # pylint: disable=invalid-name
 
