@@ -26,12 +26,8 @@ class DecomposableAttentionServable(Servable):
     def predict_json(self, inputs: JSONDict) -> JSONDict:
         tokenizer = WordTokenizer()
 
-        # TODO(joelgrus) fix front-end to specify these
-        if "premise" in inputs and "hypothesis" in inputs:
-            premise_text = inputs["premise"]
-            hypothesis_text = inputs["hypothesis"]
-        else:
-            premise_text, hypothesis_text = inputs["input"].split("\n\n")
+        premise_text = inputs["premise"]
+        hypothesis_text = inputs["hypothesis"]
 
 
         premise = TextField(tokenizer.tokenize(premise_text), token_indexers=self.token_indexers)

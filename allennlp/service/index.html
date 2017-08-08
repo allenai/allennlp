@@ -4,56 +4,96 @@
     <title>AllenNLP</title>
 </head>
 <body>
-    <form>
-        <div>
-            <select name="model-picker" id="model-picker">
-            </select>
-        </div>
-        <div>
-            <textarea name="model-input" id="model-input"></textarea>
-        </div>
-        <div>
-            <button type="button" onclick="runModel()">run model</button>
-        </div>
-    </form>
-    <div id="output">
-    </div>
+    <div id="bidaf">
+        <h2>bidaf</h2>
+        <form id="bidaf-form">
+            <h3>Passage</h3>
+            <div>
+                <textarea name="bidaf-passage" id="bidaf-passage"></textarea>
+            </div>
+            <h3>Question</h3>
+            <div>
+                <textarea name="bidaf-question" id="bidaf-question"></textarea>
+            </div>
+            <div>
+                <button type="button" onclick="runBidaf()">run bidaf</button>
+            </div>
+        </form>
+        <div id="bidaf-output"></div>
+    </div>  <!-- bidaf -->
+
+    <hr>
+
+    <div id="snli">
+        <h2>decomposable attention</h2>
+        <form id="snli-form">
+            <h3>Premise</h3>
+            <div>
+                <textarea name="snli-premise" id="snli-premise"></textarea>
+            </div>
+            <h3>Hypothesis</h3>
+            <div>
+                <textarea name="snli-hypothesis" id="snli-hypothesis"></textarea>
+            </div>
+            <div>
+                <button type="button" onclick="runSnli()">run decomposable attention</button>
+            </div>
+        </form>
+        <div id="snli-output"></div>
+    </div> <!-- snli -->
+
+    <hr>
+
+    <div id="srl">
+        <h2>semantic role labeling</h2>
+        <form id="srl-form">
+            <h3>Sentence</h3>
+            <div>
+                <textarea name="srl-sentence" id="srl-sentence"></textarea>
+            </div>
+            <div>
+                <button type="button" onclick="runSrl()">run srl</button>
+            </div>
+        </form>
+        <div id="srl-output"></div>
+    </div> <!-- srl -->
 
     <script>
 
-/* Populate the dropdown based on available models. */
-(function() {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'models');
-    xhr.onload = function() {
-        if (xhr.status == 200) {
-            var models = JSON.parse(xhr.responseText)['models'];
-            models.forEach(function(modelName) {
-                var option = document.createElement("option");
-                option.value = modelName;
-                option.innerText = modelName;
-                document.getElementById("model-picker").appendChild(option);
-            });
-        }
-    }
-    xhr.send();
-})();
 
-/* Run the selected model and put the results in the `output` div. */
-function runModel() {
-    var modelName = document.getElementById("model-picker").value;
-    var input = document.getElementById("model-input").value;
-
+function runModel(modelName, inputs, outputDivId) {
     var xhr = new XMLHttpRequest();
 
     xhr.open('POST', 'predict/' + modelName);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onload = function() {
         if (xhr.status === 200) {
-            document.getElementById("output").innerText = xhr.responseText;
+            document.getElementById(outputDivId).innerText = xhr.responseText;
         }
     }
-    xhr.send(JSON.stringify({ 'input': input }));
+
+    var input = {};
+    for (var inputName in inputs) {
+        var divId = inputs[inputName];
+        var inputValue = document.getElementById(divId).value;
+        input[inputName] = inputValue;
+    }
+
+    console.log(input);
+
+    xhr.send(JSON.stringify(input));
+}
+
+function runBidaf() {
+    runModel('bidaf', {"question": "bidaf-question", "passage": "bidaf-passage"}, "bidaf-output");
+}
+
+function runSnli() {
+    runModel('snli', {"premise": "snli-premise", "hypothesis": "snli-hypothesis"}, "snli-output");
+}
+
+function runSrl() {
+    runModel('srl', {"sentence": "srl-sentence"}, "srl-output");
 }
 
     </script>

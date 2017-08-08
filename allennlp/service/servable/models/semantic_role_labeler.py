@@ -37,7 +37,8 @@ class SemanticRoleLabelerServable(Servable):
     def predict_json(self, inputs: JSONDict) -> JSONDict:
         tokenizer = WordTokenizer()
 
-        sentence = tokenizer.tokenize(inputs["input"])
+        sentence = tokenizer.tokenize(inputs["sentence"])
+        print(sentence)
         text = TextField(sentence, token_indexers={"tokens": SingleIdTokenIndexer()})
         results = {"idx": []}  # type: Dict[str, Any]
         for i in range(len(sentence)):

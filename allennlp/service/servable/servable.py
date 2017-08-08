@@ -41,23 +41,15 @@ class ServableCollection:
 
     @staticmethod
     def default() -> 'ServableCollection':
-        # TODO(joelgrus): eventually get rid of this
-
-        # disable parameter logging for these models
-        logging.disable(PARAMETER)
-
         import allennlp.service.servable.models.semantic_role_labeler as semantic_role_labeler
         import allennlp.service.servable.models.bidaf as bidaf
         import allennlp.service.servable.models.decomposable_attention as decomposable_attention
 
         all_models = {
                 'bidaf': bidaf.BidafServable(),
-                'semantic_role_labeler': semantic_role_labeler.SemanticRoleLabelerServable(),
-                'decomposable_attention': decomposable_attention.DecomposableAttentionServable(),
+                'srl': semantic_role_labeler.SemanticRoleLabelerServable(),
+                'snli': decomposable_attention.DecomposableAttentionServable(),
         }  # type: Dict[str, Servable]
-
-        # now re-enable parameter logging
-        logging.disable(logging.NOTSET)
 
         return ServableCollection(all_models)
 

@@ -34,12 +34,8 @@ class BidafServable(Servable):
     def predict_json(self, inputs: JSONDict) -> JSONDict:
         tokenizer = WordTokenizer()
 
-        # TODO(joelgrus) fix front-end to specify these
-        if "question" in inputs and "passage" in inputs:
-            question_text = inputs["question"]
-            passage_text = inputs["passage"]
-        else:
-            question_text, passage_text = inputs["input"].split("\n\n")
+        question_text = inputs["question"]
+        passage_text = inputs["passage"]
 
         question = TextField(tokenizer.tokenize(question_text), token_indexers=self.token_indexers)
         passage = TextField(tokenizer.tokenize(passage_text) + [SquadReader.STOP_TOKEN],
