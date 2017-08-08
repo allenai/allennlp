@@ -94,17 +94,23 @@ class AugmentedLstm(torch.nn.Module):
         sequence_tensor, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
         batch_size = sequence_tensor.size()[0]
         total_timesteps = sequence_tensor.size()[1]
-        output_accumulator = Variable(torch.zeros([batch_size, total_timesteps, self.hidden_size]))
+
+        # We have to use this '.data.new().resize_.fill_' pattern to create tensors with the correct
+        # type - forward has no knowledge of whether these are torch.Tensors or torch.cuda.Tensors.
+        output_accumulator = Variable(sequence_tensor.data.new()
+                                      .resize_(batch_size, total_timesteps, self.hidden_size).fill_(0))
         if initial_state is None:
-            full_batch_previous_memory = Variable(torch.zeros([batch_size, self.hidden_size]))
-            full_batch_previous_state = Variable(torch.zeros([batch_size, self.hidden_size]))
+            full_batch_previous_memory = Variable(sequence_tensor.data.new()
+                                                  .resize_(batch_size, self.hidden_size).fill_(0))
+            full_batch_previous_state = Variable(sequence_tensor.data.new()
+                                                 .resize_(batch_size, self.hidden_size).fill_(0))
         else:
             full_batch_previous_state = initial_state[0].squeeze(0)
             full_batch_previous_memory = initial_state[1].squeeze(0)
 
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0:
-            dropout_mask = get_dropout_mask(self.recurrent_dropout_probability, [batch_size, self.hidden_size])
+            dropout_mask = get_dropout_mask(self.recurrent_dropout_probability, full_batch_previous_memory)
         else:
             dropout_mask = None
 
@@ -162,7 +168,7 @@ class AugmentedLstm(torch.nn.Module):
                 timestep_output = highway_gate * timestep_output + (1 - highway_gate) * highway_input_projection
 
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
-            if dropout_mask and self.training:
+            if dropout_mask is not None and self.training:
                 timestep_output = timestep_output * dropout_mask[0: current_length_index + 1]
 
             # We've been doing computation with less than the full batch, so here we create a new

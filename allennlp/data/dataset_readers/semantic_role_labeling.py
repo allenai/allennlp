@@ -1,8 +1,10 @@
 import codecs
 import os
+import logging
 from typing import Dict, List, Optional  # pylint: disable=unused-import
 
 from overrides import overrides
+import tqdm
 
 from allennlp.common import Params
 from allennlp.data.dataset import Dataset
@@ -11,6 +13,9 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, TagField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.common.checks import ConfigurationError
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("srl")
@@ -171,7 +176,8 @@ class SrlReader(DatasetReader):
         predicate_argument_labels = []  # type: List[List[str]]
         current_span_label = []  # type: List[Optional[str]]
 
-        for root, _, files in os.walk(file_path):
+        logger.info("Reading SRL instances from dataset files at: %s", file_path)
+        for root, _, files in tqdm.tqdm(list(os.walk(file_path))):
             for data_file in files:
                 # These are a relic of the dataset pre-processing. Every file will be duplicated
                 # - one file called filename.gold_skel and one generated from the preprocessing
@@ -248,6 +254,10 @@ class SrlReader(DatasetReader):
 
                         if is_verbal_predicate:
                             verbal_predicates.append(word_index)
+
+        if not instances:
+            raise ConfigurationError("No instances were read from the given filepath {}. "
+                                     "Is the path correct?".format(file_path))
         return Dataset(instances)
 
     @classmethod

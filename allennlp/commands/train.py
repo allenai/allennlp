@@ -106,9 +106,10 @@ def train_model(param_dict: Dict[str, Any]):
 
     log_dir = params.get("serialization_prefix", None)  # pylint: disable=no-member
     if log_dir is not None:
-        sys.stdout = TeeLogger(log_dir + "_stdout.log", sys.stdout)  # type: ignore
-        sys.stderr = TeeLogger(log_dir + "_stderr.log", sys.stderr)  # type: ignore
-        handler = logging.FileHandler(log_dir + "_python_logging.log")
+        os.makedirs(log_dir, exist_ok=True)
+        sys.stdout = TeeLogger(os.path.join(log_dir, "_stdout.log"), sys.stdout)  # type: ignore
+        sys.stderr = TeeLogger(os.path.join(log_dir, "_stderr.log"), sys.stderr)  # type: ignore
+        handler = logging.FileHandler(os.path.join(log_dir, "_python_logging.log"))
         handler.setLevel(logging.INFO)
         handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
         logging.getLogger().addHandler(handler)
@@ -125,9 +126,14 @@ def train_model(param_dict: Dict[str, Any]):
 
     # TODO(Mark): work out how this is going to be built with different options.
     vocab = Vocabulary.from_dataset(train_data)
-    train_data.index_instances(vocab)
-    model = Model.from_params(vocab, params.pop('model'))
+    if log_dir:
+        vocab.save_to_files(os.path.join(log_dir, "vocabulary"))
 
+    model = Model.from_params(vocab, params.pop('model'))
+    iterator = DataIterator.from_params(params.pop("iterator"))
+    optimizer = Optimizer.from_params(model.parameters(), params.pop("optimizer"))
+
+    train_data.index_instances(vocab)
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
@@ -136,11 +142,7 @@ def train_model(param_dict: Dict[str, Any]):
     else:
         validation_data = None
 
-    iterator = DataIterator.from_params(params.pop("iterator"))
-    optimizer = Optimizer.from_params(model.parameters(), params.pop("optimizer"))
-
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,
                                   params)
-
     trainer.train()
