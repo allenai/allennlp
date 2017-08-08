@@ -135,7 +135,8 @@ def train_model(param_dict: Dict[str, Any]):
 
     model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
-    optimizer = Optimizer.from_params(model.parameters(), params.pop("optimizer"))
+    parameters = [p for p in model.parameters() if p.requires_grad]
+    optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
     train_data.index_instances(vocab)
     validation_data_path = params.pop('validation_data_path', None)
