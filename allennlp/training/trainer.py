@@ -1,7 +1,7 @@
 import logging
 import os
 import shutil
-from typing import Optional, List
+from typing import Optional, List  # pylint: disable=unused-import
 
 import torch
 from torch.nn.utils.clip_grad import clip_grad_norm
