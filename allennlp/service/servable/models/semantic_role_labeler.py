@@ -38,7 +38,6 @@ class SemanticRoleLabelerServable(Servable):
         tokenizer = WordTokenizer()
 
         sentence = tokenizer.tokenize(inputs["sentence"])
-        print(sentence)
         text = TextField(sentence, token_indexers={"tokens": SingleIdTokenIndexer()})
         results = {"idx": []}  # type: Dict[str, Any]
         for i in range(len(sentence)):
