@@ -35,6 +35,7 @@ ENV PYTHONHASHSEED 2157
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
+# Copy select files needed for installing requirements
 COPY requirements.txt .
 COPY requirements_test.txt .
 COPY scripts/ scripts/
@@ -48,6 +49,9 @@ RUN /bin/bash -c 'source activate allennlp && pip install --no-cache-dir -q http
 RUN echo "source activate allennlp" >> ~/.bashrc
 
 COPY . .
+
+# Run tests to verify the Docker build
+RUN /bin/bash -c 'source activate allennlp && pytest'
 
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["/bin/bash"]
