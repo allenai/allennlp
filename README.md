@@ -47,27 +47,47 @@ Docker provides a virtual machine with everything set up to run AllenNLP--whethe
 run on a CPU.  Docker provides more isolation and consistency, and also makes it easy to distribute your environment
 to a compute cluster.
 
+## Downloading a pre-built Docker image
+
+It is easy to run a pre-built Docker development environment.  AllenNLP is configured with Docker Cloud to build a
+new image on every update to the master branch.  To download an image from [Docker Hub](https://hub.docker.com/r/allennlp/):
+
+```bash
+docker pull allennlp/allennlp-cpu:latest
+```
+
+You can alternatively download an environment set up to use a GPU.
+
+```bash
+docker pull allennlp/allennlp-gpu:latest
+```
+
+## Building a Docker image
+
 Following are instructions on creating a Docker environment that use the CPU.  To use the GPU, use the same instructions
 but substitute `gpu` for `cpu`.  The following command will take some time, as it completely builds the environment
 needed to run AllenNLP.
 
 ```bash
-docker build --file Dockerfile.cpu --tag allennlp-cpu .
+docker build --file Dockerfile.cpu --tag allennlp/allennlp-cpu .
 ```
 
 You should now be able to see this image listed by running `docker images allennlp-cpu`.
 
 ```
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-allennlp-cpu        latest              b66aee6cb593        5 minutes ago       2.38GB
+allennlp/allennlp-cpu        latest              b66aee6cb593        5 minutes ago       2.38GB
 ```
 
-You can run the image with `docker run --rm -it allennlp-cpu`.  The `--rm` flag cleans up the image on exit and the
+## Running the Docker image
+
+You can run the image with `docker run --rm -it allennlp/allennlp-cpu`.  The `--rm` flag cleans up the image on exit and the
 `-it` flags make the session interactive so you can use the bash shell the Docker image starts.
 
-The Docker environment uses Conda to install Python.  You can enter the Conda environment with `source activate runenv`.
+The Docker environment uses Conda to install Python and automatically enters the Conda environment "allennlp".
 
-You can test your installation by entering the Conda environment with `source activate allennlp` and running  `pytest -v`.
+You can test your installation by running  `pytest -v`.
+
 
 ### Setting up a Kubernetes development environment
 

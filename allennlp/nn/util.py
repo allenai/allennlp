@@ -170,13 +170,10 @@ def masked_log_softmax(vector, mask):
     ``None`` in for the mask is also acceptable; you'll just get a regular log_softmax.
 
     We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
-
-    In the case that the input vector is completely masked, this function returns an array
-    of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
-    that uses categorical cross-entropy loss.
     """
     if mask is not None:
-        return mask * _get_normalized_masked_log_probablities(vector, mask)
+        masked_log_probs = _get_normalized_masked_log_probablities(vector, mask)
+        return replace_masked_values(masked_log_probs, mask, -1e7)
     else:
         # There is no mask, so we use the provided ``torch.nn.functional.log_softmax`` function.
         return torch.nn.functional.log_softmax(vector)
@@ -370,11 +367,10 @@ def replace_masked_values(tensor: Variable, mask: Variable, replace_with: float)
     to the same shape as ``tensor``. We require that ``tensor.dim() == mask.dim()``, as otherwise we
     won't know which dimensions of the mask to unsqueeze.
     """
-    # We'll build a tensor of the same shape as `tensor`, subtract away masked values, then add
-    # back in the `replace_with` value.
+    # We'll build a tensor of the same shape as `tensor`, zero out masked values, then add back in
+    # the `replace_with` value.
     if tensor.dim() != mask.dim():
         raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
     one_minus_mask = 1.0 - mask
-    values_to_subtract = tensor * one_minus_mask
     values_to_add = replace_with * one_minus_mask
-    return tensor - values_to_subtract + values_to_add
+    return tensor * mask + values_to_add
