@@ -50,9 +50,5 @@ RUN echo "source activate allennlp" >> ~/.bashrc
 
 COPY . .
 
-# Remove file to avoid a "GOMP_4.0 not found" error
-# https://github.com/pytorch/pytorch/issues/643#issuecomment-314949320
-RUN rm /opt/conda/envs/allennlp/lib/python3.5/site-packages/torch/lib/libgomp.so.1
-
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["/bin/bash"]
