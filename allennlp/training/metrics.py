@@ -33,7 +33,7 @@ class Metric(Registrable):
 @Metric.register("categorical_accuracy")
 class CategoricalAccuracy(Metric):
     """
-    Categorical TopK accuracy. Assumes integer labels, with
+    Categorical Top-K accuracy. Assumes integer labels, with
     each item to be classified having a single correct class.
     """
     def __init__(self, top_k: int = 1) -> None:
@@ -49,11 +49,12 @@ class CategoricalAccuracy(Metric):
         Parameters
         ----------
         predictions : ``torch.Tensor``, required.
-            A tensor of predictions of shape (batch_size, num_classes).
+            A tensor of predictions of shape (batch_size, ..., num_classes).
         gold_labels : ``torch.Tensor``, required.
-            A tensor of integer class label of shape (batch_size).
+            A tensor of integer class label of shape (batch_size, ...). It must be the same
+            shape as the ``predictions`` tensor without the ``num_classes`` dimension.
         mask: ``torch.Tensor``, optional (default = None).
-
+                A masking tensor the same size as ``gold_labels``.
         """
         # Some sanity checks.
         num_classes = predictions.size(-1)
@@ -77,6 +78,11 @@ class CategoricalAccuracy(Metric):
         self.total_count += count.sum()
 
     def get_metric(self, reset: bool = False):
+        """
+        Returns
+        -------
+        A single key dictionary containing the accumulated accuracy.
+        """
         accuracy = 100. * float(self.correct_count) / float(self.total_count)
         if reset:
             self.reset()
@@ -90,7 +96,12 @@ class CategoricalAccuracy(Metric):
 
 @Metric.register("f1")
 class F1Measure(Metric):
-
+    """
+    Computes Precision, Recall and F1 with respect to a given ``null_prediction`` label.
+    For example, for a BIO tagging scheme, you would pass the classification index of
+    the "O" tag, resulting in the Precision, Recall and F1 score being calculated for
+    all classes which correspond to actually tagging words.
+    """
     def __init__(self, null_prediction_label: int) -> None:
         self._null_prediction_label = null_prediction_label
         self.true_positives = 0.0
@@ -107,11 +118,12 @@ class F1Measure(Metric):
         Parameters
         ----------
         predictions : ``torch.Tensor``, required.
-            A tensor of predictions of shape (batch_size, num_classes).
+            A tensor of predictions of shape (batch_size, ..., num_classes).
         gold_labels : ``torch.Tensor``, required.
-            A tensor of integer class label of shape (batch_size).
+            A tensor of integer class label of shape (batch_size, ...). It must be the same
+            shape as the ``predictions`` tensor without the ``num_classes`` dimension.
         mask: ``torch.Tensor``, optional (default = None).
-
+            A masking tensor the same size as ``gold_labels``.
         """
         if mask is None:
             mask = torch.ones(gold_labels.size())
@@ -143,6 +155,14 @@ class F1Measure(Metric):
         self.false_positives += (incorrect_non_null_predictions * mask).sum()
 
     def get_metric(self, reset: bool = False):
+        """
+        Returns
+        -------
+        A Dict containing the following metrics based on the accumulated count statistics:
+        precision : float
+        recall : float
+        f1-measure : float
+        """
         recall = float(self.true_positives) / float(self.true_positives + self.false_negatives)
         precision = float(self.true_positives) / float(self.true_positives + self.false_positives)
         f1_measure = 2. * ((precision * recall) / (precision + recall + 1e-13))
