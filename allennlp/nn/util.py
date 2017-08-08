@@ -170,13 +170,10 @@ def masked_log_softmax(vector, mask):
     ``None`` in for the mask is also acceptable; you'll just get a regular log_softmax.
 
     We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
-
-    In the case that the input vector is completely masked, this function returns an array
-    of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
-    that uses categorical cross-entropy loss.
     """
     if mask is not None:
-        return mask * _get_normalized_masked_log_probablities(vector, mask)
+        masked_log_probs = _get_normalized_masked_log_probablities(vector, mask)
+        return replace_masked_values(masked_log_probs, mask, -1e7)
     else:
         # There is no mask, so we use the provided ``torch.nn.functional.log_softmax`` function.
         return torch.nn.functional.log_softmax(vector)
