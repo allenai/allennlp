@@ -2,7 +2,61 @@
 [![codecov](https://codecov.io/gh/allenai/allennlp/branch/master/graph/badge.svg)](https://codecov.io/gh/allenai/allennlp)
 # AllenNLP
 
-A [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) natural language processing toolkit using state-of-the-art deep learning models.
+An [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) NLP research library, built on PyTorch,
+for developing state-of-the-art deep learning models.
+
+## Quickstart
+
+The fastest way to get an environment to run AllenNLP is with Docker.  Once you have [installed Docker](https://docs.docker.com/engine/installation/)
+just run `docker run -it --rm allennlp/allennlp-cpu` to get an environment that will run on the cpu (use `allennlp-gpu` if you have a CUDA-supported GPU).
+Now you can do any of the following:
+
+* Run a model on example sentences with `allennlp/run bulk`.
+* Start a web service to host our models with `allennlp/run serve`.
+* Interactively code against AllenNLP from the Python interpreter with `python`.
+
+## What is AllenNLP?
+
+Built on PyTorch, AllenNLP makes it easy to design and evaluate new deep
+learning models for nearly any NLP problem, along with the infrastructure to
+easily run them in the cloud or on your laptop.
+
+AllenNLP includes reference implementations of high quality models for Semantic
+Role Labelling, Question and Answering (BiDAF), Entailment (decomposable
+attention), and more.
+
+AllenNLP is built and maintained by the Allen Institute for Artificial
+Intelligence, in close collaboration with researchers at the University of
+Washington and elsewhere. With a dedicated team of best-in-field researchers
+and software engineers, the AllenNLP project is uniquely positioned to provide
+state of the art models with high quality engineering.
+
+<table>
+<tr>
+    <td><b> allennlp </b></td>
+    <td> an open-source NLP research library, built on PyTorch </td>
+</tr>
+<tr>
+    <td><b> allennlp.commands </b></td>
+    <td> functionality for a CLI and web service </td>
+</tr>
+<tr>
+    <td><b> allennlp.common </b></td>
+    <td> a data processing module for loading datasets and encoding strings as integers for representation in matrices </td>
+</tr>
+<tr>
+    <td><b> allennlp.models </b></td>
+    <td> a collection of state-of-the-art models </td>
+</tr>
+<tr>
+    <td><b> allennlp.service </b></td>
+    <td> a web server to serve our demo and API </td>
+</tr>
+<tr>
+    <td><b> allennlp.training </b></td>
+    <td> functionality for training models </td>
+</tr>
+</table>
 
 ## Running AllenNLP
 
@@ -110,3 +164,7 @@ You can test your installation by running  `pytest -v`.
 
 6. When you are done, don't forget to kill your job using `kubectl delete -f /path/to/kubernetes-dev-machine.yaml`
 
+## Communication
+
+* [User list](https://groups.google.com/a/allenai.org/forum/#!forum/allennlp-users): announcements, user questions, and discussion
+* [GitHub issues](https://github.com/allenai/allennlp/issues): bug reports and feature requests
