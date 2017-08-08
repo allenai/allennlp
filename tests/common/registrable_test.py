@@ -14,7 +14,7 @@ from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.similarity_function import SimilarityFunction
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn import Initializer
 from allennlp.training.regularizers.regularizer import Regularizer
 
@@ -96,7 +96,8 @@ class TestRegistrable(AllenNlpTestCase):
                 "eye": torch.nn.init.eye,
         }
         for key, value in all_initializers.items():
-            assert Initializer.by_name(key) == value
+            # pylint: disable=protected-access
+            assert Initializer.by_name(key)()._init_function == value
 
     def test_registry_has_builtin_token_embedders(self):
         assert TokenEmbedder.by_name("embedding").__name__ == 'Embedding'

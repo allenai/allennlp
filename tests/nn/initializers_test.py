@@ -4,7 +4,7 @@ from torch.nn.init import constant
 import numpy
 
 from allennlp.nn import InitializerApplicator
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
 
 class TestInitializers(AllenNlpTestCase):
@@ -20,7 +20,6 @@ class TestInitializers(AllenNlpTestCase):
             assert torch.equal(parameter.data, torch.ones(parameter.size()) * 5)
 
     def test_regex_matches_are_initialized_correctly(self):
-
         class Net(torch.nn.Module):
             def __init__(self):
                 super(Net, self).__init__()
@@ -47,6 +46,7 @@ class TestInitializers(AllenNlpTestCase):
 
     def test_from_params(self):
 
+        to_exclude = ["this", "and", "that"]
         params = Params({
                 "initializers": {
                         "conv": "orthogonal",
@@ -54,12 +54,38 @@ class TestInitializers(AllenNlpTestCase):
                                 "type": "constant",
                                 "val": 1
                         }
-                }
+                },
+                "exclude": to_exclude
         })
         initializer_applicator = InitializerApplicator.from_params(params)
-        initializers = initializer_applicator._initializers  # pylint: disable=protected-access
-        assert initializers["conv"] == torch.nn.init.orthogonal
+        # pylint: disable=protected-access
+        assert initializer_applicator._exclude == to_exclude
+        initializers = initializer_applicator._initializers
+        assert initializers["conv"]._init_function == torch.nn.init.orthogonal
 
         tensor = torch.FloatTensor([0, 0, 0, 0, 0])
         initializers["linear"](tensor)
         numpy.testing.assert_array_equal(tensor.numpy(), numpy.array([1, 1, 1, 1, 1]))
+
+    def test_exclude_works_properly(self):
+        class Net(torch.nn.Module):
+            def __init__(self):
+                super(Net, self).__init__()
+                self.linear1 = torch.nn.Linear(5, 10)
+                self.linear2 = torch.nn.Linear(10, 5)
+                self.linear2.weight.data.fill_(7)
+                self.linear2.bias.data.fill_(7)
+
+            def forward(self, inputs):  # pylint: disable=arguments-differ
+                pass
+
+        initializers = InitializerApplicator(default_initializer=lambda tensor: constant(tensor, 10),
+                                             exclude=["linear2"])
+        model = Net()
+        initializers(model)
+
+        for parameter in list(model.linear1.parameters()):
+            assert torch.equal(parameter.data, torch.ones(parameter.size()) * 10)
+
+        for parameter in list(model.linear2.parameters()):
+            assert torch.equal(parameter.data, torch.ones(parameter.size()) * 7)

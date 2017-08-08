@@ -1,7 +1,8 @@
 import logging
 import re
-from typing import Dict, Callable
+from typing import Callable, Dict, Sequence, Type
 
+import torch
 import torch.nn.init
 
 from allennlp.common import Registrable
@@ -17,19 +18,51 @@ class Initializer(Registrable):
     """
     default_implementation = 'normal'
 
+    def __call__(self, tensor: torch.autograd.Variable) -> None:
+        """
+        This function is here just to make mypy happy.  We expect initialization functions to
+        follow this API; the builtin pytorch initialization functions follow this just fine, even
+        though they don't subclass ``Initialization``.  We're just making it explicit here, so mypy
+        knows that initializers are callable like this.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def from_params(cls, params: Params):
+        # Just a string - corresponds to the name of an initializer.
+        if isinstance(params, str):
+            return cls.by_name(params)()
+        else:
+            choice = params.pop_choice("type", cls.list_available())
+            return cls.by_name(choice).from_params(params)
+
+
+def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
+    class Init(Initializer):
+        def __init__(self, **kwargs):
+            self._init_function = init_function
+            self._kwargs = kwargs
+        def __call__(self, tensor: torch.autograd.Variable) -> None:
+            self._init_function(tensor, **self._kwargs)
+        @classmethod
+        def from_params(cls, params: Params):
+            return cls(**params.as_dict())
+    return Init
+
+
 # There are no classes to decorate, so we hack these into Registrable._registry
 Registrable._registry[Initializer] = {  # pylint: disable=protected-access
-        "normal": torch.nn.init.normal,
-        "uniform": torch.nn.init.uniform,
-        "orthogonal": torch.nn.init.orthogonal,
-        "constant": torch.nn.init.constant,
-        "dirac": torch.nn.init.dirac,
-        "xavier_normal": torch.nn.init.xavier_normal,
-        "xavier_uniform": torch.nn.init.xavier_uniform,
-        "kaiming_normal": torch.nn.init.kaiming_normal,
-        "kaiming_uniform": torch.nn.init.kaiming_uniform,
-        "sparse": torch.nn.init.sparse,
-        "eye": torch.nn.init.eye,
+        "normal": _initializer_wrapper(torch.nn.init.normal),
+        "uniform": _initializer_wrapper(torch.nn.init.uniform),
+        "orthogonal": _initializer_wrapper(torch.nn.init.orthogonal),
+        "constant": _initializer_wrapper(torch.nn.init.constant),
+        "dirac": _initializer_wrapper(torch.nn.init.dirac),
+        "xavier_normal": _initializer_wrapper(torch.nn.init.xavier_normal),
+        "xavier_uniform": _initializer_wrapper(torch.nn.init.xavier_uniform),
+        "kaiming_normal": _initializer_wrapper(torch.nn.init.kaiming_normal),
+        "kaiming_uniform": _initializer_wrapper(torch.nn.init.kaiming_uniform),
+        "sparse": _initializer_wrapper(torch.nn.init.sparse),
+        "eye": _initializer_wrapper(torch.nn.init.eye),
 }
 
 
@@ -39,20 +72,27 @@ class InitializerApplicator:
     All parameters in the Module will be initialized.
     """
     def __init__(self,
-                 initializers: Dict[str, Callable[[torch.Tensor], None]] = None,
-                 default_initializer: Callable[[torch.Tensor], None] = torch.nn.init.normal) -> None:
+                 initializers: Dict[str, Initializer] = None,
+                 default_initializer: Initializer = Initializer.by_name('normal')(),
+                 exclude: Sequence[str] = None) -> None:
         """
         Parameters
         ----------
-        initializers : Dict[str, Callable[[torch.Tensor], None]], optional (default = {})
+        initializers : ``Dict[str, Callable[[torch.Tensor], None]]``, optional (default = {})
             A dictionary mapping parameter regexes to initializers to be applied to parameters
             matching the regex.
-        default_initializer : Callable[[torch.Tensor], None], optional, (default = torch.nn.init.normal)
+        default_initializer : ``Callable[[torch.Tensor], None]``, optional (default = torch.nn.init.normal)
             A default initializer, which will be used in the case that the Applicator encounters a parameter
             which does not match any of the regexes provided.
+        exclude : ``Sequence[str]``, optional (default=``[]``)
+            A set of regexes for parameters that should be excluded from the default
+            initialization.  This does *not* apply to the regexes passed in the ``initializers``
+            parameter; it only filters the list of parameters that would otherwise get initialized
+            by the default initializer.
         """
         self._initializers = initializers or {}
         self._default_initializer = default_initializer
+        self._exclude = exclude or []
 
     def __call__(self, module: torch.nn.Module) -> None:
         """
@@ -78,9 +118,12 @@ class InitializerApplicator:
                 not_explicitly_initialized_parameters.append((name, parameter))
 
         for name, parameter in not_explicitly_initialized_parameters:
-            self._default_initializer(parameter)
-            logger.info("Initializing %s using the Default "
-                        "Intitializer. (Normal(0, 1) unless user specified.)", name)
+            if any(re.search(exclude_regex, name) for exclude_regex in self._exclude):
+                logger.info("Excluding %s from default initialization", name)
+            else:
+                logger.info("Initializing %s using the Default "
+                            "Intitializer. (Normal(0, 1) unless user specified.)", name)
+                self._default_initializer(parameter)
 
     @classmethod
     def from_params(cls, params: Params) -> "InitializerApplicator":
@@ -88,16 +131,20 @@ class InitializerApplicator:
         Converts a Params object into an InitializerApplicator. The json should
         be formatted as follows:
 
-        initializers: {
-            parameter_regex_match1: {
-                "type": "normal"
-                "mean": 0.01
-                "std": 0.1
-            },
-            parameter_regex_match2: "uniform",
+        {
+            "initializers": {
+                "parameter_regex_match1": {
+                    "type": "normal"
+                    "mean": 0.01
+                    "std": 0.1
+                },
+                "parameter_regex_match2": "uniform",
 
-            "default": "orthogonal"
+                "default": "orthogonal"
+            },
+            "exclude": ["exclude_regex"]
         }
+
         where the keys are regex matches to the parameters (with the exception of the "default" key,
         which will be used as the default initializer for parameters which do not match any
         initializer regex passed to the InitializerApplicator). The values can either be strings,
@@ -116,27 +163,10 @@ class InitializerApplicator:
         -------
         An InitializerApplicator containing the specified initializers.
         """
-        # Construct a dictionary of available initializers from the torch.nn.init package.
-        all_initializer_params = params.pop("initializers", {}).as_dict()
-        instantiated_initializers = {}
+        all_initializer_params = params.pop("initializers", {})
+        initializers = {}
         for name, initializer_params in all_initializer_params.items():
-            # Just a string - corresponds to the name of an initializer.
-            if isinstance(initializer_params, str):
-                instantiated_initializers[name] = Initializer.by_name(initializer_params)
-            else:
-                initializer_type = initializer_params.pop("type")
-                # This is to avoid passing by reference inside the curried function.
-                # Without creating a new dict, we would pass the value of initializer_params
-                # when it is called, which could be different as it is a loop variable.
-                init_params = {**initializer_params}
-
-                # pylint: disable=cell-var-from-loop
-                def curried_initializer(tensor: torch.Tensor):
-                    return Initializer.by_name(initializer_type)(tensor, **init_params)  # type: ignore
-                # pylint: enable=cell-var-from-loop
-                instantiated_initializers[name] = curried_initializer  # type: ignore
-        try:
-            default = instantiated_initializers.pop("default")
-        except KeyError:
-            default = torch.nn.init.normal
-        return InitializerApplicator(instantiated_initializers, default)  # type: ignore
+            initializers[name] = Initializer.from_params(initializer_params)
+        default = initializers.pop("default", Initializer.by_name('normal')())
+        exclude_regexes = params.pop("exclude", [])
+        return InitializerApplicator(initializers, default, exclude_regexes)

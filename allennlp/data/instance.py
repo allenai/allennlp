@@ -45,12 +45,16 @@ class Instance:
             lengths[field_name] = field.get_padding_lengths()
         return lengths
 
-    def as_array(self, padding_lengths: Dict[str, Dict[str, int]]) -> Dict[str, DataArray]:
+    def as_array_dict(self, padding_lengths: Dict[str, Dict[str, int]] = None) -> Dict[str, DataArray]:
         """
         Pads each ``Field`` in this instance to the lengths given in ``padding_lengths`` (which is
         keyed by field name, then by padding key, the same as the return value in
         :func:`get_padding_lengths`), returning a list of numpy arrays for each field.
+
+        If ``padding_lengths`` is omitted, we will call ``self.get_padding_lengths()`` to get the
+        sizes of the arrays to create.
         """
+        padding_lengths = padding_lengths or self.get_padding_lengths()
         arrays = {}
         for field_name, field in self._fields.items():
             arrays[field_name] = field.as_array(padding_lengths[field_name])

@@ -1,9 +1,9 @@
 import torch
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
-from allennlp.common.tensor import sort_batch_by_length
-from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.nn.util import sort_batch_by_length
 
 
 class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
@@ -53,11 +53,11 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
         packed_sequence_input = pack_padded_sequence(sorted_inputs,
-                                                     sorted_sequence_lengths.tolist(),
+                                                     sorted_sequence_lengths.data.tolist(),
                                                      batch_first=True)
 
         # Actually call the module on the sorted PackedSequence.
         packed_sequence_output, _ = self._module(packed_sequence_input, hidden_state)
         unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
         # Restore the original indices and return the sequence.
-        return unpacked_sequence_tensor[restoration_indices]
+        return unpacked_sequence_tensor.index_select(0, restoration_indices)

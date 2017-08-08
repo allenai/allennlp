@@ -1,9 +1,9 @@
 import torch
 from torch.nn.utils.rnn import pack_padded_sequence
 
-from allennlp.common.tensor import sort_batch_by_length
-from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
+from allennlp.nn.util import sort_batch_by_length
 
 
 class PytorchSeq2VecWrapper(Seq2VecEncoder):
@@ -49,7 +49,6 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             is_bidirectional = self._module.bidirectional
         except AttributeError:
             is_bidirectional = False
-        print("is bidirectional: ", is_bidirectional)
         return self._module.hidden_size * (2 if is_bidirectional else 1)
 
     def forward(self,  # pylint: disable=arguments-differ
@@ -67,7 +66,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
         packed_sequence_input = pack_padded_sequence(sorted_inputs,
-                                                     sorted_sequence_lengths.tolist(),
+                                                     sorted_sequence_lengths.data.tolist(),
                                                      batch_first=True)
 
         # Actually call the module on the sorted PackedSequence.
@@ -85,7 +84,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         # and return them as a single (batch_size, self.get_output_dim()) tensor.
 
         # now of shape: (batch_size, num_layers * num_directions, hidden_size).
-        unsorted_state = state.transpose(0, 1)[restoration_indices]
+        unsorted_state = state.transpose(0, 1).index_select(0, restoration_indices)
 
         # Extract the last hidden vector, including both forward and backward states
         # if the cell is bidirectional. Then reshape by concatenation (in the case

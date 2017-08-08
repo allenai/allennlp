@@ -8,7 +8,7 @@ from allennlp.data.fields import TextField, LabelField
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestDataset(AllenNlpTestCase):
@@ -34,11 +34,11 @@ class TestDataset(AllenNlpTestCase):
         padding_lengths = dataset.get_padding_lengths()
         assert padding_lengths == {"text1": {"num_tokens": 5}, "text2": {"num_tokens": 6}}
 
-    def test_as_arrays(self):
+    def test_as_array_dict(self):
         dataset = self.get_dataset()
         dataset.index_instances(self.vocab)
         padding_lengths = dataset.get_padding_lengths()
-        arrays = dataset.as_arrays(padding_lengths)
+        arrays = dataset.as_array_dict(padding_lengths)
         text1 = arrays["text1"]["tokens"]
         text2 = arrays["text2"]["tokens"]
 

@@ -4,6 +4,7 @@ import logging
 from overrides import overrides
 import numpy
 import torch
+from torch.nn.functional import embedding
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -104,15 +105,14 @@ class Embedding(TokenEmbedder):
 
     @overrides
     def forward(self, inputs):  # pylint: disable=arguments-differ
-        padding_index = self.padding_index if self.padding_index is not None else -1
         original_inputs = inputs
         if original_inputs.dim() > 2:
             inputs = inputs.view(-1, inputs.size(-1))
-        embedded = self._backend.Embedding(padding_index,
-                                           self.max_norm,
-                                           self.norm_type,
-                                           self.scale_grad_by_freq,
-                                           self.sparse)(inputs, self.weight)
+        embedded = embedding(inputs, self.weight,
+                             max_norm=self.max_norm,
+                             norm_type=self.norm_type,
+                             scale_grad_by_freq=self.scale_grad_by_freq,
+                             sparse=self.sparse)
         if original_inputs.dim() > 2:
             view_args = list(original_inputs.size()) + [embedded.size(-1)]
             embedded = embedded.view(*view_args)

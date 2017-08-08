@@ -4,14 +4,15 @@ import shutil
 from typing import Optional
 
 import torch
+from torch.nn.utils.clip_grad import clip_grad_norm
 import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.tensor import arrays_to_variables
 from allennlp.data import Dataset
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
+from allennlp.nn.util import arrays_to_variables
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -24,10 +25,10 @@ class Trainer:
                  train_dataset: Dataset,
                  validation_dataset: Optional[Dataset] = None,
                  patience: int = 2,
-                 batch_size: int = 32,
                  num_epochs: int = 20,
                  serialization_prefix: Optional[str] = None,
-                 cuda_device: int = -1) -> None:
+                 cuda_device: int = -1,
+                 grad_norm: Optional[float] = None) -> None:
         """
         Parameters
         ----------
@@ -46,8 +47,6 @@ class Trainer:
             A ``Dataset`` to evaluate on. The dataset should have already been indexed.
         patience : int, optional (default=2)
             Number of epochs to be patient before early stopping.
-        batch_size : int, optional (default = 32)
-            Batch size to use when training.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_prefix : str, optional (default=None)
@@ -57,6 +56,8 @@ class Trainer:
             An integer specifying the CUDA device to use. If -1, the CPU is used.
             Multi-gpu training is not currently supported, but will be once the
             Pytorch DataParallel API stabilises.
+        grad_norm: float, optional, (default = None).
+            If provided, gradient norms will be rescaled to have a maximum of this value.
         """
         self._model = model
         self._iterator = iterator
@@ -65,10 +66,10 @@ class Trainer:
         self._validation_dataset = validation_dataset
 
         self._patience = patience  # TODO(Mark): add this to training loop with validation metrics.
-        self._batch_size = batch_size
         self._num_epochs = num_epochs
         self._serialization_prefix = serialization_prefix
         self._cuda_device = cuda_device
+        self._grad_norm = grad_norm
 
         if self._cuda_device >= 0:
             self._model = self._model.cuda(self._cuda_device)
@@ -95,10 +96,15 @@ class Trainer:
                 try:
                     loss = output_dict["loss"]
                     loss.backward()
-                    train_loss += loss.data.numpy()
+                    # Make sure Variable is on the cpu before converting to numpy.
+                    # .cpu() is a no-op if you aren't using GPUs.
+                    train_loss += loss.data.cpu().numpy()
                 except KeyError:
                     raise ConfigurationError("The model you are trying to optimize does not contain a"
                                              " 'loss' key in the output of model.forward(inputs).")
+
+                if self._grad_norm:
+                    clip_grad_norm(self._model.parameters(), self._grad_norm)
                 self._optimizer.step()
 
             if self._validation_dataset is not None:
@@ -107,9 +113,9 @@ class Trainer:
                 val_generator = self._iterator(self._validation_dataset, num_epochs=1)
                 for batch in tqdm.tqdm(val_generator):
                     tensor_batch = arrays_to_variables(batch, self._cuda_device)
-                    val_output_dict = self._model.forward(tensor_batch)
+                    val_output_dict = self._model.forward(**tensor_batch)
                     loss = val_output_dict["loss"]
-                    val_loss += loss.data.numpy()
+                    val_loss += loss.data.cpu().numpy()
 
             # TODO(Mark): Add user specified metrics here, maybe a "metrics" key?
             logger.info("Training Loss: %3f    Validation Loss: %3f ", train_loss, val_loss)
@@ -182,15 +188,15 @@ class Trainer:
 
         params = params or Params({})
         patience = params.pop("patience", 2)
-        batch_size = params.pop("batch_size", 32)
         num_epochs = params.pop("num_epochs", 20)
         serialization_prefix = params.pop("serialization_prefix", None)
         cuda_device = params.pop("cuda_device", -1)
+        grad_norm = params.pop("grad_norm", None)
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
                        train_dataset, validation_dataset,
                        patience=patience,
-                       batch_size=batch_size,
                        num_epochs=num_epochs,
                        serialization_prefix=serialization_prefix,
-                       cuda_device=cuda_device)
+                       cuda_device=cuda_device,
+                       grad_norm=grad_norm)

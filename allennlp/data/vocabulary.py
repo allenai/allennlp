@@ -1,8 +1,9 @@
 from collections import defaultdict
 from typing import Any, Callable, Dict, Union, Sequence
-
 import codecs
 import logging
+import os
+
 import tqdm
 
 from allennlp.common.util import namespace_match
@@ -10,6 +11,9 @@ from allennlp.common.util import namespace_match
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
+DEFAULT_PADDING_TOKEN = "@@PADDING@@"
+DEFAULT_OOV_TOKEN = "@@UNKNOWN@@"
+NAMESPACE_PADDING_FILE = 'non_padded_namespaces.txt'
 
 
 class _NamespaceDependentDefaultDict(defaultdict):
@@ -129,10 +133,11 @@ class Vocabulary:
                  min_count: int = 1,
                  max_vocab_size: Union[int, Dict[str, int]] = None,
                  non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES) -> None:
-        self._padding_token = "@@PADDING@@"
-        self._oov_token = "@@UNKOWN@@"
+        self._padding_token = DEFAULT_PADDING_TOKEN
+        self._oov_token = DEFAULT_OOV_TOKEN
         if not isinstance(max_vocab_size, dict):
             max_vocab_size = defaultdict(lambda: max_vocab_size)  # type: ignore
+        self._non_padded_namespaces = non_padded_namespaces
         self._token_to_index = _TokenToIndexDefaultDict(non_padded_namespaces,
                                                         self._padding_token,
                                                         self._oov_token)
@@ -150,34 +155,107 @@ class Vocabulary:
                     if count >= min_count:
                         self.add_token_to_namespace(token, namespace)
 
-    def set_from_file(self, filename: str, oov_token: str, namespace: str = "tokens"):
+    def save_to_files(self, directory: str) -> None:
+        """
+        Persist this Vocabulary to files so it can be reloaded later.
+        Each namespace corresponds to one file.
+
+        Parameters
+        ----------
+        directory : ``str``
+            The directory where we save the serialized vocabulary.
+        """
+        os.makedirs(directory, exist_ok=True)
+        if os.listdir(directory):
+            logging.warning("vocabulary serialization directory %s is not empty", directory)
+
+        with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), 'w', 'utf-8') as namespace_file:
+            for namespace_str in self._non_padded_namespaces:
+                print(namespace_str, file=namespace_file)
+
+        for namespace, mapping in self._index_to_token.items():
+            # Each namespace gets written to its own file, in index order.
+            with codecs.open(os.path.join(directory, namespace + '.txt'), 'w', 'utf-8') as token_file:
+                num_tokens = len(mapping)
+                start_index = 1 if mapping[0] == self._padding_token else 0
+                for i in range(start_index, num_tokens):
+                    print(mapping[i], file=token_file)
+
+    @classmethod
+    def from_files(cls, directory: str) -> 'Vocabulary':
+        """
+        Loads a ``Vocabulary`` that was serialized using ``save_to_files``.
+
+        Parameters
+        ----------
+        directory : ``str``
+            The directory containing the serialized vocabulary.
+        """
+        with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), 'r', 'utf-8') as namespace_file:
+            non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
+
+        vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
+
+        # Check every file in the directory.
+        for namespace_filename in os.listdir(directory):
+            if namespace_filename == NAMESPACE_PADDING_FILE:
+                continue
+            namespace = namespace_filename.replace('.txt', '')
+            if any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces):
+                is_padded = False
+            else:
+                is_padded = True
+            filename = os.path.join(directory, namespace_filename)
+            vocab.set_from_file(filename, is_padded, namespace=namespace)
+
+        return vocab
+
+    def set_from_file(self,
+                      filename: str,
+                      is_padded: bool = True,
+                      oov_token: str = DEFAULT_OOV_TOKEN,
+                      namespace: str = "tokens"):
         """
         If you already have a vocabulary file for a trained model somewhere, and you really want to
         use that vocabulary file instead of just setting the vocabulary from a dataset, for
         whatever reason, you can do that with this method.  You must specify the namespace to use,
         and we assume that you want to use padding and OOV tokens for this.
-
         Parameters
         ----------
         filename : ``str``
             The file containing the vocabulary to load.  It should be formatted as one token per
-            line, with nothing else in the line.  The index we assign to the token is the
-            (1-indexed) line number in the file.  Note that this file should contain the OOV token
-            string!
-        oov_token : ``str``
+            line, with nothing else in the line.  The index we assign to the token is the line
+            number in the file (1-indexed if ``is_padded``, 0-indexed otherwise).  Note that this
+            file should contain the OOV token string!
+        is_padded : ``bool``, optional (default=``True``)
+            Is this vocabulary padded?  For token / word / character vocabularies, this should be
+            ``True``; while for tag or label vocabularies, this should typically be ``False``.  If
+            ``True``, we add a padding token with index 0, and we enforce that the ``oov_token`` is
+            present in the file.
+        oov_token : ``str``, optional (default=``DEFAULT_OOV_TOKEN``)
             What token does this vocabulary use to represent out-of-vocabulary characters?  This
-            must show up as a line in the vocabulary file.
+            must show up as a line in the vocabulary file.  When we find it, we replace
+            ``oov_token`` with ``self._oov_token``, because we only use one OOV token across
+            namespaces.
         namespace : ``str``, optional (default=``"tokens"``)
             What namespace should we overwrite with this vocab file?
         """
-        self._oov_token = oov_token
-        self._token_to_index[namespace] = {self._padding_token: 0}
-        self._index_to_token[namespace] = [self._padding_token]
+        if is_padded:
+            self._token_to_index[namespace] = {self._padding_token: 0}
+            self._index_to_token[namespace] = [self._padding_token]
+        else:
+            self._token_to_index[namespace] = {}
+            self._index_to_token[namespace] = []
         with codecs.open(filename, 'r', 'utf-8') as input_file:
             for i, line in enumerate(input_file.readlines()):
+                index = i + 1 if is_padded else i
                 token = line.strip()
-                self._token_to_index[namespace][token] = i + 1
+                if token == oov_token:
+                    token = self._oov_token
+                self._token_to_index[namespace][token] = index
                 self._index_to_token[namespace].append(token)
+        if is_padded:
+            assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
 
     @classmethod
     def from_dataset(cls,

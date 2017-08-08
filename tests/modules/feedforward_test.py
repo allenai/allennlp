@@ -8,7 +8,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules import FeedForward
 from allennlp.nn import InitializerApplicator
-from allennlp.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestFeedForward(AllenNlpTestCase):

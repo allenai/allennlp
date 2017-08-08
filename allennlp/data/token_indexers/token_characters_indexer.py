@@ -1,13 +1,13 @@
 from typing import Dict, List
 import itertools
 
+from overrides import overrides
+
 from allennlp.common.params import Params
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
-
-# pylint: disable=no-self-use
 
 
 @TokenIndexer.register("characters")
@@ -26,38 +26,38 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         ``CharacterTokenizer`` with its default parameters, which uses unicode characters and
         retains casing.
     """
+    # pylint: disable=no-self-use
     def __init__(self,
                  namespace: str = 'token_characters',
                  character_tokenizer: CharacterTokenizer = CharacterTokenizer()) -> None:
         self.namespace = namespace
         self.character_tokenizer = character_tokenizer
 
-    # TODO(joelgrus) uncomment these once fix is merged to overrides library
-    # @overrides
+    @overrides
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
         for character in self.character_tokenizer.tokenize(token):
             counter[self.namespace][character] += 1
 
-    # @overrides
+    @overrides
     def token_to_indices(self, token: str, vocabulary: Vocabulary) -> List[int]:
         indices = []
         for character in self.character_tokenizer.tokenize(token):
             indices.append(vocabulary.get_token_index(character, self.namespace))
         return indices
 
-    # @overrides
+    @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
         return {'num_token_characters': len(token)}
 
-    # overrides
+    @overrides
     def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):
         return (num_tokens, padding_lengths['num_token_characters'])
 
-    # @overrides
+    @overrides
     def get_padding_token(self) -> List[int]:
         return []
 
-    # @overrides
+    @overrides
     def pad_token_sequence(self,
                            tokens: List[List[int]],
                            desired_num_tokens: int,

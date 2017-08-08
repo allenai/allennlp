@@ -1,17 +1,20 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
+
+import numpy
 import torch
 from torch.autograd import Variable
-import numpy
+
+from allennlp.common.checks import ConfigurationError
 
 
-def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
+def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     """
     Compute sequence lengths for each batch element in a tensor using a
     binary mask.
 
     Parameters
     ----------
-    mask : torch.ByteTensor, required.
+    mask : torch.Tensor, required.
         A 2D binary mask of shape (batch_size, sequence_length) to
         calculate the per-batch sequence lengths from.
 
@@ -20,49 +23,63 @@ def get_lengths_from_binary_sequence_mask(mask: torch.ByteTensor):
     A torch.LongTensor of shape (batch_size,) representing the lengths
     of the sequences in the batch.
     """
-    return mask.sum(-1).squeeze()
+    return mask.long().sum(-1)
 
 
-def sort_batch_by_length(tensor: torch.FloatTensor, sequence_lengths: torch.LongTensor):
+def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torch.autograd.Variable):
     """
     Sort a batch first tensor by some specified lengths.
 
     Parameters
     ----------
-    tensor : torch.FloatTensor, required.
+    tensor : Variable(torch.FloatTensor), required.
         A batch first Pytorch tensor.
-    sequence_lengths : torch.LongTensor, required.
+    sequence_lengths : Variable(torch.LongTensor), required.
         A tensor representing the lengths of some dimension of the tensor which
         we want to sort by.
 
     Returns
     -------
-    sorted_tensor : torch.FloatTensor
+    sorted_tensor : Variable(torch.FloatTensor)
         The original tensor sorted along the batch dimension with respect to sequence_lengths.
-    sorted_sequence_lengths : torch.LongTensor
+    sorted_sequence_lengths : Variable(torch.LongTensor)
         The original sequence_lengths sorted by decreasing size.
-    restoration_indices : torch.LongTensor
-        Indices into the sorted_tensor such that ``sorted_tensor[restoration_indices] == original_tensor``
+    restoration_indices : Variable(torch.LongTensor)
+        Indices into the sorted_tensor such that
+        ``sorted_tensor.index_select(0, restoration_indices) == original_tensor``
     """
+
+    if not isinstance(tensor, Variable) or not isinstance(sequence_lengths, Variable):
+        raise ConfigurationError("Both the tensor and sequence lengths must be torch.autograd.Variables.")
+
     sorted_sequence_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
-    sorted_tensor = tensor[permutation_index]
+    sorted_tensor = tensor.index_select(0, permutation_index)
+
+    # This is ugly, but required - we are creating a new variable at runtime, so we
+    # must ensure it has the correct CUDA vs non-CUDA type. We do this by cloning and
+    # refilling one of the inputs to the function.
+    index_range = sequence_lengths.data.clone().copy_(torch.arange(0, len(sequence_lengths)))
     # This is the equivalent of zipping with index, sorting by the original
     # sequence lengths and returning the now sorted indices.
-    index_range = torch.range(0, len(sequence_lengths) - 1).long()
+    index_range = Variable(index_range.long())
     _, reverse_mapping = permutation_index.sort(0, descending=False)
-    restoration_indices = index_range[reverse_mapping]
+    restoration_indices = index_range.index_select(0, reverse_mapping)
     return sorted_tensor, sorted_sequence_lengths, restoration_indices
 
 
-def get_dropout_mask(dropout_probability: float, shape: List[int]):
+def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autograd.Variable):
     """
-    Computes an element-wise dropout mask for an arbitrarily sized tensor, where
+    Computes and returns an element-wise dropout mask for a given tensor, where
     each element in the mask is dropped out with probability dropout_probability.
+    Note that the mask is NOT applied to the tensor - the tensor is passed to retain
+    the correct CUDA tensor type for the mask.
 
     Parameters
     ----------
-    dropout_probability: float, Probability of dropping a dimension of the input.
-    shape: Shape of the tensor you are generating a mask for.
+    dropout_probability : float, required.
+        Probability of dropping a dimension of the input.
+    tensor_for_masking : torch.Variable, required.
+
 
     Return
     ------
@@ -70,7 +87,8 @@ def get_dropout_mask(dropout_probability: float, shape: List[int]):
     This scaling ensures expected values and variances of the output of applying this mask
      and the original tensor are the same.
     """
-    binary_mask = torch.rand(shape) > dropout_probability
+    binary_mask = tensor_for_masking.clone()
+    binary_mask.data.copy_(torch.rand(tensor_for_masking.size()) > dropout_probability)
     # Scale mask by 1/keep_prob to preserve output statistics.
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask
@@ -118,13 +136,11 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
 def _get_normalized_masked_log_probablities(vector, mask):
     # We calculate normalized log probabilities in a numerically stable fashion, as done
     # in https://github.com/rkadlec/asreader/blob/master/asreader/custombricks/softmax_mask_bricks.py
-    # TODO(mattg): a bunch of this logic can be simplified once pytorch-0.2 is out.
-    # torch.max(keepdim=True), for instance, simplifies things here.
     input_masked = mask * vector
-    shifted = mask * (input_masked - torch.max(input_masked, dim=1)[0].expand_as(input_masked))
+    shifted = mask * (input_masked - input_masked.max(dim=1, keepdim=True)[0])
     # We add epsilon to avoid numerical instability when the sum in the log yields 0.
-    normalization_constant = ((mask * shifted.exp()).sum(dim=1) + 1e-7).log()
-    normalized_log_probabilities = (shifted - normalization_constant.expand_as(shifted))
+    normalization_constant = ((mask * shifted.exp()).sum(dim=1, keepdim=True) + 1e-7).log()
+    normalized_log_probabilities = (shifted - normalization_constant)
     return normalized_log_probabilities
 
 
@@ -213,7 +229,7 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     return viterbi_path, viterbi_score
 
 
-def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Tensor:
+def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.LongTensor:
     """
     Takes the dictionary of tensors produced by a ``TextField`` and returns a mask of shape
     ``(batch_size, num_tokens)``.  This mask will be 0 where the tokens are padding, and 1
@@ -223,11 +239,20 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Te
     word ids, one for character ids).  In order to get a token mask, we assume that the tensor in
     the dictionary with the lowest number of dimensions has plain token ids.  This allows us to
     also handle cases where the input is actually a ``ListField[TextField]``.
+
+    NOTE: Our functions for generating masks create torch.LongTensors, because using
+    torch.byteTensors inside Variables makes it easy to run into overflow errors
+    when doing mask manipulation, such as summing to get the lengths of sequences - see below.
+    >>> mask = torch.ones([260]).byte()
+    >>> mask.sum() # equals 260.
+    >>> var_mask = torch.autograd.Variable(mask)
+    >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
     tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
     tensor_dims.sort(key=lambda x: x[0])
     token_tensor = tensor_dims[0][1]
-    return token_tensor != 0
+
+    return (token_tensor != 0).long()
 
 
 def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
@@ -240,7 +265,7 @@ def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) 
     """
     tensor_shape = tensor.size()
     reshaped_tensor = tensor.view(-1, tensor.size()[-1])
-    if mask:
+    if mask is not None:
         while mask.dim() < tensor.dim():
             mask = mask.unsqueeze(1)
         mask = mask.expand_as(tensor).contiguous().float()
@@ -279,7 +304,7 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
             expanded_size.insert(i + 1, attention.size(i + 1))
         matrix = matrix.expand(*expanded_size)
     intermediate = attention.unsqueeze(-1).expand_as(matrix) * matrix
-    return intermediate.sum(dim=-2).squeeze(-2)
+    return intermediate.sum(dim=-2)
 
 
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
@@ -336,4 +361,20 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     if batch_average:
         num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
         return per_batch_loss.sum() / num_non_empty_sequences
-    return per_batch_loss.squeeze(1)
+    return per_batch_loss
+
+
+def replace_masked_values(tensor: Variable, mask: Variable, replace_with: float) -> Variable:
+    """
+    Replaces all masked values in ``tensor`` with ``replace_with``.  ``mask`` must be broadcastable
+    to the same shape as ``tensor``. We require that ``tensor.dim() == mask.dim()``, as otherwise we
+    won't know which dimensions of the mask to unsqueeze.
+    """
+    # We'll build a tensor of the same shape as `tensor`, subtract away masked values, then add
+    # back in the `replace_with` value.
+    if tensor.dim() != mask.dim():
+        raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
+    one_minus_mask = 1.0 - mask
+    values_to_subtract = tensor * one_minus_mask
+    values_to_add = replace_with * one_minus_mask
+    return tensor - values_to_subtract + values_to_add

@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.data.dataset_readers import SnliReader
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestSnliReader(AllenNlpTestCase):

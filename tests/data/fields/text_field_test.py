@@ -8,7 +8,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 
 

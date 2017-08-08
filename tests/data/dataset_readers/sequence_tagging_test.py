@@ -1,18 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
-from allennlp.testing.test_case import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
-
-    def setUp(self):
-        super(TestSequenceTaggingDatasetReader, self).setUp()
-        self.write_sequence_tagging_data()
-
     def test_read_from_file(self):
-
         reader = SequenceTaggingDatasetReader()
-        dataset = reader.read(self.TRAIN_FILE)
+        dataset = reader.read('tests/fixtures/sequence_tagging_example.tsv')
 
         assert len(dataset.instances) == 4
         fields = dataset.instances[0].fields()

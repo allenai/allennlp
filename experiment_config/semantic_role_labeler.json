@@ -1,0 +1,29 @@
+{
+  "dataset_reader":{"type":"srl"},
+  "train_data_path": "/net/efs/aristo/allennlp/srl/conll-formatted-ontonotes-5.0-12/conll-formatted-ontonotes-5.0/data/train",
+  "validation_data_path": "/net/efs/aristo/allennlp/srl/conll-formatted-ontonotes-5.0-12/conll-formatted-ontonotes-5.0/data/development/",
+  "model": {
+    "type":"srl",
+    "stacked_encoder": {
+      "type": "lstm",
+      "input_size": 101,
+      "hidden_size": 300,
+      "num_layers": 8
+    }
+  },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["tokens", "num_tokens"]],
+    "batch_size" : 80
+  },
+  "optimizer": {
+    "type": "adadelta",
+    "lr": 0.000001,
+    "rho": 0.95
+  },
+  "num_epochs": 500,
+  "grad_norm": 1.0,
+  "patience" : 500,
+  "serialization_prefix" : "/net/efs/aristo/allennlp/srl/srl-model",
+  "cuda_device" : 0
+}

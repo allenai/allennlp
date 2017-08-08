@@ -8,7 +8,7 @@ from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.modules.similarity_functions import BilinearSimilarity
-from allennlp.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 class TestBilinearSimilarityFunction(AllenNlpTestCase):
     def test_weights_are_correct_sizes(self):

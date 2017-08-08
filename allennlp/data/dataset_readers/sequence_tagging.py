@@ -1,14 +1,19 @@
 from typing import Dict
+import logging
 
 from overrides import overrides
+import tqdm
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField, TagField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("sequence_tagging")
@@ -36,7 +41,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
         with open(file_path, "r") as data_file:
 
             instances = []
-            for line in data_file:
+            logger.info("Reading instances from lines in file at: %s", file_path)
+            for line in tqdm.tqdm(data_file):
                 tokens_and_tags = [pair.split("###") for pair in line.strip("\n").split("\t")]
                 tokens = [x[0] for x in tokens_and_tags]
                 tags = [x[1] for x in tokens_and_tags]
@@ -45,6 +51,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
                 sequence_tags = TagField(tags, sequence)
                 instances.append(Instance({'tokens': sequence,
                                            'tags': sequence_tags}))
+        if not instances:
+            raise ConfigurationError("No instances were read from the given filepath {}. "
+                                     "Is the path correct?".format(file_path))
         return Dataset(instances)
 
     @classmethod
