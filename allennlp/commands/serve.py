@@ -16,9 +16,6 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     return subparser
 
 def serve(args: argparse.Namespace) -> None:
-    # The services (and backing models) are potentially heavyweight.
-    # We postpone the imports until here so that they don't get instantiated for
-    # non-`serve` commands.
     if args.backend == 'flask':
         server_flask.run(args.port)
     elif args.backend == 'sanic':
