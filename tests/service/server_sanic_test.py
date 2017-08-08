@@ -1,10 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
 import json
 
-from allennlp.service.server_sanic import app
+from allennlp.service.server_sanic import make_app
 from allennlp.service.servable import ServableCollection
 from allennlp.common.testing import AllenNlpTestCase
 
+app = make_app()
 # Add default models to app
 app.servables = ServableCollection.default()
 

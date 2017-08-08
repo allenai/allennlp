@@ -16,7 +16,8 @@ class BidafServable(Servable):
 
         self.tokenizer = WordTokenizer()
 
-        dataset = SquadReader(token_indexers=self.token_indexers).read('tests/fixtures/squad_example.json')
+        dataset = SquadReader(tokenizer=self.tokenizer,
+                              token_indexers=self.token_indexers).read('tests/fixtures/squad_example.json')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)

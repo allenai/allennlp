@@ -22,6 +22,7 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger.setLevel(logging.INFO)
 
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Train the specified model on the specified dataset.'''
@@ -76,9 +77,13 @@ def train_model_from_file(args: argparse.Namespace):
     # We need the python hashseed to be set if we're training a model
     ensure_pythonhashseed_set()
 
+    logger.info("b4")
+
     # Set logging format
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         level=logging.INFO)
+
+    logger.info("after")
 
     param_path = args.param_path
     param_dict = pyhocon.ConfigFactory.parse_file(param_path)

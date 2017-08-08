@@ -11,11 +11,12 @@ from allennlp.service.servable import Servable, JSONDict
 
 class SemanticRoleLabelerServable(Servable):
     def __init__(self):
-        dataset = SrlReader().read('tests/fixtures/conll_2012/')
-        vocab = Vocabulary.from_dataset(dataset)
-        self.vocab = vocab
-        dataset.index_instances(vocab)
-        self.dataset = dataset
+        self.tokenizer = WordTokenizer()
+        self.token_indexers = {"tokens": SingleIdTokenIndexer(lowercase_tokens=True)}
+
+        dataset = SrlReader(token_indexers=self.token_indexers).read('tests/fixtures/conll_2012/')
+        self.vocab = Vocabulary.from_dataset(dataset)
+        dataset.index_instances(self.vocab)
 
         params = Params({
                 "text_field_embedder": {
@@ -35,10 +36,9 @@ class SemanticRoleLabelerServable(Servable):
         self.model = SemanticRoleLabeler.from_params(self.vocab, params)
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
-        tokenizer = WordTokenizer()
-
-        sentence = tokenizer.tokenize(inputs["sentence"])
-        text = TextField(sentence, token_indexers={"tokens": SingleIdTokenIndexer()})
+        sentence = self.tokenizer.tokenize(inputs["sentence"])
+        text = TextField(sentence, token_indexers=self.token_indexers)
+        # TODO(joelgrus) use spacy to identify verbs
         results = {"idx": []}  # type: Dict[str, Any]
         for i in range(len(sentence)):
             verb_indicator = IndexField(i, text)
