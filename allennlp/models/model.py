@@ -18,20 +18,13 @@ class Model(torch.nn.Module, Registrable):
     interleave the models with a wrapper module which unpacks the dictionary into
     a list of tensors.
 
-    Finally, the output dictionary of your model can contain 2 special keys which we
-    use if you train a model using the :class:`~allennlp.training.Trainer`. These are:
-
-    loss : ``torch.Variable``, required.
-        The loss to be optimized. Required for a model to be trained using ``Trainer``.
-
-    has_metrics : bool, optional.
-        If your model has this key in it's output dictionary, :func:`Model.get_metrics`
-        will be called in the training loop after each epoch. This allows you to implement
-        metrics which accumulate as your model trains.
-
-    in order for your model to be trained using the :class:`~allennlp.training.Trainer`
+    In order for your model to be trained using the :class:`~allennlp.training.Trainer`
     api, the output dictionary of your Model must include a "loss" key, which will be
-    optimised during the training process. Additionally, it may include a
+    optimised during the training process.
+
+    Finally, you can optionally implement :func:`Model.get_metrics` in order to make use
+    of early stopping and best-model serialization based on a validation metric in
+    :class:`~allennlp.training.Trainer`.
     """
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
@@ -81,6 +74,10 @@ class Model(torch.nn.Module, Registrable):
         Returns a dictionary of metrics. If the ``forward`` call of your model returns a
         ``has_metrics`` key, this will be called by :class:`allennlp.training.Trainer`
         in order to compute and use model metrics for early stopping and model serialisation.
+        We pass here rather than raising as it is not required to implement metrics for a new model.
+        A boolean `reset` parameter is passed, as frequently a metric accumulator will have
+        some state which should be reset between epochs. This is also compatible with
+        :class:`~allennlp.training.Metric`s.
         """
         pass
 

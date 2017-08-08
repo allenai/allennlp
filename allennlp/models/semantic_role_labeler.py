@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional
 import torch
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
+from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.constants import GLOVE_PATH
@@ -198,6 +199,7 @@ class SemanticRoleLabeler(Model):
                     transition_matrix[i, j] = float("-inf")
         return transition_matrix
 
+    @overrides
     def get_metrics(self, reset: bool = False):
         return self.f1_metric.get_metric(reset)
 
