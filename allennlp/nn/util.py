@@ -116,8 +116,8 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
         would otherwise not have a batch dimension.
     for_training : ``bool``, optional (default = ``True``)
         If ``False``, we will pass the ``volatile=True`` flag when constructing variables, which
-        disables gradient computations in the graph.  This makes inference much faster, but is
-        incompatible with training models.
+        disables gradient computations in the graph.  This makes inference more efficient
+        (particularly in memory usage), but is incompatible with training models.
 
     Returns
     -------

@@ -235,7 +235,9 @@ class BidirectionalAttentionFlow(Model):
         """
         instance = Instance({'question': question, 'passage': passage})
         instance.index_fields(self._vocab)
-        model_input = util.arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
+        model_input = util.arrays_to_variables(instance.as_array_dict(),
+                                               add_batch_dimension=True,
+                                               for_training=False)
         output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.
