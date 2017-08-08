@@ -1,15 +1,16 @@
-#!/bin/python
+#!/bin/bash
 
 ECR_REPOSITORY=896129387501.dkr.ecr.us-west-2.amazonaws.com
 
-PARAM_FILE=$1
+COMMAND=$1
 CONTACT=$2
+
 CONTAINER_TAG=$(git rev-parse HEAD)
 IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$CONTAINER_TAG
 ID=$(openssl rand -base64 6 | tr '[:upper:]' '[:lower:]')
 
-USAGE="USAGE: ./run_on_kube.sh [PARAM_FILE] [CONTACT]"
-if [ ! -n "$PARAM_FILE" ] ; then
+USAGE="USAGE: ./run_on_kube.sh [COMMAND] [CONTACT]"
+if [ ! -n "$COMMAND" ] ; then
   echo "$USAGE"
   exit 1
 fi
@@ -20,9 +21,9 @@ if [ ! -n "$CONTACT" ] ; then
 fi
 
 echo "Configuration:"
-echo "  PARAM_FILE: $PARAM_FILE"
-echo "  Contact:    $CONTACT"
-echo "  Image:      $IMAGE"
+echo "  Command: $COMMAND"
+echo "  Contact: $CONTACT"
+echo "  Image:   $IMAGE"
 
 git diff-index --quiet HEAD --
 ec=$?
@@ -43,8 +44,6 @@ echo "Building the Docker image..."
 docker build -f Dockerfile.gpu -t $IMAGE . --build-arg PARAM_FILE=$PARAM_FILE
 echo "Pushing the Docker image to ECR..."
 docker push $IMAGE
-
-COMMAND="bash -c touch /net/efs/aristo/helloworld"
 
 cat >spec.yaml <<EOF
 apiVersion: batch/v1
@@ -90,6 +89,8 @@ spec:
             mountPath: /net/efs/aristo
             readOnly: true
           command:
+             - bash
+             - -c
              - $COMMAND
       volumes:
       # Mount in the GPU driver from the host machine. This guarantees compatibility.
