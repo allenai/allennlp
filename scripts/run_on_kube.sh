@@ -87,7 +87,7 @@ spec:
             readOnly: true
           - name: nfs
             mountPath: /net/efs/aristo
-            readOnly: true
+            readOnly: false
           command:
              - bash
              - -c
