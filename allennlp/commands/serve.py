@@ -1,5 +1,7 @@
 import argparse
 
+from allennlp.service import server_flask, server_sanic
+
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Run the web service, which provides an HTTP API as well as a web demo.'''
     subparser = parser.add_parser(
@@ -14,11 +16,12 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     return subparser
 
 def serve(args: argparse.Namespace) -> None:
+    # The services (and backing models) are potentially heavyweight.
+    # We postpone the imports until here so that they don't get instantiated for
+    # non-`serve` commands.
     if args.backend == 'flask':
-        from allennlp.service import server_flask
         server_flask.run(args.port)
     elif args.backend == 'sanic':
-        from allennlp.service import server_sanic
         server_sanic.run(args.port)
     else:
         raise Exception("Unsupported backend: " + args.backend)

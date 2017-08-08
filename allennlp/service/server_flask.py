@@ -3,13 +3,13 @@ from allennlp.service.servable import ServableCollection
 from flask import Flask, Response, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_url_path='')  # pylint: disable=invalid-name
-
-# TODO(joelgrus): make this configurable
-servables = ServableCollection.default()  # pylint: disable=invalid-name
+app.servables = ServableCollection()
 
 def run(port: int) -> None:
     """Run the server programatically"""
     print("Starting a flask server on port {}.".format(port))
+    # TODO(joelgrus): make this configurable
+    app.servables = ServableCollection.default()
     app.run(port=port, host="0.0.0.0")
 
 
@@ -37,7 +37,7 @@ def handle_unknown_model(error: UnknownModel) -> Response:
 @app.route('/predict/<model_name>', methods=['POST'])
 def predict(model_name: str) -> Response:
     """make a prediction using the specified model and return the results"""
-    model = servables.get(model_name.lower())
+    model = app.servables.get(model_name.lower())
     if model is None:
         raise UnknownModel(model_name)
 
@@ -51,4 +51,4 @@ def predict(model_name: str) -> Response:
 @app.route('/models')
 def list_models() -> Response:
     """list the available models"""
-    return jsonify({"models": servables.list_available()})
+    return jsonify({"models": app.servables.list_available()})
