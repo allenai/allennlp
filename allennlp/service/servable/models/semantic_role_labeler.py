@@ -2,7 +2,7 @@ from typing import Dict, Any  # pylint: disable=unused-import
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers.semantic_role_labelling import SrlReader
+from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.token_indexers import SingleIdTokenIndexer

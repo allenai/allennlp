@@ -4,13 +4,12 @@ from unittest import TestCase
 
 from allennlp.service.servable.models.bidaf import BidafServable
 
-import pytest
 
 class TestBidafServable(TestCase):
     def test_uses_named_inputs(self):
         inputs = {
-                "question": "Is this a test?",
-                "passage": "This is definitely a test"
+                "question": "What kind of test succeeded on its first attempt?",
+                "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
         }
 
         model = BidafServable()

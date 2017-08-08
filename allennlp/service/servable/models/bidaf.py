@@ -24,6 +24,7 @@ class BidafServable(Servable):
         dataset = SquadReader.from_params(reader_params).read('tests/fixtures/squad_example.json')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
+        print("vocab size", vocab.get_vocab_size())
         dataset.index_instances(vocab)
         self.dataset = dataset
         self.token_indexers = {'tokens': SingleIdTokenIndexer(),
@@ -36,6 +37,7 @@ class BidafServable(Servable):
 
         question_text = inputs["question"]
         passage_text = inputs["passage"]
+
 
         question = TextField(tokenizer.tokenize(question_text), token_indexers=self.token_indexers)
         passage = TextField(tokenizer.tokenize(passage_text) + [SquadReader.STOP_TOKEN],
