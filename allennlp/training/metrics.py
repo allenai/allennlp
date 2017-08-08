@@ -67,10 +67,11 @@ class CategoricalAccuracy(Metric):
         # Top K indexes of the predictions.
         top_k = predictions.topk(self.top_k, -1)[1]
 
+        # This is of shape (batch_size, ..., top_k).
         correct = top_k.eq(gold_labels.long().unsqueeze(-1)).float()
         count = torch.ones(gold_labels.size())
-        if mask:
-            correct *= mask
+        if mask is not None:
+            correct *= mask.unsqueeze(-1)
             count *= mask
         self.correct_count += correct.sum()
         self.total_count += count.sum()
@@ -112,8 +113,10 @@ class F1Measure(Metric):
         mask: ``torch.Tensor``, optional (default = None).
 
         """
-        mask = mask or torch.ones(gold_labels.size())
+        if mask is None:
+            mask = torch.ones(gold_labels.size())
         mask = mask.float()
+
         null_prediction_mask = gold_labels.eq(self._null_prediction_label).float()
         some_prediction_mask = 1.0 - null_prediction_mask
 
