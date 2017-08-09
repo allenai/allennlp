@@ -4,6 +4,13 @@
   "validation_data_path": "/net/efs/aristo/allennlp/srl/conll-formatted-ontonotes-5.0-12/conll-formatted-ontonotes-5.0/data/development/",
   "model": {
     "type":"srl",
+    "text_field_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
+        "trainable": true
+      }
+    },
     "stacked_encoder": {
       "type": "lstm",
       "input_size": 101,
@@ -24,6 +31,6 @@
   "num_epochs": 500,
   "grad_norm": 1.0,
   "patience" : 500,
-  "serialization_prefix" : "/net/efs/aristo/allennlp/srl/srl-model",
+  "serialization_prefix" : "/net/efs/aristo/allennlp/srl/srl-model2",
   "cuda_device" : 0
 }
