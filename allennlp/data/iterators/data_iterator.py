@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, List, Generator, Union
 
 import numpy
@@ -6,6 +7,8 @@ from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class DataIterator(Registrable):
@@ -45,6 +48,8 @@ class DataIterator(Registrable):
         for group in grouped_instances:
             batch = Dataset(group)
             padding_lengths = batch.get_padding_lengths()
+            logger.debug("Batch padding lengths: %s", str(padding_lengths))
+            logger.debug("Batch size: %d", len(batch.instances))
             yield batch.as_array_dict(padding_lengths, verbose=False)
 
     def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
