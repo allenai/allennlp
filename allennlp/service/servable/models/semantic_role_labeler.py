@@ -1,4 +1,4 @@
-from typing import Dict, Any  # pylint: disable=unused-import
+from typing import Dict, Any, Optional  # pylint: disable=unused-import
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -36,7 +36,7 @@ class SemanticRoleLabelerServable(Servable):
                 })
 
         self.model = SemanticRoleLabeler.from_params(self.vocab, params)
-        self.nlp = spacy.load('en')
+        self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
         sentence = inputs["sentence"]
