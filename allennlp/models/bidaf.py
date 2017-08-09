@@ -9,7 +9,7 @@ from allennlp.data.fields import TextField
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
-from allennlp.nn import util
+from allennlp.nn import InitializerApplicator, util
 
 
 @Model.register("bidaf")
@@ -49,6 +49,8 @@ class BidirectionalAttentionFlow(Model):
     span_end_encoder : ``Seq2SeqEncoder``
         The encoder that we will use to incorporate span start predictions into the passage state
         before predicting span end.
+    initializer : ``InitializerApplicator``
+        We will use this to initialize the parameters in the model, calling ``initializer(self)``.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -56,7 +58,8 @@ class BidirectionalAttentionFlow(Model):
                  phrase_layer: Seq2SeqEncoder,
                  attention_similarity_function: SimilarityFunction,
                  modeling_layer: Seq2SeqEncoder,
-                 span_end_encoder: Seq2SeqEncoder) -> None:
+                 span_end_encoder: Seq2SeqEncoder,
+                 initializer: InitializerApplicator) -> None:
         super(BidirectionalAttentionFlow, self).__init__()
 
         self._vocab = vocab
@@ -76,7 +79,7 @@ class BidirectionalAttentionFlow(Model):
         span_end_encoding_dim = span_end_encoder.get_output_dim()
         span_end_input_dim = encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
-        # TODO(mattg): figure out default initialization here
+        initializer(self)
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -232,7 +235,9 @@ class BidirectionalAttentionFlow(Model):
         """
         instance = Instance({'question': question, 'passage': passage})
         instance.index_fields(self._vocab)
-        model_input = util.arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
+        model_input = util.arrays_to_variables(instance.as_array_dict(),
+                                               add_batch_dimension=True,
+                                               for_training=False)
         output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.
@@ -347,6 +352,13 @@ class BidirectionalAttentionFlow(Model):
                 }
         span_end_encoder_params = params.pop("span_end_encoder", default_span_end_encoder_params)
         span_end_encoder = Seq2SeqEncoder.from_params(span_end_encoder_params)
+
+        default_initializer_params = {'default': 'orthonormal',
+                                      'exclude': ["token_embedder_tokens"]}
+
+        initializer_params = params.pop('initializer', default_initializer_params)
+        initializer = InitializerApplicator.from_params(initializer_params)
+
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
@@ -354,4 +366,5 @@ class BidirectionalAttentionFlow(Model):
                    phrase_layer=phrase_layer,
                    attention_similarity_function=similarity_function,
                    modeling_layer=modeling_layer,
-                   span_end_encoder=span_end_encoder)
+                   span_end_encoder=span_end_encoder,
+                   initializer=initializer)
