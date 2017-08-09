@@ -1,13 +1,14 @@
-from typing import Dict, Any  # pylint: disable=unused-import
+from typing import Dict
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.models import SemanticRoleLabeler
 from allennlp.service.servable import Servable, JSONDict
+
+import spacy
 
 class SemanticRoleLabelerServable(Servable):
     def __init__(self,
@@ -17,17 +18,25 @@ class SemanticRoleLabelerServable(Servable):
         self.tokenizer = tokenizer
         self.token_indexers = token_indexers
         self.model = model
+        self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
-        sentence = self.tokenizer.tokenize(inputs["sentence"])
-        text = TextField(sentence, token_indexers=self.token_indexers)
-        # TODO(joelgrus) use spacy to identify verbs
-        results = {"idx": []}  # type: Dict[str, Any]
-        for i in range(len(sentence)):
-            verb_indicator = IndexField(i, text)
-            output = self.model.tag(text, verb_indicator)
-            output["class_probabilities"] = output["class_probabilities"].tolist()
-            results["idx"].append(output)
+        sentence = inputs["sentence"]
+        tokens = self.tokenizer.tokenize(sentence)
+        text = TextField(tokens, token_indexers=self.token_indexers)
+
+        results = {"verbs": []}  # type: JSONDict
+        spacy_doc = self.nlp(sentence)
+        for i, word in enumerate(spacy_doc):
+            if word.pos_ == "VERB":
+                verb_indicator = IndexField(i, text)
+                output = self.model.tag(text, verb_indicator)
+                results["verbs"].append({
+                        "index": i,
+                        "verb": word.text,
+                        "tags": output["tags"],
+                        "class_probabilities": output["class_probabilities"].tolist()
+                })
 
         return results
 
