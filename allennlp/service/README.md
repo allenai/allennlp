@@ -1,31 +1,34 @@
 # Service
 
 This service serves AllenNLP models through a REST API.
-(Or it will once they're ready; right now it serves one-line placeholder models.)
 
 Right now we are considering both Flask and Sanic. Accordingly, there are two
-versions of the server.
+versions of the server. (At some point soon one of them will be
+removed, most likely Flask.)
 
-To start the flask version run
+To start the Flask version, from the top level directory run
 
 ```bash
-FLASK_APP=allennlp/service/server_flask.py flask run --port 5001
+allennlp/run serve --backend flask --port 8000
 ```
 
 (substitute whatever port you want).
 
-To start the sanic version run
+To start the sanic version just substitute `sanic` for the backend
 
 ```bash
-python -m sanic --workers 4 --port 5001 allennlp.service.server_sanic.app
+allennlp/run serve --backend sanic --port 8000
 ```
 
 Right now the API has two routes.
 
 `GET /models` returns a list of the available models.
 
-`POST /predict/<model_name>` asks the specified model for a prediction, based on the data in the request body.
-The current placeholder models expect a field called `input` whose value is a string.
-They return the same input, along with the model name and an `output` field that is also a string.
+`POST /predict/<model_name>` asks the specified model for a prediction, based on the data in the request body. Each model expects different inputs:
 
-It also serves a bare-bones web page that provides a front-end for these predictions.
+* Semantic Role Labeling: `{"sentence": "..."}`
+* Bidaf (question answering): `{"paragraph": "...", "question": "..."}`
+* Snli: `{"premise": "...", "hypothesis": "..."}`
+
+It also serves a web demo for each of these at `/`,
+that's probably how you want to use these.

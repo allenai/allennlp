@@ -9,6 +9,8 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models import SemanticRoleLabeler
 from allennlp.service.servable import Servable, JSONDict
 
+import spacy
+
 class SemanticRoleLabelerServable(Servable):
     def __init__(self):
         self.tokenizer = WordTokenizer()
@@ -34,16 +36,24 @@ class SemanticRoleLabelerServable(Servable):
                 })
 
         self.model = SemanticRoleLabeler.from_params(self.vocab, params)
+        self.nlp = spacy.load('en')
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
-        sentence = self.tokenizer.tokenize(inputs["sentence"])
-        text = TextField(sentence, token_indexers=self.token_indexers)
-        # TODO(joelgrus) use spacy to identify verbs
-        results = {"idx": []}  # type: Dict[str, Any]
-        for i in range(len(sentence)):
-            verb_indicator = IndexField(i, text)
-            output = self.model.tag(text, verb_indicator)
-            output["class_probabilities"] = output["class_probabilities"].tolist()
-            results["idx"].append(output)
+        sentence = inputs["sentence"]
+        tokens = self.tokenizer.tokenize(sentence)
+        text = TextField(tokens, token_indexers=self.token_indexers)
+
+        results = {"verbs": []}  # type: JSONDict
+        spacy_doc = self.nlp(sentence)
+        for i, word in enumerate(spacy_doc):
+            if word.pos_ == "VERB":
+                verb_indicator = IndexField(i, text)
+                output = self.model.tag(text, verb_indicator)
+                results["verbs"].append({
+                        "index": i,
+                        "verb": word.text,
+                        "tags": output["tags"],
+                        "class_probabilities": output["class_probabilities"].tolist()
+                })
 
         return results
