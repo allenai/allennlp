@@ -113,8 +113,8 @@ class Trainer:
                 if self._grad_norm:
                     clip_grad_norm(self._model.parameters(), self._grad_norm)
                 self._optimizer.step()
-            metrics = self._model.get_metrics(reset=True) or {"loss": train_loss}
-
+            metrics = self._model.get_metrics(reset=True) or {}
+            metrics["loss"] = train_loss
             if self._validation_dataset is not None:
                 # Switch to evaluation mode.
                 self._model.eval()
@@ -124,12 +124,11 @@ class Trainer:
                     val_output_dict = self._model.forward(**tensor_batch)
                     loss = val_output_dict["loss"]
                     val_loss += loss.data.cpu().numpy()
-                val_metrics = self._model.get_metrics(reset=True) or {"loss": val_loss}
-
+                val_metrics = self._model.get_metrics(reset=True) or {}
+                val_metrics["loss"] = val_loss
                 message_template = "Training %s : %3f    Validation %s : %3f "
                 for name, value in metrics.items():
                     logger.info(message_template, name, value, name, val_metrics[name])
-                logger.info(message_template, "Loss", train_loss, "Loss", val_loss)
 
                 this_epoch = val_metrics[self._validation_metric]
                 if len(validation_metric_per_epoch) > self._patience:
@@ -143,7 +142,6 @@ class Trainer:
                 message_template = "Training %s : %3f "
                 for name, value in metrics.items():
                     logger.info(message_template, name, value)
-                logger.info(message_template, "Loss", train_loss)
                 if self._serialization_prefix:
                     self._save_checkpoint(epoch)
 

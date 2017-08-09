@@ -16,7 +16,7 @@ class MetricsTest(AllenNlpTestCase):
         targets = torch.Tensor([0, 3])
         accuracy(predictions, targets)
         actual_accuracy = accuracy.get_metric()
-        assert actual_accuracy == 50.0
+        assert actual_accuracy == 0.50
 
     def test_top_k_categorical_accuracy(self):
         accuracy = CategoricalAccuracy(top_k=2)
@@ -25,7 +25,7 @@ class MetricsTest(AllenNlpTestCase):
         targets = torch.Tensor([0, 3])
         accuracy(predictions, targets)
         actual_accuracy = accuracy.get_metric()
-        assert actual_accuracy == 100.0
+        assert actual_accuracy == 1.0
 
     def test_top_k_categorical_accuracy_accumulates_and_resets_correctly(self):
         accuracy = CategoricalAccuracy(top_k=2)
@@ -37,7 +37,7 @@ class MetricsTest(AllenNlpTestCase):
         accuracy(predictions, torch.Tensor([4, 4]))
         accuracy(predictions, torch.Tensor([4, 4]))
         actual_accuracy = accuracy.get_metric(reset=True)
-        assert actual_accuracy == 50.0
+        assert actual_accuracy == 0.50
         assert accuracy.correct_count == 0.0
         assert accuracy.total_count == 0.0
 
@@ -50,7 +50,7 @@ class MetricsTest(AllenNlpTestCase):
         mask = torch.Tensor([0, 1, 1])
         accuracy(predictions, targets, mask)
         actual_accuracy = accuracy.get_metric()
-        assert actual_accuracy == 50.0
+        assert actual_accuracy == 0.50
 
     def test_top_k_categorical_accuracy_works_for_sequences(self):
         accuracy = CategoricalAccuracy(top_k=2)
@@ -64,14 +64,14 @@ class MetricsTest(AllenNlpTestCase):
                                 [0, 1, 4]])
         accuracy(predictions, targets)
         actual_accuracy = accuracy.get_metric(reset=True)
-        numpy.testing.assert_almost_equal(actual_accuracy, 66.6666666)
+        numpy.testing.assert_almost_equal(actual_accuracy, 0.6666666)
 
         # Test the same thing but with a mask:
         mask = torch.Tensor([[0, 1, 1],
                              [1, 0, 1]])
         accuracy(predictions, targets, mask)
         actual_accuracy = accuracy.get_metric(reset=True)
-        numpy.testing.assert_almost_equal(actual_accuracy, 50.0)
+        numpy.testing.assert_almost_equal(actual_accuracy, 0.50)
 
     def test_top_k_categorical_accuracy_catches_exceptions(self):
         accuracy = CategoricalAccuracy()
@@ -149,7 +149,6 @@ class MetricsTest(AllenNlpTestCase):
         assert f1_measure.false_positives == 0.0
         assert f1_measure.false_negatives == 0.0
 
-
     def test_f1_measure_works_for_sequences(self):
         f1_measure = F1Measure(positive_label=0)
         predictions = torch.Tensor([[[0.35, 0.25, 0.1, 0.1, 0.2],
@@ -158,8 +157,8 @@ class MetricsTest(AllenNlpTestCase):
                                     [[0.35, 0.25, 0.1, 0.1, 0.2],
                                      [0.1, 0.6, 0.1, 0.2, 0.0],
                                      [0.1, 0.6, 0.1, 0.2, 0.0]]])
-        # [[True Negative, False Positive, False Positive],
-        #  [True Negative, True Positive, False Negative]]
+        # [[True Positive, True Negative, True Negative],
+        #  [True Positive, True Negative, False Negative]]
         targets = torch.Tensor([[0, 3, 4],
                                 [0, 1, 0]])
         f1_measure(predictions, targets)

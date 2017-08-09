@@ -13,10 +13,21 @@ class Metric(Registrable):
     A very general abstract class representing a metric which can be
     accumulated.
     """
-    def __call__(self, predictions: torch.Tensor,
+    def __call__(self,
+                 predictions: torch.Tensor,
                  gold_labels: torch.Tensor,
                  mask: Optional[torch.Tensor]):
-
+        """
+        Parameters
+        ----------
+        predictions : ``torch.Tensor``, required.
+            A tensor of predictions.
+        gold_labels : ``torch.Tensor``, required.
+            A tensor corresponding to some gold label to evaluate against.
+        mask: ``torch.Tensor``, optional (default = None).
+            A mask can be passed, in order to deal with metrics which are
+            computed over potentially padded elements, such as sequence labels.
+        """
         raise NotImplementedError
 
     def get_metric(self, reset: bool) -> Union[float, Tuple[float, ...]]:
@@ -61,9 +72,8 @@ class CategoricalAccuracy(Metric):
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the ``predictions`` tensor without the ``num_classes`` dimension.
         mask: ``torch.Tensor``, optional (default = None).
-                A masking tensor the same size as ``gold_labels``.
+            A masking tensor the same size as ``gold_labels``.
         """
-
         # Some sanity checks.
         num_classes = predictions.size(-1)
         if gold_labels.dim() != predictions.dim() - 1:
@@ -91,7 +101,7 @@ class CategoricalAccuracy(Metric):
         -------
         The accumulated accuracy.
         """
-        accuracy = 100. * float(self.correct_count) / float(self.total_count)
+        accuracy = float(self.correct_count) / float(self.total_count)
         if reset:
             self.reset()
         return accuracy
@@ -105,7 +115,7 @@ class CategoricalAccuracy(Metric):
 @Metric.register("f1")
 class F1Measure(Metric):
     """
-    Computes Precision, Recall and F1 with respect to a given ``positive_label`` label.
+    Computes Precision, Recall and F1 with respect to a given ``positive_label``.
     For example, for a BIO tagging scheme, you would pass the classification index of
     the tag you are interested in, resulting in the Precision, Recall and F1 score being
     calculated for this tag only.
@@ -170,13 +180,13 @@ class F1Measure(Metric):
         """
         Returns
         -------
-        Returns a tuple of the following metrics based on the accumulated count statistics:
+        A tuple of the following metrics based on the accumulated count statistics:
         precision : float
         recall : float
         f1-measure : float
         """
-        recall = float(self.true_positives) / float(self.true_positives + self.false_negatives + 1e-13)
         precision = float(self.true_positives) / float(self.true_positives + self.false_positives + 1e-13)
+        recall = float(self.true_positives) / float(self.true_positives + self.false_negatives + 1e-13)
         f1_measure = 2. * ((precision * recall) / (precision + recall + 1e-13))
         if reset:
             self.reset()
