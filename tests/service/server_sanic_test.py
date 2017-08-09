@@ -1,35 +1,27 @@
 # pylint: disable=no-self-use,invalid-name
 import json
 
-from allennlp.service.server_sanic import app
+from allennlp.service.server_sanic import make_app
+from allennlp.service.servable import ServableCollection
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestApp(AllenNlpTestCase):
 
-    def test_list_models(self):
+    def setUp(self):
+        super().setUp()
+        app = make_app()
+        app.servables = ServableCollection.default()
         app.testing = True
-        client = app.test_client
+        self.client = app.test_client
 
-        _, response = client.get("/models")
+    def test_list_models(self):
+        _, response = self.client.get("/models")
         data = json.loads(response.text)
-        assert "reverser" in set(data["models"])
+        assert "bidaf" in set(data["models"])
 
     def test_unknown_model(self):
-        app.testing = True
-        client = app.test_client
-        _, response = client.post("/predict/bogus_model",
-                                  json={"input": "broken"})
+        _, response = self.client.post("/predict/bogus_model",
+                                       json={"input": "broken"})
         assert response.status == 400
         assert "unknown model" in response.text and "bogus_model" in response.text
-
-    def test_known_model(self):
-        app.testing = True
-        client = app.test_client
-        _, response = client.post("/predict/reverser",
-                                  json={"input": "not broken"})
-        data = json.loads(response.text)
-        assert set(data.keys()) == {"input", "model_name", "output"}
-        assert data["model_name"] == "reverser"
-        assert data["input"] == "not broken"
-        assert data["output"] == "nekorb ton"

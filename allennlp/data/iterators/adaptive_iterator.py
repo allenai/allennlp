@@ -121,15 +121,9 @@ class AdaptiveIterator(BucketIterator):
             if (len(current_batch) * big_o_memory_constant > self._adaptive_memory_usage_constant
                         or len(current_batch) > self._maximum_batch_size):
                 current_batch.pop()
-                if logger.getEffectiveLevel() <= logging.DEBUG:
-                    padding_lengths = Dataset(current_batch).get_padding_lengths()
-                    logger.debug("Batch size: %d; padding: %s", len(current_batch), padding_lengths)
                 batches.append(current_batch)
                 current_batch = [instance]
                 current_lengths = instance_lengths
-        if logger.getEffectiveLevel() <= logging.DEBUG:
-            padding_lengths = Dataset(current_batch).get_padding_lengths()
-            logger.debug("Batch size: %d; padding: %s", len(current_batch), padding_lengths)
         batches.append(current_batch)
         return batches
 
