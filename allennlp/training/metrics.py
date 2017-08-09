@@ -178,15 +178,6 @@ class F1Measure(Metric):
         recall = float(self.true_positives) / float(self.true_positives + self.false_negatives + 1e-13)
         precision = float(self.true_positives) / float(self.true_positives + self.false_positives + 1e-13)
         f1_measure = 2. * ((precision * recall) / (precision + recall + 1e-13))
-
-        print("recall: ", recall)
-        print("precision: ", precision)
-        print("f1: ", f1_measure)
-        print("true positive : ", self.true_positives)
-        print("true negatives : ", self.true_negatives)
-        print("false positives : ", self.false_positives)
-        print("false negatives : ", self.false_negatives)
-
         if reset:
             self.reset()
         return precision, recall, f1_measure
