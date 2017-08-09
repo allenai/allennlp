@@ -1,11 +1,58 @@
-# This is a configuration file for provisioning a GPU machine on Kubernetes.
+#!/bin/bash
+
+ECR_REPOSITORY=896129387501.dkr.ecr.us-west-2.amazonaws.com
+
+COMMAND=$1
+CONTACT=$2
+
+COMMIT=$(git rev-parse HEAD)
+IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$COMMIT
+ID=${COMMIT:0:8}
+
+USAGE="USAGE: ./run_on_kube.sh [COMMAND] [CONTACT]"
+if [ ! -n "$COMMAND" ] ; then
+  echo "$USAGE"
+  exit 1
+fi
+
+if [ ! -n "$CONTACT" ] ; then
+  echo "$USAGE"
+  exit 1
+fi
+
+echo "Configuration:"
+echo "  Command: $COMMAND"
+echo "  Contact: $CONTACT"
+echo "  Image:   $IMAGE"
+
+git diff-index --quiet HEAD --
+ec=$?
+if [ $ec -eq 1 ] ; then
+  echo "Your git repository has outstanding changes."
+  echo "Please commit your changes before running an experiment."
+  exit 1
+fi
+
+set -e
+
+# Get temporary ecr login. For this command to work, you need the python awscli
+# package with a version more recent than 1.11.91.
+echo "Logging in to AWS ECR..."
+eval $(aws --region=us-west-2 ecr get-login --no-include-email)
+
+echo "Building the Docker image..."
+docker build -f Dockerfile.gpu -t $IMAGE . --build-arg PARAM_FILE=$PARAM_FILE
+echo "Pushing the Docker image to ECR..."
+docker push $IMAGE
+
+cat >spec.yaml <<EOF
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name:
-  namespace:
+  name: allennlp-job-$ID
+  namespace: allennlp
   labels:
-    contact:
+    contact: $CONTACT
 spec:
   template:
     metadata:
@@ -14,8 +61,8 @@ spec:
     spec:
       restartPolicy: Never
       containers:
-        - name: dev-environment
-          image: 896129387501.dkr.ecr.us-west-2.amazonaws.com/allennlp:dev-environment
+        - name: allennlp-dev-env
+          image: $IMAGE
           stdin: true
           tty: true
           resources:
@@ -40,9 +87,11 @@ spec:
             readOnly: true
           - name: nfs
             mountPath: /net/efs/aristo
-            readOnly: true
+            readOnly: false
           command:
-             - /bin/sh
+             - bash
+             - -c
+             - $COMMAND
       volumes:
       # Mount in the GPU driver from the host machine. This guarantees compatibility.
       - name: nvidia-driver
@@ -57,3 +106,9 @@ spec:
         - key: "GpuOnly"
           operator: "Equal"
           value: "true"
+EOF
+
+echo "Sending job to Kubernetes..."
+kubectl create -f spec.yaml
+
+echo "Done!"
