@@ -242,10 +242,10 @@ class Vocabulary:
         """
         if is_padded:
             self._token_to_index[namespace] = {self._padding_token: 0}
-            self._index_to_token[namespace] = [self._padding_token]
+            self._index_to_token[namespace] = {0: self._padding_token}
         else:
             self._token_to_index[namespace] = {}
-            self._index_to_token[namespace] = []
+            self._index_to_token[namespace] = {}
         with codecs.open(filename, 'r', 'utf-8') as input_file:
             for i, line in enumerate(input_file.readlines()):
                 index = i + 1 if is_padded else i
@@ -253,7 +253,7 @@ class Vocabulary:
                 if token == oov_token:
                     token = self._oov_token
                 self._token_to_index[namespace][token] = index
-                self._index_to_token[namespace].append(token)
+                self._index_to_token[namespace][index] = token
         if is_padded:
             assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
 
