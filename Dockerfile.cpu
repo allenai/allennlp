@@ -21,11 +21,7 @@ RUN apt-get update --fix-missing && apt-get install -y \
     libsm6 \
     libxext6 \
     libxrender1 \
-    mercurial \
-    subversion \
     wget \
-    python-dev \
-    python3-dev \
     libevent-dev \
     build-essential
 
@@ -52,4 +48,4 @@ RUN bash -c 'source activate allennlp && INSTALL_TEST_REQUIREMENTS="true" ./scri
 COPY . .
 
 # Run tests to verify the Docker build
-RUN /bin/bash -c 'source activate allennlp && pytest'
+RUN /bin/bash -c 'source activate allennlp && PYTHONDONTWRITEBYTECODE=1 pytest'
