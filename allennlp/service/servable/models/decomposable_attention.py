@@ -26,6 +26,9 @@ class DecomposableAttentionServable(Servable):
         initializer = InitializerApplicator()
         initializer(self.model)
 
+        self.vocab.save_to_files('allennlp/service/servable/models/data/vocab_snli')
+
+
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
 

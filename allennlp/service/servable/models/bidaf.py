@@ -1,34 +1,43 @@
+from typing import Dict
+
 from allennlp.common import Params, constants
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers.squad import SquadReader
 from allennlp.data.fields import TextField
-from allennlp.data.tokenizers import WordTokenizer
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.tokenizers import Tokenizer
+from allennlp.data.token_indexers import TokenIndexer
 from allennlp.models import BidirectionalAttentionFlow
 from allennlp.service.servable import Servable, JSONDict
 
 class BidafServable(Servable):
-    def __init__(self):
-        constants.GLOVE_PATH = 'tests/fixtures/glove.6B.100d.sample.txt.gz'
+    def __init__(self,
+                 glove_path: str,
+                 tokenizer: Tokenizer,
+                 token_indexers: Dict[str, TokenIndexer],
+                 model: BidirectionalAttentionFlow) -> None:
+        constants.GLOVE_PATH = glove_path # 'tests/fixtures/glove.6B.100d.sample.txt.gz'
 
-        self.token_indexers = {'tokens': SingleIdTokenIndexer(lowercase_tokens=True),
-                               'token_characters': TokenCharactersIndexer()}
+        #self.token_indexers = {'tokens': SingleIdTokenIndexer(lowercase_tokens=True),
+        #                       'token_characters': TokenCharactersIndexer()}
 
-        self.tokenizer = WordTokenizer()
+        self.tokenizer = tokenizer # WordTokenizer()
+        self.token_indexers = token_indexers
 
-        dataset = SquadReader(tokenizer=self.tokenizer,
-                              token_indexers=self.token_indexers).read('tests/fixtures/squad_example.json')
-        vocab = Vocabulary.from_dataset(dataset)
-        self.vocab = vocab
-        dataset.index_instances(vocab)
-        self.dataset = dataset
+        #dataset = SquadReader(tokenizer=self.tokenizer,
+        #                      token_indexers=self.token_indexers).read('tests/fixtures/squad_example.json')
+        #vocab = Vocabulary.from_dataset(dataset)
 
-        self.model = BidirectionalAttentionFlow.from_params(self.vocab, Params({}))
+        #self.vocab = vocabulary
+        #dataset.index_instances(vocab)
+        #self.dataset = dataset
+
+        self.model = model # BidirectionalAttentionFlow.from_params(self.vocab, Params({}))
+
+        #self.vocab.save_to_files('allennlp/service/servable/models/data/vocab_bidaf')
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
         question_text = inputs["question"]
         passage_text = inputs["passage"]
-
 
         question = TextField(self.tokenizer.tokenize(question_text), token_indexers=self.token_indexers)
         passage = TextField(self.tokenizer.tokenize(passage_text) + [SquadReader.STOP_TOKEN],
@@ -39,3 +48,23 @@ class BidafServable(Servable):
         output_dict["span_end_probs"] = output_dict["span_end_probs"].tolist()
 
         return output_dict
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'BidafServable':
+        glove_path = params.pop("glove_path")
+        tokenizer = Tokenizer.from_params(params.pop("tokenizer"))
+
+        token_indexers = {}
+        token_indexer_params = params.pop('token_indexers')
+        for name, indexer_params in token_indexer_params.items():
+            token_indexers[name] = TokenIndexer.from_params(indexer_params)
+
+        vocab_dir = params.pop('vocab_dir')
+        vocab = Vocabulary.from_files(vocab_dir)
+
+        model = BidirectionalAttentionFlow.from_params(vocab, params)
+
+        return BidafServable(glove_path=glove_path,
+                             tokenizer=tokenizer,
+                             token_indexers=token_indexers,
+                             model=model)

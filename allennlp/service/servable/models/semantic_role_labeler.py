@@ -35,6 +35,9 @@ class SemanticRoleLabelerServable(Servable):
 
         self.model = SemanticRoleLabeler.from_params(self.vocab, params)
 
+        self.vocab.save_to_files('allennlp/service/servable/models/data/vocab_srl')
+
+
     def predict_json(self, inputs: JSONDict) -> JSONDict:
         sentence = self.tokenizer.tokenize(inputs["sentence"])
         text = TextField(sentence, token_indexers=self.token_indexers)

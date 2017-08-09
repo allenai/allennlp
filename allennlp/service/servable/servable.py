@@ -1,6 +1,8 @@
 from typing import Dict, Any, Optional, List
 
-from allennlp.common.params import Params
+from allennlp.common.params import Params, replace_none
+
+import pyhocon
 
 JSONDict = Dict[str, Any]  # pylint: disable=invalid-name
 
@@ -38,14 +40,18 @@ class ServableCollection:
     def list_available(self) -> List[str]:
         return list(self.collection.keys())
 
+    # TODO: get rid of this
     @staticmethod
     def default() -> 'ServableCollection':
         import allennlp.service.servable.models.semantic_role_labeler as semantic_role_labeler
         import allennlp.service.servable.models.bidaf as bidaf
         import allennlp.service.servable.models.decomposable_attention as decomposable_attention
 
+        bidaf_params = Params(
+                replace_none(pyhocon.ConfigFactory.parse_file('allennlp/service/servable/models/data/bidaf.conf')))
+
         all_models = {
-                'bidaf': bidaf.BidafServable(),
+                'bidaf': bidaf.BidafServable.from_params(bidaf_params),
                 'srl': semantic_role_labeler.SemanticRoleLabelerServable(),
                 'snli': decomposable_attention.DecomposableAttentionServable(),
         }  # type: Dict[str, Servable]
