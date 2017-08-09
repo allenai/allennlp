@@ -3,7 +3,7 @@
 # AllenNLP
 
 An [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) NLP research library, built on PyTorch,
-for developing state-of-the-art deep learning models.
+for developing state-of-the-art deep learning models on a wide variety of linguistic tasks.
 
 ## Quickstart
 
@@ -19,7 +19,16 @@ Now you can do any of the following:
 
 Built on PyTorch, AllenNLP makes it easy to design and evaluate new deep
 learning models for nearly any NLP problem, along with the infrastructure to
-easily run them in the cloud or on your laptop.
+easily run them in the cloud or on your laptop.  AllenNLP was designed with the
+following principles:
+
+* *Hyper-modular and lightweight.* Use the parts which you like seamlessly with PyTorch.
+* *Extensively tested and easy to extend.* Test coverage is above 90% and the example
+  models provide a template for contributions.
+* *Take padding and making seriously*, making it easy to implement correct
+  models without the pain.
+* *Experiment friendly.*  Run reproducible experiments from a json
+  specification with comprehensive logging.
 
 AllenNLP includes reference implementations of high quality models for Semantic
 Role Labelling, Question and Answering (BiDAF), Entailment (decomposable
@@ -41,12 +50,20 @@ state of the art models with high quality engineering.
     <td> functionality for a CLI and web service </td>
 </tr>
 <tr>
-    <td><b> allennlp.common </b></td>
+    <td><b> allennlp.data </b></td>
     <td> a data processing module for loading datasets and encoding strings as integers for representation in matrices </td>
 </tr>
 <tr>
     <td><b> allennlp.models </b></td>
     <td> a collection of state-of-the-art models </td>
+</tr>
+<tr>
+    <td><b> allennlp.modules </b></td>
+    <td> a collection of PyTorch modules for use with text </td>
+</tr>
+<tr>
+    <td><b> allennlp.nn </b></td>
+    <td> tensor utility functions, such as initializers and activation functions </td>
 </tr>
 <tr>
     <td><b> allennlp.service </b></td>
