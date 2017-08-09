@@ -51,7 +51,7 @@ class SemanticRoleLabeler(Model):
         self.vocab = vocab
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
-        self.f1_metric = metric
+        self.metric = metric
 
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
@@ -131,7 +131,7 @@ class SemanticRoleLabeler(Model):
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             output_dict["loss"] = loss
             # Increment counts for f1 metric.
-            self.f1_metric(class_probabilities, tags, mask)
+            self.metric(class_probabilities.data, tags.data, mask.data)
 
         return output_dict
 

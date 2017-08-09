@@ -25,7 +25,7 @@ class Trainer:
                  train_dataset: Dataset,
                  validation_dataset: Optional[Dataset] = None,
                  patience: int = 2,
-                 validation_metric: Optional[str] = None,
+                 validation_metric: str = "loss",
                  num_epochs: int = 20,
                  serialization_prefix: Optional[str] = None,
                  cuda_device: int = -1,
@@ -92,7 +92,7 @@ class Trainer:
         for epoch in range(epoch_counter, self._num_epochs):
             train_loss = 0.0
             val_loss = 0.0
-            validation_metric_counts = []  # type: List[float]
+            validation_metric_per_epoch = []  # type: List[float]
             # Set the model to "train" mode.
             self._model.train()
             train_generator = self._iterator(self._train_dataset, num_epochs=1)
@@ -113,7 +113,7 @@ class Trainer:
                 if self._grad_norm:
                     clip_grad_norm(self._model.parameters(), self._grad_norm)
                 self._optimizer.step()
-            metrics = self._model.get_metrics(reset=True) or {}
+            metrics = self._model.get_metrics(reset=True) or {"loss": train_loss}
 
             if self._validation_dataset is not None:
                 # Switch to evaluation mode.
@@ -124,25 +124,28 @@ class Trainer:
                     val_output_dict = self._model.forward(**tensor_batch)
                     loss = val_output_dict["loss"]
                     val_loss += loss.data.cpu().numpy()
+                val_metrics = self._model.get_metrics(reset=True) or {"loss": val_loss}
 
-                val_metrics = self._model.get_metrics(reset=True) or {}
+                message_template = "Training %s : %3f    Validation %s : %3f "
+                for name, value in metrics.items():
+                    logger.info(message_template, name, value, name, val_metrics[name])
+                logger.info(message_template, "Loss", train_loss, "Loss", val_loss)
 
-            message_template = "Training %s : %3f    Validation %s : %3f "
-            for name, value in metrics.items():
-                logger.info(message_template, name, value, name, val_metrics[name])
-            logger.info(message_template, "Loss", train_loss, "Loss", val_loss)
-
-            if self._validation_metric:
                 this_epoch = val_metrics[self._validation_metric]
+                if len(validation_metric_per_epoch) > self._patience:
+                    if max(validation_metric_per_epoch[-self._patience:]) > this_epoch:
+                        break
+                validation_metric_per_epoch.append(this_epoch)
+                is_best_so_far = this_epoch == max(validation_metric_per_epoch)
+                if self._serialization_prefix:
+                    self._save_checkpoint(epoch, is_best=is_best_so_far)
             else:
-                this_epoch = val_loss
-            if len(validation_metric_counts) > self._patience:
-                if validation_metric_counts[-self._patience] > this_epoch:
-                    break
-            validation_metric_counts.append(this_epoch)
-            is_best_so_far = this_epoch == max(validation_metric_counts)
-            if self._serialization_prefix:
-                self._save_checkpoint(epoch, is_best=is_best_so_far)
+                message_template = "Training %s : %3f "
+                for name, value in metrics.items():
+                    logger.info(message_template, name, value)
+                logger.info(message_template, "Loss", train_loss)
+                if self._serialization_prefix:
+                    self._save_checkpoint(epoch)
 
     def _save_checkpoint(self,
                          epoch: int,
@@ -210,7 +213,7 @@ class Trainer:
 
         params = params or Params({})
         patience = params.pop("patience", 2)
-        validation_metric = params.pop("validation_metric", None)
+        validation_metric = params.pop("validation_metric", "loss")
         num_epochs = params.pop("num_epochs", 20)
         serialization_prefix = params.pop("serialization_prefix", None)
         cuda_device = params.pop("cuda_device", -1)

@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Optional, Tuple, Union
 
 from overrides import overrides
 import torch
@@ -19,10 +19,11 @@ class Metric(Registrable):
 
         raise NotImplementedError
 
-    def get_metric(self, reset: bool) -> Dict[str, float]:
+    def get_metric(self, reset: bool) -> Union[float, Tuple[float, ...]]:
         """
         Compute and return the metric. Optionally also call :func:`self.reset`.
         """
+        raise NotImplementedError
 
     def reset(self) -> None:
         """
@@ -62,6 +63,7 @@ class CategoricalAccuracy(Metric):
         mask: ``torch.Tensor``, optional (default = None).
                 A masking tensor the same size as ``gold_labels``.
         """
+
         # Some sanity checks.
         num_classes = predictions.size(-1)
         if gold_labels.dim() != predictions.dim() - 1:
@@ -87,12 +89,12 @@ class CategoricalAccuracy(Metric):
         """
         Returns
         -------
-        A single key dictionary containing the accumulated accuracy.
+        The accumulated accuracy.
         """
         accuracy = 100. * float(self.correct_count) / float(self.total_count)
         if reset:
             self.reset()
-        return {"accuracy": accuracy}
+        return accuracy
 
     @overrides
     def reset(self):
@@ -131,6 +133,10 @@ class F1Measure(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         """
+        num_classes = predictions.size(-1)
+        if (gold_labels >= num_classes).any():
+            raise ConfigurationError("A gold label passed to F1Measure contains an id >= {}, "
+                                     "the number of classes.".format(num_classes))
         if mask is None:
             mask = torch.ones(gold_labels.size())
         mask = mask.float()
@@ -164,7 +170,7 @@ class F1Measure(Metric):
         """
         Returns
         -------
-        A Dict containing the following metrics based on the accumulated count statistics:
+        Returns a tuple of the following metrics based on the accumulated count statistics:
         precision : float
         recall : float
         f1-measure : float
@@ -175,7 +181,7 @@ class F1Measure(Metric):
 
         if reset:
             self.reset()
-        return {"precision": precision, "recall": recall, "f1-measure": f1_measure}
+        return precision, recall, f1_measure
 
     def reset(self):
         self.true_positives = 0.0
