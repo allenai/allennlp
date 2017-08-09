@@ -35,7 +35,9 @@ ENV PYTHONHASHSEED 2157
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
-# Copy select files needed for installing requirements
+# Copy select files needed for installing requirements.
+# We only copy what we need here to minimize rebuilds of the Docker image due to source changes.
+# We copy the full repository later on.
 COPY requirements.txt .
 COPY requirements_test.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
