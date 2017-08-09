@@ -11,29 +11,12 @@ from allennlp.service.servable import Servable, JSONDict
 
 class BidafServable(Servable):
     def __init__(self,
-                 glove_path: str,
                  tokenizer: Tokenizer,
                  token_indexers: Dict[str, TokenIndexer],
                  model: BidirectionalAttentionFlow) -> None:
-        constants.GLOVE_PATH = glove_path # 'tests/fixtures/glove.6B.100d.sample.txt.gz'
-
-        #self.token_indexers = {'tokens': SingleIdTokenIndexer(lowercase_tokens=True),
-        #                       'token_characters': TokenCharactersIndexer()}
-
-        self.tokenizer = tokenizer # WordTokenizer()
+        self.tokenizer = tokenizer
         self.token_indexers = token_indexers
-
-        #dataset = SquadReader(tokenizer=self.tokenizer,
-        #                      token_indexers=self.token_indexers).read('tests/fixtures/squad_example.json')
-        #vocab = Vocabulary.from_dataset(dataset)
-
-        #self.vocab = vocabulary
-        #dataset.index_instances(vocab)
-        #self.dataset = dataset
-
-        self.model = model # BidirectionalAttentionFlow.from_params(self.vocab, Params({}))
-
-        #self.vocab.save_to_files('allennlp/service/servable/models/data/vocab_bidaf')
+        self.model = model
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
         question_text = inputs["question"]
@@ -52,6 +35,8 @@ class BidafServable(Servable):
     @classmethod
     def from_params(cls, params: Params) -> 'BidafServable':
         glove_path = params.pop("glove_path")
+        constants.GLOVE_PATH = glove_path
+
         tokenizer = Tokenizer.from_params(params.pop("tokenizer"))
 
         token_indexers = {}
@@ -62,9 +47,10 @@ class BidafServable(Servable):
         vocab_dir = params.pop('vocab_dir')
         vocab = Vocabulary.from_files(vocab_dir)
 
-        model = BidirectionalAttentionFlow.from_params(vocab, params)
+        model_params = params.pop("model")
+        assert model_params.pop("type") == "bidaf"
+        model = BidirectionalAttentionFlow.from_params(vocab, model_params)
 
-        return BidafServable(glove_path=glove_path,
-                             tokenizer=tokenizer,
+        return BidafServable(tokenizer=tokenizer,
                              token_indexers=token_indexers,
                              model=model)

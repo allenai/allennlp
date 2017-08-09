@@ -47,13 +47,17 @@ class ServableCollection:
         import allennlp.service.servable.models.bidaf as bidaf
         import allennlp.service.servable.models.decomposable_attention as decomposable_attention
 
-        bidaf_params = Params(
-                replace_none(pyhocon.ConfigFactory.parse_file('allennlp/service/servable/models/data/bidaf.conf')))
+        bidaf_params = Params(replace_none(pyhocon.ConfigFactory.parse_file(
+                'allennlp/service/servable/models/bidaf.conf')))
+        snli_params = Params(replace_none(pyhocon.ConfigFactory.parse_file(
+                'allennlp/service/servable/models/decomposable_attention.conf')))
+        srl_params = Params(replace_none(pyhocon.ConfigFactory.parse_file(
+                'allennlp/service/servable/models/semantic_role_labeler.conf')))
 
         all_models = {
                 'bidaf': bidaf.BidafServable.from_params(bidaf_params),
-                'srl': semantic_role_labeler.SemanticRoleLabelerServable(),
-                'snli': decomposable_attention.DecomposableAttentionServable(),
+                'srl': semantic_role_labeler.SemanticRoleLabelerServable.from_params(srl_params),
+                'snli': decomposable_attention.DecomposableAttentionServable.from_params(snli_params),
         }  # type: Dict[str, Servable]
 
         return ServableCollection(all_models)
