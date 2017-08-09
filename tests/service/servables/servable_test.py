@@ -17,12 +17,12 @@ class TestApp(TestCase):
     def test_list_available(self):
         available = self.default_models.list_available()
         assert available  # not empty
-        assert "reverser" in available
+        assert "bidaf" in available
 
 
     def test_get_model(self):
-        reverser = self.default_models.get("reverser")
-        assert reverser  # is not None
+        bidaf = self.default_models.get("bidaf")
+        assert bidaf  # is not None
 
 
     def test_register(self):
