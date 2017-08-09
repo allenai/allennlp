@@ -91,22 +91,19 @@ You can test your installation by running  `pytest -v`.
 
 ### Setting up a Kubernetes development environment
 
+Kubernetes will deploy your Docker images into the cloud, so you can have a reproducible development environment on AWS.
+
 1. Follow the instructions for getting started with
 [Kubernetes](https://github.com/allenai/infrastructure/tree/master/kubernetes).
 
-2. Fill in the [yaml file](./kubernetes-dev-machine.yaml). You need to add:
+2. Run `kubectl create -f /path/to/kubernetes-dev-environment.yaml`.  This will create a "job" on the cluster which you
+can later connect to using bash.  Note that you will be using the last Dockerfile that would pushed, and so the source
+code may not match what you have locally.
 
-    - The name of the job, under the `metadata:` heading.
-    - The namespace you wish to run in under the `metadata:` heading. To see which namespaces
-      are available, run ` kubectl get ns ` .
-    - Your contact name (first bit of your email) under `labels.contact:`.
+4. Retrieve the name of the pod created with `kubectl describe job <JOBNAME> --namespace=allennlp`.
+The pod name will be your job name followed by some additional characters.
 
-3. Run `kubectl create -f /path/to/kubernetes-dev-machine.yaml`. This creates your job on the cluster.
+5. Get a shell inside the container using `kubectl exec -it <PODNAME> bash`
 
-4. Retrieve the name of the pod created to run your job using `kubectl get pods --namespace <NAMESPACE>`.
-   This will be the name you provided for your job above, plus some random characters.
-
-5. Get a shell inside the container using `kubectl exec -it <PODNAME> --container dev-environment -- /bin/bash`
-
-6. When you are done, don't forget to kill your job using `kubectl delete -f /path/to/kubernetes-dev-machine.yaml`
+6. When you are done, don't forget to kill your job using `kubectl delete -f /path/to/kubernetes-dev-environment.yaml`
 
