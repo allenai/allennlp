@@ -105,13 +105,13 @@ class CategoricalAccuracy(Metric):
 @Metric.register("f1")
 class F1Measure(Metric):
     """
-    Computes Precision, Recall and F1 with respect to a given ``null_prediction`` label.
+    Computes Precision, Recall and F1 with respect to a given ``positive_label`` label.
     For example, for a BIO tagging scheme, you would pass the classification index of
-    the "O" tag, resulting in the Precision, Recall and F1 score being calculated for
-    all classes which correspond to actually tagging words.
+    the tag you are interested in, resulting in the Precision, Recall and F1 score being
+    calculated for this tag only.
     """
-    def __init__(self, null_prediction_label: int) -> None:
-        self._null_prediction_label = null_prediction_label
+    def __init__(self, positive_label: int) -> None:
+        self._positive_label = positive_label
         self.true_positives = 0.0
         self.true_negatives = 0.0
         self.false_positives = 0.0
@@ -141,29 +141,29 @@ class F1Measure(Metric):
             mask = torch.ones(gold_labels.size())
         mask = mask.float()
         gold_labels = gold_labels.float()
-        null_prediction_mask = gold_labels.eq(self._null_prediction_label).float()
-        some_prediction_mask = 1.0 - null_prediction_mask
+        positive_label_mask = gold_labels.eq(self._positive_label).float()
+        negative_label_mask = 1.0 - positive_label_mask
 
         argmax_predictions = predictions.topk(1, -1)[1].float().squeeze(-1)
 
-        # True Negatives: correct null_prediction predictions.
-        correct_null_predictions = (argmax_predictions ==
-                                    self._null_prediction_label).float() * null_prediction_mask
+        # True Negatives: correct non-positive predictions.
+        correct_null_predictions = (argmax_predictions !=
+                                    self._positive_label).float() * negative_label_mask
         self.true_negatives += (correct_null_predictions.float() * mask).sum()
 
-        # True Positives: correct non-null predictions.
+        # True Positives: correct positively labeled predictions.
         correct_non_null_predictions = (argmax_predictions ==
-                                        gold_labels).float() * some_prediction_mask
+                                        self._positive_label).float() * positive_label_mask
         self.true_positives += (correct_non_null_predictions * mask).sum()
 
-        # False Negatives: incorrect null_prediction predictions.
+        # False Negatives: incorrect negatively labeled predictions.
         incorrect_null_predictions = (argmax_predictions !=
-                                      self._null_prediction_label).float() * null_prediction_mask
+                                      self._positive_label).float() * positive_label_mask
         self.false_negatives += (incorrect_null_predictions * mask).sum()
 
-        # False Positives: incorrect non-null predictions
-        incorrect_non_null_predictions = (argmax_predictions !=
-                                          gold_labels).float() * some_prediction_mask
+        # False Positives: incorrect positively labeled predictions
+        incorrect_non_null_predictions = (argmax_predictions ==
+                                          self._positive_label).float() * negative_label_mask
         self.false_positives += (incorrect_non_null_predictions * mask).sum()
 
     def get_metric(self, reset: bool = False):
@@ -175,9 +175,17 @@ class F1Measure(Metric):
         recall : float
         f1-measure : float
         """
-        recall = float(self.true_positives) / float(self.true_positives + self.false_negatives)
-        precision = float(self.true_positives) / float(self.true_positives + self.false_positives)
+        recall = float(self.true_positives) / float(self.true_positives + self.false_negatives + 1e-13)
+        precision = float(self.true_positives) / float(self.true_positives + self.false_positives + 1e-13)
         f1_measure = 2. * ((precision * recall) / (precision + recall + 1e-13))
+
+        print("recall: ", recall)
+        print("precision: ", precision)
+        print("f1: ", f1_measure)
+        print("true positive : ", self.true_positives)
+        print("true negatives : ", self.true_negatives)
+        print("false positives : ", self.false_positives)
+        print("false negatives : ", self.false_negatives)
 
         if reset:
             self.reset()

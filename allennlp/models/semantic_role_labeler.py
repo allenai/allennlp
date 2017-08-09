@@ -244,7 +244,7 @@ class SemanticRoleLabeler(Model):
         initializer_params = params.pop('initializer', default_initializer_params)
         initializer = InitializerApplicator.from_params(initializer_params)
 
-        default_metric_params = {"type": "f1", "null_prediction_label": vocab.get_token_index("O", "tags")}
+        default_metric_params = {"type": "f1", "positive_label": vocab.get_token_index("O", "tags")}
         metric = Metric.from_params(params.pop("metric", default_metric_params))
 
         return cls(vocab=vocab,
