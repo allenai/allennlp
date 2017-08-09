@@ -1,0 +1,86 @@
+{
+  "dataset_reader": {
+    "type": "squad",
+    "token_indexers": {
+      "tokens": {
+        "type": "single_id",
+        "lowercase_tokens": true
+      },
+      "token_characters": {
+        "type": "characters"
+      }
+    }
+  },
+  "train_data_path": "/net/efs/aristo/dlfa/squad/train-v1.1.json",
+  "validation_data_path": "/net/efs/aristo/dlfa/squad/dev-v1.1.json",
+  "model": {
+    "type": "bidaf",
+    "text_field_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
+        "trainable": false
+      },
+      "token_characters": {
+        "type": "character_encoding",
+        "embedding": {
+          "embedding_dim": 8
+        },
+        "encoder": {
+          "type": "cnn",
+          "embedding_dim": 8,
+          "num_filters": 100,
+          "ngram_filter_sizes": [5]
+        }
+      }
+    },
+    "num_highway_layers": 2,
+    "phrase_layer": {
+      "type": "lstm",
+      "bidirectional": true,
+      "input_size": 200,
+      "hidden_size": 100,
+      "num_layers": 1
+    },
+    "similarity_function": {
+      "type": "linear",
+      "combination": "x,y,x*y",
+      "tensor_1_dim": 200,
+      "tensor_2_dim": 200
+    },
+    "modeling_layer": {
+      "type": "lstm",
+      "bidirectional": true,
+      "input_size": 800,
+      "hidden_size": 100,
+      "num_layers": 2
+    },
+    "span_end_encoder": {
+      "type": "lstm",
+      "bidirectional": true,
+      "input_size": 1400,
+      "hidden_size": 100,
+      "num_layers": 2
+    },
+    "initializer": {
+        "default": "orthonormal",
+        "exclude": ["token_embedder_tokens"]
+    }
+  },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["passage", "num_tokens"], ["question", "num_tokens"]],
+    "batch_size": 40,
+    "biggest_batch_first": true
+  },
+  "optimizer": {
+    "type": "adadelta",
+    "lr": 0.5,
+    "rho": 0.95
+  },
+  "num_epochs": 12,
+  "grad_norm": 1.0,
+  "patience" : 12,
+  "serialization_prefix" : "/net/efs/aristo/allennlp/bidaf/bidaf-model2",
+  "cuda_device" : 0
+}

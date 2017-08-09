@@ -42,10 +42,10 @@ class SimpleTagger(Model):
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
 
-    # pylint: disable=arguments-differ
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
         """
         Parameters
         ----------
@@ -97,8 +97,6 @@ class SimpleTagger(Model):
 
         return output_dict
 
-    # pylint: enable=arguments-differ
-
     def tag(self, text_field: TextField) -> Dict[str, Any]:
         """
         Perform inference on a TextField to produce predicted tags and class probabilities
@@ -122,7 +120,9 @@ class SimpleTagger(Model):
         """
         instance = Instance({'tokens': text_field})
         instance.index_fields(self.vocab)
-        model_input = arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
+        model_input = arrays_to_variables(instance.as_array_dict(),
+                                          add_batch_dimension=True,
+                                          for_training=False)
         output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.

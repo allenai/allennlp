@@ -38,6 +38,8 @@ class SemanticRoleLabeler(Model):
     stacked_encoder : ``Seq2SeqEncoder``
         The encoder (with its own internal stacking) that we will use in between embedding tokens
         and predicting output tags.
+    initializer : ``InitializerApplicator``
+        We will use this to initialize the parameters in the model, calling ``initializer(self)``.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -158,7 +160,9 @@ class SemanticRoleLabeler(Model):
         """
         instance = Instance({"tokens": text_field, "verb_indicator": verb_indicator})
         instance.index_fields(self.vocab)
-        model_input = arrays_to_variables(instance.as_array_dict(), add_batch_dimension=True)
+        model_input = arrays_to_variables(instance.as_array_dict(),
+                                          add_batch_dimension=True,
+                                          for_training=False)
         output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.

@@ -2,7 +2,7 @@
 import argparse
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import train_model, add_subparser, train_model_from_file
+from allennlp.commands.train import train_model, add_subparser, _train_model_from_args
 
 
 class TestTrain(AllenNlpTestCase):
@@ -40,7 +40,7 @@ class TestTrain(AllenNlpTestCase):
 
         args = parser.parse_args(raw_args)
 
-        assert args.func == train_model_from_file
+        assert args.func == _train_model_from_args
         assert args.param_path == "path/to/params"
 
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name

@@ -96,7 +96,8 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autog
 
 def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
                         cuda_device: int = -1,
-                        add_batch_dimension: bool = False):
+                        add_batch_dimension: bool = False,
+                        for_training: bool = True):
     """
     Convert an (optionally) nested dictionary of arrays to Pytorch ``Variables``,
     suitable for use in a computation graph.
@@ -113,6 +114,10 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
         using this function. This is useful during inference for passing
         tensors representing a single example to a Pytorch model which
         would otherwise not have a batch dimension.
+    for_training : ``bool``, optional (default = ``True``)
+        If ``False``, we will pass the ``volatile=True`` flag when constructing variables, which
+        disables gradient computations in the graph.  This makes inference more efficient
+        (particularly in memory usage), but is incompatible with training models.
 
     Returns
     -------
@@ -126,7 +131,7 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
         tensor = torch.from_numpy(data_structure)
         if add_batch_dimension:
             tensor.unsqueeze_(0)
-        torch_variable = Variable(tensor)
+        torch_variable = Variable(tensor, volatile=not for_training)
         if cuda_device == -1:
             return torch_variable
         else:
