@@ -177,3 +177,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab2.get_token_index(vocab._oov_token, namespace='b') == 1
         assert vocab2.get_token_index('b2', namespace='b') == 2
         assert vocab2.get_token_index('b3', namespace='b') == 3
+
+        # Check the dictionaries containing the reverse mapping are identical.
+        assert vocab.get_index_to_token_vocabulary("a") == vocab2.get_index_to_token_vocabulary("a")
+        assert vocab.get_index_to_token_vocabulary("b") == vocab2.get_index_to_token_vocabulary("b")
