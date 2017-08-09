@@ -1,13 +1,6 @@
 .dockerignore
-*.pyc
-*/*.pyc
-*/*/*.pyc
-*/*/*/*.pyc
-*/*/*/*/*.pyc
-*/*/*/*/*/*.pyc
-*/*/*/*.pyc
-**/*.pyc
 **.pyc
 **/__pycache__
 .gitignore
 .git
+./allennlp/data/fields/__pycache__
