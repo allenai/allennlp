@@ -1,5 +1,3 @@
-from typing import Dict, Any, Optional  # pylint: disable=unused-import
-
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader

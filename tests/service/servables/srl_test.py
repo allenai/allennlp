@@ -18,7 +18,7 @@ class TestSrlServable(TestCase):
         # TODO(joelgrus): update this when you figure out the result format
         verbs = result.get("verbs")
 
-        assert verbs  # is not None
+        assert verbs is not None
 
         assert any(v["verb"] == "wrote" for v in verbs)
         assert any(v["verb"] == "make" for v in verbs)
