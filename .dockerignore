@@ -1,0 +1,13 @@
+.dockerignore
+*.pyc
+*/*.pyc
+*/*/*.pyc
+*/*/*/*.pyc
+*/*/*/*/*.pyc
+*/*/*/*/*/*.pyc
+*/*/*/*.pyc
+**/*.pyc
+**.pyc
+**/__pycache__
+.gitignore
+.git
