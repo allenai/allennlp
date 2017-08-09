@@ -36,11 +36,11 @@ class TestBulk(TestCase):
         outfile = os.path.join(tempdir, "outputs.txt")
 
         with open(infile, 'w') as f:
-            f.write("""{"input": "forward"}\n""")
-            f.write("""{"input": "drawkcab"}\n""")
+            f.write("""{"sentence": "this is a great sentence"}\n""")
+            f.write("""{"sentence": "this is a less great sentence"}\n""")
 
         args = ["bulk",     # command
-                "reverser", # model_name
+                "srl", # model_name
                 infile,     # input_file
                 "--output-file", outfile,
                 "--print"]
@@ -53,8 +53,7 @@ class TestBulk(TestCase):
             lines = [json.loads(line) for line in f]
 
         assert len(lines) == 2
-        assert lines[0] == {"model_name": "reverser", "input": "forward", "output": "drawrof"}
-        assert lines[1] == {"model_name": "reverser", "input": "drawkcab", "output": "backward"}
+
 
     def test_fails_without_required_args(self):
         args = ["bulk",          # command

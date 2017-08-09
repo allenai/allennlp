@@ -258,13 +258,13 @@ class TestNnUtil(AllenNlpTestCase):
         mask_1d = Variable(torch.FloatTensor([[1.0, 0.0, 1.0]]))
         vector_1d_softmaxed = masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
-                                  numpy.array([[0.01798621, 1.0, 0.98201382]]))
+                                  numpy.array([[0.01798621, 0.0, 0.98201382]]))
 
         vector_1d = Variable(torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]]))
         mask_1d = Variable(torch.FloatTensor([[1.0, 0.0, 1.0, 1.0]]))
         vector_1d_softmaxed = masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
-                                  numpy.array([[0.01321289, 1.0,
+                                  numpy.array([[0.01321289, 0.0,
                                                 0.26538793, 0.72139918]]))
 
         # Testing the masked 1D case where the input is all 0s and the mask
@@ -273,7 +273,7 @@ class TestNnUtil(AllenNlpTestCase):
         mask_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 1.0]]))
         vector_1d_softmaxed = masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
-                                  numpy.array([[1., 1., 1., 1.]]))
+                                  numpy.array([[0., 0., 0., 1.]]))
 
     def test_get_text_field_mask_returns_a_correct_mask(self):
         text_field_arrays = {
