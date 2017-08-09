@@ -1,9 +1,8 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 import torch
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
-from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.constants import GLOVE_PATH
@@ -13,7 +12,6 @@ from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import IndexField, TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
-from allennlp.training.metrics import Metric
 from allennlp.nn.util import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 
@@ -44,14 +42,12 @@ class SemanticRoleLabeler(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
-                 initializer: InitializerApplicator,
-                 metric: Optional[Metric] = None) -> None:
+                 initializer: InitializerApplicator) -> None:
         super(SemanticRoleLabeler, self).__init__()
 
         self.vocab = vocab
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
-        self.metric = metric
 
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
@@ -130,8 +126,6 @@ class SemanticRoleLabeler(Model):
                 _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             output_dict["loss"] = loss
-            # Increment counts for f1 metric.
-            self.metric(class_probabilities.data, tags.data, mask.data)
 
         return output_dict
 
@@ -202,10 +196,6 @@ class SemanticRoleLabeler(Model):
                     transition_matrix[i, j] = float("-inf")
         return transition_matrix
 
-    @overrides
-    def get_metrics(self, reset: bool = False):
-        return self.f1_metric.get_metric(reset)
-
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SemanticRoleLabeler':
         """
@@ -244,11 +234,7 @@ class SemanticRoleLabeler(Model):
         initializer_params = params.pop('initializer', default_initializer_params)
         initializer = InitializerApplicator.from_params(initializer_params)
 
-        default_metric_params = {"type": "f1", "positive_label": vocab.get_token_index("O", "tags")}
-        metric = Metric.from_params(params.pop("metric", default_metric_params))
-
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder,
-                   initializer=initializer,
-                   metric=metric)
+                   initializer=initializer)
