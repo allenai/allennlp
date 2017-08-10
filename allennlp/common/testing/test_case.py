@@ -10,7 +10,7 @@ import pytest
 from numpy.testing import assert_allclose
 
 from allennlp.common.checks import log_pytorch_version_info
-from allennlp.common.params import Params
+from allennlp.common.params import Params, PARAMETER
 from allennlp.data.dataset import Dataset
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -24,7 +24,8 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
 
     def setUp(self):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                            level=logging.DEBUG)
+                            level=logging.INFO)
+        logging.disable(PARAMETER)
         log_pytorch_version_info()
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
