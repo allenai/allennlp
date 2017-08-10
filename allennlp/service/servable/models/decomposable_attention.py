@@ -8,7 +8,6 @@ from allennlp.data.fields import TextField
 from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.models import DecomposableAttention
-from allennlp.nn import InitializerApplicator
 from allennlp.service.servable import Servable, JSONDict
 
 class DecomposableAttentionServable(Servable):
