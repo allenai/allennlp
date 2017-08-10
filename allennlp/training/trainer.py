@@ -220,8 +220,12 @@ class Trainer:
         training_state_path = os.path.join(self._serialization_prefix,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
 
-        device_mapping = "cuda:{}".format(int(self._cuda_device)) if self._cuda_device >= 0 else "cpu"
-        model_state = torch.load(model_path, map_location=lambda: device_mapping)
+        def device_mapping(storage, location):  # pylint: disable=unused-argument
+            if self._cuda_device >= 0:
+                return storage.cuda(self._cuda_device)
+            else:
+                return storage
+        model_state = torch.load(model_path, map_location=device_mapping)
         training_state = torch.load(training_state_path)
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
