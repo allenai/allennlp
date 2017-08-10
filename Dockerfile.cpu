@@ -1,6 +1,13 @@
 FROM ubuntu:16.04
 
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+ENV PATH /opt/conda/bin:$PATH
+ENV PYTHONHASHSEED 2157
+
+WORKDIR /stage
 EXPOSE 8000
+CMD ["/bin/bash"]
 
 # Install base packages.
 RUN apt-get update --fix-missing && apt-get install -y \
@@ -13,48 +20,33 @@ RUN apt-get update --fix-missing && apt-get install -y \
     libsm6 \
     libxext6 \
     libxrender1 \
-    mercurial \
-    subversion \
     wget \
-    python-dev \
-    python3-dev \
     libevent-dev \
-    build-essential
+    build-essential && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Anaconda.
 RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
     wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-    rm ~/miniconda.sh
-ENV PATH /opt/conda/bin:$PATH
+    rm ~/miniconda.sh && \
+    echo "source activate allennlp" >> ~/.bashrc
 
-# Setup AllenNLP
-WORKDIR /stage
-
+# Create a conda environment so we have a reproducible version of Python
 RUN conda create -n allennlp --yes python=3.5
-ENV PYTHONHASHSEED 2157
-ENV LC_ALL=C.UTF-8
-ENV LANG=C.UTF-8
+
+# Make sure we enter the allennlp Conda environment automatically
+RUN echo "source activate allennlp" >> ~/.bashrc
 
 # Copy select files needed for installing requirements.
-# We only copy what we need here to minimize rebuilds of the Docker image due to source changes.
-# We copy the full repository later on.
+# We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
 COPY requirements_test.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
-
-# Get rid of pycache or .pyc files that you might have accidentally copied
-RUN find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
-
-RUN /bin/bash -c 'source activate allennlp && INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh'
-RUN /bin/bash -c 'source activate allennlp && pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post1-cp35-cp35m-manylinux1_x86_64.whl'
-
-RUN echo "source activate allennlp" >> ~/.bashrc
+RUN bash -c 'source activate allennlp && INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh'
+RUN bash -c 'source activate allennlp && pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post1-cp35-cp35m-manylinux1_x86_64.whl'
 
 COPY . .
 
 # Run tests to verify the Docker build
-RUN /bin/bash -c 'source activate allennlp && pytest'
-
-ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["/bin/bash"]
+RUN /bin/bash -c 'source activate allennlp && PYTHONDONTWRITEBYTECODE=1 pytest'

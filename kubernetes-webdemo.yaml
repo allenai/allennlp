@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: allennlp-webdemo
-          image: "896129387501.dkr.ecr.us-west-2.amazonaws.com/allennlp/allennlp-cpu:98d99ea096d0b4944296adac5fe9fc96f9383c14"
+          image: "allennlp/allennlp-cpu:latest"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
           # for documentation on the resources section.
@@ -33,7 +33,8 @@ spec:
           command:
             - /bin/bash
             - -c
-            - "source activate allennlp && export PYTHONPATH=. && python allennlp serve"
+            - "source activate allennlp && allennlp/run serve"
+          imagePullPolicy: Always
 ---
 apiVersion: v1
 kind: Service
