@@ -23,16 +23,15 @@ description of the problem and the solution, and include a link to relevant issu
 Once your pull request is created, our continuous build system will check your pull request.  Continuous
 build will test that:
 
-* The code compiles
-* All tests pass
-* `pylint` accepts the code style (our guidelines are based on PEP8)
-* `mypy` typechecks the Python code
+* [`pytest`](https://docs.pytest.org/en/latest/) All tests pass
+* [`pylint`](https://www.pylint.org/) accepts the code style (our guidelines are based on PEP8)
+* [`mypy`](http://mypy-lang.org/) typechecks the Python code
 * The docs can be generated successfully
 
 If your code fails one of these checks, you will be expected to fix your pull request before it is considered.
 
 You can run most of these tests locally, which will be faster than waiting for cloud systems to run tests.  To see
-exactly what our continuous build system runs, look at `.travis.yml`.  The two most common checks you should run
+exactly what our continuous build system runs, look at `.travis.yml`.  The most common checks you should run
 locally are:
 
 * `pytest -v`.  If you run this in the root AllenNLP directory, this will run all of our tests.

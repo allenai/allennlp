@@ -27,7 +27,7 @@ following principles:
 * *Hyper-modular and lightweight.* Use the parts which you like seamlessly with PyTorch.
 * *Extensively tested and easy to extend.* Test coverage is above 90% and the example
   models provide a template for contributions.
-* *Take padding and making seriously*, making it easy to implement correct
+* *Take padding and masking seriously*, making it easy to implement correct
   models without the pain.
 * *Experiment friendly.*  Run reproducible experiments from a json
   specification with comprehensive logging.
