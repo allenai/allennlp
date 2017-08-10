@@ -164,8 +164,7 @@ You can test your installation by running  `pytest -v`.
 
 Kubernetes will deploy your Docker images into the cloud, so you can have a reproducible development environment on AWS.
 
-1. Follow the instructions for getting started with
-[Kubernetes](https://github.com/allenai/infrastructure/tree/master/kubernetes).
+1. Set up `kubectl` to connect to your Kubernetes cluster.
 
 2. Run `kubectl create -f /path/to/kubernetes-dev-environment.yaml`.  This will create a "job" on the cluster which you
 can later connect to using bash.  Note that you will be using the last Dockerfile that would pushed, and so the source
