@@ -34,6 +34,7 @@ numpy
 matplotlib
 
 # Training visualisation using tensorboard.
+pillow # A dependency of tensorboard-pytorch which is not recorded.
 tensorboard-pytorch
 
 # aws commandline tools for running on Docker remotely.
