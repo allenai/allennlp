@@ -3,4 +3,3 @@
 **/__pycache__
 .gitignore
 .git
-./allennlp/data/fields/__pycache__
