@@ -1,9 +1,11 @@
+import os
 from typing import Dict
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
+from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import TextField, IndexField
-from allennlp.data.tokenizers import Tokenizer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.models import SemanticRoleLabeler
 from allennlp.service.servable import Servable, JSONDict
@@ -41,21 +43,22 @@ class SemanticRoleLabelerServable(Servable):
         return results
 
     @classmethod
-    def from_params(cls, params: Params) -> 'SemanticRoleLabelerServable':
-        tokenizer = Tokenizer.from_params(params.pop("tokenizer"))
+    def from_config(cls, config: Params) -> 'SemanticRoleLabelerServable':
+        dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
 
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers')
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-
-        vocab_dir = params.pop('vocab_dir')
+        serialization_prefix = config.pop('serialization_prefix')
+        vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
-        model_params = params.pop("model")
-        assert model_params.pop("type") == "semantic_role_labeler"
+        model_params = config.pop("model")
+        assert model_params.pop("type") == "srl"
         model = SemanticRoleLabeler.from_params(vocab, model_params)
 
-        return SemanticRoleLabelerServable(tokenizer=tokenizer,
-                                           token_indexers=token_indexers,
+        # TODO(joelgrus): load weights
+
+        # pylint: disable=protected-access
+        # use default WordTokenizer, since there's none in the experiment spec
+        return SemanticRoleLabelerServable(tokenizer=WordTokenizer(),
+                                           token_indexers=dataset_reader._token_indexers,
                                            model=model)
+        # pylint: enable=protected-access

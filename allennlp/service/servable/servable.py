@@ -51,17 +51,23 @@ class ServableCollection:
         with open('experiment_config/bidaf.json') as f:
             config = json.loads(f.read())
             config['serialization_prefix'] = 'tests/fixtures/bidaf'
-            config['model']['text_field_embedder']['tokens']['pretrained_file'] = 'tests/fixtures/glove.6B.100d.sample.txt.gz'
+            config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
+                'tests/fixtures/glove.6B.100d.sample.txt.gz'
             bidaf_config = Params(replace_none(config))
+
+        with open('experiment_config/semantic_role_labeler.json') as f:
+            config = json.loads(f.read())
+            config['serialization_prefix'] = 'tests/fixtures/srl'
+            config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
+                'tests/fixtures/glove.6B.100d.sample.txt.gz'
+            srl_config = Params(replace_none(config))
 
         snli_params = Params(replace_none(pyhocon.ConfigFactory.parse_file(
                 'allennlp/service/servable/models/decomposable_attention.conf')))
-        srl_params = Params(replace_none(pyhocon.ConfigFactory.parse_file(
-                'allennlp/service/servable/models/semantic_role_labeler.conf')))
 
         all_models = {
                 'bidaf': bidaf.BidafServable.from_config(bidaf_config),
-                'srl': semantic_role_labeler.SemanticRoleLabelerServable.from_params(srl_params),
+                'srl': semantic_role_labeler.SemanticRoleLabelerServable.from_config(srl_config),
                 'snli': decomposable_attention.DecomposableAttentionServable.from_params(snli_params),
         }  # type: Dict[str, Servable]
 

@@ -3,9 +3,10 @@ from typing import Dict
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
+from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.dataset_readers.squad import SquadReader
 from allennlp.data.fields import TextField
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.models import BidirectionalAttentionFlow
 from allennlp.service.servable import Servable, JSONDict
@@ -35,16 +36,7 @@ class BidafServable(Servable):
 
     @classmethod
     def from_config(cls, config: Params) -> 'BidafServable':
-        tokenizer_params = config.pop("tokenizer", None)
-        if tokenizer_params is None:
-            tokenizer = WordTokenizer()
-        else:
-            tokenizer = Tokenizer.from_params(tokenizer_params)
-
-        token_indexers = {}
-        token_indexer_params = config["dataset_reader"].pop('token_indexers')
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
+        dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
 
         serialization_prefix = config.pop('serialization_prefix')
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
@@ -56,6 +48,8 @@ class BidafServable(Servable):
 
         # TODO(joelgrus) load weights
 
-        return BidafServable(tokenizer=tokenizer,
-                             token_indexers=token_indexers,
+        # pylint: disable=protected-access
+        return BidafServable(tokenizer=dataset_reader._tokenizer,
+                             token_indexers=dataset_reader._token_indexers,
                              model=model)
+        # pylint: enable=protected-access

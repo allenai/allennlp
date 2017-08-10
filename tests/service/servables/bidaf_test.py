@@ -1,8 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
-
+import json
 from unittest import TestCase
 
-from allennlp.common import Params, constants
+from allennlp.common import Params
+from allennlp.common.params import replace_none
 from allennlp.service.servable.models.bidaf import BidafServable
 
 
@@ -13,25 +14,12 @@ class TestBidafServable(TestCase):
                 "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
         }
 
-        bidaf_config = Params({
-                "dataset_reader": {
-                        "token_indexers": {
-                                "tokens": {
-                                        "type": "single_id",
-                                        "lowercase_tokens" : True
-                                },
-                                "token_characters": {
-                                        "type": "characters"
-                                }
-                        }
-                },
-                "serialization_prefix": "tests/fixtures/bidaf",
-                "model": {
-                        "type": "bidaf"
-                }
-        })
-
-        constants.GLOVE_PATH = 'tests/fixtures/glove.6B.100d.sample.txt.gz'
+        with open('experiment_config/bidaf.json') as f:
+            config = json.loads(f.read())
+            config['serialization_prefix'] = 'tests/fixtures/bidaf'
+            config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
+                'tests/fixtures/glove.6B.100d.sample.txt.gz'
+            bidaf_config = Params(replace_none(config))
 
         model = BidafServable.from_config(bidaf_config)
 
