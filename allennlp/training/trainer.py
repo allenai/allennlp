@@ -6,6 +6,7 @@ from typing import Optional, List  # pylint: disable=unused-import
 import torch
 from torch.nn.utils.clip_grad import clip_grad_norm
 import tqdm
+from tensorboard import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -89,6 +90,9 @@ class Trainer:
         epoch_counter = 0
         # Resume from serialization path if it contains a saved model.
         if self._serialization_prefix is not None:
+            # Set up tensorboard logging.
+            train_log = SummaryWriter(os.path.join(self._serialization_prefix, "log", "train"))
+            validation_log = SummaryWriter(os.path.join(self._serialization_prefix, "log", "validation"))
             if any(["model_state_epoch_" in x
                     for x in os.listdir(self._serialization_prefix)]):
                 logger.info("Loading model from checkpoint.")
@@ -143,6 +147,9 @@ class Trainer:
                 message_template = "Training %s : %3f    Validation %s : %3f "
                 for name, value in metrics.items():
                     logger.info(message_template, name, value, name, val_metrics[name])
+                    if self._serialization_prefix:
+                        train_log.add_scalar(name, value, epoch)
+                        validation_log.add_scalar(name, val_metrics[name], epoch)
 
                 this_epoch = val_metrics[self._validation_metric]
                 if len(validation_metric_per_epoch) > self._patience:
@@ -156,6 +163,8 @@ class Trainer:
                 message_template = "Training %s : %3f "
                 for name, value in metrics.items():
                     logger.info(message_template, name, value)
+                    if self._serialization_prefix:
+                        train_log.add_scalar(name, value, epoch)
                 if self._serialization_prefix:
                     self._save_checkpoint(epoch)
 
