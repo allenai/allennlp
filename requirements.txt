@@ -33,6 +33,9 @@ spacy
 numpy
 matplotlib
 
+# Training visualisation using tensorboard.
+tensorboard-pytorch
+
 # aws commandline tools for running on Docker remotely.
 awscli>=1.11.91
 
