@@ -29,7 +29,8 @@ class Trainer:
                  num_epochs: int = 20,
                  serialization_prefix: Optional[str] = None,
                  cuda_device: int = -1,
-                 grad_norm: Optional[float] = None) -> None:
+                 grad_norm: Optional[float] = None,
+                 grad_clipping: Optional[float] = None) -> None:
         """
         Parameters
         ----------
@@ -62,6 +63,10 @@ class Trainer:
             Pytorch DataParallel API stabilises.
         grad_norm: float, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
+        grad_clipping: ``float``, optional (default = ``None``).
+            If provided, gradients will be clipped `during the backward pass` to have an (absolute)
+            maximum of this value.  If you are getting ``NaNs`` in your gradients during training
+            that are not solved by using ``grad_norm``, you may need this.
         """
         self._model = model
         self._iterator = iterator
@@ -75,6 +80,7 @@ class Trainer:
         self._serialization_prefix = serialization_prefix
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
+        self._grad_clipping = grad_clipping
 
         if self._cuda_device >= 0:
             self._model = self._model.cuda(self._cuda_device)
@@ -88,6 +94,14 @@ class Trainer:
                 logger.info("Loading model from checkpoint.")
                 epoch_counter = self._restore_checkpoint()
 
+        if self._grad_clipping is not None:
+            # Pylint is unable to tell that we're in the case that _glad_clipping is not None...
+            # pylint: disable=invalid-unary-operand-type
+            clip_function = lambda grad: grad.clamp(-self._grad_clipping, self._grad_clipping)
+            for parameter in self._model.parameters():
+                if parameter.requires_grad:
+                    parameter.register_hook(clip_function)
+        
         logger.info("Beginning training.")
         for epoch in range(epoch_counter, self._num_epochs):
             train_loss = 0.0
@@ -216,6 +230,7 @@ class Trainer:
         serialization_prefix = params.pop("serialization_prefix", None)
         cuda_device = params.pop("cuda_device", -1)
         grad_norm = params.pop("grad_norm", None)
+        grad_clipping = params.pop("grad_clipping", None)
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
                        train_dataset, validation_dataset,
@@ -224,4 +239,5 @@ class Trainer:
                        num_epochs=num_epochs,
                        serialization_prefix=serialization_prefix,
                        cuda_device=cuda_device,
-                       grad_norm=grad_norm)
+                       grad_norm=grad_norm,
+                       grad_clipping=grad_clipping)
