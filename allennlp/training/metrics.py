@@ -55,7 +55,7 @@ class CategoricalAccuracy(Metric):
     each item to be classified having a single correct class.
     """
     def __init__(self, top_k: int = 1) -> None:
-        self.top_k = top_k
+        self._top_k = top_k
         self.correct_count = 0.
         self.total_count = 0.
 
@@ -84,7 +84,7 @@ class CategoricalAccuracy(Metric):
                                      "the number of classes.".format(num_classes))
 
         # Top K indexes of the predictions.
-        top_k = predictions.topk(self.top_k, -1)[1]
+        top_k = predictions.topk(self._top_k, -1)[1]
 
         # This is of shape (batch_size, ..., top_k).
         correct = top_k.eq(gold_labels.long().unsqueeze(-1)).float()
@@ -122,11 +122,10 @@ class F1Measure(Metric):
     """
     def __init__(self, positive_label: int) -> None:
         self._positive_label = positive_label
-        self.true_positives = 0.0
-        self.true_negatives = 0.0
-        self.false_positives = 0.0
-        self.false_negatives = 0.0
-        self.total_counts = 0.0
+        self._true_positives = 0.0
+        self._true_negatives = 0.0
+        self._false_positives = 0.0
+        self._false_negatives = 0.0
 
     def __call__(self,
                  predictions: torch.Tensor,
@@ -159,22 +158,22 @@ class F1Measure(Metric):
         # True Negatives: correct non-positive predictions.
         correct_null_predictions = (argmax_predictions !=
                                     self._positive_label).float() * negative_label_mask
-        self.true_negatives += (correct_null_predictions.float() * mask).sum()
+        self._true_negatives += (correct_null_predictions.float() * mask).sum()
 
         # True Positives: correct positively labeled predictions.
         correct_non_null_predictions = (argmax_predictions ==
                                         self._positive_label).float() * positive_label_mask
-        self.true_positives += (correct_non_null_predictions * mask).sum()
+        self._true_positives += (correct_non_null_predictions * mask).sum()
 
         # False Negatives: incorrect negatively labeled predictions.
         incorrect_null_predictions = (argmax_predictions !=
                                       self._positive_label).float() * positive_label_mask
-        self.false_negatives += (incorrect_null_predictions * mask).sum()
+        self._false_negatives += (incorrect_null_predictions * mask).sum()
 
         # False Positives: incorrect positively labeled predictions
         incorrect_non_null_predictions = (argmax_predictions ==
                                           self._positive_label).float() * negative_label_mask
-        self.false_positives += (incorrect_non_null_predictions * mask).sum()
+        self._false_positives += (incorrect_non_null_predictions * mask).sum()
 
     def get_metric(self, reset: bool = False):
         """
@@ -185,16 +184,15 @@ class F1Measure(Metric):
         recall : float
         f1-measure : float
         """
-        precision = float(self.true_positives) / float(self.true_positives + self.false_positives + 1e-13)
-        recall = float(self.true_positives) / float(self.true_positives + self.false_negatives + 1e-13)
+        precision = float(self._true_positives) / float(self._true_positives + self._false_positives + 1e-13)
+        recall = float(self._true_positives) / float(self._true_positives + self._false_negatives + 1e-13)
         f1_measure = 2. * ((precision * recall) / (precision + recall + 1e-13))
         if reset:
             self.reset()
         return precision, recall, f1_measure
 
     def reset(self):
-        self.true_positives = 0.0
-        self.true_negatives = 0.0
-        self.false_positives = 0.0
-        self.false_negatives = 0.0
-        self.total_counts = 0.0
+        self._true_positives = 0.0
+        self._true_negatives = 0.0
+        self._false_positives = 0.0
+        self._false_negatives = 0.0

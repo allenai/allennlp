@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 import pytest
 import numpy
@@ -100,10 +100,10 @@ class MetricsTest(AllenNlpTestCase):
         targets = torch.Tensor([0, 4, 1, 0, 3, 0])
         f1_measure(predictions, targets)
         precision, recall, f1 = f1_measure.get_metric()
-        assert f1_measure.true_positives == 1.0
-        assert f1_measure.true_negatives == 3.
-        assert f1_measure.false_positives == 0.0
-        assert f1_measure.false_negatives == 2.0
+        assert f1_measure._true_positives == 1.0
+        assert f1_measure._true_negatives == 3.
+        assert f1_measure._false_positives == 0.0
+        assert f1_measure._false_negatives == 2.0
         f1_measure.reset()
         numpy.testing.assert_almost_equal(precision, 1.0)
         numpy.testing.assert_almost_equal(recall, 0.333333333)
@@ -113,10 +113,10 @@ class MetricsTest(AllenNlpTestCase):
         mask = torch.Tensor([1, 0, 1, 1, 1, 0])
         f1_measure(predictions, targets, mask)
         precision, recall, f1 = f1_measure.get_metric()
-        assert f1_measure.true_positives == 1.0
-        assert f1_measure.true_negatives == 2.0
-        assert f1_measure.false_positives == 0.0
-        assert f1_measure.false_negatives == 1.0
+        assert f1_measure._true_positives == 1.0
+        assert f1_measure._true_negatives == 2.0
+        assert f1_measure._false_positives == 0.0
+        assert f1_measure._false_negatives == 1.0
         f1_measure.reset()
         numpy.testing.assert_almost_equal(precision, 1.0)
         numpy.testing.assert_almost_equal(recall, 0.5)
@@ -136,18 +136,18 @@ class MetricsTest(AllenNlpTestCase):
         f1_measure(predictions, targets)
         f1_measure(predictions, targets)
         precision, recall, f1 = f1_measure.get_metric()
-        assert f1_measure.true_positives == 2.0
-        assert f1_measure.true_negatives == 6.0
-        assert f1_measure.false_positives == 0.0
-        assert f1_measure.false_negatives == 4.0
+        assert f1_measure._true_positives == 2.0
+        assert f1_measure._true_negatives == 6.0
+        assert f1_measure._false_positives == 0.0
+        assert f1_measure._false_negatives == 4.0
         f1_measure.reset()
         numpy.testing.assert_almost_equal(precision, 1.0)
         numpy.testing.assert_almost_equal(recall, 0.333333333)
         numpy.testing.assert_almost_equal(f1, 0.499999999)
-        assert f1_measure.true_positives == 0.0
-        assert f1_measure.true_negatives == 0.0
-        assert f1_measure.false_positives == 0.0
-        assert f1_measure.false_negatives == 0.0
+        assert f1_measure._true_positives == 0.0
+        assert f1_measure._true_negatives == 0.0
+        assert f1_measure._false_positives == 0.0
+        assert f1_measure._false_negatives == 0.0
 
     def test_f1_measure_works_for_sequences(self):
         f1_measure = F1Measure(positive_label=0)
@@ -163,10 +163,10 @@ class MetricsTest(AllenNlpTestCase):
                                 [0, 1, 0]])
         f1_measure(predictions, targets)
         precision, recall, f1 = f1_measure.get_metric()
-        assert f1_measure.true_positives == 2.0
-        assert f1_measure.true_negatives == 3.0
-        assert f1_measure.false_positives == 0.0
-        assert f1_measure.false_negatives == 1.0
+        assert f1_measure._true_positives == 2.0
+        assert f1_measure._true_negatives == 3.0
+        assert f1_measure._false_positives == 0.0
+        assert f1_measure._false_negatives == 1.0
         f1_measure.reset()
         numpy.testing.assert_almost_equal(precision, 1.0)
         numpy.testing.assert_almost_equal(recall, 0.666666666)
@@ -177,10 +177,10 @@ class MetricsTest(AllenNlpTestCase):
                              [1, 1, 1]])
         f1_measure(predictions, targets, mask)
         precision, recall, f1 = f1_measure.get_metric()
-        assert f1_measure.true_positives == 1.0
-        assert f1_measure.true_negatives == 2.0
-        assert f1_measure.false_positives == 0.0
-        assert f1_measure.false_negatives == 1.0
+        assert f1_measure._true_positives == 1.0
+        assert f1_measure._true_negatives == 2.0
+        assert f1_measure._false_positives == 0.0
+        assert f1_measure._false_negatives == 1.0
         numpy.testing.assert_almost_equal(precision, 1.0)
         numpy.testing.assert_almost_equal(recall, 0.5)
         numpy.testing.assert_almost_equal(f1, 0.66666666666)
