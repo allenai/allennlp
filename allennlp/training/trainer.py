@@ -101,7 +101,7 @@ class Trainer:
             for parameter in self._model.parameters():
                 if parameter.requires_grad:
                     parameter.register_hook(clip_function)
-        
+
         logger.info("Beginning training.")
         for epoch in range(epoch_counter, self._num_epochs):
             train_loss = 0.0
