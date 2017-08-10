@@ -1,10 +1,11 @@
+import os
 from typing import Dict
 
-from allennlp.common import Params, constants
+from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers.squad import SquadReader
 from allennlp.data.fields import TextField
-from allennlp.data.tokenizers import Tokenizer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.models import BidirectionalAttentionFlow
 from allennlp.service.servable import Servable, JSONDict
@@ -33,23 +34,27 @@ class BidafServable(Servable):
         return output_dict
 
     @classmethod
-    def from_params(cls, params: Params) -> 'BidafServable':
-        glove_path = params.pop("glove_path")
-        constants.GLOVE_PATH = glove_path
-
-        tokenizer = Tokenizer.from_params(params.pop("tokenizer"))
+    def from_config(cls, config: Params) -> 'BidafServable':
+        tokenizer_params = config.pop("tokenizer", None)
+        if tokenizer_params is None:
+            tokenizer = WordTokenizer()
+        else:
+            tokenizer = Tokenizer.from_params(tokenizer_params)
 
         token_indexers = {}
-        token_indexer_params = params.pop('token_indexers')
+        token_indexer_params = config["dataset_reader"].pop('token_indexers')
         for name, indexer_params in token_indexer_params.items():
             token_indexers[name] = TokenIndexer.from_params(indexer_params)
 
-        vocab_dir = params.pop('vocab_dir')
+        serialization_prefix = config.pop('serialization_prefix')
+        vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
-        model_params = params.pop("model")
+        model_params = config.pop("model")
         assert model_params.pop("type") == "bidaf"
         model = BidirectionalAttentionFlow.from_params(vocab, model_params)
+
+        # TODO(joelgrus) load weights
 
         return BidafServable(tokenizer=tokenizer,
                              token_indexers=token_indexers,

@@ -1,3 +1,4 @@
+import json
 from typing import Dict, Any, Optional, List
 
 from allennlp.common.params import Params, replace_none
@@ -47,15 +48,19 @@ class ServableCollection:
         import allennlp.service.servable.models.bidaf as bidaf
         import allennlp.service.servable.models.decomposable_attention as decomposable_attention
 
-        bidaf_params = Params(replace_none(pyhocon.ConfigFactory.parse_file(
-                'allennlp/service/servable/models/bidaf.conf')))
+        with open('experiment_config/bidaf.json') as f:
+            config = json.loads(f.read())
+            config['serialization_prefix'] = 'tests/fixtures/bidaf'
+            config['model']['text_field_embedder']['tokens']['pretrained_file'] = 'tests/fixtures/glove.6B.100d.sample.txt.gz'
+            bidaf_config = Params(replace_none(config))
+
         snli_params = Params(replace_none(pyhocon.ConfigFactory.parse_file(
                 'allennlp/service/servable/models/decomposable_attention.conf')))
         srl_params = Params(replace_none(pyhocon.ConfigFactory.parse_file(
                 'allennlp/service/servable/models/semantic_role_labeler.conf')))
 
         all_models = {
-                'bidaf': bidaf.BidafServable.from_params(bidaf_params),
+                'bidaf': bidaf.BidafServable.from_config(bidaf_config),
                 'srl': semantic_role_labeler.SemanticRoleLabelerServable.from_params(srl_params),
                 'snli': decomposable_attention.DecomposableAttentionServable.from_params(snli_params),
         }  # type: Dict[str, Servable]
