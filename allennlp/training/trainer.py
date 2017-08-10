@@ -215,10 +215,14 @@ class Trainer:
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
         epoch_to_load = max([int(x.split("model_state_epoch_")[-1].strip(".th")) for x in model_checkpoints])
 
-        model_state = torch.load(os.path.join(self._serialization_prefix,
-                                              "model_state_epoch_{}.th".format(epoch_to_load)))
-        training_state = torch.load(os.path.join(self._serialization_prefix,
-                                                 "training_state_epoch_{}.th".format(epoch_to_load)))
+        model_path = os.path.join(self._serialization_prefix,
+                                  "model_state_epoch_{}.th".format(epoch_to_load))
+        training_state_path = os.path.join(self._serialization_prefix,
+                                           "training_state_epoch_{}.th".format(epoch_to_load))
+
+        device_mapping = "cuda:{}".format(int(self._cuda_device)) if self._cuda_device >= 0 else "cpu"
+        model_state = torch.load(model_path, map_location=lambda: device_mapping)
+        training_state = torch.load(training_state_path)
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
         return training_state["epoch"]
