@@ -27,6 +27,7 @@ build will test that:
 * [`pylint`](https://www.pylint.org/) accepts the code style (our guidelines are based on PEP8)
 * [`mypy`](http://mypy-lang.org/) typechecks the Python code
 * The docs can be generated successfully
+* Test coverage remains high.  Please add unit tests so we maintain our code coverage.
 
 If your code fails one of these checks, you will be expected to fix your pull request before it is considered.
 
