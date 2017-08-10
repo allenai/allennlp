@@ -104,6 +104,7 @@ class InitializerApplicator:
         module : torch.nn.Module, required.
             The Pytorch module to apply the initializers to.
         """
+        logger.info("Initializing parameters; finding explicit regex matches first")
         # Store which initialisers were applied to which parameters.
         not_explicitly_initialized_parameters = []
         for name, parameter in module.named_parameters():
@@ -111,18 +112,18 @@ class InitializerApplicator:
             for initializer_regex, initializer in self._initializers.items():
                 if re.search(initializer_regex, name):
                     initializer(parameter)
-                    logger.info("Initializing %s using %s "
-                                "Intitializer.", name, initializer_regex)
+                    logger.info("Initializing %s using %s intitializer", name, initializer_regex)
                     is_initialized = True
             if not is_initialized:
                 not_explicitly_initialized_parameters.append((name, parameter))
 
+        logger.info("Initializing remaining parameters with default initializer: %s",
+                    self._default_initializer)
         for name, parameter in not_explicitly_initialized_parameters:
             if any(re.search(exclude_regex, name) for exclude_regex in self._exclude):
                 logger.info("Excluding %s from default initialization", name)
             else:
-                logger.info("Initializing %s using the Default "
-                            "Intitializer. (Normal(0, 1) unless user specified.)", name)
+                logger.info("Initializing %s using the default initializer", name)
                 self._default_initializer(parameter)
 
     @classmethod

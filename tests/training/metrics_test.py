@@ -5,10 +5,9 @@ import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
-from allennlp.training.metrics import CategoricalAccuracy, F1Measure
+from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, F1Measure
 
-class MetricsTest(AllenNlpTestCase):
-
+class CategoricalAccuracyTest(AllenNlpTestCase):
     def test_categorical_accuracy(self):
         accuracy = CategoricalAccuracy()
         predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
@@ -80,6 +79,34 @@ class MetricsTest(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             accuracy(predictions, out_of_range_labels)
 
+class BooleanAccuracyTest(AllenNlpTestCase):
+    def test_accuracy_computation(self):
+        accuracy = BooleanAccuracy()
+        predictions = torch.Tensor([[0, 1],
+                                    [2, 3],
+                                    [4, 5],
+                                    [6, 7]])
+        targets = torch.Tensor([[0, 1],
+                                [2, 2],
+                                [4, 5],
+                                [7, 7]])
+        accuracy(predictions, targets)
+        assert accuracy.get_metric() == 2. / 4
+
+        mask = torch.ones(4, 2)
+        mask[1, 1] = 0
+        accuracy(predictions, targets, mask)
+        assert accuracy.get_metric() == 5. / 8
+
+        targets[1, 1] = 3
+        accuracy(predictions, targets)
+        assert accuracy.get_metric() == 8. / 12
+
+        accuracy.reset()
+        accuracy(predictions, targets)
+        assert accuracy.get_metric() == 3. / 4
+
+class F1MeasureTest(AllenNlpTestCase):
     def test__f1_measure_catches_exceptions(self):
         f1_measure = F1Measure(0)
         predictions = torch.rand([5, 7])

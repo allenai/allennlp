@@ -25,6 +25,11 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     def setUp(self):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                             level=logging.DEBUG)
+        # Disabling some of the more verbose logging statements that typically aren't very helpful
+        # in tests.
+        logging.getLogger('allennlp.common.params').disabled = True
+        logging.getLogger('allennlp.nn.initializers').disabled = True
+        logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
         log_pytorch_version_info()
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
