@@ -34,7 +34,7 @@ spec:
             - /bin/bash
             - -c
             - "source activate allennlp && allennlp/run serve"
-      imagePullPolicy: Always
+          imagePullPolicy: Always
 ---
 apiVersion: v1
 kind: Service
