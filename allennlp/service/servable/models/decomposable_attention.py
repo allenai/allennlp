@@ -3,7 +3,7 @@ from typing import Dict
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.dataset_readers import SnliReader
 from allennlp.data.fields import TextField
 from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.token_indexers import TokenIndexer
@@ -37,7 +37,9 @@ class DecomposableAttentionServable(Servable):
 
     @classmethod
     def from_config(cls, config: Params) -> 'DecomposableAttentionServable':
-        dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
+        dataset_reader_params = config.pop("dataset_reader")
+        assert dataset_reader_params.pop("type") == "snli"
+        dataset_reader = SnliReader.from_params(dataset_reader_params)
 
         serialization_prefix = config.pop('serialization_prefix')
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
@@ -48,7 +50,7 @@ class DecomposableAttentionServable(Servable):
         model = DecomposableAttention.from_params(vocab, model_params)
 
         # pylint: disable=protected-access
-        return DecomposableAttentionServable(tokenizer=dataset_reader._tokenizer,            # type: ignore
-                                             token_indexers=dataset_reader._token_indexers,  # type: ignore
+        return DecomposableAttentionServable(tokenizer=dataset_reader._tokenizer,
+                                             token_indexers=dataset_reader._token_indexers,
                                              model=model)
         # pylint: enable=protected-access

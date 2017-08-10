@@ -3,7 +3,6 @@ from typing import Dict
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.dataset_readers.squad import SquadReader
 from allennlp.data.fields import TextField
 from allennlp.data.tokenizers import Tokenizer
@@ -36,7 +35,9 @@ class BidafServable(Servable):
 
     @classmethod
     def from_config(cls, config: Params) -> 'BidafServable':
-        dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
+        dataset_reader_params = config.pop("dataset_reader")
+        assert dataset_reader_params.pop('type') == 'squad'
+        dataset_reader = SquadReader.from_params(dataset_reader_params)
 
         serialization_prefix = config.pop('serialization_prefix')
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
@@ -49,7 +50,7 @@ class BidafServable(Servable):
         # TODO(joelgrus) load weights
 
         # pylint: disable=protected-access
-        return BidafServable(tokenizer=dataset_reader._tokenizer,           # type: ignore
-                             token_indexers=dataset_reader._token_indexers, # type: ignore
+        return BidafServable(tokenizer=dataset_reader._tokenizer,
+                             token_indexers=dataset_reader._token_indexers,
                              model=model)
         # pylint: enable=protected-access
