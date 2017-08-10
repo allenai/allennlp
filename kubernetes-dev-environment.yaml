@@ -15,7 +15,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: allennlp-dev-env
-          image: 896129387501.dkr.ecr.us-west-2.amazonaws.com/allennlp/allennlp-gpu:latest
+          image: allennlp/allennlp-gpu:latest
           stdin: true
           tty: true
           resources:
