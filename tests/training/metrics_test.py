@@ -92,7 +92,7 @@ class BooleanAccuracyTest(AllenNlpTestCase):
                                 [7, 7]])
         accuracy(predictions, targets)
         assert accuracy.get_metric() == 0.50  # 2 / 4
-        targets[1,1] = 3
+        targets[1, 1] = 3
         accuracy(predictions, targets)
         assert accuracy.get_metric() == 0.625  # 5 / 8
         accuracy.reset()

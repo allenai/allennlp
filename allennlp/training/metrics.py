@@ -127,8 +127,8 @@ class CategoricalAccuracy(Metric):
 class BooleanAccuracy(Metric):
     """
     Just checks batch-equality of two tensors and computes an accuracy metric based on that.  This
-    is basically the same as :class:`CategoricalAccuracy`, if you've already done a ``.max()`` on
-    your predictions.  If you have categorical output, you should typically just use
+    is similar to :class:`CategoricalAccuracy`, if you've already done a ``.max()`` on your
+    predictions.  If you have categorical output, though, you should typically just use
     :class:`CategoricalAccuracy`.  The reason you might want to use this instead is if you've done
     some kind of constrained inference and don't have a prediction tensor that matches the API of
     :class:`CategoricalAccuracy`, which assumes a final dimension of size ``num_classes``.

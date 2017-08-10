@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 import torch
 from torch.autograd import Variable
@@ -281,7 +281,7 @@ class BidirectionalAttentionFlow(Model):
         span_start_logits = span_start_logits.data.cpu().numpy()
         span_end_logits = span_end_logits.data.cpu().numpy()
 
-        for b in range(batch_size):
+        for b in range(batch_size):  # pylint: disable=invalid-name
             for j in range(passage_length):
                 if j == 0:
                     # 0 is not a valid end index.
