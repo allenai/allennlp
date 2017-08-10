@@ -63,15 +63,18 @@
       "num_layers": 2
     },
     "initializer": {
-        "default": "orthonormal",
+        "default": {
+          "type": "normal",
+          "mean": 0,
+          "std": 0.1
+        },
         "exclude": ["token_embedder_tokens"]
     }
   },
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["passage", "num_tokens"], ["question", "num_tokens"]],
-    "batch_size": 40,
-    "biggest_batch_first": true
+    "batch_size": 40
   },
   "optimizer": {
     "type": "adadelta",
@@ -79,8 +82,9 @@
     "rho": 0.95
   },
   "num_epochs": 12,
-  "grad_norm": 1.0,
+  "grad_norm": 100.0,
+  "grad_clipping": 100,
   "patience" : 12,
-  "serialization_prefix" : "/net/efs/aristo/allennlp/bidaf/bidaf-model2",
+  "serialization_prefix" : "/net/efs/aristo/allennlp/bidaf/bidaf-model",
   "cuda_device" : 0
 }
