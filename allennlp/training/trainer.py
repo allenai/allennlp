@@ -1,11 +1,12 @@
 import logging
 import os
 import shutil
-from typing import Optional
+from typing import Optional, List  # pylint: disable=unused-import
 
 import torch
 from torch.nn.utils.clip_grad import clip_grad_norm
 import tqdm
+from tensorboard import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -25,10 +26,12 @@ class Trainer:
                  train_dataset: Dataset,
                  validation_dataset: Optional[Dataset] = None,
                  patience: int = 2,
+                 validation_metric: str = "loss",
                  num_epochs: int = 20,
                  serialization_prefix: Optional[str] = None,
                  cuda_device: int = -1,
-                 grad_norm: Optional[float] = None) -> None:
+                 grad_norm: Optional[float] = None,
+                 grad_clipping: Optional[float] = None) -> None:
         """
         Parameters
         ----------
@@ -47,6 +50,9 @@ class Trainer:
             A ``Dataset`` to evaluate on. The dataset should have already been indexed.
         patience : int, optional (default=2)
             Number of epochs to be patient before early stopping.
+        validation_metric : str, optional (default="loss")
+            Validation metric to measure for whether to stop training using patience
+            and whether to serialize an ``is_best`` model each epoch.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_prefix : str, optional (default=None)
@@ -58,6 +64,10 @@ class Trainer:
             Pytorch DataParallel API stabilises.
         grad_norm: float, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
+        grad_clipping: ``float``, optional (default = ``None``).
+            If provided, gradients will be clipped `during the backward pass` to have an (absolute)
+            maximum of this value.  If you are getting ``NaNs`` in your gradients during training
+            that are not solved by using ``grad_norm``, you may need this.
         """
         self._model = model
         self._iterator = iterator
@@ -65,11 +75,13 @@ class Trainer:
         self._train_dataset = train_dataset
         self._validation_dataset = validation_dataset
 
-        self._patience = patience  # TODO(Mark): add this to training loop with validation metrics.
+        self._patience = patience
+        self._validation_metric = validation_metric
         self._num_epochs = num_epochs
         self._serialization_prefix = serialization_prefix
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
+        self._grad_clipping = grad_clipping
 
         if self._cuda_device >= 0:
             self._model = self._model.cuda(self._cuda_device)
@@ -78,14 +90,27 @@ class Trainer:
         epoch_counter = 0
         # Resume from serialization path if it contains a saved model.
         if self._serialization_prefix is not None:
+            # Set up tensorboard logging.
+            train_log = SummaryWriter(os.path.join(self._serialization_prefix, "log", "train"))
+            validation_log = SummaryWriter(os.path.join(self._serialization_prefix, "log", "validation"))
             if any(["model_state_epoch_" in x
                     for x in os.listdir(self._serialization_prefix)]):
+                logger.info("Loading model from checkpoint.")
                 epoch_counter = self._restore_checkpoint()
 
+        if self._grad_clipping is not None:
+            # Pylint is unable to tell that we're in the case that _glad_clipping is not None...
+            # pylint: disable=invalid-unary-operand-type
+            clip_function = lambda grad: grad.clamp(-self._grad_clipping, self._grad_clipping)
+            for parameter in self._model.parameters():
+                if parameter.requires_grad:
+                    parameter.register_hook(clip_function)
+
+        logger.info("Beginning training.")
         for epoch in range(epoch_counter, self._num_epochs):
             train_loss = 0.0
             val_loss = 0.0
-
+            validation_metric_per_epoch = []  # type: List[float]
             # Set the model to "train" mode.
             self._model.train()
             train_generator = self._iterator(self._train_dataset, num_epochs=1)
@@ -106,7 +131,8 @@ class Trainer:
                 if self._grad_norm:
                     clip_grad_norm(self._model.parameters(), self._grad_norm)
                 self._optimizer.step()
-
+            metrics = self._model.get_metrics(reset=True) or {}
+            metrics["loss"] = train_loss
             if self._validation_dataset is not None:
                 # Switch to evaluation mode.
                 self._model.eval()
@@ -116,11 +142,31 @@ class Trainer:
                     val_output_dict = self._model.forward(**tensor_batch)
                     loss = val_output_dict["loss"]
                     val_loss += loss.data.cpu().numpy()
+                val_metrics = self._model.get_metrics(reset=True) or {}
+                val_metrics["loss"] = val_loss
+                message_template = "Training %s : %3f    Validation %s : %3f "
+                for name, value in metrics.items():
+                    logger.info(message_template, name, value, name, val_metrics[name])
+                    if self._serialization_prefix:
+                        train_log.add_scalar(name, value, epoch)
+                        validation_log.add_scalar(name, val_metrics[name], epoch)
 
-            # TODO(Mark): Add user specified metrics here, maybe a "metrics" key?
-            logger.info("Training Loss: %3f    Validation Loss: %3f ", train_loss, val_loss)
-            if self._serialization_prefix:
-                self._save_checkpoint(epoch)
+                this_epoch = val_metrics[self._validation_metric]
+                if len(validation_metric_per_epoch) > self._patience:
+                    if max(validation_metric_per_epoch[-self._patience:]) > this_epoch:
+                        break
+                validation_metric_per_epoch.append(this_epoch)
+                is_best_so_far = this_epoch == max(validation_metric_per_epoch)
+                if self._serialization_prefix:
+                    self._save_checkpoint(epoch, is_best=is_best_so_far)
+            else:
+                message_template = "Training %s : %3f "
+                for name, value in metrics.items():
+                    logger.info(message_template, name, value)
+                    if self._serialization_prefix:
+                        train_log.add_scalar(name, value, epoch)
+                if self._serialization_prefix:
+                    self._save_checkpoint(epoch)
 
     def _save_checkpoint(self,
                          epoch: int,
@@ -145,7 +191,7 @@ class Trainer:
         if is_best:
             logger.info("Best validation performance so far. "
                         "Copying weights to %s/best.th'.", self._serialization_prefix)
-            shutil.copy(model_path, os.path.join(model_path, "best.th"))
+            shutil.copyfile(model_path, os.path.join(self._serialization_prefix, "best.th"))
 
     def _restore_checkpoint(self) -> int:
         """
@@ -188,15 +234,19 @@ class Trainer:
 
         params = params or Params({})
         patience = params.pop("patience", 2)
+        validation_metric = params.pop("validation_metric", "loss")
         num_epochs = params.pop("num_epochs", 20)
         serialization_prefix = params.pop("serialization_prefix", None)
         cuda_device = params.pop("cuda_device", -1)
         grad_norm = params.pop("grad_norm", None)
+        grad_clipping = params.pop("grad_clipping", None)
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
                        train_dataset, validation_dataset,
                        patience=patience,
+                       validation_metric=validation_metric,
                        num_epochs=num_epochs,
                        serialization_prefix=serialization_prefix,
                        cuda_device=cuda_device,
-                       grad_norm=grad_norm)
+                       grad_norm=grad_norm,
+                       grad_clipping=grad_clipping)

@@ -1,39 +1,26 @@
+import os
+from typing import Dict
+
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
+from allennlp.data.dataset_readers import SrlReader
 from allennlp.data.fields import TextField, IndexField
-from allennlp.data.tokenizers import WordTokenizer
-from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.token_indexers import TokenIndexer
 from allennlp.models import SemanticRoleLabeler
 from allennlp.service.servable import Servable, JSONDict
 
 import spacy
 
 class SemanticRoleLabelerServable(Servable):
-    def __init__(self):
-        self.tokenizer = WordTokenizer()
-        self.token_indexers = {"tokens": SingleIdTokenIndexer(lowercase_tokens=True)}
-
-        dataset = SrlReader(token_indexers=self.token_indexers).read('tests/fixtures/conll_2012/')
-        self.vocab = Vocabulary.from_dataset(dataset)
-        dataset.index_instances(self.vocab)
-
-        params = Params({
-                "text_field_embedder": {
-                        "tokens": {
-                                "type": "embedding",
-                                "embedding_dim": 5
-                                }
-                        },
-                "stacked_encoder": {
-                        "type": "lstm",
-                        "input_size": 6,
-                        "hidden_size": 7,
-                        "num_layers": 2
-                        }
-                })
-
-        self.model = SemanticRoleLabeler.from_params(self.vocab, params)
+    def __init__(self,
+                 tokenizer: Tokenizer,
+                 token_indexers: Dict[str, TokenIndexer],
+                 model: SemanticRoleLabeler) -> None:
+        self.tokenizer = tokenizer
+        self.token_indexers = token_indexers
+        self.model = model
+        self.model.eval()
         self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
@@ -55,3 +42,26 @@ class SemanticRoleLabelerServable(Servable):
                 })
 
         return results
+
+    @classmethod
+    def from_config(cls, config: Params) -> 'SemanticRoleLabelerServable':
+        dataset_reader_params = config.pop("dataset_reader")
+        assert dataset_reader_params.pop('type') == 'srl'
+        dataset_reader = SrlReader.from_params(dataset_reader_params)
+
+        serialization_prefix = config.pop('serialization_prefix')
+        vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
+        vocab = Vocabulary.from_files(vocab_dir)
+
+        model_params = config.pop("model")
+        assert model_params.pop("type") == "srl"
+        model = SemanticRoleLabeler.from_params(vocab, model_params)
+
+        # TODO(joelgrus): load weights
+
+        # pylint: disable=protected-access
+        # use default WordTokenizer, since there's none in the experiment spec
+        return SemanticRoleLabelerServable(tokenizer=WordTokenizer(),
+                                           token_indexers=dataset_reader._token_indexers,
+                                           model=model)
+        # pylint: enable=protected-access
