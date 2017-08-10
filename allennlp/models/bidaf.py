@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple
 
 import torch
+from torch.autograd import Variable
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, constants
@@ -10,6 +11,7 @@ from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, util
+from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy
 
 
 @Model.register("bidaf")
@@ -80,6 +82,9 @@ class BidirectionalAttentionFlow(Model):
         span_end_input_dim = encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
         initializer(self)
+        self._span_start_accuracy = CategoricalAccuracy()
+        self._span_end_accuracy = CategoricalAccuracy()
+        self._span_accuracy = BooleanAccuracy()
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -206,12 +211,23 @@ class BidirectionalAttentionFlow(Model):
             if span_start.dim() == 2:
                 _, span_start = span_start.max(-1)
             loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.view(-1))
+            self._span_start_accuracy(span_start_logits, span_start)
             if span_end.dim() == 2:
                 _, span_end = span_end.max(-1)
             loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.view(-1))
+            self._span_end_accuracy(span_end_logits, span_end)
+            best_span = self._get_best_span(span_start_logits, span_end_logits)
+            self._span_accuracy(best_span, torch.stack([span_start, span_end], -1))
             output_dict["loss"] = loss
 
         return output_dict
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return {
+                'span_start_acc': self._span_start_accuracy.get_metric(reset),
+                'span_end_acc': self._span_end_accuracy.get_metric(reset),
+                'full_span_acc': self._span_accuracy.get_metric(reset),
+                }
 
     def predict_span(self, question: TextField, passage: TextField) -> Dict[str, Any]:
         """
@@ -241,48 +257,50 @@ class BidirectionalAttentionFlow(Model):
         output_dict = self.forward(**model_input)
 
         # Remove batch dimension, as we only had one input.
-        span_start_probs = output_dict["span_start_probs"].data.squeeze(0)
-        span_end_probs = output_dict["span_end_probs"].data.squeeze(0)
-        best_span = self._get_best_span(span_start_probs, span_end_probs)
+        span_start_logits = output_dict["span_start_logits"]
+        span_end_logits = output_dict["span_end_logits"]
+        best_span = self._get_best_span(span_start_logits, span_end_logits)
 
         return {
-                "span_start_probs": span_start_probs.numpy(),
-                "span_end_probs": span_end_probs.numpy(),
-                "best_span": best_span,
+                "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).numpy(),
+                "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).numpy(),
+                "best_span": tuple(best_span.data.squeeze(0).numpy()),
                 }
 
     @staticmethod
-    def _get_best_span(span_start_probs: torch.Tensor, span_end_probs: torch.Tensor) -> Tuple[int, int]:
-        if span_start_probs.dim() > 2 or span_end_probs.dim() > 2:
-            raise ValueError("Input shapes must be (X,) or (1,X)")
-        if span_start_probs.dim() == 2:
-            assert span_start_probs.size(0) == 1, "2D input must have an initial dimension of 1"
-            span_start_probs = span_start_probs.squeeze()
-        if span_end_probs.dim() == 2:
-            assert span_end_probs.size(0) == 1, "2D input must have an initial dimension of 1"
-            span_end_probs = span_end_probs.squeeze()
-        max_span_probability = 0
-        best_word_span = (0, 1)
-        begin_span_argmax = 0
-        for j, _ in enumerate(span_start_probs):
-            if j == 0:
-                # 0 is not a valid end index.
-                continue
-            val1 = span_start_probs[begin_span_argmax]
-            val2 = span_end_probs[j]
+    def _get_best_span(span_start_logits: Variable, span_end_logits: Variable) -> Variable:
+        if span_start_logits.dim() != 2 or span_end_logits.dim() != 2:
+            raise ValueError("Input shapes must be (batch_size, passage_length)")
+        batch_size, passage_length = span_start_logits.size()
+        max_span_log_prob = [-1e20] * batch_size
+        span_start_argmax = [0] * batch_size
+        best_word_span = Variable(span_start_logits.data.new()
+                                  .resize_(batch_size, 2).fill_(0)).long()
+        best_word_span[:, 1] = 1
 
-            if val1 * val2 > max_span_probability:
-                best_word_span = (begin_span_argmax, j)
-                max_span_probability = val1 * val2
+        span_start_logits = span_start_logits.data.cpu().numpy()
+        span_end_logits = span_end_logits.data.cpu().numpy()
 
-            # We need to update best_span_argmax here _after_ we've checked the current span
-            # position, so that we don't allow things like (1, 1), which are empty spans.  We've
-            # added a special stop symbol to the end of the passage, so this still allows for all
-            # valid spans over the passage.
-            if val1 < span_start_probs[j]:
-                val1 = span_start_probs[j]
-                begin_span_argmax = j
-        return (best_word_span[0], best_word_span[1])
+        for b in range(batch_size):
+            for j in range(passage_length):
+                if j == 0:
+                    # 0 is not a valid end index.
+                    continue
+                val1 = span_start_logits[b, span_start_argmax[b]]
+                val2 = span_end_logits[b, j]
+
+                if val1 + val2 > max_span_log_prob[b]:
+                    best_word_span[b, 0] = span_start_argmax[b]
+                    best_word_span[b, 1] = j
+                    max_span_log_prob[b] = val1 + val2
+
+                # We need to update best_span_argmax here _after_ we've checked the current span
+                # position, so that we don't allow things like (1, 1), which are empty spans.  We've
+                # added a special stop symbol to the end of the passage, so this still allows for all
+                # valid spans over the passage.
+                if val1 < span_start_logits[b, j]:
+                    span_start_argmax[b] = j
+        return best_word_span
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':

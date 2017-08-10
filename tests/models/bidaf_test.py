@@ -2,6 +2,7 @@
 import numpy
 from numpy.testing import assert_almost_equal
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params, constants
 from allennlp.data import Vocabulary
@@ -121,29 +122,29 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
 
         # Note that the best span cannot be (1, 0) since even though 0.3 * 0.5 is the greatest
         # value, the end span index is constrained to occur after the begin span index.
-        span_begin_probs = torch.FloatTensor([0.1, 0.3, 0.05, 0.3, 0.25])
-        span_end_probs = torch.FloatTensor([0.5, 0.1, 0.2, 0.05, 0.15])
+        span_begin_probs = Variable(torch.FloatTensor([[0.1, 0.3, 0.05, 0.3, 0.25]])).log()
+        span_end_probs = Variable(torch.FloatTensor([[0.5, 0.1, 0.2, 0.05, 0.15]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
-        assert begin_end_idxs == (1, 2)
+        assert_almost_equal(begin_end_idxs.data.numpy(), [[1, 2]])
 
         # Testing an edge case of the dynamic program here, for the order of when you update the
         # best previous span position.  We should not get (1, 1), because that's an empty span.
-        span_begin_probs = torch.FloatTensor([0.4, 0.5, 0.1])
-        span_end_probs = torch.FloatTensor([0.3, 0.6, 0.1])
+        span_begin_probs = Variable(torch.FloatTensor([[0.4, 0.5, 0.1]])).log()
+        span_end_probs = Variable(torch.FloatTensor([[0.3, 0.6, 0.1]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
-        assert begin_end_idxs == (0, 1)
+        assert_almost_equal(begin_end_idxs.data.numpy(), [[0, 1]])
 
         # Testing another edge case of the dynamic program here, where (0, 0) is the best solution
         # without constraints.
-        span_begin_probs = torch.FloatTensor([0.8, 0.1, 0.1])
-        span_end_probs = torch.FloatTensor([0.8, 0.1, 0.1])
+        span_begin_probs = Variable(torch.FloatTensor([[0.8, 0.1, 0.1]])).log()
+        span_end_probs = Variable(torch.FloatTensor([[0.8, 0.1, 0.1]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
-        assert begin_end_idxs == (0, 1)
+        assert_almost_equal(begin_end_idxs.data.numpy(), [[0, 1]])
 
         # test higher-order input
         # Note that the best span cannot be (1, 1) since even though 0.3 * 0.5 is the greatest
         # value, the end span index is constrained to occur after the begin span index.
-        span_begin_probs = torch.FloatTensor([[0.1, 0.3, 0.05, 0.3, 0.25]])
-        span_end_probs = torch.FloatTensor([[0.1, 0.5, 0.2, 0.05, 0.15]])
+        span_begin_probs = Variable(torch.FloatTensor([[0.1, 0.3, 0.05, 0.3, 0.25]])).log()
+        span_end_probs = Variable(torch.FloatTensor([[0.1, 0.5, 0.2, 0.05, 0.15]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
-        assert begin_end_idxs == (1, 2)
+        assert_almost_equal(begin_end_idxs.data.numpy(), [[1, 2]])
