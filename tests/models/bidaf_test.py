@@ -91,8 +91,6 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
 
                 })
         self.small_model = BidirectionalAttentionFlow.from_params(self.vocab, small_params)
-        initializer = InitializerApplicator()
-        initializer(self.model)
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = arrays_to_variables(self.dataset.as_array_dict())
