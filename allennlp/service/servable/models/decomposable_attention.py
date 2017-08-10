@@ -48,7 +48,7 @@ class DecomposableAttentionServable(Servable):
         model = DecomposableAttention.from_params(vocab, model_params)
 
         # pylint: disable=protected-access
-        return DecomposableAttentionServable(tokenizer=dataset_reader._tokenizer,
-                                             token_indexers=dataset_reader._token_indexers,
+        return DecomposableAttentionServable(tokenizer=dataset_reader._tokenizer,            # type: ignore
+                                             token_indexers=dataset_reader._token_indexers,  # type: ignore
                                              model=model)
         # pylint: enable=protected-access

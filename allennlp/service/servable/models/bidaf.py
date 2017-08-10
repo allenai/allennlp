@@ -49,7 +49,7 @@ class BidafServable(Servable):
         # TODO(joelgrus) load weights
 
         # pylint: disable=protected-access
-        return BidafServable(tokenizer=dataset_reader._tokenizer,
-                             token_indexers=dataset_reader._token_indexers,
+        return BidafServable(tokenizer=dataset_reader._tokenizer,           # type: ignore
+                             token_indexers=dataset_reader._token_indexers, # type: ignore
                              model=model)
         # pylint: enable=protected-access

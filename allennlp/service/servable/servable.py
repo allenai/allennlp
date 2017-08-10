@@ -47,22 +47,22 @@ class ServableCollection:
         import allennlp.service.servable.models.bidaf as bidaf
         import allennlp.service.servable.models.decomposable_attention as decomposable_attention
 
-        with open('experiment_config/bidaf.json') as f:
-            config = json.loads(f.read())
+        with open('experiment_config/bidaf.json') as config_file:
+            config = json.loads(config_file.read())
             config['serialization_prefix'] = 'tests/fixtures/bidaf'
             config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
                 'tests/fixtures/glove.6B.100d.sample.txt.gz'
             bidaf_config = Params(replace_none(config))
 
-        with open('experiment_config/semantic_role_labeler.json') as f:
-            config = json.loads(f.read())
+        with open('experiment_config/semantic_role_labeler.json') as config_file:
+            config = json.loads(config_file.read())
             config['serialization_prefix'] = 'tests/fixtures/srl'
             config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
                 'tests/fixtures/glove.6B.100d.sample.txt.gz'
             srl_config = Params(replace_none(config))
 
-        with open('experiment_config/decomposable_attention.json') as f:
-            config = json.loads(f.read())
+        with open('experiment_config/decomposable_attention.json') as config_file:
+            config = json.loads(config_file.read())
             config['serialization_prefix'] = 'tests/fixtures/decomposable_attention'
             # TODO(joelgrus) once the correct config exists, just modify it
             constants.GLOVE_PATH = 'tests/fixtures/glove.6B.300d.sample.txt.gz'

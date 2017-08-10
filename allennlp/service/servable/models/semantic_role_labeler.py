@@ -59,6 +59,6 @@ class SemanticRoleLabelerServable(Servable):
         # pylint: disable=protected-access
         # use default WordTokenizer, since there's none in the experiment spec
         return SemanticRoleLabelerServable(tokenizer=WordTokenizer(),
-                                           token_indexers=dataset_reader._token_indexers,
+                                           token_indexers=dataset_reader._token_indexers,  # type: ignore
                                            model=model)
         # pylint: enable=protected-access
