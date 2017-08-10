@@ -23,10 +23,11 @@ description of the problem and the solution, and include a link to relevant issu
 Once your pull request is created, our continuous build system will check your pull request.  Continuous
 build will test that:
 
-* The code compiles.
-* All tests pass.
-* `pylint` accepts the code style (our guidelines are based on PEP8).
-* The docs can be generated successfully.
+* The code compiles
+* All tests pass
+* `pylint` accepts the code style (our guidelines are based on PEP8)
+* `mypy` typechecks the Python code
+* The docs can be generated successfully
 
 If your code fails one of these checks, you will be expected to fix your pull request before it is considered.
 
@@ -36,7 +37,7 @@ locally are:
 
 * `pytest -v`.  If you run this in the root AllenNLP directory, this will run all of our tests.
 * `./scripts/pylint.sh`.  This will make sure your code conforms to our automatically-checkable style guidelines.
-To see our project specific linting settings, look at `.pylintrc`.
+* `./scripts/mypy.sh`.  This will run the mypy typechecker over the code.
 
 ### Do you have a suggestion for an enhancement?
 
