@@ -91,13 +91,20 @@ class BooleanAccuracyTest(AllenNlpTestCase):
                                 [4, 5],
                                 [7, 7]])
         accuracy(predictions, targets)
-        assert accuracy.get_metric() == 0.50  # 2 / 4
+        assert accuracy.get_metric() == 2. / 4
+
+        mask = torch.ones(4, 2)
+        mask[1, 1] = 0
+        accuracy(predictions, targets, mask)
+        assert accuracy.get_metric() == 5. / 8
+
         targets[1, 1] = 3
         accuracy(predictions, targets)
-        assert accuracy.get_metric() == 0.625  # 5 / 8
+        assert accuracy.get_metric() == 8. / 12
+
         accuracy.reset()
         accuracy(predictions, targets)
-        assert accuracy.get_metric() == 0.75  # 3 / 4
+        assert accuracy.get_metric() == 3. / 4
 
 class F1MeasureTest(AllenNlpTestCase):
     def test__f1_measure_catches_exceptions(self):

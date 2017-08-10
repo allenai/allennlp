@@ -147,14 +147,10 @@ class BooleanAccuracy(Metric):
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : ``torch.Tensor``, required.
-            A tensor of integer class label of shape (batch_size, ...). It must be the same
-            shape as the ``predictions`` tensor.
+            A tensor of the same shape as ``predictions``.
         mask: ``torch.Tensor``, optional (default = None).
-            Currently must be ``None``.  We keep this parameter just to match the API.
+            A tensor of the same shape as ``predictions``.
         """
-        if mask is not None:
-            raise NotImplementedError("BasicAccuracy does not handle masks at the moment")
-
         # If you actually passed in Variables here instead of Tensors, this will be a huge memory
         # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
         # that we're using tensors here first.
@@ -162,6 +158,14 @@ class BooleanAccuracy(Metric):
             predictions = predictions.data
         if isinstance(gold_labels, Variable):
             gold_labels = gold_labels.data
+        if isinstance(mask, Variable):
+            mask = mask.data
+
+        if mask is not None:
+            # We can multiply by the mask up front, because we're just checking equality below, and
+            # this way everything that's masked will be equal.
+            predictions = predictions * mask
+            gold_labels = gold_labels * mask
 
         batch_size = predictions.size(0)
         predictions = predictions.view(batch_size, -1)
