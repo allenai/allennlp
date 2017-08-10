@@ -1,7 +1,9 @@
+import os
 from typing import Dict
 
-from allennlp.common import Params, constants
+from allennlp.common import Params
 from allennlp.data import Vocabulary
+from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.token_indexers import TokenIndexer
@@ -34,24 +36,19 @@ class DecomposableAttentionServable(Servable):
         return output_dict
 
     @classmethod
-    def from_params(cls, params: Params) -> 'DecomposableAttentionServable':
-        glove_path = params.pop('glove_path')
-        constants.GLOVE_PATH = glove_path
+    def from_config(cls, config: Params) -> 'DecomposableAttentionServable':
+        dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
 
-        tokenizer = Tokenizer.from_params(params.pop("tokenizer"))
-
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers')
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-
-        vocab_dir = params.pop('vocab_dir')
+        serialization_prefix = config.pop('serialization_prefix')
+        vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
-        model_params = params.pop("model")
+        model_params = config.pop("model")
         assert model_params.pop("type") == "decomposable_attention"
         model = DecomposableAttention.from_params(vocab, model_params)
 
-        return DecomposableAttentionServable(tokenizer=tokenizer,
-                                             token_indexers=token_indexers,
+        # pylint: disable=protected-access
+        return DecomposableAttentionServable(tokenizer=dataset_reader._tokenizer,
+                                             token_indexers=dataset_reader._token_indexers,
                                              model=model)
+        # pylint: enable=protected-access

@@ -1,9 +1,8 @@
 import json
 from typing import Dict, Any, Optional, List
 
-from allennlp.common.params import Params, replace_none
-
-import pyhocon
+from allennlp.common import Params, constants
+from allennlp.common.params import replace_none
 
 JSONDict = Dict[str, Any]  # pylint: disable=invalid-name
 
@@ -62,13 +61,18 @@ class ServableCollection:
                 'tests/fixtures/glove.6B.100d.sample.txt.gz'
             srl_config = Params(replace_none(config))
 
-        snli_params = Params(replace_none(pyhocon.ConfigFactory.parse_file(
-                'allennlp/service/servable/models/decomposable_attention.conf')))
+        with open('experiment_config/decomposable_attention.json') as f:
+            config = json.loads(f.read())
+            config['serialization_prefix'] = 'tests/fixtures/decomposable_attention'
+            # TODO(joelgrus) once the correct config exists, just modify it
+            constants.GLOVE_PATH = 'tests/fixtures/glove.6B.300d.sample.txt.gz'
+            decomposable_attention_config = Params(replace_none(config))
 
         all_models = {
                 'bidaf': bidaf.BidafServable.from_config(bidaf_config),
                 'srl': semantic_role_labeler.SemanticRoleLabelerServable.from_config(srl_config),
-                'snli': decomposable_attention.DecomposableAttentionServable.from_params(snli_params),
+                'snli': decomposable_attention.DecomposableAttentionServable.from_config(
+                        decomposable_attention_config),
         }  # type: Dict[str, Servable]
 
         return ServableCollection(all_models)
