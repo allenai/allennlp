@@ -19,9 +19,7 @@ class DecomposableAttentionServable(Servable):
         self.tokenizer = tokenizer
         self.token_indexers = token_indexers
         self.model = model
-
-        initializer = InitializerApplicator()
-        initializer(self.model)
+        self.model.eval()
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
         premise_text = inputs["premise"]

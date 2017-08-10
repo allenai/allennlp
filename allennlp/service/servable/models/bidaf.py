@@ -18,6 +18,7 @@ class BidafServable(Servable):
         self.tokenizer = tokenizer
         self.token_indexers = token_indexers
         self.model = model
+        self.model.eval()
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
         question_text = inputs["question"]

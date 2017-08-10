@@ -20,6 +20,7 @@ class SemanticRoleLabelerServable(Servable):
         self.tokenizer = tokenizer
         self.token_indexers = token_indexers
         self.model = model
+        self.model.eval()
         self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
 
     def predict_json(self, inputs: JSONDict) -> JSONDict:
