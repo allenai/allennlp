@@ -7,7 +7,6 @@ ENV PYTHONHASHSEED 2157
 
 WORKDIR /stage
 EXPOSE 8000
-ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["/bin/bash"]
 
 # Install base packages.
@@ -23,13 +22,15 @@ RUN apt-get update --fix-missing && apt-get install -y \
     libxrender1 \
     wget \
     libevent-dev \
-    build-essential
+    build-essential && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Anaconda.
 RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
     wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-    rm ~/miniconda.sh
+    rm ~/miniconda.sh && \
+    echo "source activate allennlp" >> ~/.bashrc
 
 # Create a conda environment so we have a reproducible version of Python
 RUN conda create -n allennlp --yes python=3.5
