@@ -178,7 +178,9 @@ The pod name will be your job name followed by some additional characters.
 
 6. When you are done, don't forget to kill your job using `kubectl delete -f /path/to/kubernetes-dev-environment.yaml`
 
-## Communication
+## Team
 
-* [User list](https://groups.google.com/a/allenai.org/forum/#!forum/allennlp-users): announcements, user questions, and discussion
-* [GitHub issues](https://github.com/allenai/allennlp/issues): bug reports and feature requests
+AllenNLP is an open-source project backed by the Allen Institute for Artificial Intelligence (AI2).  AI2 is a non-profit
+institute with the mission to contribute to humanity through high-impact AI research and engineering.  To learn more about
+AI2, visit www.allenai.org.  To learn more about who contributed to this codebase,
+see [our contributors](https://github.com/allenai/allennlp/graphs/contributors).
