@@ -24,10 +24,9 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
                            type=str,
                            required=True,
                            help='path to the configuration file that trained the model')
-    subparser.add_argument('--weights_file',
-                           type=str,
-                           required=True,
-                           help='path to the file containing the trained weights')
+    subparser.add_argument('--epoch',
+                           type=int,
+                           help='if specified, use saved weights from this epoch (otherwise use "best")')
     subparser.add_argument('--evaluation_data_file',
                            type=str,
                            required=True,
@@ -48,8 +47,9 @@ def evaluate(model: Model,
     model.eval()
 
     generator = iterator(dataset, num_epochs=1)
+    logger.info("Iterating over dataset")
     for batch in tqdm.tqdm(generator):
-        tensor_batch = arrays_to_variables(batch, cuda_device)
+        tensor_batch = arrays_to_variables(batch, cuda_device, for_training=False)
         model.forward(**tensor_batch)
 
     return model.get_metrics()
@@ -75,9 +75,13 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     cuda_device = args.cuda_device
 
     # Instantiate model
+    if args.epoch:
+        weights_file = os.path.join(serialization_prefix, "model_state_epoch_{}.th".format(args.epoch))
+    else:
+        weights_file = os.path.join(serialization_prefix, "best.th")
+
     model = Model.from_params(vocab, config.pop('model'))
-    model_state = torch.load(args.weights_file,
-                             map_location=device_mapping(cuda_device))
+    model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
     model.load_state_dict(model_state)
     model.eval()
 
@@ -85,6 +89,8 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
     metrics = evaluate(model, dataset, iterator, cuda_device)
 
+    logger.info("Finished evaluating.")
+    logger.info("Metrics:")
     for key, metric in metrics.items():
         logger.info("%s: %s", key, metric)
 

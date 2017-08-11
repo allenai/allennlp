@@ -14,7 +14,6 @@ class TestEvaluate(AllenNlpTestCase):
 
         raw_args = ["evaluate",
                     "--config_file", "tests/fixtures/bidaf/experiment.json",
-                    "--weights_file", "tests/fixtures/bidaf/serialization/best.th",
                     "--evaluation_data_file", "tests/fixtures/bidaf/data/data.json"]
 
         args = parser.parse_args(raw_args)
