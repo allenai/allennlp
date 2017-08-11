@@ -64,8 +64,8 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
         bio_tags = ["B-ARG-1", "I-ARG-1", "O", "B-V", "B-ARGM-ADJ", "O"]
         sentence = ["Mark", "and", "Matt", "were", "running", "fast", "."]
 
-        gold_file_path = self.TEST_DIR + "gold_conll_eval.txt"
-        prediction_file_path = self.TEST_DIR + "prediction_conll_eval.txt"
+        gold_file_path = os.path.join(self.TEST_DIR, "gold_conll_eval.txt")
+        prediction_file_path = os.path.join(self.TEST_DIR, "prediction_conll_eval.txt")
         with open(gold_file_path, "a+") as gold_file, open(prediction_file_path, "a+") as prediction_file:
             # Use the same bio tags as prediction vs gold to make it obvious by looking
             # at the perl script output if something is wrong. Write them twice to
