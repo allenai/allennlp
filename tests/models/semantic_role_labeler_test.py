@@ -1,4 +1,6 @@
+# pylint: disable=no-self-use
 import numpy
+import subprocess
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -6,6 +8,8 @@ from allennlp.data.dataset_readers import SrlReader
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
+from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
+from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -50,3 +54,25 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
         # Predictions are a distribution.
         numpy.testing.assert_almost_equal(numpy.sum(output["class_probabilities"], -1),
                                           numpy.array([1, 1, 1, 1]))
+
+    def test_bio_tags_correctly_convert_to_conll_format(self):
+        bio_tags = ["B-ARG-1", "I-ARG-1", "O", "B-V", "B-ARGM-ADJ", "O"]
+        conll_tags = convert_bio_tags_to_conll_format(bio_tags)
+        assert conll_tags == ["(ARG-1*", "*)", "*", "(V*)", "(ARGM-ADJ*)", "*"]
+
+
+    def test_perl_eval_script_can_run_on_printed_conll_files(self):
+        bio_tags = ["B-ARG-1", "I-ARG-1", "O", "B-V", "B-ARGM-ADJ", "O"]
+        sentence = ["Mark", "and", "Matt", "were", "running", "fast", "."]
+
+        gold_file_path = self.TEST_DIR + "gold_conll_eval.txt"
+        prediction_file_path = self.TEST_DIR + "prediction_conll_eval.txt"
+        with open(gold_file_path, "a+") as gold_file, open(prediction_file_path, "a+") as prediction_file:
+            # Use the same bio tags as prediction vs gold to make it obvious by looking
+            # at the perl script output if something is wrong.
+            write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
+            write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
+
+        perl_script_command = ["perl", "./scripts/srl-eval.pl", prediction_file_path, gold_file_path]
+        exit_code = subprocess.check_call(perl_script_command)
+        assert exit_code == 0
