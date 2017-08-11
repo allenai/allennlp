@@ -1,6 +1,6 @@
-# pylint: disable=no-self-use
-import numpy
+# pylint: disable=no-self-use,invalid-name
 import subprocess
+import numpy
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -60,7 +60,6 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
         conll_tags = convert_bio_tags_to_conll_format(bio_tags)
         assert conll_tags == ["(ARG-1*", "*)", "*", "(V*)", "(ARGM-ADJ*)", "*"]
 
-
     def test_perl_eval_script_can_run_on_printed_conll_files(self):
         bio_tags = ["B-ARG-1", "I-ARG-1", "O", "B-V", "B-ARGM-ADJ", "O"]
         sentence = ["Mark", "and", "Matt", "were", "running", "fast", "."]
@@ -69,7 +68,8 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
         prediction_file_path = self.TEST_DIR + "prediction_conll_eval.txt"
         with open(gold_file_path, "a+") as gold_file, open(prediction_file_path, "a+") as prediction_file:
             # Use the same bio tags as prediction vs gold to make it obvious by looking
-            # at the perl script output if something is wrong.
+            # at the perl script output if something is wrong. Write them twice to
+            # ensure that the perl script deals with multiple sentences.
             write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
             write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
 
