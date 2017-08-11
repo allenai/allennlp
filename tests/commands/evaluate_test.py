@@ -3,7 +3,6 @@ import argparse
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.evaluate import evaluate_from_args, add_subparser
-from allennlp.models import Model
 
 
 class TestEvaluate(AllenNlpTestCase):
