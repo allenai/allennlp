@@ -8,12 +8,10 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestApp(AllenNlpTestCase):
 
-    def setUp(self):
-        super().setUp()
-        app = make_app()
-        app.servables = ServableCollection.default()
-        app.testing = True
-        self.client = app.test_client
+    app = make_app()
+    app.servables = ServableCollection.default()
+    app.testing = True
+    client = app.test_client
 
     def test_list_models(self):
         _, response = self.client.get("/models")
