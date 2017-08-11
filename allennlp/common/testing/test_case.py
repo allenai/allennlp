@@ -70,6 +70,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
                                              model: Model,
                                              dataset: Dataset,
                                              iterator: DataIterator = None):
+        model.eval()  # set eval mode, to turn off things like dropout
         data_iterator = iterator or BasicIterator()
         single_batch = next(data_iterator(dataset))
         single_batch = arrays_to_variables(single_batch)
@@ -84,6 +85,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         loaded_model = model
         loaded_model.zero_grad()
         loaded_model.load_state_dict(torch.load(self.MODEL_FILE))
+        loaded_model.eval()  # set eval mode, to turn off things like dropout
         loaded_model_predictions = loaded_model.forward(**single_batch)
 
         # Check loaded model's loss exists and we can compute gradients.
