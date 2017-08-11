@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import subprocess
+import os
 import numpy
 
 from allennlp.common import Params
