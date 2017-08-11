@@ -7,7 +7,7 @@ class TestSnliReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
         reader = SnliReader()
-        dataset = reader.read('tests/fixtures/snli_example.jsonl')
+        dataset = reader.read('tests/fixtures/data/snli.jsonl')
 
         instance1 = {"premise": ["A", "person", "on", "a", "horse",
                                  "jumps", "over", "a", "broken", "down", "airplane", "."],

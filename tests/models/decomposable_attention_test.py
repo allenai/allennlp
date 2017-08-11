@@ -18,7 +18,7 @@ class TestDecomposableAttention(AllenNlpTestCase):
         super(TestDecomposableAttention, self).setUp()
 
         constants.GLOVE_PATH = 'tests/fixtures/glove.6B.300d.sample.txt.gz'
-        dataset = SnliReader().read('tests/fixtures/snli_example.jsonl')
+        dataset = SnliReader().read('tests/fixtures/data/snli.jsonl')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)

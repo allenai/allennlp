@@ -24,9 +24,9 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
                            type=str,
                            required=True,
                            help='path to the configuration file that trained the model')
-    subparser.add_argument('--epoch',
-                           type=int,
-                           help='if specified, use saved weights from this epoch (otherwise use "best")')
+    subparser.add_argument('--weights_file',
+                           type=str,
+                           help='path to the saved model weights (defaults to best.th in the config-specified serialization directory')
     subparser.add_argument('--evaluation_data_file',
                            type=str,
                            required=True,
@@ -75,10 +75,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     cuda_device = args.cuda_device
 
     # Instantiate model
-    if args.epoch:
-        weights_file = os.path.join(serialization_prefix, "model_state_epoch_{}.th".format(args.epoch))
-    else:
-        weights_file = os.path.join(serialization_prefix, "best.th")
+    weights_file = args.weights_file or os.path.join(serialization_prefix, "best.th")
 
     model = Model.from_params(vocab, config.pop('model'))
     model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))

@@ -15,7 +15,7 @@ from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 class TestTrainer(AllenNlpTestCase):
     def setUp(self):
         super(TestTrainer, self).setUp()
-        dataset = SequenceTaggingDatasetReader().read('tests/fixtures/sequence_tagging_example.tsv')
+        dataset = SequenceTaggingDatasetReader().read('tests/fixtures/data/sequence_tagging.tsv')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)
