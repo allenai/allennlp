@@ -1,4 +1,5 @@
 from typing import List
+import math
 import random
 
 from overrides import overrides
@@ -23,6 +24,10 @@ class BasicIterator(DataIterator):
     """
     def __init__(self, batch_size: int = 32) -> None:
         self._batch_size = batch_size
+
+    @overrides
+    def get_num_batches(self, dataset: Dataset) -> int:
+        return math.ceil(len(dataset.instances) / self._batch_size)
 
     @overrides
     def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:

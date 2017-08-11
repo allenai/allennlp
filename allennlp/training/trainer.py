@@ -1,7 +1,7 @@
 import logging
 import os
 import shutil
-from typing import Optional, List  # pylint: disable=unused-import
+from typing import Dict, Optional, List  # pylint: disable=unused-import
 
 import torch
 from torch.nn.utils.clip_grad import clip_grad_norm
@@ -16,6 +16,9 @@ from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+def _description_from_metrics(metrics: Dict[str, float]) -> str:
+    return ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
 
 
 class Trainer:
@@ -107,6 +110,9 @@ class Trainer:
                     parameter.register_hook(clip_function)
 
         logger.info("Beginning training.")
+        num_training_batches = self._iterator.get_num_batches(self._train_dataset)
+        if self._validation_dataset is not None:
+            num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
         for epoch in range(epoch_counter, self._num_epochs):
             train_loss = 0.0
             val_loss = 0.0
@@ -114,7 +120,11 @@ class Trainer:
             # Set the model to "train" mode.
             self._model.train()
             train_generator = self._iterator(self._train_dataset, num_epochs=1)
-            for batch in tqdm.tqdm(train_generator):
+
+            train_progress_bar = tqdm.tqdm(train_generator, total=num_training_batches)
+            batch_num = 0
+            for batch in train_progress_bar:
+                batch_num += 1
                 tensor_batch = arrays_to_variables(batch, self._cuda_device)
                 self._optimizer.zero_grad()
                 output_dict = self._model.forward(**tensor_batch)
@@ -131,19 +141,29 @@ class Trainer:
                 if self._grad_norm:
                     clip_grad_norm(self._model.parameters(), self._grad_norm)
                 self._optimizer.step()
-            metrics = self._model.get_metrics(reset=True) or {}
-            metrics["loss"] = train_loss
+                metrics = self._model.get_metrics()
+                metrics["loss"] = float(train_loss / batch_num)
+                train_progress_bar.set_description(_description_from_metrics(metrics))
+            metrics = self._model.get_metrics(reset=True)
+            metrics["loss"] = train_loss / batch_num
+
             if self._validation_dataset is not None:
                 # Switch to evaluation mode.
                 self._model.eval()
                 val_generator = self._iterator(self._validation_dataset, num_epochs=1)
-                for batch in tqdm.tqdm(val_generator):
+                val_progress_bar = tqdm.tqdm(val_generator, total=num_validation_batches)
+                batch_num = 0
+                for batch in val_progress_bar:
+                    batch_num += 1
                     tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=False)
                     val_output_dict = self._model.forward(**tensor_batch)
                     loss = val_output_dict["loss"]
                     val_loss += loss.data.cpu().numpy()
-                val_metrics = self._model.get_metrics(reset=True) or {}
-                val_metrics["loss"] = val_loss
+                    metrics = self._model.get_metrics()
+                    metrics["loss"] = float(val_loss / batch_num)
+                    val_progress_bar.set_description(_description_from_metrics(metrics))
+                val_metrics = self._model.get_metrics(reset=True)
+                val_metrics["loss"] = val_loss / batch_num
                 message_template = "Training %s : %3f    Validation %s : %3f "
                 for name, value in metrics.items():
                     logger.info(message_template, name, value, name, val_metrics[name])
