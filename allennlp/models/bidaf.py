@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 import torch
 from torch.autograd import Variable
-from torch.nn.functional import nll_loss, log_softmax
+from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, constants
 from allennlp.data import Instance, Vocabulary
