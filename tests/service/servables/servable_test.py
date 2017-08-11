@@ -11,8 +11,7 @@ class TestServable(Servable):
 
 class TestApp(TestCase):
 
-    def setUp(self):
-        self.default_models = ServableCollection.default()
+    default_models = ServableCollection.default()
 
     def test_list_available(self):
         available = self.default_models.list_available()
