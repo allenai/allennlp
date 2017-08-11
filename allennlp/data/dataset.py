@@ -47,6 +47,7 @@ class Dataset:
         Converts all ``UnindexedFields`` in all ``Instances`` in this ``Dataset`` into
         ``IndexedFields``.  This modifies the current object, it does not return a new object.
         """
+        logger.info("Indexing dataset")
         for instance in tqdm.tqdm(self.instances):
             instance.index_fields(vocab)
 

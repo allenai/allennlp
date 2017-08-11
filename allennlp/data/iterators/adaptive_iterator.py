@@ -92,6 +92,15 @@ class AdaptiveIterator(BucketIterator):
                                                batch_size=batch_size)
 
     @overrides
+    def get_num_batches(self, dataset: Dataset) -> int:
+        """
+        This is a non-trivial operation with an ``AdaptiveIterator``, and it's only approximate,
+        because the actual number of batches constructed depends on the padding noise.  Call this
+        sparingly.
+        """
+        return len(self._create_batches(dataset))
+
+    @overrides
     def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
         if self._biggest_batch_first:
             return super(AdaptiveIterator, self)._create_batches(dataset, shuffle)

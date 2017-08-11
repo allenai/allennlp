@@ -43,6 +43,14 @@ class DataIterator(Registrable):
             for _ in range(num_epochs):
                 yield from self._yield_one_epoch(dataset, shuffle)
 
+    def get_num_batches(self, dataset: Dataset) -> int:
+        """
+        Returns the number of batches that ``dataset`` will be split into; if you want to track
+        progress through the batch with the generator produced by ``__call__``, this could be
+        useful.
+        """
+        raise NotImplementedError
+
     def _yield_one_epoch(self, dataset: Dataset, shuffle: bool):
         grouped_instances = self._create_batches(dataset, shuffle)
         for group in grouped_instances:
