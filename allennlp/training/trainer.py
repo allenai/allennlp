@@ -13,7 +13,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data import Dataset
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
-from allennlp.nn.util import arrays_to_variables
+from allennlp.nn.util import arrays_to_variables, device_mapping
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -220,12 +220,7 @@ class Trainer:
         training_state_path = os.path.join(self._serialization_prefix,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
 
-        def device_mapping(storage, location):  # pylint: disable=unused-argument
-            if self._cuda_device >= 0:
-                return storage.cuda(self._cuda_device)
-            else:
-                return storage
-        model_state = torch.load(model_path, map_location=device_mapping)
+        model_state = torch.load(model_path, map_location=device_mapping(self._cuda_device))
         training_state = torch.load(training_state_path)
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
