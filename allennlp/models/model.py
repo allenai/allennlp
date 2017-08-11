@@ -81,6 +81,7 @@ class Model(torch.nn.Module, Registrable):
         :class:`~allennlp.training.Metric`s handling the accumulation of the metric until this
         method is called.
         """
+        # pylint: disable=unused-argument,no-self-use
         return {}
 
     @classmethod
