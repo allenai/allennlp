@@ -384,7 +384,7 @@ def replace_masked_values(tensor: Variable, mask: Variable, replace_with: float)
 def device_mapping(cuda_device: int):
     """
     In order to `torch.load()` a GPU-trained model onto a CPU (or specific GPU),
-    you have to supply a `device_mapping` function. Call this with
+    you have to supply a `map_location` function. Call this with
     the desired `cuda_device` to get the function that `torch.load()` needs.
     """
     def inner_device_mapping(storage: torch.Storage, location) -> torch.Storage:  # pylint: disable=unused-argument
