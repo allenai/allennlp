@@ -14,20 +14,25 @@ class TokenCharactersEncoder(TokenEmbedder):
     A ``TokenCharactersEncoder`` takes the output of a
     :class:`~allennlp.data.token_indexers.TokenCharactersIndexer`, which is a tensor of shape
     (batch_size, num_tokens, num_characters), embeds the characters, runs a token-level encoder, and
-    returns the result, which is a tensor of shape (batch_size, num_tokens, encoding_dim).
+    returns the result, which is a tensor of shape (batch_size, num_tokens, encoding_dim).  We also
+    optionally apply dropout after the token-level encoder.
 
     We take the embedding and encoding modules as input, so this class is itself quite simple.
     """
-    def __init__(self, embedding: Embedding, encoder: Seq2VecEncoder) -> None:
+    def __init__(self, embedding: Embedding, encoder: Seq2VecEncoder, dropout: float = 0.0) -> None:
         super(TokenCharactersEncoder, self).__init__()
         self._embedding = TimeDistributed(embedding)
         self._encoder = TimeDistributed(encoder)
+        if dropout > 0:
+            self._dropout = torch.nn.Dropout(p=dropout)
+        else:
+            self._dropout = lambda x: x
 
     def get_output_dim(self) -> int:
         return self._encoder._module.get_output_dim()  # pylint: disable=protected-access
 
     def forward(self, token_characters: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
-        return self._encoder(self._embedding(token_characters))
+        return self._dropout(self._encoder(self._embedding(token_characters)))
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':
@@ -38,4 +43,6 @@ class TokenCharactersEncoder(TokenEmbedder):
         embedding = Embedding.from_params(vocab, embedding_params)
         encoder_params = params.pop("encoder")  # type: Params
         encoder = Seq2VecEncoder.from_params(encoder_params)
-        return cls(embedding, encoder)
+        dropout = params.pop("dropout", 0.0)
+        params.assert_empty(cls.__name__)
+        return cls(embedding, encoder, dropout)

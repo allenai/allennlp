@@ -31,7 +31,8 @@
           "embedding_dim": 8,
           "num_filters": 100,
           "ngram_filter_sizes": [5]
-        }
+        },
+        "dropout": 0.2
       }
     },
     "num_highway_layers": 2,
@@ -40,7 +41,8 @@
       "bidirectional": true,
       "input_size": 200,
       "hidden_size": 100,
-      "num_layers": 1
+      "num_layers": 1,
+      "dropout": 0.2
     },
     "similarity_function": {
       "type": "linear",
@@ -53,15 +55,18 @@
       "bidirectional": true,
       "input_size": 800,
       "hidden_size": 100,
-      "num_layers": 2
+      "num_layers": 2,
+      "dropout": 0.2
     },
     "span_end_encoder": {
       "type": "lstm",
       "bidirectional": true,
       "input_size": 1400,
       "hidden_size": 100,
-      "num_layers": 2
+      "num_layers": 2,
+      "dropout": 0.2
     },
+    "dropout": 0.2,
     "initializer": {
         "default": {
           "type": "normal",
@@ -77,13 +82,12 @@
     "batch_size": 40
   },
   "optimizer": {
-    "type": "adadelta",
-    "lr": 0.5,
-    "rho": 0.95
+    "type": "sgd",
+    "lr": 0.00001
   },
   "num_epochs": 12,
-  "grad_norm": 100.0,
-  "grad_clipping": 100,
+  "grad_norm": 0.1,
+  "grad_clipping": 0.1,
   "patience" : 12,
   "serialization_prefix" : "/net/efs/aristo/allennlp/bidaf/bidaf-model",
   "cuda_device" : 0
