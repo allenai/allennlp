@@ -121,9 +121,9 @@ class Trainer:
             self._model.train()
             train_generator = self._iterator(self._train_dataset, num_epochs=1)
 
-            train_progress_bar = tqdm.tqdm(train_generator, total=num_training_batches)
+            train_generator_tqdm = tqdm.tqdm(train_generator, total=num_training_batches)
             batch_num = 0
-            for batch in train_progress_bar:
+            for batch in train_generator_tqdm:
                 batch_num += 1
                 tensor_batch = arrays_to_variables(batch, self._cuda_device)
                 self._optimizer.zero_grad()
@@ -143,7 +143,7 @@ class Trainer:
                 self._optimizer.step()
                 metrics = self._model.get_metrics()
                 metrics["loss"] = float(train_loss / batch_num)
-                train_progress_bar.set_description(_description_from_metrics(metrics))
+                train_generator_tqdm.set_description(_description_from_metrics(metrics))
             metrics = self._model.get_metrics(reset=True)
             metrics["loss"] = train_loss / batch_num
 
@@ -151,9 +151,9 @@ class Trainer:
                 # Switch to evaluation mode.
                 self._model.eval()
                 val_generator = self._iterator(self._validation_dataset, num_epochs=1)
-                val_progress_bar = tqdm.tqdm(val_generator, total=num_validation_batches)
+                val_generator_tqdm = tqdm.tqdm(val_generator, total=num_validation_batches)
                 batch_num = 0
-                for batch in val_progress_bar:
+                for batch in val_generator_tqdm:
                     batch_num += 1
                     tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=False)
                     val_output_dict = self._model.forward(**tensor_batch)
@@ -161,7 +161,7 @@ class Trainer:
                     val_loss += loss.data.cpu().numpy()
                     metrics = self._model.get_metrics()
                     metrics["loss"] = float(val_loss / batch_num)
-                    val_progress_bar.set_description(_description_from_metrics(metrics))
+                    val_generator_tqdm.set_description(_description_from_metrics(metrics))
                 val_metrics = self._model.get_metrics(reset=True)
                 val_metrics["loss"] = val_loss / batch_num
                 message_template = "Training %s : %3f    Validation %s : %3f "
