@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 import torch
 from torch.autograd import Variable
-from torch.nn.functional import nll_loss
+from torch.nn.functional import nll_loss, log_softmax
 
 from allennlp.common import Params, constants
 from allennlp.data import Instance, Vocabulary
@@ -53,6 +53,9 @@ class BidirectionalAttentionFlow(Model):
         before predicting span end.
     initializer : ``InitializerApplicator``
         We will use this to initialize the parameters in the model, calling ``initializer(self)``.
+    dropout : ``float``, optional (default=``0.2``)
+        If greater than 0, we will apply dropout with this probability after all encoders (pytorch
+        LSTMs do not apply dropout to their last layer).
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -61,7 +64,8 @@ class BidirectionalAttentionFlow(Model):
                  attention_similarity_function: SimilarityFunction,
                  modeling_layer: Seq2SeqEncoder,
                  span_end_encoder: Seq2SeqEncoder,
-                 initializer: InitializerApplicator) -> None:
+                 initializer: InitializerApplicator,
+                 dropout: float = 0.2) -> None:
         super(BidirectionalAttentionFlow, self).__init__()
 
         self._vocab = vocab
@@ -85,6 +89,10 @@ class BidirectionalAttentionFlow(Model):
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
         self._span_accuracy = BooleanAccuracy()
+        if dropout > 0:
+            self._dropout = torch.nn.Dropout(p=dropout)
+        else:
+            self._dropout = lambda x: x
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -138,8 +146,8 @@ class BidirectionalAttentionFlow(Model):
 
         question_sequence_lengths = util.get_lengths_from_binary_sequence_mask(question_mask)
         passage_sentence_lengths = util.get_lengths_from_binary_sequence_mask(passage_mask)
-        encoded_question = self._phrase_layer(embedded_question, question_sequence_lengths)
-        encoded_passage = self._phrase_layer(embedded_passage, passage_sentence_lengths)
+        encoded_question = self._dropout(self._phrase_layer(embedded_question, question_sequence_lengths))
+        encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_sentence_lengths))
         encoding_dim = encoded_question.size(-1)
 
         # Shape: (batch_size, passage_length, question_length)
@@ -172,11 +180,11 @@ class BidirectionalAttentionFlow(Model):
                                           encoded_passage * tiled_question_passage_vector],
                                          dim=-1)
 
-        modeled_passage = self._modeling_layer(final_merged_passage)
+        modeled_passage = self._dropout(self._modeling_layer(final_merged_passage))
         modeling_dim = modeled_passage.size(-1)
 
         # Shape: (batch_size, passage_length, encoding_dim * 4 + modeling_dim))
-        span_start_input = torch.cat([final_merged_passage, modeled_passage], dim=-1)
+        span_start_input = self._dropout(torch.cat([final_merged_passage, modeled_passage], dim=-1))
         # Shape: (batch_size, passage_length)
         span_start_logits = self._span_start_predictor(span_start_input).squeeze(-1)
         # Shape: (batch_size, passage_length)
@@ -196,9 +204,9 @@ class BidirectionalAttentionFlow(Model):
                                              modeled_passage * tiled_start_representation],
                                             dim=-1)
         # Shape: (batch_size, passage_length, encoding_dim)
-        encoded_span_end = self._span_end_encoder(span_end_representation)
+        encoded_span_end = self._dropout(self._span_end_encoder(span_end_representation))
         # Shape: (batch_size, passage_length, encoding_dim * 4 + span_end_encoding_dim)
-        span_end_input = torch.cat([final_merged_passage, encoded_span_end], dim=-1)
+        span_end_input = self._dropout(torch.cat([final_merged_passage, encoded_span_end], dim=-1))
         span_end_logits = self._span_end_predictor(span_end_input).squeeze(-1)
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
 
@@ -377,6 +385,7 @@ class BidirectionalAttentionFlow(Model):
         initializer_params = params.pop('initializer', default_initializer_params)
         initializer = InitializerApplicator.from_params(initializer_params)
 
+        dropout = params.pop('dropout', 0.2)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
@@ -385,4 +394,5 @@ class BidirectionalAttentionFlow(Model):
                    attention_similarity_function=similarity_function,
                    modeling_layer=modeling_layer,
                    span_end_encoder=span_end_encoder,
-                   initializer=initializer)
+                   initializer=initializer,
+                   dropout=dropout)
