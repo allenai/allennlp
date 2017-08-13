@@ -133,7 +133,8 @@ class SemanticRoleLabeler(Model):
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
-            self.metric(class_probabilities, tags, mask)
+            if self.metric is not None:
+                self.metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict
