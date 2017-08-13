@@ -257,7 +257,8 @@ class SemanticRoleLabeler(Model):
         # TODO(Mark): Try to make passing these parameters to the metric configurable. Seems hard.
         tag_vocab = vocab.get_index_to_token_vocabulary("tags")
         outside_index = vocab.get_token_index("O", "tags")
-        metric = ConllSpanBasedF1Measure(tag_vocab, ignore_classes=[outside_index])
+        verb_index = vocab.get_token_index("B-V", "tags")
+        metric = ConllSpanBasedF1Measure(tag_vocab, ignore_classes=[outside_index, verb_index])
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder,
