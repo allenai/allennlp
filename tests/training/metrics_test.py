@@ -5,7 +5,9 @@ import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
-from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, F1Measure
+from allennlp.data import Vocabulary
+from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy
+from allennlp.training.metrics import F1Measure, ConllSpanBasedF1Measure
 
 class CategoricalAccuracyTest(AllenNlpTestCase):
     def test_categorical_accuracy(self):
@@ -211,3 +213,89 @@ class F1MeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(precision, 1.0)
         numpy.testing.assert_almost_equal(recall, 0.5)
         numpy.testing.assert_almost_equal(f1, 0.66666666666)
+
+
+class ConllSpanBasedF1Test(AllenNlpTestCase):
+
+    def setUp(self):
+        super(ConllSpanBasedF1Test, self).setUp()
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace("O", "tags")
+        vocab.add_token_to_namespace("B-ARG1", "tags")
+        vocab.add_token_to_namespace("I-ARG1", "tags")
+        vocab.add_token_to_namespace("B-ARG2", "tags")
+        vocab.add_token_to_namespace("I-ARG2", "tags")
+        self.vocab = vocab
+
+    def test_conll_span_based_f1_extracts_correct_spans(self):
+        o_index = self.vocab.get_token_index("O", "tags")
+        tag_vocab = self.vocab.get_index_to_token_vocabulary("tags")
+        metric = ConllSpanBasedF1Measure(tag_vocab, ignore_classes=[o_index])
+
+        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "B-ARG1", "B-ARG2"]
+        indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
+        spans = metric._extract_spans(indices)
+        assert spans == {((1, 2), "ARG1"), ((4, 5), "ARG2"), ((6, 6), "ARG1"), ((7, 7), "ARG2")}
+
+        # Check that invalid BIO sequences are handled as non-spans.
+        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "I-ARG1", "B-ARG2", "I-ARG2", "B-ARG1", "I-ARG2"]
+        indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
+        spans = metric._extract_spans(indices)
+        assert spans == {((1, 2), "ARG1"), ((5, 6), "ARG2"), ((7, 7), "ARG1")}
+
+    def test_span_metrics_are_computed_correctly(self):
+        gold_labels = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "O", "O", "O"]
+        gold_indices = [self.vocab.get_token_index(x, "tags") for x in gold_labels]
+
+        gold_tensor = torch.Tensor([gold_indices])
+
+        prediction_tensor = torch.rand([1, 9, self.vocab.get_vocab_size("tags")])
+        prediction_tensor[:, 0, 0] = 1
+        prediction_tensor[:, 1, 1] = 1  # (True positive - ARG1
+        prediction_tensor[:, 2, 2] = 1  # *)
+        prediction_tensor[:, 3, 0] = 1
+        prediction_tensor[:, 4, 0] = 1  # (False Negative - ARG2
+        prediction_tensor[:, 5, 0] = 1  # *)
+        prediction_tensor[:, 6, 0] = 1
+        prediction_tensor[:, 7, 1] = 1  # (False Positive - ARG1
+        prediction_tensor[:, 8, 2] = 1  # *)
+
+        o_index = self.vocab.get_token_index("O", "tags")
+        tag_vocab = self.vocab.get_index_to_token_vocabulary("tags")
+        metric = ConllSpanBasedF1Measure(tag_vocab, ignore_classes=[o_index])
+
+        metric(prediction_tensor, gold_tensor)
+
+        assert metric._true_positives["ARG1"] == 1
+        assert metric._true_positives["ARG2"] == 0
+        assert metric._true_positives["O"] == 0
+        assert metric._false_negatives["ARG1"] == 0
+        assert metric._false_negatives["ARG2"] == 1
+        assert metric._false_negatives["O"] == 0
+        assert metric._false_positives["ARG1"] == 1
+        assert metric._false_positives["ARG2"] == 0
+        assert metric._false_positives["O"] == 0
+
+        # Check things are accumulating correctly.
+        metric(prediction_tensor, gold_tensor)
+        assert metric._true_positives["ARG1"] == 2
+        assert metric._true_positives["ARG2"] == 0
+        assert metric._true_positives["O"] == 0
+        assert metric._false_negatives["ARG1"] == 0
+        assert metric._false_negatives["ARG2"] == 2
+        assert metric._false_negatives["O"] == 0
+        assert metric._false_positives["ARG1"] == 2
+        assert metric._false_positives["ARG2"] == 0
+        assert metric._false_positives["O"] == 0
+
+        metric_dict = metric.get_metric()
+
+        numpy.testing.assert_almost_equal(metric_dict["ARG2"]["recall"], 0.0)
+        numpy.testing.assert_almost_equal(metric_dict["ARG2"]["precision"], 0.0)
+        numpy.testing.assert_almost_equal(metric_dict["ARG2"]["f1-measure"], 0.0)
+        numpy.testing.assert_almost_equal(metric_dict["ARG1"]["recall"], 1.0)
+        numpy.testing.assert_almost_equal(metric_dict["ARG1"]["precision"], 0.5)
+        numpy.testing.assert_almost_equal(metric_dict["ARG1"]["f1-measure"], 0.666666666)
+        numpy.testing.assert_almost_equal(metric_dict["overall"]["recall"], 0.5)
+        numpy.testing.assert_almost_equal(metric_dict["overall"]["precision"], 0.5)
+        numpy.testing.assert_almost_equal(metric_dict["overall"]["f1-measure"], 0.5)

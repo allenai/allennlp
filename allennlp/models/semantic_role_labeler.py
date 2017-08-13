@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, TextIO
+from typing import Dict, Any, List, TextIO, Optional
 
 import torch
 from torch.nn.modules.linear import Linear
@@ -14,6 +14,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.training.metrics import ConllSpanBasedF1Measure
 
 
 @Model.register("srl")
@@ -40,17 +41,23 @@ class SemanticRoleLabeler(Model):
         and predicting output tags.
     initializer : ``InitializerApplicator``
         We will use this to initialize the parameters in the model, calling ``initializer(self)``.
+    metric: ConllSpanBasedF1Measure, optional (default = None).
+        A span based metric to compute accuracy whilst training.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
-                 initializer: InitializerApplicator) -> None:
+                 initializer: InitializerApplicator,
+                 metric: Optional[ConllSpanBasedF1Measure] = None) -> None:
         super(SemanticRoleLabeler, self).__init__()
 
         self.vocab = vocab
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
 
+        # For the span based evaluation, we don't want to consider labels for
+        # out of span tokens or verbs, because the verb index is provided to the model.
+        self.metric = metric
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
@@ -101,7 +108,6 @@ class SemanticRoleLabeler(Model):
 
         """
         embedded_text_input = self.text_field_embedder(tokens)
-        # TODO(Mark): Use mask in encoder once all registered encoders have the same API.
         mask = get_text_field_mask(tokens)
         expanded_verb_indicator = verb_indicator.unsqueeze(-1).float()
         # Concatenate the verb feature onto the embedded text. This now
@@ -127,6 +133,7 @@ class SemanticRoleLabeler(Model):
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
+            self.metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict
@@ -174,6 +181,14 @@ class SemanticRoleLabeler(Model):
                 for x in max_likelihood_sequence]
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}
+
+    def get_metrics(self, reset: bool = False):
+        # TODO(Mark): This won't play well with the metrics in Trainer, see how Matt wants it.
+        if self.metric:
+            metric_dict = self.metric.get_metric(reset=reset)
+        else:
+            metric_dict = {}
+        return metric_dict
 
     def get_viterbi_pairwise_potentials(self):
         """
@@ -238,10 +253,15 @@ class SemanticRoleLabeler(Model):
         initializer_params = params.pop('initializer', default_initializer_params)
         initializer = InitializerApplicator.from_params(initializer_params)
 
+        # TODO(Mark): Try to make passing these parameters to the metric configurable. Seems hard.
+        tag_vocab = vocab.get_index_to_token_vocabulary("tags")
+        outside_index = vocab.get_token_index("O", "tags")
+        metric = ConllSpanBasedF1Measure(tag_vocab, ignore_classes=[outside_index])
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder,
-                   initializer=initializer)
+                   initializer=initializer,
+                   metric=metric)
 
 
 def write_to_conll_eval_file(prediction_file: TextIO,
