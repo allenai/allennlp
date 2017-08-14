@@ -204,12 +204,12 @@ class TeOutput extends React.Component {
 
 class Button extends React.Component {
   render() {
-    const { selectedModel, outputState } = this.props;
+    const { selectedModel, outputState, submit } = this.props;
 
-    const type="submit";
+    const type="button";
 
     return (
-      <button id="input--mc-submit" type={type} disabled={outputState === "working"} className="btn btn--icon-disclosure">Run
+      <button id="input--mc-submit" type={type} disabled={outputState === "working"} className="btn btn--icon-disclosure" onClick={() => { submit() }}>Run
         <svg>
           <use xlinkHref="#icon__disclosure"></use>
         </svg>
@@ -276,7 +276,7 @@ class ModelIntro extends React.Component {
 class SrlInput extends React.Component {
   render() {
 
-    const { selectedModel, outputState } = this.props;
+    const { selectedModel, outputState, submit } = this.props;
 
     const title = "Semantic Role Labeling";
     const tooltip = [<strong>Semantic Role Labeling (SRL)</strong>, " is a technique that detects the semantic arguments associated with the verb of a sentence."];
@@ -323,7 +323,7 @@ class SrlInput extends React.Component {
             <input id="input--srl-sentence" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
           </div>
           <div className="form__field form__field--btn">
-            <Button selectedModel={selectedModel} outputState={outputState} />
+            <Button selectedModel={selectedModel} outputState={outputState} submit={submit} />
           </div>
         </form>
       </div>
@@ -558,13 +558,13 @@ class PaneLeft extends React.Component {
 
   render() {
 
-    const { selectedModel, outputState } = this.props;
+    const { selectedModel, outputState, submit } = this.props;
 
     let inputContent;
 
     switch (selectedModel) {
       case "srl":
-        inputContent = (<SrlInput selectedModel={selectedModel} outputState={outputState} />);
+        inputContent = (<SrlInput selectedModel={selectedModel} outputState={outputState} submit={submit} />);
         break;
       case "mc":
         inputContent = (<McInput selectedModel={selectedModel} outputState={outputState} />);
@@ -635,15 +635,22 @@ class App extends React.Component {
   constructor() {
     super();
     this.state = {
-      outputState: "received", // valid values: "working", "empty", "received", "error"
+      outputState: "empty", // valid values: "working", "empty", "received", "error"
       selectedModel: "srl", // valid values: "srl", "mc", "te"
     };
     this.changeModel = this.changeModel.bind(this);
+    this.submit = this.submit.bind(this);
   }
 
   changeModel(thisModel) {
     this.setState({
       selectedModel: thisModel,
+    });
+  }
+
+  submit(thisModel) {
+    this.setState({
+      outputState: "working",
     });
   }
 
@@ -659,7 +666,7 @@ class App extends React.Component {
       <div className="pane-container">
         <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
         <div className="pane model">
-          <PaneLeft outputState={outputState} selectedModel={selectedModel} />
+          <PaneLeft outputState={outputState} selectedModel={selectedModel} submit={this.submit} />
           <PaneRight outputState={outputState} selectedModel={selectedModel} />
         </div>
       </div>
