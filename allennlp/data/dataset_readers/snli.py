@@ -49,6 +49,10 @@ class SnliReader(DatasetReader):
                 example = json.loads(line)
 
                 label = example["gold_label"]
+                if label == '-':
+                    # These were cases where the annotators disagreed; we'll just skip them.  It's
+                    # like 800 out of 500k examples in the training data.
+                    continue
                 label_field = LabelField(label)
 
                 premise = example["sentence1"]
