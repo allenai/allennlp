@@ -204,12 +204,12 @@ class TeOutput extends React.Component {
 
 class Button extends React.Component {
   render() {
-    const { selectedModel, outputState, submit } = this.props;
+    const { selectedModel, outputState } = this.props;
 
-    const type="button";
+    const type="submit";
 
     return (
-      <button id="input--mc-submit" type={type} disabled={outputState === "working"} className="btn btn--icon-disclosure" onClick={() => { submit() }}>Run
+      <button id="input--mc-submit" type={type} disabled={outputState === "working"} className="btn btn--icon-disclosure">Run
         <svg>
           <use xlinkHref="#icon__disclosure"></use>
         </svg>
@@ -316,14 +316,14 @@ class SrlInput extends React.Component {
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-        <form>
+      <form onSubmit={ e => { e.preventDefault(); submit(); }}>
           <ExampleSelect options={options} outputState={outputState} />
           <div className="form__field">
             <label htmlFor="#input--srl-sentence">Sentence</label>
             <input id="input--srl-sentence" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
           </div>
           <div className="form__field form__field--btn">
-            <Button selectedModel={selectedModel} outputState={outputState} submit={submit} />
+            <Button selectedModel={selectedModel} outputState={outputState} />
           </div>
         </form>
       </div>
