@@ -45,15 +45,15 @@ class SemanticRoleLabelerServable(Servable):
 
     @classmethod
     def from_config(cls, config: Params) -> 'SemanticRoleLabelerServable':
-        dataset_reader_params = config.pop("dataset_reader")
+        dataset_reader_params = config["dataset_reader"]
         assert dataset_reader_params.pop('type') == 'srl'
         dataset_reader = SrlReader.from_params(dataset_reader_params)
 
-        serialization_prefix = config.pop('serialization_prefix')
+        serialization_prefix = config["trainer"]["serialization_prefix"]
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
-        model_params = config.pop("model")
+        model_params = config["model"]
         assert model_params.pop("type") == "srl"
         model = SemanticRoleLabeler.from_params(vocab, model_params)
 

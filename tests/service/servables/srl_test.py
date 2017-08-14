@@ -15,7 +15,7 @@ class TestSrlServable(TestCase):
 
         with open('experiment_config/semantic_role_labeler.json') as f:
             config = json.loads(f.read())
-            config['serialization_prefix'] = 'tests/fixtures/srl'
+            config['trainer']['serialization_prefix'] = 'tests/fixtures/srl'
             config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
                 'tests/fixtures/glove.6B.100d.sample.txt.gz'
             srl_config = Params(replace_none(config))

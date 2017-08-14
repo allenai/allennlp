@@ -34,15 +34,15 @@ class DecomposableAttentionServable(Servable):
 
     @classmethod
     def from_config(cls, config: Params) -> 'DecomposableAttentionServable':
-        dataset_reader_params = config.pop("dataset_reader")
+        dataset_reader_params = config["dataset_reader"]
         assert dataset_reader_params.pop("type") == "snli"
         dataset_reader = SnliReader.from_params(dataset_reader_params)
 
-        serialization_prefix = config.pop('serialization_prefix')
+        serialization_prefix = config["trainer"]["serialization_prefix"]
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
-        model_params = config.pop("model")
+        model_params = config["model"]
         assert model_params.pop("type") == "decomposable_attention"
         model = DecomposableAttention.from_params(vocab, model_params)
 

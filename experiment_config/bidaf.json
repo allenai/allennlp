@@ -82,12 +82,12 @@
     "batch_size": 40
   },
   "optimizer": {
-    "type": "adadelta",
-    "lr": 1.0
+    "type": "sgd",
+    "lr": 0.001
   },
   "trainer": {
     "num_epochs": 12,
-    "grad_clipping": 0.1,
+    "grad_clipping": 10.0,
     "patience": 12,
     "serialization_prefix": "/output",
     "cuda_device": 0,
