@@ -268,6 +268,77 @@ class ModelIntro extends React.Component {
 
 
 /*******************************************************************************
+  <SrlComponent /> Component
+*******************************************************************************/
+
+class SrlComponent extends React.Component {
+  constructor() {
+    super();
+
+    this.state = {
+      sentence: "",
+    };
+
+    this.setInput = this.setInput.bind(this);
+  }
+
+  setInput(value) {
+    this.setState({
+      sentence: value,
+    });
+  }
+
+  render() {
+    const { outputState, sentence, submit } = this.props;
+
+    const placeholderTemplate = (message) => {
+      return (
+        <div className="placeholder">
+          <div className="placeholder__content">
+            <svg className={`placeholder__${outputState}`}>
+              <use xlinkHref={`#icon__${outputState}`}></use>
+            </svg>
+            {message !== "" ? (
+              <p>{message}</p>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    let outputContent;
+
+    switch (outputState) {
+      case "working":
+        outputContent = placeholderTemplate("");
+        break;
+      case "received":
+        outputContent = (<SrlOutput />);
+        break;
+      case "error":
+        outputContent = placeholderTemplate("Something went wrong. Please try again.");
+        break;
+      default:
+        // outputState = "empty"
+        outputContent = placeholderTemplate("Run model to view results");
+    }
+
+    return (
+      <div className="pane model">
+        <div className="pane__left model__input">
+          <SrlInput outputState={outputState} submit={submit} sentence={sentence} setInput={this.setInput} />
+        </div>
+        <div className={`pane__right model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
+          <div className="pane__thumb"></div>
+          { outputContent }
+        </div>
+      </div>
+    );
+  }
+}
+
+
+/*******************************************************************************
   <SrlInput /> Component
 *******************************************************************************/
 
@@ -687,12 +758,20 @@ class App extends React.Component {
     return (
       <div className="pane-container">
         <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
+        <SrlComponent outputState={outputState} submit={this.submit} />
+      </div>
+    );
+    /*
+    return (
+      <div className="pane-container">
+        <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
         <div className="pane model">
           <PaneLeft outputState={outputState} selectedModel={selectedModel} submit={this.submit} />
           <PaneRight outputState={outputState} outputText={outputText} selectedModel={selectedModel} />
         </div>
       </div>
     );
+    */
   }
 }
 
