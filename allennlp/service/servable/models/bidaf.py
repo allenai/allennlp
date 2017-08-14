@@ -29,6 +29,11 @@ class BidafServable(Servable):
                             token_indexers=self.token_indexers)
 
         output_dict = self.model.predict_span(question, passage)
+
+        # best_span is np.int64, we need to get pure python types so we can serialize them
+        output_dict["best_span"] = [x.item() for x in output_dict["best_span"]]
+
+        # similarly, the probability tensors must be converted to lists
         output_dict["span_start_probs"] = output_dict["span_start_probs"].tolist()
         output_dict["span_end_probs"] = output_dict["span_end_probs"].tolist()
 

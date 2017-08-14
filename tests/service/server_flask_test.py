@@ -7,12 +7,10 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestApp(AllenNlpTestCase):
 
-    def setUp(self):
-        super().setUp()
-        app = make_app()
-        app.testing = True
-        app.servables = ServableCollection.default()
-        self.client = app.test_client()
+    app = make_app()
+    app.testing = True
+    app.servables = ServableCollection.default()
+    client = app.test_client()
 
     # TODO(joelgrus): this is a fragile test
     def test_list_models(self):
