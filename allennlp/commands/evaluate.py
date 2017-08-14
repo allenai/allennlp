@@ -26,7 +26,8 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
                            help='path to the configuration file that trained the model')
     subparser.add_argument('--weights_file',
                            type=str,
-                           help='path to the saved model weights (defaults to best.th in the config-specified serialization directory')
+                           help=('path to the saved model weights '
+                                 '(defaults to best.th in the config-specified serialization directory'))
     subparser.add_argument('--evaluation_data_file',
                            type=str,
                            required=True,
