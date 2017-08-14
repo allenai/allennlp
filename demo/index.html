@@ -277,9 +277,26 @@ class SrlComponent extends React.Component {
 
     this.state = {
       sentence: "",
+      outputText: "",
+      outputState: "empty", // valid values: "working", "empty", "received", "error"
     };
 
     this.setInput = this.setInput.bind(this);
+    this.submit = this.submit.bind(this);
+  }
+
+  submit(thisModel) {
+    this.setState({
+      outputState: "working",
+    });
+
+    this.setState({
+      outputText: this.state.sentence,
+    });
+
+    this.setState({
+      outputState: "received",
+    });
   }
 
   setInput(value) {
@@ -289,14 +306,12 @@ class SrlComponent extends React.Component {
   }
 
   render() {
-    const { outputState, sentence, submit } = this.props;
-
     const placeholderTemplate = (message) => {
       return (
         <div className="placeholder">
           <div className="placeholder__content">
-            <svg className={`placeholder__${outputState}`}>
-              <use xlinkHref={`#icon__${outputState}`}></use>
+            <svg className={`placeholder__${this.state.outputState}`}>
+              <use xlinkHref={`#icon__${this.state.outputState}`}></use>
             </svg>
             {message !== "" ? (
               <p>{message}</p>
@@ -308,12 +323,12 @@ class SrlComponent extends React.Component {
 
     let outputContent;
 
-    switch (outputState) {
+    switch (this.state.outputState) {
       case "working":
         outputContent = placeholderTemplate("");
         break;
       case "received":
-        outputContent = (<SrlOutput />);
+        outputContent = (<SrlOutput outputText={this.state.outputText} />);
         break;
       case "error":
         outputContent = placeholderTemplate("Something went wrong. Please try again.");
@@ -326,9 +341,99 @@ class SrlComponent extends React.Component {
     return (
       <div className="pane model">
         <div className="pane__left model__input">
-          <SrlInput outputState={outputState} submit={submit} sentence={sentence} setInput={this.setInput} />
+          <SrlInput outputState={this.state.outputState} submit={this.submit} sentence={this.state.sentence} setInput={this.setInput} />
         </div>
-        <div className={`pane__right model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
+        <div className={`pane__right model__output ${this.state.outputState !== "received" ? "model__output--empty" : ""}`}>
+          <div className="pane__thumb"></div>
+          { outputContent }
+        </div>
+      </div>
+    );
+  }
+}
+
+/*******************************************************************************
+  <McComponent /> Component
+*******************************************************************************/
+
+class McComponent extends React.Component {
+  constructor() {
+    super();
+
+    this.state = {
+      passage: "",
+      question: "",
+      outputText: "",
+      outputState: "empty", // valid values: "working", "empty", "received", "error"
+    };
+
+    this.setInput = this.setInput.bind(this);
+    this.submit = this.submit.bind(this);
+  }
+
+  submit(thisModel) {
+    this.setState({
+      outputState: "working",
+    });
+
+    this.setState({
+      outputText: this.state.sentence,
+    });
+
+    this.setState({
+      outputState: "received",
+    });
+  }
+
+  setInput(passage, question) {
+    this.setState({
+      passage: passage,
+    });
+
+    this.setState({
+      question: question,
+    });
+  }
+
+  render() {
+    const placeholderTemplate = (message) => {
+      return (
+        <div className="placeholder">
+          <div className="placeholder__content">
+            <svg className={`placeholder__${this.state.outputState}`}>
+              <use xlinkHref={`#icon__${this.state.outputState}`}></use>
+            </svg>
+            {message !== "" ? (
+              <p>{message}</p>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    let outputContent;
+
+    switch (this.state.outputState) {
+      case "working":
+        outputContent = placeholderTemplate("");
+        break;
+      case "received":
+        outputContent = (<McOutput outputText={this.state.outputText} />);
+        break;
+      case "error":
+        outputContent = placeholderTemplate("Something went wrong. Please try again.");
+        break;
+      default:
+        // outputState = "empty"
+        outputContent = placeholderTemplate("Run model to view results");
+    }
+
+    return (
+      <div className="pane model">
+        <div className="pane__left model__input">
+          <McInput outputState={this.state.outputState} submit={this.submit} sentence={this.state.sentence} setInput={this.setInput} />
+        </div>
+        <div className={`pane__right model__output ${this.state.outputState !== "received" ? "model__output--empty" : ""}`}>
           <div className="pane__thumb"></div>
           { outputContent }
         </div>
@@ -353,14 +458,17 @@ class SrlInput extends React.Component {
   }
 
   handleSentenceChange(e) {
+    const value = e.target.value;
     this.setState({
       sentence: e.target.value
     });
+    const { setInput } = this.props; // TODO(michaels)
+    setInput(value);
   }
 
   render() {
 
-    const { selectedModel, outputState, submit } = this.props;
+    const { selectedModel, outputState, submit, setInput } = this.props;
 
     const title = "Semantic Role Labeling";
     const tooltip = [<strong>Semantic Role Labeling (SRL)</strong>, " is a technique that detects the semantic arguments associated with the verb of a sentence."];
@@ -423,7 +531,12 @@ class SrlInput extends React.Component {
 class McInput extends React.Component {
   render() {
 
-    const { selectedModel, outputState } = this.props;
+    this.state = {
+      passage: "",
+      question: "",
+    }
+
+    const { selectedModel, outputState, setInput } = this.props;
 
     const title = "Machine Comprehension";
     const tooltip = [<strong>Machine Comprehension (MC)</strong>, ", based on BiDAF, or Bi-Directional Attention Flow, is an approach to answering questions. Given a passage and a question about the contents of the passage, the MC model will provide an answer."];
@@ -472,11 +585,11 @@ class McInput extends React.Component {
           <ExampleSelect options={options} outputState={outputState} />
           <div className="form__field">
             <label htmlFor="#input--mc-passage">Passage</label>
-            <textarea id="input--mc-passage" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;Saturn is the sixth planet from the Sun and the second-largest in the Solar System, after Jupiter. It is a gas giant with an average radius about nine times that of Earth. Although it has only one-eighth the average density of Earth, with its larger volume Saturn is just over 95 times more massive. Saturn is named after the Roman god of agriculture; its astronomical symbol represents the god&#39;s sickle.&quot;" disabled={outputState === "working"}></textarea>
+            <textarea id="input--mc-passage" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;Saturn is the sixth planet from the Sun and the second-largest in the Solar System, after Jupiter. It is a gas giant with an average radius about nine times that of Earth. Although it has only one-eighth the average density of Earth, with its larger volume Saturn is just over 95 times more massive. Saturn is named after the Roman god of agriculture; its astronomical symbol represents the god&#39;s sickle.&quot;" disabled={outputState === "working"} value={this.state.passage}></textarea>
           </div>
           <div className="form__field">
             <label htmlFor="#input--mc-question">Question</label>
-            <input id="input--mc-question" type="text" required="true" placeholder="E.g. &quot;What does Saturn’s astronomical symbol represent?&quot;" disabled={outputState === "working"} />
+            <input id="input--mc-question" type="text" required="true" placeholder="E.g. &quot;What does Saturn’s astronomical symbol represent?&quot;" disabled={outputState === "working"} value={this.state.question} />
           </div>
           <div className="form__field form__field--btn">
             <Button selectedModel={selectedModel} outputState={outputState} />
@@ -564,110 +677,6 @@ class TeInput extends React.Component {
 
 
 /*******************************************************************************
-  <PaneRight /> Component
-*******************************************************************************/
-
-class PaneRight extends React.Component {
-  render() {
-    const { outputState, outputText, selectedModel } = this.props;
-
-    const placeholderTemplate = (message) => {
-      return (
-        <div className="placeholder">
-          <div className="placeholder__content">
-            <svg className={`placeholder__${outputState}`}>
-              <use xlinkHref={`#icon__${outputState}`}></use>
-            </svg>
-            {message !== "" ? (
-              <p>{message}</p>
-            ) : null}
-          </div>
-        </div>
-      );
-    }
-
-    let outputContent;
-
-    switch (outputState) {
-      case "working":
-        outputContent = placeholderTemplate("");
-        break;
-      case "received":
-        switch (selectedModel) {
-          case "srl":
-            outputContent = (<SrlOutput outputText={ outputText }/>);
-            break;
-          case "mc":
-            outputContent = (<McOutput outputText={ outputText }/>);
-            break;
-          case "te":
-            outputContent = (<TeOutput outputText={ outputText }/>);
-            break;
-        }
-        break;
-      case "error":
-        outputContent = placeholderTemplate("Something went wrong. Please try again.");
-        break;
-      default:
-        // outputState = "empty"
-        outputContent = placeholderTemplate("Run model to view results");
-    }
-
-    return (
-      <div className={`pane__right model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
-        <div className="pane__thumb"></div>
-        {outputContent}
-      </div>
-    );
-  }
-}
-
-
-
-/*******************************************************************************
-  <PaneLeft /> Component
-*******************************************************************************/
-
-class PaneLeft extends React.Component {
-  constructor() {
-    super();
-    this.populateInputs = this.populateInputs.bind(this);
-  }
-
-  populateInputs(thisOption) {
-    this.setState({
-      selectedModel: thisModel,
-    });
-  }
-
-  render() {
-
-    const { selectedModel, outputState, submit } = this.props;
-
-    let inputContent;
-
-    switch (selectedModel) {
-      case "srl":
-        inputContent = (<SrlInput selectedModel={selectedModel} outputState={outputState} submit={submit} />);
-        break;
-      case "mc":
-        inputContent = (<McInput selectedModel={selectedModel} outputState={outputState} />);
-        break;
-      case "te":
-        inputContent = (<TeInput selectedModel={selectedModel} outputState={outputState} />);
-        break;
-    }
-
-    return (
-      <div className="pane__left model__input">
-        {inputContent}
-      </div>
-    );
-  }
-}
-
-
-/*******************************************************************************
   <Header /> Component
 *******************************************************************************/
 
@@ -719,31 +728,14 @@ class App extends React.Component {
   constructor() {
     super();
     this.state = {
-      outputState: "empty", // valid values: "working", "empty", "received", "error"
-      outputText: "",
       selectedModel: "srl", // valid values: "srl", "mc", "te"
     };
     this.changeModel = this.changeModel.bind(this);
-    this.submit = this.submit.bind(this);
   }
 
   changeModel(thisModel) {
     this.setState({
       selectedModel: thisModel,
-    });
-  }
-
-  submit(thisModel) {
-    this.setState({
-      outputState: "working",
-    });
-
-    this.setState({
-      outputText: "One... two... three...",
-    });
-
-    this.setState({
-      outputState: "received",
     });
   }
 
@@ -755,10 +747,23 @@ class App extends React.Component {
       "label_probs": [0.2976710796, 0.4121640921, 0.2901648283]
     };
 
+    let component;
+    switch (selectedModel) {
+      case "srl":
+        component = ( <SrlComponent outputState={outputState} submit={this.submit} /> )
+        break;
+      case "mc":
+        component = ( <McComponent outputState={outputState} submit={this.submit} /> )
+        break;
+      case "te":
+        component = ( <TeComponent outputState={outputState} submit={this.submit} /> )
+        break;
+    }
+
     return (
       <div className="pane-container">
         <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
-        <SrlComponent outputState={outputState} submit={this.submit} />
+        { component }
       </div>
     );
     /*
