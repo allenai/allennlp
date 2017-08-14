@@ -29,7 +29,7 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
                                 }
                         }
                 })
-        dataset = SquadReader.from_params(reader_params).read('tests/fixtures/squad_example.json')
+        dataset = SquadReader.from_params(reader_params).read('tests/fixtures/data/squad.json')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)

@@ -24,7 +24,7 @@ class TestTrain(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": 'tests/fixtures/sequence_tagging_example.tsv',
+                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "iterator": {"type": "basic", "batch_size": 2},
                 "optimizer": "adam",
                 "num_epochs": 2
