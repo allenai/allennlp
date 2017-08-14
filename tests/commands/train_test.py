@@ -7,7 +7,7 @@ from allennlp.commands.train import train_model, add_subparser, _train_model_fro
 
 class TestTrain(AllenNlpTestCase):
     def test_train_model(self):
-        trainer_params = {
+        params = {
                 "model": {
                         "type": "simple_tagger",
                         "text_field_embedder": {
@@ -27,9 +27,9 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "iterator": {"type": "basic", "batch_size": 2},
                 "optimizer": "adam",
-                "num_epochs": 2
+                "trainer": {"num_epochs": 2}
         }
-        train_model(trainer_params)
+        train_model(params)
 
     def test_train_args(self):
         parser = argparse.ArgumentParser(description="Testing")

@@ -16,7 +16,7 @@ class TestDecomposableAttentionServable(TestCase):
 
         with open('experiment_config/decomposable_attention.json') as f:
             config = json.loads(f.read())
-            config['serialization_prefix'] = 'tests/fixtures/decomposable_attention'
+            config['trainer']['serialization_prefix'] = 'tests/fixtures/decomposable_attention'
             # TODO(joelgrus) once the correct config exists, just modify it
             constants.GLOVE_PATH = 'tests/fixtures/glove.6B.300d.sample.txt.gz'
             decomposable_attention_config = Params(replace_none(config))
