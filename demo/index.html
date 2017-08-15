@@ -780,11 +780,10 @@ class App extends React.Component {
           body: JSON.stringify(payload)
         }).then(function(response) {
           return response.json();
-        }).then(function(json) {
-          // console.log(JSON.stringify(json));
-          // component.setState({rawOutput: json});
+        }).then((json) => {
+          component.setState({rawOutput: json});
           this.setState({outputState: "received"}); // todo(michaels): why am I having an error here?
-        }).catch(function(error) {
+        }).catch((error) => {
           this.setState({outputState: "error"});
           throw error; // todo(michaels): is this right?
         });
@@ -843,38 +842,38 @@ class App extends React.Component {
       "label_probs": [0.2976710796, 0.4121640921, 0.2901648283]
     };
 
-    var app = this; // todo(michaels)
-    function InputControl() {
+    const InputControl = () => {
       if (selectedModel == "srl") {
         return (
-          <SrlInput outputState={outputState} runModel={app.runModel} />
+          <SrlInput outputState={outputState} runModel={this.runModel} />
         )
       }
       else if (selectedModel == "mc") {
         return (
-          <SrlInput outputState={outputState} runModel={app.runModel} />
+          <McInput outputState={outputState} runModel={this.runModel} />
         )
       }
       else if (selectedModel == "te") {
         return (
-          <SrlInput outputState={outputState} runModel={app.runModel} />
+          <TeInput outputState={outputState} runModel={this.runModel} />
         )
       }
     }
-    function OutputControl() {
+
+    const OutputControl = () => {
       if (selectedModel == "srl") {
         return (
-          <SrlOutput rawOutput={this.state.rawOutput} />
+          <SrlOutput rawOutput={rawOutput} />
         )
       }
       else if (selectedModel == "mc") {
         return (
-          <SrlOutput rawOutput={this.state.rawOutput} />
+          <McOutput rawOutput={rawOutput} />
         )
       }
       else if (selectedModel == "te") {
         return (
-          <SrlOutput rawOutput={this.state.rawOutput} />
+          <TeOutput rawOutput={rawOutput} />
         )
       }
     }
