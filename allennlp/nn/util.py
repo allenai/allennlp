@@ -379,3 +379,16 @@ def replace_masked_values(tensor: Variable, mask: Variable, replace_with: float)
     one_minus_mask = 1.0 - mask
     values_to_add = replace_with * one_minus_mask
     return tensor * mask + values_to_add
+
+def device_mapping(cuda_device: int):
+    """
+    In order to `torch.load()` a GPU-trained model onto a CPU (or specific GPU),
+    you have to supply a `map_location` function. Call this with
+    the desired `cuda_device` to get the function that `torch.load()` needs.
+    """
+    def inner_device_mapping(storage: torch.Storage, location) -> torch.Storage:  # pylint: disable=unused-argument
+        if cuda_device >= 0:
+            return storage.cuda(cuda_device)
+        else:
+            return storage
+    return inner_device_mapping

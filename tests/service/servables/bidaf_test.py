@@ -16,7 +16,7 @@ class TestBidafServable(TestCase):
 
         with open('experiment_config/bidaf.json') as f:
             config = json.loads(f.read())
-            config['serialization_prefix'] = 'tests/fixtures/bidaf'
+            config['trainer']['serialization_prefix'] = 'tests/fixtures/bidaf/serialization'
             config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
                 'tests/fixtures/glove.6B.100d.sample.txt.gz'
             bidaf_config = Params(replace_none(config))

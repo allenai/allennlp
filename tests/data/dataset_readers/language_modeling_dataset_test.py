@@ -7,7 +7,7 @@ class TestLanguageModellingDatasetReader(AllenNlpTestCase):
     def test_read_from_file(self):
         reader = LanguageModelingReader(tokens_per_instance=4)
 
-        dataset = reader.read('tests/fixtures/language_modeling_example.txt')
+        dataset = reader.read('tests/fixtures/data/language_modeling.txt')
         instances = dataset.instances
         assert instances[0].fields()["input_tokens"].tokens() == ["<S>", "This", "is", "a", "sentence"]
         assert instances[1].fields()["input_tokens"].tokens() == ["<S>", "for", "language", "modelling", "."]

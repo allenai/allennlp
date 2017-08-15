@@ -5,6 +5,8 @@
 An [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) NLP research library, built on PyTorch,
 for developing state-of-the-art deep learning models on a wide variety of linguistic tasks.
 
+*PLEASE NOTE that AllenNLP is currently pre-release!*  There are many rough edges.  We will have our first release in early September.
+
 ## Quickstart
 
 The fastest way to get an environment to run AllenNLP is with Docker.  Once you have [installed Docker](https://docs.docker.com/engine/installation/)
@@ -25,7 +27,7 @@ following principles:
 * *Hyper-modular and lightweight.* Use the parts which you like seamlessly with PyTorch.
 * *Extensively tested and easy to extend.* Test coverage is above 90% and the example
   models provide a template for contributions.
-* *Take padding and making seriously*, making it easy to implement correct
+* *Take padding and masking seriously*, making it easy to implement correct
   models without the pain.
 * *Experiment friendly.*  Run reproducible experiments from a json
   specification with comprehensive logging.
@@ -164,8 +166,7 @@ You can test your installation by running  `pytest -v`.
 
 Kubernetes will deploy your Docker images into the cloud, so you can have a reproducible development environment on AWS.
 
-1. Follow the instructions for getting started with
-[Kubernetes](https://github.com/allenai/infrastructure/tree/master/kubernetes).
+1. Set up `kubectl` to connect to your Kubernetes cluster.
 
 2. Run `kubectl create -f /path/to/kubernetes-dev-environment.yaml`.  This will create a "job" on the cluster which you
 can later connect to using bash.  Note that you will be using the last Dockerfile that would pushed, and so the source
@@ -178,7 +179,9 @@ The pod name will be your job name followed by some additional characters.
 
 6. When you are done, don't forget to kill your job using `kubectl delete -f /path/to/kubernetes-dev-environment.yaml`
 
-## Communication
+## Team
 
-* [User list](https://groups.google.com/a/allenai.org/forum/#!forum/allennlp-users): announcements, user questions, and discussion
-* [GitHub issues](https://github.com/allenai/allennlp/issues): bug reports and feature requests
+AllenNLP is an open-source project backed by [the Allen Institute for Artificial Intelligence (AI2)](http://www.allenai.org).
+AI2 is a non-profit institute with the mission to contribute to humanity through high-impact AI research and engineering.
+To learn more about who specifically contributed to this codebase, see [our contributors](https://github.com/allenai/allennlp/graphs/contributors)
+page.

@@ -26,7 +26,7 @@ class TestSquadReader(AllenNlpTestCase):
 
     def test_read_from_file(self):
         reader = SquadReader()
-        instances = reader.read('tests/fixtures/squad_example.json').instances
+        instances = reader.read('tests/fixtures/data/squad.json').instances
         assert len(instances) == 5
         assert instances[0].fields()["question"].tokens()[:3] == ["To", "whom", "did"]
         assert instances[0].fields()["passage"].tokens()[:3] == ["Architecturally", ",", "the"]

@@ -13,12 +13,9 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data import Dataset
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
-from allennlp.nn.util import arrays_to_variables
+from allennlp.nn.util import arrays_to_variables, device_mapping
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-def _description_from_metrics(metrics: Dict[str, float]) -> str:
-    return ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
 
 
 class Trainer:
@@ -34,7 +31,8 @@ class Trainer:
                  serialization_prefix: Optional[str] = None,
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
-                 grad_clipping: Optional[float] = None) -> None:
+                 grad_clipping: Optional[float] = None,
+                 log_one_line_per_batch: bool = False) -> None:
         """
         Parameters
         ----------
@@ -65,12 +63,18 @@ class Trainer:
             An integer specifying the CUDA device to use. If -1, the CPU is used.
             Multi-gpu training is not currently supported, but will be once the
             Pytorch DataParallel API stabilises.
-        grad_norm: float, optional, (default = None).
+        grad_norm : float, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
-        grad_clipping: ``float``, optional (default = ``None``).
+        grad_clipping : ``float``, optional (default = ``None``).
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
+        log_one_line_per_batch : ``bool``, optional (default=``False``)
+            We use ``tqdm`` for logging, which will print a nice progress bar that updates in place
+            after every batch.  This is nice if you're running training on a local shell, but can
+            cause problems with log files from, e.g., a docker image running on kubernetes.  If
+            ``log_one_line_per_batch`` is ``True``, we will force the per-batch output from
+            ``tqdm`` to include a newline, which makes the logs work better in these situations.
         """
         self._model = model
         self._iterator = iterator
@@ -85,6 +89,10 @@ class Trainer:
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
+        if log_one_line_per_batch:
+            self._tqdm_newline = '\n'
+        else:
+            self._tqdm_newline = ''
 
         if self._cuda_device >= 0:
             self._model = self._model.cuda(self._cuda_device)
@@ -114,6 +122,7 @@ class Trainer:
         if self._validation_dataset is not None:
             num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
         for epoch in range(epoch_counter, self._num_epochs):
+            logger.info("Epoch %d/%d", epoch + 1, self._num_epochs)
             train_loss = 0.0
             val_loss = 0.0
             validation_metric_per_epoch = []  # type: List[float]
@@ -143,9 +152,9 @@ class Trainer:
                 self._optimizer.step()
                 metrics = self._model.get_metrics()
                 metrics["loss"] = float(train_loss / batch_num)
-                train_generator_tqdm.set_description(_description_from_metrics(metrics))
+                train_generator_tqdm.set_description(self._description_from_metrics(metrics))
             metrics = self._model.get_metrics(reset=True)
-            metrics["loss"] = train_loss / batch_num
+            metrics["loss"] = float(train_loss / batch_num)
 
             if self._validation_dataset is not None:
                 # Switch to evaluation mode.
@@ -159,11 +168,11 @@ class Trainer:
                     val_output_dict = self._model.forward(**tensor_batch)
                     loss = val_output_dict["loss"]
                     val_loss += loss.data.cpu().numpy()
-                    metrics = self._model.get_metrics()
-                    metrics["loss"] = float(val_loss / batch_num)
-                    val_generator_tqdm.set_description(_description_from_metrics(metrics))
+                    val_metrics = self._model.get_metrics()
+                    val_metrics["loss"] = float(val_loss / batch_num)
+                    val_generator_tqdm.set_description(self._description_from_metrics(val_metrics))
                 val_metrics = self._model.get_metrics(reset=True)
-                val_metrics["loss"] = val_loss / batch_num
+                val_metrics["loss"] = float(val_loss / batch_num)
                 message_template = "Training %s : %3f    Validation %s : %3f "
                 for name, value in metrics.items():
                     logger.info(message_template, name, value, name, val_metrics[name])
@@ -174,6 +183,7 @@ class Trainer:
                 this_epoch = val_metrics[self._validation_metric]
                 if len(validation_metric_per_epoch) > self._patience:
                     if max(validation_metric_per_epoch[-self._patience:]) > this_epoch:
+                        logger.info("Ran out of patience.  Stopping training.")
                         break
                 validation_metric_per_epoch.append(this_epoch)
                 is_best_so_far = this_epoch == max(validation_metric_per_epoch)
@@ -187,6 +197,10 @@ class Trainer:
                         train_log.add_scalar(name, value, epoch)
                 if self._serialization_prefix:
                     self._save_checkpoint(epoch)
+
+    def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
+        return self._tqdm_newline + ', '.join(["%s: %.2f" % (name, value)
+                                               for name, value in metrics.items()]) + " ||"
 
     def _save_checkpoint(self,
                          epoch: int,
@@ -240,12 +254,7 @@ class Trainer:
         training_state_path = os.path.join(self._serialization_prefix,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
 
-        def device_mapping(storage, location):  # pylint: disable=unused-argument
-            if self._cuda_device >= 0:
-                return storage.cuda(self._cuda_device)
-            else:
-                return storage
-        model_state = torch.load(model_path, map_location=device_mapping)
+        model_state = torch.load(model_path, map_location=device_mapping(self._cuda_device))
         training_state = torch.load(training_state_path)
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
@@ -268,6 +277,7 @@ class Trainer:
         cuda_device = params.pop("cuda_device", -1)
         grad_norm = params.pop("grad_norm", None)
         grad_clipping = params.pop("grad_clipping", None)
+        log_one_line_per_batch = params.pop("log_one_line_per_batch", False)
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
                        train_dataset, validation_dataset,
@@ -277,4 +287,5 @@ class Trainer:
                        serialization_prefix=serialization_prefix,
                        cuda_device=cuda_device,
                        grad_norm=grad_norm,
-                       grad_clipping=grad_clipping)
+                       grad_clipping=grad_clipping,
+                       log_one_line_per_batch=log_one_line_per_batch)
