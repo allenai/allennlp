@@ -61,7 +61,7 @@ class BrownCorpusDatasetReader(DatasetReader):
         return Dataset(instances)
 
     @classmethod
-    def from_params(cls, params: Params) -> 'SequenceTaggingDatasetReader':
+    def from_params(cls, params: Params) -> 'BrownCorpusDatasetReader':
         """
         Parameters
         ----------

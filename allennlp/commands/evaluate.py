@@ -4,6 +4,7 @@ import json
 import os
 import logging
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params, replace_none
 from allennlp.data import Vocabulary, Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -61,7 +62,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         config = Params(replace_none(json.loads(config_file.read())))
 
     # Find out where the model was serialized to
-    serialization_prefix = config.get('trainer').get('serialization_prefix')
+    serialization_prefix = config.get('trainer', {}).get('serialization_prefix')
+    if serialization_prefix is None:
+        raise ConfigurationError("trainer.serialization_prefix must be specified in config")
+
 
     # Load vocabulary from file
     vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
