@@ -1,11 +1,13 @@
 from allennlp.service.servable import ServableCollection
 
 from flask import Flask, Response, jsonify, request, send_from_directory
+from flask_cors import CORS
 
 def run(port: int) -> None:
     """Run the server programatically"""
     print("Starting a flask server on port {}.".format(port))
     app = make_app()
+    CORS(app)
     # TODO(joelgrus): make this configurable
     app.servables = ServableCollection.default()
     app.run(port=port, host="0.0.0.0")

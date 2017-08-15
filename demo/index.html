@@ -18,30 +18,6 @@
 //  BEGIN React
 
 
-
-
-
-/*******************************************************************************
-  <TeTable /> Component
-*******************************************************************************/
-
-// const testNumbers = [
-//   0.297679,
-//   0.4129640921,
-//   0.2901648283
-// ]
-//
-// for( let i=0; i <= testNumbers.length - 1; i++) {
-//   document.getElementById("test").innerHTML += prettyProb(testNumbers[i]) + "<br>";
-// }
-//
-// function prettyProb(n) {
-//   const multiplicator = Math.pow(100, 1);
-//   n = parseFloat((n * multiplicator * 100).toFixed(11));
-//   return (Math.round(n) / multiplicator).toFixed(2) + "%";
-// }
-
-
 /*******************************************************************************
   <TeGraph /> Component
 *******************************************************************************/
@@ -73,27 +49,20 @@ class TeGraph extends React.Component {
 }
 
 
-
-
-
-
-
-
-
 /*******************************************************************************
   <SrlOutput /> Component
 *******************************************************************************/
 
 class SrlOutput extends React.Component {
   render() {
-    const { outputText } = this.props;
+    const { rawOutput } = this.props;
 
     return (
       <div className="model__content">
         <div className="form__field">
           <label>Annotated Text</label>
           <pre>
-            <code>{outputText}</code>
+            <code>{ rawOutput }</code>
           </pre>
         </div>
       </div>
@@ -108,11 +77,13 @@ class SrlOutput extends React.Component {
 
 class McOutput extends React.Component {
   render() {
+    const { rawOutput } = this.props;
+
     return (
       <div className="model__content">
         <div className="form__field">
           <label>Answer</label>
-          <div className="model__content__summary">Two</div>
+          <div className="model__content__summary">{ rawOutput }</div>
         </div>
       </div>
     );
@@ -126,6 +97,7 @@ class McOutput extends React.Component {
 
 class TeOutput extends React.Component {
   render() {
+    const { rawOutput } = this.props;
 
     const conclusive = true;
     const judgement = "n"; // Valid values: "e", "c", "n"
@@ -154,6 +126,14 @@ class TeOutput extends React.Component {
         );
       }
     }
+
+// TODO: Here's a function to make a long probabiliy value look pretty:
+
+// function prettyProb(n) {
+//   const multiplicator = Math.pow(100, 1);
+//   n = parseFloat((n * multiplicator * 100).toFixed(11));
+//   return (Math.round(n) / multiplicator).toFixed(2) + "%";
+// }
 
     return (
       <div className="model__content">
@@ -188,12 +168,11 @@ class TeOutput extends React.Component {
             </table>
           </div>
         </div>
+        <code>{rawOutput}</code>
       </div>
     );
   }
 }
-
-
 
 
 /*******************************************************************************
@@ -216,29 +195,6 @@ class Button extends React.Component {
   }
 }
 
-/*******************************************************************************
-  <ExampleSelect /> Component
-*******************************************************************************/
-
-class ExampleSelect extends React.Component {
-  render() {
-
-    const { options, outputState } = this.props;
-
-    const optionsArray = Array.prototype.slice.call(options)
-
-    return (
-      <div className="form__instructions"><span>Enter text or</span>
-        <select disabled={outputState === "working"}>
-          <option value="0">Choose an example...</option>
-          {options.map((item, index) => (
-            <option key={index} value={index}>{item}</option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-}
 
 /*******************************************************************************
   <ModelIntro /> Component
@@ -266,253 +222,96 @@ class ModelIntro extends React.Component {
 }
 
 
-
-/*******************************************************************************
-  <SrlComponent /> Component
-*******************************************************************************/
-
-class SrlComponent extends React.Component {
-  constructor() {
-    super();
-
-    this.state = {
-      sentence: "",
-      outputText: "",
-      outputState: "empty", // valid values: "working", "empty", "received", "error"
-    };
-
-    this.setInput = this.setInput.bind(this);
-    this.submit = this.submit.bind(this);
-  }
-
-  submit(thisModel) {
-    this.setState({
-      outputState: "working",
-    });
-
-    this.setState({
-      outputText: this.state.sentence,
-    });
-
-    this.setState({
-      outputState: "received",
-    });
-  }
-
-  setInput(value) {
-    this.setState({
-      sentence: value,
-    });
-  }
-
-  render() {
-    const placeholderTemplate = (message) => {
-      return (
-        <div className="placeholder">
-          <div className="placeholder__content">
-            <svg className={`placeholder__${this.state.outputState}`}>
-              <use xlinkHref={`#icon__${this.state.outputState}`}></use>
-            </svg>
-            {message !== "" ? (
-              <p>{message}</p>
-            ) : null}
-          </div>
-        </div>
-      );
-    }
-
-    let outputContent;
-
-    switch (this.state.outputState) {
-      case "working":
-        outputContent = placeholderTemplate("");
-        break;
-      case "received":
-        outputContent = (<SrlOutput outputText={this.state.outputText} />);
-        break;
-      case "error":
-        outputContent = placeholderTemplate("Something went wrong. Please try again.");
-        break;
-      default:
-        // outputState = "empty"
-        outputContent = placeholderTemplate("Run model to view results");
-    }
-
-    return (
-      <div className="pane model">
-        <div className="pane__left model__input">
-          <SrlInput outputState={this.state.outputState} submit={this.submit} sentence={this.state.sentence} setInput={this.setInput} />
-        </div>
-        <div className={`pane__right model__output ${this.state.outputState !== "received" ? "model__output--empty" : ""}`}>
-          <div className="pane__thumb"></div>
-          { outputContent }
-        </div>
-      </div>
-    );
-  }
-}
-
-/*******************************************************************************
-  <McComponent /> Component
-*******************************************************************************/
-
-class McComponent extends React.Component {
-  constructor() {
-    super();
-
-    this.state = {
-      passage: "",
-      question: "",
-      outputText: "",
-      outputState: "empty", // valid values: "working", "empty", "received", "error"
-    };
-
-    this.setInput = this.setInput.bind(this);
-    this.submit = this.submit.bind(this);
-  }
-
-  submit(thisModel) {
-    this.setState({
-      outputState: "working",
-    });
-
-    this.setState({
-      outputText: this.state.sentence,
-    });
-
-    this.setState({
-      outputState: "received",
-    });
-  }
-
-  setInput(passage, question) {
-    this.setState({
-      passage: passage,
-    });
-
-    this.setState({
-      question: question,
-    });
-  }
-
-  render() {
-    const placeholderTemplate = (message) => {
-      return (
-        <div className="placeholder">
-          <div className="placeholder__content">
-            <svg className={`placeholder__${this.state.outputState}`}>
-              <use xlinkHref={`#icon__${this.state.outputState}`}></use>
-            </svg>
-            {message !== "" ? (
-              <p>{message}</p>
-            ) : null}
-          </div>
-        </div>
-      );
-    }
-
-    let outputContent;
-
-    switch (this.state.outputState) {
-      case "working":
-        outputContent = placeholderTemplate("");
-        break;
-      case "received":
-        outputContent = (<McOutput outputText={this.state.outputText} />);
-        break;
-      case "error":
-        outputContent = placeholderTemplate("Something went wrong. Please try again.");
-        break;
-      default:
-        // outputState = "empty"
-        outputContent = placeholderTemplate("Run model to view results");
-    }
-
-    return (
-      <div className="pane model">
-        <div className="pane__left model__input">
-          <McInput outputState={this.state.outputState} submit={this.submit} sentence={this.state.sentence} setInput={this.setInput} />
-        </div>
-        <div className={`pane__right model__output ${this.state.outputState !== "received" ? "model__output--empty" : ""}`}>
-          <div className="pane__thumb"></div>
-          { outputContent }
-        </div>
-      </div>
-    );
-  }
-}
-
-
 /*******************************************************************************
   <SrlInput /> Component
 *******************************************************************************/
 
-class SrlInput extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      sentence: '',
-    };
+const srlSentences = [
+  "The quick brown fox jumps over the lazy dog.",
+  "After evaluating the danger posed by the solar flare, the robot resumed work on its spaceship.",
+  "Did Uriah honestly think he could beat the game in under three hours?",
+  "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!",
+  "John, Paul and Ringo were always everyone's favorites.",
+];
 
+const srlDataIds = [
+  {
+    "id": 0,
+    "sentence": srlSentences[0]
+  },
+  {
+    "id": 1,
+    "sentence": srlSentences[1]
+  },
+  {
+    "id": 2,
+    "sentence": srlSentences[2]
+  },
+  {
+    "id": 3,
+    "sentence": srlSentences[3]
+  },
+  {
+    "id": 4,
+    "sentence": srlSentences[4]
+  }
+];
+
+class SrlInput extends React.Component {
+  constructor() {
+    super();
+    this.state = {
+      srlSentenceValue: "",
+    };
+    this.handleListChange = this.handleListChange.bind(this);
     this.handleSentenceChange = this.handleSentenceChange.bind(this);
   }
 
+  handleListChange(e) {
+    if (e.target.value !== "") {
+      this.setState({
+        srlSentenceValue: srlSentences[e.target.value],
+      });
+    }
+  }
+
   handleSentenceChange(e) {
-    const value = e.target.value;
     this.setState({
-      sentence: e.target.value
+      srlSentenceValue: e.target.value,
     });
-    const { setInput } = this.props; // TODO(michaels)
-    setInput(value);
   }
 
   render() {
+    const { srlSentenceValue } = this.state;
+    const { selectedModel, outputState, runModel } = this.props;
 
-    const { selectedModel, outputState, submit, setInput } = this.props;
+    const srlInputs = {
+      "model": selectedModel,
+      "sentenceValue": srlSentenceValue,
+    };
 
     const title = "Semantic Role Labeling";
-    const tooltip = [<strong>Semantic Role Labeling (SRL)</strong>, " is a technique that detects the semantic arguments associated with the verb of a sentence."];
-    const options = [
-      "The quick brown fox jumps over the lazy dog.",
-      "After evaluating the danger posed by the solar flare, the robot resumed work on its spaceship.",
-      "Did Uriah honestly think he could beat the game in under three hours?",
-      "If you liked the music we were playing last night, you will absolutely love what we&#39;re playing tomorrow!",
-      "John, Paul and Ringo were always everyone&#39;s favorites."
-    ];
-
-    const exampleContent = {
-      "examples": [
-        {
-          "value": 1,
-          "sentence": "The quick brown fox jumps over the lazy dog.",
-        },
-        {
-          "value": 2,
-          "sentence": "After evaluating the danger posed by the solar flare, the robot resumed work on its spaceship.",
-        },
-        {
-          "value": 3,
-          "sentence": "Did Uriah honestly think he could beat the game in under three hours?",
-        },
-        {
-          "value": 4,
-          "sentence": "If you liked the music we were playing last night, you will absolutely love what we&#39;re playing tomorrow!",
-        },
-        {
-          "value": 5,
-          "sentence": "John, Paul and Ringo were always everyone&#39;s favorites.",
-        }
-      ]
-    }
+    const tooltip = (
+      <div><strong>Semantic Role Labeling (SRL)</strong> is a technique that detects the semantic arguments associated with the verb of a sentence.</div>
+    );
 
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-      <form onSubmit={ e => { e.preventDefault(); submit(); }}>
-          <ExampleSelect options={options} outputState={outputState} />
+        <form onSubmit={() => { runModel(event, srlInputs) }}>
+          <div className="form__instructions"><span>Enter text or</span>
+            <select disabled={outputState === "working"} onChange={this.handleListChange}>
+              <option value="">Choose an example...</option>
+              {srlDataIds.map((obj) => {
+                return (
+                  <option value={obj.id} key={obj.id}>{obj.sentence}</option>
+                );
+              })}
+            </select>
+          </div>
           <div className="form__field">
             <label htmlFor="#input--srl-sentence">Sentence</label>
-            <input id="input--srl-sentence" name="sentence" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" value={this.state.sentence} onChange={this.handleSentenceChange} />
+            <input onChange={this.handleSentenceChange} value={srlSentenceValue} id="input--srl-sentence" ref="srlSentence" type="text" required="true" autoFocus="true" value={srlSentenceValue} placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
           </div>
           <div className="form__field form__field--btn">
             <Button selectedModel={selectedModel} outputState={outputState} />
@@ -528,68 +327,119 @@ class SrlInput extends React.Component {
   <McInput /> Component
 *******************************************************************************/
 
+const mcPassages = [
+  "A reusable launch system (RLS, or reusable launch vehicle, RLV) is a launch system which is capable of launching a payload into space more than once. This contrasts with expendable launch systems, where each launch vehicle is launched once and then discarded. No completely reusable orbital launch system has ever been created. Two partially reusable launch systems were developed, the Space Shuttle and Falcon 9. The Space Shuttle was partially reusable: the orbiter (which included the Space Shuttle main engines and the Orbital Maneuvering System engines), and the two solid rocket boosters were reused after several months of refitting work for each launch. The external tank was discarded after each flight.",
+
+  "Robotics is an interdisciplinary branch of engineering and science that includes mechanical engineering, electrical engineering, computer science, and others. Robotics deals with the design, construction, operation, and use of robots, as well as computer systems for their control, sensory feedback, and information processing. These technologies are used to develop machines that can substitute for humans. Robots can be used in any situation and for any purpose, but today many are used in dangerous environments (including bomb detection and de-activation), manufacturing processes, or where humans cannot survive. Robots can take on any form but some are made to resemble humans in appearance. This is said to help in the acceptance of a robot in certain replicative behaviors usually performed by people. Such robots attempt to replicate walking, lifting, speech, cognition, and basically anything a human can do.",
+
+  "The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called \"the Matrix\", created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer \"Neo\" learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the \"dream world.\"",
+
+  "Kerbal Space Program (KSP) is a space flight simulation video game developed and published by Squad for Microsoft Windows, OS X, Linux, PlayStation 4, Xbox One, with a Wii U version that was supposed to be released at a later date. The developers have stated that the gaming landscape has changed since that announcement and more details will be released soon. In the game, players direct a nascent space program, staffed and crewed by humanoid aliens known as \"Kerbals\". The game features a realistic orbital physics engine, allowing for various real-life orbital maneuvers such as Hohmann transfer orbits and bi-elliptic transfer orbits.",
+
+  "The Millennium Falcon is a spaceship in the Star Wars universe commanded at one time by Corellian smuggler Han Solo (Harrison Ford) and his Wookiee first mate, Chewbacca (Peter Mayhew). The highly modified Corellian Engineering Corporation (CEC) YT-1300 light freighter first appears in Star Wars (1977), and subsequently in The Empire Strikes Back (1980), Return of the Jedi (1983) and The Force Awakens (2015). The ship also makes a brief cameo appearance in Revenge of the Sith (2005). Additionally, the Falcon appears in a variety of Star Wars expanded universe materials, including books, comics, and games; James Luceno's novel Millennium Falcon focuses on the titular ship. It also appears in the 2014 animated film The Lego Movie in Lego form, with Billy Dee Williams and Anthony Daniels reprising their roles of Lando Calrissian and C-3PO, with Keith Ferguson voicing Han Solo.",
+];
+
+const mcQuestions = [
+  "How many partially reusable launch systems were developed?",
+  "What do robots that resemble humans attempt to do?",
+  "Who stars in The Matrix?",
+  "What does the physics engine allow for?",
+  "What type of freighter is the Millenium Falcon?",
+];
+
+const mcDataIds = [
+  {
+    "id": 0,
+    "passage": mcPassages[0]
+  },
+  {
+    "id": 1,
+    "passage": mcPassages[1]
+  },
+  {
+    "id": 2,
+    "passage": mcPassages[2]
+  },
+  {
+    "id": 3,
+    "passage": mcPassages[3]
+  },
+  {
+    "id": 4,
+    "passage": mcPassages[4]
+  }
+];
+
 class McInput extends React.Component {
+  constructor() {
+    super();
+    this.state = {
+      mcPassageValue: "",
+      mcQuestionValue: "",
+    };
+    this.handleListChange = this.handleListChange.bind(this);
+    this.handleQuestionChange = this.handleQuestionChange.bind(this);
+    this.handlePassageChange = this.handlePassageChange.bind(this);
+  }
+
+  handleListChange(e) {
+    if (e.target.value !== "") {
+      this.setState({
+        mcPassageValue: mcPassages[e.target.value],
+        mcQuestionValue: mcQuestions[e.target.value],
+      });
+    }
+  }
+
+  handlePassageChange(e) {
+    this.setState({
+      mcPassageValue: e.target.value,
+    });
+  }
+
+  handleQuestionChange(e) {
+    this.setState({
+      mcQuestionValue: e.target.value,
+    });
+  }
+
   render() {
 
-    this.state = {
-      passage: "",
-      question: "",
-    }
+    const { mcPassageValue, mcQuestionValue } = this.state;
+    const { selectedModel, outputState, runModel } = this.props;
 
-    const { selectedModel, outputState, setInput } = this.props;
+    const mcInputs = {
+      "model": selectedModel,
+      "passageValue": mcPassageValue,
+      "questionValue": mcQuestionValue
+    };
 
     const title = "Machine Comprehension";
-    const tooltip = [<strong>Machine Comprehension (MC)</strong>, ", based on BiDAF, or Bi-Directional Attention Flow, is an approach to answering questions. Given a passage and a question about the contents of the passage, the MC model will provide an answer."];
-    const options = [
-      "A reusable launch system (RLS, or reusable launch...",
-      "Robotics is an interdisciplinary branch of engineering...",
-      "The Matrix is a 1999 science fiction action film...",
-      "Kerbal Space Program (KSP) is a space flight simulation...",
-      "Robotics is an interdisciplinary branch of engineering..."
-    ];
-
-    const exampleContent = {
-      "examples": [
-        {
-          "value": 1,
-          "passage": "A reusable launch system (RLS, or reusable launch vehicle, RLV) is a launch system which is capable of launching a payload into space more than once. This contrasts with expendable launch systems, where each launch vehicle is launched once and then discarded. No completely reusable orbital launch system has ever been created. Two partially reusable launch systems were developed, the Space Shuttle and Falcon 9. The Space Shuttle was partially reusable: the orbiter (which included the Space Shuttle main engines and the Orbital Maneuvering System engines), and the two solid rocket boosters were reused after several months of refitting work for each launch. The external tank was discarded after each flight.",
-          "question": "How many partially reusable launch systems were developed?"
-        },
-        {
-          "value": 2,
-          "passage": "Robotics is an interdisciplinary branch of engineering and science that includes mechanical engineering, electrical engineering, computer science, and others. Robotics deals with the design, construction, operation, and use of robots, as well as computer systems for their control, sensory feedback, and information processing. These technologies are used to develop machines that can substitute for humans. Robots can be used in any situation and for any purpose, but today many are used in dangerous environments (including bomb detection and de-activation), manufacturing processes, or where humans cannot survive. Robots can take on any form but some are made to resemble humans in appearance. This is said to help in the acceptance of a robot in certain replicative behaviors usually performed by people. Such robots attempt to replicate walking, lifting, speech, cognition, and basically anything a human can do. Many of today's robots are inspired by nature, contributing to the field of bio-inspired robotics.",
-          "question": "What do robots that resemble humans attempt to do?"
-        },
-        {
-          "value": 3,
-          "passage": "The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called &quot;the Matrix&quot;, created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer &quot;Neo&quot; learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the &quot;dream world.&quot;",
-          "question": "Who stars in The Matrix?"
-        },
-        {
-          "value": 4,
-          "passage": "Kerbal Space Program (KSP) is a space flight simulation video game developed and published by Squad for Microsoft Windows, OS X, Linux, PlayStation 4, Xbox One, with a Wii U version that was supposed to be released at a later date. The developers have stated that the gaming landscape has changed since that announcement and more details will be released soon. In the game, players direct a nascent space program, staffed and crewed by humanoid aliens known as &quot;Kerbals&quot;. The game features a realistic orbital physics engine, allowing for various real-life orbital maneuvers such as Hohmann transfer orbits and bi-elliptic transfer orbits.",
-          "question": "What does the physics engine allow for?"
-        },
-        {
-          "value": 5,
-          "passage": "The Millennium Falcon is a spaceship in the Star Wars universe commanded at one time by Corellian smuggler Han Solo (Harrison Ford) and his Wookiee first mate, Chewbacca (Peter Mayhew). The highly modified Corellian Engineering Corporation (CEC) YT-1300 light freighter first appears in Star Wars (1977), and subsequently in The Empire Strikes Back (1980), Return of the Jedi (1983) and The Force Awakens (2015). The ship also makes a brief cameo appearance in Revenge of the Sith (2005). Additionally, the Falcon appears in a variety of Star Wars expanded universe materials, including books, comics, and games; James Luceno's novel Millennium Falcon focuses on the titular ship. It also appears in the 2014 animated film The Lego Movie in Lego form, with Billy Dee Williams and Anthony Daniels reprising their roles of Lando Calrissian and C-3PO, with Keith Ferguson voicing Han Solo.",
-          "question": "What type of freighter is the Millenium Falcon?"
-        }
-      ]
-    }
+    const tooltip = (
+      <div><strong>Machine Comprehension (MC)</strong>, based on BiDAF, or Bi-Directional Attention Flow, is an approach to answering questions. Given a passage and a question about the contents of the passage, the MC model will provide an answer.</div>
+    );
 
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-        <form>
-          <ExampleSelect options={options} outputState={outputState} />
+        <form onSubmit={() => { runModel(event, mcInputs) }}>
+          <div className="form__instructions"><span>Enter text or</span>
+            <select disabled={outputState === "working"} onChange={this.handleListChange}>
+              <option value="">Choose an example...</option>
+              {mcDataIds.map((obj) => {
+                return (
+                  <option value={obj.id} key={obj.id}>{obj.passage.substring(0,60) + "..."}</option>
+                );
+              })}
+            </select>
+          </div>
           <div className="form__field">
             <label htmlFor="#input--mc-passage">Passage</label>
-            <textarea id="input--mc-passage" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;Saturn is the sixth planet from the Sun and the second-largest in the Solar System, after Jupiter. It is a gas giant with an average radius about nine times that of Earth. Although it has only one-eighth the average density of Earth, with its larger volume Saturn is just over 95 times more massive. Saturn is named after the Roman god of agriculture; its astronomical symbol represents the god&#39;s sickle.&quot;" disabled={outputState === "working"} value={this.state.passage}></textarea>
+            <textarea onChange={this.handlePassageChange} id="input--mc-passage" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;Saturn is the sixth planet from the Sun and the second-largest in the Solar System, after Jupiter. It is a gas giant with an average radius about nine times that of Earth. Although it has only one-eighth the average density of Earth, with its larger volume Saturn is just over 95 times more massive. Saturn is named after the Roman god of agriculture; its astronomical symbol represents the god&#39;s sickle.&quot;" value={mcPassageValue} disabled={outputState === "working"}></textarea>
           </div>
           <div className="form__field">
             <label htmlFor="#input--mc-question">Question</label>
-            <input id="input--mc-question" type="text" required="true" placeholder="E.g. &quot;What does Saturn’s astronomical symbol represent?&quot;" disabled={outputState === "working"} value={this.state.question} />
+            <input onChange={this.handleQuestionChange} id="input--mc-question" type="text" required="true" value={mcQuestionValue} placeholder="E.g. &quot;What does Saturn’s astronomical symbol represent?&quot;" disabled={outputState === "working"} />
           </div>
           <div className="form__field form__field--btn">
             <Button selectedModel={selectedModel} outputState={outputState} />
@@ -599,71 +449,121 @@ class McInput extends React.Component {
     );
   }
 }
-
 
 
 /*******************************************************************************
   <TeInput /> Component
 *******************************************************************************/
 
+const tePremises = [
+  "The toddler got excited when she heard her favorite song on the radio.",
+  "A white rabbit was spotted hopping through the grass.",
+  "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
+  "A large, gray elephant walked beside a herd of zebras.",
+  "A handmade djembe was on display at the Smithsonian.",
+];
+
+const teHypotheses = [
+  "The toddler is playing with her toys.",
+  "There are no rabbits.",
+  "The spacecraft has the ability to travel between planets.",
+  "The elephant was lost.",
+  "Visitors could see the djembe."
+];
+
+const teDataIds = [
+  {
+    "id": 0,
+    "premise": tePremises[0]
+  },
+  {
+    "id": 1,
+    "premise": tePremises[1]
+  },
+  {
+    "id": 2,
+    "premise": tePremises[2]
+  },
+  {
+    "id": 3,
+    "premise": tePremises[3]
+  },
+  {
+    "id": 4,
+    "premise": tePremises[4]
+  }
+];
+
 class TeInput extends React.Component {
+  constructor() {
+    super();
+    this.state = {
+      tePremiseValue: "",
+      teHypothesisValue: "",
+    };
+    this.handleListChange = this.handleListChange.bind(this);
+    this.handlePremiseChange = this.handlePremiseChange.bind(this);
+    this.handleHypothesisChange = this.handleHypothesisChange.bind(this);
+  }
+
+  handleListChange(e) {
+    if (e.target.value !== "") {
+      this.setState({
+        tePremiseValue: tePremises[e.target.value],
+        teHypothesisValue: teHypotheses[e.target.value],
+      });
+    }
+  }
+
+  handlePremiseChange(e) {
+    this.setState({
+      tePremiseValue: e.target.value,
+    });
+  }
+
+  handleHypothesisChange(e) {
+    this.setState({
+      teHypothesisValue: e.target.value,
+    });
+  }
+
   render() {
 
-    const { selectedModel, outputState } = this.props;
+    const { tePremiseValue, teHypothesisValue } = this.state;
+    const { selectedModel, outputState, runModel } = this.props;
+
+    const teInputs = {
+      "model": selectedModel,
+      "premiseValue": tePremiseValue,
+      "hypothesisValue": teHypothesisValue
+    };
 
     const title = "Textual Entailment";
-    const tooltip = [<strong>Textual Entailment (TE)</strong>, " is a task in natural language processing for determining whether a phrase (hypothesis) is true given a premise."];
-    const options = [
-      "The toddler got excited when she heard her favorite song on the radio.",
-      "A white rabbit was spotted hopping through the grass.",
-      "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
-      "A large, gray elephant walked beside a herd of zebras.",
-      "A handmade djembe was on display at the Smithsonian.",
-    ];
-
-
-    const exampleContent = {
-      "examples": [
-        {
-          "value": 1,
-          "premise": "The toddler got excited when she heard her favorite song on the radio.",
-          "hypothesis": "The toddler is playing with her toys."
-        },
-        {
-          "value": 2,
-          "premise": "A white rabbit was spotted hopping through the grass.",
-          "hypothesis": "There are no rabbits."
-        },
-        {
-          "value": 3,
-          "premise": "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
-          "hypothesis": "The spacecraft has the ability to travel between planets."
-        },
-        {
-          "value": 4,
-          "premise": "A large, gray elephant walked beside a herd of zebras.",
-          "hypothesis": "The elephant was lost."
-        },
-        {
-          "value": 5,
-          "premise": "A handmade djembe was on display at the Smithsonian.",
-          "hypothesis": "Visitors could see the djembe."
-        }
-      ]
-    }
+    const tooltip = (
+      <div><strong>Textual Entailment (TE)</strong> is a task in natural language processing for determining whether a phrase (hypothesis) is true given a premise.</div>
+    );
 
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-        <form>
-          <ExampleSelect options={options} outputState={outputState} />
+        <form onSubmit={() => { runModel(event, teInputs) }}>
+          <div className="form__instructions"><span>Enter text or</span>
+            <select disabled={outputState === "working"} onChange={this.handleListChange}>
+              <option value="">Choose an example...</option>
+              {teDataIds.map((obj) => {
+                return (
+                  <option value={obj.id} key={obj.id}>{obj.premise}</option>
+                );
+              })}
+            </select>
+          </div>
           <div className="form__field">
             <label htmlFor="input--te-premise">Premise</label>
-            <input id="input--te-premise" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;A black dog chased a cat throught the park.&quot;" />
+            <input onChange={this.handlePremiseChange} id="input--te-premise" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;A black dog chased a cat throught the park.&quot;" value={tePremiseValue} />
           </div>
           <div className="form__field">
             <label htmlFor="input--te-hypothesis">Hypothesis</label>
-            <input id="input--te-hypothesis" type="text" required="true" placeholder="E.g. &quot;The cat is black.&quot;" />
+            <input onChange={this.handleHypothesisChange} id="input--te-hypothesis" type="text" required="true" value={teHypothesisValue} placeholder="E.g. &quot;The cat is black.&quot;" />
           </div>
           <div className="form__field form__field--btn">
             <Button selectedModel={selectedModel} outputState={outputState} />
@@ -674,6 +574,107 @@ class TeInput extends React.Component {
   }
 }
 
+
+/*******************************************************************************
+  <PaneRight /> Component
+*******************************************************************************/
+
+class PaneRight extends React.Component {
+  render() {
+    const { outputState, selectedModel, rawOutput } = this.props;
+
+    const placeholderTemplate = (message) => {
+      return (
+        <div className="placeholder">
+          <div className="placeholder__content">
+            <svg className={`placeholder__${outputState}`}>
+              <use xlinkHref={`#icon__${outputState}`}></use>
+            </svg>
+            {message !== "" ? (
+              <p>{message}</p>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    let outputContent;
+
+    switch (outputState) {
+      case "working":
+        outputContent = placeholderTemplate("");
+        break;
+      case "received":
+        switch (selectedModel) {
+          case "srl":
+            outputContent = (<SrlOutput rawOutput={rawOutput} />);
+            break;
+          case "mc":
+            outputContent = (<McOutput rawOutput={rawOutput} />);
+            break;
+          case "te":
+            outputContent = (<TeOutput rawOutput={rawOutput} />);
+            break;
+        }
+        break;
+      case "error":
+        outputContent = placeholderTemplate("Something went wrong. Please try again.");
+        break;
+      default:
+        // outputState = "empty"
+        outputContent = placeholderTemplate("Run model to view results");
+    }
+
+    return (
+      <div className={`pane__right model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
+        <div className="pane__thumb"></div>
+        {outputContent}
+      </div>
+    );
+  }
+}
+
+/*******************************************************************************
+  <PaneLeft /> Component
+*******************************************************************************/
+
+class PaneLeft extends React.Component {
+  constructor() {
+    super();
+    this.populateInputs = this.populateInputs.bind(this);
+  }
+
+  populateInputs(thisOption) {
+    this.setState({
+      selectedModel: thisModel,
+    });
+  }
+
+  render() {
+
+    const { selectedModel, outputState, runModel } = this.props;
+
+    let inputContent;
+
+    switch (selectedModel) {
+      case "srl":
+        inputContent = (<SrlInput selectedModel={selectedModel} outputState={outputState} runModel={runModel} />);
+        break;
+      case "mc":
+        inputContent = (<McInput selectedModel={selectedModel} outputState={outputState} runModel={runModel} />);
+        break;
+      case "te":
+        inputContent = (<TeInput selectedModel={selectedModel} outputState={outputState} runModel={runModel} />);
+        break;
+    }
+
+    return (
+      <div className="pane__left model__input">
+        {inputContent}
+      </div>
+    );
+  }
+}
 
 
 /*******************************************************************************
@@ -719,7 +720,6 @@ class Header extends React.Component {
 }
 
 
-
 /*******************************************************************************
   <App /> Container
 *******************************************************************************/
@@ -728,55 +728,112 @@ class App extends React.Component {
   constructor() {
     super();
     this.state = {
+      outputState: "empty", // valid values: "working", "empty", "received", "error"
       selectedModel: "srl", // valid values: "srl", "mc", "te"
+      rawOutput: "",
     };
     this.changeModel = this.changeModel.bind(this);
+    this.runModel = this.runModel.bind(this);
   }
 
   changeModel(thisModel) {
     this.setState({
       selectedModel: thisModel,
+      outputState: "empty",
     });
   }
 
-  render(){
+  runModel(event, inputs) {
+    // Prevent regular form submission
+    if (event) { event.preventDefault(); }
+    this.setState({
+      outputState: "working",
+    });
 
-    const { outputState, outputText, selectedModel } = this.state;
+    let payload;
+    switch (this.state.selectedModel) {
+      case "srl":
+        payload = { sentence: inputs.sentenceValue };
+        fetch('http://localhost:8000/predict/srl', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        }).then(function(response) {
+          return response.json();
+        }).then(function(json) {
+          component.setState({rawOutput: JSON.stringify(json)});
+          component.setState({outputState: "received"});
+        });
+
+        break;
+
+      case "mc":
+        payload = {
+          passage: inputs.passageValue,
+          question: inputs.questionValue,
+        };
+        fetch('http://localhost:8000/predict/bidaf', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        }).then(function(response) {
+          return response.json();
+        }).then(function(json) {
+          component.setState({rawOutput: JSON.stringify(json)});
+          component.setState({outputState: "received"});
+        });
+
+        break;
+
+      case "te":
+        payload = {
+          premise: inputs.premiseValue,
+          hypothesis: inputs.hypothesisValue,
+        };
+        fetch('http://localhost:8000/predict/snli', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        }).then(function(response) {
+          return response.json();
+        }).then(function(json) {
+          component.setState({rawOutput: JSON.stringify(json)});
+          component.setState({outputState: "received"});
+        });
+        break;
+    }
+
+    console.log(JSON.stringify(payload));
+
+    var component = this;
+  }
+
+  render() {
+
+    const { outputState, selectedModel, rawOutput } = this.state;
 
     const labelProbs = {
       "label_probs": [0.2976710796, 0.4121640921, 0.2901648283]
     };
 
-    let component;
-    switch (selectedModel) {
-      case "srl":
-        component = ( <SrlComponent outputState={outputState} submit={this.submit} /> )
-        break;
-      case "mc":
-        component = ( <McComponent outputState={outputState} submit={this.submit} /> )
-        break;
-      case "te":
-        component = ( <TeComponent outputState={outputState} submit={this.submit} /> )
-        break;
-    }
-
-    return (
-      <div className="pane-container">
-        <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
-        { component }
-      </div>
-    );
-    /*
     return (
       <div className="pane-container">
         <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
         <div className="pane model">
-          <PaneLeft outputState={outputState} selectedModel={selectedModel} submit={this.submit} />
-          <PaneRight outputState={outputState} outputText={outputText} selectedModel={selectedModel} />
+          <PaneLeft outputState={outputState} selectedModel={selectedModel} runModel={this.runModel} />
+          <PaneRight outputState={outputState} selectedModel={selectedModel} rawOutput={this.state.rawOutput} />
         </div>
       </div>
     );
-    */
   }
 }
 
@@ -794,7 +851,6 @@ ReactDOM.render(
 // END React
 
     </script>
-
     <svg id="icons" xmlns="http://www.w3.org/2000/svg">
       <symbol id="icon__empty" viewBox="0 0 96 58">
         <path d="M48,0.3C25,0.3,5.7,13.7,0,29c5.7,15.3,25,28.7,48,28.7S90.3,44.3,96,29C90.3,13.7,71,0.3,48,0.3z M48,47C38,47,30,39,30,29 c0-10,8.1-18,18-18c10,0,18,8.1,18,18C66,39,58,47,48,47z M48,22.1c-3.8,0-6.9,3.1-6.9,6.9s3.1,6.9,6.9,6.9s6.9-3.1,6.9-6.9 S51.8,22.1,48,22.1z"></path>
