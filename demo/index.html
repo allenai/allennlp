@@ -72,18 +72,17 @@ class ResultDisplay extends React.Component {
 
 class TeGraph extends React.Component {
   render() {
-    // TODO: Un-hardcode these coordinate values.
-    // Coordinates are relative to the .te-graph div
-    //
-    // .te-graph width = 224
-    // .te-graph height = 194
+    const { x, y } = this.props
 
-    const x = 112;
-    const y = 129;
+    const width = 224;
+    const height = 194;
+
+    const absoluteX = Math.round(x * width);
+    const absoluteY = Math.round((1.0 - y) * height);
 
     const plotCoords = {
-      left: `${x}px`,
-      top: `${y}px`,
+      left: `${absoluteX}px`,
+      top: `${absoluteY}px`,
     };
 
     return (
@@ -147,9 +146,6 @@ class TeOutput extends React.Component {
   render() {
     const { rawOutput } = this.props;
 
-    console.log(rawOutput);
-    console.log(rawOutput.label_probs);
-    console.log(rawOutput['label_probs']);
     const entailment = rawOutput['label_probs'][0];
     const contradiction = rawOutput['label_probs'][1];
     const neutral = rawOutput['label_probs'][2];
@@ -211,12 +207,16 @@ class TeOutput extends React.Component {
       }
     }
 
-// TODO: Here's a function to make a long probabiliy value look pretty:
+    function formatProb(n) {
+      return parseFloat((n * 100).toFixed(1)) + "%";
+    }
 
-   function formatProb(n) {
-     const multiplicator = Math.pow(100, 1);
-     return parseFloat((n * 100).toFixed(1)) + "%";
-   }
+    // https://en.wikipedia.org/wiki/Ternary_plot#Plotting_a_ternary_plot
+    const a = contradiction;
+    const b = neutral;
+    const c = entailment;
+    const x = 0.5 * (2 * b + c) / (a + b + c)
+    const y = (c / (a + b + c))
 
     return (
       <div className="model__content">
@@ -225,7 +225,7 @@ class TeOutput extends React.Component {
           {summaryText()}
         </div>
         <div className="te-output">
-          <TeGraph />
+          <TeGraph x={x} y={y}/>
           <div className="te-table">
             <table>
               <thead>
