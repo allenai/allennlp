@@ -269,7 +269,7 @@ class Button extends React.Component {
     const type="submit";
 
     return (
-      <button id="input--mc-submit" type={type} disabled={outputState === "working"} className="btn btn--icon-disclosure">Run
+      <button id="input--mc-submit" type="submit" disabled={outputState === "working"} className="btn btn--icon-disclosure">Run
         <svg>
           <use xlinkHref="#icon__disclosure"></use>
         </svg>
@@ -665,22 +665,9 @@ class PaneRight extends React.Component {
   render() {
     const { outputState, selectedModel, rawOutput } = this.props;
 
-    let model;
-    switch (selectedModel) {
-      case "srl":
-        model = (<SrlOutput rawOutput={rawOutput} />);
-        break;
-      case "mc":
-        model = (<McOutput rawOutput={rawOutput} />);
-        break;
-      case "te":
-        model = (<TeOutput rawOutput={rawOutput} />);
-        break;
-    }
-
     return (
       <ResultDisplay outputState={outputState}>
-        {model}
+        {this.props.children}
       </ResultDisplay>
     )
   }
@@ -778,6 +765,8 @@ class App extends React.Component {
       outputState: "working",
     });
 
+    var component = this; // todo(michaels)
+
     let payload;
     switch (this.state.selectedModel) {
       case "srl":
@@ -792,11 +781,14 @@ class App extends React.Component {
         }).then(function(response) {
           return response.json();
         }).then(function(json) {
-          component.setState({rawOutput: json});
-          component.setState({outputState: "received"});
+          // console.log(JSON.stringify(json));
+          // component.setState({rawOutput: json});
+          this.setState({outputState: "received"}); // todo(michaels): why am I having an error here?
         }).catch(function(error) {
-          component.setState({outputState: "error"});
+          this.setState({outputState: "error"});
+          throw error; // todo(michaels): is this right?
         });
+
 
         break;
 
@@ -841,8 +833,6 @@ class App extends React.Component {
         });
         break;
     }
-
-    var component = this;
   }
 
   render() {
@@ -857,17 +847,34 @@ class App extends React.Component {
     function InputControl() {
       if (selectedModel == "srl") {
         return (
-          <SrlInput  outputState={outputState} runModel={app.runModel} />
+          <SrlInput outputState={outputState} runModel={app.runModel} />
         )
       }
       else if (selectedModel == "mc") {
         return (
-          <SrlInput  outputState={outputState} runModel={app.runModel} />
+          <SrlInput outputState={outputState} runModel={app.runModel} />
         )
       }
       else if (selectedModel == "te") {
         return (
-          <SrlInput  outputState={outputState} runModel={app.runModel} />
+          <SrlInput outputState={outputState} runModel={app.runModel} />
+        )
+      }
+    }
+    function OutputControl() {
+      if (selectedModel == "srl") {
+        return (
+          <SrlOutput rawOutput={this.state.rawOutput} />
+        )
+      }
+      else if (selectedModel == "mc") {
+        return (
+          <SrlOutput rawOutput={this.state.rawOutput} />
+        )
+      }
+      else if (selectedModel == "te") {
+        return (
+          <SrlOutput rawOutput={this.state.rawOutput} />
         )
       }
     }
@@ -879,7 +886,9 @@ class App extends React.Component {
           <PaneLeft>
             <InputControl/>
           </PaneLeft>
-          <PaneRight outputState={outputState} selectedModel={selectedModel} rawOutput={this.state.rawOutput} />
+          <PaneRight outputState={outputState}>
+            <OutputControl/>
+          </PaneRight>
         </div>
       </div>
     );
