@@ -264,7 +264,7 @@ class TeOutput extends React.Component {
 
 class Button extends React.Component {
   render() {
-    const { selectedModel, outputState } = this.props;
+    const { outputState } = this.props;
 
     const type="submit";
 
@@ -366,10 +366,9 @@ class SrlInput extends React.Component {
 
   render() {
     const { srlSentenceValue } = this.state;
-    const { selectedModel, outputState, runModel } = this.props;
+    const { outputState, runModel } = this.props;
 
     const srlInputs = {
-      "model": selectedModel,
       "sentenceValue": srlSentenceValue,
     };
 
@@ -397,7 +396,7 @@ class SrlInput extends React.Component {
             <input onChange={this.handleSentenceChange} value={srlSentenceValue} id="input--srl-sentence" ref="srlSentence" type="text" required="true" autoFocus="true" value={srlSentenceValue} placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
           </div>
           <div className="form__field form__field--btn">
-            <Button selectedModel={selectedModel} outputState={outputState} />
+            <Button outputState={outputState} />
           </div>
         </form>
       </div>
@@ -694,36 +693,12 @@ class PaneRight extends React.Component {
 class PaneLeft extends React.Component {
   constructor() {
     super();
-    this.populateInputs = this.populateInputs.bind(this);
   }
 
-  populateInputs(thisOption) {
-    this.setState({
-      selectedModel: thisModel,
-    });
-  }
-
-  render() {
-
-    const { selectedModel, outputState, runModel } = this.props;
-
-    let inputContent;
-
-    switch (selectedModel) {
-      case "srl":
-        inputContent = (<SrlInput selectedModel={selectedModel} outputState={outputState} runModel={runModel} />);
-        break;
-      case "mc":
-        inputContent = (<McInput selectedModel={selectedModel} outputState={outputState} runModel={runModel} />);
-        break;
-      case "te":
-        inputContent = (<TeInput selectedModel={selectedModel} outputState={outputState} runModel={runModel} />);
-        break;
-    }
-
+  render () {
     return (
       <div className="pane__left model__input">
-        {inputContent}
+        {this.props.children}
       </div>
     );
   }
@@ -878,11 +853,32 @@ class App extends React.Component {
       "label_probs": [0.2976710796, 0.4121640921, 0.2901648283]
     };
 
+    var app = this; // todo(michaels)
+    function InputControl() {
+      if (selectedModel == "srl") {
+        return (
+          <SrlInput  outputState={outputState} runModel={app.runModel} />
+        )
+      }
+      else if (selectedModel == "mc") {
+        return (
+          <SrlInput  outputState={outputState} runModel={app.runModel} />
+        )
+      }
+      else if (selectedModel == "te") {
+        return (
+          <SrlInput  outputState={outputState} runModel={app.runModel} />
+        )
+      }
+    }
+
     return (
       <div className="pane-container">
         <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
         <div className="pane model">
-          <PaneLeft outputState={outputState} selectedModel={selectedModel} runModel={this.runModel} />
+          <PaneLeft>
+            <InputControl/>
+          </PaneLeft>
           <PaneRight outputState={outputState} selectedModel={selectedModel} rawOutput={this.state.rawOutput} />
         </div>
       </div>
