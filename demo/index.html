@@ -62,7 +62,7 @@ class SrlOutput extends React.Component {
         <div className="form__field">
           <label>Annotated Text</label>
           <pre>
-            <code>{ rawOutput }</code>
+            <code>{ JSON.stringify(rawOutput) }</code>
           </pre>
         </div>
       </div>
@@ -83,7 +83,7 @@ class McOutput extends React.Component {
       <div className="model__content">
         <div className="form__field">
           <label>Answer</label>
-          <div className="model__content__summary">{ rawOutput }</div>
+          <div className="model__content__summary">{ JSON.stringify(rawOutput) }</div>
         </div>
       </div>
     );
@@ -99,12 +99,30 @@ class TeOutput extends React.Component {
   render() {
     const { rawOutput } = this.props;
 
-    const conclusive = true;
-    const judgement = "n"; // Valid values: "e", "c", "n"
-    const degree = "very"; // Valid values: "somewhat", "very"
+    console.log(rawOutput);
+    console.log(rawOutput.label_probs);
+    console.log(rawOutput['label_probs']);
+    const entailment = rawOutput['label_probs'][0];
+    const contradiction = rawOutput['label_probs'][1];
+    const neutral = rawOutput['label_probs'][2];
 
+    let judgement; // Valid values: "e", "c", "n"
+    let degree; // Valid values: "somewhat", "very"
+
+    if (entailment > contradiction && entailment > neutral) {
+      judgement = "e"
+    }
+    else if (contradiction > entailment && contradiction > neutral) {
+      judgement = "c"
+    }
+    else if (neutral > entailment && neutral > contradiction) {
+      judgement = "n"
+    }
+
+    const veryConfident = 0.75;
+    const somewhatConfident = 0.50;
     const summaryText = () => {
-      if (conclusive) {
+      if (entailment >= veryConfident || contradiction >= veryConfident || neutral >= veryConfident) {
         let judgementStr;
         switch(judgement) {
           case "c":
@@ -120,7 +138,25 @@ class TeOutput extends React.Component {
         return (
           <div className="model__content__summary">It is <strong>{degree} likely</strong> that {judgementStr}.</div>
         );
-      } else {
+      }
+      else if (entailment >= somewhatConfident || contradiction >= somewhatConfident || neutral >= somewhatConfident) {
+        let judgementStr;
+        switch(judgement) {
+          case "c":
+            judgementStr = (<span>the premise <strong>contradicts</strong> the hypothesis</span>);
+            break;
+          case "e":
+            judgementStr = (<span>the premise <strong>entails</strong> the hypothesis</span>);
+            break;
+          case "n":
+            judgementStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
+            break;
+        }
+        return (
+          <div className="model__content__summary">It is <strong>somewhat likely</strong> that {judgementStr}.</div>
+        );
+      }
+      else {
         return (
           <div className="model__content__summary">The model is not confident in its judgment.</div>
         );
@@ -129,11 +165,10 @@ class TeOutput extends React.Component {
 
 // TODO: Here's a function to make a long probabiliy value look pretty:
 
-// function prettyProb(n) {
-//   const multiplicator = Math.pow(100, 1);
-//   n = parseFloat((n * multiplicator * 100).toFixed(11));
-//   return (Math.round(n) / multiplicator).toFixed(2) + "%";
-// }
+   function formatProb(n) {
+     const multiplicator = Math.pow(100, 1);
+     return parseFloat((n * 100).toFixed(1)) + "%";
+   }
 
     return (
       <div className="model__content">
@@ -154,21 +189,21 @@ class TeOutput extends React.Component {
               <tbody>
                 <tr>
                   <td>Entailment</td>
-                  <td>84.3%</td>
+                  <td>{formatProb(entailment)}</td>
                 </tr>
                 <tr>
                   <td>Contradiction</td>
-                  <td>23.4%</td>
+                  <td>{formatProb(contradiction)}</td>
                 </tr>
                 <tr>
                   <td>Neutral</td>
-                  <td>1.3%</td>
+                  <td>{formatProb(neutral)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
-        <code>{rawOutput}</code>
+        <code>{JSON.stringify(rawOutput)}</code>
       </div>
     );
   }
@@ -750,6 +785,7 @@ class App extends React.Component {
       outputState: "working",
     });
 
+    debugger;
     let payload;
     switch (this.state.selectedModel) {
       case "srl":
@@ -762,10 +798,13 @@ class App extends React.Component {
           },
           body: JSON.stringify(payload)
         }).then(function(response) {
+          debugger;
           return response.json();
         }).then(function(json) {
-          component.setState({rawOutput: JSON.stringify(json)});
+          component.setState({rawOutput: json});
           component.setState({outputState: "received"});
+        }).catch(function(error) {
+          component.setState({outputState: "error"});
         });
 
         break;
@@ -785,7 +824,7 @@ class App extends React.Component {
         }).then(function(response) {
           return response.json();
         }).then(function(json) {
-          component.setState({rawOutput: JSON.stringify(json)});
+          component.setState({rawOutput: json});
           component.setState({outputState: "received"});
         });
 
@@ -806,13 +845,11 @@ class App extends React.Component {
         }).then(function(response) {
           return response.json();
         }).then(function(json) {
-          component.setState({rawOutput: JSON.stringify(json)});
+          component.setState({rawOutput: json});
           component.setState({outputState: "received"});
         });
         break;
     }
-
-    console.log(JSON.stringify(payload));
 
     var component = this;
   }
