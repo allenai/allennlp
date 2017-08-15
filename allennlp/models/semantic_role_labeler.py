@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, TextIO, Optional
+from typing import Dict, Any, List, TextIO
 
 import torch
 from torch.nn.modules.linear import Linear
@@ -14,7 +14,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
-from allennlp.training.metrics import ConllSpanBasedF1Measure
+from allennlp.training.metrics import SpanBasedF1Measure
 
 
 @Model.register("srl")
@@ -47,8 +47,7 @@ class SemanticRoleLabeler(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
-                 initializer: InitializerApplicator,
-                 metric: Optional[ConllSpanBasedF1Measure] = None) -> None:
+                 initializer: InitializerApplicator) -> None:
         super(SemanticRoleLabeler, self).__init__()
 
         self.vocab = vocab
@@ -57,7 +56,9 @@ class SemanticRoleLabeler(Model):
 
         # For the span based evaluation, we don't want to consider labels for
         # out of span tokens or verbs, because the verb index is provided to the model.
-        self.metric = metric
+        tag_vocab = vocab.get_index_to_token_vocabulary("tags")
+        self.metric = SpanBasedF1Measure(tag_vocab, ignore_classes=["O", "V"])
+
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
@@ -254,17 +255,10 @@ class SemanticRoleLabeler(Model):
         initializer_params = params.pop('initializer', default_initializer_params)
         initializer = InitializerApplicator.from_params(initializer_params)
 
-        # TODO(Mark): Try to make passing these parameters to the metric configurable. Seems hard.
-        tag_vocab = vocab.get_index_to_token_vocabulary("tags")
-        outside_index = vocab.get_token_index("O", "tags")
-        verb_index = vocab.get_token_index("B-V", "tags")
-        metric = ConllSpanBasedF1Measure(tag_vocab, ignore_classes=[outside_index, verb_index])
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder,
-                   initializer=initializer,
-                   metric=metric)
-
+                   initializer=initializer)
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,

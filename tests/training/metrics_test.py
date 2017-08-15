@@ -7,7 +7,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy
-from allennlp.training.metrics import F1Measure, ConllSpanBasedF1Measure
+from allennlp.training.metrics import F1Measure, SpanBasedF1Measure
 
 class CategoricalAccuracyTest(AllenNlpTestCase):
     def test_categorical_accuracy(self):
@@ -215,10 +215,10 @@ class F1MeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(f1, 0.66666666666)
 
 
-class ConllSpanBasedF1Test(AllenNlpTestCase):
+class SpanBasedF1Test(AllenNlpTestCase):
 
     def setUp(self):
-        super(ConllSpanBasedF1Test, self).setUp()
+        super(SpanBasedF1Test, self).setUp()
         vocab = Vocabulary()
         vocab.add_token_to_namespace("O", "tags")
         vocab.add_token_to_namespace("B-ARG1", "tags")
@@ -228,20 +228,20 @@ class ConllSpanBasedF1Test(AllenNlpTestCase):
         self.vocab = vocab
 
     def test_conll_span_based_f1_extracts_correct_spans(self):
-        o_index = self.vocab.get_token_index("O", "tags")
         tag_vocab = self.vocab.get_index_to_token_vocabulary("tags")
-        metric = ConllSpanBasedF1Measure(tag_vocab, ignore_classes=[o_index])
+        metric = SpanBasedF1Measure(tag_vocab, ignore_classes=["O"])
 
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "B-ARG1", "B-ARG2"]
         indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
         spans = metric._extract_spans(indices)
         assert spans == {((1, 2), "ARG1"), ((4, 5), "ARG2"), ((6, 6), "ARG1"), ((7, 7), "ARG2")}
 
-        # Check that invalid BIO sequences are handled as non-spans.
-        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "I-ARG1", "B-ARG2", "I-ARG2", "B-ARG1", "I-ARG2"]
+        # Check that invalid BIO sequences are also handled as spans.
+        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "I-ARG1", "B-ARG2", "I-ARG2", "B-ARG1", "I-ARG2", "I-ARG2"]
         indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
         spans = metric._extract_spans(indices)
-        assert spans == {((1, 2), "ARG1"), ((5, 6), "ARG2"), ((7, 7), "ARG1")}
+        assert spans == {((1, 2), "ARG1"), ((5, 6), "ARG2"), ((7, 7), "ARG1"),
+                         ((4, 4), "ARG1"), ((8, 9), "ARG2")}
 
     def test_span_metrics_are_computed_correctly(self):
         gold_labels = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "O", "O", "O"]
@@ -260,9 +260,8 @@ class ConllSpanBasedF1Test(AllenNlpTestCase):
         prediction_tensor[:, 7, 1] = 1  # (False Positive - ARG1
         prediction_tensor[:, 8, 2] = 1  # *)
 
-        o_index = self.vocab.get_token_index("O", "tags")
         tag_vocab = self.vocab.get_index_to_token_vocabulary("tags")
-        metric = ConllSpanBasedF1Measure(tag_vocab, ignore_classes=[o_index])
+        metric = SpanBasedF1Measure(tag_vocab, ignore_classes=["O"])
 
         metric(prediction_tensor, gold_tensor)
 
@@ -290,12 +289,12 @@ class ConllSpanBasedF1Test(AllenNlpTestCase):
 
         metric_dict = metric.get_metric()
 
-        numpy.testing.assert_almost_equal(metric_dict["ARG2"]["recall"], 0.0)
-        numpy.testing.assert_almost_equal(metric_dict["ARG2"]["precision"], 0.0)
-        numpy.testing.assert_almost_equal(metric_dict["ARG2"]["f1-measure"], 0.0)
-        numpy.testing.assert_almost_equal(metric_dict["ARG1"]["recall"], 1.0)
-        numpy.testing.assert_almost_equal(metric_dict["ARG1"]["precision"], 0.5)
-        numpy.testing.assert_almost_equal(metric_dict["ARG1"]["f1-measure"], 0.666666666)
-        numpy.testing.assert_almost_equal(metric_dict["overall"]["recall"], 0.5)
-        numpy.testing.assert_almost_equal(metric_dict["overall"]["precision"], 0.5)
-        numpy.testing.assert_almost_equal(metric_dict["overall"]["f1-measure"], 0.5)
+        numpy.testing.assert_almost_equal(metric_dict["recall-ARG2"], 0.0)
+        numpy.testing.assert_almost_equal(metric_dict["precision-ARG2"], 0.0)
+        numpy.testing.assert_almost_equal(metric_dict["f1-measure-ARG2"], 0.0)
+        numpy.testing.assert_almost_equal(metric_dict["recall-ARG1"], 1.0)
+        numpy.testing.assert_almost_equal(metric_dict["precision-ARG1"], 0.5)
+        numpy.testing.assert_almost_equal(metric_dict["f1-measure-ARG1"], 0.666666666)
+        numpy.testing.assert_almost_equal(metric_dict["recall-overall"], 0.5)
+        numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 0.5)
+        numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 0.5)

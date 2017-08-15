@@ -33,7 +33,7 @@ class Metric(Registrable):
         """
         raise NotImplementedError
 
-    def get_metric(self, reset: bool) -> Union[float, Tuple[float, ...]]:
+    def get_metric(self, reset: bool) -> Union[float, Tuple[float, ...], Dict[str, float]]:
         """
         Compute and return the metric. Optionally also call :func:`self.reset`.
         """
@@ -292,8 +292,8 @@ class F1Measure(Metric):
         self._false_negatives = 0.0
 
 
-@Metric.register("conll_span_f1")
-class ConllSpanBasedF1Measure(Metric):
+@Metric.register("span_f1")
+class SpanBasedF1Measure(Metric):
     """
     The Conll SRL metrics are based on exact span matching. This metric
     implements span-based precision and recall metrics for a BIO tagging
@@ -306,7 +306,7 @@ class ConllSpanBasedF1Measure(Metric):
     """
     def __init__(self,
                  label_vocabulary: Dict[int, str],
-                 ignore_classes: List[int] = None) -> None:
+                 ignore_classes: List[str] = None) -> None:
         """
         Parameters
         ----------
@@ -314,11 +314,13 @@ class ConllSpanBasedF1Measure(Metric):
             A mapping from integer class labels to string labels. This metric
             assumes that a BIO format is used in which the labels are of the format:
             ["B-LABEL", "I-LABEL"].
-        ignore_classes : List[int], optional.
-            Integer classes which will be ignored when computing span
+        ignore_classes : List[str], optional.
+            Non-BIO labeled classes which will be ignored when computing span
             metrics. This is helpful for instance, to avoid computing
-            metrics for "O", "B-V" and "I-V" tags in a BIO tagging scheme
+            metrics for "O", and "V" tags in a BIO tagging scheme
             for semantic role labelling, which are typically not included.
+            Note that these labels do not have their prepended BIO information,
+            they are only the raw tag.
         """
         self._label_vocabulary = label_vocabulary
         self._ignore_classes = ignore_classes or []
@@ -361,7 +363,7 @@ class ConllSpanBasedF1Measure(Metric):
                                      "id >= {}, the number of classes.".format(num_classes))
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        argmax_predictions = torch.topk(predictions, 1, -1)[1].float().squeeze(-1)
+        argmax_predictions = predictions.max(-1)[1].float().squeeze(-1)
 
         # Iterate over timesteps in batch.
         batch_size = gold_labels.size(0)
@@ -386,6 +388,9 @@ class ConllSpanBasedF1Measure(Metric):
         """
         Given an integer tag sequence corresponding to BIO tags, extracts spans.
         Spans are inclusive and can be of zero length, representing a single word span.
+        Ill-formed spans are also included (i.e those which do not start with a "B-LABEL"),
+        as otherwise it is possible to get a perfect precision score whilst still predicting
+        ill-formed spans in addition to the correct spans.
 
         Parameters
         ----------
@@ -396,7 +401,7 @@ class ConllSpanBasedF1Measure(Metric):
         -------
         spans : Set[Tuple[Tuple[int, int], str]]
             The typed, extracted spans from the sequence, in the format ((span_start, span_end), label).
-            Note that the label _does not_ contain any BIO tag prefixes.
+            Note that the label `does not` contain any BIO tag prefixes.
         """
         spans = set()
         span_start = 0
@@ -407,7 +412,7 @@ class ConllSpanBasedF1Measure(Metric):
             string_tag = self._label_vocabulary[integer_tag]
             bio_tag = string_tag[0]
             conll_tag = string_tag[2:]
-            if integer_tag in self._ignore_classes:
+            if conll_tag in self._ignore_classes:
                 # The span has ended.
                 if active_conll_tag:
                     spans.add(((span_start, span_end), active_conll_tag))
@@ -430,17 +435,21 @@ class ConllSpanBasedF1Measure(Metric):
                 # This is the case the bio label is an "I", but either:
                 # 1) the span hasn't started - i.e. an ill formed span.
                 # 2) The span is an I tag for a different conll annotation.
-                # We'll process the previous span if it exists, and then just
-                # continue.
+                # We'll process the previous span if it exists, but also
+                # include this span. This is important, because otherwise,
+                # a model may get a perfect F1 score whilst still including
+                # false positive ill-formed spans.
                 if active_conll_tag:
                     spans.add(((span_start, span_end), active_conll_tag))
-                active_conll_tag = None
+                active_conll_tag = conll_tag
+                span_start = index
+                span_end = index
         # Last token might have been a part of a valid span.
         if active_conll_tag:
             spans.add(((span_start, span_end), active_conll_tag))
         return spans
 
-    def get_metric(self, reset: bool = False) -> Dict[str, Dict[str, float]]:
+    def get_metric(self, reset: bool = False):
         """
         Returns
         -------
@@ -453,21 +462,28 @@ class ConllSpanBasedF1Measure(Metric):
         recall and f1-measure for all spans.
         """
         all_tags = set()  # type: Set[str]
-        all_tags.update(self._true_positives)
-        all_tags.update(self._false_positives)
-        all_tags.update(self._false_negatives)
+        all_tags.update(self._true_positives.keys())
+        all_tags.update(self._false_positives.keys())
+        all_tags.update(self._false_negatives.keys())
         all_metrics = {}
         for tag in all_tags:
             precision, recall, f1_measure = self._compute_metrics(self._true_positives[tag],
                                                                   self._false_positives[tag],
                                                                   self._false_negatives[tag])
-            all_metrics[tag] = {"precision": precision, "recall": recall, "f1-measure": f1_measure}
+            precision_key = "precision" + "-" + tag
+            recall_key = "recall" + "-" + tag
+            f1_key = "f1-measure" + "-" + tag
+            all_metrics[precision_key] = precision
+            all_metrics[recall_key] = recall
+            all_metrics[f1_key] = f1_measure
 
         # Compute the precision, recall and f1 for all spans jointly.
         precision, recall, f1_measure = self._compute_metrics(sum(self._true_positives.values()),
                                                               sum(self._false_positives.values()),
                                                               sum(self._false_negatives.values()))
-        all_metrics["overall"] = {"precision": precision, "recall": recall, "f1-measure": f1_measure}
+        all_metrics["precision-overall"] = precision
+        all_metrics["recall-overall"] = recall
+        all_metrics["f1-measure-overall"] = f1_measure
         if reset:
             self.reset()
         return all_metrics
