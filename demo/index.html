@@ -366,7 +366,7 @@ class SrlInput extends React.Component {
 
   render() {
     const { srlSentenceValue } = this.state;
-    const { outputState, runModel } = this.props;
+    const { outputState, runSrlModel } = this.props;
 
     const srlInputs = {
       "sentenceValue": srlSentenceValue,
@@ -380,7 +380,7 @@ class SrlInput extends React.Component {
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-        <form onSubmit={() => { runModel(event, srlInputs) }}>
+        <form onSubmit={() => { runSrlModel(event, srlInputs) }}>
           <div className="form__instructions"><span>Enter text or</span>
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
               <option value="">Choose an example...</option>
@@ -488,7 +488,7 @@ class McInput extends React.Component {
   render() {
 
     const { mcPassageValue, mcQuestionValue } = this.state;
-    const { selectedModel, outputState, runModel } = this.props;
+    const { selectedModel, outputState, runMcModel } = this.props;
 
     const mcInputs = {
       "model": selectedModel,
@@ -504,7 +504,7 @@ class McInput extends React.Component {
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-        <form onSubmit={() => { runModel(event, mcInputs) }}>
+        <form onSubmit={() => { runMcModel(event, mcInputs) }}>
           <div className="form__instructions"><span>Enter text or</span>
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
               <option value="">Choose an example...</option>
@@ -612,7 +612,7 @@ class TeInput extends React.Component {
   render() {
 
     const { tePremiseValue, teHypothesisValue } = this.state;
-    const { selectedModel, outputState, runModel } = this.props;
+    const { selectedModel, outputState, runTeModel } = this.props;
 
     const teInputs = {
       "model": selectedModel,
@@ -628,7 +628,7 @@ class TeInput extends React.Component {
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-        <form onSubmit={() => { runModel(event, teInputs) }}>
+        <form onSubmit={() => { runTeModel(event, teInputs) }}>
           <div className="form__instructions"><span>Enter text or</span>
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
               <option value="">Choose an example...</option>
@@ -748,7 +748,6 @@ class App extends React.Component {
       rawOutput: "",
     };
     this.changeModel = this.changeModel.bind(this);
-    this.runModel = this.runModel.bind(this);
   }
 
   changeModel(thisModel) {
@@ -756,82 +755,6 @@ class App extends React.Component {
       selectedModel: thisModel,
       outputState: "empty",
     });
-  }
-
-  runModel(event, inputs) {
-    // Prevent regular form submission
-    if (event) { event.preventDefault(); }
-    this.setState({
-      outputState: "working",
-    });
-
-    var component = this; // todo(michaels)
-
-    let payload;
-    switch (this.state.selectedModel) {
-      case "srl":
-        payload = { sentence: inputs.sentenceValue };
-        fetch('http://localhost:8000/predict/srl', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        }).then(function(response) {
-          return response.json();
-        }).then((json) => {
-          component.setState({rawOutput: json});
-          this.setState({outputState: "received"}); // todo(michaels): why am I having an error here?
-        }).catch((error) => {
-          this.setState({outputState: "error"});
-          throw error; // todo(michaels): is this right?
-        });
-
-
-        break;
-
-      case "mc":
-        payload = {
-          passage: inputs.passageValue,
-          question: inputs.questionValue,
-        };
-        fetch('http://localhost:8000/predict/bidaf', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        }).then(function(response) {
-          return response.json();
-        }).then(function(json) {
-          component.setState({rawOutput: json});
-          component.setState({outputState: "received"});
-        });
-
-        break;
-
-      case "te":
-        payload = {
-          premise: inputs.premiseValue,
-          hypothesis: inputs.hypothesisValue,
-        };
-        fetch('http://localhost:8000/predict/snli', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        }).then(function(response) {
-          return response.json();
-        }).then(function(json) {
-          component.setState({rawOutput: json});
-          component.setState({outputState: "received"});
-        });
-        break;
-    }
   }
 
   render() {
@@ -842,53 +765,184 @@ class App extends React.Component {
       "label_probs": [0.2976710796, 0.4121640921, 0.2901648283]
     };
 
-    const InputControl = () => {
+    const ModelComponent = () => {
       if (selectedModel == "srl") {
-        return (
-          <SrlInput outputState={outputState} runModel={this.runModel} />
-        )
-      }
-      else if (selectedModel == "mc") {
-        return (
-          <McInput outputState={outputState} runModel={this.runModel} />
-        )
+        return (<SrlComponent outputState={outputState}/>)
       }
       else if (selectedModel == "te") {
-        return (
-          <TeInput outputState={outputState} runModel={this.runModel} />
-        )
-      }
-    }
-
-    const OutputControl = () => {
-      if (selectedModel == "srl") {
-        return (
-          <SrlOutput rawOutput={rawOutput} />
-        )
+        return (<TeComponent outputState={outputState}/>)
       }
       else if (selectedModel == "mc") {
-        return (
-          <McOutput rawOutput={rawOutput} />
-        )
-      }
-      else if (selectedModel == "te") {
-        return (
-          <TeOutput rawOutput={rawOutput} />
-        )
+        return (<McComponent outputState={outputState}/>)
       }
     }
 
     return (
       <div className="pane-container">
         <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
-        <div className="pane model">
-          <PaneLeft>
-            <InputControl/>
-          </PaneLeft>
-          <PaneRight outputState={outputState}>
-            <OutputControl/>
-          </PaneRight>
-        </div>
+        <ModelComponent />
+      </div>
+    );
+  }
+}
+
+class SrlComponent extends React.Component {
+  constructor() {
+    super();
+
+    this.state = {
+      outputState: "empty", // valid values: "working", "empty", "received", "error"
+      rawOutput: {},
+    };
+
+    this.runSrlModel = this.runSrlModel.bind(this);
+  }
+
+  runSrlModel(event, inputs) {
+    // Prevent regular form submission
+    if (event) { event.preventDefault(); }
+    this.setState({
+      outputState: "working",
+    });
+
+    var payload = { sentence: inputs.sentenceValue };
+    fetch('http://localhost:8000/predict/srl', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    }).then(function(response) {
+      return response.json();
+    }).then((json) => {
+      this.setState({rawOutput: json});
+      this.setState({outputState: "received"});
+    }).catch((error) => {
+      this.setState({outputState: "error"});
+      throw error; // todo(michaels): is this right?
+    });
+  }
+
+  render() {
+    return (
+      <div className="pane model">
+        <PaneLeft>
+          <SrlInput runSrlModel={this.runSrlModel}/>
+        </PaneLeft>
+        <PaneRight outputState={this.state.outputState}>
+          <SrlOutput rawOutput={this.state.rawOutput}/>
+        </PaneRight>
+      </div>
+    );
+  }
+}
+
+class TeComponent extends React.Component {
+  constructor() {
+    super();
+
+    this.state = {
+      outputState: "empty", // valid values: "working", "empty", "received", "error"
+      rawOutput: {},
+    };
+
+    this.runTeModel = this.runTeModel.bind(this);
+  }
+
+  runTeModel(event, inputs) {
+    // Prevent regular form submission
+    if (event) { event.preventDefault(); }
+    this.setState({
+      outputState: "working",
+    });
+
+    var payload = {
+      premise: inputs.premiseValue,
+      hypothesis: inputs.hypothesisValue,
+    };
+    fetch('http://localhost:8000/predict/snli', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    }).then((response) => {
+      return response.json();
+    }).then((json) => {
+      this.setState({rawOutput: json});
+      this.setState({outputState: "received"});
+    }).catch((error) => {
+      this.setState({outputState: "error"});
+      throw error; // todo(michaels): is this right?
+    });
+  }
+
+  render() {
+    return (
+      <div className="pane model">
+        <PaneLeft>
+          <TeInput runTeModel={this.runTeModel}/>
+        </PaneLeft>
+        <PaneRight outputState={this.state.outputState}>
+          <TeOutput rawOutput={this.state.rawOutput}/>
+        </PaneRight>
+      </div>
+    );
+  }
+}
+
+class McComponent extends React.Component {
+  constructor() {
+    super();
+
+    this.state = {
+      outputState: "empty", // valid values: "working", "empty", "received", "error"
+      rawOutput: {},
+    };
+
+    this.runMcModel = this.runMcModel.bind(this);
+  }
+
+  runMcModel(event, inputs) {
+    // Prevent regular form submission
+    if (event) { event.preventDefault(); }
+    this.setState({
+      outputState: "working",
+    });
+
+    var payload = {
+      passage: inputs.passageValue,
+      question: inputs.questionValue,
+    };
+    fetch('http://localhost:8000/predict/bidaf', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    }).then((response) => {
+      return response.json();
+    }).then((json) => {
+      this.setState({rawOutput: json});
+      this.setState({outputState: "received"});
+    }).catch((error) => {
+      this.setState({outputState: "error"});
+      throw error; // todo(michaels): is this right?
+    });
+  }
+
+  render() {
+    return (
+      <div className="pane model">
+        <PaneLeft>
+          <McInput runMcModel={this.runMcModel}/>
+        </PaneLeft>
+        <PaneRight outputState={this.state.outputState}>
+          <McOutput rawOutput={this.state.rawOutput}/>
+        </PaneRight>
       </div>
     );
   }
