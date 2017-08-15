@@ -17,6 +17,54 @@
 
 //  BEGIN React
 
+class ResultDisplay extends React.Component {
+  constructor() {
+    super();
+  }
+
+  render() {
+    const { outputState } = this.props;
+
+    const placeholderTemplate = (message) => {
+      return (
+        <div className="placeholder">
+          <div className="placeholder__content">
+            <svg className={`placeholder__${outputState}`}>
+              <use xlinkHref={`#icon__${outputState}`}></use>
+            </svg>
+            {message !== "" ? (
+              <p>{message}</p>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    let outputContent;
+    switch (outputState) {
+      case "working":
+        outputContent = placeholderTemplate("");
+        break;
+      case "received":
+        outputContent = this.props.children;
+        break;
+      case "error":
+        outputContent = placeholderTemplate("Something went wrong. Please try again.");
+        break;
+      default:
+        // outputState = "empty"
+        outputContent = placeholderTemplate("Run model to view results");
+    }
+
+    return (
+      <div className={`pane__right model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
+        <div className="pane__thumb"></div>
+        {outputContent}
+      </div>
+    );
+  }
+}
+
 
 /*******************************************************************************
   <TeGraph /> Component
@@ -618,54 +666,24 @@ class PaneRight extends React.Component {
   render() {
     const { outputState, selectedModel, rawOutput } = this.props;
 
-    const placeholderTemplate = (message) => {
-      return (
-        <div className="placeholder">
-          <div className="placeholder__content">
-            <svg className={`placeholder__${outputState}`}>
-              <use xlinkHref={`#icon__${outputState}`}></use>
-            </svg>
-            {message !== "" ? (
-              <p>{message}</p>
-            ) : null}
-          </div>
-        </div>
-      );
-    }
-
-    let outputContent;
-
-    switch (outputState) {
-      case "working":
-        outputContent = placeholderTemplate("");
+    let model;
+    switch (selectedModel) {
+      case "srl":
+        model = (<SrlOutput rawOutput={rawOutput} />);
         break;
-      case "received":
-        switch (selectedModel) {
-          case "srl":
-            outputContent = (<SrlOutput rawOutput={rawOutput} />);
-            break;
-          case "mc":
-            outputContent = (<McOutput rawOutput={rawOutput} />);
-            break;
-          case "te":
-            outputContent = (<TeOutput rawOutput={rawOutput} />);
-            break;
-        }
+      case "mc":
+        model = (<McOutput rawOutput={rawOutput} />);
         break;
-      case "error":
-        outputContent = placeholderTemplate("Something went wrong. Please try again.");
+      case "te":
+        model = (<TeOutput rawOutput={rawOutput} />);
         break;
-      default:
-        // outputState = "empty"
-        outputContent = placeholderTemplate("Run model to view results");
     }
 
     return (
-      <div className={`pane__right model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
-        <div className="pane__thumb"></div>
-        {outputContent}
-      </div>
-    );
+      <ResultDisplay outputState={outputState}>
+        {model}
+      </ResultDisplay>
+    )
   }
 }
 
@@ -785,7 +803,6 @@ class App extends React.Component {
       outputState: "working",
     });
 
-    debugger;
     let payload;
     switch (this.state.selectedModel) {
       case "srl":
@@ -798,7 +815,6 @@ class App extends React.Component {
           },
           body: JSON.stringify(payload)
         }).then(function(response) {
-          debugger;
           return response.json();
         }).then(function(json) {
           component.setState({rawOutput: json});
