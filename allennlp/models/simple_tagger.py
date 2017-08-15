@@ -5,12 +5,14 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
+from allennlp.common.params import replace_none
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields.text_field import TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, sequence_cross_entropy_with_logits
 from allennlp.nn.util import get_text_field_mask, get_lengths_from_binary_sequence_mask
+from allennlp.training.metrics import CategoricalAccuracy
 
 
 @Model.register("simple_tagger")
@@ -41,6 +43,10 @@ class SimpleTagger(Model):
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
+        self.metrics = {
+                "accuracy": CategoricalAccuracy(),
+                "accuracy3": CategoricalAccuracy(top_k=3)
+        }
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
@@ -93,6 +99,8 @@ class SimpleTagger(Model):
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
+            for metric in self.metrics.values():
+                metric(logits, tags, mask.float())
             output_dict["loss"] = loss
 
         return output_dict
@@ -133,10 +141,15 @@ class SimpleTagger(Model):
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}
 
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+
+
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SimpleTagger':
         text_field_embedder = TextFieldEmbedder.from_params(vocab, params.pop("text_field_embedder"))
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
+
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder)

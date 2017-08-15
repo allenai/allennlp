@@ -15,6 +15,7 @@ from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashse
 from allennlp.common.params import Params, replace_none
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.data import Vocabulary
+from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
@@ -108,7 +109,10 @@ def train_model(param_dict: Dict[str, Any]):
     params = Params(replace_none(param_dict))
     prepare_environment(params)
 
-    log_dir = params.get("serialization_prefix", None)  # pylint: disable=no-member
+    trainer_params = params.pop("trainer")
+    log_dir = trainer_params.get("serialization_prefix")
+    non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
+
     if log_dir is not None:
         os.makedirs(log_dir, exist_ok=True)
         sys.stdout = TeeLogger(os.path.join(log_dir, "_stdout.log"), sys.stdout)  # type: ignore
@@ -129,7 +133,7 @@ def train_model(param_dict: Dict[str, Any]):
     train_data = dataset_reader.read(train_data_path)
 
     # TODO(Mark): work out how this is going to be built with different options.
-    vocab = Vocabulary.from_dataset(train_data)
+    vocab = Vocabulary.from_dataset(train_data, non_padded_namespaces=non_padded_namespaces)
     if log_dir:
         vocab.save_to_files(os.path.join(log_dir, "vocabulary"))
 
@@ -147,7 +151,6 @@ def train_model(param_dict: Dict[str, Any]):
     else:
         validation_data = None
 
-    trainer_params = params.pop("trainer")
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,
                                   trainer_params)

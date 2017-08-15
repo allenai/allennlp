@@ -60,8 +60,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     with open(args.config_file) as config_file:
         config = Params(replace_none(json.loads(config_file.read())))
 
+    # Find out where the model was serialized to
+    serialization_prefix = config.get('trainer').get('serialization_prefix')
+
     # Load vocabulary from file
-    serialization_prefix = config.pop('serialization_prefix')
     vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
     vocab = Vocabulary.from_files(vocab_dir)
 
