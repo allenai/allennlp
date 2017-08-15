@@ -1,0 +1,25 @@
+{
+  "dataset_reader": {
+    "type": "array"
+  },
+  "train_data_path": "tutorials/getting_started/xor_data.json",
+  "validation_data_path": "tutorials/getting_started/xor_data.json",
+  "model": {
+    "type": "mlp",
+    "input_dim": 2,
+    "num_layers": 2,
+    "hidden_dims": [2, 1],
+    "activations": "sigmoid"
+  },
+  "iterator": {
+    "type": "basic",
+    "batch_size": 4
+  },
+  "optimizer": {
+    "type": "sgd",
+    "lr": 0.01
+  },
+  "num_epochs": 1000,
+  "serialization_prefix" : "tutorials/getting_started/serialization",
+  "cuda_device" : -1
+}
