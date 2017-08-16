@@ -34,8 +34,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__()
-        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        super().__init__(token_indexers=token_indexers)
 
     @overrides
     def read(self, file_path):

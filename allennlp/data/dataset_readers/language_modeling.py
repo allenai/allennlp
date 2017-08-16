@@ -47,11 +47,8 @@ class LanguageModelingReader(DatasetReader):
                  tokens_per_instance: int = None,
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__()
-
+        super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
         self._tokens_per_instance = tokens_per_instance
-        self._tokenizer = tokenizer
-        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._start_token = '<S>'
         self._end_token = '</S>'
 

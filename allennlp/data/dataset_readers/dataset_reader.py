@@ -1,4 +1,8 @@
+from typing import Dict
+
 from allennlp.data.dataset import Dataset
+from allennlp.data.tokenizers import Tokenizer
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
 
@@ -9,9 +13,11 @@ class DatasetReader(Registrable):
     parameters necessary to read the data apart from the filepath should be passed to the
     constructor of the ``DatasetReader``.
     """
-    def __init__(self):
-        self._tokenizer = None      # type: Optional[Tokenizer]
-        self._token_indexers = {}   # type: Dict[str, TokenIndexer]
+    def __init__(self,
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 tokenizer: Tokenizer = None) -> None:
+        self._tokenizer = tokenizer
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     def read(self, file_path: str) -> Dataset:
         """
