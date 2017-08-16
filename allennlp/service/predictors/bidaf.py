@@ -1,10 +1,10 @@
 from allennlp.data.dataset_readers.squad import SquadReader
 from allennlp.data.fields import TextField
-from allennlp.service.servable import Servable, JsonDict
+from allennlp.service.predictors import Predictor, JsonDict, sanitize
 
 
-@Servable.register('bidaf')
-class BidafServable(Servable):
+@Predictor.register('bidaf')
+class BidafPredictor(Predictor):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         question_text = inputs["question"]
         passage_text = inputs["passage"]
@@ -13,4 +13,4 @@ class BidafServable(Servable):
         passage = TextField(self.tokenizer.tokenize(passage_text) + [SquadReader.STOP_TOKEN],
                             token_indexers=self.token_indexers)
 
-        return self.model.predict_span(question, passage)
+        return sanitize(self.model.predict_span(question, passage))

@@ -11,7 +11,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField, TagField
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

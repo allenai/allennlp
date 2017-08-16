@@ -1,4 +1,4 @@
-from allennlp.service.servable import ServableCollection, sanitize
+from allennlp.service.predictors import PredictorCollection, sanitize
 
 from sanic import Sanic, response, request
 from sanic.config import LOGGING
@@ -14,14 +14,14 @@ def run(port: int) -> None:
     print("Starting a sanic server on port {}.".format(port))
     app = make_app()
     # TODO(joelgrus): make this configurable
-    app.servables = ServableCollection.default()
+    app.servables = PredictorCollection.default()
     app.run(port=port, host="0.0.0.0")
 
 def make_app() -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
     app.static('/', 'allennlp/service/index.html')
     app.static('/index.html', 'allennlp/service/index.html')
-    app.servables = ServableCollection()
+    app.servables = PredictorCollection()
 
     @app.route('/predict/<model_name>', methods=['POST'])
     async def predict(req: request.Request, model_name: str) -> response.HTTPResponse:  # pylint: disable=unused-variable

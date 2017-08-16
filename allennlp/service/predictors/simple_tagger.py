@@ -1,13 +1,13 @@
 from allennlp.data.fields import TextField
-from allennlp.service.servable import Servable, JsonDict
+from allennlp.service.predictors import Predictor, JsonDict, sanitize
 
 
-@Servable.register('simple_tagger')
-class SimpleTaggerServable(Servable):
+@Predictor.register('simple_tagger')
+class SimpleTaggerPredictor(Predictor):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         sentence = inputs["sentence"]
 
         tokens = TextField(self.tokenizer.tokenize(sentence),
                            token_indexers=self.token_indexers)
 
-        return self.model.tag(tokens)
+        return sanitize(self.model.tag(tokens))

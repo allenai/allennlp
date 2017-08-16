@@ -13,7 +13,6 @@ from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField, LabelField
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

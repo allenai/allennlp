@@ -1,4 +1,4 @@
-from allennlp.service.servable import ServableCollection, sanitize
+from allennlp.service.predictors import PredictorCollection, sanitize
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
@@ -7,12 +7,12 @@ def run(port: int) -> None:
     print("Starting a flask server on port {}.".format(port))
     app = make_app()
     # TODO(joelgrus): make this configurable
-    app.servables = ServableCollection.default()
+    app.servables = PredictorCollection.default()
     app.run(port=port, host="0.0.0.0")
 
 def make_app() -> Flask:
     app = Flask(__name__, static_url_path='')  # pylint: disable=invalid-name
-    app.servables = ServableCollection()
+    app.servables = PredictorCollection()
 
     @app.route('/')
     def root() -> Response:  # pylint: disable=unused-variable

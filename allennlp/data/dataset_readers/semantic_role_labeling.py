@@ -11,7 +11,6 @@ from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, TagField, IndexField
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.common.checks import ConfigurationError
 

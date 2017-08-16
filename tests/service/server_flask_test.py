@@ -2,14 +2,14 @@
 import json
 
 from allennlp.service.server_flask import make_app
-from allennlp.service.servable import ServableCollection
+from allennlp.service.predictors import PredictorCollection
 from allennlp.common.testing import AllenNlpTestCase
 
 class TestApp(AllenNlpTestCase):
 
     app = make_app()
     app.testing = True
-    app.servables = ServableCollection.default()
+    app.servables = PredictorCollection.default()
     client = app.test_client()
 
     # TODO(joelgrus): this is a fragile test

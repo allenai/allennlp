@@ -1,6 +1,5 @@
 import json
 import os
-from collections.abc import Iterable
 from typing import Dict, Any, Optional, List
 
 from allennlp.common import Params, Registrable, constants
@@ -17,20 +16,34 @@ import torch
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
 
-def sanitize(x: Any) -> Any:
-    if isinstance(x, torch.Tensor) or isinstance(x, np.ndarray):
+def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name
+    """
+    Sanitize x so that it can be JSON serialized
+    """
+    if isinstance(x, (str, float, int, bool)):
+        # x is already serializable
+        return x
+    elif isinstance(x, (torch.Tensor, np.ndarray)):
+        # tensors and arrays need to be converted to lists
         return x.tolist()
     elif isinstance(x, np.number):
+        # NumPy numbers need to be converted to Python numbers
         return x.item()
-    elif isinstance(x, Iterable):
-        return [sanitize(x_i) for x_i in x]
     elif isinstance(x, dict):
+        # Dicts need their values sanitized
         return {key: sanitize(value) for key, value in x.items()}
+    elif isinstance(x, (list, tuple)):
+        # Lists and Tuples need their values sanitized
+        return [sanitize(x_i) for x_i in x]
     else:
-        return x
+        raise ValueError("cannot sanitize {} of type {}".format(x, type(x)))
 
 
-class Servable(Registrable):
+class Predictor(Registrable):
+    """
+    a ``Predictor`` is a thin wrapper around an AllenNLP model that handles JSON -> JSON predictions
+    that can be used for serving models through the web API or making predictions in bulk.
+    """
     def __init__(self, model: Model, vocab: Vocabulary,
                  tokenizer: Tokenizer, token_indexers: Dict[str, TokenIndexer]) -> None:
         self.model = model
@@ -42,7 +55,7 @@ class Servable(Registrable):
         raise NotImplementedError()
 
     @classmethod
-    def from_config(cls, config: Params) -> 'Servable':
+    def from_config(cls, config: Params) -> 'Predictor':
         dataset_reader_params = config["dataset_reader"]
         dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
@@ -62,17 +75,17 @@ class Servable(Registrable):
         return cls(model, vocab, tokenizer, token_indexers)
 
 
-class ServableCollection:
+class PredictorCollection:
     """
     This represents the collection of models that are available to our command line tool or REST API.
     """
-    def __init__(self, collection: Dict[str, Servable] = None) -> None:
+    def __init__(self, collection: Dict[str, Predictor] = None) -> None:
         self.collection = collection if collection is not None else {}
 
-    def get(self, key: str) -> Optional[Servable]:
+    def get(self, key: str) -> Optional[Predictor]:
         return self.collection.get(key)
 
-    def register(self, key: str, servable: Servable):
+    def register(self, key: str, servable: Predictor):
         self.collection[key] = servable
 
     def list_available(self) -> List[str]:
@@ -81,7 +94,7 @@ class ServableCollection:
 
     # TODO: get rid of this
     @staticmethod
-    def default() -> 'ServableCollection':
+    def default() -> 'PredictorCollection':
         with open('experiment_config/bidaf.json') as config_file:
             config = json.loads(config_file.read())
             config['trainer']['serialization_prefix'] = 'tests/fixtures/bidaf/serialization'
@@ -103,19 +116,19 @@ class ServableCollection:
             constants.GLOVE_PATH = 'tests/fixtures/glove.6B.300d.sample.txt.gz'
             decomposable_attention_config = Params(replace_none(config))
 
-        from allennlp.service.servable.models.bidaf import BidafServable
-        from allennlp.service.servable.models.decomposable_attention import DecomposableAttentionServable
-        from allennlp.service.servable.models.semantic_role_labeler import SemanticRoleLabelerServable
+        from allennlp.service.predictors.bidaf import BidafPredictor
+        from allennlp.service.predictors.decomposable_attention import DecomposableAttentionPredictor
+        from allennlp.service.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor
 
         all_models = {
-                'bidaf': BidafServable.from_config(bidaf_config),
-                'srl': SemanticRoleLabelerServable.from_config(srl_config),
-                'snli': DecomposableAttentionServable.from_config(decomposable_attention_config),
-        }  # type: Dict[str, Servable]
+                'bidaf': BidafPredictor.from_config(bidaf_config),
+                'srl': SemanticRoleLabelerPredictor.from_config(srl_config),
+                'snli': DecomposableAttentionPredictor.from_config(decomposable_attention_config),
+        }  # type: Dict[str, Predictor]
 
-        return ServableCollection(all_models)
+        return PredictorCollection(all_models)
 
     @staticmethod
-    def from_params(params: Params) -> 'ServableCollection':  # pylint: disable=unused-argument
+    def from_params(params: Params) -> 'PredictorCollection':  # pylint: disable=unused-argument
         # TODO(joelgrus) implement this
-        return ServableCollection.default()
+        return PredictorCollection.default()
