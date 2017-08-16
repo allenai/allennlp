@@ -6,8 +6,8 @@ from sanic.exceptions import ServerError
 
 # Move access.log and error.log to /tmp by default
 # If someone really wants them, they can move them back
-LOGGING['handlers']['accessTimedRotatingFile']['filename'] = '/tmp/sanic_access.log'
-LOGGING['handlers']['errorTimedRotatingFile']['filename'] = '/tmp/sanic_error.log'
+# LOGGING['handlers']['accessTimedRotatingFile']['filename'] = '/tmp/sanic_access.log'
+# LOGGING['handlers']['errorTimedRotatingFile']['filename'] = '/tmp/sanic_error.log'
 
 def run(port: int) -> None:
     """Run the server programatically"""
@@ -19,22 +19,21 @@ def run(port: int) -> None:
 
 def make_app() -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
-    app.static('/', 'allennlp/service/index.html')
-    app.static('/index.html', 'allennlp/service/index.html')
+    app.static('/', './allennlp/service/static/')
     app.servables = ServableCollection()
 
-    @app.route('/predict/<model_name>', methods=['POST'])
+    @app.route('/predict/<model_name>', methods=['OPTIONS', 'POST'])
     async def predict(req: request.Request, model_name: str) -> response.HTTPResponse:  # pylint: disable=unused-variable
-        """make a prediction using the specified model and return the results"""
-        model = app.servables.get(model_name.lower())
-        if model is None:
-            raise ServerError("unknown model: {}".format(model_name), status_code=400)
+      """make a prediction using the specified model and return the results"""
+      model = app.servables.get(model_name.lower())
+      if model is None:
+        raise ServerError("unknown model: {}".format(model_name), status_code=400)
 
-        # TODO(joelgrus): error handling
-        data = req.json
-        prediction = model.predict_json(data)
+      # TODO(joelgrus): error handling
+      data = req.json
+      prediction = model.predict_json(data)
 
-        return response.json(prediction)
+      return response.json(prediction)
 
     @app.route('/models')
     async def list_models(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
