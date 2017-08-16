@@ -2,10 +2,10 @@
 
 from unittest import TestCase
 
-from allennlp.service.servable import ServableCollection, Servable, JSONDict
+from allennlp.service.servable import ServableCollection, Servable, JsonDict
 
 class TestServable(Servable):
-    def predict_json(self, inputs: JSONDict) -> JSONDict:
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         return {"output": "test servable"}
 
 

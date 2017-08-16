@@ -1,1 +1,1 @@
-from .servable import Servable, JSONDict, ServableCollection
+from .servable import Servable, JsonDict, ServableCollection

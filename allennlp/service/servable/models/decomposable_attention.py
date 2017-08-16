@@ -8,19 +8,11 @@ from allennlp.data.fields import TextField
 from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.models import DecomposableAttention
-from allennlp.service.servable import Servable, JSONDict
+from allennlp.service.servable import Servable, JsonDict
 
+@Servable.register('decomposable_attention')
 class DecomposableAttentionServable(Servable):
-    def __init__(self,
-                 tokenizer: Tokenizer,
-                 token_indexers: Dict[str, TokenIndexer],
-                 model: DecomposableAttention) -> None:
-        self.tokenizer = tokenizer
-        self.token_indexers = token_indexers
-        self.model = model
-        self.model.eval()
-
-    def predict_json(self, inputs: JSONDict) -> JSONDict:
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         premise_text = inputs["premise"]
         hypothesis_text = inputs["hypothesis"]
 
@@ -31,23 +23,3 @@ class DecomposableAttentionServable(Servable):
         output_dict["label_probs"] = output_dict["label_probs"].tolist()
 
         return output_dict
-
-    @classmethod
-    def from_config(cls, config: Params) -> 'DecomposableAttentionServable':
-        dataset_reader_params = config["dataset_reader"]
-        assert dataset_reader_params.pop("type") == "snli"
-        dataset_reader = SnliReader.from_params(dataset_reader_params)
-
-        serialization_prefix = config["trainer"]["serialization_prefix"]
-        vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
-        vocab = Vocabulary.from_files(vocab_dir)
-
-        model_params = config["model"]
-        assert model_params.pop("type") == "decomposable_attention"
-        model = DecomposableAttention.from_params(vocab, model_params)
-
-        # pylint: disable=protected-access
-        return DecomposableAttentionServable(tokenizer=dataset_reader._tokenizer,
-                                             token_indexers=dataset_reader._token_indexers,
-                                             model=model)
-        # pylint: enable=protected-access

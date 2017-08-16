@@ -1,26 +1,61 @@
 import json
+import os
 from typing import Dict, Any, Optional, List
 
-from allennlp.common import Params, constants
+from allennlp.common import Params, Registrable, constants
 from allennlp.common.params import replace_none
+from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data import Vocabulary
+from allennlp.models import Model
 
-JSONDict = Dict[str, Any]  # pylint: disable=invalid-name
+JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
 
-class Servable:
-    """
-    Any "model" that we want to serve through either our command line tool or REST API / webapp
-    needs to implement this interface.
-    """
-    def predict_json(self, inputs: JSONDict) -> JSONDict:
+class Servable(Registrable):
+    def __init__(self, model: Model, vocab: Vocabulary, dataset_reader: DatasetReader):
+        print("initializing", self)
+        self.model = model
+        self.vocab = vocab
+        self.dataset_reader = dataset_reader
+
+        try:
+            self.tokenizer = dataset_reader._tokenizer  # pylint: disable=protected-access
+        except AttributeError:
+            self.tokenizer = WordTokenizer()
+
+        try:
+            self.token_indexers = dataset_reader._token_indexers  # pylint: disable=protected-access
+        except AttributeError:
+            self.token_indexers = {}
+
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         raise NotImplementedError()
 
-    # TODO(joelgrus): add a predict_tensor method maybe?
-
     @classmethod
-    def from_params(cls, params: Params) -> 'Servable':  # pylint: disable=unused-argument
-        # default implementation calls no-argument constructor, you probably want to override this
-        return cls()
+    def from_config(cls, config: Params) -> 'Servable':
+        dataset_reader_params = config["dataset_reader"]
+        dataset_reader = DatasetReader.from_params(dataset_reader_params)
+
+        serialization_prefix = config['trainer']['serialization_prefix']
+        vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
+        vocab = Vocabulary.from_files(vocab_dir)
+
+        model_params = config["model"]
+        model = Model.from_params(vocab, model_params)
+
+        # TODO(joelgrus): use a GPU if appropriate
+        # cuda_device = -1
+
+        weights_file = os.path.join(serialization_prefix, "best.th")
+
+        # TODO(joelgrus): get rid of this check once we have weights files for all the models
+        #if os.path.exists(weights_file):
+        #    model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
+        #    model.load_state_dict(model_state)
+        model.eval()
+
+        return cls(model, vocab, dataset_reader)
 
 
 class ServableCollection:
@@ -40,13 +75,10 @@ class ServableCollection:
     def list_available(self) -> List[str]:
         return list(self.collection.keys())
 
+
     # TODO: get rid of this
     @staticmethod
     def default() -> 'ServableCollection':
-        import allennlp.service.servable.models.semantic_role_labeler as semantic_role_labeler
-        import allennlp.service.servable.models.bidaf as bidaf
-        import allennlp.service.servable.models.decomposable_attention as decomposable_attention
-
         with open('experiment_config/bidaf.json') as config_file:
             config = json.loads(config_file.read())
             config['trainer']['serialization_prefix'] = 'tests/fixtures/bidaf/serialization'
@@ -68,11 +100,14 @@ class ServableCollection:
             constants.GLOVE_PATH = 'tests/fixtures/glove.6B.300d.sample.txt.gz'
             decomposable_attention_config = Params(replace_none(config))
 
+        from allennlp.service.servable.models.bidaf import BidafServable
+        from allennlp.service.servable.models.decomposable_attention import DecomposableAttentionServable
+        from allennlp.service.servable.models.semantic_role_labeler import SemanticRoleLabelerServable
+
         all_models = {
-                'bidaf': bidaf.BidafServable.from_config(bidaf_config),
-                'srl': semantic_role_labeler.SemanticRoleLabelerServable.from_config(srl_config),
-                'snli': decomposable_attention.DecomposableAttentionServable.from_config(
-                        decomposable_attention_config),
+                'bidaf': BidafServable.from_config(bidaf_config),
+                'srl': SemanticRoleLabelerServable.from_config(srl_config),
+                'snli': DecomposableAttentionServable.from_config(decomposable_attention_config),
         }  # type: Dict[str, Servable]
 
         return ServableCollection(all_models)
