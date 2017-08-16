@@ -217,6 +217,7 @@ class SquadSentenceSelectionReader(DatasetReader):
                  negative_sentence_selection: str = "paragraph",
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super().__init__()
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
         self._tokenizer = tokenizer
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}

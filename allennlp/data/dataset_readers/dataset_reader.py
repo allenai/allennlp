@@ -1,8 +1,4 @@
-from typing import Dict, Optional
-
 from allennlp.data.dataset import Dataset
-from allennlp.data.token_indexers import TokenIndexer
-from allennlp.data.tokenizers import Tokenizer
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
 

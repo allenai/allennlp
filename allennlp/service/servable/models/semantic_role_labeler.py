@@ -1,4 +1,6 @@
-from allennlp.data import Vocabulary, DatasetReader
+from typing import Dict
+
+from allennlp.data import Vocabulary, Tokenizer, TokenIndexer
 from allennlp.data.fields import TextField, IndexField
 from allennlp.models import Model
 from allennlp.service.servable import Servable, JsonDict
@@ -7,8 +9,9 @@ import spacy
 
 @Servable.register("srl")
 class SemanticRoleLabelerServable(Servable):
-    def __init__(self, model: Model, vocab: Vocabulary, dataset_reader: DatasetReader) -> None:
-        super().__init__(model, vocab, dataset_reader)
+    def __init__(self, model: Model, vocab: Vocabulary,
+                 tokenizer: Tokenizer, token_indexers: Dict[str, TokenIndexer]) -> None:
+        super().__init__(model, vocab, tokenizer, token_indexers)
 
         self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
 
