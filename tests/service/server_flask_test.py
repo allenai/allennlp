@@ -9,7 +9,7 @@ class TestApp(AllenNlpTestCase):
 
     app = make_app()
     app.testing = True
-    app.servables = PredictorCollection.default()
+    app.predictors = PredictorCollection.default()
     client = app.test_client()
 
     # TODO(joelgrus): this is a fragile test

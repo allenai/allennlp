@@ -14,19 +14,19 @@ def run(port: int) -> None:
     print("Starting a sanic server on port {}.".format(port))
     app = make_app()
     # TODO(joelgrus): make this configurable
-    app.servables = PredictorCollection.default()
+    app.predictors = PredictorCollection.default()
     app.run(port=port, host="0.0.0.0")
 
 def make_app() -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
     app.static('/', 'allennlp/service/index.html')
     app.static('/index.html', 'allennlp/service/index.html')
-    app.servables = PredictorCollection()
+    app.predictors = PredictorCollection()
 
     @app.route('/predict/<model_name>', methods=['POST'])
     async def predict(req: request.Request, model_name: str) -> response.HTTPResponse:  # pylint: disable=unused-variable
         """make a prediction using the specified model and return the results"""
-        model = app.servables.get(model_name.lower())
+        model = app.predictors.get(model_name.lower())
         if model is None:
             raise ServerError("unknown model: {}".format(model_name), status_code=400)
 
@@ -40,6 +40,6 @@ def make_app() -> Sanic:
     @app.route('/models')
     async def list_models(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """list the available models"""
-        return response.json({"models": app.servables.list_available()})
+        return response.json({"models": app.predictors.list_available()})
 
     return app

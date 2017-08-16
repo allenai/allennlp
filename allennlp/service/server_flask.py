@@ -7,12 +7,12 @@ def run(port: int) -> None:
     print("Starting a flask server on port {}.".format(port))
     app = make_app()
     # TODO(joelgrus): make this configurable
-    app.servables = PredictorCollection.default()
+    app.predictors = PredictorCollection.default()
     app.run(port=port, host="0.0.0.0")
 
 def make_app() -> Flask:
     app = Flask(__name__, static_url_path='')  # pylint: disable=invalid-name
-    app.servables = PredictorCollection()
+    app.predictors = PredictorCollection()
 
     @app.route('/')
     def root() -> Response:  # pylint: disable=unused-variable
@@ -38,7 +38,7 @@ def make_app() -> Flask:
     @app.route('/predict/<model_name>', methods=['POST'])
     def predict(model_name: str) -> Response:  # pylint: disable=unused-variable
         """make a prediction using the specified model and return the results"""
-        model = app.servables.get(model_name.lower())
+        model = app.predictors.get(model_name.lower())
         if model is None:
             raise UnknownModel(model_name)
 
@@ -53,6 +53,6 @@ def make_app() -> Flask:
     @app.route('/models')
     def list_models() -> Response:  # pylint: disable=unused-variable
         """list the available models"""
-        return jsonify({"models": app.servables.list_available()})
+        return jsonify({"models": app.predictors.list_available()})
 
     return app

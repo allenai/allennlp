@@ -85,8 +85,8 @@ class PredictorCollection:
     def get(self, key: str) -> Optional[Predictor]:
         return self.collection.get(key)
 
-    def register(self, key: str, servable: Predictor):
-        self.collection[key] = servable
+    def register(self, key: str, predictor: Predictor):
+        self.collection[key] = predictor
 
     def list_available(self) -> List[str]:
         return list(self.collection.keys())

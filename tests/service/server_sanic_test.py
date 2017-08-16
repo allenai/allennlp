@@ -9,7 +9,7 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestApp(AllenNlpTestCase):
 
     app = make_app()
-    app.servables = PredictorCollection.default()
+    app.predictors = PredictorCollection.default()
     app.testing = True
     client = app.test_client
 

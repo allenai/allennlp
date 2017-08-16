@@ -25,10 +25,10 @@ def get_model(args: argparse.Namespace) -> Optional[Predictor]:
     model_name = args.model
     return models.get(model_name)
 
-def run(servable: Predictor, input_file: IO, output_file: Optional[IO], print_to_console: bool) -> None:
+def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_to_console: bool) -> None:
     for line in input_file:
         data = json.loads(line)
-        result = servable.predict_json(data)
+        result = predictor.predict_json(data)
         sanitized = sanitize(result)
         output = json.dumps(sanitized)
 
