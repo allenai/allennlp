@@ -99,7 +99,7 @@ you might care about the `trainer` section, which specifies how we want to train
   }
 ```
 
-The `num_epochs` parameter just specifies how many passes through the dataset we want to train on.
+Here the `num_epochs` parameter specifies that we want to make 20 training passes through the training dataset.
 On a recent Macbook each epoch of this model on this dataset takes about 30 seconds, so 20 will take about 10 minutes.
 The `serialization` prefix is the path where the model's vocabulary and checkpointed weights will be saved.
 And if you have a GPU you can change `cuda_device` to 0 to use it.
@@ -124,8 +124,9 @@ accuracy: 0.50, accuracy_top3: 0.64, loss: 2.27 ||: 100%|##########| 50/50 [00:0
 
 Here `accuracy` measures how often our model predicted the "correct" part of speech tag as most probable,
 while `accuracy3` measures how often the correct tag was one of the _three_ most probable.
-(`loss` measures [cross entropy](https://en.wikipedia.org/wiki/Cross_entropy), which you probably don't care about
- other than to make sure that it's mostly decreasing during training.)
+(`loss` measures [cross entropy](https://en.wikipedia.org/wiki/Cross_entropy)
+ and is the objective being used to train the model. You want to make sure
+ it's mostly decreasing during training.)
 
 After 20 epochs we see we see
 
@@ -145,7 +146,8 @@ and 83% of the time the correct tag was in the model's "top 3".
 if you look at the data there's a lot of different tags!)
 
 Now that the model is trained, there should be a bunch of files in the serialization directory. The `vocabulary` directory
-contains the model's vocabularies and (in particular) their encodings as integers. The various
+contains the model's vocabularies, each of which is a (distinct) encoding of strings as integers.
+In our case, we'll have one for `tokens` (i.e. words) and another for `tags`. The various
 `training_state_epoch_XX.th` files contain the state of the trainer after each epoch (`.th` is the suffix for serialized torch tensors),
 so that you could resume training where you left off, if you wanted to.
 Similarly, the `model_state_epoch_XX.th` files contain the model weights after each epoch.

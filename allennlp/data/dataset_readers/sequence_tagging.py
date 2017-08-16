@@ -23,18 +23,27 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
     WORD###TAG [TAB] WORD###TAG [TAB] ..... \n
 
-    and converts it into a ``Dataset`` suitable for sequence tagging.
+    and converts it into a ``Dataset`` suitable for sequence tagging. You can also specify
+    alternative delimiters in the constructor.
 
     Parameters
     ----------
+    word_tag_delimiter: ``str``, optional (default=``"###"``)
+        The text that separates each WORD from its TAG.
+    word_word_delimiter: ``str``, optional (default=``"\t"``)
+        The text that separates each WORD-TAG pair from the next pair.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
     """
     def __init__(self,
+                 word_tag_delimiter: str = "###",
+                 word_word_delimiter: str = "\t",
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self.word_tag_delimiter = word_tag_delimiter
+        self.word_word_delimiter = word_word_delimiter
 
     @overrides
     def read(self, file_path):
@@ -43,7 +52,14 @@ class SequenceTaggingDatasetReader(DatasetReader):
             instances = []
             logger.info("Reading instances from lines in file at: %s", file_path)
             for line in tqdm.tqdm(data_file):
-                tokens_and_tags = [pair.split("###") for pair in line.strip("\n").split("\t")]
+                line = line.strip("\n")
+
+                # skip blank lines
+                if not line:
+                    continue
+
+                tokens_and_tags = [pair.rsplit(self.word_tag_delimiter, 1)
+                                   for pair in line.split(self.word_word_delimiter)]
                 tokens = [x[0] for x in tokens_and_tags]
                 tags = [x[1] for x in tokens_and_tags]
 
