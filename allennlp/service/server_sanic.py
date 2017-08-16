@@ -20,6 +20,7 @@ def run(port: int) -> None:
 def make_app() -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
     app.static('/', './allennlp/service/static/')
+    app.static('/', './allennlp/service/static/index.html')
     app.servables = ServableCollection()
 
     @app.route('/predict/<model_name>', methods=['OPTIONS', 'POST'])
