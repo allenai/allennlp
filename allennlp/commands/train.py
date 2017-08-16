@@ -147,7 +147,9 @@ def train_model(param_dict: Dict[str, Any]):
     else:
         validation_data = None
 
+    trainer_params = params.pop("trainer")
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,
-                                  params)
+                                  trainer_params)
+    params.assert_empty('base train command')
     trainer.train()

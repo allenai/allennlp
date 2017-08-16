@@ -11,14 +11,14 @@
       }
     }
   },
-  "train_data_path": "/net/efs/aristo/dlfa/squad/train-v1.1.json",
-  "validation_data_path": "/net/efs/aristo/dlfa/squad/dev-v1.1.json",
+  "train_data_path": "/squad/train-v1.1.json",
+  "validation_data_path": "/squad/dev-v1.1.json",
   "model": {
     "type": "bidaf",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
+        "pretrained_file": "/glove/glove.6B.100d.txt.gz",
         "trainable": false
       },
       "token_characters": {
@@ -83,12 +83,14 @@
   },
   "optimizer": {
     "type": "sgd",
-    "lr": 0.00001
+    "lr": 0.001
   },
-  "num_epochs": 12,
-  "grad_norm": 0.1,
-  "grad_clipping": 0.1,
-  "patience" : 12,
-  "serialization_prefix" : "/net/efs/aristo/allennlp/bidaf/bidaf-model",
-  "cuda_device" : 0
+  "trainer": {
+    "num_epochs": 12,
+    "grad_clipping": 10.0,
+    "patience": 12,
+    "serialization_prefix": "/output",
+    "cuda_device": 0,
+    "log_one_line_per_batch": false
+  }
 }
