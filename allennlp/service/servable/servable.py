@@ -1,5 +1,6 @@
 import json
 import os
+from collections.abc import Iterable
 from typing import Dict, Any, Optional, List
 
 from allennlp.common import Params, Registrable, constants
@@ -10,7 +11,23 @@ from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data import Vocabulary
 from allennlp.models import Model
 
+import numpy as np
+import torch
+
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
+
+
+def sanitize(x: Any) -> Any:
+    if isinstance(x, torch.Tensor) or isinstance(x, np.ndarray):
+        return x.tolist()
+    elif isinstance(x, np.number):
+        return x.item()
+    elif isinstance(x, Iterable):
+        return [sanitize(x_i) for x_i in x]
+    elif isinstance(x, dict):
+        return {key: sanitize(value) for key, value in x.items()}
+    else:
+        return x
 
 
 class Servable(Registrable):

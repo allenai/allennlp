@@ -30,7 +30,7 @@ class SemanticRoleLabelerServable(Servable):
                         "index": i,
                         "verb": word.text,
                         "tags": output["tags"],
-                        "class_probabilities": output["class_probabilities"].tolist()
+                        "class_probabilities": output["class_probabilities"]
                 })
 
         return results

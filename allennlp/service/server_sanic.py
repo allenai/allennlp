@@ -1,4 +1,4 @@
-from allennlp.service.servable import ServableCollection
+from allennlp.service.servable import ServableCollection, sanitize
 
 from sanic import Sanic, response, request
 from sanic.config import LOGGING
@@ -33,8 +33,9 @@ def make_app() -> Sanic:
         # TODO(joelgrus): error handling
         data = req.json
         prediction = model.predict_json(data)
+        sanitized = sanitize(prediction)
 
-        return response.json(prediction)
+        return response.json(sanitized)
 
     @app.route('/models')
     async def list_models(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable

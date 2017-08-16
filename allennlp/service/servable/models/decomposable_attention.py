@@ -12,7 +12,4 @@ class DecomposableAttentionServable(Servable):
         hypothesis = TextField(self.tokenizer.tokenize(hypothesis_text),
                                token_indexers=self.token_indexers)
 
-        output_dict = self.model.predict_entailment(premise, hypothesis)
-        output_dict["label_probs"] = output_dict["label_probs"].tolist()
-
-        return output_dict
+        return self.model.predict_entailment(premise, hypothesis)

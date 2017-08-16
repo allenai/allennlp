@@ -1,4 +1,4 @@
-from allennlp.service.servable import ServableCollection
+from allennlp.service.servable import ServableCollection, sanitize
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
@@ -45,8 +45,9 @@ def make_app() -> Flask:
         # TODO(joelgrus): error handling
         data = request.get_json()
         prediction = model.predict_json(data)
+        sanitized = sanitize(prediction)
 
-        return jsonify(prediction)
+        return jsonify(sanitized)
 
 
     @app.route('/models')
