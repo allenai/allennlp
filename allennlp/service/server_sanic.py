@@ -4,11 +4,6 @@ from sanic import Sanic, response, request
 from sanic.config import LOGGING
 from sanic.exceptions import ServerError
 
-# Move access.log and error.log to /tmp by default
-# If someone really wants them, they can move them back
-# LOGGING['handlers']['accessTimedRotatingFile']['filename'] = '/tmp/sanic_access.log'
-# LOGGING['handlers']['errorTimedRotatingFile']['filename'] = '/tmp/sanic_error.log'
-
 def run(port: int) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
