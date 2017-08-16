@@ -1,11 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
-from allennlp.data.dataset_readers import BrownCorpusDatasetReader
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestBrownCorpusDatasetReader(AllenNlpTestCase):
     def test_read_from_file(self):
-        reader = BrownCorpusDatasetReader()
+        reader = SequenceTaggingDatasetReader(word_tag_delimiter='/', word_word_delimiter=' ')
         dataset = reader.read('tests/fixtures/data/brown_corpus.txt')
 
         assert len(dataset.instances) == 4
