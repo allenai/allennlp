@@ -9,6 +9,7 @@ from allennlp.common.registrable import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.common.params import Params
+from allennlp.data.vocabulary import Vocabulary
 
 
 class Metric(Registrable):
@@ -46,8 +47,10 @@ class Metric(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params, vocab: Optional[Vocabulary] = None):
         metric_type = params.pop_choice("type", cls.list_available())
+        if vocab is not None:
+            return cls.by_name(metric_type)(vocab, **params.as_dict())  # type: ignore
         return cls.by_name(metric_type)(**params.as_dict())  # type: ignore
 
 
@@ -305,24 +308,26 @@ class SpanBasedF1Measure(Metric):
     can be helpful for judging model peformance during training.
     """
     def __init__(self,
-                 label_vocabulary: Dict[int, str],
+                 vocabulary: Vocabulary,
+                 tag_namespace: str = "tags",
                  ignore_classes: List[str] = None) -> None:
         """
         Parameters
         ----------
-        label_vocabulary : Dict[int, str], required.
-            A mapping from integer class labels to string labels. This metric
-            assumes that a BIO format is used in which the labels are of the format:
-            ["B-LABEL", "I-LABEL"].
+        vocabulary : ``Vocabulary``, required.
+            A vocabulary containing the tag namespace.
+        tag_namespace : str, required.
+            This metric assumes that a BIO format is used in which the
+            labels are of the format: ["B-LABEL", "I-LABEL"].
         ignore_classes : List[str], optional.
             Non-BIO labeled classes which will be ignored when computing span
             metrics. This is helpful for instance, to avoid computing
-            metrics for "O", and "V" tags in a BIO tagging scheme
-            for semantic role labelling, which are typically not included.
-            Note that these labels do not have their prepended BIO information,
-            they are only the raw tag.
+            metrics for "V" spans in a BIO tagging scheme and ignoring "O" tags
+            representing out of span words for semantic role labelling, which are
+            typically not included. Note that these labels do not have their
+            prepended BIO information, they are only the raw tag.
         """
-        self._label_vocabulary = label_vocabulary
+        self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(tag_namespace)
         self._ignore_classes = ignore_classes or []
 
         # These will hold per label span counts.
@@ -412,7 +417,7 @@ class SpanBasedF1Measure(Metric):
             string_tag = self._label_vocabulary[integer_tag]
             bio_tag = string_tag[0]
             conll_tag = string_tag[2:]
-            if conll_tag in self._ignore_classes:
+            if bio_tag == "O" or conll_tag in self._ignore_classes:
                 # The span has ended.
                 if active_conll_tag:
                     spans.add(((span_start, span_end), active_conll_tag))

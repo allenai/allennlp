@@ -41,8 +41,6 @@ class SemanticRoleLabeler(Model):
         and predicting output tags.
     initializer : ``InitializerApplicator``
         We will use this to initialize the parameters in the model, calling ``initializer(self)``.
-    metric: ConllSpanBasedF1Measure, optional (default = None).
-        A span based metric to compute accuracy whilst training.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -54,10 +52,9 @@ class SemanticRoleLabeler(Model):
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
 
-        # For the span based evaluation, we don't want to consider labels for
-        # out of span tokens or verbs, because the verb index is provided to the model.
-        tag_vocab = vocab.get_index_to_token_vocabulary("tags")
-        self.metric = SpanBasedF1Measure(tag_vocab, ignore_classes=["O", "V"])
+        # For the span based evaluation, we don't want to consider labels
+        # for verb, because the verb index is provided to the model.
+        self.metric = SpanBasedF1Measure(vocab, tag_namespace="tags", ignore_classes=["V"])
 
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
@@ -134,8 +131,7 @@ class SemanticRoleLabeler(Model):
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
-            if self.metric is not None:
-                self.metric(class_probabilities, tags, mask)
+            self.metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict
@@ -185,11 +181,7 @@ class SemanticRoleLabeler(Model):
         return {"tags": tags, "class_probabilities": predictions.numpy()}
 
     def get_metrics(self, reset: bool = False):
-        # TODO(Mark): This won't play well with the metrics in Trainer, see how Matt wants it.
-        if self.metric:
-            metric_dict = self.metric.get_metric(reset=reset)
-        else:
-            metric_dict = {}
+        metric_dict = self.metric.get_metric(reset=reset)
         return metric_dict
 
     def get_viterbi_pairwise_potentials(self):
