@@ -99,6 +99,7 @@ class SquadReader(DatasetReader):
     def __init__(self,
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super().__init__()
         self._tokenizer = tokenizer
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 

@@ -7,17 +7,17 @@ import spacy
 
 @Servable.register("srl")
 class SemanticRoleLabelerServable(Servable):
-    def __init__(self, model: Model, vocab: Vocabulary, dataset_reader: DatasetReader):
+    def __init__(self, model: Model, vocab: Vocabulary, dataset_reader: DatasetReader) -> None:
         super().__init__(model, vocab, dataset_reader)
 
-        self.nlp = spacy.load('en')
+        self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
 
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         sentence = inputs["sentence"]
         tokens = self.tokenizer.tokenize(sentence)
         text = TextField(tokens, token_indexers=self.token_indexers)
 
-        results = {"verbs": []}  # type: JSONDict
+        results = {"verbs": []}  # type: JsonDict
         spacy_doc = self.nlp(sentence)
         for i, word in enumerate(spacy_doc):
             if word.pos_ == "VERB":

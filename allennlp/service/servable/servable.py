@@ -4,7 +4,8 @@ from typing import Dict, Any, Optional, List
 
 from allennlp.common import Params, Registrable, constants
 from allennlp.common.params import replace_none
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data import Vocabulary
 from allennlp.models import Model
@@ -13,21 +14,12 @@ JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
 
 class Servable(Registrable):
-    def __init__(self, model: Model, vocab: Vocabulary, dataset_reader: DatasetReader):
-        print("initializing", self)
+    def __init__(self, model: Model, vocab: Vocabulary,
+                 tokenizer: Tokenizer, token_indexers: Dict[str, TokenIndexer]) -> None:
         self.model = model
         self.vocab = vocab
-        self.dataset_reader = dataset_reader
-
-        try:
-            self.tokenizer = dataset_reader._tokenizer  # pylint: disable=protected-access
-        except AttributeError:
-            self.tokenizer = WordTokenizer()
-
-        try:
-            self.token_indexers = dataset_reader._token_indexers  # pylint: disable=protected-access
-        except AttributeError:
-            self.token_indexers = {}
+        self.tokenizer = tokenizer
+        self.token_indexers = token_indexers
 
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         raise NotImplementedError()
@@ -37,6 +29,9 @@ class Servable(Registrable):
         dataset_reader_params = config["dataset_reader"]
         dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
+        tokenizer = dataset_reader._tokenizer or WordTokenizer()  # pylint: disable=protected-access
+        token_indexers = dataset_reader._token_indexers           # pylint: disable=protected-access
+
         serialization_prefix = config['trainer']['serialization_prefix']
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
@@ -44,24 +39,15 @@ class Servable(Registrable):
         model_params = config["model"]
         model = Model.from_params(vocab, model_params)
 
-        # TODO(joelgrus): use a GPU if appropriate
-        # cuda_device = -1
-
-        weights_file = os.path.join(serialization_prefix, "best.th")
-
-        # TODO(joelgrus): get rid of this check once we have weights files for all the models
-        #if os.path.exists(weights_file):
-        #    model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
-        #    model.load_state_dict(model_state)
+        # TODO(joelgrus): load weights from files
         model.eval()
 
-        return cls(model, vocab, dataset_reader)
+        return cls(model, vocab, tokenizer, token_indexers)
 
 
 class ServableCollection:
     """
     This represents the collection of models that are available to our command line tool or REST API.
-
     """
     def __init__(self, collection: Dict[str, Servable] = None) -> None:
         self.collection = collection if collection is not None else {}
