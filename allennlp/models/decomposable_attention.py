@@ -11,6 +11,7 @@ from allennlp.modules import FeedForward, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
 from allennlp.nn.util import arrays_to_variables, get_lengths_from_binary_sequence_mask
+from allennlp.training.metrics import CategoricalAccuracy
 
 
 @Model.register("decomposable_attention")
@@ -80,6 +81,7 @@ class DecomposableAttention(Model):
             raise ConfigurationError("Final output dimension (%d) must equal num labels (%d)" %
                                      (aggregate_feedforward.get_output_dim(), self._num_labels))
 
+        self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
 
         # TODO(mattg): figure out default initialization here
@@ -162,9 +164,15 @@ class DecomposableAttention(Model):
             if label.dim() == 2:
                 _, label = label.max(-1)
             loss = self._loss(label_logits, label.view(-1))
+            self._accuracy(label_logits, label)
             output_dict["loss"] = loss
 
         return output_dict
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return {
+                'accuracy': self._accuracy.get_metric(reset),
+                }
 
     def predict_entailment(self, premise: TextField, hypothesis: TextField) -> Dict[str, torch.Tensor]:
         """
