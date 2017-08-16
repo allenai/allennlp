@@ -69,9 +69,12 @@ class ServableCollection:
             decomposable_attention_config = Params(replace_none(config))
 
         all_models = {
-                'bidaf': bidaf.BidafServable.from_config(bidaf_config),
+                # Machine Comprehension
+                'mc': bidaf.BidafServable.from_config(bidaf_config),
+                # Semantic Role Labeling
                 'srl': semantic_role_labeler.SemanticRoleLabelerServable.from_config(srl_config),
-                'snli': decomposable_attention.DecomposableAttentionServable.from_config(
+                # Textual Entailment
+                'te': decomposable_attention.DecomposableAttentionServable.from_config(
                         decomposable_attention_config),
         }  # type: Dict[str, Servable]
 

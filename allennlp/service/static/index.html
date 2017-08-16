@@ -796,7 +796,8 @@ class SrlComponent extends React.Component {
 
   runSrlModel(event, inputs) {
     // Prevent regular form submission
-    if (event) { event.preventDefault(); }
+    event.preventDefault();
+
     this.setState({
       outputState: "working",
     });
@@ -861,7 +862,7 @@ class TeComponent extends React.Component {
       premise: inputs.premiseValue,
       hypothesis: inputs.hypothesisValue,
     };
-    fetch('/predict/snli', {
+    fetch('/predict/te', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -920,7 +921,7 @@ class McComponent extends React.Component {
       passage: inputs.passageValue,
       question: inputs.questionValue,
     };
-    fetch('/predict/bidaf', {
+    fetch('/predict/mc', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
