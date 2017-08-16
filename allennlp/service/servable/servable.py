@@ -1,7 +1,7 @@
 import json
 from typing import Dict, Any, Optional, List
 
-from allennlp.common import Params, constants
+from allennlp.common import Params
 from allennlp.common.params import replace_none
 
 JSONDict = Dict[str, Any]  # pylint: disable=invalid-name
