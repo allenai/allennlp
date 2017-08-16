@@ -1,13 +1,7 @@
 from allennlp.service.servable import ServableCollection
 
 from sanic import Sanic, response, request
-from sanic.config import LOGGING
 from sanic.exceptions import ServerError
-
-# Move access.log and error.log to /tmp by default
-# If someone really wants them, they can move them back
-LOGGING['handlers']['accessTimedRotatingFile']['filename'] = '/tmp/sanic_access.log'
-LOGGING['handlers']['errorTimedRotatingFile']['filename'] = '/tmp/sanic_error.log'
 
 def run(port: int) -> None:
     """Run the server programatically"""
@@ -19,8 +13,8 @@ def run(port: int) -> None:
 
 def make_app() -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
-    app.static('/', 'allennlp/service/index.html')
-    app.static('/index.html', 'allennlp/service/index.html')
+    app.static('/', './allennlp/service/static/')
+    app.static('/', './allennlp/service/static/index.html')
     app.servables = ServableCollection()
 
     @app.route('/predict/<model_name>', methods=['POST'])
@@ -32,7 +26,10 @@ def make_app() -> Sanic:
 
         # TODO(joelgrus): error handling
         data = req.json
-        prediction = model.predict_json(data)
+        try:
+            prediction = model.predict_json(data)
+        except KeyError as err:
+            raise ServerError("Required JSON field not found: " + err.args[0], status_code=400)
 
         return response.json(prediction)
 
