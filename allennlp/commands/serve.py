@@ -7,8 +7,6 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     subparser = parser.add_parser(
             'serve', description=description, help='Run the web service and demo.')
 
-    subparser.add_argument('--backend', metavar='backend', type=str, choices=['sanic'], default='sanic',
-                           help='The backend for the web service.')
     subparser.add_argument('--port', type=int, default=8000)
 
     subparser.set_defaults(func=serve)
@@ -16,7 +14,4 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     return subparser
 
 def serve(args: argparse.Namespace) -> None:
-    if args.backend == 'sanic':
-        server_sanic.run(args.port)
-    else:
-        raise Exception("Unsupported backend: " + args.backend)
+    server_sanic.run(args.port)

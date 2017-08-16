@@ -1,7 +1,6 @@
 from allennlp.service.servable import ServableCollection
 
 from sanic import Sanic, response, request
-from sanic.config import LOGGING
 from sanic.exceptions import ServerError
 
 def run(port: int) -> None:
@@ -23,14 +22,14 @@ def make_app() -> Sanic:
         """make a prediction using the specified model and return the results"""
         model = app.servables.get(model_name.lower())
         if model is None:
-          raise ServerError("unknown model: {}".format(model_name), status_code=400)
+            raise ServerError("unknown model: {}".format(model_name), status_code=400)
 
         # TODO(joelgrus): error handling
         data = req.json
         try:
-          prediction = model.predict_json(data)
+            prediction = model.predict_json(data)
         except KeyError as err:
-          raise ServerError("Required JSON field not found: " + err.args[0], status_code=400);
+            raise ServerError("Required JSON field not found: " + err.args[0], status_code=400)
 
         return response.json(prediction)
 
