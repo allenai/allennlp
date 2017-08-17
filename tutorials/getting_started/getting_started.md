@@ -65,9 +65,12 @@ The `serve` command starts the demo server.
 
 ```
 (allennlp) root@9175b60b4e52:/stage# allennlp/run serve
-Starting a flask server on port 8000.
+Starting a sanic server on port 8000.
 [... lots of logging omitted ...]
-2017-08-14 20:00:48,330 - INFO - werkzeug -  * Running on http://0.0.0.0:8000/ (Press CTRL+C to quit)
+2017-08-16 18:55:12 - (sanic)[INFO]: Goin' Fast @ http://0.0.0.0:8000
+2017-08-16 18:55:12,321 - INFO - sanic - Goin' Fast @ http://0.0.0.0:8000
+2017-08-16 18:55:12 - (sanic)[INFO]: Starting worker [33290]
+2017-08-16 18:55:12,323 - INFO - sanic - Starting worker [33290]
 ```
 
 If you visit `http://localhost:8000` in your browser, you can play around with the same demo
@@ -101,7 +104,7 @@ you might care about the `trainer` section, which specifies how we want to train
 
 Here the `num_epochs` parameter specifies that we want to make 20 training passes through the training dataset.
 On a recent Macbook each epoch of this model on this dataset takes about 30 seconds, so 20 will take about 10 minutes.
-The `serialization` prefix is the path where the model's vocabulary and checkpointed weights will be saved.
+The `serialization_prefix` is the path where the model's vocabulary and checkpointed weights will be saved.
 And if you have a GPU you can change `cuda_device` to 0 to use it.
 
 Change any of those if you want to, and then run
@@ -128,7 +131,7 @@ while `accuracy3` measures how often the correct tag was one of the _three_ most
  and is the objective being used to train the model. You want to make sure
  it's mostly decreasing during training.
 
-After 20 epochs we see we see
+After 20 epochs we see
 
 ```
 2017-08-15 13:22:01,591 - INFO - allennlp.training.trainer - Epoch 20/20
