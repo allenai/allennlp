@@ -42,5 +42,5 @@ conda create -n $CONDA_ENV_NAME --yes --quiet python=3.5.2
 source activate $CONDA_ENV_NAME
 
 # Install pip dependencies.
-pip install --quiet -r requirements.txt
-pip install --quiet -r requirements_test.txt
+pip install -r requirements.txt
+pip install -r requirements_test.txt
