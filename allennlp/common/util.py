@@ -104,8 +104,9 @@ def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> 
 
 def namespace_match(pattern: str, namespace: str):
     """
-    Matches a namespace pattern against a namespace string.  For example, "*tags" matches
-    "passage_tags" and "question_tags" and "tokens" matches "tokens" but not "stemmed_tokens".
+    Matches a namespace pattern against a namespace string.  For example, ``*tags`` matches
+    ``passage_tags`` and ``question_tags`` and ``tokens`` matches ``tokens`` but not
+    ``stemmed_tokens``.
     """
     if pattern[0] == '*' and namespace.endswith(pattern[1:]):
         return True

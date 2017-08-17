@@ -11,11 +11,6 @@ Subpackages
 Submodules
 ----------
 
-.. automodule:: allennlp.service.server_flask
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.service.server_sanic
    :members:
    :undoc-members:

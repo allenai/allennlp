@@ -25,8 +25,8 @@ class StackedAlternatingLstm(torch.nn.Module):
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
 
-    Return
-    ------
+    Returns
+    -------
     output_accumulator : PackedSequence
         The outputs of the interleaved LSTMs per timestep. A tensor of shape
         (batch_size, max_timesteps, hidden_size) where for a given batch

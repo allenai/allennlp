@@ -22,7 +22,7 @@ class LabelField(Field[numpy.ndarray]):
     Parameters
     ----------
     label : ``Union[str, int]``
-    label_namespace : ``str``, optional (default=``labels``)
+    label_namespace : ``str``, optional (default="labels")
         The namespace to use for converting label strings into integers.  We map label strings to
         integers for you (e.g., "entailment" and "contradiction" get converted to one-hot vectors),
         and this namespace tells the ``Vocabulary`` object which mapping from strings to integers
@@ -30,7 +30,7 @@ class LabelField(Field[numpy.ndarray]):
         word).  If you have multiple different label fields in your data, you should make sure you
         use different namespaces for each one, always using the suffix "labels" (e.g.,
         "passage_labels" and "question_labels").
-    num_labels : ``int``, optional (default=``None``)
+    num_labels : ``int``, optional (default=None)
         If your labels are 0-indexed integers, you can pass in the number of labels here, and we'll
         skip the indexing step.  If this is ``None``, no matter the type of ``label``, we'll use a
         vocabulary to give the labels new IDs.

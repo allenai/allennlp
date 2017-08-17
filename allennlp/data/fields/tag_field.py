@@ -30,7 +30,7 @@ class TagField(Field[numpy.ndarray]):
     sequence_field : ``SequenceField``
         A field containing the sequence that this ``TagField`` is labeling.  Most often, this is a
         ``TextField``, for tagging individual tokens in a sentence.
-    tag_namespace : ``str``, optional (default=``'tags'``)
+    tag_namespace : ``str``, optional (default='tags')
         The namespace to use for converting tag strings into integers.  We convert tag strings to
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).

@@ -32,8 +32,8 @@ class _NamespaceDependentDefaultDict(defaultdict):
 
     To do filtering, we take a sequence of ``non_padded_namespaces``.  This is a list or tuple of
     strings that are either matched exactly against the keys, or treated as suffixes, if the
-    string starts with `*`.  In other words, if "*tags" is in non_padded_namespaces then
-    "passage_tags", "question_tags", etc. (anything that ends with "tags") will have the
+    string starts with ``*``.  In other words, if ``*tags`` is in ``non_padded_namespaces`` then
+    ``passage_tags``, ``question_tags``, etc. (anything that ends with ``tags``) will have the
     ``non_padded`` default value.
 
     Parameters
@@ -114,7 +114,7 @@ class Vocabulary:
         to be no larger than this.  If you specify a dictionary, then each namespace in the
         ``counter`` can have a separate maximum vocabulary size.  Any missing key will have a value
         of ``None``, which means no cap on the vocabulary size.
-    non_padded_namespaces : ``Sequence[str]``, optional (default=``("*tags", "*labels")``)
+    non_padded_namespaces : ``Sequence[str]``, optional
         By default, we assume you are mapping word / character tokens to integers, and so you want
         to reserve word indices for padding and out-of-vocabulary tokens.  However, if you are
         mapping NER or SRL tags, or class labels, to integers, you probably do not want to reserve
@@ -122,11 +122,12 @@ class Vocabulary:
         namespaces should `not` have padding and OOV tokens added.
 
         The format of each element of this is either a string, which must match field names
-        exactly,  or "*" followed by a string, which we match as a suffix against field names.
+        exactly,  or ``*`` followed by a string, which we match as a suffix against field names.
 
-        We try to make the default here reasonable, so that you don't have to think about this.  As
-        long as your namespace ends in "tags" or "labels" (which is true by default for all tag and
-        label fields in this code), you don't have to specify anything here.
+        We try to make the default here reasonable, so that you don't have to think about this.
+        The default is ``("*tags", "*labels")``, so as long as your namespace ends in "tags" or
+        "labels" (which is true by default for all tag and label fields in this code), you don't
+        have to specify anything here.
     """
     def __init__(self,
                  counter: Dict[str, Dict[str, int]] = None,
@@ -228,17 +229,17 @@ class Vocabulary:
             line, with nothing else in the line.  The index we assign to the token is the line
             number in the file (1-indexed if ``is_padded``, 0-indexed otherwise).  Note that this
             file should contain the OOV token string!
-        is_padded : ``bool``, optional (default=``True``)
+        is_padded : ``bool``, optional (default=True)
             Is this vocabulary padded?  For token / word / character vocabularies, this should be
             ``True``; while for tag or label vocabularies, this should typically be ``False``.  If
             ``True``, we add a padding token with index 0, and we enforce that the ``oov_token`` is
             present in the file.
-        oov_token : ``str``, optional (default=``DEFAULT_OOV_TOKEN``)
+        oov_token : ``str``, optional (default=DEFAULT_OOV_TOKEN)
             What token does this vocabulary use to represent out-of-vocabulary characters?  This
             must show up as a line in the vocabulary file.  When we find it, we replace
             ``oov_token`` with ``self._oov_token``, because we only use one OOV token across
             namespaces.
-        namespace : ``str``, optional (default=``"tokens"``)
+        namespace : ``str``, optional (default="tokens")
             What namespace should we overwrite with this vocab file?
         """
         if is_padded:

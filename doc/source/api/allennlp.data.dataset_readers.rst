@@ -14,7 +14,7 @@ Submodules
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.data.dataset_readers.semantic_role_labelling
+.. automodule:: allennlp.data.dataset_readers.semantic_role_labeling
    :members:
    :undoc-members:
    :show-inheritance:
