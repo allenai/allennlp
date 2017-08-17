@@ -10,7 +10,7 @@ The easiest way to get started is using Docker. Assuming you have Docker install
 docker run -p 8000:8000 -it --rm allennlp/allennlp-cpu
 ```
 
-If your machine has GPUs, use `allenlp-gpu` instead.
+If your machine has GPUs, use `allennlp-gpu` instead.
 
 This will download the latest `allennlp` image to your machine
 (unless you already have it),
