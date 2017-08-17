@@ -14,11 +14,8 @@ class TestBidafPredictor(TestCase):
                 "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
         }
 
-        with open('experiment_config/bidaf.json') as f:
+        with open('tests/fixtures/bidaf/experiment.json') as f:
             config = json.loads(f.read())
-            config['trainer']['serialization_prefix'] = 'tests/fixtures/bidaf/serialization'
-            config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
-                'tests/fixtures/glove.6B.100d.sample.txt.gz'
             bidaf_config = Params(replace_none(config))
 
         model = BidafPredictor.from_config(bidaf_config)
