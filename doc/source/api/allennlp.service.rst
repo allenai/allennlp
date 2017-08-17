@@ -6,7 +6,7 @@ Subpackages
 
 .. toctree::
 
-   allennlp.service.servable
+   allennlp.service.predictors
 
 Submodules
 ----------
