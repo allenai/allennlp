@@ -13,11 +13,8 @@ class TestSrlPredictor(TestCase):
                 "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
         }
 
-        with open('experiment_config/semantic_role_labeler.json') as f:
+        with open('tests/fixtures/srl/experiment.json') as f:
             config = json.loads(f.read())
-            config['trainer']['serialization_prefix'] = 'tests/fixtures/srl'
-            config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
-                'tests/fixtures/glove.6B.100d.sample.txt.gz'
             srl_config = Params(replace_none(config))
 
         model = SemanticRoleLabelerPredictor.from_config(srl_config)

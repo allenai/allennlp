@@ -50,25 +50,16 @@ class Predictor(Registrable):
 
 # TODO(joelgrus): delete this function
 def default_params() -> Dict[str, Params]:
-    with open('experiment_config/bidaf.json') as config_file:
+    with open('tests/fixtures/bidaf/experiment.json') as config_file:
         config = json.loads(config_file.read())
-        config['trainer']['serialization_prefix'] = 'tests/fixtures/bidaf/serialization'
-        config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
-            'tests/fixtures/glove.6B.100d.sample.txt.gz'
         bidaf_config = Params(replace_none(config))
 
-    with open('experiment_config/semantic_role_labeler.json') as config_file:
+    with open('tests/fixtures/srl/experiment.json') as config_file:
         config = json.loads(config_file.read())
-        config['trainer']['serialization_prefix'] = 'tests/fixtures/srl'
-        config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
-            'tests/fixtures/glove.6B.100d.sample.txt.gz'
         srl_config = Params(replace_none(config))
 
-    with open('experiment_config/decomposable_attention.json') as config_file:
+    with open('tests/fixtures/decomposable_attention/experiment.json') as config_file:
         config = json.loads(config_file.read())
-        config['trainer']['serialization_prefix'] = 'tests/fixtures/decomposable_attention'
-        config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
-            'tests/fixtures/glove.6B.300d.sample.txt.gz'
         decomposable_attention_config = Params(replace_none(config))
 
     return {
