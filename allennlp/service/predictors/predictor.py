@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional, List
 
 from allennlp.common import Params, Registrable
 from allennlp.common.params import replace_none
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.dataset_readers import DatasetReader
@@ -12,31 +13,6 @@ from allennlp.models import Model
 
 import numpy as np
 import torch
-
-JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
-
-
-def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name
-    """
-    Sanitize x so that it can be JSON serialized
-    """
-    if isinstance(x, (str, float, int, bool)):
-        # x is already serializable
-        return x
-    elif isinstance(x, (torch.Tensor, np.ndarray)):
-        # tensors and arrays need to be converted to lists
-        return x.tolist()
-    elif isinstance(x, np.number):
-        # NumPy numbers need to be converted to Python numbers
-        return x.item()
-    elif isinstance(x, dict):
-        # Dicts need their values sanitized
-        return {key: sanitize(value) for key, value in x.items()}
-    elif isinstance(x, (list, tuple)):
-        # Lists and Tuples need their values sanitized
-        return [sanitize(x_i) for x_i in x]
-    else:
-        raise ValueError("cannot sanitize {} of type {}".format(x, type(x)))
 
 
 class Predictor(Registrable):

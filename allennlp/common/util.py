@@ -2,6 +2,35 @@ from itertools import zip_longest
 from typing import Any, Callable, Dict, List, TypeVar
 import random
 
+import torch
+import numpy as np
+
+JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
+
+def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name
+    """
+    Sanitize x so that it can be JSON serialized
+    """
+    if isinstance(x, (str, float, int, bool)):
+        # x is already serializable
+        return x
+    elif isinstance(x, torch.Tensor):
+        # tensor needs to be converted to a list (and moved to cpu if necessary)
+        return x.cpu().tolist()
+    elif isinstance(x, np.ndarray):
+        # array needs to be converted to a list
+        return x.tolist()
+    elif isinstance(x, np.number):
+        # NumPy numbers need to be converted to Python numbers
+        return x.item()
+    elif isinstance(x, dict):
+        # Dicts need their values sanitized
+        return {key: sanitize(value) for key, value in x.items()}
+    elif isinstance(x, (list, tuple)):
+        # Lists and Tuples need their values sanitized
+        return [sanitize(x_i) for x_i in x]
+    else:
+        raise ValueError("cannot sanitize {} of type {}".format(x, type(x)))
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
     """
