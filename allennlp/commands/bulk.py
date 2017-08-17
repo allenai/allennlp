@@ -4,7 +4,7 @@ import json
 import sys
 from typing import Optional, IO
 
-from allennlp.service.predictors import Predictor, PredictorCollection, sanitize
+from allennlp.service.predictors import Predictor, load_predictors
 
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Run the specified model against a JSON-lines input file.'''
@@ -21,7 +21,7 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
 
 def get_model(args: argparse.Namespace) -> Optional[Predictor]:
     # TODO(joelgrus): use the args to instantiate the model
-    models = PredictorCollection.default()
+    models = load_predictors()
     model_name = args.model
     return models.get(model_name)
 
@@ -29,8 +29,7 @@ def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_t
     for line in input_file:
         data = json.loads(line)
         result = predictor.predict_json(data)
-        sanitized = sanitize(result)
-        output = json.dumps(sanitized)
+        output = json.dumps(result)
 
         if print_to_console:
             print(output)

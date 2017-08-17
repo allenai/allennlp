@@ -1,9 +1,10 @@
 from typing import Dict
 
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Vocabulary, Tokenizer, TokenIndexer
 from allennlp.data.fields import TextField, IndexField
 from allennlp.models import Model
-from allennlp.service.predictors import Predictor, JsonDict, sanitize
+from allennlp.service.predictors.predictor import Predictor
 
 import spacy
 

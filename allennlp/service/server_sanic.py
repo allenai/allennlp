@@ -1,4 +1,4 @@
-from allennlp.service.predictors import PredictorCollection, sanitize
+from allennlp.service.predictors import load_predictors
 
 from sanic import Sanic, response, request
 from sanic.exceptions import ServerError
@@ -8,7 +8,7 @@ def run(port: int) -> None:
     print("Starting a sanic server on port {}.".format(port))
     app = make_app()
     # TODO(joelgrus): make this configurable
-    app.predictors = PredictorCollection.default()
+    app.predictors = load_predictors()
     app.run(port=port, host="0.0.0.0")
 
 def make_app() -> Sanic:
@@ -16,7 +16,7 @@ def make_app() -> Sanic:
 
     app.static('/', './allennlp/service/static/')
     app.static('/', './allennlp/service/static/index.html')
-    app.predictors = PredictorCollection()
+    app.predictors = {}
 
     @app.route('/predict/<model_name>', methods=['POST'])
     async def predict(req: request.Request, model_name: str) -> response.HTTPResponse:  # pylint: disable=unused-variable
@@ -32,12 +32,11 @@ def make_app() -> Sanic:
         except KeyError as err:
             raise ServerError("Required JSON field not found: " + err.args[0], status_code=400)
 
-        sanitized = sanitize(prediction)
-        return response.json(sanitized)
+        return response.json(prediction)
 
     @app.route('/models')
     async def list_models(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """list the available models"""
-        return response.json({"models": app.predictors.list_available()})
+        return response.json({"models": list(app.predictors.keys())})
 
     return app

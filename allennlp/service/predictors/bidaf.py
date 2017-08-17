@@ -1,9 +1,10 @@
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.data.dataset_readers.squad import SquadReader
 from allennlp.data.fields import TextField
-from allennlp.service.predictors import Predictor, JsonDict, sanitize
+from allennlp.service.predictors.predictor import Predictor
 
 
-@Predictor.register('bidaf')
+@Predictor.register('mc')
 class BidafPredictor(Predictor):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         question_text = inputs["question"]
