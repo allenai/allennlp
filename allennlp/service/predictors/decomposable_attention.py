@@ -2,7 +2,7 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data.fields import TextField
 from allennlp.service.predictors.predictor import Predictor
 
-@Predictor.register('te')
+@Predictor.register('textual-entailment')
 class DecomposableAttentionPredictor(Predictor):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         premise_text = inputs["premise"]

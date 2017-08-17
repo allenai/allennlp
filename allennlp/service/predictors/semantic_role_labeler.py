@@ -8,7 +8,7 @@ from allennlp.service.predictors.predictor import Predictor
 
 import spacy
 
-@Predictor.register("srl")
+@Predictor.register("semantic-role-labelling")
 class SemanticRoleLabelerPredictor(Predictor):
     def __init__(self, model: Model, vocab: Vocabulary,
                  tokenizer: Tokenizer, token_indexers: Dict[str, TokenIndexer]) -> None:

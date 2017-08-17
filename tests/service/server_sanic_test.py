@@ -16,7 +16,7 @@ class TestApp(AllenNlpTestCase):
     def test_list_models(self):
         _, response = self.client.get("/models")
         data = json.loads(response.text)
-        assert "mc" in set(data["models"])
+        assert "machine-comprehension" in set(data["models"])
 
     def test_unknown_model(self):
         _, response = self.client.post("/predict/bogus_model",
@@ -24,24 +24,24 @@ class TestApp(AllenNlpTestCase):
         assert response.status == 400
         assert "unknown model" in response.text and "bogus_model" in response.text
 
-    def test_mc(self):
-        _, response = self.client.post("/predict/mc",
+    def test_machine_comprehension(self):
+        _, response = self.client.post("/predict/machine-comprehension",
                                        json={"passage": "the super bowl was played in seattle",
                                              "question": "where was the super bowl played?"})
         assert response.status == 200
         results = json.loads(response.text)
         assert "best_span" in results
 
-    def test_te(self):
-        _, response = self.client.post("/predict/te",
+    def test_textual_entailment(self):
+        _, response = self.client.post("/predict/textual-entailment",
                                        json={"premise": "the super bowl was played in seattle",
                                              "hypothesis": "the super bowl was played in ohio"})
         assert response.status == 200
         results = json.loads(response.text)
         assert "label_probs" in results
 
-    def test_srl(self):
-        _, response = self.client.post("/predict/srl",
+    def test_semantic_role_labelling(self):
+        _, response = self.client.post("/predict/semantic-role-labelling",
                                        json={"sentence": "the super bowl was played in seattle"})
         assert response.status == 200
         results = json.loads(response.text)

@@ -790,7 +790,7 @@ class SrlComponent extends React.Component {
     });
 
     var payload = { sentence: inputs.sentenceValue };
-    fetch('/predict/srl', {
+    fetch('/predict/semantic-role-labelling', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -847,7 +847,7 @@ class TeComponent extends React.Component {
       premise: inputs.premiseValue,
       hypothesis: inputs.hypothesisValue,
     };
-    fetch('/predict/te', {
+    fetch('/predict/textual-entailment', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -904,7 +904,7 @@ class McComponent extends React.Component {
       passage: inputs.passageValue,
       question: inputs.questionValue,
     };
-    fetch('/predict/mc', {
+    fetch('/predict/machine-comprehension', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',

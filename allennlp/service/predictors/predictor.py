@@ -72,9 +72,9 @@ def default_params() -> Dict[str, Params]:
         decomposable_attention_config = Params(replace_none(config))
 
     return {
-            'mc': bidaf_config,
-            'srl': srl_config,
-            'te': decomposable_attention_config
+            'machine-comprehension': bidaf_config,
+            'semantic-role-labelling': srl_config,
+            'textual-entailment': decomposable_attention_config
     }
 
 
