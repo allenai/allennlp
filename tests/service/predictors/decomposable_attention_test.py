@@ -2,7 +2,7 @@
 import json
 from unittest import TestCase
 
-from allennlp.common import Params, constants
+from allennlp.common import Params
 from allennlp.common.params import replace_none
 from allennlp.service.predictors.decomposable_attention import DecomposableAttentionPredictor
 

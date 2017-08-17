@@ -2,7 +2,7 @@ import json
 import os
 from typing import Dict, Any, Optional, List
 
-from allennlp.common import Params, Registrable, constants
+from allennlp.common import Params, Registrable
 from allennlp.common.params import replace_none
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer
