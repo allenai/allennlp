@@ -27,3 +27,6 @@ codecov
 
 # Required to run sanic tests
 aiohttp
+
+# For building our docs
+sphinx
