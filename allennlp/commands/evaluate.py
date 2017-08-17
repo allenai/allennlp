@@ -57,6 +57,11 @@ def evaluate(model: Model,
     return model.get_metrics()
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
+    # Disable some of the more verbose logging statements
+    logging.getLogger('allennlp.common.params').disabled = True
+    logging.getLogger('allennlp.nn.initializers').disabled = True
+    logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
+
     # Load parameter file
     with open(args.config_file) as config_file:
         config = Params(replace_none(json.loads(config_file.read())))

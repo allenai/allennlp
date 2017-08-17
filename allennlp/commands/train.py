@@ -11,7 +11,7 @@ import numpy
 import pyhocon
 import torch
 
-from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set
+from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set, ConfigurationError
 from allennlp.common.params import Params, replace_none
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.data import Vocabulary
@@ -113,17 +113,19 @@ def train_model(param_dict: Dict[str, Any]):
     log_dir = trainer_params.get("serialization_prefix")
     non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
 
-    if log_dir is not None:
-        os.makedirs(log_dir, exist_ok=True)
-        sys.stdout = TeeLogger(os.path.join(log_dir, "_stdout.log"), sys.stdout)  # type: ignore
-        sys.stderr = TeeLogger(os.path.join(log_dir, "_stderr.log"), sys.stderr)  # type: ignore
-        handler = logging.FileHandler(os.path.join(log_dir, "_python_logging.log"))
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
-        logging.getLogger().addHandler(handler)
-        serialisation_params = deepcopy(params).as_dict(quiet=True)
-        with open(os.path.join(log_dir, "_model_params.json"), "w") as param_file:
-            json.dump(serialisation_params, param_file)
+    if log_dir is None:
+        raise ConfigurationError("configuration must specify trainer.serialization_prefix")
+
+    os.makedirs(log_dir, exist_ok=True)
+    sys.stdout = TeeLogger(os.path.join(log_dir, "_stdout.log"), sys.stdout)  # type: ignore
+    sys.stderr = TeeLogger(os.path.join(log_dir, "_stderr.log"), sys.stderr)  # type: ignore
+    handler = logging.FileHandler(os.path.join(log_dir, "_python_logging.log"))
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
+    logging.getLogger().addHandler(handler)
+    serialisation_params = deepcopy(params).as_dict(quiet=True)
+    with open(os.path.join(log_dir, "_model_params.json"), "w") as param_file:
+        json.dump(serialisation_params, param_file)
 
     # Now we begin assembling the required parts for the Trainer.
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))

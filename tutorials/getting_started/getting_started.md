@@ -10,13 +10,13 @@ The easiest way to get started is using Docker. Assuming you have Docker install
 docker run -p 8000:8000 -it --rm allennlp/allennlp-cpu
 ```
 
-(If your machine has GPUs, use `allenlp-gpu` instead.)
+If your machine has GPUs, use `allenlp-gpu` instead.
 
 This will download the latest `allennlp` image to your machine
 (unless you already have it),
 start a Docker container, and launch an interactive shell.
-(It also exposes port 8000, which is where the demo server runs,
- and shuts down the container when you exit the interactive shell.)
+It also exposes port 8000, which is where the demo server runs,
+and shuts down the container when you exit the interactive shell.
 
 ## Installing Not Using Docker
 
@@ -79,7 +79,7 @@ TODO(joelgrus): screenshot
 
 In this tutorial we'll train a simple part-of-speech tagger using AllenNLP.
 The model is defined in [allennlp/models/simple_tagger.py](https://github.com/allenai/allennlp/blob/master/allennlp/models/simple_tagger.py).
-It consists of a word embedding layer followed by a LSTM.
+It consists of a word embedding layer followed by an LSTM.
 
 Our dataset will be a subset of the [Brown Corpus](http://www.nltk.org/nltk_data/).
 In particular, the file [tutorials/getting_started/data/cr.train](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/data/cr.train)
@@ -124,9 +124,9 @@ accuracy: 0.50, accuracy_top3: 0.64, loss: 2.27 ||: 100%|##########| 50/50 [00:0
 
 Here `accuracy` measures how often our model predicted the "correct" part of speech tag as most probable,
 while `accuracy3` measures how often the correct tag was one of the _three_ most probable.
-(`loss` measures [cross entropy](https://en.wikipedia.org/wiki/Cross_entropy)
+`loss` measures [cross entropy](https://en.wikipedia.org/wiki/Cross_entropy)
  and is the objective being used to train the model. You want to make sure
- it's mostly decreasing during training.)
+ it's mostly decreasing during training.
 
 After 20 epochs we see we see
 
@@ -142,8 +142,8 @@ accuracy: 0.71, loss: 1.38, accuracy3: 0.83 ||: 100%|##########| 50/50 [00:01<00
 
 This means that 71% of the time our model predicted the correct tag on the validation dataset,
 and 83% of the time the correct tag was in the model's "top 3".
-(Not ground-breaking performance, but this is a pretty simple model, and
-if you look at the data there's a lot of different tags!)
+Not ground-breaking performance, but this is a pretty simple model, and
+if you look at the data there's a lot of different tags!
 
 Now that the model is trained, there should be a bunch of files in the serialization directory. The `vocabulary` directory
 contains the model's vocabularies, each of which is a (distinct) encoding of strings as integers.
@@ -151,7 +151,7 @@ In our case, we'll have one for `tokens` (i.e. words) and another for `tags`. Th
 `training_state_epoch_XX.th` files contain the state of the trainer after each epoch (`.th` is the suffix for serialized torch tensors),
 so that you could resume training where you left off, if you wanted to.
 Similarly, the `model_state_epoch_XX.th` files contain the model weights after each epoch.
-Finally `best.th` contains the *best* weights (that is, those from the epoch with the smallest `loss`).
+Finally `best.th` contains the *best* weights (that is, those from the epoch with the smallest `loss` on the validation dataset).
 
 ### Evaluating a Model
 
@@ -164,7 +164,7 @@ the model was serialized to, it also tells us enough to evaluate the model:
 allennlp/run evaluate --config_file tutorials/getting_started/simple_tagger.json --evaluation_data_file tutorials/getting_started/data/cp.test
 ```
 
-After again spitting out a bunch of parameter values, it will evaluate the trained model on the evaluation data file:
+This will evaluate the trained model on the evaluation data file:
 
 ```
 2017-08-15 13:11:47,106 - INFO - allennlp.commands.evaluate - Iterating over dataset

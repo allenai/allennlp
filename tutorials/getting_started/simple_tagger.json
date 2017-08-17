@@ -2,7 +2,6 @@
   "dataset_reader": {
     "type": "sequence_tagging",
     "word_tag_delimiter": "/",
-    "word_word_delimiter": " ",
     "token_indexers": {
       "tokens": {
         "type": "single_id",

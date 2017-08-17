@@ -15,6 +15,7 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+DEFAULT_WORD_TAG_DELIMITER = "###"
 
 @DatasetReader.register("sequence_tagging")
 class SequenceTaggingDatasetReader(DatasetReader):
@@ -30,20 +31,21 @@ class SequenceTaggingDatasetReader(DatasetReader):
     ----------
     word_tag_delimiter: ``str``, optional (default=``"###"``)
         The text that separates each WORD from its TAG.
-    word_word_delimiter: ``str``, optional (default=``"\t"``)
-        The text that separates each WORD-TAG pair from the next pair.
+    token_delimiter: ``str``, optional (default=``None``)
+        The text that separates each WORD-TAG pair from the next pair. If ``None``
+        then the line will just be split on whitespace.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
     """
     def __init__(self,
-                 word_tag_delimiter: str = "###",
-                 word_word_delimiter: str = "\t",
+                 word_tag_delimiter: str = DEFAULT_WORD_TAG_DELIMITER,
+                 token_delimiter: str = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self.word_tag_delimiter = word_tag_delimiter
-        self.word_word_delimiter = word_word_delimiter
+        self._word_tag_delimiter = word_tag_delimiter
+        self._token_delimiter = token_delimiter
 
     @overrides
     def read(self, file_path):
@@ -58,8 +60,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
                 if not line:
                     continue
 
-                tokens_and_tags = [pair.rsplit(self.word_tag_delimiter, 1)
-                                   for pair in line.split(self.word_word_delimiter)]
+                tokens_and_tags = [pair.rsplit(self._word_tag_delimiter, 1)
+                                   for pair in line.split(self._token_delimiter)]
                 tokens = [x[0] for x in tokens_and_tags]
                 tags = [x[1] for x in tokens_and_tags]
 
@@ -87,5 +89,11 @@ class SequenceTaggingDatasetReader(DatasetReader):
         # so if no parameters are given we must pass None.
         if token_indexers == {}:
             token_indexers = None
+
+        word_tag_delimiter = params.pop("word_tag_delimiter", DEFAULT_WORD_TAG_DELIMITER)
+        token_delimiter = params.pop("token_delimiter", None)
+
         params.assert_empty(cls.__name__)
-        return SequenceTaggingDatasetReader(token_indexers=token_indexers)
+        return SequenceTaggingDatasetReader(token_indexers=token_indexers,
+                                            word_tag_delimiter=word_tag_delimiter,
+                                            token_delimiter=token_delimiter)
