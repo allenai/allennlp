@@ -4,10 +4,10 @@ from unittest import TestCase
 
 from allennlp.common import Params
 from allennlp.common.params import replace_none
-from allennlp.service.servable.models.semantic_role_labeler import SemanticRoleLabelerServable
+from allennlp.service.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor
 
 
-class TestSrlServable(TestCase):
+class TestSrlPredictor(TestCase):
     def test_uses_named_inputs(self):
         inputs = {
                 "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
@@ -20,7 +20,7 @@ class TestSrlServable(TestCase):
                 'tests/fixtures/glove.6B.100d.sample.txt.gz'
             srl_config = Params(replace_none(config))
 
-        model = SemanticRoleLabelerServable.from_config(srl_config)
+        model = SemanticRoleLabelerPredictor.from_config(srl_config)
 
         result = model.predict_json(inputs)
 

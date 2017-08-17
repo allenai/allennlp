@@ -1,4 +1,4 @@
-from allennlp.service.servable import ServableCollection
+from allennlp.service.predictors import load_predictors
 
 from sanic import Sanic, response, request
 from sanic.exceptions import ServerError
@@ -8,24 +8,25 @@ def run(port: int) -> None:
     print("Starting a sanic server on port {}.".format(port))
     app = make_app()
     # TODO(joelgrus): make this configurable
-    app.servables = ServableCollection.default()
+    app.predictors = load_predictors()
     app.run(port=port, host="0.0.0.0")
 
 def make_app() -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
+
     app.static('/', './allennlp/service/static/')
     app.static('/', './allennlp/service/static/index.html')
-    app.servables = ServableCollection()
+    app.predictors = {}
 
     @app.route('/predict/<model_name>', methods=['POST'])
     async def predict(req: request.Request, model_name: str) -> response.HTTPResponse:  # pylint: disable=unused-variable
         """make a prediction using the specified model and return the results"""
-        model = app.servables.get(model_name.lower())
+        model = app.predictors.get(model_name.lower())
         if model is None:
             raise ServerError("unknown model: {}".format(model_name), status_code=400)
 
-        # TODO(joelgrus): error handling
         data = req.json
+
         try:
             prediction = model.predict_json(data)
         except KeyError as err:
@@ -36,6 +37,6 @@ def make_app() -> Sanic:
     @app.route('/models')
     async def list_models(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """list the available models"""
-        return response.json({"models": app.servables.list_available()})
+        return response.json({"models": list(app.predictors.keys())})
 
     return app

@@ -17,7 +17,6 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.fields import TextField, ListField, IndexField
 from allennlp.data.fields.field import Field  # pylint: disable=unused-import
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -99,8 +98,7 @@ class SquadReader(DatasetReader):
     def __init__(self,
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        self._tokenizer = tokenizer
-        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
 
     def read(self, file_path: str):
 
@@ -216,9 +214,8 @@ class SquadSentenceSelectionReader(DatasetReader):
                  negative_sentence_selection: str = "paragraph",
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
-        self._tokenizer = tokenizer
-        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
         # Initializing some data structures here that will be useful when reading a file.
         # Maps sentence strings to sentence indices

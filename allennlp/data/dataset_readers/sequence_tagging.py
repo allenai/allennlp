@@ -11,7 +11,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField, TagField
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -43,7 +42,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
                  word_tag_delimiter: str = DEFAULT_WORD_TAG_DELIMITER,
                  token_delimiter: str = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        super().__init__(token_indexers=token_indexers)
         self._word_tag_delimiter = word_tag_delimiter
         self._token_delimiter = token_delimiter
 

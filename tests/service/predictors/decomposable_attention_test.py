@@ -2,12 +2,12 @@
 import json
 from unittest import TestCase
 
-from allennlp.common import Params, constants
+from allennlp.common import Params
 from allennlp.common.params import replace_none
-from allennlp.service.servable.models.decomposable_attention import DecomposableAttentionServable
+from allennlp.service.predictors.decomposable_attention import DecomposableAttentionPredictor
 
 
-class TestDecomposableAttentionServable(TestCase):
+class TestDecomposableAttentionPredictor(TestCase):
     def test_uses_named_inputs(self):
         inputs = {
                 "premise": "I always write unit tests for my code.",
@@ -22,7 +22,7 @@ class TestDecomposableAttentionServable(TestCase):
             decomposable_attention_config = Params(replace_none(config))
 
 
-        model = DecomposableAttentionServable.from_config(decomposable_attention_config)
+        model = DecomposableAttentionPredictor.from_config(decomposable_attention_config)
 
         result = model.predict_json(inputs)
 
