@@ -112,8 +112,8 @@ class PredictorCollection:
         with open('experiment_config/decomposable_attention.json') as config_file:
             config = json.loads(config_file.read())
             config['trainer']['serialization_prefix'] = 'tests/fixtures/decomposable_attention'
-            # TODO(joelgrus) once the correct config exists, just modify it
-            constants.GLOVE_PATH = 'tests/fixtures/glove.6B.300d.sample.txt.gz'
+            config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
+                'tests/fixtures/glove.6B.300d.sample.txt.gz'
             decomposable_attention_config = Params(replace_none(config))
 
         from allennlp.service.predictors.bidaf import BidafPredictor
@@ -121,9 +121,9 @@ class PredictorCollection:
         from allennlp.service.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor
 
         all_models = {
-                'bidaf': BidafPredictor.from_config(bidaf_config),
+                'mc': BidafPredictor.from_config(bidaf_config),
                 'srl': SemanticRoleLabelerPredictor.from_config(srl_config),
-                'snli': DecomposableAttentionPredictor.from_config(decomposable_attention_config),
+                'te': DecomposableAttentionPredictor.from_config(decomposable_attention_config),
         }  # type: Dict[str, Predictor]
 
         return PredictorCollection(all_models)

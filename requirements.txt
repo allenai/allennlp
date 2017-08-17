@@ -41,10 +41,7 @@ tensorboard-pytorch
 awscli>=1.11.91
 
 # REST interface for models
-flask>=0.12
-
-# Alternative REST interface for models
-sanic==0.5.4
+sanic==0.6.0
 
 #### LIBRARIES USED IN SCRIPTS ####
 # argument parsing in for data cleaning scripts

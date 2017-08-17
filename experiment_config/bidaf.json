@@ -68,12 +68,20 @@
     },
     "dropout": 0.2,
     "initializer": {
-        "default": {
-          "type": "normal",
-          "mean": 0,
-          "std": 0.1
-        },
-        "exclude": ["token_embedder_tokens"]
+      "bias": {
+        "type": "normal",
+        "mean": 0,
+        "std": 0.1
+      },
+      "similarity_function.*weight_vector": {
+        "type": "normal",
+        "mean": 0,
+        "std": 0.1
+      },
+      "default": {
+        "type": "xavier_uniform"
+      },
+      "exclude": ["token_embedder_tokens"]
     }
   },
   "iterator": {
@@ -82,12 +90,11 @@
     "batch_size": 40
   },
   "optimizer": {
-    "type": "sgd",
-    "lr": 0.001
+    "type": "adam"
   },
   "trainer": {
     "num_epochs": 12,
-    "grad_clipping": 10.0,
+    "grad_norm": 10.0,
     "patience": 12,
     "serialization_prefix": "/output",
     "cuda_device": 0,

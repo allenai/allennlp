@@ -233,7 +233,8 @@ class SemanticRoleLabeler(Model):
         encoder_params = params.pop("stacked_encoder", default_lstm_params)
         stacked_encoder = Seq2SeqEncoder.from_params(encoder_params)
 
-        default_initializer_params = {'default': 'orthonormal'}
+        default_initializer_params = {'bias': {'type': 'normal', 'std': 0.1},
+                                      'default': 'orthogonal'}
 
         initializer_params = params.pop('initializer', default_initializer_params)
         initializer = InitializerApplicator.from_params(initializer_params)
