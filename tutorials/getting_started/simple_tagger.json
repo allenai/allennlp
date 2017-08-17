@@ -1,0 +1,37 @@
+{
+  "dataset_reader": {
+    "type": "sequence_tagging",
+    "word_tag_delimiter": "/",
+    "token_indexers": {
+      "tokens": {
+        "type": "single_id",
+        "lowercase_tokens": true
+      }
+    }
+  },
+  "non_padded_namespaces": [],
+  "train_data_path": "tutorials/getting_started/data/cr.train",
+  "validation_data_path": "tutorials/getting_started/data/cr.dev",
+  "model": {
+    "type": "simple_tagger",
+    "text_field_embedder": {
+            "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 20
+            }
+    },
+    "stacked_encoder": {
+            "type": "lstm",
+            "input_size": 20,
+            "hidden_size": 20,
+            "num_layers": 2
+    }
+  },
+  "iterator": {"type": "basic", "batch_size": 2},
+  "optimizer": "adam",
+  "trainer": {
+    "num_epochs": 20,
+    "serialization_prefix": "/tmp/tutorials/getting_started",
+    "cuda_device": -1
+  }
+}

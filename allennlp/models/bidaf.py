@@ -379,8 +379,22 @@ class BidirectionalAttentionFlow(Model):
         span_end_encoder_params = params.pop("span_end_encoder", default_span_end_encoder_params)
         span_end_encoder = Seq2SeqEncoder.from_params(span_end_encoder_params)
 
-        default_initializer_params = {'default': 'orthonormal',
-                                      'exclude': ["token_embedder_tokens"]}
+        default_initializer_params = {
+                "bias": {
+                        "type": "normal",
+                        "mean": 0,
+                        "std": 0.1
+                        },
+                "similarity_function.*weight_vector": {
+                        "type": "normal",
+                        "mean": 0,
+                        "std": 0.1
+                        },
+                "default": {
+                        "type": "xavier_uniform"
+                        },
+                'exclude': ["token_embedder_tokens"]
+                }
 
         initializer_params = params.pop('initializer', default_initializer_params)
         initializer = InitializerApplicator.from_params(initializer_params)

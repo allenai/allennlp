@@ -44,6 +44,8 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
             self._kwargs = kwargs
         def __call__(self, tensor: torch.autograd.Variable) -> None:
             self._init_function(tensor, **self._kwargs)
+        def __repr__(self):
+            return 'Init: %s, with params: %s' % (self._init_function, self._kwargs)
         @classmethod
         def from_params(cls, params: Params):
             return cls(**params.as_dict())
@@ -114,6 +116,7 @@ class InitializerApplicator:
                     initializer(parameter)
                     logger.info("Initializing %s using %s intitializer", name, initializer_regex)
                     is_initialized = True
+                    break
             if not is_initialized:
                 not_explicitly_initialized_parameters.append((name, parameter))
 
@@ -133,27 +136,27 @@ class InitializerApplicator:
         be formatted as follows:
 
         {
-            "initializers": {
-                "parameter_regex_match1": {
-                    "type": "normal"
-                    "mean": 0.01
-                    "std": 0.1
-                },
-                "parameter_regex_match2": "uniform",
-
-                "default": "orthogonal"
+            "parameter_regex_match1": {
+                "type": "normal"
+                "mean": 0.01
+                "std": 0.1
             },
+            "parameter_regex_match2": "uniform",
+            "default": "orthogonal",
             "exclude": ["exclude_regex"]
         }
 
-        where the keys are regex matches to the parameters (with the exception of the "default" key,
-        which will be used as the default initializer for parameters which do not match any
-        initializer regex passed to the InitializerApplicator). The values can either be strings,
-        in which case they correspond to the names of initializers, or dictionaries, in which
-        case they must contain the "type" key, corresponding to the name of an initializer.
-        In addition, they may contain auxiliary named parameters which will be fed to the
-        initializer itself. To determine valid auxiliary parameters, please refer to the
-        torch.nn.init documentation.
+        where the keys are regex matches to the parameters, with the exception of the "default" and
+        "exclude" keys.  The "default" key defines an initializer which will be used as the default
+        initializer for parameters which do not match any initializer regex passed to the
+        InitializerApplicator, except for any parameter with a name matching a regex in "exclude".
+
+        The values for parameter regexes and for the "default" key will be passed to
+        ``Initializer.from_params()``.  These values can either be strings, in which case they
+        correspond to the names of initializers, or dictionaries, in which case they must contain
+        the "type" key, corresponding to the name of an initializer.  In addition, they may contain
+        auxiliary named parameters which will be fed to the initializer itself. To determine valid
+        auxiliary parameters, please refer to the torch.nn.init documentation.
 
         Parameters
         ----------
@@ -164,10 +167,13 @@ class InitializerApplicator:
         -------
         An InitializerApplicator containing the specified initializers.
         """
-        all_initializer_params = params.pop("initializers", {})
+        exclude_regexes = params.pop("exclude", [])
         initializers = {}
-        for name, initializer_params in all_initializer_params.items():
+        for name in list(params.keys()):
+            initializer_params = params.pop(name)
+            if name[0] == '"' and name[-1] == '"':
+                name = name[1:-1]
             initializers[name] = Initializer.from_params(initializer_params)
         default = initializers.pop("default", Initializer.by_name('normal')())
-        exclude_regexes = params.pop("exclude", [])
+        params.assert_empty(cls.__name__)
         return InitializerApplicator(initializers, default, exclude_regexes)

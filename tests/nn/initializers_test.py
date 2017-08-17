@@ -1,13 +1,23 @@
 # pylint: disable=no-self-use, invalid-name
+import logging
+
+import numpy
+import pyhocon
 import torch
 from torch.nn.init import constant
-import numpy
 
 from allennlp.nn import InitializerApplicator
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
 
 class TestInitializers(AllenNlpTestCase):
+    def setUp(self):
+        super(TestInitializers, self).setUp()
+        logging.getLogger('allennlp.nn.initializers').disabled = False
+
+    def tearDown(self):
+        super(TestInitializers, self).tearDown()
+        logging.getLogger('allennlp.nn.initializers').disabled = True
 
     def test_all_parameters_are_initialized(self):
         model = torch.nn.Sequential(
@@ -23,37 +33,45 @@ class TestInitializers(AllenNlpTestCase):
         class Net(torch.nn.Module):
             def __init__(self):
                 super(Net, self).__init__()
-                self.linear1 = torch.nn.Linear(5, 10)
-                self.linear2 = torch.nn.Linear(10, 5)
+                self.linear_1_with_funky_name = torch.nn.Linear(5, 10)
+                self.linear_2 = torch.nn.Linear(10, 5)
                 self.conv = torch.nn.Conv1d(5, 5, 5)
 
             def forward(self, inputs):  # pylint: disable=arguments-differ
                 pass
 
-        initializers = InitializerApplicator({"conv": lambda tensor: constant(tensor, 5)},
-                                             default_initializer=lambda tensor: constant(tensor, 10))
+        # pyhocon does funny things if there's a . in a key.  This test makes sure that we
+        # handle these kinds of regexes correctly.
+        json_params = """{
+        "conv": {"type": "constant", "val": 5},
+        "funky_na.*bi": {"type": "constant", "val": 7},
+        "default": {"type": "constant", "val": 10}
+        }
+        """
+        params = Params(pyhocon.ConfigFactory.parse_string(json_params))
+        initializers = InitializerApplicator.from_params(params)
         model = Net()
         initializers(model)
-        layers = list(model.children())
-        linear_layers = layers[:2]
-        conv_layer = layers[2]
 
-        for parameter in list(linear_layers[0].parameters()) + list(linear_layers[1].parameters()):
-            assert torch.equal(parameter.data, torch.ones(parameter.size()) * 10)
-
-        for parameter in conv_layer.parameters():
+        for parameter in model.conv.parameters():
             assert torch.equal(parameter.data, torch.ones(parameter.size()) * 5)
+
+        parameter = model.linear_1_with_funky_name.bias
+        assert torch.equal(parameter.data, torch.ones(parameter.size()) * 7)
+        parameter = model.linear_1_with_funky_name.weight
+        assert torch.equal(parameter.data, torch.ones(parameter.size()) * 10)
+
+        for parameter in model.linear_2.parameters():
+            assert torch.equal(parameter.data, torch.ones(parameter.size()) * 10)
 
     def test_from_params(self):
 
         to_exclude = ["this", "and", "that"]
         params = Params({
-                "initializers": {
-                        "conv": "orthogonal",
-                        "linear": {
-                                "type": "constant",
-                                "val": 1
-                        }
+                "conv": "orthogonal",
+                "linear": {
+                        "type": "constant",
+                        "val": 1
                 },
                 "exclude": to_exclude
         })

@@ -16,11 +16,11 @@ class TestApp(TestCase):
     def test_list_available(self):
         available = self.default_models.list_available()
         assert available  # not empty
-        assert "bidaf" in available
+        assert "mc" in available
 
 
     def test_get_model(self):
-        bidaf = self.default_models.get("bidaf")
+        bidaf = self.default_models.get("mc")
         assert bidaf  # is not None
 
 
