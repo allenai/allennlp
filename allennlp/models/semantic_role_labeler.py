@@ -54,7 +54,7 @@ class SemanticRoleLabeler(Model):
 
         # For the span based evaluation, we don't want to consider labels
         # for verb, because the verb index is provided to the model.
-        self.metric = SpanBasedF1Measure(vocab, tag_namespace="tags", ignore_classes=["V"])
+        self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="tags", ignore_classes=["V"])
 
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
@@ -131,7 +131,7 @@ class SemanticRoleLabeler(Model):
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
-            self.metric(class_probabilities, tags, mask)
+            self.span_metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict
@@ -181,7 +181,13 @@ class SemanticRoleLabeler(Model):
         return {"tags": tags, "class_probabilities": predictions.numpy()}
 
     def get_metrics(self, reset: bool = False):
-        metric_dict = self.metric.get_metric(reset=reset)
+        metric_dict = self.span_metric.get_metric(reset=reset)
+        if self.training:
+            # This can be a lot of metrics, as there are 3 per class.
+            # During training, we only really care about the overall
+            # metrics, so we filter for them here.
+            return {x: y for x, y in metric_dict if "overall" in x}
+
         return metric_dict
 
     def get_viterbi_pairwise_potentials(self):
