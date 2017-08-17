@@ -1,0 +1,11 @@
+
+cats/N are/V animals/N ./N
+
+
+dogs/N are/V animals/N ./N
+
+
+snakes/N are/V animals/N ./N
+
+
+birds/N are/V animals/N ./N

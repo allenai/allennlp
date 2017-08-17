@@ -4,6 +4,7 @@ import argparse
 import allennlp.commands.serve as serve
 import allennlp.commands.bulk as bulk
 import allennlp.commands.train as train
+import allennlp.commands.evaluate as evaluate
 
 def main(raw_args: Sequence[str]) -> None:
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]')
@@ -13,6 +14,7 @@ def main(raw_args: Sequence[str]) -> None:
     bulk.add_subparser(subparsers)
     train.add_subparser(subparsers)
     serve.add_subparser(subparsers)
+    evaluate.add_subparser(subparsers)
 
     args = parser.parse_args(raw_args)
 

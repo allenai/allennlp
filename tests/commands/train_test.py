@@ -27,7 +27,10 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "iterator": {"type": "basic", "batch_size": 2},
                 "optimizer": "adam",
-                "trainer": {"num_epochs": 2}
+                "trainer": {
+                        "num_epochs": 2,
+                        "serialization_prefix": self.TEST_DIR
+                }
         }
         train_model(params)
 
