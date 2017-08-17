@@ -43,3 +43,4 @@ source activate $CONDA_ENV_NAME
 
 # Install pip dependencies.
 pip install --quiet -r requirements.txt
+pip install --quiet -r requirements_test.txt
