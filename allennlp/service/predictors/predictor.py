@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, Optional, List
+from typing import Dict
 
 from allennlp.common import Params, Registrable
 from allennlp.common.params import replace_none

@@ -2,7 +2,7 @@
 import json
 
 from allennlp.service.server_sanic import make_app
-from allennlp.service.predictors import Predictor, load_predictors
+from allennlp.service.predictors import load_predictors
 from allennlp.common.testing import AllenNlpTestCase
 
 
