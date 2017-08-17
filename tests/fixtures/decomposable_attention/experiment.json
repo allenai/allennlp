@@ -9,35 +9,35 @@
     }
   },
   "train_data_path": "tests/fixtures/data/snli.jsonl",
-  "validation_data_path": "tests/fixtures/data/snli/jsonl",
+  "validation_data_path": "tests/fixtures/data/snli.jsonl",
   "model": {
     "type": "decomposable_attention",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "projection_dim": 200,
+        "projection_dim": 2,
         "pretrained_file": "tests/fixtures/glove.6B.300d.sample.txt.gz",
         "trainable": false
       }
     },
     "attend_feedforward": {
-      "input_dim": 200,
-      "num_layers": 2,
-      "hidden_dims": 200,
+      "input_dim": 2,
+      "num_layers": 1,
+      "hidden_dims": 2,
       "activations": "relu"
     },
     "similarity_function": {"type": "dot_product"},
     "compare_feedforward": {
-      "input_dim": 400,
-      "num_layers": 2,
-      "hidden_dims": 200,
+      "input_dim": 4,
+      "num_layers": 1,
+      "hidden_dims": 2,
       "activations": "relu"
     },
     "aggregate_feedforward": {
-      "input_dim": 400,
-      "num_layers": 2,
-      "hidden_dims": [200, 3],
-      "activations": ["relu", "linear"]
+      "input_dim": 4,
+      "num_layers": 1,
+      "hidden_dims": 3,
+      "activations": "linear"
     }
   },
   "iterator": {
@@ -53,6 +53,6 @@
     "num_epochs": 20,
     "patience": 5,
     "cuda_device": 0,
-    "serialization_prefix" : "snli_output"
+    "serialization_prefix" : "tests/fixtures/decomposable_attention/serialization"
   }
 }

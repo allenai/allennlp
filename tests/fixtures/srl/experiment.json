@@ -1,7 +1,7 @@
 {
   "dataset_reader":{"type":"srl"},
   "train_data_path": "tests/fixtures/data/srl",
-  "validation_data_path": "tests/fixtures/data/srl",
+  "validation_data_path": "srl-model/train/64/",
   "model": {
     "type": "srl",
     "text_field_embedder": {
@@ -32,7 +32,7 @@
     "num_epochs": 1,
     "grad_norm": 1.0,
     "patience": 500,
-    "serialization_prefix": "srl_output",
+    "serialization_prefix": "tests/fixtures/srl/serialization",
     "cuda_device": 0
   }
 }
