@@ -111,7 +111,7 @@ class SrlOutput extends React.Component {
         <div className="form__field">
           <label>Annotated Text</label>
           <pre>
-            <code>{ JSON.stringify(rawOutput) }</code>
+            <code>{ JSON.stringify(rawOutput, null, "  ") }</code>
           </pre>
         </div>
       </div>
@@ -131,7 +131,7 @@ class McOutput extends React.Component {
       <div className="model__content">
         <div className="form__field">
           <label>Answer</label>
-          <div className="model__content__summary">{ JSON.stringify(rawOutput) }</div>
+          <div className="model__content__summary">{ JSON.stringify(rawOutput, null, "  ") }</div>
         </div>
       </div>
     );
@@ -263,16 +263,14 @@ class TeOutput extends React.Component {
 
 class Button extends React.Component {
   render() {
-    const { outputState } = this.props;
-
-    const type="submit";
+    const { outputState, runModel, inputs } = this.props;
 
     return (
-      <button id="input--mc-submit" type="submit" disabled={outputState === "working"} className="btn btn--icon-disclosure">Run
-        <svg>
-          <use xlinkHref="#icon__disclosure"></use>
-        </svg>
-      </button>
+    <button id="input--mc-submit" type="button" disabled={outputState === "working"} className="btn btn--icon-disclosure" onClick={ () => { runModel(event, inputs) }}>Run
+      <svg>
+        <use xlinkHref="#icon__disclosure"></use>
+      </svg>
+    </button>
     );
   }
 }
@@ -377,25 +375,23 @@ class SrlInput extends React.Component {
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-        <form onSubmit={() => { runSrlModel(event, srlInputs) }}>
-          <div className="form__instructions"><span>Enter text or</span>
-            <select disabled={outputState === "working"} onChange={this.handleListChange}>
-              <option value="">Choose an example...</option>
-              {srlDataIds.map((obj) => {
-                return (
-                  <option value={obj.id} key={obj.id}>{obj.sentence}</option>
-                );
-              })}
-            </select>
-          </div>
-          <div className="form__field">
-            <label htmlFor="#input--srl-sentence">Sentence</label>
-            <input onChange={this.handleSentenceChange} value={srlSentenceValue} id="input--srl-sentence" ref="srlSentence" type="text" required="true" autoFocus="true" value={srlSentenceValue} placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
-          </div>
-          <div className="form__field form__field--btn">
-            <Button outputState={outputState} />
-          </div>
-        </form>
+        <div className="form__instructions"><span>Enter text or</span>
+          <select disabled={outputState === "working"} onChange={this.handleListChange}>
+            <option value="">Choose an example...</option>
+            {srlDataIds.map((obj) => {
+              return (
+                <option value={obj.id} key={obj.id}>{obj.sentence}</option>
+              );
+            })}
+          </select>
+        </div>
+        <div className="form__field">
+          <label htmlFor="#input--srl-sentence">Sentence</label>
+          <input onChange={this.handleSentenceChange} value={srlSentenceValue} id="input--srl-sentence" ref="srlSentence" type="text" required="true" autoFocus="true" value={srlSentenceValue} placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
+        </div>
+        <div className="form__field form__field--btn">
+          <Button outputState={outputState} runModel={runSrlModel}  inputs={srlInputs} />
+        </div>
       </div>
     );
   }
@@ -484,10 +480,9 @@ class McInput extends React.Component {
   render() {
 
     const { mcPassageValue, mcQuestionValue } = this.state;
-    const { selectedModel, outputState, runMcModel } = this.props;
+    const { outputState, runMcModel } = this.props;
 
     const mcInputs = {
-      "model": selectedModel,
       "passageValue": mcPassageValue,
       "questionValue": mcQuestionValue
     };
@@ -500,29 +495,27 @@ class McInput extends React.Component {
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-        <form onSubmit={() => { runMcModel(event, mcInputs) }}>
-          <div className="form__instructions"><span>Enter text or</span>
-            <select disabled={outputState === "working"} onChange={this.handleListChange}>
-              <option value="">Choose an example...</option>
-              {mcDataIds.map((obj) => {
-                return (
-                  <option value={obj.id} key={obj.id}>{obj.passage.substring(0,60) + "..."}</option>
-                );
-              })}
-            </select>
-          </div>
-          <div className="form__field">
-            <label htmlFor="#input--mc-passage">Passage</label>
-            <textarea onChange={this.handlePassageChange} id="input--mc-passage" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;Saturn is the sixth planet from the Sun and the second-largest in the Solar System, after Jupiter. It is a gas giant with an average radius about nine times that of Earth. Although it has only one-eighth the average density of Earth, with its larger volume Saturn is just over 95 times more massive. Saturn is named after the Roman god of agriculture; its astronomical symbol represents the god&#39;s sickle.&quot;" value={mcPassageValue} disabled={outputState === "working"}></textarea>
-          </div>
-          <div className="form__field">
-            <label htmlFor="#input--mc-question">Question</label>
-            <input onChange={this.handleQuestionChange} id="input--mc-question" type="text" required="true" value={mcQuestionValue} placeholder="E.g. &quot;What does Saturn’s astronomical symbol represent?&quot;" disabled={outputState === "working"} />
-          </div>
-          <div className="form__field form__field--btn">
-            <Button selectedModel={selectedModel} outputState={outputState} />
-          </div>
-        </form>
+        <div className="form__instructions"><span>Enter text or</span>
+          <select disabled={outputState === "working"} onChange={this.handleListChange}>
+            <option value="">Choose an example...</option>
+            {mcDataIds.map((obj) => {
+              return (
+                <option value={obj.id} key={obj.id}>{obj.passage.substring(0,60) + "..."}</option>
+              );
+            })}
+          </select>
+        </div>
+        <div className="form__field">
+          <label htmlFor="#input--mc-passage">Passage</label>
+          <textarea onChange={this.handlePassageChange} id="input--mc-passage" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;Saturn is the sixth planet from the Sun and the second-largest in the Solar System, after Jupiter. It is a gas giant with an average radius about nine times that of Earth. Although it has only one-eighth the average density of Earth, with its larger volume Saturn is just over 95 times more massive. Saturn is named after the Roman god of agriculture; its astronomical symbol represents the god&#39;s sickle.&quot;" value={mcPassageValue} disabled={outputState === "working"}></textarea>
+        </div>
+        <div className="form__field">
+          <label htmlFor="#input--mc-question">Question</label>
+          <input onChange={this.handleQuestionChange} id="input--mc-question" type="text" required="true" value={mcQuestionValue} placeholder="E.g. &quot;What does Saturn’s astronomical symbol represent?&quot;" disabled={outputState === "working"} />
+        </div>
+        <div className="form__field form__field--btn">
+          <Button outputState={outputState} runModel={runMcModel} inputs={mcInputs} />
+        </div>
       </div>
     );
   }
@@ -607,10 +600,9 @@ class TeInput extends React.Component {
   render() {
 
     const { tePremiseValue, teHypothesisValue } = this.state;
-    const { selectedModel, outputState, runTeModel } = this.props;
+    const { outputState, runTeModel } = this.props;
 
     const teInputs = {
-      "model": selectedModel,
       "premiseValue": tePremiseValue,
       "hypothesisValue": teHypothesisValue
     };
@@ -623,29 +615,27 @@ class TeInput extends React.Component {
     return (
       <div className="model__content">
       <ModelIntro title={title} tooltip={tooltip} />
-        <form onSubmit={() => { runTeModel(event, teInputs) }}>
-          <div className="form__instructions"><span>Enter text or</span>
-            <select disabled={outputState === "working"} onChange={this.handleListChange}>
-              <option value="">Choose an example...</option>
-              {teDataIds.map((obj) => {
-                return (
-                  <option value={obj.id} key={obj.id}>{obj.premise}</option>
-                );
-              })}
-            </select>
-          </div>
-          <div className="form__field">
-            <label htmlFor="input--te-premise">Premise</label>
-            <input onChange={this.handlePremiseChange} id="input--te-premise" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;A black dog chased a cat throught the park.&quot;" value={tePremiseValue} />
-          </div>
-          <div className="form__field">
-            <label htmlFor="input--te-hypothesis">Hypothesis</label>
-            <input onChange={this.handleHypothesisChange} id="input--te-hypothesis" type="text" required="true" value={teHypothesisValue} placeholder="E.g. &quot;The cat is black.&quot;" />
-          </div>
-          <div className="form__field form__field--btn">
-            <Button selectedModel={selectedModel} outputState={outputState} />
-          </div>
-        </form>
+        <div className="form__instructions"><span>Enter text or</span>
+          <select disabled={outputState === "working"} onChange={this.handleListChange}>
+            <option value="">Choose an example...</option>
+            {teDataIds.map((obj) => {
+              return (
+                <option value={obj.id} key={obj.id}>{obj.premise}</option>
+              );
+            })}
+          </select>
+        </div>
+        <div className="form__field">
+          <label htmlFor="input--te-premise">Premise</label>
+          <input onChange={this.handlePremiseChange} id="input--te-premise" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;A black dog chased a cat throught the park.&quot;" value={tePremiseValue} />
+        </div>
+        <div className="form__field">
+          <label htmlFor="input--te-hypothesis">Hypothesis</label>
+          <input onChange={this.handleHypothesisChange} id="input--te-hypothesis" type="text" required="true" value={teHypothesisValue} placeholder="E.g. &quot;The cat is black.&quot;" />
+        </div>
+        <div className="form__field form__field--btn">
+          <Button outputState={outputState} runModel={runTeModel} inputs={teInputs} />
+        </div>
       </div>
     );
   }
@@ -657,7 +647,7 @@ class TeInput extends React.Component {
 
 class PaneRight extends React.Component {
   render() {
-    const { outputState, selectedModel, rawOutput } = this.props;
+    const { outputState, rawOutput } = this.props;
 
     return (
       <ResultDisplay outputState={outputState}>
@@ -795,9 +785,6 @@ class SrlComponent extends React.Component {
   }
 
   runSrlModel(event, inputs) {
-    // Prevent regular form submission
-    event.preventDefault();
-
     this.setState({
       outputState: "working",
     });
@@ -852,8 +839,6 @@ class TeComponent extends React.Component {
   }
 
   runTeModel(event, inputs) {
-    // Prevent regular form submission
-    if (event) { event.preventDefault(); }
     this.setState({
       outputState: "working",
     });
@@ -911,8 +896,6 @@ class McComponent extends React.Component {
   }
 
   runMcModel(event, inputs) {
-    // Prevent regular form submission
-    if (event) { event.preventDefault(); }
     this.setState({
       outputState: "working",
     });
