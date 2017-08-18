@@ -151,4 +151,3 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         model = Model.from_files(params)
 
         assert isinstance(model, BidirectionalAttentionFlow)
-
