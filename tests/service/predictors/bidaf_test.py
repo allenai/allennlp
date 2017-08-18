@@ -4,24 +4,21 @@ from unittest import TestCase
 
 from allennlp.common import Params
 from allennlp.common.params import replace_none
-from allennlp.service.servable.models.bidaf import BidafServable
+from allennlp.service.predictors.bidaf import BidafPredictor
 
 
-class TestBidafServable(TestCase):
+class TestBidafPredictor(TestCase):
     def test_uses_named_inputs(self):
         inputs = {
                 "question": "What kind of test succeeded on its first attempt?",
                 "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
         }
 
-        with open('experiment_config/bidaf.json') as f:
+        with open('tests/fixtures/bidaf/experiment.json') as f:
             config = json.loads(f.read())
-            config['trainer']['serialization_prefix'] = 'tests/fixtures/bidaf/serialization'
-            config['model']['text_field_embedder']['tokens']['pretrained_file'] = \
-                'tests/fixtures/glove.6B.100d.sample.txt.gz'
             bidaf_config = Params(replace_none(config))
 
-        model = BidafServable.from_config(bidaf_config)
+        model = BidafPredictor.from_config(bidaf_config)
 
         result = model.predict_json(inputs)
 

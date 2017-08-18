@@ -2,14 +2,14 @@
 import json
 
 from allennlp.service.server_sanic import make_app
-from allennlp.service.servable import ServableCollection
+from allennlp.service.predictors import load_predictors
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestApp(AllenNlpTestCase):
 
     app = make_app()
-    app.servables = ServableCollection.default()
+    app.predictors = load_predictors()
     app.testing = True
     client = app.test_client
 

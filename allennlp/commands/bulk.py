@@ -4,7 +4,7 @@ import json
 import sys
 from typing import Optional, IO
 
-from allennlp.service.servable import Servable, ServableCollection
+from allennlp.service.predictors import Predictor, load_predictors
 
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Run the specified model against a JSON-lines input file.'''
@@ -19,16 +19,16 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
 
     return subparser
 
-def get_model(args: argparse.Namespace) -> Optional[Servable]:
+def get_model(args: argparse.Namespace) -> Optional[Predictor]:
     # TODO(joelgrus): use the args to instantiate the model
-    models = ServableCollection.default()
+    models = load_predictors()
     model_name = args.model
     return models.get(model_name)
 
-def run(servable: Servable, input_file: IO, output_file: Optional[IO], print_to_console: bool) -> None:
+def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_to_console: bool) -> None:
     for line in input_file:
         data = json.loads(line)
-        result = servable.predict_json(data)
+        result = predictor.predict_json(data)
         output = json.dumps(result)
 
         if print_to_console:
