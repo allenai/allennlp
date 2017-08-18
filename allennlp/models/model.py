@@ -142,4 +142,11 @@ class Model(torch.nn.Module, Registrable):
         model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
         model.load_state_dict(model_state)
 
+        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
+        # in sync with the weights
+        if cuda_device >= 0:
+            model.cuda(cuda_device)
+        else:
+            model.cpu()
+
         return model
