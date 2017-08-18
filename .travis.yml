@@ -21,6 +21,13 @@ env:
 notifications:
   email: false
 
+addons:
+  apt:
+    packages:
+      - dvipng
+      - texlive-latex-base
+      - texlive-latex-extra
+
 install: source build_tools/travis/install.sh
 script: bash build_tools/travis/test_script.sh
 after_success: source build_tools/travis/after_success.sh

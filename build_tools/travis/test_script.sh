@@ -29,9 +29,6 @@ if [[ "$RUN_TESTS" == "true" ]]; then
 fi
 
 if [[ "$BUILD_DOCS" == "true" ]]; then
-  sudo -E apt-get -yq --no-install-suggests --no-install-recommends --force-yes \
-    install dvipng texlive-latex-base texlive-latex-extra \
-    texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
   cd doc
   make html-strict
   cd ..
