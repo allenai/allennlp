@@ -1,10 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
+import os
 from unittest import TestCase
 
 from allennlp.common import Params
 from allennlp.models import Model
 from allennlp.service.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor
 
+import pytest
 
 class TestSrlPredictor(TestCase):
     def test_uses_named_inputs(self):
@@ -27,6 +29,7 @@ class TestSrlPredictor(TestCase):
         assert any(v["verb"] == "worked" for v in verbs)
 
 
+    @pytest.mark.skipif(os.environ.get("TRAVIS") is not None, reason="causes OOM error and crashes on Travis")
     def test_cpu_vs_gpu(self):
         config = Params.from_file('tests/fixtures/srl/experiment.json')
         predictor_gpu = SemanticRoleLabelerPredictor.from_config(config)
