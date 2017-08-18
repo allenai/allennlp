@@ -89,7 +89,7 @@ class SpanBasedF1Measure(Metric):
                                      "id >= {}, the number of classes.".format(num_classes))
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        argmax_predictions = predictions.max(-1)[1].float().squeeze(-1)
+        argmax_predictions = predictions.max(-1)[1].float()
 
         # Iterate over timesteps in batch.
         batch_size = gold_labels.size(0)
