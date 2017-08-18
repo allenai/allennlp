@@ -8,10 +8,11 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
             'serve', description=description, help='Run the web service and demo.')
 
     subparser.add_argument('--port', type=int, default=8000)
+    subparser.add_argument('--workers', type=int, default=1)
 
     subparser.set_defaults(func=serve)
 
     return subparser
 
 def serve(args: argparse.Namespace) -> None:
-    server_sanic.run(args.port)
+    server_sanic.run(args.port, args.workers)
