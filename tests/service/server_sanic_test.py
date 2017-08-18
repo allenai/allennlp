@@ -5,11 +5,16 @@ from allennlp.service.server_sanic import make_app
 from allennlp.service.predictors import load_predictors
 from allennlp.common.testing import AllenNlpTestCase
 
+TEST_CONFIG_FILES = {
+        'mc': 'tests/fixtures/bidaf/experiment.json',
+        'srl': 'tests/fixtures/srl/experiment.json',
+        'te': 'tests/fixtures/decomposable_attention/experiment.json'
+}
 
 class TestApp(AllenNlpTestCase):
 
     app = make_app()
-    app.predictors = load_predictors()
+    app.predictors = load_predictors(TEST_CONFIG_FILES)
     app.testing = True
     client = app.test_client
 

@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, List
 from collections import MutableMapping
 
@@ -183,6 +184,15 @@ class Params(MutableMapping):
             new_history = self.history + new_history + "."
             return Params(value, new_history)
         return value
+
+    # TODO(joelgrus): should this be pyhocon instead of json?
+    @staticmethod
+    def from_file(params_file: str):
+        """
+        Load a `Params` object from a JSON file.
+        """
+        with open(params_file) as input_file:
+            return Params(replace_none(json.loads(input_file.read())))
 
 
 def pop_choice(params: Dict[str, Any],

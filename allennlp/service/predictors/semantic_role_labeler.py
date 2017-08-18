@@ -1,7 +1,7 @@
 from typing import Dict
 
 from allennlp.common.util import JsonDict, sanitize
-from allennlp.data import Vocabulary, Tokenizer, TokenIndexer
+from allennlp.data import Tokenizer, TokenIndexer
 from allennlp.data.fields import TextField, IndexField
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
@@ -10,9 +10,9 @@ import spacy
 
 @Predictor.register("srl")
 class SemanticRoleLabelerPredictor(Predictor):
-    def __init__(self, model: Model, vocab: Vocabulary,
+    def __init__(self, model: Model,
                  tokenizer: Tokenizer, token_indexers: Dict[str, TokenIndexer]) -> None:
-        super().__init__(model, vocab, tokenizer, token_indexers)
+        super().__init__(model, tokenizer, token_indexers)
 
         self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
 

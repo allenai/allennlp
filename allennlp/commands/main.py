@@ -2,7 +2,7 @@ from typing import Sequence
 import argparse
 
 import allennlp.commands.serve as serve
-import allennlp.commands.bulk as bulk
+import allennlp.commands.predict as predict
 import allennlp.commands.train as train
 import allennlp.commands.evaluate as evaluate
 
@@ -11,7 +11,7 @@ def main(raw_args: Sequence[str]) -> None:
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 
     # Add sub-commands
-    bulk.add_subparser(subparsers)
+    predict.add_subparser(subparsers)
     train.add_subparser(subparsers)
     serve.add_subparser(subparsers)
     evaluate.add_subparser(subparsers)

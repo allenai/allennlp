@@ -1,9 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
-import json
 from unittest import TestCase
 
 from allennlp.common import Params
-from allennlp.common.params import replace_none
 from allennlp.service.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor
 
 
@@ -13,11 +11,8 @@ class TestSrlPredictor(TestCase):
                 "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
         }
 
-        with open('tests/fixtures/srl/experiment.json') as f:
-            config = json.loads(f.read())
-            srl_config = Params(replace_none(config))
-
-        model = SemanticRoleLabelerPredictor.from_config(srl_config)
+        config = Params.from_file('tests/fixtures/srl/experiment.json')
+        model = SemanticRoleLabelerPredictor.from_config(config)
 
         result = model.predict_json(inputs)
 

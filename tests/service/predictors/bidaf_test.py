@@ -1,9 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
-import json
 from unittest import TestCase
 
 from allennlp.common import Params
-from allennlp.common.params import replace_none
 from allennlp.service.predictors.bidaf import BidafPredictor
 
 
@@ -14,10 +12,7 @@ class TestBidafPredictor(TestCase):
                 "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
         }
 
-        with open('tests/fixtures/bidaf/experiment.json') as f:
-            config = json.loads(f.read())
-            bidaf_config = Params(replace_none(config))
-
+        bidaf_config = Params.from_file('tests/fixtures/bidaf/experiment.json')
         model = BidafPredictor.from_config(bidaf_config)
 
         result = model.predict_json(inputs)
