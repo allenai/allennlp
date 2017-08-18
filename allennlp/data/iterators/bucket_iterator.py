@@ -26,15 +26,11 @@ class BucketIterator(BasicIterator):
         minimize the amount of padding necessary per batch. In order to do this, we need to know
         which fields need what type of padding, and in what order.
 
-        For example:
-        ``[("sentence1", "num_tokens"),
-           ("sentence2", "num_tokens"),
-           ("sentence1", "num_token_characters")]``
-
-        would sort a dataset first by the "num_tokens" of the "sentence1" field, then by the
-        "num_tokens" of the "sentence2" field, and finally by the "num_token_characters" of the
-        "sentence1" field.  TODO(mattg): we should have some documentation somewhere that gives the
-        standard padding keys used by different fields.
+        For example, ``[("sentence1", "num_tokens"), ("sentence2", "num_tokens"), ("sentence1",
+        "num_token_characters")]`` would sort a dataset first by the "num_tokens" of the
+        "sentence1" field, then by the "num_tokens" of the "sentence2" field, and finally by the
+        "num_token_characters" of the "sentence1" field.  TODO(mattg): we should have some
+        documentation somewhere that gives the standard padding keys used by different fields.
 
         By default, the list of sorting keys is empty, meaning the dataset won't be sorted and
         batches will just be padded using the max lengths of all fields requiring padding

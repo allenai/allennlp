@@ -13,15 +13,20 @@ cache:
 
 env:
   matrix:
-    # run tests, submit coverage info
     - COVERAGE="true" RUN_TESTS="true"
-    # pylint checks skip the tests
     - RUN_PYLINT="true"
-    # mypy checks also skip the tests
     - RUN_MYPY="true"
+    - BUILD_DOCS="true"
 
 notifications:
   email: false
+
+addons:
+  apt:
+    packages:
+      - dvipng
+      - texlive-latex-base
+      - texlive-latex-extra
 
 install: source build_tools/travis/install.sh
 script: bash build_tools/travis/test_script.sh

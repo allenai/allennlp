@@ -29,7 +29,8 @@ class AdaptiveIterator(BucketIterator):
 
     1. Provide the ``padding_memory_scaling`` function, which gives a big-O bound on memory
        usage given padding lengths. For instance, if you have two TextFields with
-       ``sentence_lengths`` which require padding, this might be simply |sentence1| * |sentence2|.
+       ``sentence_lengths`` which require padding, this might be simply ``|sentence1| *
+       |sentence2|``.
     2. Tune the `adaptive_memory_usage_constant` parameter for your particular model and GPU.
        While tuning this, set ``biggest_batch_first`` to ``True``, which will bypass the adaptive
        grouping step and use the batching of a ``BucketIterator``, returning the biggest batch

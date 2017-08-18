@@ -22,7 +22,7 @@ class SrlReader(DatasetReader):
     """
     This DatasetReader is designed to read in the English OntoNotes v5.0 data
     in the format used by the CoNLL 2011/2012 shared tasks. In order to use this
-    Reader, you must follow the instructions provided here (v12 release):
+    Reader, you must follow the instructions provided `here (v12 release):
     <http://cemantix.org/data/ontonotes.html>`_, which will allow you to download
     the CoNLL style annotations for the  OntoNotes v5.0 release -- LDC2013T19.tgz
     obtained from LDC.
@@ -33,27 +33,27 @@ class SrlReader(DatasetReader):
     conll-formatted-ontonotes-5.0/
      ── data
        ├── development
-       |   └── data
-       |       └── english
-       |           └── annotations
-       |               ├── bc
-       |               ├── bn
-       |               ├── mz
-       |               ├── nw
-       |               ├── pt
-       |               ├── tc
-       |               └── wb
+           └── data
+               └── english
+                   └── annotations
+                       ├── bc
+                       ├── bn
+                       ├── mz
+                       ├── nw
+                       ├── pt
+                       ├── tc
+                       └── wb
        ├── test
-       │   └── data
-       │       └── english
-       │           └── annotations
-       │               ├── bc
-       │               ├── bn
-       │               ├── mz
-       │               ├── nw
-       │               ├── pt
-       │               ├── tc
-       │               └── wb
+           └── data
+               └── english
+                   └── annotations
+                       ├── bc
+                       ├── bn
+                       ├── mz
+                       ├── nw
+                       ├── pt
+                       ├── tc
+                       └── wb
        └── train
            └── data
                └── english
@@ -78,7 +78,7 @@ class SrlReader(DatasetReader):
     3 Word number : int
         This is the word index of the word in that sentence.
     4 Word : str
-        This is the token as segmented/tokenized in the Treebank. Initially the *_skel file
+        This is the token as segmented/tokenized in the Treebank. Initially the ``*_skel`` file
         contain the placeholder [WORD] which gets replaced by the actual token from the
         Treebank which is part of the OntoNotes release.
     5 POS Tag : str
@@ -87,11 +87,11 @@ class SrlReader(DatasetReader):
         annotation are marked with a XX tag. The verb is marked with just a VERB tag.
     6 Parse bit: str
         This is the bracketed structure broken before the first open parenthesis in the parse,
-        and the word/part-of-speech leaf replaced with a *. The full parse can be created by
+        and the word/part-of-speech leaf replaced with a ``*``. The full parse can be created by
         substituting the asterisk with the "([pos] [word])" string (or leaf) and concatenating
         the items in the rows of that column. When the parse information is missing, the
-        first word of a sentence is tagged as "(TOP*" and the last word is tagged as "*)"
-        and all intermediate words are tagged with a "*".
+        first word of a sentence is tagged as ``(TOP*`` and the last word is tagged as ``*)``
+        and all intermediate words are tagged with a ``*``.
     7 Predicate lemma: str
         The predicate lemma is mentioned for the rows for which we have semantic role
         information or word sense information. All other rows are marked with a "-".
@@ -104,22 +104,23 @@ class SrlReader(DatasetReader):
         and Web Log data. When not available the rows are marked with an "-".
     11 Named Entities: str
         These columns identifies the spans representing various named entities. For documents
-        which do not have named entity annotation, each line is represented with an "*".
+        which do not have named entity annotation, each line is represented with an ``*``.
     12+ Predicate Arguments: str
         There is one column each of predicate argument structure information for the predicate
         mentioned in Column 7. If there are no predicates tagged in a sentence this is a
-        single column with all rows marked with an "*".
+        single column with all rows marked with an ``*``.
     -1 Co-reference: str
         Co-reference chain information encoded in a parenthesis structure. For documents that do
          not have co-reference annotations, each line is represented with a "-".
 
     Parameters
     ----------
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+    token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
+        Default is ``{"tokens": SingleIdTokenIndexer()}``.
 
-    Return
-    ------
+    Returns
+    -------
     A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
 
     """
@@ -133,7 +134,7 @@ class SrlReader(DatasetReader):
                           predicate_argument_labels: List[List[str]]) -> List[Instance]:
         """
         Parameters
-        ---------
+        ----------
         sentence : List[str], required.
             The tokenised sentence.
         verbal_predicates : List[int], required.
@@ -143,8 +144,8 @@ class SrlReader(DatasetReader):
             A list of predicate argument labels, one for each verbal_predicate. The
             internal lists are of length: len(sentence).
 
-        Return
-        ------
+        Returns
+        -------
         A list of Instances.
 
         """

@@ -15,14 +15,16 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     set of labels.  The linear layer needs to know its input dimension before it is called, and you
     can get that from ``get_output_dim``.
 
-    In order to use this API wrapper, you must implement a class with the following interface:
-    Class:
-        self.input_size
-        self.hidden_size
-        self.bidirectional (optional)
+    In order to be wrapped with this wrapper, a class must have the following members:
 
-    def forward(inputs: PackedSequence, hidden_state: torch.Tensor)
-        -> outputs: PackedSequence, final_state: torch.Tensor.
+        - ``self.input_size: int``
+        - ``self.hidden_size: int``
+        - ``def forward(inputs: PackedSequence, hidden_state: torch.autograd.Variable) ->
+          Tuple[PackedSequence, torch.autograd.Variable]``.
+        - ``self.bidirectional: bool`` (optional)
+
+    This is what pytorch's RNN's look like - just make sure your class looks like those, and it
+    should work.
     """
     def __init__(self, module: torch.nn.modules.RNNBase) -> None:
         super(PytorchSeq2SeqWrapper, self).__init__()

@@ -30,11 +30,13 @@ class AugmentedLstm(torch.nn.Module):
         LSTM.
     use_highway: bool, optional (default = True)
         Whether or not to use highway connections between layers. This effectively involves
-        reparameterising the normal output of an LSTM as:
+        reparameterising the normal output of an LSTM as::
+
             gate = sigmoid(W_x1 * x_t + W_h * h_t)
             output = gate * h_t  + (1 - gate) * (W_x2 * x_t)
-    Return
-    ------
+
+    Returns
+    -------
     output_accumulator : PackedSequence
         The outputs of the LSTM for each timestep. A tensor of shape
         (batch_size, max_timesteps, hidden_size) where for a given batch
