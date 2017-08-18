@@ -40,8 +40,8 @@ class TestApp(AllenNlpTestCase):
         results = json.loads(response.text)
         assert "label_probs" in results
 
-    def test_semantic_role_labelling(self):
-        _, response = self.client.post("/predict/semantic-role-labelling",
+    def test_semantic_role_labeling(self):
+        _, response = self.client.post("/predict/semantic-role-labeling",
                                        json={"sentence": "the super bowl was played in seattle"})
         assert response.status == 200
         results = json.loads(response.text)

@@ -40,7 +40,7 @@ class TestBulk(TestCase):
             f.write("""{"sentence": "this is a less great sentence"}\n""")
 
         args = ["bulk",     # command
-                "semantic-role-labelling", # model_name
+                "semantic-role-labeling", # model_name
                 infile,     # input_file
                 "--output-file", outfile,
                 "--print"]

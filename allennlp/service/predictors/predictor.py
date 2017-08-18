@@ -73,7 +73,7 @@ def default_params() -> Dict[str, Params]:
 
     return {
             'machine-comprehension': bidaf_config,
-            'semantic-role-labelling': srl_config,
+            'semantic-role-labeling': srl_config,
             'textual-entailment': decomposable_attention_config
     }
 
