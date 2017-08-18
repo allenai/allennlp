@@ -14,6 +14,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.training.metrics import SpanBasedF1Measure
 
 
 @Model.register("srl")
@@ -50,6 +51,10 @@ class SemanticRoleLabeler(Model):
         self.vocab = vocab
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
+
+        # For the span based evaluation, we don't want to consider labels
+        # for verb, because the verb index is provided to the model.
+        self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="tags", ignore_classes=["V"])
 
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
@@ -101,7 +106,6 @@ class SemanticRoleLabeler(Model):
 
         """
         embedded_text_input = self.text_field_embedder(tokens)
-        # TODO(Mark): Use mask in encoder once all registered encoders have the same API.
         mask = get_text_field_mask(tokens)
         expanded_verb_indicator = verb_indicator.unsqueeze(-1).float()
         # Concatenate the verb feature onto the embedded text. This now
@@ -127,6 +131,7 @@ class SemanticRoleLabeler(Model):
             if tags.dim() == 3:
                 _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
+            self.span_metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
         return output_dict
@@ -174,6 +179,17 @@ class SemanticRoleLabeler(Model):
                 for x in max_likelihood_sequence]
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}
+
+    def get_metrics(self, reset: bool = False):
+        metric_dict = self.span_metric.get_metric(reset=reset)
+        if self.training:
+            # This can be a lot of metrics, as there are 3 per class.
+            # During training, we only really care about the overall
+            # metrics, so we filter for them here.
+            # TODO(Mark): This is fragile and should be replaced with some verbosity level in Trainer.
+            return {x: y for x, y in metric_dict.items() if "overall" in x}
+
+        return metric_dict
 
     def get_viterbi_pairwise_potentials(self):
         """
@@ -243,7 +259,6 @@ class SemanticRoleLabeler(Model):
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder,
                    initializer=initializer)
-
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,
