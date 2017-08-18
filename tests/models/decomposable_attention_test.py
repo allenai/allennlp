@@ -7,7 +7,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SnliReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.models import DecomposableAttention
+from allennlp.models import DecomposableAttention, Model
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import arrays_to_variables
 from allennlp.common.testing import AllenNlpTestCase
@@ -41,3 +41,9 @@ class TestDecomposableAttention(AllenNlpTestCase):
         hypothesis = TextField(["A", "dog", "is", "an", "animal"], token_indexers=self.token_indexers)
         output_dict = self.model.predict_entailment(premise, hypothesis)
         assert_almost_equal(numpy.sum(output_dict["label_probs"], -1), 1, decimal=6)
+
+    def test_from_file(self):
+        params = Params.from_file('tests/fixtures/decomposable_attention/experiment.json')
+        model = Model.from_files(params)
+
+        assert isinstance(model, DecomposableAttention)

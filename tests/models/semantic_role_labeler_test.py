@@ -8,6 +8,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SrlReader
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
@@ -77,3 +78,9 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
         perl_script_command = ["perl", "./scripts/srl-eval.pl", prediction_file_path, gold_file_path]
         exit_code = subprocess.check_call(perl_script_command)
         assert exit_code == 0
+
+    def test_from_file(self):
+        params = Params.from_file('tests/fixtures/srl/experiment.json')
+        model = Model.from_files(params)
+
+        assert isinstance(model, SemanticRoleLabeler)

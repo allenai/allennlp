@@ -57,7 +57,7 @@ class TestPredict(TestCase):
 
     def test_fails_without_required_args(self):
         args = ["predict",          # command
-                "reverser",      # model_name, but no input file
+                "/path/to/model",   # model, but no input file
                ]
 
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name

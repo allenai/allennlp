@@ -9,7 +9,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
-from allennlp.models import BidirectionalAttentionFlow
+from allennlp.models import Model, BidirectionalAttentionFlow
 from allennlp.nn.util import arrays_to_variables
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -145,3 +145,10 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         span_end_probs = Variable(torch.FloatTensor([[0.1, 0.5, 0.2, 0.05, 0.15]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
         assert_almost_equal(begin_end_idxs.data.numpy(), [[1, 2]])
+
+    def test_from_file(self):
+        params = Params.from_file('tests/fixtures/bidaf/experiment.json')
+        model = Model.from_files(params)
+
+        assert isinstance(model, BidirectionalAttentionFlow)
+
