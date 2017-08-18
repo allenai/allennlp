@@ -1,4 +1,3 @@
-import json
 from typing import Any, Dict, List
 from collections import MutableMapping
 
@@ -185,14 +184,13 @@ class Params(MutableMapping):
             return Params(value, new_history)
         return value
 
-    # TODO(joelgrus): should this be pyhocon instead of json?
     @staticmethod
-    def from_file(params_file: str):
+    def from_file(params_file: str) -> 'Params':
         """
-        Load a `Params` object from a JSON file.
+        Load a `Params` object from a configuration file.
         """
-        with open(params_file) as input_file:
-            return Params(replace_none(json.loads(input_file.read())))
+        param_dict = pyhocon.ConfigFactory.parse_file(params_file)
+        return Params(replace_none(param_dict))
 
 
 def pop_choice(params: Dict[str, Any],

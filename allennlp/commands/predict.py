@@ -10,7 +10,7 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     description = '''Run the specified model against a JSON-lines input file.'''
     subparser = parser.add_parser(
             'predict', description=description, help='Use a trained model to make predictions.')
-    subparser.add_argument('config_file', type=str, help='the configuration file that trained the model')
+    subparser.add_argument('config_file', type=str, help='the training configuration file for the model')
     subparser.add_argument('input_file', metavar='input-file', type=str, help='path to input file')
     subparser.add_argument('--output-file', type=str, help='path to output file')
     subparser.add_argument('--print', action='store_true', help='print results to string')
