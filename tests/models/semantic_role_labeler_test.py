@@ -84,3 +84,13 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
         model = Model.from_files(params)
 
         assert isinstance(model, SemanticRoleLabeler)
+
+    def test_cpu_vs_gpu(self):
+        params = Params.from_file('tests/fixtures/srl/experiment.json')
+        model_gpu = Model.from_files(params)
+
+        # params have been consumed, so reload them
+        params = Params.from_file('tests/fixtures/srl/experiment.json')
+        model_cpu = Model.from_files(params, weights_file='tests/fixtures/srl/serialization/best_cpu.th')
+
+        assert model_cpu == model_gpu

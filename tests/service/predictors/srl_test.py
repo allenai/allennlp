@@ -2,6 +2,7 @@
 from unittest import TestCase
 
 from allennlp.common import Params
+from allennlp.models import Model
 from allennlp.service.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor
 
 
@@ -12,9 +13,9 @@ class TestSrlPredictor(TestCase):
         }
 
         config = Params.from_file('tests/fixtures/srl/experiment.json')
-        model = SemanticRoleLabelerPredictor.from_config(config)
+        predictor = SemanticRoleLabelerPredictor.from_config(config)
 
-        result = model.predict_json(inputs)
+        result = predictor.predict_json(inputs)
 
         # TODO(joelgrus): update this when you figure out the result format
         verbs = result.get("verbs")
@@ -24,3 +25,30 @@ class TestSrlPredictor(TestCase):
         assert any(v["verb"] == "wrote" for v in verbs)
         assert any(v["verb"] == "make" for v in verbs)
         assert any(v["verb"] == "worked" for v in verbs)
+
+
+    def test_cpu_vs_gpu(self):
+        config = Params.from_file('tests/fixtures/srl/experiment.json')
+        predictor_gpu = SemanticRoleLabelerPredictor.from_config(config)
+
+        # params have been consumed, so reload them
+        config = Params.from_file('tests/fixtures/srl/experiment.json')
+        model_cpu = Model.from_files(config, weights_file='tests/fixtures/srl/serialization/best_cpu.th')
+
+        predictor_cpu = SemanticRoleLabelerPredictor(
+                model=model_cpu,
+                tokenizer=predictor_gpu.tokenizer,
+                token_indexers=predictor_gpu.token_indexers
+        )
+
+        sentences = [
+                "Squirrels write unit tests to make sure their nuts work correctly.",
+                "My code never works when I need it to.",
+                "An extra GPU could really help my experiments run faster."
+        ]
+
+        for sentence in sentences:
+            prediction_cpu = predictor_cpu.predict_json({"sentence": sentence})
+            prediction_gpu = predictor_gpu.predict_json({"sentence": sentence})
+            print(prediction_cpu)
+            assert prediction_cpu == prediction_gpu
