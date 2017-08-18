@@ -1,29 +1,28 @@
 import argparse
 from contextlib import ExitStack
 import json
-import sys
 from typing import Optional, IO
 
-from allennlp.service.predictors import Predictor, load_predictors
+from allennlp.common.params import Params
+from allennlp.service.predictors import Predictor
 
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Run the specified model against a JSON-lines input file.'''
     subparser = parser.add_parser(
-            'bulk', description=description, help='Run a model in bulk.')
-    subparser.add_argument('model', type=str, help='the name of the model to run')
+            'predict', description=description, help='Use a trained model to make predictions.')
+    subparser.add_argument('config_file', type=str, help='the training configuration file for the model')
     subparser.add_argument('input_file', metavar='input-file', type=str, help='path to input file')
     subparser.add_argument('--output-file', type=str, help='path to output file')
     subparser.add_argument('--print', action='store_true', help='print results to string')
 
-    subparser.set_defaults(func=bulk)
+    subparser.set_defaults(func=predict)
 
     return subparser
 
-def get_model(args: argparse.Namespace) -> Optional[Predictor]:
-    # TODO(joelgrus): use the args to instantiate the model
-    models = load_predictors()
-    model_name = args.model
-    return models.get(model_name)
+def get_predictor(args: argparse.Namespace) -> Predictor:
+    config = Params.from_file(args.config_file)
+    predictor = Predictor.from_config(config)
+    return predictor
 
 def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_to_console: bool) -> None:
     for line in input_file:
@@ -36,11 +35,8 @@ def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_t
         if output_file:
             output_file.write(output + "\n")
 
-def bulk(args: argparse.Namespace) -> None:
-    model = get_model(args)
-    if model is None:
-        print("unknown model:", args.model)
-        sys.exit(-1)
+def predict(args: argparse.Namespace) -> None:
+    predictor = get_predictor(args)
 
     # ExitStack allows us to conditionally context-manage `output_file`, which may or may not exist
     with ExitStack() as stack:
@@ -50,4 +46,4 @@ def bulk(args: argparse.Namespace) -> None:
         else:
             output_file = None
 
-        run(model, input_file, output_file, args.print)
+        run(predictor, input_file, output_file, args.print)

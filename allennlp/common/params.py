@@ -184,6 +184,14 @@ class Params(MutableMapping):
             return Params(value, new_history)
         return value
 
+    @staticmethod
+    def from_file(params_file: str) -> 'Params':
+        """
+        Load a `Params` object from a configuration file.
+        """
+        param_dict = pyhocon.ConfigFactory.parse_file(params_file)
+        return Params(replace_none(param_dict))
+
 
 def pop_choice(params: Dict[str, Any],
                key: str,

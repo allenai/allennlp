@@ -6,27 +6,27 @@ import tempfile
 from unittest import TestCase
 
 from allennlp.commands.main import main
-from allennlp.commands.bulk import add_subparser, bulk
+from allennlp.commands.predict import add_subparser, predict
 
 
-class TestBulk(TestCase):
+class TestPredict(TestCase):
 
-    def test_add_bulk_subparser(self):
+    def test_add_predict_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
         add_subparser(subparsers)
 
-        raw_args = ["bulk",     # command
-                    "reverser", # model
-                    "infile",   # input_file
+        raw_args = ["predict",     # command
+                    "/path/to/model", # model
+                    "/path/to/data",   # input_file
                     "--output-file", "outfile",
                     "--print"]
 
         args = parser.parse_args(raw_args)
 
-        assert args.func == bulk
-        assert args.model == "reverser"
-        assert args.input_file == "infile"
+        assert args.func == predict
+        assert args.config_file == "/path/to/model"
+        assert args.input_file == "/path/to/data"
         assert args.output_file == "outfile"
         assert args.print
 
@@ -39,8 +39,8 @@ class TestBulk(TestCase):
             f.write("""{"sentence": "this is a great sentence"}\n""")
             f.write("""{"sentence": "this is a less great sentence"}\n""")
 
-        args = ["bulk",     # command
-                "semantic-role-labeling", # model_name
+        args = ["predict",     # command
+                "tests/fixtures/srl/experiment.json",
                 infile,     # input_file
                 "--output-file", outfile,
                 "--print"]
@@ -56,24 +56,11 @@ class TestBulk(TestCase):
 
 
     def test_fails_without_required_args(self):
-        args = ["bulk",          # command
-                "reverser",      # model_name, but no input file
+        args = ["predict",          # command
+                "/path/to/model",   # model, but no input file
                ]
 
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
             main(args)
 
         assert cm.exception.code == 2  # argparse code for incorrect usage
-
-
-    def test_fails_on_unknown_model(self):
-        args = ["bulk",          # command
-                "unknown_model", # model_name
-                "bogus file",    # input_file
-                "--output-file", "bogus out file",
-                "--print"]
-
-        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
-            main(args)
-
-        assert cm.exception.code == -1

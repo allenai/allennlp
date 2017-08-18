@@ -4,7 +4,7 @@ allennlp.commands
 Submodules
 ----------
 
-.. automodule:: allennlp.commands.bulk
+.. automodule:: allennlp.commands.predict
    :members:
    :undoc-members:
    :show-inheritance:

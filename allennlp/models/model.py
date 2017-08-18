@@ -1,9 +1,13 @@
 from typing import Dict
-import torch
+import os
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Vocabulary
+from allennlp.nn.util import device_mapping
+
+import torch
 
 
 class Model(torch.nn.Module, Registrable):
@@ -87,3 +91,62 @@ class Model(torch.nn.Module, Registrable):
     def from_params(cls, vocab: Vocabulary, params: Params):
         choice = params.pop_choice("type", cls.list_available())
         return cls.by_name(choice).from_params(vocab, params)
+
+    @classmethod
+    def load(cls,
+             config: Params,
+             serialization_prefix: str = None,
+             weights_file: str = None,
+             cuda_device: int = -1) -> 'Model':
+        """
+        Instantiates an already-trained model, based on the experiment
+        configuration and some optional overrides.
+
+        Parameters
+        ----------
+        config: Params
+            The configuration that was used to train the model. It should definitely
+            have a `model` section, and should probably have a `trainer` section
+            as well.
+        serialization_prefix: str = None
+            By default we look at `config['trainer']['serialization_prefix']` to
+            get the path to the serialized model, but you can override that
+            value here.
+        weights_file: str = None
+            By default we load the weights from `best.th` in the serialization
+            directory, but you can override that value here.
+        cuda_device: int = -1
+            By default we load the model on the CPU, but if you want to load it
+            for GPU usage you can specify the id of your GPU here
+
+
+        Returns
+        -------
+        model: Model
+            The model specified in the configuration, loaded with the serialized
+            vocabulary and the trained weights.
+        """
+        trainer_config = config.get("trainer", {})
+        serialization_prefix = (serialization_prefix or
+                                trainer_config.get('serialization_prefix'))
+        if serialization_prefix is None:
+            raise ConfigurationError('serialization_prefix must be specified')
+
+        weights_file = weights_file or os.path.join(serialization_prefix, 'best.th')
+
+        # Load vocabulary from file
+        vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
+        vocab = Vocabulary.from_files(vocab_dir)
+
+        model = Model.from_params(vocab, config.get('model'))
+        model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
+        model.load_state_dict(model_state)
+
+        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
+        # in sync with the weights
+        if cuda_device >= 0:
+            model.cuda(cuda_device)
+        else:
+            model.cpu()
+
+        return model

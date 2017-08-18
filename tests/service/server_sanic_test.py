@@ -6,6 +6,11 @@ from allennlp.service.server_sanic import make_app
 from allennlp.service.predictors import load_predictors
 from allennlp.common.testing import AllenNlpTestCase
 
+TEST_CONFIG_FILES = {
+        'machine-comprehension': 'tests/fixtures/bidaf/experiment.json',
+        'semantic-role-labeling': 'tests/fixtures/srl/experiment.json',
+        'textual-entailment': 'tests/fixtures/decomposable_attention/experiment.json'
+}
 
 class TestApp(AllenNlpTestCase):
 
@@ -15,7 +20,7 @@ class TestApp(AllenNlpTestCase):
         super(TestApp, self).setUp()
         if self.client is None:
             app = make_app()
-            app.predictors = load_predictors()
+            app.predictors = load_predictors(TEST_CONFIG_FILES)
             app.testing = True
             self.client = app.test_client
 
