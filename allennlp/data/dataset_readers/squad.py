@@ -85,6 +85,10 @@ class SquadReader(DatasetReader):
     fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
     and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.
 
+    The ``Instances`` also store their ID and the original passage text in the instance metadata,
+    accessible as ``instance.metadata['id']`` and ``instance.metadata['original_passage']``.  You
+    will want this if you want to use the official SQuAD evaluation script.
+
     Parameters
     ----------
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
@@ -127,6 +131,7 @@ class SquadReader(DatasetReader):
 
                 for question_answer in paragraph_json['qas']:
                     question_text = question_answer["question"].strip().replace("\n", "")
+                    question_id = question_answer['id'].strip()
                     tokenized_question = self._tokenizer.tokenize(question_text)
 
                     # There may be multiple answer annotations, so pick the one that occurs the
@@ -153,12 +158,14 @@ class SquadReader(DatasetReader):
                     question_field = TextField(tokenized_question, self._token_indexers)
                     span_start_field = IndexField(span_start, paragraph_field)
                     span_end_field = IndexField(span_end, paragraph_field)
-                    instance = Instance({
+                    fields = {
                             'question': question_field,
                             'passage': paragraph_field,
                             'span_start': span_start_field,
                             'span_end': span_end_field
-                            })
+                            }
+                    metadata = {'id': question_id, 'original_passage': paragraph}
+                    instance = Instance(fields, metadata)
                     instances.append(instance)
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "

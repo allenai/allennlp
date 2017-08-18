@@ -251,7 +251,7 @@ class Vocabulary:
         with codecs.open(filename, 'r', 'utf-8') as input_file:
             for i, line in enumerate(input_file.readlines()):
                 index = i + 1 if is_padded else i
-                token = line.strip()
+                token = line[:-1]
                 if token == oov_token:
                     token = self._oov_token
                 self._token_to_index[namespace][token] = index
