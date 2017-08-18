@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import json
+import os
 
 from allennlp.service.server_sanic import make_app
 from allennlp.service.predictors import load_predictors
@@ -8,10 +9,23 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestApp(AllenNlpTestCase):
 
-    app = make_app()
-    app.predictors = load_predictors()
-    app.testing = True
-    client = app.test_client
+    client = None
+
+    def setUp(self):
+        super(TestApp, self).setUp()
+        if self.client is None:
+            app = make_app()
+            app.predictors = load_predictors()
+            app.testing = True
+            self.client = app.test_client
+
+    def tearDown(self):
+        super(TestApp, self).tearDown()
+        try:
+            os.remove('access.log')
+            os.remove('error.log')
+        except FileNotFoundError:
+            pass
 
     def test_list_models(self):
         _, response = self.client.get("/models")
