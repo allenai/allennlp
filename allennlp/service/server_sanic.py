@@ -3,13 +3,13 @@ from allennlp.service.predictors import load_predictors
 from sanic import Sanic, response, request
 from sanic.exceptions import ServerError
 
-def run(port: int) -> None:
+def run(port: int, workers: int) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
     app = make_app()
     # TODO(joelgrus): make this configurable
     app.predictors = load_predictors()
-    app.run(port=port, host="0.0.0.0")
+    app.run(port=port, host="0.0.0.0", workers=workers)
 
 def make_app() -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
