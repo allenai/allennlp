@@ -42,34 +42,33 @@ class Model(torch.nn.Module, Registrable):
         without the presence of these labels. Hence, any inputs not available at
         inference time should only be used inside a conditional block.
 
-        The intended sketch of this method is as follows:
+        The intended sketch of this method is as follows::
 
-        >>> def forward(self, input1, input2, targets=None):
-        >>>     ....
-        >>>     ....
-        >>>     output1 = self.layer1(input1)
-        >>>     output2 = self.layer2(input2)
-        >>>     output_dict = {"output1": output1, "output2": output2}
-        >>>     if targets is not None:
-        >>>         # Function returning a scalar torch.Tensor, defined by the user.
-        >>>         loss = self._compute_loss(output1, output2, targets)
-        >>>         output_dict["loss"] = loss
-        >>>
-        >>>     return output_dict
+            def forward(self, input1, input2, targets=None):
+                ....
+                ....
+                output1 = self.layer1(input1)
+                output2 = self.layer2(input2)
+                output_dict = {"output1": output1, "output2": output2}
+                if targets is not None:
+                    # Function returning a scalar torch.Tensor, defined by the user.
+                    loss = self._compute_loss(output1, output2, targets)
+                    output_dict["loss"] = loss
+                return output_dict
 
         Parameters
         ----------
         inputs:
-            Tensors comprising everything needed to perform a training update,
-            `including` labels, which should be optional (i.e have a default value of None).
-            At inference time, simply pass the relevant inputs, not including the labels.
+            Tensors comprising everything needed to perform a training update, `including` labels,
+            which should be optional (i.e have a default value of ``None``).  At inference time,
+            simply pass the relevant inputs, not including the labels.
 
         Returns
         -------
-        output_dict: Dict[str, torch.Tensor]
+        output_dict: ``Dict[str, torch.Tensor]``
             The outputs from the model. In order to train a model using the
-            :class:`~allennlp.training.Trainer` api, you must provide a "loss"
-            key pointing to a scalar torch.Tensor representing the loss to be optimized.
+            :class:`~allennlp.training.Trainer` api, you must provide a "loss" key pointing to a
+            scalar ``torch.Tensor`` representing the loss to be optimized.
         """
         raise NotImplementedError
 
@@ -82,7 +81,7 @@ class Model(torch.nn.Module, Registrable):
         passed, as frequently a metric accumulator will have some state which should be reset
         between epochs. This is also compatible with :class:`~allennlp.training.Metric`s. Metrics
         should be populated during the call to ``forward``, with the
-        :class:`~allennlp.training.Metric`s handling the accumulation of the metric until this
+        :class:`~allennlp.training.Metric` handling the accumulation of the metric until this
         method is called.
         """
         # pylint: disable=unused-argument,no-self-use

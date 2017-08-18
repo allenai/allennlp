@@ -27,3 +27,9 @@ fi
 if [[ "$RUN_TESTS" == "true" ]]; then
     run_tests
 fi
+
+if [[ "$BUILD_DOCS" == "true" ]]; then
+  cd doc
+  make html-strict
+  cd ..
+fi

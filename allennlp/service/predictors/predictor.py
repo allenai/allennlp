@@ -9,9 +9,9 @@ from allennlp.models import Model
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
-        'srl': 'srl',
-        'decomposable_attention': 'te',
-        'bidaf': 'mc'
+        'srl': 'semantic-role-labeling',
+        'decomposable_attention': 'textual-entailment',
+        'bidaf': 'machine-comprehension'
 }
 
 class Predictor(Registrable):

@@ -88,8 +88,10 @@ class SquadReader(DatasetReader):
     ----------
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this ``Tokenizer`` for both the question and the passage.  See :class:`Tokenizer`.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+        Default is ```WordTokenizer()``.
+    token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
+        Default is ``{"tokens": SingleIdTokenIndexer()}``.
     """
     #: This gets added to the end of every passage, because we use an exclusive span end index.  In
     #: order to be able to include the last token in the passage in the predicted span, we need a
@@ -186,7 +188,7 @@ class SquadSentenceSelectionReader(DatasetReader):
     """
     Parameters
     ----------
-    negative_sentence_selection : ``str``, optional (default=``"paragraph"``)
+    negative_sentence_selection : ``str``, optional (default="paragraph")
         A comma-separated list of methods to use to generate negative sentences in the data.
 
         There are three options here:
@@ -205,10 +207,12 @@ class SquadSentenceSelectionReader(DatasetReader):
 
         We will process these options in order, so the "pad-to-[int]" option mostly only makes
         sense as the last option.
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+    tokenizer : ``Tokenizer``, optional
         We use this ``Tokenizer`` for both the question and the sentences.  See :class:`Tokenizer`.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+        Default is ``WordTokenizer()``.
+    token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the question and the sentences.  See :class:`TokenIndexer`.
+        Default is ``{"tokens": SingleIdTokenIndexer()}``.
     """
     def __init__(self,
                  negative_sentence_selection: str = "paragraph",
@@ -388,7 +392,7 @@ class SquadSentenceSelectionReader(DatasetReader):
         """
         Parameters
         ----------
-        negative_sentence_selection : ``str``, optional (default=``"paragraph"``)
+        negative_sentence_selection : ``str``, optional (default="paragraph")
         tokenizer : ``Params``, optional
         token_indexers: ``List[Params]``, optional
         """

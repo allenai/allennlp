@@ -3,20 +3,19 @@ from allennlp.service.predictors import load_predictors
 from sanic import Sanic, response, request
 from sanic.exceptions import ServerError
 
-
 DEFAULT_CONFIG_FILES = {
-        'mc': 'tests/fixtures/bidaf/experiment.json',
-        'srl': 'tests/fixtures/srl/experiment.json',
-        'te': 'tests/fixtures/decomposable_attention/experiment.json'
+        'machine-comprehension': 'tests/fixtures/bidaf/experiment.json',
+        'semantic-role-labeling': 'tests/fixtures/srl/experiment.json',
+        'textual-entailment': 'tests/fixtures/decomposable_attention/experiment.json'
 }
 
-def run(port: int) -> None:
+def run(port: int, workers: int = 1) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
     app = make_app()
     # TODO(joelgrus): make this configurable and don't use the defaults
     app.predictors = load_predictors(DEFAULT_CONFIG_FILES)
-    app.run(port=port, host="0.0.0.0")
+    app.run(port=port, host="0.0.0.0", workers=workers)
 
 def make_app() -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name

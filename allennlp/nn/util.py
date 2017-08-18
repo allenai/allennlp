@@ -81,8 +81,8 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autog
     tensor_for_masking : torch.Variable, required.
 
 
-    Return
-    ------
+    Returns
+    -------
     A torch.FloatTensor consisting of the binary mask scaled by 1/ (1 - dropout_probability).
     This scaling ensures expected values and variances of the output of applying this mask
      and the original tensor are the same.

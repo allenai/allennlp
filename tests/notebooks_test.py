@@ -9,7 +9,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestNotebooks(AllenNlpTestCase):
     def test_vocabulary_tutorial(self):
-        assert self.execute_notebook("allennlp/notebooks/vocabulary.ipynb")
+        assert self.execute_notebook("tutorials/notebooks/vocabulary.ipynb")
 
     @staticmethod
     def execute_notebook(notebook_path: str):

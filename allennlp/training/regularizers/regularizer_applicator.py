@@ -39,15 +39,16 @@ class RegularizerApplicator:
     def from_params(cls, params: Params) -> 'RegularizerApplicator':
         """
         Converts a Params object into an RegularizerApplicator. The json should
-        be formatted as follows:
+        be formatted as follows::
 
-        regularizers: {
-            parameter_regex_match1: {
-                "type": "l2"
-                "alpha": 0.01
-            },
-            parameter_regex_match2: "l1",
-        }
+            regularizers: {
+                parameter_regex_match1: {
+                    "type": "l2"
+                    "alpha": 0.01
+                },
+                parameter_regex_match2: "l1",
+            }
+
         where the keys are regex matches to parameter names. The values can either be strings,
         in which case they correspond to the names of regularizers, or dictionaries, in which
         case they must contain the "type" key, corresponding to the name of a regularizer.

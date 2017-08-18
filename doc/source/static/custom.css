@@ -1,0 +1,17 @@
+.toggle .header {
+    display: block;
+    clear: both;
+}
+
+.toggle .header:after {
+    content: " ▼";
+}
+
+.toggle .header.open:after {
+    content: " ▲";
+}
+
+.wy-nav-content a.internal code span.pre {
+  color: blue;
+  text-decoration: underline;
+}

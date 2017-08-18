@@ -4,7 +4,7 @@ from allennlp.data.fields import TextField
 from allennlp.service.predictors.predictor import Predictor
 
 
-@Predictor.register('mc')
+@Predictor.register('machine-comprehension')
 class BidafPredictor(Predictor):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         question_text = inputs["question"]

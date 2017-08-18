@@ -36,7 +36,7 @@ class LinearSimilarity(SimilarityFunction):
         The dimension of the second tensor, ``y``, described above.  This is ``y.size()[-1]`` - the
         length of the vector that will go into the similarity computation.  We need this so we can
         build weight vectors correctly.
-    combination : ``str``, optional (default=``"x,y"``)
+    combination : ``str``, optional (default="x,y")
         Described above.
     activation : ``Activation``, optional (default=linear (i.e. no activation))
         An activation function applied after the ``w^T * [x;y] + b`` calculation.  Default is no

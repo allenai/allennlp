@@ -133,18 +133,18 @@ class InitializerApplicator:
     def from_params(cls, params: Params) -> "InitializerApplicator":
         """
         Converts a Params object into an InitializerApplicator. The json should
-        be formatted as follows:
+        be formatted as follows::
 
-        {
-            "parameter_regex_match1": {
-                "type": "normal"
-                "mean": 0.01
-                "std": 0.1
-            },
-            "parameter_regex_match2": "uniform",
-            "default": "orthogonal",
-            "exclude": ["exclude_regex"]
-        }
+            {
+                "parameter_regex_match1": {
+                    "type": "normal"
+                    "mean": 0.01
+                    "std": 0.1
+                },
+                "parameter_regex_match2": "uniform",
+                "default": "orthogonal",
+                "exclude": ["exclude_regex"]
+            }
 
         where the keys are regex matches to the parameters, with the exception of the "default" and
         "exclude" keys.  The "default" key defines an initializer which will be used as the default
