@@ -42,8 +42,8 @@ class TestDecomposableAttention(AllenNlpTestCase):
         output_dict = self.model.predict_entailment(premise, hypothesis)
         assert_almost_equal(numpy.sum(output_dict["label_probs"], -1), 1, decimal=6)
 
-    def test_from_file(self):
+    def test_model_load(self):
         params = Params.from_file('tests/fixtures/decomposable_attention/experiment.json')
-        model = Model.from_files(params)
+        model = Model.load(params)
 
         assert isinstance(model, DecomposableAttention)

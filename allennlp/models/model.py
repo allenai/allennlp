@@ -93,11 +93,11 @@ class Model(torch.nn.Module, Registrable):
         return cls.by_name(choice).from_params(vocab, params)
 
     @classmethod
-    def from_files(cls,
-                   config: Params,
-                   serialization_prefix: str = None,
-                   weights_file: str = None,
-                   cuda_device: int = -1) -> 'Model':
+    def load(cls,
+             config: Params,
+             serialization_prefix: str = None,
+             weights_file: str = None,
+             cuda_device: int = -1) -> 'Model':
         """
         Instantiates an already-trained model, based on the experiment
         configuration and some optional overrides.

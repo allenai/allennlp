@@ -146,8 +146,8 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
         assert_almost_equal(begin_end_idxs.data.numpy(), [[1, 2]])
 
-    def test_from_file(self):
+    def test_model_load(self):
         params = Params.from_file('tests/fixtures/bidaf/experiment.json')
-        model = Model.from_files(params)
+        model = Model.load(params)
 
         assert isinstance(model, BidirectionalAttentionFlow)

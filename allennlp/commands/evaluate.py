@@ -63,9 +63,9 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     with open(args.config_file) as config_file:
         config = Params(replace_none(json.loads(config_file.read())))
 
-    model = Model.from_files(config,
-                             weights_file=args.weights_file,
-                             cuda_device=args.cuda_device)
+    model = Model.load(config,
+                       weights_file=args.weights_file,
+                       cuda_device=args.cuda_device)
     model.eval()
 
     vocab = model._vocab  # pylint: disable=protected-access

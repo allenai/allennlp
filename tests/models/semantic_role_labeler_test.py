@@ -79,18 +79,8 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
         exit_code = subprocess.check_call(perl_script_command)
         assert exit_code == 0
 
-    def test_from_file(self):
+    def test_model_load(self):
         params = Params.from_file('tests/fixtures/srl/experiment.json')
-        model = Model.from_files(params)
+        model = Model.load(params)
 
         assert isinstance(model, SemanticRoleLabeler)
-
-    def test_cpu_vs_gpu(self):
-        params = Params.from_file('tests/fixtures/srl/experiment.json')
-        model_gpu = Model.from_files(params)
-
-        # params have been consumed, so reload them
-        params = Params.from_file('tests/fixtures/srl/experiment.json')
-        model_cpu = Model.from_files(params, weights_file='tests/fixtures/srl/serialization/best_cpu.th')
-
-        assert model_cpu == model_gpu

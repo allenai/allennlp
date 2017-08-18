@@ -39,7 +39,7 @@ class Predictor(Registrable):
         token_indexers = dataset_reader._token_indexers           # pylint: disable=protected-access
 
         model_name = config.get("model").get("type")
-        model = Model.from_files(config)
+        model = Model.load(config)
         model.eval()
 
         predictor_name = predictor_name or DEFAULT_PREDICTORS[model_name]

@@ -33,7 +33,7 @@ class TestSrlPredictor(TestCase):
 
         # params have been consumed, so reload them
         config = Params.from_file('tests/fixtures/srl/experiment.json')
-        model_cpu = Model.from_files(config, weights_file='tests/fixtures/srl/serialization/best_cpu.th')
+        model_cpu = Model.load(config, weights_file='tests/fixtures/srl/serialization/best_cpu.th')
 
         predictor_cpu = SemanticRoleLabelerPredictor(
                 model=model_cpu,
