@@ -49,8 +49,8 @@ class Metric(Registrable):
     @classmethod
     def from_params(cls, params: Params, vocab: Optional[Vocabulary] = None):
         metric_type = params.pop_choice("type", cls.list_available())
-        if vocab is not None:
-            return cls.by_name(metric_type)(vocab, **params.as_dict())  # type: ignore
+        if vocab:
+            params["vocabulary"] = vocab
         return cls.by_name(metric_type)(**params.as_dict())  # type: ignore
 
 
@@ -320,12 +320,18 @@ class SpanBasedF1Measure(Metric):
             This metric assumes that a BIO format is used in which the
             labels are of the format: ["B-LABEL", "I-LABEL"].
         ignore_classes : List[str], optional.
-            Non-BIO labeled classes which will be ignored when computing span
-            metrics. This is helpful for instance, to avoid computing
-            metrics for "V" spans in a BIO tagging scheme and ignoring "O" tags
-            representing out of span words for semantic role labelling, which are
-            typically not included. Note that these labels do not have their
-            prepended BIO information, they are only the raw tag.
+            Span labels which will be ignored when computing span metrics.
+            A "span label" is the part that comes after the BIO label, so it
+            would be "ARG1" for the tag "B-ARG1". For example by passing:
+
+             ``ignore_classes=["V"]``
+            the following sequence would not consider the "V" span at index (2, 3)
+            when computing the precision, recall and F1 metrics.
+
+            ["O", "O", "B-V", "I-V", "B-ARG1", "I-ARG1"]
+
+            This is helpful for instance, to avoid computing metrics for "V"
+            spans in a BIO tagging scheme which are typically not included.
         """
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(tag_namespace)
         self._ignore_classes = ignore_classes or []

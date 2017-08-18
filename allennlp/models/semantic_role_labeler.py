@@ -186,6 +186,7 @@ class SemanticRoleLabeler(Model):
             # This can be a lot of metrics, as there are 3 per class.
             # During training, we only really care about the overall
             # metrics, so we filter for them here.
+            # TODO(Mark): This is fragile and should be replaced with some verbosity level in Trainer.
             return {x: y for x, y in metric_dict if "overall" in x}
 
         return metric_dict
