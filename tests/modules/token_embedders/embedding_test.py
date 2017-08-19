@@ -6,38 +6,38 @@ import pytest
 import torch
 from torch.autograd import Variable
 
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules.token_embedders.embedding import get_pretrained_embedding_layer
+from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Vocabulary
+from allennlp.modules.token_embedders.embedding import Embedding, _read_pretrained_embedding_file
 
 
-class TestPretrainedEmbeddings(AllenNlpTestCase):
+class TestEmbedding(AllenNlpTestCase):
     # pylint: disable=protected-access
     def test_get_embedding_layer_uses_correct_embedding_dim(self):
         vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1')
+        vocab.add_token_to_namespace('word2')
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
-        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
-        assert embedding_layer.get_output_dim() == 3
-
-        with gzip.open(embeddings_filename, 'wb') as embeddings_file:
-            embeddings_file.write("word1 1.0 2.3 -1.0 3.1\n".encode('utf-8'))
-            embeddings_file.write("word2 0.1 0.4 -4.0 -1.2\n".encode('utf-8'))
-        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
-        assert embedding_layer.get_output_dim() == 4
-
-        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab, projection_dim=2)
-        assert embedding_layer.get_output_dim() == 2
+        embedding_weights = _read_pretrained_embedding_file(embeddings_filename, 3, vocab)
+        assert tuple(embedding_weights.size()) == (4, 3)  # 4 because of padding and OOV
+        with pytest.raises(ConfigurationError):
+            _read_pretrained_embedding_file(embeddings_filename, 4, vocab)
 
     def test_forward_works_with_projection_layer(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace('the')
         vocab.add_token_to_namespace('a')
-        embedding_layer = get_pretrained_embedding_layer('tests/fixtures/glove.6B.300d.sample.txt.gz',
-                                                         vocab,
-                                                         projection_dim=20)
+        params = Params({
+                'pretrained_file': 'tests/fixtures/glove.6B.300d.sample.txt.gz',
+                'embedding_dim': 300,
+                'projection_dim': 20
+                })
+        embedding_layer = Embedding.from_params(vocab, params)
         input_tensor = Variable(torch.LongTensor([[3, 2, 1, 0]]))
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 4, 20)
@@ -46,44 +46,40 @@ class TestPretrainedEmbeddings(AllenNlpTestCase):
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 1, 4, 20)
 
-    def test_get_embedding_layer_crashes_when_embedding_file_has_header(self):
-        vocab = Vocabulary()
-        embeddings_filename = self.TEST_DIR + "embeddings.gz"
-        with gzip.open(embeddings_filename, 'wb') as embeddings_file:
-            embeddings_file.write("dimensionality 3\n".encode('utf-8'))
-            embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
-            embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
-        with pytest.raises(Exception):
-            get_pretrained_embedding_layer(embeddings_filename, vocab)
-
-    def test_get_embedding_layer_skips_inconsistent_lines(self):
-        vocab = Vocabulary()
-        vocab.add_token_to_namespace("word1")
-        vocab.add_token_to_namespace("word2")
-        embeddings_filename = self.TEST_DIR + "embeddings.gz"
-        with gzip.open(embeddings_filename, 'wb') as embeddings_file:
-            embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
-            embeddings_file.write("word2 0.1 0.4 \n".encode('utf-8'))
-        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
-        word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
-        assert not numpy.allclose(word_vector.numpy()[:2], numpy.array([0.1, 0.4]))
-
-    def test_get_embedding_layer_actually_initializes_word_vectors_correctly(self):
+    def test_embedding_layer_actually_initializes_word_vectors_correctly(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("word")
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
-        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
+        params = Params({
+                'pretrained_file': embeddings_filename,
+                'embedding_dim': 3,
+                })
+        embedding_layer = Embedding.from_params(vocab, params)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word")]
         assert numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
 
+        # If we're loading a saved model, we should _not_ be reading the embedding file.
+        params = Params({
+                'pretrained_file': embeddings_filename,
+                'embedding_dim': 3,
+                })
+        embedding_layer = Embedding.from_params(vocab, params, loading_saved_model=True)
+        word_vector = embedding_layer.weight.data[vocab.get_token_index("word")]
+        assert not numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
+
     def test_get_embedding_layer_initializes_unseen_words_randomly_not_zero(self):
         vocab = Vocabulary()
+        vocab.add_token_to_namespace("word")
         vocab.add_token_to_namespace("word2")
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
-        embedding_layer = get_pretrained_embedding_layer(embeddings_filename, vocab)
+        params = Params({
+                'pretrained_file': embeddings_filename,
+                'embedding_dim': 3,
+                })
+        embedding_layer = Embedding.from_params(vocab, params)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
         assert not numpy.allclose(word_vector.numpy(), numpy.array([0.0, 0.0, 0.0]))

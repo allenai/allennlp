@@ -17,6 +17,7 @@
         "type": "embedding",
         "projection_dim": 200,
         "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.300d.txt.gz",
+        "embedding_dim": 300,
         "trainable": false
       }
     },
