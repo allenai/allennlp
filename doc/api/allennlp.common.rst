@@ -16,11 +16,6 @@ Submodules
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.common.constants
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.common.params
    :members:
    :undoc-members:
