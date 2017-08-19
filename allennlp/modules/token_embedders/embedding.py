@@ -124,11 +124,14 @@ class Embedding(TokenEmbedder):
         return embedded
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':
+    def from_params(cls, vocab: Vocabulary, params: Params, loading_saved_model: bool = False) -> 'Embedding':
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         pretrained_file = params.pop("pretrained_file", None)
         projection_dim = params.pop("projection_dim", None)
-        if pretrained_file:
+        if pretrained_file and not loading_saved_model:
+            # If we're loading a saved model, we don't want to actually read a pre-trained
+            # embedding file - the embeddings will just be in our saved weights, and we might not
+            # have the original embedding file anymore, anyway.
             trainable = params.pop("trainable", True)
             return get_pretrained_embedding_layer(pretrained_file,
                                                   vocab,
@@ -146,6 +149,7 @@ class Embedding(TokenEmbedder):
         params.assert_empty(cls.__name__)
         return cls(num_embeddings=num_embeddings,
                    embedding_dim=embedding_dim,
+                   projection_dim=projection_dim,
                    padding_index=padding_index,
                    trainable=trainable,
                    max_norm=max_norm,

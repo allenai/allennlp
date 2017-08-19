@@ -217,7 +217,10 @@ class SemanticRoleLabeler(Model):
         return transition_matrix
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SemanticRoleLabeler':
+    def from_params(cls,
+                    vocab: Vocabulary,
+                    params: Params,
+                    loading_saved_model: bool = False) -> 'SemanticRoleLabeler':
         """
         With an empty ``params`` argument, this will instantiate a SRL model with the same
         configuration as published in the "Deep Semantic Role Labeling - What works and what's
@@ -236,7 +239,7 @@ class SemanticRoleLabeler(Model):
                 }
 
         embedder_params = params.pop("text_field_embedder", default_embedder_params)
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
+        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params, loading_saved_model)
 
         default_lstm_params = {
                 'type': 'alternating_lstm',

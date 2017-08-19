@@ -203,7 +203,10 @@ class DecomposableAttention(Model):
         return {'label_probs': label_probs.numpy()}
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'DecomposableAttention':
+    def from_params(cls,
+                    vocab: Vocabulary,
+                    params: Params,
+                    loading_svaed_model: bool = False) -> 'DecomposableAttention':
         """
         With an empty ``params`` argument, this will instantiate a decomposable attention model
         with the same configuration as published in the original paper, as long as you've set
@@ -222,7 +225,7 @@ class DecomposableAttention(Model):
                         }
                 }
         embedder_params = params.pop("text_field_embedder", default_embedder_params)
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
+        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params, loading_saved_model)
 
         premise_encoder_params = params.pop("premise_encoder", None)
         if premise_encoder_params is not None:

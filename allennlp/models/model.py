@@ -96,7 +96,7 @@ class Model(torch.nn.Module, Registrable):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
-        return cls.by_name(choice).from_params(vocab, params)
+        return cls.by_name(choice).from_params(vocab, params, loading_saved_model)
 
     @classmethod
     def load(cls,
@@ -144,7 +144,7 @@ class Model(torch.nn.Module, Registrable):
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
-        model = Model.from_params(vocab, config.get('model'))
+        model = Model.from_params(vocab, config.get('model'), loading_saved_model=True)
         model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
         model.load_state_dict(model_state)
 

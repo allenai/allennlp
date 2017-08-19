@@ -143,10 +143,14 @@ class SimpleTagger(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
 
-
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SimpleTagger':
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, params.pop("text_field_embedder"))
+    def from_params(cls,
+                    vocab: Vocabulary,
+                    params: Params,
+                    loading_saved_model: bool = False) -> 'SimpleTagger':
+        text_field_embedder = TextFieldEmbedder.from_params(vocab,
+                                                            params.pop("text_field_embedder"),
+                                                            loading_saved_model)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
 
         return cls(vocab=vocab,

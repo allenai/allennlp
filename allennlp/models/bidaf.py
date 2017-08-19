@@ -311,7 +311,10 @@ class BidirectionalAttentionFlow(Model):
         return best_word_span
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
+    def from_params(cls,
+                    vocab: Vocabulary,
+                    params: Params,
+                    loading_saved_model: bool = False) -> 'BidirectionalAttentionFlow':
         """
         With an empty ``params`` argument, this will instantiate a BiDAF model with the same
         configuration as published in the original BiDAF paper, as long as you've set
@@ -341,7 +344,7 @@ class BidirectionalAttentionFlow(Model):
                         }
                 }
         embedder_params = params.pop("text_field_embedder", default_embedder_params)
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
+        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params, loading_saved_model)
         num_highway_layers = params.pop("num_highway_layers", 2)
         default_phrase_layer_params = {
                 'type': 'lstm',
