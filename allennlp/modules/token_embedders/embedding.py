@@ -209,15 +209,15 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
                 # skipped.  It's hard to check for that here; you just have to look in the
                 # embedding_misses_file and at the model summary to make sure things look
                 # like they are supposed to.
-                logger.warn("Found line with wrong number of dimensions (expected %d but was %d): %s",
-                            embedding_dim, len(fields) - 1, line)
+                logger.warning("Found line with wrong number of dimensions (expected %d, was %d): %s",
+                               embedding_dim, len(fields) - 1, line)
                 continue
             word = fields[0]
             if word in words_to_keep:
                 vector = numpy.asarray(fields[1:], dtype='float32')
                 embeddings[word] = vector
 
-    if len(embeddings) == 0:
+    if not embeddings:
         raise ConfigurationError("No embeddings of correct dimension found; you probably "
                                  "misspecified your embedding_dim parameter, or didn't "
                                  "pre-populate your Vocabulary")
