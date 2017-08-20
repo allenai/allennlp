@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # AllenNLP documentation build configuration file, created by
-# sphinx-quickstart on Wed Jan 25 11:35:07 2017.
+# sphinx-quickstart on Mon Aug  7 09:11:08 2017.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -38,12 +38,13 @@ sys.path.insert(0, os.path.abspath('../'))
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.linkcode',
-              'numpydoc',
-              'sphinx.ext.autosummary'
+              'sphinx.ext.mathjax',
+              'sphinx.ext.autosummary',
+              'numpydoc'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['source/templates']
+templates_path = ['templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -52,10 +53,10 @@ templates_path = ['source/templates']
 source_suffix = '.rst'
 
 # The master toctree document.
-master_doc = 'source/index'
+master_doc = 'index'
 
 # General information about the project.
-project = 'allennlp'
+project = 'AllenNLP'
 copyright = '2017, Allen Institute for Artificial Intelligence'
 author = 'Allen Institute for Artificial Intelligence'
 
@@ -78,7 +79,7 @@ language = 'en'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = []
+exclude_patterns = ['_build']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -88,17 +89,6 @@ todo_include_todos = False
 
 numpydoc_show_class_members = False
 
-autodoc_default_flags = ['private-members']
-
-def maybe_skip_member(app, what, name, obj, skip, options):
-    if '__' in name:
-        return True
-    if name == 'call':
-        return True
-    return skip
-
-def setup(app):
-    app.connect('autodoc-skip-member', maybe_skip_member)
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -118,7 +108,22 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['source/static']
+html_static_path = ['static']
+
+# Custom sidebar templates, must be a dictionary that maps document names
+# to template names.
+#
+# This is required for the alabaster theme
+# refs: http://alabaster.readthedocs.io/en/latest/installation.html#sidebars
+html_sidebars = {
+    '**': [
+        'about.html',
+        'navigation.html',
+        'relations.html',  # needs 'show_related': True theme option to display
+        'searchbox.html',
+        'donate.html',
+    ]
+}
 
 
 # -- Options for HTMLHelp output ------------------------------------------
@@ -151,7 +156,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'allennlp.tex', 'AllenNLP Documentation',
+    (master_doc, 'AllenNLP.tex', 'AllenNLP Documentation',
      'AI2', 'manual'),
 ]
 
@@ -172,40 +177,14 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'allennlp', 'AllenNLP Documentation',
-     author, 'allennlp', 'One line description of project.',
+    (master_doc, 'AllenNLP', 'AllenNLP Documentation',
+     author, 'AllenNLP', 'One line description of project.',
      'Miscellaneous'),
 ]
 
 
 
-# -- Options for Epub output ----------------------------------------------
-
-# Bibliographic Dublin Core info.
-epub_title = project
-epub_author = author
-epub_publisher = author
-epub_copyright = copyright
-
-# The unique identifier of the text. This can be a ISBN number
-# or the project homepage.
-#
-# epub_identifier = ''
-
-# A unique identification for the text.
-#
-# epub_uid = ''
-
-# A list of files that should not be packed into the epub file.
-epub_exclude_files = ['search.html']
-
 # -- Miscellaneous Extra Tweaks -------------------------------------------
-# pngmath / imgmath compatibility layer for different sphinx versions
-
-if LooseVersion(sphinx.__version__) < LooseVersion('1.4'):
-    extensions.append('sphinx.ext.pngmath')
-else:
-    extensions.append('sphinx.ext.imgmath')
 
 # make github links resolve
 def linkcode_resolve(domain, info):
@@ -250,4 +229,4 @@ def linkcode_resolve(domain, info):
         linespec = ""
 
     filename = info['module'].replace('.', '/')
-    return "http://github.com/allenai/allennlp/blob/master/%s.py%s" % (filename, linespec)
+    return "http://github.com/allenai/deep_qa/blob/master/%s.py%s" % (filename, linespec)

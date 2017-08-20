@@ -1,4 +1,4 @@
 *.pyc
 .cache/
 .coverage
-doc/build/
+doc/_build/
