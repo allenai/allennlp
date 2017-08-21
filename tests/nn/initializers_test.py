@@ -2,11 +2,14 @@
 import logging
 
 import numpy
+import pytest
 import pyhocon
 import torch
 from torch.nn.init import constant
 
 from allennlp.nn import InitializerApplicator
+from allennlp.nn.initializers import block_orthogonal
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
 
@@ -107,3 +110,13 @@ class TestInitializers(AllenNlpTestCase):
 
         for parameter in list(model.linear2.parameters()):
             assert torch.equal(parameter.data, torch.ones(parameter.size()) * 7)
+
+    def test_block_orthogonal_can_initialize(self):
+        # TODO(Mark): This is a rubbish test. See if Matt/Joel have a better idea.
+        tensor = torch.zeros([10, 6, 8])
+        block_orthogonal(tensor, [5, 2, 2])
+
+    def test_block_orthogonal_raises_on_mismatching_dimensions(self):
+        tensor = torch.zeros([10, 6, 8])
+        with pytest.raises(ConfigurationError):
+            block_orthogonal(tensor, [7, 2, 1])

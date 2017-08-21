@@ -1,13 +1,14 @@
 import logging
 import re
-from typing import Callable, Dict, Sequence, Type
+from typing import Callable, Dict, Sequence, Type, List
+import itertools
 
 import torch
 import torch.nn.init
 
 from allennlp.common import Registrable
 from allennlp.common.params import Params
-
+from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -35,6 +36,45 @@ class Initializer(Registrable):
         else:
             choice = params.pop_choice("type", cls.list_available())
             return cls.by_name(choice).from_params(params)
+
+
+def block_orthogonal(tensor: torch.Tensor,
+                    split_sizes: List[int],
+                    gain: float = 1.0) -> None:
+    """
+    An initializer which allows initializing model parameters in "blocks". This is helpful
+    in the case of recurrent models which use multiple gates applied to linear projections,
+    which can be computed efficiently if they are concatenated together. However, they are
+    separate parameters which should be initialized independently.
+
+    Parameters
+    ----------
+    tensor : ``torch.Tensor``, required.
+        A tensor to initialize.
+    split_sizes : List[int], required.
+        A list of length ``tensor.ndim()`` specifying the size of the
+        blocks along that particular dimension. E.g. ``[10, 20]`` would
+        result in the tensor being split into chunks of size 10 along the
+        first dimension and 20
+    gain : float, optional (default = 1.0)
+        The gain (scaling) applied to the orthogonal initialization.
+    """
+    sizes = list(tensor.size())
+    if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):
+        raise ConfigurationError("tensor dimensions must be divisible by their respective "
+                                 "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
+    indexes = [list(range(0, max_size, split))
+               for max_size, split in zip(sizes, split_sizes)]
+
+    # Iterate over all possible blocks within the tensor.
+    for block_start_indices in itertools.product(*indexes):
+        # This is a tuple of slices corresponding to:
+        # tensor[index: index + step_size, ...]. This is
+        # required because we could have an arbitrary number
+        # of dimensions.
+        block_slice = tuple([slice(i, i + step)
+                             for i, step in zip(block_start_indices, [x - 1 for x in split_sizes])])
+        torch.nn.init.orthogonal(tensor[block_slice].contiguous(), gain=gain)
 
 
 def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
@@ -65,6 +105,7 @@ Registrable._registry[Initializer] = {  # pylint: disable=protected-access
         "kaiming_uniform": _initializer_wrapper(torch.nn.init.kaiming_uniform),
         "sparse": _initializer_wrapper(torch.nn.init.sparse),
         "eye": _initializer_wrapper(torch.nn.init.eye),
+        "block_orthogonal": _initializer_wrapper(block_orthogonal)
 }
 
 
