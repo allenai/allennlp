@@ -18,6 +18,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.models.archival import archive_model
 from allennlp.models.model import Model
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer import Trainer
@@ -171,6 +172,6 @@ def train_model(param_dict: Dict[str, Any]) -> Model:
     trainer.train()
 
     # Now tar up results
-    model.archive(serialization_prefix=log_dir, config_file=params_file)
+    archive_model(serialization_prefix=log_dir, config_file=params_file)
 
     return model
