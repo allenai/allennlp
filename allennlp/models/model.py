@@ -22,7 +22,7 @@ _WEIGHTS_NAME = "weights.th"
 
 # When training a model, many sets of weights are saved. By default we want to
 # archive this set of weights.
-_DEFAULT_ARCHIVAL_WEIGHTS = "best.th"
+_DEFAULT_WEIGHTS = "best.th"
 
 class Model(torch.nn.Module, Registrable):
     """
@@ -104,7 +104,7 @@ class Model(torch.nn.Module, Registrable):
     def archive(self,                                       # pylint: disable=no-self-use
                 serialization_prefix: str,
                 config_file: str,
-                weights: str = _DEFAULT_ARCHIVAL_WEIGHTS) -> None:
+                weights: str = _DEFAULT_WEIGHTS) -> None:
         """
         Archives the model weights, its training configuration, and its
         vocabulary to `model.tar.gz`
@@ -115,7 +115,7 @@ class Model(torch.nn.Module, Registrable):
             The directory where the weights and vocabulary are written out.
         config_file: ``str``
             The path to the experiment configuration file used to train the model.
-        weights: ``str``, optional (default=_DEFAULT_ARCHIVAL_WEIGHTS)
+        weights: ``str``, optional (default=_DEFAULT_WEIGHTS)
             Which weights file to include in the archive. The default is ``best.th``.
         """
         archive_file = os.path.join(serialization_prefix, "model.tar.gz")

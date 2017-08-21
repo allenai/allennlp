@@ -167,7 +167,7 @@ def train_model(param_dict: Dict[str, Any]) -> Model:
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,
                                   trainer_params)
-    #params.assert_empty('base train command')
+    params.assert_empty('base train command')
     trainer.train()
 
     # Now tar up results
