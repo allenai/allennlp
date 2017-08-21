@@ -725,7 +725,6 @@ class App extends React.Component {
   constructor() {
     super();
     this.state = {
-      outputState: "empty", // valid values: "working", "empty", "received", "error"
       selectedModel: "srl", // valid values: "srl", "mc", "te"
       rawOutput: "",
     };
@@ -735,13 +734,12 @@ class App extends React.Component {
   changeModel(thisModel) {
     this.setState({
       selectedModel: thisModel,
-      outputState: "empty",
     });
   }
 
   render() {
 
-    const { outputState, selectedModel, rawOutput } = this.state;
+    const { selectedModel, rawOutput } = this.state;
 
     const labelProbs = {
       "label_probs": [0.2976710796, 0.4121640921, 0.2901648283]
@@ -749,13 +747,13 @@ class App extends React.Component {
 
     const ModelComponent = () => {
       if (selectedModel == "srl") {
-        return (<SrlComponent outputState={outputState}/>)
+        return (<SrlComponent />)
       }
       else if (selectedModel == "te") {
-        return (<TeComponent outputState={outputState}/>)
+        return (<TeComponent />)
       }
       else if (selectedModel == "mc") {
-        return (<McComponent outputState={outputState}/>)
+        return (<McComponent />)
       }
     }
 
