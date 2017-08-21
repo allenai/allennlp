@@ -90,8 +90,8 @@ def train_model_from_file(parameter_filename: str):
     # We need the python hashseed to be set if we're training a model
     ensure_pythonhashseed_set()
 
-    # Load the experiment config from a file, and its own filename
-    # in it so that we can include it in the archived results.
+    # Load the experiment config from a file, and add its own filename
+    # to the config so that we can include it in the archived results.
     param_dict = pyhocon.ConfigFactory.parse_file(parameter_filename)
     param_dict[_CONFIG_FILE_KEY] = parameter_filename
     train_model(param_dict)

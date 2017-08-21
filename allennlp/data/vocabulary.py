@@ -14,7 +14,6 @@ DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
 DEFAULT_PADDING_TOKEN = "@@PADDING@@"
 DEFAULT_OOV_TOKEN = "@@UNKNOWN@@"
 NAMESPACE_PADDING_FILE = 'non_padded_namespaces.txt'
-NAMESPACE_PADDING_NAME = os.path.join('vocabulary', NAMESPACE_PADDING_FILE)
 
 
 class _NamespaceDependentDefaultDict(defaultdict):
