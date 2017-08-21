@@ -1,8 +1,10 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
+import os
+import json
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import train_model, add_subparser, _train_model_from_args
+from allennlp.commands.train import train_model, add_subparser, _train_model_from_args, _CONFIG_FILE_KEY
 
 
 class TestTrain(AllenNlpTestCase):
@@ -25,6 +27,7 @@ class TestTrain(AllenNlpTestCase):
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "iterator": {"type": "basic", "batch_size": 2},
                 "optimizer": "adam",
                 "trainer": {
@@ -32,6 +35,12 @@ class TestTrain(AllenNlpTestCase):
                         "serialization_prefix": self.TEST_DIR
                 }
         }
+
+        # Write params to file for archiving purposes
+        config_file = os.path.join(self.TEST_DIR, "config.json")
+        with open(config_file, 'w') as outfile:
+            outfile.write(json.dumps(params))
+        params[_CONFIG_FILE_KEY] = config_file
         train_model(params)
 
     def test_train_args(self):

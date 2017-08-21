@@ -1,5 +1,9 @@
 from typing import Dict
+import tarfile
+import tempfile
 import os
+import logging
+import shutil
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
@@ -9,6 +13,14 @@ from allennlp.nn.util import device_mapping
 
 import torch
 
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+# names used when archiving a model
+_CONFIG_NAME = "config.json"
+_WEIGHTS_NAME = "weights.th"
+
+# by default, we archive the best weights
+_DEFAULT_WEIGHTS = "best.th"
 
 class Model(torch.nn.Module, Registrable):
     """
@@ -87,11 +99,74 @@ class Model(torch.nn.Module, Registrable):
         # pylint: disable=unused-argument,no-self-use
         return {}
 
+    def archive(self,                                       # pylint: disable=no-self-use
+                serialization_prefix: str,
+                config_file: str,
+                weights: str = _DEFAULT_WEIGHTS) -> None:
+        """
+        Archives the model weights, its training configuration, and its
+        vocabulary to `model.tar.gz`
+
+        Parameters
+        ----------
+        serialization_prefix: ``str``
+            The directory where the weights and vocabulary are written out.
+        config_file: ``str``
+            The path to the experiment configuration file used to train the model.
+        weights: ``str``, optional (default=_DEFAULT_WEIGHTS)
+            Which weights file to include in the archive. The default is ``best.th``.
+        """
+        archive_file = os.path.join(serialization_prefix, "model.tar.gz")
+        logger.info("archiving weights and vocabulary to %s", archive_file)
+        with tarfile.open(archive_file, 'w:gz') as archive:
+            archive.add(config_file, arcname=_CONFIG_NAME)
+            archive.add(os.path.join(serialization_prefix, weights),
+                        arcname=_WEIGHTS_NAME)
+            archive.add(os.path.join(serialization_prefix, "vocabulary"),
+                        arcname="vocabulary")
+
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params):
+    def from_archive(cls,
+                     archive_file: str,
+                     cuda_device: int = -1) -> 'Model':
+        """
+        Instantiates a model from an archived `tar.gz` file.
+
+        Parameters
+        ----------
+        archive_file: ``str``
+            The archive file to load the model from.
+        cuda_device: ``int``, optional (default = -1)
+            If `cuda_device` is >= 0, the model will be loaded onto the
+            corresponding GPU. Otherwise it will be loaded to CPU.
+        """
+        # Extract archive to temp dir
+        tempdir = tempfile.mkdtemp()
+        logger.info("extracting archive file %s to temp dir %s", archive_file, tempdir)
+        with tarfile.open(archive_file, 'r:gz') as archive:
+            archive.extractall(tempdir)
+
+        # Load config
+        config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME))
+
+        # Instantiate model
+        model = Model.load(config,
+                           weights_file=os.path.join(tempdir, _WEIGHTS_NAME),
+                           serialization_prefix=tempdir,
+                           cuda_device=cuda_device)
+
+        # Clean up temp dir
+        shutil.rmtree(tempdir)
+
+        return model
+
+
+    @classmethod
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
         return cls.by_name(choice).from_params(vocab, params)
 
+    # TODO(joelgrus): can we get rid of this?
     @classmethod
     def load(cls,
              config: Params,
@@ -132,7 +207,7 @@ class Model(torch.nn.Module, Registrable):
         if serialization_prefix is None:
             raise ConfigurationError('serialization_prefix must be specified')
 
-        weights_file = weights_file or os.path.join(serialization_prefix, 'best.th')
+        weights_file = weights_file or os.path.join(serialization_prefix, _DEFAULT_WEIGHTS)
 
         # Load vocabulary from file
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
