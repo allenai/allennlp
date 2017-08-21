@@ -39,8 +39,8 @@ class Initializer(Registrable):
 
 
 def block_orthogonal(tensor: torch.Tensor,
-                    split_sizes: List[int],
-                    gain: float = 1.0) -> None:
+                     split_sizes: List[int],
+                     gain: float = 1.0) -> None:
     """
     An initializer which allows initializing model parameters in "blocks". This is helpful
     in the case of recurrent models which use multiple gates applied to linear projections,
