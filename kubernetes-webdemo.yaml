@@ -29,7 +29,7 @@ spec:
               # One-fifth of a CPU.
               cpu: 200m
               # 250 megabytes.
-              memory: 500Mi
+              memory: 1000Mi
           command:
             - /bin/bash
             - -c
@@ -46,5 +46,5 @@ spec:
   selector:
     app: allennlp-webdemo
   ports:
-    - port: 8000
+    - port: 80
       targetPort: 8000

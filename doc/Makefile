@@ -6,7 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 SOURCEDIR     = source
-BUILDDIR      = build
+BUILDDIR      = _build
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_elements.papersize=a4
@@ -242,7 +242,7 @@ dummy:
 	@echo "Build finished. Dummy builder generates no files."
 
 check:
-	rm -rf build
+	rm -rf _build
 	$(SPHINXBUILD) -W -T -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
 html-strict:
