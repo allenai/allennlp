@@ -15,12 +15,14 @@ import torch
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-# names used when archiving a model
+# We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
+# These are the *known names* under which we archive the config and weights.
 _CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 
-# by default, we archive the best weights
-_DEFAULT_WEIGHTS = "best.th"
+# When training a model, many sets of weights are saved. By default we want to
+# archive this set of weights.
+_DEFAULT_ARCHIVAL_WEIGHTS = "best.th"
 
 class Model(torch.nn.Module, Registrable):
     """
@@ -102,7 +104,7 @@ class Model(torch.nn.Module, Registrable):
     def archive(self,                                       # pylint: disable=no-self-use
                 serialization_prefix: str,
                 config_file: str,
-                weights: str = _DEFAULT_WEIGHTS) -> None:
+                weights: str = _DEFAULT_ARCHIVAL_WEIGHTS) -> None:
         """
         Archives the model weights, its training configuration, and its
         vocabulary to `model.tar.gz`
@@ -113,7 +115,7 @@ class Model(torch.nn.Module, Registrable):
             The directory where the weights and vocabulary are written out.
         config_file: ``str``
             The path to the experiment configuration file used to train the model.
-        weights: ``str``, optional (default=_DEFAULT_WEIGHTS)
+        weights: ``str``, optional (default=_DEFAULT_ARCHIVAL_WEIGHTS)
             Which weights file to include in the archive. The default is ``best.th``.
         """
         archive_file = os.path.join(serialization_prefix, "model.tar.gz")
@@ -166,7 +168,6 @@ class Model(torch.nn.Module, Registrable):
         choice = params.pop_choice("type", cls.list_available())
         return cls.by_name(choice).from_params(vocab, params)
 
-    # TODO(joelgrus): can we get rid of this?
     @classmethod
     def load(cls,
              config: Params,

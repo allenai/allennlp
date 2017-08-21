@@ -146,7 +146,6 @@ class Vocabulary:
         self._index_to_token = _IndexToTokenDefaultDict(non_padded_namespaces,
                                                         self._padding_token,
                                                         self._oov_token)
-
         if counter is not None:
             for namespace in counter:
                 token_counts = list(counter[namespace].items())
@@ -276,7 +275,6 @@ class Vocabulary:
         namespace_token_counts = defaultdict(lambda: defaultdict(int))  # type: Dict[str, Dict[str, int]]
         for instance in tqdm.tqdm(dataset.instances):
             instance.count_vocab_items(namespace_token_counts)
-
 
         return Vocabulary(counter=namespace_token_counts,
                           min_count=min_count,
