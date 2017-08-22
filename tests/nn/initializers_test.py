@@ -5,6 +5,7 @@ import numpy
 import pytest
 import pyhocon
 import torch
+from torch.autograd import Variable
 from torch.nn.init import constant
 
 from allennlp.nn import InitializerApplicator
@@ -112,9 +113,9 @@ class TestInitializers(AllenNlpTestCase):
             assert torch.equal(parameter.data, torch.ones(parameter.size()) * 7)
 
     def test_block_orthogonal_can_initialize(self):
-        tensor = torch.zeros([10, 6])
+        tensor = torch.autograd.Variable(torch.zeros([10, 6]))
         block_orthogonal(tensor, [5, 3])
-        tensor = tensor.numpy()
+        tensor = tensor.data.numpy()
 
         def test_block_is_orthogonal(block) -> None:
             matrix_product = block.T @ block

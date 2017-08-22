@@ -4,6 +4,7 @@ from typing import Callable, Dict, Sequence, Type, List
 import itertools
 
 import torch
+from torch.autograd import Variable
 import torch.nn.init
 
 from allennlp.common import Registrable
@@ -59,14 +60,17 @@ def block_orthogonal(tensor: torch.Tensor,
     gain : float, optional (default = 1.0)
         The gain (scaling) applied to the orthogonal initialization.
     """
+
+    if isinstance(tensor, Variable):
+        block_orthogonal(tensor.data, split_sizes, gain)
+        return tensor
+
     sizes = list(tensor.size())
     if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):
         raise ConfigurationError("tensor dimensions must be divisible by their respective "
                                  "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
     indexes = [list(range(0, max_size, split))
                for max_size, split in zip(sizes, split_sizes)]
-    # Our step size for each block is the split size minus 1,
-    # as the end index is exclusive.
     # Iterate over all possible blocks within the tensor.
     for block_start_indices in itertools.product(*indexes):
         # A list of tuples containing the index to start at for this block
