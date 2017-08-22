@@ -32,7 +32,8 @@ class Trainer:
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 log_one_line_per_batch: bool = False) -> None:
+                 log_one_line_per_batch: bool = False,
+                 validation_metric_decreases: bool = True) -> None:
         """
         Parameters
         ----------
@@ -75,6 +76,10 @@ class Trainer:
             cause problems with log files from, e.g., a docker image running on kubernetes.  If
             ``log_one_line_per_batch`` is ``True``, we will force the per-batch output from
             ``tqdm`` to include a newline, which makes the logs work better in these situations.
+        validation_metric_decreases : bool, optional (default = True)
+            Whether decreases in the validation metric are a good thing. This is true for loss
+            based metrics, but for accuracy based metrics, early stopping and best model serialization
+            should be based on an increasing function. This flag provides this functionality.
         """
         self._model = model
         self._iterator = iterator
@@ -89,6 +94,7 @@ class Trainer:
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
+        self._validation_metric_decreases = validation_metric_decreases
         if log_one_line_per_batch:
             self._tqdm_newline = '\n'
         else:
@@ -182,11 +188,20 @@ class Trainer:
 
                 this_epoch = val_metrics[self._validation_metric]
                 if len(validation_metric_per_epoch) > self._patience:
-                    if max(validation_metric_per_epoch[-self._patience:]) > this_epoch:
+                    # Is the worst validation performance in past self._patience
+                    # epochs is better than current value?
+                    if self._validation_metric_decreases:
+                        should_stop = max(validation_metric_per_epoch[-self._patience:]) < this_epoch
+                    else:
+                        should_stop = min(validation_metric_per_epoch[-self._patience:]) > this_epoch
+                    if should_stop:
                         logger.info("Ran out of patience.  Stopping training.")
                         break
                 validation_metric_per_epoch.append(this_epoch)
-                is_best_so_far = this_epoch == max(validation_metric_per_epoch)
+                if self._validation_metric_decreases:
+                    is_best_so_far = this_epoch == min(validation_metric_per_epoch)
+                else:
+                    is_best_so_far = this_epoch == max(validation_metric_per_epoch)
                 if self._serialization_prefix:
                     self._save_checkpoint(epoch, is_best=is_best_so_far)
             else:
