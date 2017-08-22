@@ -18,11 +18,16 @@ from allennlp.data import Vocabulary
 from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.models.archival import archive_model
 from allennlp.models.model import Model
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+# We need the path to the configuration file in order to archive the trained model,
+# so we add it to the `Params` object with this key.
+_CONFIG_FILE_KEY = "@CONFIG_FILE@"
 
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Train the specified model on the specified dataset.'''
@@ -69,7 +74,7 @@ def prepare_environment(params: Union[Params, Dict[str, Any]]):
 
 def _train_model_from_args(args: argparse.Namespace):
     """
-    Just converts from an ``argparse.Namepsace`` object to a string path.
+    Just converts from an ``argparse.Namespace`` object to a string path.
     """
     train_model_from_file(args.param_path)
 
@@ -86,13 +91,14 @@ def train_model_from_file(parameter_filename: str):
     # We need the python hashseed to be set if we're training a model
     ensure_pythonhashseed_set()
 
-    # Set logging format
-
+    # Load the experiment config from a file, and add its own filename
+    # to the config so that we can include it in the archived results.
     param_dict = pyhocon.ConfigFactory.parse_file(parameter_filename)
+    param_dict[_CONFIG_FILE_KEY] = parameter_filename
     train_model(param_dict)
 
 
-def train_model(param_dict: Dict[str, Any]):
+def train_model(param_dict: Dict[str, Any]) -> Model:
     """
     This function can be used as an entry point to running models in AllenNLP
     directly from a JSON specification using a :class:`Driver`. Note that if
@@ -117,6 +123,10 @@ def train_model(param_dict: Dict[str, Any]):
 
     if log_dir is None:
         raise ConfigurationError("configuration must specify trainer.serialization_prefix")
+
+    params_file = params.pop(_CONFIG_FILE_KEY)
+    if params_file is None:
+        raise ConfigurationError("{} must be specified for model archiving".format(_CONFIG_FILE_KEY))
 
     os.makedirs(log_dir, exist_ok=True)
     sys.stdout = TeeLogger(os.path.join(log_dir, "_stdout.log"), sys.stdout)  # type: ignore
@@ -160,3 +170,8 @@ def train_model(param_dict: Dict[str, Any]):
                                   trainer_params)
     params.assert_empty('base train command')
     trainer.train()
+
+    # Now tar up results
+    archive_model(serialization_prefix=log_dir, config_file=params_file)
+
+    return model
