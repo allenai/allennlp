@@ -2,10 +2,6 @@ from typing import Dict, Any
 import argparse
 import logging
 
-<<<<<<< HEAD
-=======
-from allennlp.common.params import Params
->>>>>>> master
 from allennlp.data import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
