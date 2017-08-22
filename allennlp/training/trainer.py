@@ -26,14 +26,13 @@ class Trainer:
                  train_dataset: Dataset,
                  validation_dataset: Optional[Dataset] = None,
                  patience: int = 2,
-                 validation_metric: str = "loss",
+                 validation_metric: str = "-loss",
                  num_epochs: int = 20,
                  serialization_prefix: Optional[str] = None,
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 log_one_line_per_batch: bool = False,
-                 validation_metric_decreases: bool = True) -> None:
+                 log_one_line_per_batch: bool = False) -> None:
         """
         Parameters
         ----------
@@ -54,7 +53,9 @@ class Trainer:
             Number of epochs to be patient before early stopping.
         validation_metric : str, optional (default="loss")
             Validation metric to measure for whether to stop training using patience
-            and whether to serialize an ``is_best`` model each epoch.
+            and whether to serialize an ``is_best`` model each epoch. The metric name
+            must be prepended with either "+" or "-", which specifies whether the metric
+            is an increasing or decreasing function.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_prefix : str, optional (default=None)
@@ -76,10 +77,6 @@ class Trainer:
             cause problems with log files from, e.g., a docker image running on kubernetes.  If
             ``log_one_line_per_batch`` is ``True``, we will force the per-batch output from
             ``tqdm`` to include a newline, which makes the logs work better in these situations.
-        validation_metric_decreases : bool, optional (default = True)
-            Whether decreases in the validation metric are a good thing. This is true for loss
-            based metrics, but for accuracy based metrics, early stopping and best model serialization
-            should be based on an increasing function. This flag provides this functionality.
         """
         self._model = model
         self._iterator = iterator
@@ -88,13 +85,18 @@ class Trainer:
         self._validation_dataset = validation_dataset
 
         self._patience = patience
-        self._validation_metric = validation_metric
         self._num_epochs = num_epochs
         self._serialization_prefix = serialization_prefix
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
-        self._validation_metric_decreases = validation_metric_decreases
+
+        increase_or_decrease = validation_metric[0]
+        if increase_or_decrease not in ["+", "-"]:
+            raise ConfigurationError("Validation metrics must specify whether they should increase "
+                                     "or decrease by pre-pending the metric name with a +/-.")
+        self._validation_metric = validation_metric[1:]
+        self._validation_metric_decreases = increase_or_decrease == "-"
         if log_one_line_per_batch:
             self._tqdm_newline = '\n'
         else:
@@ -286,7 +288,7 @@ class Trainer:
 
         params = params or Params({})
         patience = params.pop("patience", 2)
-        validation_metric = params.pop("validation_metric", "loss")
+        validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop("num_epochs", 20)
         serialization_prefix = params.pop("serialization_prefix", None)
         cuda_device = params.pop("cuda_device", -1)
