@@ -12,7 +12,7 @@ import pyhocon
 import torch
 
 from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set, ConfigurationError
-from allennlp.common.params import Params, replace_none
+from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.data import Vocabulary
 from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES
@@ -114,7 +114,7 @@ def train_model(param_dict: Dict[str, Any]) -> Model:
     param_dict: Dict[str, any], required.
         A parameter file specifying an AllenNLP Experiment.
     """
-    params = Params(replace_none(param_dict))
+    params = Params(param_dict)
     prepare_environment(params)
 
     trainer_params = params.pop("trainer")

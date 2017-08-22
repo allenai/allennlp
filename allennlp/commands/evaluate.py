@@ -3,7 +3,7 @@ import argparse
 import json
 import logging
 
-from allennlp.common.params import Params, replace_none
+from allennlp.common.params import Params
 from allennlp.data import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
@@ -61,7 +61,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
     # Load parameter file
     with open(args.config_file) as config_file:
-        config = Params(replace_none(json.loads(config_file.read())))
+        config = Params(json.loads(config_file.read()))
 
     model = Model.load(config,
                        weights_file=args.weights_file,

@@ -53,7 +53,7 @@ class Params(MutableMapping):
     DEFAULT = object()
 
     def __init__(self, params: Dict[str, Any], history: str = "") -> None:
-        self.params = params
+        self.params = replace_none(params)
         self.history = history
 
     @overrides
@@ -190,7 +190,7 @@ class Params(MutableMapping):
         Load a `Params` object from a configuration file.
         """
         param_dict = pyhocon.ConfigFactory.parse_file(params_file)
-        return Params(replace_none(param_dict))
+        return Params(param_dict)
 
 
 def pop_choice(params: Dict[str, Any],
