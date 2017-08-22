@@ -127,9 +127,6 @@ class SemanticRoleLabeler(Model):
         class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, sequence_length, self.num_classes])
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
         if tags is not None:
-            # Negative log likelihood criterion takes integer labels, not one hot.
-            if tags.dim() == 3:
-                _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             self.span_metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss

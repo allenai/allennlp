@@ -61,8 +61,4 @@ class TestTagField(AllenNlpTestCase):
         tag_field.index(vocab)
         padding_lengths = tag_field.get_padding_lengths()
         array = tag_field.as_array(padding_lengths)
-        numpy.testing.assert_array_almost_equal(array, numpy.array([[1, 0, 0],
-                                                                    [0, 1, 0],
-                                                                    [0, 0, 1],
-                                                                    [0, 0, 1],
-                                                                    [0, 0, 1]]))
+        numpy.testing.assert_array_almost_equal(array, numpy.array([0, 1, 2, 2, 2]))

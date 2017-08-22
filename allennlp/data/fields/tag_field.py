@@ -70,12 +70,7 @@ class TagField(Field[numpy.ndarray]):
     def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:
         desired_num_tokens = padding_lengths['num_tokens']
         padded_tags = pad_sequence_to_length(self._indexed_tags, desired_num_tokens)
-        one_hot_tags = []
-        for tag in padded_tags:
-            one_hot_tag = [0] * self._num_tags
-            one_hot_tag[tag] = 1
-            one_hot_tags.append(one_hot_tag)
-        return numpy.asarray(one_hot_tags)
+        return padded_tags
 
     @overrides
     def empty_field(self):  # pylint: disable=no-self-use

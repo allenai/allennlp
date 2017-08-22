@@ -73,7 +73,7 @@ class LabelField(Field[numpy.ndarray]):
     def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:  # pylint: disable=unused-argument
         label_array = numpy.zeros(self._num_labels)
         label_array[self._label_id] = 1
-        return label_array
+        return [self._label_id]
 
     @overrides
     def empty_field(self):
