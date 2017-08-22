@@ -1,5 +1,6 @@
 from typing import Dict
 import os
+import logging
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
@@ -9,6 +10,11 @@ from allennlp.nn.util import device_mapping
 
 import torch
 
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+# When training a model, many sets of weights are saved. By default we want to
+# save/load this set of weights.
+_DEFAULT_WEIGHTS = "best.th"
 
 class Model(torch.nn.Module, Registrable):
     """
@@ -88,7 +94,7 @@ class Model(torch.nn.Module, Registrable):
         return {}
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params):
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
         return cls.by_name(choice).from_params(vocab, params)
 
@@ -132,7 +138,7 @@ class Model(torch.nn.Module, Registrable):
         if serialization_prefix is None:
             raise ConfigurationError('serialization_prefix must be specified')
 
-        weights_file = weights_file or os.path.join(serialization_prefix, 'best.th')
+        weights_file = weights_file or os.path.join(serialization_prefix, _DEFAULT_WEIGHTS)
 
         # Load vocabulary from file
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')

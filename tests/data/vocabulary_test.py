@@ -102,8 +102,10 @@ class TestVocabulary(AllenNlpTestCase):
             vocab_file.write('a\n')
             vocab_file.write('word\n')
             vocab_file.write('another\n')
+
         vocab = Vocabulary()
         vocab.set_from_file(vocab_filename, is_padded=True, oov_token="<UNK>")
+
         assert vocab._oov_token == DEFAULT_OOV_TOKEN
         assert vocab.get_token_index("random string") == 3
         assert vocab.get_token_index("<S>") == 1
@@ -129,6 +131,7 @@ class TestVocabulary(AllenNlpTestCase):
             vocab_file.write('O\n')
             vocab_file.write('B-ORG\n')
             vocab_file.write('I-ORG\n')
+
         vocab = Vocabulary()
         vocab.set_from_file(vocab_filename, is_padded=False, namespace='tags')
         assert vocab.get_token_index("B-PERS", namespace='tags') == 0
