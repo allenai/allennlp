@@ -37,7 +37,8 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
                         "input_size": 6,
                         "hidden_size": 7,
                         "num_layers": 2
-                        }
+                        },
+                "initializer": {"default": "normal"},
                 })
 
         self.model = SemanticRoleLabeler.from_params(self.vocab, params)

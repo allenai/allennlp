@@ -4,7 +4,7 @@ import torch
 from torch.autograd import Variable
 from torch.nn.functional import nll_loss
 
-from allennlp.common import Params, constants
+from allennlp.common import Params
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
@@ -312,93 +312,14 @@ class BidirectionalAttentionFlow(Model):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
-        """
-        With an empty ``params`` argument, this will instantiate a BiDAF model with the same
-        configuration as published in the original BiDAF paper, as long as you've set
-        ``allennlp.common.constants.GLOVE_PATH`` to the location of your gzipped 100-dimensional
-        glove vectors.
-
-        If you want to change parameters, the keys in the ``params`` object must match the
-        constructor arguments above.
-        """
-        default_embedder_params = {
-                'tokens': {
-                        'type': 'embedding',
-                        'pretrained_file': constants.GLOVE_PATH,
-                        'trainable': False
-                        },
-                'token_characters': {
-                        'type': 'character_encoding',
-                        'embedding': {
-                                'embedding_dim': 8
-                                },
-                        'encoder': {
-                                'type': 'cnn',
-                                'embedding_dim': 8,
-                                'num_filters': 100,
-                                'ngram_filter_sizes': [5]
-                                }
-                        }
-                }
-        embedder_params = params.pop("text_field_embedder", default_embedder_params)
+        embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        num_highway_layers = params.pop("num_highway_layers", 2)
-        default_phrase_layer_params = {
-                'type': 'lstm',
-                'bidirectional': True,
-                'input_size': 200,
-                'hidden_size': 100,
-                'num_layers': 1,
-                }
-        phrase_layer_params = params.pop("phrase_layer", default_phrase_layer_params)
-        phrase_layer = Seq2SeqEncoder.from_params(phrase_layer_params)
-        default_similarity_function_params = {
-                'type': 'linear',
-                'combination': 'x,y,x*y',
-                'tensor_1_dim': 200,
-                'tensor_2_dim': 200
-                }
-        similarity_function_params = params.pop("similarity_function", default_similarity_function_params)
-        similarity_function = SimilarityFunction.from_params(similarity_function_params)
-        default_modeling_layer_params = {
-                'type': 'lstm',
-                'bidirectional': True,
-                'input_size': 800,
-                'hidden_size': 100,
-                'num_layers': 2,
-                }
-        modeling_layer_params = params.pop("modeling_layer", default_modeling_layer_params)
-        modeling_layer = Seq2SeqEncoder.from_params(modeling_layer_params)
-        default_span_end_encoder_params = {
-                'type': 'lstm',
-                'bidirectional': True,
-                'input_size': 1400,
-                'hidden_size': 100,
-                'num_layers': 2,
-                }
-        span_end_encoder_params = params.pop("span_end_encoder", default_span_end_encoder_params)
-        span_end_encoder = Seq2SeqEncoder.from_params(span_end_encoder_params)
-
-        default_initializer_params = {
-                "bias": {
-                        "type": "normal",
-                        "mean": 0,
-                        "std": 0.1
-                        },
-                "similarity_function.*weight_vector": {
-                        "type": "normal",
-                        "mean": 0,
-                        "std": 0.1
-                        },
-                "default": {
-                        "type": "xavier_uniform"
-                        },
-                'exclude': ["token_embedder_tokens"]
-                }
-
-        initializer_params = params.pop('initializer', default_initializer_params)
-        initializer = InitializerApplicator.from_params(initializer_params)
-
+        num_highway_layers = params.pop("num_highway_layers")
+        phrase_layer = Seq2SeqEncoder.from_params(params.pop("phrase_layer"))
+        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
+        modeling_layer = Seq2SeqEncoder.from_params(params.pop("modeling_layer"))
+        span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
+        initializer = InitializerApplicator.from_params(params.pop("initializer"))
         dropout = params.pop('dropout', 0.2)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
