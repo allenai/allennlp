@@ -1,6 +1,5 @@
 from typing import Dict, Any
 import argparse
-import json
 import logging
 
 from allennlp.common.params import Params, replace_none
@@ -47,7 +46,7 @@ def evaluate(model: Model,
 
     generator = iterator(dataset, num_epochs=1)
     logger.info("Iterating over dataset")
-    for batch in tqdm.tqdm(generator):
+    for batch in tqdm.tqdm(generator, total=iterator.get_num_batches(dataset)):
         tensor_batch = arrays_to_variables(batch, cuda_device, for_training=False)
         model.forward(**tensor_batch)
 
@@ -59,10 +58,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logging.getLogger('allennlp.nn.initializers').disabled = True
     logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
 
-    # Load parameter file
-    with open(args.config_file) as config_file:
-        config = Params(replace_none(json.loads(config_file.read())))
-
+    config = Params.from_file(args.config_file)
     model = Model.load(config,
                        weights_file=args.weights_file,
                        cuda_device=args.cuda_device)
