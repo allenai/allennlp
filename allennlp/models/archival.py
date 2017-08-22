@@ -30,12 +30,16 @@ def archive_model(serialization_prefix: str,
     weights: ``str``, optional (default=_DEFAULT_WEIGHTS)
         Which weights file to include in the archive. The default is ``best.th``.
     """
+    weights_file = os.path.join(serialization_prefix, weights)
+    if not os.path.exists(weights_file):
+        logger.error("weights file %s does not exist, unable to archive model", weights_file)
+        return
+
     archive_file = os.path.join(serialization_prefix, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
     with tarfile.open(archive_file, 'w:gz') as archive:
         archive.add(config_file, arcname=_CONFIG_NAME)
-        archive.add(os.path.join(serialization_prefix, weights),
-                    arcname=_WEIGHTS_NAME)
+        archive.add(weights_file, arcname=_WEIGHTS_NAME)
         archive.add(os.path.join(serialization_prefix, "vocabulary"),
                     arcname="vocabulary")
 
