@@ -112,9 +112,18 @@ class TestInitializers(AllenNlpTestCase):
             assert torch.equal(parameter.data, torch.ones(parameter.size()) * 7)
 
     def test_block_orthogonal_can_initialize(self):
-        # TODO(Mark): This is a rubbish test. See if Matt/Joel have a better idea.
-        tensor = torch.zeros([10, 6, 8])
-        block_orthogonal(tensor, [5, 2, 2])
+        tensor = torch.zeros([10, 6])
+        block_orthogonal(tensor, [5, 3])
+        tensor = tensor.numpy()
+
+        def test_block_is_orthogonal(block) -> None:
+            matrix_product = block.T @ block
+            numpy.testing.assert_array_almost_equal(matrix_product,
+                                                    numpy.eye(matrix_product.shape[-1]), 6)
+        test_block_is_orthogonal(tensor[:5, :3])
+        test_block_is_orthogonal(tensor[:5, 3:])
+        test_block_is_orthogonal(tensor[5:, 3:])
+        test_block_is_orthogonal(tensor[5:, :3])
 
     def test_block_orthogonal_raises_on_mismatching_dimensions(self):
         tensor = torch.zeros([10, 6, 8])
