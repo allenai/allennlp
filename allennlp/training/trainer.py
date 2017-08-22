@@ -288,7 +288,7 @@ class Trainer:
 
         params = params or Params({})
         patience = params.pop("patience", 2)
-        validation_metric = params.pop("validation_metric", "loss")
+        validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop("num_epochs", 20)
         serialization_prefix = params.pop("serialization_prefix", None)
         cuda_device = params.pop("cuda_device", -1)
