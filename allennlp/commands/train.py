@@ -8,7 +8,6 @@ from copy import deepcopy
 from typing import Any, Dict, Union
 
 import numpy
-import pyhocon
 import torch
 
 from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set, ConfigurationError
@@ -93,12 +92,12 @@ def train_model_from_file(parameter_filename: str):
 
     # Load the experiment config from a file, and add its own filename
     # to the config so that we can include it in the archived results.
-    param_dict = pyhocon.ConfigFactory.parse_file(parameter_filename)
-    param_dict[_CONFIG_FILE_KEY] = parameter_filename
-    train_model(param_dict)
+    params = Params.from_file(parameter_filename)
+    params[_CONFIG_FILE_KEY] = parameter_filename
+    train_model(params)
 
 
-def train_model(param_dict: Dict[str, Any]) -> Model:
+def train_model(params: Params) -> Model:
     """
     This function can be used as an entry point to running models in AllenNLP
     directly from a JSON specification using a :class:`Driver`. Note that if
@@ -111,10 +110,9 @@ def train_model(param_dict: Dict[str, Any]) -> Model:
 
     Parameters
     ----------
-    param_dict: Dict[str, any], required.
-        A parameter file specifying an AllenNLP Experiment.
+    params: Params, required.
+        A parameter object specifying an AllenNLP Experiment.
     """
-    params = Params(param_dict)
     prepare_environment(params)
 
     trainer_params = params.pop("trainer")
@@ -124,8 +122,9 @@ def train_model(param_dict: Dict[str, Any]) -> Model:
     if log_dir is None:
         raise ConfigurationError("configuration must specify trainer.serialization_prefix")
 
-    params_file = params.pop(_CONFIG_FILE_KEY)
-    if params_file is None:
+    try:
+        params_file = params.pop(_CONFIG_FILE_KEY)
+    except ConfigurationError:
         raise ConfigurationError("{} must be specified for model archiving".format(_CONFIG_FILE_KEY))
 
     os.makedirs(log_dir, exist_ok=True)

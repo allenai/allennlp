@@ -4,6 +4,7 @@ import json
 
 import torch
 
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import train_model, _CONFIG_FILE_KEY
 from allennlp.models.archival import load_model
@@ -13,7 +14,7 @@ class ArchivalTest(AllenNlpTestCase):
     def test_archiving(self):
         super(ArchivalTest, self).setUp()
 
-        params = {
+        params = Params({
                 "model": {
                         "type": "simple_tagger",
                         "text_field_embedder": {
@@ -38,12 +39,12 @@ class ArchivalTest(AllenNlpTestCase):
                         "num_epochs": 2,
                         "serialization_prefix": self.TEST_DIR
                 }
-        }
+        })
 
         # write out config file
         config_file = os.path.join(self.TEST_DIR, "config.json")
         with open(config_file, 'w') as outfile:
-            outfile.write(json.dumps(params))
+            json.dump(params.as_dict(), outfile)
 
         params[_CONFIG_FILE_KEY] = config_file
 
