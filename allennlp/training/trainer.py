@@ -26,7 +26,7 @@ class Trainer:
                  train_dataset: Dataset,
                  validation_dataset: Optional[Dataset] = None,
                  patience: int = 2,
-                 validation_metric: str = "loss",
+                 validation_metric: str = "-loss",
                  num_epochs: int = 20,
                  serialization_prefix: Optional[str] = None,
                  cuda_device: int = -1,
@@ -53,7 +53,9 @@ class Trainer:
             Number of epochs to be patient before early stopping.
         validation_metric : str, optional (default="loss")
             Validation metric to measure for whether to stop training using patience
-            and whether to serialize an ``is_best`` model each epoch.
+            and whether to serialize an ``is_best`` model each epoch. The metric name
+            must be prepended with either "+" or "-", which specifies whether the metric
+            is an increasing or decreasing function.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_prefix : str, optional (default=None)
@@ -83,12 +85,18 @@ class Trainer:
         self._validation_dataset = validation_dataset
 
         self._patience = patience
-        self._validation_metric = validation_metric
         self._num_epochs = num_epochs
         self._serialization_prefix = serialization_prefix
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
+
+        increase_or_decrease = validation_metric[0]
+        if increase_or_decrease not in ["+", "-"]:
+            raise ConfigurationError("Validation metrics must specify whether they should increase "
+                                     "or decrease by pre-pending the metric name with a +/-.")
+        self._validation_metric = validation_metric[1:]
+        self._validation_metric_decreases = increase_or_decrease == "-"
         if log_one_line_per_batch:
             self._tqdm_newline = '\n'
         else:
@@ -182,11 +190,20 @@ class Trainer:
 
                 this_epoch = val_metrics[self._validation_metric]
                 if len(validation_metric_per_epoch) > self._patience:
-                    if max(validation_metric_per_epoch[-self._patience:]) > this_epoch:
+                    # Is the worst validation performance in past self._patience
+                    # epochs is better than current value?
+                    if self._validation_metric_decreases:
+                        should_stop = max(validation_metric_per_epoch[-self._patience:]) < this_epoch
+                    else:
+                        should_stop = min(validation_metric_per_epoch[-self._patience:]) > this_epoch
+                    if should_stop:
                         logger.info("Ran out of patience.  Stopping training.")
                         break
                 validation_metric_per_epoch.append(this_epoch)
-                is_best_so_far = this_epoch == max(validation_metric_per_epoch)
+                if self._validation_metric_decreases:
+                    is_best_so_far = this_epoch == min(validation_metric_per_epoch)
+                else:
+                    is_best_so_far = this_epoch == max(validation_metric_per_epoch)
                 if self._serialization_prefix:
                     self._save_checkpoint(epoch, is_best=is_best_so_far)
             else:
@@ -271,7 +288,7 @@ class Trainer:
 
         params = params or Params({})
         patience = params.pop("patience", 2)
-        validation_metric = params.pop("validation_metric", "loss")
+        validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop("num_epochs", 20)
         serialization_prefix = params.pop("serialization_prefix", None)
         cuda_device = params.pop("cuda_device", -1)
