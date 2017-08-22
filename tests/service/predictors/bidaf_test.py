@@ -2,7 +2,7 @@
 from unittest import TestCase
 
 from allennlp.models.archival import load_archive
-from allennlp.service.predictors.bidaf import BidafPredictor
+from allennlp.service.predictors import Predictor
 
 
 class TestBidafPredictor(TestCase):
@@ -13,7 +13,7 @@ class TestBidafPredictor(TestCase):
         }
 
         archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
-        predictor = BidafPredictor.from_archive(archive)
+        predictor = Predictor.from_archive(archive)
 
         result = predictor.predict_json(inputs)
 
