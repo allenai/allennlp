@@ -8,11 +8,10 @@ from copy import deepcopy
 from typing import Any, Dict, Union
 
 import numpy
-import pyhocon
 import torch
 
 from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set, ConfigurationError
-from allennlp.common.params import Params, replace_none
+from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.data import Vocabulary
 from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES

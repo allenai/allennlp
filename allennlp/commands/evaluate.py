@@ -2,7 +2,7 @@ from typing import Dict, Any
 import argparse
 import logging
 
-from allennlp.common.params import Params, replace_none
+from allennlp.common.params import Params
 from allennlp.data import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
