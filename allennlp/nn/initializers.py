@@ -55,7 +55,7 @@ def block_orthogonal(tensor: torch.Tensor,
         A list of length ``tensor.ndim()`` specifying the size of the
         blocks along that particular dimension. E.g. ``[10, 20]`` would
         result in the tensor being split into chunks of size 10 along the
-        first dimension and 20
+        first dimension and 20 along the second.
     gain : float, optional (default = 1.0)
         The gain (scaling) applied to the orthogonal initialization.
     """
@@ -65,16 +65,21 @@ def block_orthogonal(tensor: torch.Tensor,
                                  "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
     indexes = [list(range(0, max_size, split))
                for max_size, split in zip(sizes, split_sizes)]
-
+    # Our step size for each block is the split size minus 1,
+    # as the end index is exclusive.
     # Iterate over all possible blocks within the tensor.
     for block_start_indices in itertools.product(*indexes):
+        # A list of tuples containing the index to start at for this block
+        # and the appropriate step size (i.e split_size[i] for dimension i).
+        index_and_step_tuples = zip(block_start_indices, split_sizes)
         # This is a tuple of slices corresponding to:
         # tensor[index: index + step_size, ...]. This is
         # required because we could have an arbitrary number
-        # of dimensions.
-        block_slice = tuple([slice(i, i + step)
-                             for i, step in zip(block_start_indices, [x - 1 for x in split_sizes])])
-        torch.nn.init.orthogonal(tensor[block_slice].contiguous(), gain=gain)
+        # of dimensions. The actual slices we need are the
+        # start_index: start_index + step for each dimension in the tensor.
+        block_slice = tuple([slice(start_index, start_index + step)
+                             for start_index, step in index_and_step_tuples])
+        tensor[block_slice] = torch.nn.init.orthogonal(tensor[block_slice].contiguous(), gain=gain)
 
 
 def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
