@@ -2,6 +2,10 @@ from typing import Dict, Any
 import argparse
 import logging
 
+<<<<<<< HEAD
+=======
+from allennlp.common.params import Params
+>>>>>>> master
 from allennlp.data import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
@@ -42,7 +46,7 @@ def evaluate(model: Model,
 
     generator = iterator(dataset, num_epochs=1)
     logger.info("Iterating over dataset")
-    for batch in tqdm.tqdm(generator):
+    for batch in tqdm.tqdm(generator, total=iterator.get_num_batches(dataset)):
         tensor_batch = arrays_to_variables(batch, cuda_device, for_training=False)
         model.forward(**tensor_batch)
 
