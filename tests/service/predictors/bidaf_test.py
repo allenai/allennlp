@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from unittest import TestCase
 
-from allennlp.common import Params
+from allennlp.models.archival import load_archive
 from allennlp.service.predictors.bidaf import BidafPredictor
 
 
@@ -12,10 +12,10 @@ class TestBidafPredictor(TestCase):
                 "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
         }
 
-        bidaf_config = Params.from_file('tests/fixtures/bidaf/experiment.json')
-        model = BidafPredictor.from_config(bidaf_config)
+        archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
+        predictor = BidafPredictor.from_archive(archive)
 
-        result = model.predict_json(inputs)
+        result = predictor.predict_json(inputs)
 
         assert "span_start_probs" in result
         assert "span_end_probs" in result

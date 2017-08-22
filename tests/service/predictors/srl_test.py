@@ -3,6 +3,7 @@ import os
 from unittest import TestCase
 
 from allennlp.common import Params
+from allennlp.common.testing.predictors import predictor_from_config
 from allennlp.models import Model
 from allennlp.service.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor
 
@@ -15,7 +16,7 @@ class TestSrlPredictor(TestCase):
         }
 
         config = Params.from_file('tests/fixtures/srl/experiment.json')
-        predictor = SemanticRoleLabelerPredictor.from_config(config)
+        predictor = predictor_from_config(config)
 
         result = predictor.predict_json(inputs)
 
@@ -32,7 +33,7 @@ class TestSrlPredictor(TestCase):
     @pytest.mark.skipif(os.environ.get("TRAVIS") is not None, reason="causes OOM error and crashes on Travis")
     def test_cpu_vs_gpu(self):
         config = Params.from_file('tests/fixtures/srl/experiment.json')
-        predictor_gpu = SemanticRoleLabelerPredictor.from_config(config)
+        predictor_gpu = predictor_from_config(config)
 
         # params have been consumed, so reload them
         config = Params.from_file('tests/fixtures/srl/experiment.json')

@@ -3,8 +3,9 @@ import json
 import os
 
 from allennlp.service.server_sanic import make_app
-from allennlp.service.predictors import load_predictors
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing.predictors import predictor_from_config
 
 TEST_CONFIG_FILES = {
         'machine-comprehension': 'tests/fixtures/bidaf/experiment.json',
@@ -20,7 +21,11 @@ class TestApp(AllenNlpTestCase):
         super(TestApp, self).setUp()
         if self.client is None:
             app = make_app()
-            app.predictors = load_predictors(TEST_CONFIG_FILES)
+            app.predictors = {
+                    name: predictor_from_config(Params.from_file(param_file))
+                    for name, param_file in TEST_CONFIG_FILES.items()
+            }
+
             app.testing = True
             self.client = app.test_client
 

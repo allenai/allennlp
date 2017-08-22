@@ -13,7 +13,7 @@ class TestEvaluate(AllenNlpTestCase):
         add_subparser(subparsers)
 
         raw_args = ["evaluate",
-                    "--config_file", "tests/fixtures/bidaf/experiment.json",
+                    "--archive_file", "tests/fixtures/bidaf/serialization/model.tar.gz",
                     "--evaluation_data_file", "tests/fixtures/data/squad.json"]
 
         args = parser.parse_args(raw_args)

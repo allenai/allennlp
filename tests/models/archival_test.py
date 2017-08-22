@@ -6,7 +6,7 @@ import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import train_model, _CONFIG_FILE_KEY
-from allennlp.models.archival import load_model
+from allennlp.models.archival import load_archive
 
 
 class ArchivalTest(AllenNlpTestCase):
@@ -53,7 +53,8 @@ class ArchivalTest(AllenNlpTestCase):
         archive_path = os.path.join(self.TEST_DIR, "model.tar.gz")
 
         # load from the archive
-        model2 = load_model(archive_path)
+        archive = load_archive(archive_path)
+        model2 = archive.model
 
         # check that model weights are the same
         keys = set(model.state_dict().keys())
@@ -66,7 +67,7 @@ class ArchivalTest(AllenNlpTestCase):
 
         # check that vocabularies are the same
         vocab = model.vocab
-        vocab2 = model2.vocab
+        vocab2 = archive.vocab
 
         assert vocab._token_to_index == vocab2._token_to_index  # pylint: disable=protected-access
         assert vocab._index_to_token == vocab2._index_to_token  # pylint: disable=protected-access

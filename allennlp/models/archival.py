@@ -1,3 +1,4 @@
+from typing import NamedTuple
 import logging
 import os
 import tempfile
@@ -5,9 +6,13 @@ import tarfile
 import shutil
 
 from allennlp.common import Params
+from allennlp.data import Vocabulary
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+# An archive comprises a Model, its Vocabulary, and its experimental config
+Archive = NamedTuple("Archive", [("model", Model), ("vocab", Vocabulary), ("config", Params)])
 
 # We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
 # These are the *known names* under which we archive the config and weights.
@@ -43,9 +48,9 @@ def archive_model(serialization_prefix: str,
         archive.add(os.path.join(serialization_prefix, "vocabulary"),
                     arcname="vocabulary")
 
-def load_model(archive_file: str, cuda_device: int = -1) -> Model:
+def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
     """
-    Instantiates a model from an archived `tar.gz` file.
+    Instantiates an Archive from an archived `tar.gz` file.
 
     Parameters
     ----------
@@ -64,8 +69,11 @@ def load_model(archive_file: str, cuda_device: int = -1) -> Model:
     # Load config
     config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME))
 
-    # Instantiate model
-    model = Model.load(config,
+    # Load vocabulary
+    vocab = Vocabulary.from_files(os.path.join(tempdir, "vocabulary"))
+
+    # Instantiate model. Use a duplicate of the config, as it will get consumed.
+    model = Model.load(config.duplicate(),
                        weights_file=os.path.join(tempdir, _WEIGHTS_NAME),
                        serialization_prefix=tempdir,
                        cuda_device=cuda_device)
@@ -73,4 +81,4 @@ def load_model(archive_file: str, cuda_device: int = -1) -> Model:
     # Clean up temp dir
     shutil.rmtree(tempdir)
 
-    return model
+    return Archive(model=model, config=config, vocab=vocab)

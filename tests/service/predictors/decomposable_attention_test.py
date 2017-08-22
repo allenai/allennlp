@@ -2,6 +2,7 @@
 from unittest import TestCase
 
 from allennlp.common import Params
+from allennlp.common.testing.predictors import predictor_from_config
 from allennlp.service.predictors.decomposable_attention import DecomposableAttentionPredictor
 
 
@@ -13,8 +14,8 @@ class TestDecomposableAttentionPredictor(TestCase):
         }
 
         config = Params.from_file('tests/fixtures/decomposable_attention/experiment.json')
-        model = DecomposableAttentionPredictor.from_config(config)
+        predictor = predictor_from_config(config)
 
-        result = model.predict_json(inputs)
+        result = predictor.predict_json(inputs)
 
         assert "label_probs" in result
