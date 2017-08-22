@@ -47,14 +47,11 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         return torch.cat(embedded_representations, dim=-1)
 
     @classmethod
-    def from_params(cls,
-                    vocab: Vocabulary,
-                    params: Params,
-                    loading_saved_model: bool = False) -> 'BasicTextFieldEmbedder':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':
         token_embedders = {}
         keys = list(params.keys())
         for key in keys:
             embedder_params = params.pop(key)
-            token_embedders[key] = TokenEmbedder.from_params(vocab, embedder_params, loading_saved_model)
+            token_embedders[key] = TokenEmbedder.from_params(vocab, embedder_params)
         params.assert_empty(cls.__name__)
         return cls(token_embedders)

@@ -311,12 +311,9 @@ class BidirectionalAttentionFlow(Model):
         return best_word_span
 
     @classmethod
-    def from_params(cls,
-                    vocab: Vocabulary,
-                    params: Params,
-                    loading_saved_model: bool = False) -> 'BidirectionalAttentionFlow':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
         embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params, loading_saved_model)
+        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         num_highway_layers = params.pop("num_highway_layers")
         phrase_layer = Seq2SeqEncoder.from_params(params.pop("phrase_layer"))
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))

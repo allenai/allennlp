@@ -49,6 +49,7 @@ class TestEmbedding(AllenNlpTestCase):
     def test_embedding_layer_actually_initializes_word_vectors_correctly(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("word")
+        vocab.add_token_to_namespace("word2")
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
@@ -59,14 +60,7 @@ class TestEmbedding(AllenNlpTestCase):
         embedding_layer = Embedding.from_params(vocab, params)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word")]
         assert numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
-
-        # If we're loading a saved model, we should _not_ be reading the embedding file.
-        params = Params({
-                'pretrained_file': embeddings_filename,
-                'embedding_dim': 3,
-                })
-        embedding_layer = Embedding.from_params(vocab, params, loading_saved_model=True)
-        word_vector = embedding_layer.weight.data[vocab.get_token_index("word")]
+        word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
         assert not numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
 
     def test_get_embedding_layer_initializes_unseen_words_randomly_not_zero(self):

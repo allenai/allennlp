@@ -124,7 +124,7 @@ class Embedding(TokenEmbedder):
         return embedded
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params, loading_saved_model: bool = False) -> 'Embedding':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':
         embedding_dim = params.pop('embedding_dim')
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         pretrained_file = params.pop("pretrained_file", None)
@@ -139,7 +139,7 @@ class Embedding(TokenEmbedder):
         sparse = params.pop('sparse', False)
         params.assert_empty(cls.__name__)
 
-        if pretrained_file and not loading_saved_model:
+        if pretrained_file:
             # If we're loading a saved model, we don't want to actually read a pre-trained
             # embedding file - the embeddings will just be in our saved weights, and we might not
             # have the original embedding file anymore, anyway.

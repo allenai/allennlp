@@ -96,7 +96,7 @@ class Model(torch.nn.Module, Registrable):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
-        return cls.by_name(choice).from_params(vocab, params, loading_saved_model)
+        return cls.by_name(choice).from_params(vocab, params)
 
     @classmethod
     def load(cls,
@@ -144,7 +144,10 @@ class Model(torch.nn.Module, Registrable):
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
-        model = Model.from_params(vocab, config.get('model'), loading_saved_model=True)
+        model_params = config.get('model')
+
+        _remove_pretrained_embedding_params(model_params)
+        model = Model.from_params(vocab, model_params)
         model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
         model.load_state_dict(model_state)
 
@@ -156,3 +159,12 @@ class Model(torch.nn.Module, Registrable):
             model.cpu()
 
         return model
+
+
+def _remove_pretrained_embedding_params(params: Params):
+    keys = params.keys()
+    if 'pretrained_file' in keys:
+        del params['pretrained_file']
+    for value in params.values():
+        if isinstance(value, Params):
+            _remove_pretrained_embedding_params(value)

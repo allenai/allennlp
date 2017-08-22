@@ -35,15 +35,12 @@ class TokenCharactersEncoder(TokenEmbedder):
         return self._dropout(self._encoder(self._embedding(token_characters)))
 
     @classmethod
-    def from_params(cls,
-                    vocab: Vocabulary,
-                    params: Params,
-                    loading_saved_model: bool = False) -> 'TokenCharactersEncoder':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':
         embedding_params = params.pop("embedding")  # type: Params
         # Embedding.from_params() uses "tokens" as the default namespace, but we need to change
         # that to be "token_characters" by default.
         embedding_params.setdefault("vocab_namespace", "token_characters")
-        embedding = Embedding.from_params(vocab, embedding_params, loading_saved_model)
+        embedding = Embedding.from_params(vocab, embedding_params)
         encoder_params = params.pop("encoder")  # type: Params
         encoder = Seq2VecEncoder.from_params(encoder_params)
         dropout = params.pop("dropout", 0.0)

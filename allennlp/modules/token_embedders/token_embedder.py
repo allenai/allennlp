@@ -27,9 +27,6 @@ class TokenEmbedder(torch.nn.Module, Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls,
-                    vocab: Vocabulary,
-                    params: Params,
-                    loading_saved_model: bool = False) -> 'TokenEmbedder':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenEmbedder':
         choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(vocab, params, loading_saved_model)
+        return cls.by_name(choice).from_params(vocab, params)

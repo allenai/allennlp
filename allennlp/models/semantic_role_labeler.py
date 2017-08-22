@@ -216,12 +216,9 @@ class SemanticRoleLabeler(Model):
         return transition_matrix
 
     @classmethod
-    def from_params(cls,
-                    vocab: Vocabulary,
-                    params: Params,
-                    loading_saved_model: bool = False) -> 'SemanticRoleLabeler':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SemanticRoleLabeler':
         embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params, loading_saved_model)
+        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
         initializer = InitializerApplicator.from_params(params.pop("initializer"))
 
