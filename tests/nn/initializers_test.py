@@ -113,7 +113,7 @@ class TestInitializers(AllenNlpTestCase):
             assert torch.equal(parameter.data, torch.ones(parameter.size()) * 7)
 
     def test_block_orthogonal_can_initialize(self):
-        tensor = torch.autograd.Variable(torch.zeros([10, 6]))
+        tensor = Variable(torch.zeros([10, 6]))
         block_orthogonal(tensor, [5, 3])
         tensor = tensor.data.numpy()
 
