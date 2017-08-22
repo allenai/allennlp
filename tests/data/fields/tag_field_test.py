@@ -5,30 +5,30 @@ import pytest
 import numpy
 
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.fields import TextField, TagField
+from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestTagField(AllenNlpTestCase):
+class TestSequenceLabelField(AllenNlpTestCase):
 
     def setUp(self):
-        super(TestTagField, self).setUp()
+        super(TestSequenceLabelField, self).setUp()
         self.text = TextField(["here", "are", "some", "words", "."],
                               {"words": SingleIdTokenIndexer("words")})
 
     def test_tag_length_mismatch_raises(self):
         with pytest.raises(ConfigurationError):
             wrong_tags = ["B", "O", "O"]
-            _ = TagField(wrong_tags, self.text)
+            _ = SequenceLabelField(wrong_tags, self.text)
 
     def test_count_vocab_items_correctly_indexes_tags(self):
         tags = ["B", "I", "O", "O", "O"]
-        tag_field = TagField(tags, self.text, tag_namespace="tags")
+        sequence_label_field = SequenceLabelField(tags, self.text, tag_namespace="tags")
 
         counter = defaultdict(lambda: defaultdict(int))
-        tag_field.count_vocab_items(counter)
+        sequence_label_field.count_vocab_items(counter)
 
         assert counter["tags"]["B"] == 1
         assert counter["tags"]["I"] == 1
@@ -42,12 +42,12 @@ class TestTagField(AllenNlpTestCase):
         o_index = vocab.add_token_to_namespace("O", namespace='*tags')
 
         tags = ["B", "I", "O", "O", "O"]
-        tag_field = TagField(tags, self.text, tag_namespace="*tags")
-        tag_field.index(vocab)
+        sequence_label_field = SequenceLabelField(tags, self.text, tag_namespace="*tags")
+        sequence_label_field.index(vocab)
 
         # pylint: disable=protected-access
-        assert tag_field._indexed_tags == [b_index, i_index, o_index, o_index, o_index]
-        assert tag_field._num_tags == 3
+        assert sequence_label_field._indexed_tags == [b_index, i_index, o_index, o_index, o_index]
+        assert sequence_label_field._num_tags == 3
         # pylint: enable=protected-access
 
     def test_pad_produces_one_hot_targets(self):
@@ -57,8 +57,8 @@ class TestTagField(AllenNlpTestCase):
         vocab.add_token_to_namespace("O", namespace='*tags')
 
         tags = ["B", "I", "O", "O", "O"]
-        tag_field = TagField(tags, self.text, tag_namespace="*tags")
-        tag_field.index(vocab)
-        padding_lengths = tag_field.get_padding_lengths()
-        array = tag_field.as_array(padding_lengths)
+        sequence_label_field = SequenceLabelField(tags, self.text, tag_namespace="*tags")
+        sequence_label_field.index(vocab)
+        padding_lengths = sequence_label_field.get_padding_lengths()
+        array = sequence_label_field.as_array(padding_lengths)
         numpy.testing.assert_array_almost_equal(array, numpy.array([0, 1, 2, 2, 2]))

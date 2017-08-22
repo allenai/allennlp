@@ -13,9 +13,9 @@ from allennlp.data.vocabulary import Vocabulary
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class TagField(Field[numpy.ndarray]):
+class SequenceLabelField(Field[numpy.ndarray]):
     """
-    A ``TagField`` assigns a categorical label to each element in a :class:`SequenceField`.
+    A ``SequenceLabelField`` assigns a categorical label to each element in a :class:`SequenceField`.
     Because it's a labeling of some other field, we take that field as input here, and we use it to
     determine our padding and other things.
 
@@ -28,7 +28,7 @@ class TagField(Field[numpy.ndarray]):
         A sequence of categorical labels, encoded as strings.  These could be POS tags like [NN,
         JJ, ...], BIO tags like [B-PERS, I-PERS, O, O, ...], or any other categorical tag sequence.
     sequence_field : ``SequenceField``
-        A field containing the sequence that this ``TagField`` is labeling.  Most often, this is a
+        A field containing the sequence that this ``SequenceLabelField`` is labeling.  Most often, this is a
         ``TextField``, for tagging individual tokens in a sentence.
     tag_namespace : ``str``, optional (default='tags')
         The namespace to use for converting tag strings into integers.  We convert tag strings to
@@ -43,13 +43,13 @@ class TagField(Field[numpy.ndarray]):
         self._num_tags = None      # type: Optional[int]
 
         if not self._tag_namespace.endswith("tags"):
-            logger.warning("Your tag namespace was '%s'. We recommend you use a namespace "
-                           "ending with 'tags', so we don't add UNK and PAD tokens by "
+            logger.warning("Your sequence label namespace was '%s'. We recommend you use a namespace "
+                           "ending with 'tags' or 'labels', so we don't add UNK and PAD tokens by "
                            "default to your vocabulary.  See documentation for "
                            "`non_padded_namespaces` parameter in Vocabulary.", self._tag_namespace)
 
         if len(tags) != sequence_field.sequence_length():
-            raise ConfigurationError("Tag length and sequence length "
+            raise ConfigurationError("Label length and sequence length "
                                      "don't match: %d and %d" % (len(tags), sequence_field.sequence_length()))
 
     @overrides
@@ -75,9 +75,9 @@ class TagField(Field[numpy.ndarray]):
     @overrides
     def empty_field(self):  # pylint: disable=no-self-use
         # pylint: disable=protected-access
-        tag_field = TagField([], None)
-        tag_field._indexed_tags = []
-        return tag_field
+        sequence_label_field = SequenceLabelField([], None)
+        sequence_label_field._indexed_tags = []
+        return sequence_label_field
 
     def tags(self):
         return self._tags
