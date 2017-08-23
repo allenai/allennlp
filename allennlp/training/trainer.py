@@ -161,7 +161,7 @@ class Trainer:
                 metrics["loss"] = float(train_loss / batch_num)
                 description = self._description_from_metrics(metrics)
                 if self._use_tqdm:
-                    train_generator.set_description(description)
+                    train_generator.set_description(description)  # type: ignore
                 else:
                     logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
             metrics = self._model.get_metrics(reset=True)
@@ -185,7 +185,7 @@ class Trainer:
                     val_metrics["loss"] = float(val_loss / batch_num)
                     description = self._description_from_metrics(val_metrics)
                     if self._use_tqdm:
-                        val_generator.set_description(description)
+                        val_generator.set_description(description)  # type: ignore
                     else:
                         logger.info("Batch %d/%d: %s", batch_num, num_validation_batches, description)
                 val_metrics = self._model.get_metrics(reset=True)
@@ -226,6 +226,7 @@ class Trainer:
                     self._save_checkpoint(epoch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
+        # pylint: disable=no-self-use
         return ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
 
     def _save_checkpoint(self,
