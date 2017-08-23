@@ -147,7 +147,14 @@ class Model(torch.nn.Module, Registrable):
         vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
-        model = Model.from_params(vocab, config.get('model'))
+        model_params = config.get('model')
+
+        # The experiment config tells us how to _train_ a model, including where to get pre-trained
+        # embeddings from.  We're now _loading_ the model, so those embeddings will already be
+        # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
+        # want the code to look for it, so we remove it from the parameters here.
+        _remove_pretrained_embedding_params(model_params)
+        model = Model.from_params(vocab, model_params)
         model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
         model.load_state_dict(model_state)
 
@@ -159,3 +166,12 @@ class Model(torch.nn.Module, Registrable):
             model.cpu()
 
         return model
+
+
+def _remove_pretrained_embedding_params(params: Params):
+    keys = params.keys()
+    if 'pretrained_file' in keys:
+        del params['pretrained_file']
+    for value in params.values():
+        if isinstance(value, Params):
+            _remove_pretrained_embedding_params(value)
