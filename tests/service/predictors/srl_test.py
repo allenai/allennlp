@@ -2,9 +2,8 @@
 import os
 from unittest import TestCase
 
-from allennlp.common import Params
-from allennlp.models import Model
-from allennlp.service.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor
+from allennlp.models.archival import load_archive
+from allennlp.service.predictors import Predictor
 
 import pytest
 
@@ -14,8 +13,8 @@ class TestSrlPredictor(TestCase):
                 "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
         }
 
-        config = Params.from_file('tests/fixtures/srl/experiment.json')
-        predictor = SemanticRoleLabelerPredictor.from_config(config)
+        archive = load_archive('tests/fixtures/srl/serialization/model.tar.gz')
+        predictor = Predictor.from_archive(archive)
 
         result = predictor.predict_json(inputs)
 
@@ -31,18 +30,11 @@ class TestSrlPredictor(TestCase):
 
     @pytest.mark.skipif(os.environ.get("TRAVIS") is not None, reason="causes OOM error and crashes on Travis")
     def test_cpu_vs_gpu(self):
-        config = Params.from_file('tests/fixtures/srl/experiment.json')
-        predictor_gpu = SemanticRoleLabelerPredictor.from_config(config)
+        gpu_archive = load_archive('tests/fixtures/srl/serialization/model_gpu.tar.gz')
+        predictor_gpu = Predictor.from_archive(gpu_archive)
 
-        # params have been consumed, so reload them
-        config = Params.from_file('tests/fixtures/srl/experiment.json')
-        model_cpu = Model.load(config, weights_file='tests/fixtures/srl/serialization/best_cpu.th')
-
-        predictor_cpu = SemanticRoleLabelerPredictor(
-                model=model_cpu,
-                tokenizer=predictor_gpu.tokenizer,
-                token_indexers=predictor_gpu.token_indexers
-        )
+        cpu_archive = load_archive('tests/fixtures/srl/serialization/model.tar.gz')
+        predictor_cpu = Predictor.from_archive(cpu_archive)
 
         sentences = [
                 "Squirrels write unit tests to make sure their nuts work correctly.",
@@ -53,5 +45,5 @@ class TestSrlPredictor(TestCase):
         for sentence in sentences:
             prediction_cpu = predictor_cpu.predict_json({"sentence": sentence})
             prediction_gpu = predictor_gpu.predict_json({"sentence": sentence})
-            print(prediction_cpu)
-            assert prediction_cpu == prediction_gpu
+
+            assert prediction_cpu == pytest.approx(prediction_gpu)

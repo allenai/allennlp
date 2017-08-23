@@ -125,27 +125,34 @@ class Embedding(TokenEmbedder):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':
+        embedding_dim = params.pop('embedding_dim')
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         pretrained_file = params.pop("pretrained_file", None)
         projection_dim = params.pop("projection_dim", None)
-        if pretrained_file:
-            trainable = params.pop("trainable", True)
-            return get_pretrained_embedding_layer(pretrained_file,
-                                                  vocab,
-                                                  vocab_namespace,
-                                                  projection_dim,
-                                                  trainable)
+        trainable = params.pop("trainable", True)
         num_embeddings = vocab.get_vocab_size(vocab_namespace)
-        embedding_dim = params.pop('embedding_dim')
         padding_index = params.pop('padding_index', None)
-        trainable = params.pop('trainable', True)
         max_norm = params.pop('max_norm', None)
         norm_type = params.pop('norm_type', 2.)
         scale_grad_by_freq = params.pop('scale_grad_by_freq', False)
         sparse = params.pop('sparse', False)
         params.assert_empty(cls.__name__)
+
+        if pretrained_file:
+            # If we're loading a saved model, we don't want to actually read a pre-trained
+            # embedding file - the embeddings will just be in our saved weights, and we might not
+            # have the original embedding file anymore, anyway.
+            weight = _read_pretrained_embedding_file(pretrained_file,
+                                                     embedding_dim,
+                                                     vocab,
+                                                     vocab_namespace)
+        else:
+            weight = None
+
         return cls(num_embeddings=num_embeddings,
                    embedding_dim=embedding_dim,
+                   projection_dim=projection_dim,
+                   weight=weight,
                    padding_index=padding_index,
                    trainable=trainable,
                    max_norm=max_norm,
@@ -154,11 +161,10 @@ class Embedding(TokenEmbedder):
                    sparse=sparse)
 
 
-def get_pretrained_embedding_layer(embeddings_filename: str,
-                                   vocab: Vocabulary,
-                                   namespace: str = "tokens",
-                                   projection_dim: int = None,
-                                   trainable: bool = True):
+def _read_pretrained_embedding_file(embeddings_filename: str,
+                                    embedding_dim: int,
+                                    vocab: Vocabulary,
+                                    namespace: str = "tokens") -> torch.FloatTensor:
     """
     Reads a pre-trained embedding file and generates an Embedding layer that has weights
     initialized to the pre-trained embeddings.  The Embedding layer can either be trainable or
@@ -169,7 +175,6 @@ def get_pretrained_embedding_layer(embeddings_filename: str,
 
     Parameters
     ----------
-
     embeddings_filename : str, required.
         The path to a file containing pretrined embeddings. The embeddings
         file is assumed to be gzipped and space delimited, e.g. [word] [dim 1] [dim 2] ...
@@ -182,40 +187,39 @@ def get_pretrained_embedding_layer(embeddings_filename: str,
 
     Returns
     -------
-
-    An Embedding Module initialised with a weight matrix of shape
-    (vocab.get_vocab_size(namespace), pretrained_embedding_dim),
-    where the indices of words appearing in the pretrained embedding file
-    are initialized to the pretrained embedding value.
-
+    A weight matrix with embeddings initialized from the read file.  The matrix has shape
+    ``(vocab.get_vocab_size(namespace), embedding_dim)``, where the indices of words appearing in
+    the pretrained embedding file are initialized to the pretrained embedding value.
     """
     words_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
     vocab_size = vocab.get_vocab_size(namespace)
     embeddings = {}
-    embedding_dim = None
 
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading embeddings from file")
     with gzip.open(embeddings_filename, 'rb') as embeddings_file:
         for line in embeddings_file:
             fields = line.decode('utf-8').strip().split(' ')
-            if embedding_dim is None:
-                embedding_dim = len(fields) - 1
-                assert embedding_dim > 1, "Found embedding size of 1; do you have a header?"
-            else:
-                if len(fields) - 1 != embedding_dim:
-                    # Sometimes there are funny unicode parsing problems that lead to different
-                    # fields lengths (e.g., a word with a unicode space character that splits
-                    # into more than one column).  We skip those lines.  Note that if you have
-                    # some kind of long header, this could result in all of your lines getting
-                    # skipped.  It's hard to check for that here; you just have to look in the
-                    # embedding_misses_file and at the model summary to make sure things look
-                    # like they are supposed to.
-                    continue
+            if len(fields) - 1 != embedding_dim:
+                # Sometimes there are funny unicode parsing problems that lead to different
+                # fields lengths (e.g., a word with a unicode space character that splits
+                # into more than one column).  We skip those lines.  Note that if you have
+                # some kind of long header, this could result in all of your lines getting
+                # skipped.  It's hard to check for that here; you just have to look in the
+                # embedding_misses_file and at the model summary to make sure things look
+                # like they are supposed to.
+                logger.warning("Found line with wrong number of dimensions (expected %d, was %d): %s",
+                               embedding_dim, len(fields) - 1, line)
+                continue
             word = fields[0]
             if word in words_to_keep:
                 vector = numpy.asarray(fields[1:], dtype='float32')
                 embeddings[word] = vector
+
+    if not embeddings:
+        raise ConfigurationError("No embeddings of correct dimension found; you probably "
+                                 "misspecified your embedding_dim parameter, or didn't "
+                                 "pre-populate your Vocabulary")
 
     # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
     # then filling in the word vectors we just read.
@@ -233,9 +237,4 @@ def get_pretrained_embedding_layer(embeddings_filename: str,
             logger.debug("Word %s was not found in the embedding file. Initialising randomly.", word)
 
     # The weight matrix is initialized, so we construct and return the actual Embedding.
-    return Embedding(num_embeddings=vocab_size,
-                     embedding_dim=embedding_dim,
-                     projection_dim=projection_dim,
-                     padding_index=0,
-                     weight=embedding_matrix,
-                     trainable=trainable)
+    return embedding_matrix

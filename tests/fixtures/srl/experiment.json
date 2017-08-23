@@ -1,22 +1,32 @@
 {
   "dataset_reader":{"type":"srl"},
   "train_data_path": "tests/fixtures/data/srl",
-  "validation_data_path": "srl-model/train/64/",
+  "validation_data_path": "tests/fixtures/data/srl",
   "model": {
     "type": "srl",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
         "pretrained_file": "tests/fixtures/glove.6B.100d.sample.txt.gz",
+        "embedding_dim": 100,
         "trainable": true
       }
     },
     "stacked_encoder": {
       "type": "lstm",
-      "input_size": 101,
+      "input_size": 150,
       "hidden_size": 10,
       "num_layers": 1
-    }
+    },
+    "initializer": {
+      "default": {
+        "type": "normal",
+        "mean": 0,
+        "std": 0.1
+      },
+      "exclude": ["token_embedder_tokens"]
+    },
+    "binary_feature_dim": 50
   },
   "iterator": {
     "type": "bucket",
@@ -33,6 +43,6 @@
     "grad_norm": 1.0,
     "patience": 500,
     "serialization_prefix": "tests/fixtures/srl/serialization",
-    "cuda_device": 0
+    "cuda_device": -1
   }
 }

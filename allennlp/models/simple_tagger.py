@@ -34,9 +34,8 @@ class SimpleTagger(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder) -> None:
-        super(SimpleTagger, self).__init__()
+        super(SimpleTagger, self).__init__(vocab)
 
-        self.vocab = vocab
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
         self.stacked_encoder = stacked_encoder
@@ -143,10 +142,10 @@ class SimpleTagger(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
 
-
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SimpleTagger':
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, params.pop("text_field_embedder"))
+        embedder_params = params.pop("text_field_embedder")
+        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
 
         return cls(vocab=vocab,

@@ -78,12 +78,12 @@
     "lr": 0.5,
     "rho": 0.95
   },
-  "num_epochs": 1,
-  "grad_norm": 100.0,
-  "grad_clipping": 100,
-  "patience" : 12,
   "trainer": {
-    "serialization_prefix" : "tests/fixtures/bidaf/serialization"
-  },
-  "cuda_device" : 0
+    "num_epochs": 1,
+    "grad_norm": 100.0,
+    "grad_clipping": 100,
+    "patience" : 12,
+    "serialization_prefix" : "tests/fixtures/bidaf/serialization",
+    "cuda_device" : -1
+  }
 }

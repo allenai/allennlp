@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 from collections import MutableMapping
+import copy
 
 import logging
 import pyhocon
@@ -53,7 +54,7 @@ class Params(MutableMapping):
     DEFAULT = object()
 
     def __init__(self, params: Dict[str, Any], history: str = "") -> None:
-        self.params = params
+        self.params = _replace_none(params)
         self.history = history
 
     @overrides
@@ -150,6 +151,13 @@ class Params(MutableMapping):
         log_recursively(self.params, self.history)
         return self.params
 
+    def duplicate(self) -> 'Params':
+        """
+        Uses ``copy.deepcopy()`` to create a duplicate (but fully distinct)
+        copy of these Params.
+        """
+        return Params(copy.deepcopy(self.params))
+
     def assert_empty(self, class_name: str):
         """
         Raises a ``ConfigurationError`` if ``self.params`` is not empty.  We take ``class_name`` as
@@ -190,7 +198,7 @@ class Params(MutableMapping):
         Load a `Params` object from a configuration file.
         """
         param_dict = pyhocon.ConfigFactory.parse_file(params_file)
-        return Params(replace_none(param_dict))
+        return Params(param_dict)
 
 
 def pop_choice(params: Dict[str, Any],
@@ -212,10 +220,10 @@ def pop_choice(params: Dict[str, Any],
     return value
 
 
-def replace_none(dictionary: Dict[str, Any]) -> Dict[str, Any]:
+def _replace_none(dictionary: Dict[str, Any]) -> Dict[str, Any]:
     for key in dictionary.keys():
         if dictionary[key] == "None":
             dictionary[key] = None
         elif isinstance(dictionary[key], pyhocon.config_tree.ConfigTree):
-            dictionary[key] = replace_none(dictionary[key])
+            dictionary[key] = _replace_none(dictionary[key])
     return dictionary

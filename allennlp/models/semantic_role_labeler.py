@@ -5,12 +5,12 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
-from allennlp.common.constants import GLOVE_PATH
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.initializers import InitializerApplicator
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import IndexField, TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
@@ -39,16 +39,18 @@ class SemanticRoleLabeler(Model):
     stacked_encoder : ``Seq2SeqEncoder``
         The encoder (with its own internal stacking) that we will use in between embedding tokens
         and predicting output tags.
+    binary_feature_dim : int, required.
+        The dimensionality of the embedding of the binary verb predicate features.
     initializer : ``InitializerApplicator``
         We will use this to initialize the parameters in the model, calling ``initializer(self)``.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
+                 binary_feature_dim: int,
                  initializer: InitializerApplicator) -> None:
-        super(SemanticRoleLabeler, self).__init__()
+        super(SemanticRoleLabeler, self).__init__(vocab)
 
-        self.vocab = vocab
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
 
@@ -57,11 +59,13 @@ class SemanticRoleLabeler(Model):
         self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="tags", ignore_classes=["V"])
 
         self.stacked_encoder = stacked_encoder
+        # There are exactly 2 binary features for the verb predicate embedding.
+        self.binary_feature_embedding = Embedding(2, binary_feature_dim)
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
         initializer(self)
 
-        if text_field_embedder.get_output_dim() + 1 != stacked_encoder.get_input_dim():
+        if text_field_embedder.get_output_dim() + binary_feature_dim != stacked_encoder.get_input_dim():
             raise ConfigurationError("The SRL Model uses a binary verb indicator feature, meaning "
                                      "the input dimension of the stacked_encoder must be equal to "
                                      "the output dimension of the text_field_embedder + 1.")
@@ -107,10 +111,11 @@ class SemanticRoleLabeler(Model):
         """
         embedded_text_input = self.text_field_embedder(tokens)
         mask = get_text_field_mask(tokens)
-        expanded_verb_indicator = verb_indicator.unsqueeze(-1).float()
+        embedded_verb_indicator = self.binary_feature_embedding(verb_indicator.long())
+        print(embedded_verb_indicator.size())
         # Concatenate the verb feature onto the embedded text. This now
-        # has shape (batch_size, sequence_length, embedding_dim + 1).
-        embedded_text_with_verb_indicator = torch.cat([embedded_text_input, expanded_verb_indicator], -1)
+        # has shape (batch_size, sequence_length, embedding_dim + binary_feature_dim).
+        embedded_text_with_verb_indicator = torch.cat([embedded_text_input, embedded_verb_indicator], -1)
         batch_size, sequence_length, embedding_dim_with_binary_feature = embedded_text_with_verb_indicator.size()
 
         if self.stacked_encoder.get_input_dim() != embedding_dim_with_binary_feature:
@@ -218,46 +223,16 @@ class SemanticRoleLabeler(Model):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SemanticRoleLabeler':
-        """
-        With an empty ``params`` argument, this will instantiate a SRL model with the same
-        configuration as published in the "Deep Semantic Role Labeling - What works and what's
-        next" paper, as long as you've set ``allennlp.common.constants.GLOVE_PATH`` to the
-        location of your gzipped 100-dimensional glove vectors.
-
-        If you want to change parameters, the keys in the ``params`` object must match the
-        constructor arguments above.
-        """
-        default_embedder_params = {
-                'tokens': {
-                        'type': 'embedding',
-                        'pretrained_file': GLOVE_PATH,
-                        'trainable': True
-                        }
-                }
-
-        embedder_params = params.pop("text_field_embedder", default_embedder_params)
+        embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-
-        default_lstm_params = {
-                'type': 'alternating_lstm',
-                'input_size': 101,  # Because of the verb_indicator feature.
-                'hidden_size': 300,
-                'num_layers': 8,
-                'recurrent_dropout_probability': 0.1,
-                'use_highway': True
-                }
-        encoder_params = params.pop("stacked_encoder", default_lstm_params)
-        stacked_encoder = Seq2SeqEncoder.from_params(encoder_params)
-
-        default_initializer_params = {'bias': {'type': 'normal', 'std': 0.1},
-                                      'default': 'orthogonal'}
-
-        initializer_params = params.pop('initializer', default_initializer_params)
-        initializer = InitializerApplicator.from_params(initializer_params)
+        stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
+        binary_feature_dim = params.pop("binary_feature_dim")
+        initializer = InitializerApplicator.from_params(params.pop("initializer"))
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder,
+                   binary_feature_dim=binary_feature_dim,
                    initializer=initializer)
 
 def write_to_conll_eval_file(prediction_file: TextIO,

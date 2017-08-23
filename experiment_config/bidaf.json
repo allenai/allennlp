@@ -19,6 +19,7 @@
       "tokens": {
         "type": "embedding",
         "pretrained_file": "/glove/glove.6B.100d.txt.gz",
+        "embedding_dim": 100,
         "trainable": false
       },
       "token_characters": {
