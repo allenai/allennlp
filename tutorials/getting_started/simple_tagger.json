@@ -6,31 +6,51 @@
       "tokens": {
         "type": "single_id",
         "lowercase_tokens": true
+      },
+      "token_characters": {
+        "type": "characters"
       }
     }
   },
   "non_padded_namespaces": [],
-  "train_data_path": "tutorials/getting_started/data/cr.train",
-  "validation_data_path": "tutorials/getting_started/data/cr.dev",
+  "train_data_path": "/Users/joelg/Downloads/brown/sentences.small.train",
+  "validation_data_path": "/Users/joelg/Downloads/brown/sentences.small.dev",
   "model": {
     "type": "simple_tagger",
     "text_field_embedder": {
             "tokens": {
                     "type": "embedding",
-                    "embedding_dim": 20
+                    "embedding_dim": 100
+                    //"pretrained_file": "/Users/joelg/data/glove.6B.100d.txt.gz",
+                    //"trainable": false
+            },
+            "token_characters": {
+              "type": "character_encoding",
+              "embedding": {
+                "embedding_dim": 8
+              },
+              "encoder": {
+                "type": "cnn",
+                "embedding_dim": 8,
+                "num_filters": 100,
+                "ngram_filter_sizes": [5]
+              },
+              "dropout": 0.2
             }
     },
     "stacked_encoder": {
             "type": "lstm",
-            "input_size": 20,
-            "hidden_size": 20,
-            "num_layers": 2
+            "input_size": 200,
+            "hidden_size": 200,
+            "num_layers": 2,
+            "dropout": 0.5,
+            "bidirectional": true
     }
   },
-  "iterator": {"type": "basic", "batch_size": 2},
+  "iterator": {"type": "basic", "batch_size": 128},
   "optimizer": "adam",
   "trainer": {
-    "num_epochs": 20,
+    "num_epochs": 50,
     "serialization_prefix": "/tmp/tutorials/getting_started",
     "cuda_device": -1
   }
