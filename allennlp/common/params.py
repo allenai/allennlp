@@ -53,7 +53,7 @@ class Params(MutableMapping):
     DEFAULT = object()
 
     def __init__(self, params: Dict[str, Any], history: str = "") -> None:
-        self.params = replace_none(params)
+        self.params = _replace_none(params)
         self.history = history
 
     @overrides
@@ -212,10 +212,10 @@ def pop_choice(params: Dict[str, Any],
     return value
 
 
-def replace_none(dictionary: Dict[str, Any]) -> Dict[str, Any]:
+def _replace_none(dictionary: Dict[str, Any]) -> Dict[str, Any]:
     for key in dictionary.keys():
         if dictionary[key] == "None":
             dictionary[key] = None
         elif isinstance(dictionary[key], pyhocon.config_tree.ConfigTree):
-            dictionary[key] = replace_none(dictionary[key])
+            dictionary[key] = _replace_none(dictionary[key])
     return dictionary
