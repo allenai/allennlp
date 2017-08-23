@@ -6,6 +6,7 @@ import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
@@ -54,6 +55,9 @@ class LanguageModelingReader(DatasetReader):
 
     @overrides
     def read(self, file_path: str):
+        # if `file_path` is a URL, redirect to the cache
+        file_path = cached_path(file_path)
+
         with open(file_path, "r") as text_file:
             instance_strings = text_file.readlines()
         if self._tokens_per_instance is not None:

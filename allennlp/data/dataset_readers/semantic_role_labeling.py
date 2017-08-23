@@ -7,6 +7,7 @@ from overrides import overrides
 import tqdm
 
 from allennlp.common import Params
+from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -169,6 +170,9 @@ class SrlReader(DatasetReader):
 
     @overrides
     def read(self, file_path: str):
+        # if `file_path` is a URL, redirect to the cache
+        file_path = cached_path(file_path)
+
         instances = []
 
         sentence = []  # type: List[str]
