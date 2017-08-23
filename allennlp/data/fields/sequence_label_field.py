@@ -42,7 +42,7 @@ class SequenceLabelField(Field[numpy.ndarray]):
         self._labels = labels
         self._sequence_field = sequence_field
         self._label_namespace = label_namespace
-        self._indexed_labels = None  # type: Optional[List[int]]
+        self._indexed_labels = None
 
         if not (self._label_namespace.endswith("tags") or self._label_namespace.endswith("labels")):
             logger.warning("Your sequence label namespace was '%s'. We recommend you use a namespace "
@@ -61,12 +61,12 @@ class SequenceLabelField(Field[numpy.ndarray]):
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         if self._indexed_labels is None:
             for label in self._labels:
-                counter[self._label_namespace][label] += 1
+                counter[self._label_namespace][label] += 1  # type: ignore
 
     @overrides
     def index(self, vocab: Vocabulary):
         if self._indexed_labels is None:
-            self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)
+            self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
                                     for label in self._labels]
 
     @overrides

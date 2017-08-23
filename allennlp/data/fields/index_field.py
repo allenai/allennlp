@@ -33,7 +33,7 @@ class IndexField(Field[numpy.ndarray]):
         return {'num_options': self._sequence_field.sequence_length()}
 
     @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.array:
+    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.array:  # pylint: disable=unused-argument
         return numpy.asarray([self._index])
 
     @overrides
