@@ -34,10 +34,11 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
                         },
                 "stacked_encoder": {
                         "type": "lstm",
-                        "input_size": 6,
+                        "input_size": 8,
                         "hidden_size": 7,
                         "num_layers": 2
                         },
+                "binary_feature_dim": 3,
                 "initializer": {"default": "normal"},
                 })
 
