@@ -30,10 +30,10 @@ class TestSrlPredictor(TestCase):
 
     @pytest.mark.skipif(os.environ.get("TRAVIS") is not None, reason="causes OOM error and crashes on Travis")
     def test_cpu_vs_gpu(self):
-        gpu_archive = load_archive('tests/fixtures/srl/serialization/model.tar.gz')
+        gpu_archive = load_archive('tests/fixtures/srl/serialization/model_gpu.tar.gz')
         predictor_gpu = Predictor.from_archive(gpu_archive)
 
-        cpu_archive = load_archive('tests/fixtures/srl/serialization/model_cpu.tar.gz')
+        cpu_archive = load_archive('tests/fixtures/srl/serialization/model.tar.gz')
         predictor_cpu = Predictor.from_archive(cpu_archive)
 
         sentences = [
