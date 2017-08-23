@@ -19,8 +19,8 @@ class SequenceLabelField(Field[numpy.ndarray]):
     Because it's a labeling of some other field, we take that field as input here, and we use it to
     determine our padding and other things.
 
-    This field will get converted into a sequence of one-hot vectors, where the size of each
-    one-hot vector is the number of unique tags in your data.
+    This field will get converted into a list of integer class ids, representing the correct class
+    for each element in the sequence.
 
     Parameters
     ----------
@@ -70,7 +70,7 @@ class SequenceLabelField(Field[numpy.ndarray]):
     def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:
         desired_num_tokens = padding_lengths['num_tokens']
         padded_tags = pad_sequence_to_length(self._indexed_tags, desired_num_tokens)
-        return padded_tags
+        return numpy.asarray(padded_tags)
 
     @overrides
     def empty_field(self):  # pylint: disable=no-self-use

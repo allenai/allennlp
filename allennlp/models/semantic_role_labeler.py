@@ -9,7 +9,7 @@ from allennlp.common.constants import GLOVE_PATH
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.initializers import InitializerApplicator
 from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields import IndexField, TextField
+from allennlp.data.fields import SequenceFeatureField, TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
@@ -84,9 +84,9 @@ class SemanticRoleLabeler(Model):
             which knows how to combine different word representations into a single vector per
             token in your input.
         verb_indicator: torch.LongTensor, required.
-            A one-hot/all-zeros ``IndexField`` representation of the position of the verb in the sentence.
-            This should have shape (batch_size, num_tokens) and importantly, can be all zeros, in the case
-            that the sentence has no verbal predicate.
+            A one-hot/all-zeros ``SequenceFeatureField`` representation of the position of the verb
+            in the sentence. This should have shape (batch_size, num_tokens) and importantly, can be
+            all zeros, in the case that the sentence has no verbal predicate.
         tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of gold labels.  These can either be integer
             indexes or one hot arrays of labels, so of shape ``(batch_size, num_tokens)`` or of
@@ -133,7 +133,7 @@ class SemanticRoleLabeler(Model):
 
         return output_dict
 
-    def tag(self, text_field: TextField, verb_indicator: IndexField) -> Dict[str, Any]:
+    def tag(self, text_field: TextField, verb_indicator: SequenceFeatureField) -> Dict[str, Any]:
         """
         Perform inference on a ``Instance`` consisting of a single ``TextField`` representing
         the sentence and an ``IndexField`` representing an optional index into the sentence

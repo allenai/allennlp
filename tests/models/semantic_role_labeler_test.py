@@ -6,7 +6,7 @@ import numpy
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SrlReader
-from allennlp.data.fields import TextField, IndexField
+from allennlp.data.fields import TextField, SequenceFeatureField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
@@ -47,7 +47,7 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
 
     def test_tag_returns_distributions_per_token(self):
         text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})
-        verb_indicator = IndexField(1, text)
+        verb_indicator = SequenceFeatureField([0, 1, 0, 0], text)
 
         output = self.model.tag(text, verb_indicator)
         possible_tags = self.vocab.get_index_to_token_vocabulary("tags").values()
