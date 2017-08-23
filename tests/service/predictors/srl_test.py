@@ -45,4 +45,5 @@ class TestSrlPredictor(TestCase):
         for sentence in sentences:
             prediction_cpu = predictor_cpu.predict_json({"sentence": sentence})
             prediction_gpu = predictor_gpu.predict_json({"sentence": sentence})
-            assert prediction_cpu == prediction_gpu
+
+            assert prediction_cpu == pytest.approx(prediction_gpu)
