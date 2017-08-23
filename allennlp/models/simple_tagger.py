@@ -38,7 +38,7 @@ class SimpleTagger(Model):
 
         self.vocab = vocab
         self.text_field_embedder = text_field_embedder
-        self.num_classes = self.vocab.get_vocab_size("tags")
+        self.num_classes = self.vocab.get_vocab_size("labels")
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
@@ -132,7 +132,7 @@ class SimpleTagger(Model):
         predictions = output_dict["class_probabilities"].data.squeeze(0)
         _, argmax = predictions.max(-1)
         indices = argmax.numpy()
-        tags = [self.vocab.get_token_from_index(x, namespace="tags") for x in indices]
+        tags = [self.vocab.get_token_from_index(x, namespace="labels") for x in indices]
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}
 

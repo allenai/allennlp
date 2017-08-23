@@ -10,7 +10,7 @@ from allennlp.common import Params
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, SequenceLabelField, SequenceFeatureField
+from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.common.checks import ConfigurationError
 
@@ -153,7 +153,7 @@ class SrlReader(DatasetReader):
         if not verbal_predicates:
             # Sentence contains no predicates.
             tags = SequenceLabelField(["O" for _ in sentence], sentence_field)
-            verb_indicator = SequenceFeatureField([0 for _ in sentence], sentence_field)
+            verb_indicator = SequenceLabelField([0 for _ in sentence], sentence_field)
             instance = Instance(fields={"tokens": sentence_field, "verb_indicator": verb_indicator, "tags": tags})
             return [instance]
         else:
@@ -163,7 +163,7 @@ class SrlReader(DatasetReader):
                 tags = SequenceLabelField(annotation, sentence_field)
                 indicator_ids = [0 for _ in sentence]
                 indicator_ids[verb_index] = 1
-                verb_indicator = SequenceFeatureField(indicator_ids, sentence_field)
+                verb_indicator = SequenceLabelField(indicator_ids, sentence_field)
                 instances.append(Instance(fields={"tokens": sentence_field,
                                                   "verb_indicator": verb_indicator,
                                                   "tags": tags}))

@@ -9,7 +9,7 @@ from allennlp.common.constants import GLOVE_PATH
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.initializers import InitializerApplicator
 from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields import SequenceFeatureField, TextField
+from allennlp.data.fields import SequenceLabelField, TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
@@ -50,11 +50,11 @@ class SemanticRoleLabeler(Model):
 
         self.vocab = vocab
         self.text_field_embedder = text_field_embedder
-        self.num_classes = self.vocab.get_vocab_size("tags")
+        self.num_classes = self.vocab.get_vocab_size("labels")
 
         # For the span based evaluation, we don't want to consider labels
         # for verb, because the verb index is provided to the model.
-        self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="tags", ignore_classes=["V"])
+        self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="labels", ignore_classes=["V"])
 
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
@@ -132,11 +132,11 @@ class SemanticRoleLabeler(Model):
 
         return output_dict
 
-    def tag(self, text_field: TextField, verb_indicator: SequenceFeatureField) -> Dict[str, Any]:
+    def tag(self, text_field: TextField, verb_indicator: SequenceLabelField) -> Dict[str, Any]:
         """
         Perform inference on a ``Instance`` consisting of a single ``TextField`` representing
-        the sentence and an ``IndexField`` representing an optional index into the sentence
-        denoting a verbal predicate.
+        the sentence and a ``SequenceLabelField`` representing a binary per word feature
+        denoting the position of the verbal predicate.
 
         Returned sequence is the maximum likelihood tag sequence under the constraint that
         the sequence must be a valid BIO sequence.
@@ -145,7 +145,7 @@ class SemanticRoleLabeler(Model):
         ----------
         text_field : ``TextField``, required.
             A ``TextField`` containing the text to be tagged.
-        verb_indicator: ``IndexField``, required.
+        verb_indicator: ``SequenceLabelField``, required.
             The index of the verb whose arguments we are labeling.
 
         Returns
@@ -171,7 +171,7 @@ class SemanticRoleLabeler(Model):
         transition_matrix = self.get_viterbi_pairwise_potentials()
 
         max_likelihood_sequence, _ = viterbi_decode(predictions, transition_matrix)
-        tags = [self.vocab.get_token_from_index(x, namespace="tags")
+        tags = [self.vocab.get_token_from_index(x, namespace="labels")
                 for x in max_likelihood_sequence]
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}
@@ -190,25 +190,25 @@ class SemanticRoleLabeler(Model):
     def get_viterbi_pairwise_potentials(self):
         """
         Generate a matrix of pairwise transition potentials for the BIO labels.
-        The only constraint implemented here is that I-XXX tags must be preceded
+        The only constraint implemented here is that I-XXX labels must be preceded
         by either an identical I-XXX tag or a B-XXX tag. In order to achieve this
-        constraint, pairs of tags which do not satisfy this constraint have a
+        constraint, pairs of labels which do not satisfy this constraint have a
         pairwise potential of -inf.
 
         Returns
         -------
         transition_matrix : torch.Tensor
-            A (num_tags, num_tags) matrix of pairwise potentials.
+            A (num_labels, num_labels) matrix of pairwise potentials.
         """
-        all_tags = self.vocab.get_index_to_token_vocabulary("tags")
-        num_tags = len(all_tags)
-        transition_matrix = torch.zeros([num_tags, num_tags])
+        all_labels = self.vocab.get_index_to_token_vocabulary("labels")
+        num_labels = len(all_labels)
+        transition_matrix = torch.zeros([num_labels, num_labels])
 
-        for i, previous_tag in all_tags.items():
-            for j, tag in all_tags.items():
-                # I tags can only be preceded by themselves or
+        for i, previous_label in all_labels.items():
+            for j, label in all_labels.items():
+                # I labels can only be preceded by themselves or
                 # their corresponding B tag.
-                if i != j and tag[0] == 'I' and not previous_tag == 'B' + tag[1:]:
+                if i != j and label[0] == 'I' and not previous_label == 'B' + label[1:]:
                     transition_matrix[i, j] = float("-inf")
         return transition_matrix
 

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional  # pylint: disable=unused-import
+from typing import Dict, List, Optional, Union  # pylint: disable=unused-import
 import logging
 
 from overrides import overrides
@@ -24,43 +24,50 @@ class SequenceLabelField(Field[numpy.ndarray]):
 
     Parameters
     ----------
-    tags : ``List[str]``
+    labels : ``List[str]``
         A sequence of categorical labels, encoded as strings.  These could be POS tags like [NN,
         JJ, ...], BIO tags like [B-PERS, I-PERS, O, O, ...], or any other categorical tag sequence.
     sequence_field : ``SequenceField``
         A field containing the sequence that this ``SequenceLabelField`` is labeling.  Most often, this is a
         ``TextField``, for tagging individual tokens in a sentence.
-    tag_namespace : ``str``, optional (default='tags')
+    label_namespace : ``str``, optional (default='tags')
         The namespace to use for converting tag strings into integers.  We convert tag strings to
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
-    def __init__(self, tags: List[str], sequence_field: SequenceField, tag_namespace: str = 'tags') -> None:
-        self._tags = tags
+    def __init__(self,
+                 labels: Union[List[str], List[int]],
+                 sequence_field: SequenceField,
+                 label_namespace: str = 'labels') -> None:
+        self._labels = labels
         self._sequence_field = sequence_field
-        self._tag_namespace = tag_namespace
-        self._indexed_tags = None  # type: Optional[List[int]]
-        self._num_tags = None      # type: Optional[int]
+        self._label_namespace = label_namespace
+        self._indexed_labels = None  # type: Optional[List[int]]
 
-        if not self._tag_namespace.endswith("tags"):
+        if not (self._label_namespace.endswith("tags") or self._label_namespace.endswith("labels")):
             logger.warning("Your sequence label namespace was '%s'. We recommend you use a namespace "
                            "ending with 'tags' or 'labels', so we don't add UNK and PAD tokens by "
                            "default to your vocabulary.  See documentation for "
-                           "`non_padded_namespaces` parameter in Vocabulary.", self._tag_namespace)
+                           "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
 
-        if len(tags) != sequence_field.sequence_length():
+        if len(labels) != sequence_field.sequence_length():
             raise ConfigurationError("Label length and sequence length "
-                                     "don't match: %d and %d" % (len(tags), sequence_field.sequence_length()))
+                                     "don't match: %d and %d" % (len(labels), sequence_field.sequence_length()))
+
+        if all([isinstance(x, int) for x in labels]):
+            self._indexed_labels = labels
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
-        for tag in self._tags:
-            counter[self._tag_namespace][tag] += 1
+        if self._indexed_labels is None:
+            for label in self._labels:
+                counter[self._label_namespace][label] += 1
 
     @overrides
     def index(self, vocab: Vocabulary):
-        self._indexed_tags = [vocab.get_token_index(tag, self._tag_namespace) for tag in self._tags]
-        self._num_tags = vocab.get_vocab_size(self._tag_namespace)
+        if self._indexed_labels is None:
+            self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)
+                                    for label in self._labels]
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -69,15 +76,15 @@ class SequenceLabelField(Field[numpy.ndarray]):
     @overrides
     def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:
         desired_num_tokens = padding_lengths['num_tokens']
-        padded_tags = pad_sequence_to_length(self._indexed_tags, desired_num_tokens)
+        padded_tags = pad_sequence_to_length(self._indexed_labels, desired_num_tokens)
         return numpy.asarray(padded_tags)
 
     @overrides
     def empty_field(self):  # pylint: disable=no-self-use
         # pylint: disable=protected-access
         sequence_label_field = SequenceLabelField([], None)
-        sequence_label_field._indexed_tags = []
+        sequence_label_field._indexed_labels = []
         return sequence_label_field
 
-    def tags(self):
-        return self._tags
+    def labels(self):
+        return self._labels
