@@ -28,6 +28,9 @@ codecov
 # Required to run sanic tests
 aiohttp
 
+# Required to mock out `requests` calls
+responses>=0.7
+
 #### DOC-RELATED PACKAGES ####
 
 # Builds our documentation.
