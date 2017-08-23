@@ -56,4 +56,3 @@ class SequenceFeatureField(Field[numpy.ndarray]):
 
     def feature_indices(self):
         return self._feature_indices
-
