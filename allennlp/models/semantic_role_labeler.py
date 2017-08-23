@@ -112,7 +112,6 @@ class SemanticRoleLabeler(Model):
         embedded_text_input = self.text_field_embedder(tokens)
         mask = get_text_field_mask(tokens)
         embedded_verb_indicator = self.binary_feature_embedding(verb_indicator.long())
-        print(embedded_verb_indicator.size())
         # Concatenate the verb feature onto the embedded text. This now
         # has shape (batch_size, sequence_length, embedding_dim + binary_feature_dim).
         embedded_text_with_verb_indicator = torch.cat([embedded_text_input, embedded_verb_indicator], -1)
