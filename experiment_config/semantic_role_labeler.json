@@ -16,7 +16,7 @@
       "tag_projection_layer.*weight": {"type": "xavier_uniform"},
       "stacked_encoder\._module.layer_0\.input_linearity\.weight": {
         "type": "block_orthogonal",
-        "split_sizes": [300, 101]
+        "split_sizes": [300, 200]
         },
       "stacked_encoder\._module\.layer_0\.state_linearity\.weight": {
         "type": "block_orthogonal",
@@ -29,12 +29,13 @@
     },
     "stacked_encoder": {
       "type": "alternating_lstm",
-      "input_size": 101,
+      "input_size": 200,
       "hidden_size": 300,
       "num_layers": 8,
       "recurrent_dropout_probability": 0.1,
       "use_highway": true
-    }
+    },
+    "binary_feature_dim": 100
   },
   "iterator": {
     "type": "bucket",
