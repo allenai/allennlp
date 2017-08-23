@@ -11,7 +11,7 @@ h5py
 scikit-learn
 
 # Parameter parsing.
-pyhocon
+pyhocon==0.3.35
 
 # Type checking for python
 typing
