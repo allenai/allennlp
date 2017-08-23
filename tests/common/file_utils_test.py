@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import os
+import pathlib
 import pytest
 
 import responses
@@ -15,6 +16,7 @@ class TestFileUtils(AllenNlpTestCase):
                     'https://www.google.com', 'http://pytorch.org']:
             filename = url_to_filename(url)
             assert "http" not in filename
+            pathlib.Path(os.path.join(self.TEST_DIR, filename)).touch()
             back_to_url = filename_to_url(filename)
             assert back_to_url == url
 
