@@ -11,7 +11,7 @@ PARAM_FILE=$1
 EXPERIMENT_NAME=$2
 
 COMMIT=$(git rev-parse HEAD)
-IMAGE=$ECR_REPOSITORY/allennlp:$COMMIT-$RANDOM
+IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$COMMIT-$RANDOM
 
 if [ ! -n "$PARAM_FILE" ] ; then
   echo "USAGE: ./scripts/ai2-internal/run_on_beaker.sh PARAM_FILE [EXPERIMENT_NAME]"
