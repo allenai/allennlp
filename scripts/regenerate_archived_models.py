@@ -39,14 +39,14 @@ if __name__ == "__main__":
                      "tests/fixtures/decomposable_attention/serialization",
                      exist_ok=True)
 
-    # GPU model
+    # CPU model
     generate_archive("tests/fixtures/srl/experiment.json",
                      "tests/fixtures/srl/serialization",
                      exist_ok=True)
 
-    # CPU model
+    # GPU model
     generate_archive("tests/fixtures/srl/experiment.json",
                      "tests/fixtures/srl/serialization",
-                     weights_file="best_cpu.th",
-                     archive_name="model_cpu.tar.gz",
+                     weights_file="best_gpu.th",
+                     archive_name="model_gpu.tar.gz",
                      exist_ok = True)
