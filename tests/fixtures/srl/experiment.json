@@ -8,6 +8,7 @@
       "tokens": {
         "type": "embedding",
         "pretrained_file": "tests/fixtures/glove.6B.100d.sample.txt.gz",
+        "embedding_dim": 100,
         "trainable": true
       }
     },
@@ -16,6 +17,14 @@
       "input_size": 101,
       "hidden_size": 10,
       "num_layers": 1
+    },
+    "initializer": {
+      "default": {
+        "type": "normal",
+        "mean": 0,
+        "std": 0.1
+      },
+      "exclude": ["token_embedder_tokens"]
     }
   },
   "iterator": {

@@ -50,6 +50,9 @@ argparse
 # Used to read the NewsQA CSV and output a clean one.
 pandas==0.19.2
 
+# Used for downloading datasets over HTTP
+requests>=2.18
+
 # progress bars in data cleaning scripts
 tqdm
 

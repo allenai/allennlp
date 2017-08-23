@@ -3,14 +3,14 @@ from contextlib import ExitStack
 import json
 from typing import Optional, IO
 
-from allennlp.common.params import Params
+from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Run the specified model against a JSON-lines input file.'''
     subparser = parser.add_parser(
             'predict', description=description, help='Use a trained model to make predictions.')
-    subparser.add_argument('config_file', type=str, help='the training configuration file for the model')
+    subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
     subparser.add_argument('input_file', metavar='input-file', type=str, help='path to input file')
     subparser.add_argument('--output-file', type=str, help='path to output file')
     subparser.add_argument('--print', action='store_true', help='print results to string')
@@ -20,8 +20,8 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     return subparser
 
 def get_predictor(args: argparse.Namespace) -> Predictor:
-    config = Params.from_file(args.config_file)
-    predictor = Predictor.from_config(config)
+    archive = load_archive(args.archive_file)
+    predictor = Predictor.from_archive(archive)
     return predictor
 
 def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_to_console: bool) -> None:

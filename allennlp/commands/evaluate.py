@@ -2,10 +2,10 @@ from typing import Dict, Any
 import argparse
 import logging
 
-from allennlp.common.params import Params
 from allennlp.data import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
+from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables
 
@@ -17,14 +17,10 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     description = '''Evaluate the specified model + dataset'''
     subparser = parser.add_parser(
             'evaluate', description=description, help='Evaluate the specified model + dataset')
-    subparser.add_argument('--config_file',
+    subparser.add_argument('--archive_file',
                            type=str,
                            required=True,
-                           help='path to the configuration file that trained the model')
-    subparser.add_argument('--weights_file',
-                           type=str,
-                           help=('path to the saved model weights '
-                                 '(defaults to best.th in the config-specified serialization directory'))
+                           help='path to an archived trained model')
     subparser.add_argument('--evaluation_data_file',
                            type=str,
                            required=True,
@@ -58,20 +54,18 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logging.getLogger('allennlp.nn.initializers').disabled = True
     logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
 
-    config = Params.from_file(args.config_file)
-    model = Model.load(config,
-                       weights_file=args.weights_file,
-                       cuda_device=args.cuda_device)
+    # Load from archive
+    archive = load_archive(args.archive_file, args.cuda_device)
+    config = archive.config
+    model = archive.model
     model.eval()
-
-    vocab = model._vocab  # pylint: disable=protected-access
 
     # Load the evaluation data
     dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
     evaluation_data_path = args.evaluation_data_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     dataset = dataset_reader.read(evaluation_data_path)
-    dataset.index_instances(vocab)
+    dataset.index_instances(model.vocab)
 
     iterator = DataIterator.from_params(config.pop("iterator"))
 

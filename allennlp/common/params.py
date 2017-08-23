@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 from collections import MutableMapping
+import copy
 
 import logging
 import pyhocon
@@ -149,6 +150,13 @@ class Params(MutableMapping):
         logger.info("CURRENTLY DEFINED PARAMETERS: ")
         log_recursively(self.params, self.history)
         return self.params
+
+    def duplicate(self) -> 'Params':
+        """
+        Uses ``copy.deepcopy()`` to create a duplicate (but fully distinct)
+        copy of these Params.
+        """
+        return Params(copy.deepcopy(self.params))
 
     def assert_empty(self, class_name: str):
         """

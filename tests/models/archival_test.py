@@ -7,7 +7,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import train_model, _CONFIG_FILE_KEY
-from allennlp.models.archival import load_model
+from allennlp.models.archival import load_archive
 
 
 class ArchivalTest(AllenNlpTestCase):
@@ -54,7 +54,8 @@ class ArchivalTest(AllenNlpTestCase):
         archive_path = os.path.join(self.TEST_DIR, "model.tar.gz")
 
         # load from the archive
-        model2 = load_model(archive_path)
+        archive = load_archive(archive_path)
+        model2 = archive.model
 
         # check that model weights are the same
         keys = set(model.state_dict().keys())
