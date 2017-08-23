@@ -129,11 +129,11 @@ class Trainer:
         num_training_batches = self._iterator.get_num_batches(self._train_dataset)
         if self._validation_dataset is not None:
             num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
+        validation_metric_per_epoch = []  # type: List[float]
         for epoch in range(epoch_counter, self._num_epochs):
             logger.info("Epoch %d/%d", epoch + 1, self._num_epochs)
             train_loss = 0.0
             val_loss = 0.0
-            validation_metric_per_epoch = []  # type: List[float]
             # Set the model to "train" mode.
             self._model.train()
             train_generator = self._iterator(self._train_dataset, num_epochs=1)
@@ -200,6 +200,7 @@ class Trainer:
                         logger.info("Ran out of patience.  Stopping training.")
                         break
                 validation_metric_per_epoch.append(this_epoch)
+
                 if self._validation_metric_decreases:
                     is_best_so_far = this_epoch == min(validation_metric_per_epoch)
                 else:
