@@ -2,7 +2,7 @@
 import numpy
 from numpy.testing import assert_almost_equal
 
-from allennlp.common import Params, constants
+from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SnliReader
 from allennlp.data.fields import TextField
@@ -17,7 +17,6 @@ class TestDecomposableAttention(AllenNlpTestCase):
     def setUp(self):
         super(TestDecomposableAttention, self).setUp()
 
-        constants.GLOVE_PATH = 'tests/fixtures/glove.6B.300d.sample.txt.gz'
         dataset = SnliReader().read('tests/fixtures/data/snli.jsonl')
         vocab = Vocabulary.from_dataset(dataset)
         self.vocab = vocab
@@ -25,7 +24,9 @@ class TestDecomposableAttention(AllenNlpTestCase):
         self.dataset = dataset
         self.token_indexers = {'tokens': SingleIdTokenIndexer()}
 
-        self.model = DecomposableAttention.from_params(self.vocab, Params({}))
+        params = Params.from_file('tests/fixtures/decomposable_attention/experiment.json')["model"]
+        params.pop("type")
+        self.model = DecomposableAttention.from_params(self.vocab, params)
         initializer = InitializerApplicator()
         initializer(self.model)
 
