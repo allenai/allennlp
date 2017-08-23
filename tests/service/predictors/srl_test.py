@@ -46,4 +46,11 @@ class TestSrlPredictor(TestCase):
             prediction_cpu = predictor_cpu.predict_json({"sentence": sentence})
             prediction_gpu = predictor_gpu.predict_json({"sentence": sentence})
 
-            assert prediction_cpu == pytest.approx(prediction_gpu)
+            assert set(prediction_cpu.keys()) == {"verbs"}
+            assert set(prediction_gpu.keys()) == {"verbs"}
+
+            for cverb, gverb in zip(prediction_cpu["verbs"], prediction_gpu["verbs"]):
+                assert cverb["index"] == gverb["index"]
+                assert cverb["verb"] == gverb["verb"]
+                assert cverb["tags"] == gverb["tags"]
+                assert cverb["class_probabilities"] == pytest.approx(gverb["class_probabilities"])
