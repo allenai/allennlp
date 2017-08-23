@@ -36,6 +36,9 @@ class Model(torch.nn.Module, Registrable):
     of early stopping and best-model serialization based on a validation metric in
     :class:`~allennlp.training.Trainer`.
     """
+    def __init__(self, vocab: Vocabulary) -> None:
+        super().__init__()
+        self.vocab = vocab
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """

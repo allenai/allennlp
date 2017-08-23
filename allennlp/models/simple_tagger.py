@@ -34,9 +34,8 @@ class SimpleTagger(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder) -> None:
-        super(SimpleTagger, self).__init__()
+        super(SimpleTagger, self).__init__(vocab)
 
-        self.vocab = vocab
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
         self.stacked_encoder = stacked_encoder

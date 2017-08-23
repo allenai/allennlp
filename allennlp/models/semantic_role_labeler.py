@@ -45,9 +45,8 @@ class SemanticRoleLabeler(Model):
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator) -> None:
-        super(SemanticRoleLabeler, self).__init__()
+        super(SemanticRoleLabeler, self).__init__(vocab)
 
-        self.vocab = vocab
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("tags")
 

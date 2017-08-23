@@ -2,14 +2,15 @@
 import json
 import os
 
-from allennlp.service.server_sanic import make_app
-from allennlp.service.predictors import load_predictors
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.models.archival import load_archive
+from allennlp.service.predictors import Predictor
+from allennlp.service.server_sanic import make_app
 
-TEST_CONFIG_FILES = {
-        'machine-comprehension': 'tests/fixtures/bidaf/experiment.json',
-        'semantic-role-labeling': 'tests/fixtures/srl/experiment.json',
-        'textual-entailment': 'tests/fixtures/decomposable_attention/experiment.json'
+TEST_ARCHIVE_FILES = {
+        'machine-comprehension': 'tests/fixtures/bidaf/serialization/model.tar.gz',
+        'semantic-role-labeling': 'tests/fixtures/srl/serialization/model.tar.gz',
+        'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
 }
 
 class TestApp(AllenNlpTestCase):
@@ -20,7 +21,11 @@ class TestApp(AllenNlpTestCase):
         super(TestApp, self).setUp()
         if self.client is None:
             app = make_app()
-            app.predictors = load_predictors(TEST_CONFIG_FILES)
+            app.predictors = {
+                    name: Predictor.from_archive(load_archive(archive_file))
+                    for name, archive_file in TEST_ARCHIVE_FILES.items()
+            }
+
             app.testing = True
             self.client = app.test_client
 

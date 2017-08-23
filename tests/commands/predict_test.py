@@ -16,16 +16,16 @@ class TestPredict(TestCase):
         subparsers = parser.add_subparsers(title='Commands', metavar='')
         add_subparser(subparsers)
 
-        raw_args = ["predict",     # command
-                    "/path/to/model", # model
-                    "/path/to/data",   # input_file
+        raw_args = ["predict",          # command
+                    "/path/to/archive", # archive
+                    "/path/to/data",    # input_file
                     "--output-file", "outfile",
                     "--print"]
 
         args = parser.parse_args(raw_args)
 
         assert args.func == predict
-        assert args.config_file == "/path/to/model"
+        assert args.archive_file == "/path/to/archive"
         assert args.input_file == "/path/to/data"
         assert args.output_file == "outfile"
         assert args.print
@@ -36,11 +36,13 @@ class TestPredict(TestCase):
         outfile = os.path.join(tempdir, "outputs.txt")
 
         with open(infile, 'w') as f:
-            f.write("""{"sentence": "this is a great sentence"}\n""")
-            f.write("""{"sentence": "this is a less great sentence"}\n""")
+            f.write("""{"passage": "the seahawks won the super bowl in 2016", """
+                    """ "question": "when did the seahawks win the super bowl?"}\n""")
+            f.write("""{"passage": "the mariners won the super bowl in 2037", """
+                    """ "question": "when did the mariners win the super bowl?"}\n""")
 
         args = ["predict",     # command
-                "tests/fixtures/srl/experiment.json",
+                "tests/fixtures/bidaf/serialization/model.tar.gz",
                 infile,     # input_file
                 "--output-file", outfile,
                 "--print"]
@@ -50,14 +52,15 @@ class TestPredict(TestCase):
         assert os.path.exists(outfile)
 
         with open(outfile, 'r') as f:
-            lines = [json.loads(line) for line in f]
+            results = [json.loads(line) for line in f]
 
-        assert len(lines) == 2
-
+        assert len(results) == 2
+        for result in results:
+            assert set(result.keys()) == {"span_start_probs", "span_end_probs", "best_span"}
 
     def test_fails_without_required_args(self):
-        args = ["predict",          # command
-                "/path/to/model",   # model, but no input file
+        args = ["predict",           # command
+                "/path/to/archive",  # archive, but no input file
                ]
 
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name

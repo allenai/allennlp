@@ -1,8 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 from unittest import TestCase
 
-from allennlp.common import Params
-from allennlp.service.predictors.decomposable_attention import DecomposableAttentionPredictor
+from allennlp.models.archival import load_archive
+from allennlp.service.predictors import Predictor
 
 
 class TestDecomposableAttentionPredictor(TestCase):
@@ -12,9 +12,8 @@ class TestDecomposableAttentionPredictor(TestCase):
                 "hypothesis": "One time I didn't write any unit tests for my code."
         }
 
-        config = Params.from_file('tests/fixtures/decomposable_attention/experiment.json')
-        model = DecomposableAttentionPredictor.from_config(config)
-
-        result = model.predict_json(inputs)
+        archive = load_archive('tests/fixtures/decomposable_attention/serialization/model.tar.gz')
+        predictor = Predictor.from_archive(archive)
+        result = predictor.predict_json(inputs)
 
         assert "label_probs" in result
