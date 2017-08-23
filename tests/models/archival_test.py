@@ -68,7 +68,7 @@ class ArchivalTest(AllenNlpTestCase):
 
         # check that vocabularies are the same
         vocab = model.vocab
-        vocab2 = archive.vocab
+        vocab2 = model2.vocab
 
         assert vocab._token_to_index == vocab2._token_to_index  # pylint: disable=protected-access
         assert vocab._index_to_token == vocab2._index_to_token  # pylint: disable=protected-access

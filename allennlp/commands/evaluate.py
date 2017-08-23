@@ -57,7 +57,6 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     # Load from archive
     archive = load_archive(args.archive_file, args.cuda_device)
     config = archive.config
-    vocab = archive.vocab
     model = archive.model
     model.eval()
 
@@ -66,7 +65,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     evaluation_data_path = args.evaluation_data_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     dataset = dataset_reader.read(evaluation_data_path)
-    dataset.index_instances(vocab)
+    dataset.index_instances(model.vocab)
 
     iterator = DataIterator.from_params(config.pop("iterator"))
 

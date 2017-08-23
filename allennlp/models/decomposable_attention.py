@@ -65,9 +65,8 @@ class DecomposableAttention(Model):
                  aggregate_feedforward: FeedForward,
                  premise_encoder: Optional[Seq2SeqEncoder] = None,
                  hypothesis_encoder: Optional[Seq2SeqEncoder] = None) -> None:
-        super(DecomposableAttention, self).__init__()
+        super(DecomposableAttention, self).__init__(vocab)
 
-        self._vocab = vocab
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
         self._matrix_attention = MatrixAttention(similarity_function)
@@ -192,7 +191,7 @@ class DecomposableAttention(Model):
             A tensor of shape ``(num_labels,)`` representing probabilities of the entailment label.
         """
         instance = Instance({"premise": premise, "hypothesis": hypothesis})
-        instance.index_fields(self._vocab)
+        instance.index_fields(self.vocab)
         model_input = arrays_to_variables(instance.as_array_dict(),
                                           add_batch_dimension=True,
                                           for_training=False)

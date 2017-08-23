@@ -6,13 +6,12 @@ import tarfile
 import shutil
 
 from allennlp.common import Params
-from allennlp.data import Vocabulary
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-# An archive comprises a Model, its Vocabulary, and its experimental config
-Archive = NamedTuple("Archive", [("model", Model), ("vocab", Vocabulary), ("config", Params)])
+# An archive comprises a Model and its experimental config
+Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
 
 # We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
 # These are the *known names* under which we archive the config and weights.
@@ -69,9 +68,6 @@ def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
     # Load config
     config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME))
 
-    # Load vocabulary
-    vocab = Vocabulary.from_files(os.path.join(tempdir, "vocabulary"))
-
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),
                        weights_file=os.path.join(tempdir, _WEIGHTS_NAME),
@@ -81,4 +77,4 @@ def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
     # Clean up temp dir
     shutil.rmtree(tempdir)
 
-    return Archive(model=model, config=config, vocab=vocab)
+    return Archive(model=model, config=config)

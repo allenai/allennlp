@@ -66,9 +66,8 @@ class BidirectionalAttentionFlow(Model):
                  span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
                  dropout: float = 0.2) -> None:
-        super(BidirectionalAttentionFlow, self).__init__()
+        super(BidirectionalAttentionFlow, self).__init__(vocab)
 
-        self._vocab = vocab
         self._text_field_embedder = text_field_embedder
         self._highway_layer = TimeDistributed(Highway(text_field_embedder.get_output_dim(),
                                                       num_highway_layers))
@@ -258,7 +257,7 @@ class BidirectionalAttentionFlow(Model):
         best_span : (int, int)
         """
         instance = Instance({'question': question, 'passage': passage})
-        instance.index_fields(self._vocab)
+        instance.index_fields(self.vocab)
         model_input = util.arrays_to_variables(instance.as_array_dict(),
                                                add_batch_dimension=True,
                                                for_training=False)
