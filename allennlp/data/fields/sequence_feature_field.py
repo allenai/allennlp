@@ -14,20 +14,19 @@ class SequenceFeatureField(Field[numpy.ndarray]):
     """
     A ``SequenceFeatureField`` is an optional index into a :class:`SequenceField`, as might be used for
     representing a correct answer option in a list, or a span begin and span end position in a
-    passage, for example.  Because it's an index into a :class:`SequenceField`, we take one of
-    those as input and use it to compute padding lengths, so we create an optional one-hot
-    representation of the correct length. As the index is optional, this Field can be used as
-    a binary indicator for inputs which are optional.
+    passage, for example.  Because the features depend on the presence of a :class:`SequenceField`,
+    we take one as input and use it to specify the padding lengths, so the features are padded/truncated
+    to the same length.
 
     A ``SequenceFeatureField`` will get converted into a 1D :class:`numpy.array`, where the
     size of the vector is the number of elements in the dependent ``SequenceField``.
 
     Parameters
     ----------
-    feature_indices : ``Optional[int]``
+    feature_indices : ``List[int]``
         The per token indices to be represented as features.
     sequence_field : ``SequenceField``
-        A field containing the sequence that this ``SequenceFeatureField`` is a pointer into.
+        A field containing the sequence that this ``SequenceFeatureField`` has features for.
     """
     def __init__(self, feature_indices: List[int], sequence_field: SequenceField) -> None:
         self._feature_indices = feature_indices

@@ -50,7 +50,7 @@ class TestSequenceLabelField(AllenNlpTestCase):
         assert sequence_label_field._num_tags == 3
         # pylint: enable=protected-access
 
-    def test_pad_produces_one_hot_targets(self):
+    def test_pad_produces_integer_targets(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("B", namespace='*tags')
         vocab.add_token_to_namespace("I", namespace='*tags')

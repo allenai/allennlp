@@ -64,9 +64,8 @@ class SimpleTagger(Model):
             which knows how to combine different word representations into a single vector per
             token in your input.
         tags : torch.LongTensor, optional (default = None)
-            A torch tensor representing the sequence of gold labels.  These can either be integer
-            indexes or one hot arrays of labels, so of shape ``(batch_size, num_tokens)`` or of
-            shape ``(batch_size, num_tokens, num_tags)``.
+            A torch tensor representing the sequence of integer gold class labels of shape
+            ``(batch_size, num_tokens)``.
 
         Returns
         -------
@@ -94,9 +93,6 @@ class SimpleTagger(Model):
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
         if tags is not None:
-            # Negative log likelihood criterion takes integer labels, not one hot.
-            if tags.dim() == 3:
-                _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             for metric in self.metrics.values():
                 metric(logits, tags, mask.float())

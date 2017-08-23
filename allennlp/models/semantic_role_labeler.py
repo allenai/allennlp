@@ -84,13 +84,12 @@ class SemanticRoleLabeler(Model):
             which knows how to combine different word representations into a single vector per
             token in your input.
         verb_indicator: torch.LongTensor, required.
-            A one-hot/all-zeros ``SequenceFeatureField`` representation of the position of the verb
+            An integer ``SequenceFeatureField`` representation of the position of the verb
             in the sentence. This should have shape (batch_size, num_tokens) and importantly, can be
             all zeros, in the case that the sentence has no verbal predicate.
         tags : torch.LongTensor, optional (default = None)
-            A torch tensor representing the sequence of gold labels.  These can either be integer
-            indexes or one hot arrays of labels, so of shape ``(batch_size, num_tokens)`` or of
-            shape ``(batch_size, num_tokens, num_tags)``.
+            A torch tensor representing the sequence of integer gold class labels
+            of shape ``(batch_size, num_tokens)``
 
         Returns
         -------

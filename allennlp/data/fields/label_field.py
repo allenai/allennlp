@@ -16,15 +16,14 @@ class LabelField(Field[numpy.ndarray]):
     text or 0-indexed integers.  If the labels need indexing, we will use a :class:`Vocabulary` to
     convert the string labels into integers.
 
-    This field will get converted into a one-hot vector, where the size of the vector is the number
-    of unique labels in your data.
+    This field will get converted into an integer index representing the class label.
 
     Parameters
     ----------
     label : ``Union[str, int]``
     label_namespace : ``str``, optional (default="labels")
         The namespace to use for converting label strings into integers.  We map label strings to
-        integers for you (e.g., "entailment" and "contradiction" get converted to one-hot vectors),
+        integers for you (e.g., "entailment" and "contradiction" get converted 0, 1, ...),
         and this namespace tells the ``Vocabulary`` object which mapping from strings to integers
         to use (so "entailment" as a label doesn't get the same integer id as "entailment" as a
         word).  If you have multiple different label fields in your data, you should make sure you
