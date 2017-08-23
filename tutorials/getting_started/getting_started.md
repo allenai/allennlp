@@ -1,4 +1,8 @@
-# Getting Started
+---
+layout: tutorial
+title: Getting Started
+id: getting-started
+---
 
 Welcome to AllenNLP!
 
@@ -53,7 +57,7 @@ optional arguments:
 
 Commands:
 
-    bulk      Run a model in bulk.
+    predict   Use a trained model to make predictions.
     train     Train a model
     serve     Run the web service and demo.
     evaluate  Evaluate the specified model + dataset

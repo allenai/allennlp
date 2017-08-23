@@ -20,9 +20,7 @@
     "text_field_embedder": {
             "tokens": {
                     "type": "embedding",
-                    "embedding_dim": 100
-                    //"pretrained_file": "/Users/joelg/data/glove.6B.100d.txt.gz",
-                    //"trainable": false
+                    "embedding_dim": 50
             },
             "token_characters": {
               "type": "character_encoding",
@@ -32,7 +30,7 @@
               "encoder": {
                 "type": "cnn",
                 "embedding_dim": 8,
-                "num_filters": 100,
+                "num_filters": 50,
                 "ngram_filter_sizes": [5]
               },
               "dropout": 0.2
@@ -40,17 +38,17 @@
     },
     "stacked_encoder": {
             "type": "lstm",
-            "input_size": 200,
-            "hidden_size": 200,
+            "input_size": 100,
+            "hidden_size": 100,
             "num_layers": 2,
             "dropout": 0.5,
             "bidirectional": true
     }
   },
-  "iterator": {"type": "basic", "batch_size": 128},
+  "iterator": {"type": "basic", "batch_size": 32},
   "optimizer": "adam",
   "trainer": {
-    "num_epochs": 50,
+    "num_epochs": 35,
     "serialization_prefix": "/tmp/tutorials/getting_started",
     "cuda_device": -1
   }
