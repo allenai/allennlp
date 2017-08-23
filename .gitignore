@@ -1,4 +1,5 @@
 *.pyc
+.beaker/
 .cache/
 .coverage
 doc/_build/

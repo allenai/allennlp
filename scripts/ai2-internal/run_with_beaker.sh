@@ -11,10 +11,10 @@ PARAM_FILE=$1
 EXPERIMENT_NAME=$2
 
 COMMIT=$(git rev-parse HEAD)
-IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$COMMIT
+IMAGE=$ECR_REPOSITORY/allennlp:$COMMIT-$RANDOM
 
 if [ ! -n "$PARAM_FILE" ] ; then
-  echo "USAGE: ./run_on_aws.sh PARAM_FILE [EXPERIMENT_NAME]"
+  echo "USAGE: ./scripts/ai2-internal/run_on_beaker.sh PARAM_FILE [EXPERIMENT_NAME]"
   exit 1
 fi
 
@@ -31,7 +31,11 @@ set -e
 # package with a version more recent than 1.11.91.
 eval $(aws --region=us-west-2 ecr get-login --no-include-email)
 
-docker build -f Dockerfile.gpu.train -t $IMAGE . --build-arg PARAM_FILE=$PARAM_FILE
+mkdir -p .beaker/
+cp $PARAM_FILE .beaker/model_params.json
+docker build -t $IMAGE .
 docker push $IMAGE
 
-beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_NAME_ARG $GPU_ARG $DETACH_ARG $IMAGE
+CMD="allennlp/run train .beaker/model_params.json"
+
+beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_NAME_ARG $GPU_ARG $DETACH_ARG $IMAGE $CMD

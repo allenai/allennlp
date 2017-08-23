@@ -1,4 +1,5 @@
-FROM nvidia/cuda:8.0-cudnn5-devel
+ARG from=nvidia/cuda:8.0-cudnn5-devel
+FROM $from
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
@@ -40,13 +41,12 @@ RUN conda install python=3.5
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
+COPY requirements_test.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
-RUN scripts/install_requirements.sh
+RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
 RUN pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post1-cp35-cp35m-manylinux1_x86_64.whl
 
-COPY allennlp/ allennlp/
+COPY . .
 
-ARG PARAM_FILE
-COPY $PARAM_FILE model_params.json
-
-CMD allennlp/run train model_params.json
+# Run tests to verify the Docker build
+RUN PYTHONDONTWRITEBYTECODE=1 pytest
