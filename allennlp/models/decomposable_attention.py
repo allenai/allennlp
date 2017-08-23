@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 import torch
 
-from allennlp.common import Params, constants
+from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import TextField
@@ -65,9 +65,8 @@ class DecomposableAttention(Model):
                  aggregate_feedforward: FeedForward,
                  premise_encoder: Optional[Seq2SeqEncoder] = None,
                  hypothesis_encoder: Optional[Seq2SeqEncoder] = None) -> None:
-        super(DecomposableAttention, self).__init__()
+        super(DecomposableAttention, self).__init__(vocab)
 
-        self._vocab = vocab
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
         self._matrix_attention = MatrixAttention(similarity_function)
@@ -190,7 +189,7 @@ class DecomposableAttention(Model):
             A tensor of shape ``(num_labels,)`` representing probabilities of the entailment label.
         """
         instance = Instance({"premise": premise, "hypothesis": hypothesis})
-        instance.index_fields(self._vocab)
+        instance.index_fields(self.vocab)
         model_input = arrays_to_variables(instance.as_array_dict(),
                                           add_batch_dimension=True,
                                           for_training=False)
@@ -202,24 +201,7 @@ class DecomposableAttention(Model):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'DecomposableAttention':
-        """
-        With an empty ``params`` argument, this will instantiate a decomposable attention model
-        with the same configuration as published in the original paper, as long as you've set
-        ``allennlp.common.constants.GLOVE_PATH`` to the location of your gzipped 300-dimensional
-        glove vectors.
-
-        If you want to change parameters, the keys in the ``params`` object must match the
-        constructor arguments above.
-        """
-        default_embedder_params = {
-                'tokens': {
-                        'type': 'embedding',
-                        'projection_dim': 200,
-                        'pretrained_file': constants.GLOVE_PATH,
-                        'trainable': False
-                        }
-                }
-        embedder_params = params.pop("text_field_embedder", default_embedder_params)
+        embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
 
         premise_encoder_params = params.pop("premise_encoder", None)
@@ -234,36 +216,10 @@ class DecomposableAttention(Model):
         else:
             hypothesis_encoder = None
 
-        default_attend_params = {
-                'input_dim': 200,
-                'num_layers': 2,
-                'hidden_dims': 200,
-                'activations': 'relu'
-                }
-        attend_params = params.pop('attend_feedforward', default_attend_params)
-        attend_feedforward = FeedForward.from_params(attend_params)
-
-        default_similarity_function_params = {'type': 'dot_product'}
-        similarity_function_params = params.pop("similarity_function", default_similarity_function_params)
-        similarity_function = SimilarityFunction.from_params(similarity_function_params)
-
-        default_compare_params = {
-                'input_dim': 400,
-                'num_layers': 2,
-                'hidden_dims': 200,
-                'activations': 'relu'
-                }
-        compare_params = params.pop('compare_feedforward', default_compare_params)
-        compare_feedforward = FeedForward.from_params(compare_params)
-
-        default_aggregate_params = {
-                'input_dim': 400,
-                'num_layers': 2,
-                'hidden_dims': [200, 3],
-                'activations': ['relu', 'linear']
-                }
-        aggregate_params = params.pop('aggregate_feedforward', default_aggregate_params)
-        aggregate_feedforward = FeedForward.from_params(aggregate_params)
+        attend_feedforward = FeedForward.from_params(params.pop('attend_feedforward'))
+        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
+        compare_feedforward = FeedForward.from_params(params.pop('compare_feedforward'))
+        aggregate_feedforward = FeedForward.from_params(params.pop('aggregate_feedforward'))
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,

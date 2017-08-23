@@ -1,20 +1,24 @@
-from allennlp.service.predictors import load_predictors
+from allennlp.models.archival import load_archive
+from allennlp.service.predictors import Predictor
 
 from sanic import Sanic, response, request
 from sanic.exceptions import ServerError
 
-DEFAULT_CONFIG_FILES = {
-        'machine-comprehension': 'tests/fixtures/bidaf/experiment.json',
-        'semantic-role-labeling': 'tests/fixtures/srl/experiment.json',
-        'textual-entailment': 'tests/fixtures/decomposable_attention/experiment.json'
+DEFAULT_ARCHIVE_FILES = {
+        'machine-comprehension': 'tests/fixtures/bidaf/serialization/model.tar.gz',
+        'semantic-role-labeling': 'tests/fixtures/srl/serialization/model.tar.gz',
+        'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
 }
 
 def run(port: int, workers: int = 1) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
     app = make_app()
-    # TODO(joelgrus): make this configurable and don't use the defaults
-    app.predictors = load_predictors(DEFAULT_CONFIG_FILES)
+    # TODO(joelgrus): make this configurable
+    app.predictors = {
+            name: Predictor.from_archive(load_archive(archive_file))
+            for name, archive_file in DEFAULT_ARCHIVE_FILES.items()
+    }
     app.run(port=port, host="0.0.0.0", workers=workers)
 
 def make_app() -> Sanic:
