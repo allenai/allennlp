@@ -32,7 +32,7 @@ class Trainer:
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 log_one_line_per_batch: bool = False) -> None:
+                 no_tqdm: bool = False) -> None:
         """
         Parameters
         ----------
@@ -71,12 +71,12 @@ class Trainer:
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
-        log_one_line_per_batch : ``bool``, optional (default=``False``)
+        no_tqdm : ``bool``, optional (default=False)
             We use ``tqdm`` for logging, which will print a nice progress bar that updates in place
             after every batch.  This is nice if you're running training on a local shell, but can
             cause problems with log files from, e.g., a docker image running on kubernetes.  If
-            ``log_one_line_per_batch`` is ``True``, we will force the per-batch output from
-            ``tqdm`` to include a newline, which makes the logs work better in these situations.
+            ``no_tqdm`` is ``True``, we will not use tqdm, and instead log batch statistics using
+            ``logger.info``.
         """
         self._model = model
         self._iterator = iterator
@@ -97,10 +97,7 @@ class Trainer:
                                      "or decrease by pre-pending the metric name with a +/-.")
         self._validation_metric = validation_metric[1:]
         self._validation_metric_decreases = increase_or_decrease == "-"
-        if log_one_line_per_batch:
-            self._tqdm_newline = '\n'
-        else:
-            self._tqdm_newline = ''
+        self._use_tqdm = not no_tqdm
 
         if self._cuda_device >= 0:
             self._model = self._model.cuda(self._cuda_device)
@@ -138,9 +135,11 @@ class Trainer:
             self._model.train()
             train_generator = self._iterator(self._train_dataset, num_epochs=1)
 
-            train_generator_tqdm = tqdm.tqdm(train_generator, total=num_training_batches)
+            if self._use_tqdm:
+                train_generator = tqdm.tqdm(train_generator, total=num_training_batches)
             batch_num = 0
-            for batch in train_generator_tqdm:
+            logger.info("Training")
+            for batch in train_generator:
                 batch_num += 1
                 tensor_batch = arrays_to_variables(batch, self._cuda_device)
                 self._optimizer.zero_grad()
@@ -160,17 +159,23 @@ class Trainer:
                 self._optimizer.step()
                 metrics = self._model.get_metrics()
                 metrics["loss"] = float(train_loss / batch_num)
-                train_generator_tqdm.set_description(self._description_from_metrics(metrics))
+                description = self._description_from_metrics(metrics)
+                if self._use_tqdm:
+                    train_generator.set_description(description)
+                else:
+                    logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
             metrics = self._model.get_metrics(reset=True)
             metrics["loss"] = float(train_loss / batch_num)
 
             if self._validation_dataset is not None:
+                logger.info("Validating")
                 # Switch to evaluation mode.
                 self._model.eval()
                 val_generator = self._iterator(self._validation_dataset, num_epochs=1)
-                val_generator_tqdm = tqdm.tqdm(val_generator, total=num_validation_batches)
+                if self._use_tqdm:
+                    val_generator = tqdm.tqdm(val_generator, total=num_validation_batches)
                 batch_num = 0
-                for batch in val_generator_tqdm:
+                for batch in val_generator:
                     batch_num += 1
                     tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=False)
                     val_output_dict = self._model.forward(**tensor_batch)
@@ -178,7 +183,11 @@ class Trainer:
                     val_loss += loss.data.cpu().numpy()
                     val_metrics = self._model.get_metrics()
                     val_metrics["loss"] = float(val_loss / batch_num)
-                    val_generator_tqdm.set_description(self._description_from_metrics(val_metrics))
+                    description = self._description_from_metrics(val_metrics)
+                    if self._use_tqdm:
+                        val_generator.set_description(description)
+                    else:
+                        logger.info("Batch %d/%d: %s", batch_num, num_validation_batches, description)
                 val_metrics = self._model.get_metrics(reset=True)
                 val_metrics["loss"] = float(val_loss / batch_num)
                 message_template = "Training %s : %3f    Validation %s : %3f "
@@ -217,8 +226,7 @@ class Trainer:
                     self._save_checkpoint(epoch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
-        return self._tqdm_newline + ', '.join(["%s: %.2f" % (name, value)
-                                               for name, value in metrics.items()]) + " ||"
+        return ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
 
     def _save_checkpoint(self,
                          epoch: int,
@@ -295,7 +303,7 @@ class Trainer:
         cuda_device = params.pop("cuda_device", -1)
         grad_norm = params.pop("grad_norm", None)
         grad_clipping = params.pop("grad_clipping", None)
-        log_one_line_per_batch = params.pop("log_one_line_per_batch", False)
+        no_tqdm = params.pop("no_tqdm", False)
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
                        train_dataset, validation_dataset,
@@ -306,4 +314,4 @@ class Trainer:
                        cuda_device=cuda_device,
                        grad_norm=grad_norm,
                        grad_clipping=grad_clipping,
-                       log_one_line_per_batch=log_one_line_per_batch)
+                       no_tqdm=no_tqdm)
