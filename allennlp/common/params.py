@@ -7,6 +7,7 @@ import pyhocon
 
 from overrides import overrides
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -197,6 +198,9 @@ class Params(MutableMapping):
         """
         Load a `Params` object from a configuration file.
         """
+        # redirect to cache, if necessary
+        params_file = cached_path(params_file)
+
         param_dict = pyhocon.ConfigFactory.parse_file(params_file)
         return Params(param_dict)
 

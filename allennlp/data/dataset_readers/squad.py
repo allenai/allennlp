@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -103,6 +104,8 @@ class SquadReader(DatasetReader):
         super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
 
     def read(self, file_path: str):
+        # if `file_path` is a URL, redirect to the cache
+        file_path = cached_path(file_path)
 
         logger.info("Reading file at %s", file_path)
         with open(file_path) as dataset_file:
