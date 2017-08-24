@@ -6,6 +6,7 @@ import tarfile
 import shutil
 
 from allennlp.common import Params
+from allennlp.common.file_utils import cached_path
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -59,6 +60,9 @@ def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
     """
+    # redirect to the cache, if necessary
+    archive_file = cached_path(archive_file)
+
     # Extract archive to temp dir
     tempdir = tempfile.mkdtemp()
     logger.info("extracting archive file %s to temp dir %s", archive_file, tempdir)
