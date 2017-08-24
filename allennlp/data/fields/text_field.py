@@ -4,7 +4,7 @@ standard word vectors, or pass through an LSTM.
 """
 from typing import Dict, List, Optional  # pylint: disable=unused-import
 
-# from overrides import overrides
+from overrides import overrides
 import numpy
 
 from allennlp.data.fields.sequence_field import SequenceField
@@ -30,25 +30,25 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
     def __init__(self, tokens: List[str], token_indexers: Dict[str, TokenIndexer]) -> None:
-        self._tokens = tokens
+        self.tokens = tokens
         self._token_indexers = token_indexers
         self._indexed_tokens = None  # type: Optional[Dict[str, TokenList]]
 
-    # @overrides
+    @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         for indexer in self._token_indexers.values():
-            for token in self._tokens:
+            for token in self.tokens:
                 indexer.count_vocab_items(token, counter)
 
-    # @overrides
+    @overrides
     def index(self, vocab: Vocabulary):
         token_arrays = {}
         for indexer_name, indexer in self._token_indexers.items():
-            arrays = [indexer.token_to_indices(token, vocab) for token in self._tokens]
+            arrays = [indexer.token_to_indices(token, vocab) for token in self.tokens]
             token_arrays[indexer_name] = arrays
         self._indexed_tokens = token_arrays
 
-    # @overrides
+    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         lengths = []
         if self._indexed_tokens is None:
@@ -77,7 +77,7 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
 
     # @overrides
     def sequence_length(self) -> int:
-        return len(self._tokens)
+        return len(self.tokens)
 
     # @overrides
     def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.ndarray]:
@@ -99,6 +99,3 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
         # for padding reasons in ListField.
         text_field._indexed_tokens = {name: [] for name in self._token_indexers.keys()}
         return text_field
-
-    def tokens(self):
-        return self._tokens
