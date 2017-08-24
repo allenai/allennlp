@@ -6,6 +6,7 @@ import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -48,6 +49,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
     @overrides
     def read(self, file_path):
+        # if `file_path` is a URL, redirect to the cache
+        file_path = cached_path(file_path)
+
         with open(file_path, "r") as data_file:
 
             instances = []

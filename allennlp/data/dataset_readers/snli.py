@@ -7,6 +7,7 @@ import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -40,6 +41,9 @@ class SnliReader(DatasetReader):
 
     @overrides
     def read(self, file_path: str):
+        # if `file_path` is a URL, redirect to the cache
+        file_path = cached_path(file_path)
+
         instances = []
         with open(file_path, 'r') as snli_file:
             logger.info("Reading SNLI instances from jsonl dataset at: %s", file_path)
