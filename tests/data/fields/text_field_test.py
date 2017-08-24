@@ -135,7 +135,7 @@ class TestTextField(AllenNlpTestCase):
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {"num_tokens": 5, "num_token_characters": 8}
 
-    def test_pad_handles_words(self):
+    def test_as_array_handles_words(self):
         field = TextField(["This", "is", "a", "sentence", "."],
                           token_indexers={"words": SingleIdTokenIndexer("words")})
         field.index(self.vocab)
@@ -143,7 +143,7 @@ class TestTextField(AllenNlpTestCase):
         array_dict = field.as_array(padding_lengths)
         numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 1, 1, 2, 1]))
 
-    def test_pad_handles_longer_lengths(self):
+    def test_as_array_handles_longer_lengths(self):
         field = TextField(["This", "is", "a", "sentence", "."],
                           token_indexers={"words": SingleIdTokenIndexer("words")})
         field.index(self.vocab)
@@ -152,7 +152,7 @@ class TestTextField(AllenNlpTestCase):
         array_dict = field.as_array(padding_lengths)
         numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 1, 1, 2, 1, 0, 0, 0, 0, 0]))
 
-    def test_pad_handles_characters(self):
+    def test_as_array_handles_characters(self):
         field = TextField(["This", "is", "a", "sentence", "."],
                           token_indexers={"characters": TokenCharactersIndexer("characters")})
         field.index(self.vocab)
@@ -165,7 +165,7 @@ class TestTextField(AllenNlpTestCase):
                                                 [1, 0, 0, 0, 0, 0, 0, 0]])
         numpy.testing.assert_array_almost_equal(array_dict["characters"], expected_character_array)
 
-    def test_pad_handles_words_and_characters_with_longer_lengths(self):
+    def test_as_array_handles_words_and_characters_with_longer_lengths(self):
         field = TextField(["a", "sentence", "."],
                           token_indexers={"words": SingleIdTokenIndexer("words"),
                                           "characters": TokenCharactersIndexer("characters")})

@@ -22,7 +22,7 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         indexer.count_vocab_items("hello", counter)
         assert counter["characters"] == {"h": 2, "e": 2, "l": 4, "o": 2}
 
-    def test_pad_token_sequence(self):
+    def test_as_array_produces_token_sequence(self):
         indexer = TokenCharactersIndexer("characters")
         padded_tokens = indexer.pad_token_sequence([[1, 2, 3, 4, 5], [1, 2, 3], [1]],
                                                    desired_num_tokens=4,

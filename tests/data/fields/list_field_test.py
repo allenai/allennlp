@@ -68,7 +68,7 @@ class TestListField(AllenNlpTestCase):
         numpy.testing.assert_array_almost_equal(array_dict["words"][3], numpy.array([0, 0, 0, 0, 0, 0, 0]))
         numpy.testing.assert_array_almost_equal(array_dict["words"][4], numpy.array([0, 0, 0, 0, 0, 0, 0]))
 
-    def test_pad_can_handle_multiple_token_indexers(self):
+    def test_as_array_can_handle_multiple_token_indexers(self):
         field1 = TextField(["this", "is", "a", "sentence"], self.words_and_characters_indexer)
         field2 = TextField(["this", "is", "a", "different", "sentence"], self.words_and_characters_indexer)
         field3 = TextField(["this", "is", "another", "sentence"], self.words_and_characters_indexer)

@@ -47,7 +47,7 @@ class SimpleTaggerTest(AllenNlpTestCase):
     def test_tag_returns_distributions_per_token(self):
         text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})
         output = self.model.tag(text)
-        possible_tags = self.vocab.get_index_to_token_vocabulary("tags").values()
+        possible_tags = self.vocab.get_index_to_token_vocabulary("labels").values()
         for tag in output["tags"]:
             assert tag in possible_tags
         # Predictions are a distribution.
