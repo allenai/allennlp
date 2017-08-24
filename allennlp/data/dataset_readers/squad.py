@@ -143,6 +143,9 @@ class SquadReader(DatasetReader):
                                                                     tokenized_paragraph,
                                                                     (char_span_start, char_span_end),
                                                                     self._tokenizer)
+                    print("Passage tokens:", tokenized_paragraph)
+                    print("Length:", len(tokenized_paragraph))
+                    print("Span:", span_start, span_end)
 
                     # Because the paragraph is shared across multiple questions, we do a deepcopy
                     # here to avoid any weird issues with shared state between instances (e.g.,

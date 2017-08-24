@@ -1,31 +1,32 @@
-from collections import OrderedDict
-from typing import List, Dict, Type  # pylint: disable=unused-import
+from typing import List
 
 from overrides import overrides
 
-from allennlp.common import Params
+from allennlp.common import Params, Registrable
 
-# pylint: disable=invalid-name
-word_splitters = OrderedDict()  # type: Dict[str, Type[WordSplitter]]
-# pylint: enable=invalid-name
 
-class WordSplitter:
+class WordSplitter(Registrable):
     """
     A ``WordSplitter`` splits strings into words.  This is typically called a "tokenizer" in NLP,
     because splitting strings into characters is trivial, but we use ``Tokenizer`` to refer to the
     higher-level object that splits strings into tokens (which could just be character tokens).
     So, we're using "word splitter" here for this.
     """
+    default_implementation = 'spacy'
+
     def split_words(self, sentence: str) -> List[str]:
         raise NotImplementedError
 
-    @staticmethod
-    def from_params(params: Params) -> 'WordSplitter':
-        choice = params.pop_choice('type', list(word_splitters.keys()), default_to_first_choice=True)
+    @classmethod
+    def from_params(cls, params: Params) -> 'WordSplitter':
+        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
+        # None of the word splitters take parameters, so we just make sure the parameters are empty
+        # here.
         params.assert_empty('WordSplitter')
-        return word_splitters[choice]()
+        return cls.by_name(choice)()
 
 
+@WordSplitter.register('simple')
 class SimpleWordSplitter(WordSplitter):
     """
     Does really simple tokenization.  NLTK was too slow, so we wrote our own simple tokenizer
@@ -87,11 +88,13 @@ class SimpleWordSplitter(WordSplitter):
         return token and token.lower() not in self.special_cases
 
 
-class SpaceWordSplitter(WordSplitter):
+@WordSplitter.register('just_spaces')
+class JustSpacesWordSplitter(WordSplitter):
     """
     A ``WordSplitter`` that assumes you've already done your own tokenization somehow and have
     separated the tokens by spaces.  We just split the input string on whitespace and return the
-    resulting list.
+    resulting list.  We use a somewhat odd name here to avoid coming too close to the more
+    commonly used ``SpacyWordSplitter``.
 
     Note that we use ``sentence.split()``, which means that the amount of whitespace between the
     tokens does not matter.  This will never result in spaces being included as tokens.
@@ -101,6 +104,7 @@ class SpaceWordSplitter(WordSplitter):
         return sentence.split()
 
 
+@WordSplitter.register('nltk')
 class NltkWordSplitter(WordSplitter):
     """
     A ``WordSplitter`` that uses nltk's ``word_tokenize`` method.
@@ -116,21 +120,17 @@ class NltkWordSplitter(WordSplitter):
         return word_tokenize(sentence.lower())
 
 
+@WordSplitter.register('spacy')
 class SpacyWordSplitter(WordSplitter):
     """
-    A ``WordSplitter`` that uses spaCy's Tokenizer, which is much faster than the others.
+    A ``WordSplitter`` that uses spaCy's tokenizer.  It's fast and reasonable - this is the
+    recommended ``WordSplitter``.
     """
     def __init__(self):
-        # Import is here it's slow, and can be unnecessary.
+        # Import is here because it's slow, and can be unnecessary.
         import spacy
         self.en_nlp = spacy.load('en')
 
     @overrides
     def split_words(self, sentence: str) -> List[str]:
         return [str(token) for token in self.en_nlp.tokenizer(sentence)]
-
-
-word_splitters['simple'] = SimpleWordSplitter
-word_splitters['spaces'] = SpaceWordSplitter
-word_splitters['nltk'] = NltkWordSplitter
-word_splitters['spacy'] = SpacyWordSplitter
