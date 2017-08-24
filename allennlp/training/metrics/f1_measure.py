@@ -53,6 +53,8 @@ class F1Measure(Metric):
                                      "the number of classes.".format(num_classes))
         if mask is None:
             mask = torch.ones(gold_labels.size())
+            # move mask to correct device
+            mask = mask.clone().copy_(mask)
         mask = mask.float()
         gold_labels = gold_labels.float()
         positive_label_mask = gold_labels.eq(self._positive_label).float()

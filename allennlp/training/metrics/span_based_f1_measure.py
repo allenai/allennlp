@@ -73,6 +73,8 @@ class SpanBasedF1Measure(Metric):
         """
         if mask is None:
             mask = torch.ones(gold_labels.size())
+            # move mask to correct device
+            mask = mask.clone().copy_(mask)
         # If you actually passed in Variables here instead of Tensors, this will be a huge memory
         # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
         # that we're using tensors here first.

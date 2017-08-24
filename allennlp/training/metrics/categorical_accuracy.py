@@ -59,6 +59,9 @@ class CategoricalAccuracy(Metric):
         # This is of shape (batch_size, ..., top_k).
         correct = top_k.eq(gold_labels.long().unsqueeze(-1)).float()
         count = torch.ones(gold_labels.size())
+        # Move count to correct device
+        count = count.clone().copy_(count)
+
         if mask is not None:
             correct *= mask.unsqueeze(-1)
             count *= mask
