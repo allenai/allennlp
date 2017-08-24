@@ -1,11 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
-import os
 from unittest import TestCase
 
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
-import pytest
 
 class TestSrlPredictor(TestCase):
     def test_uses_named_inputs(self):
