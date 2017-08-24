@@ -5,7 +5,7 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.nn.util import get_lengths_from_binary_sequence_mask
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask, on_correct_device
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.training.metrics.metric import Metric
 
@@ -72,9 +72,7 @@ class SpanBasedF1Measure(Metric):
             A masking tensor the same size as ``gold_labels``.
         """
         if mask is None:
-            mask = torch.ones(gold_labels.size())
-            # move mask to correct device
-            mask = mask.clone().copy_(mask)
+            mask = on_correct_device(torch.ones(gold_labels.size()))
         # If you actually passed in Variables here instead of Tensors, this will be a huge memory
         # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
         # that we're using tensors here first.

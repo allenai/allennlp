@@ -392,3 +392,10 @@ def device_mapping(cuda_device: int):
         else:
             return storage
     return inner_device_mapping
+
+def on_correct_device(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Use clone() + copy_() to make sure that a tensor ends up on the right
+    device at runtime.
+    """
+    return tensor.clone().copy_(tensor)

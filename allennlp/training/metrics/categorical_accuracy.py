@@ -5,6 +5,7 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn.util import on_correct_device
 from allennlp.training.metrics.metric import Metric
 
 
@@ -58,9 +59,7 @@ class CategoricalAccuracy(Metric):
 
         # This is of shape (batch_size, ..., top_k).
         correct = top_k.eq(gold_labels.long().unsqueeze(-1)).float()
-        count = torch.ones(gold_labels.size())
-        # Move count to correct device
-        count = count.clone().copy_(count)
+        count = on_correct_device(torch.ones(gold_labels.size()))
 
         if mask is not None:
             correct *= mask.unsqueeze(-1)
