@@ -49,7 +49,7 @@ def main(config_file):
 
     model.eval()
     generator = iterator(dataset, num_epochs=1, shuffle=False)
-    print("Predicting best spans for the evalualtion data")
+    print("Predicting best spans for the evaluation data")
     best_spans = []
     result_dict = {}
     for batch in tqdm.tqdm(generator):
@@ -59,7 +59,7 @@ def main(config_file):
         for i in range(best_span_tensor.size(0)):
             best_spans.append(best_span_tensor[i].data.cpu().tolist())
     for best_span, instance in zip(best_spans, dataset.instances):
-        span_tokens = instance.fields()['passage'].tokens()[best_span[0]:best_span[1]]
+        span_tokens = instance.fields['passage'].tokens[best_span[0]:best_span[1]]
         # We have to do some hacks to get from our tokens back to the original passage text, so
         # that our answers get scored correctly.  This could be made much easier if we kept around
         # the character offset in the original text when we tokenize things.
@@ -141,13 +141,9 @@ def try_combine_tokens(span_tokens, index, passage, start_offset = 1, end_offset
     span_tokens = deepcopy(span_tokens)
     start_index = max(index - start_offset, 0)
     end_index = min(index + end_offset, len(span_tokens))
-    #print(index, start_index, end_index)
     tokens_to_combine = span_tokens[start_index:end_index]
-    #print(tokens_to_combine)
     current_text = ' '.join(tokens_to_combine)
-    #print(current_text)
     replaced = ''.join(tokens_to_combine)
-    #print(replaced)
     if current_text not in passage and replaced in passage:
         span_tokens[start_index:end_index] = [replaced]
     return span_tokens
@@ -184,5 +180,5 @@ def test_fix_span_text():
 
 
 if __name__ == '__main__':
-    #test_fix_span_text()
+    # test_fix_span_text()
     main(sys.argv[1])
