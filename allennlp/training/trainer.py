@@ -97,7 +97,7 @@ class Trainer:
                                      "or decrease by pre-pending the metric name with a +/-.")
         self._validation_metric = validation_metric[1:]
         self._validation_metric_decreases = increase_or_decrease == "-"
-        self._use_tqdm = not no_tqdm
+        self._no_tqdm = no_tqdm
 
         if self._cuda_device >= 0:
             self._model = self._model.cuda(self._cuda_device)
@@ -135,8 +135,7 @@ class Trainer:
             self._model.train()
             train_generator = self._iterator(self._train_dataset, num_epochs=1)
 
-            if self._use_tqdm:
-                train_generator = tqdm.tqdm(train_generator, total=num_training_batches)
+            train_generator = tqdm.tqdm(train_generator, disable=self._no_tqdm, total=num_training_batches)
             batch_num = 0
             logger.info("Training")
             for batch in train_generator:
@@ -160,9 +159,8 @@ class Trainer:
                 metrics = self._model.get_metrics()
                 metrics["loss"] = float(train_loss / batch_num)
                 description = self._description_from_metrics(metrics)
-                if self._use_tqdm:
-                    train_generator.set_description(description)  # type: ignore
-                else:
+                train_generator.set_description(description)
+                if self._no_tqdm:
                     logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
             metrics = self._model.get_metrics(reset=True)
             metrics["loss"] = float(train_loss / batch_num)
@@ -172,8 +170,7 @@ class Trainer:
                 # Switch to evaluation mode.
                 self._model.eval()
                 val_generator = self._iterator(self._validation_dataset, num_epochs=1)
-                if self._use_tqdm:
-                    val_generator = tqdm.tqdm(val_generator, total=num_validation_batches)
+                val_generator = tqdm.tqdm(val_generator, disable=self._no_tqdm, total=num_validation_batches)
                 batch_num = 0
                 for batch in val_generator:
                     batch_num += 1
@@ -184,9 +181,8 @@ class Trainer:
                     val_metrics = self._model.get_metrics()
                     val_metrics["loss"] = float(val_loss / batch_num)
                     description = self._description_from_metrics(val_metrics)
-                    if self._use_tqdm:
-                        val_generator.set_description(description)  # type: ignore
-                    else:
+                    val_generator.set_description(description)
+                    if self._no_tqdm:
                         logger.info("Batch %d/%d: %s", batch_num, num_validation_batches, description)
                 val_metrics = self._model.get_metrics(reset=True)
                 val_metrics["loss"] = float(val_loss / batch_num)
