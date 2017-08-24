@@ -10,7 +10,7 @@ from allennlp.common.checks import ConfigurationError
 
 class TestLabelField(AllenNlpTestCase):
 
-    def test_pad_returns_integer_array(self):
+    def test_as_array_returns_integer_array(self):
         label = LabelField(5, skip_indexing=True)
         array = label.as_array(label.get_padding_lengths())
         numpy.testing.assert_array_almost_equal(array, numpy.array([5]))

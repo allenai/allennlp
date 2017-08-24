@@ -25,9 +25,9 @@ class SemanticRoleLabelerPredictor(Predictor):
         spacy_doc = self.nlp(sentence)
         for i, word in enumerate(spacy_doc):
             if word.pos_ == "VERB":
-                this_verb_indicator = [0 for _ in tokens]
-                this_verb_indicator[i] = 1
-                verb_indicator = SequenceLabelField(this_verb_indicator, text)
+                verb_labels = [0 for _ in tokens]
+                verb_labels[i] = 1
+                verb_indicator = SequenceLabelField(verb_labels, text)
                 output = self.model.tag(text, verb_indicator)
                 results["verbs"].append({
                         "index": i,

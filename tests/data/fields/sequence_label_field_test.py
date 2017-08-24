@@ -49,7 +49,7 @@ class TestSequenceLabelField(AllenNlpTestCase):
         assert sequence_label_field._indexed_labels == [b_index, i_index, o_index, o_index, o_index]
         # pylint: enable=protected-access
 
-    def test_pad_produces_integer_targets(self):
+    def test_as_array_produces_integer_targets(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("B", namespace='*labels')
         vocab.add_token_to_namespace("I", namespace='*labels')

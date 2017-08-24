@@ -24,7 +24,7 @@ class LabelField(Field[numpy.ndarray]):
     label : ``Union[str, int]``
     label_namespace : ``str``, optional (default="labels")
         The namespace to use for converting label strings into integers.  We map label strings to
-        integers for you (e.g., "entailment" and "contradiction" get converted 0, 1, ...),
+        integers for you (e.g., "entailment" and "contradiction" get converted to 0, 1, ...),
         and this namespace tells the ``Vocabulary`` object which mapping from strings to integers
         to use (so "entailment" as a label doesn't get the same integer id as "entailment" as a
         word).  If you have multiple different label fields in your data, you should make sure you
