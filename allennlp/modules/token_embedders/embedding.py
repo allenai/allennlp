@@ -132,7 +132,6 @@ class Embedding(TokenEmbedder):
         trainable = params.pop("trainable", True)
         num_embeddings = vocab.get_vocab_size(vocab_namespace)
         padding_index = params.pop('padding_index', None)
-        trainable = params.pop('trainable', True)
         max_norm = params.pop('max_norm', None)
         norm_type = params.pop('norm_type', 2.)
         scale_grad_by_freq = params.pop('scale_grad_by_freq', False)
