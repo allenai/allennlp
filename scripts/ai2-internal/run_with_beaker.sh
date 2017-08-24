@@ -10,6 +10,9 @@ ECR_REPOSITORY=896129387501.dkr.ecr.us-west-2.amazonaws.com
 PARAM_FILE=$1
 EXPERIMENT_NAME=$2
 
+# TODO(matt): if beaker makes it possible to run experiments from the web UI, we probably should
+# just have a standard image, that we don't have to rebuild each time, and we can remove this
+# $RANDOM stuff.
 COMMIT=$(git rev-parse HEAD)
 IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$COMMIT-$RANDOM
 
@@ -31,11 +34,13 @@ set -e
 # package with a version more recent than 1.11.91.
 eval $(aws --region=us-west-2 ecr get-login --no-include-email)
 
-mkdir -p .beaker/
-cp $PARAM_FILE .beaker/model_params.json
 docker build -t $IMAGE .
 docker push $IMAGE
 
-CMD="allennlp/run train .beaker/model_params.json"
+CONFIG_DATASET_ID=$(beaker dataset create --quiet $PARAM_FILE)
+FILENAME=$(basename $PARAM_FILE)
+SOURCES_ARG="$SOURCES_ARG --source $CONFIG_DATASET_ID:/config"
+
+CMD="allennlp/run train /config/$FILENAME"
 
 beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_NAME_ARG $GPU_ARG $DETACH_ARG $IMAGE $CMD
