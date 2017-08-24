@@ -26,15 +26,15 @@ class TestSnliReader(AllenNlpTestCase):
                      "label": "entailment"}
 
         assert len(dataset.instances) == 3
-        fields = dataset.instances[0].fields()
-        assert fields["premise"].tokens() == instance1["premise"]
-        assert fields["hypothesis"].tokens() == instance1["hypothesis"]
-        assert fields["label"].label() == instance1["label"]
-        fields = dataset.instances[1].fields()
-        assert fields["premise"].tokens() == instance2["premise"]
-        assert fields["hypothesis"].tokens() == instance2["hypothesis"]
-        assert fields["label"].label() == instance2["label"]
-        fields = dataset.instances[2].fields()
-        assert fields["premise"].tokens() == instance3["premise"]
-        assert fields["hypothesis"].tokens() == instance3["hypothesis"]
-        assert fields["label"].label() == instance3["label"]
+        fields = dataset.instances[0].fields
+        assert fields["premise"].tokens == instance1["premise"]
+        assert fields["hypothesis"].tokens == instance1["hypothesis"]
+        assert fields["label"].label == instance1["label"]
+        fields = dataset.instances[1].fields
+        assert fields["premise"].tokens == instance2["premise"]
+        assert fields["hypothesis"].tokens == instance2["hypothesis"]
+        assert fields["label"].label == instance2["label"]
+        fields = dataset.instances[2].fields
+        assert fields["premise"].tokens == instance3["premise"]
+        assert fields["hypothesis"].tokens == instance3["hypothesis"]
+        assert fields["label"].label == instance3["label"]

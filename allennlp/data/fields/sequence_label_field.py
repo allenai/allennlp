@@ -40,8 +40,8 @@ class SequenceLabelField(Field[numpy.ndarray]):
                  labels: Union[List[str], List[int]],
                  sequence_field: SequenceField,
                  label_namespace: str = 'labels') -> None:
-        self._labels = labels
-        self._sequence_field = sequence_field
+        self.labels = labels
+        self.sequence_field = sequence_field
         self._label_namespace = label_namespace
         self._indexed_labels = None
 
@@ -61,18 +61,18 @@ class SequenceLabelField(Field[numpy.ndarray]):
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         if self._indexed_labels is None:
-            for label in self._labels:
+            for label in self.labels:
                 counter[self._label_namespace][label] += 1  # type: ignore
 
     @overrides
     def index(self, vocab: Vocabulary):
         if self._indexed_labels is None:
             self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
-                                    for label in self._labels]
+                                    for label in self.labels]
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        return {'num_tokens': self._sequence_field.sequence_length()}
+        return {'num_tokens': self.sequence_field.sequence_length()}
 
     @overrides
     def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:
@@ -86,6 +86,3 @@ class SequenceLabelField(Field[numpy.ndarray]):
         sequence_label_field = SequenceLabelField([], None)
         sequence_label_field._indexed_labels = []
         return sequence_label_field
-
-    def labels(self):
-        return self._labels

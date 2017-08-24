@@ -39,7 +39,7 @@ class IteratorTest(AllenNlpTestCase):
         # First we need to remove padding tokens from the candidates.
         # pylint: disable=protected-access
         candidate_instances = [tuple(w for w in instance if w != 0) for instance in candidate_instances]
-        expected_instances = [tuple(instance.fields()["text"]._indexed_tokens["tokens"])
+        expected_instances = [tuple(instance.fields["text"]._indexed_tokens["tokens"])
                               for instance in self.instances]
         assert set(candidate_instances) == set(expected_instances)
 
