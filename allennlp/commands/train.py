@@ -13,7 +13,7 @@ import torch
 from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set, ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
-from allennlp.data import Vocabulary
+from allennlp.data import Dataset, Vocabulary
 from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -145,8 +145,17 @@ def train_model(params: Params) -> Model:
     logger.info("Reading training data from %s", train_data_path)
     train_data = dataset_reader.read(train_data_path)
 
+    validation_data_path = params.pop('validation_data_path', None)
+    if validation_data_path is not None:
+        logger.info("Reading validation data from %s", validation_data_path)
+        validation_data = dataset_reader.read(validation_data_path)
+        combined_data = Dataset(train_data.instances + validation_data.instances)
+    else:
+        validation_data = None
+        combined_data = train_data
+
     # TODO(Mark): work out how this is going to be built with different options.
-    vocab = Vocabulary.from_dataset(train_data, non_padded_namespaces=non_padded_namespaces)
+    vocab = Vocabulary.from_dataset(combined_data, non_padded_namespaces=non_padded_namespaces)
     if log_dir:
         vocab.save_to_files(os.path.join(log_dir, "vocabulary"))
 
@@ -156,13 +165,8 @@ def train_model(params: Params) -> Model:
     optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
     train_data.index_instances(vocab)
-    validation_data_path = params.pop('validation_data_path', None)
-    if validation_data_path is not None:
-        logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = dataset_reader.read(validation_data_path)
+    if validation_data:
         validation_data.index_instances(vocab)
-    else:
-        validation_data = None
 
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,

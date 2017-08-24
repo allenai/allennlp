@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Any, Dict
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
@@ -15,9 +15,22 @@ class Instance:
     The ``Fields`` in an ``Instance`` can start out either indexed or un-indexed.  During the data
     processing pipeline, all fields will end up as ``IndexedFields``, and will then be converted
     into padded arrays by a ``DataGenerator``.
+
+    Parameters
+    ----------
+    fields : ``Dict[str, Field]``
+        The ``Field`` objects that will be used to produce data arrays for this instance.
+    metadata : ``Any``
+        If you need to associate additional information with an ``Instance`` that will `not` be
+        converted into data arrays, you can use this parameter.  For example, you might have an
+        instance ID that you need to save, in order to have a more convenient output format as part
+        of some pipeline; that information can go here.  It's likely that you'll want ``metadata``
+        to be a ``Dict``, but you can use it however you want, accessed as ``instance.metadata``.
+        None of the library code will touch this field.
     """
-    def __init__(self, fields: Dict[str, Field]) -> None:
+    def __init__(self, fields: Dict[str, Field], metadata: Any = None) -> None:
         self.fields = fields
+        self.metadata = metadata
 
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
