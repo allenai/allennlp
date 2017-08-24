@@ -135,10 +135,12 @@ class Trainer:
             self._model.train()
             train_generator = self._iterator(self._train_dataset, num_epochs=1)
 
-            train_generator = tqdm.tqdm(train_generator, disable=self._no_tqdm, total=num_training_batches)
+            train_generator_tqdm = tqdm.tqdm(train_generator,
+                                             disable=self._no_tqdm,
+                                             total=num_training_batches)
             batch_num = 0
             logger.info("Training")
-            for batch in train_generator:
+            for batch in train_generator_tqdm:
                 batch_num += 1
                 tensor_batch = arrays_to_variables(batch, self._cuda_device)
                 self._optimizer.zero_grad()
@@ -159,7 +161,7 @@ class Trainer:
                 metrics = self._model.get_metrics()
                 metrics["loss"] = float(train_loss / batch_num)
                 description = self._description_from_metrics(metrics)
-                train_generator.set_description(description)
+                train_generator_tqdm.set_description(description)
                 if self._no_tqdm:
                     logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
             metrics = self._model.get_metrics(reset=True)
@@ -170,9 +172,11 @@ class Trainer:
                 # Switch to evaluation mode.
                 self._model.eval()
                 val_generator = self._iterator(self._validation_dataset, num_epochs=1)
-                val_generator = tqdm.tqdm(val_generator, disable=self._no_tqdm, total=num_validation_batches)
+                val_generator_tqdm = tqdm.tqdm(val_generator,
+                                               disable=self._no_tqdm,
+                                               total=num_validation_batches)
                 batch_num = 0
-                for batch in val_generator:
+                for batch in val_generator_tqdm:
                     batch_num += 1
                     tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=False)
                     val_output_dict = self._model.forward(**tensor_batch)
@@ -181,7 +185,7 @@ class Trainer:
                     val_metrics = self._model.get_metrics()
                     val_metrics["loss"] = float(val_loss / batch_num)
                     description = self._description_from_metrics(val_metrics)
-                    val_generator.set_description(description)
+                    val_generator_tqdm.set_description(description)
                     if self._no_tqdm:
                         logger.info("Batch %d/%d: %s", batch_num, num_validation_batches, description)
                 val_metrics = self._model.get_metrics(reset=True)
