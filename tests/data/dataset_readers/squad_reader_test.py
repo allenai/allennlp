@@ -28,16 +28,16 @@ class TestSquadReader(AllenNlpTestCase):
         reader = SquadReader()
         instances = reader.read('tests/fixtures/data/squad.json').instances
         assert len(instances) == 5
-        assert instances[0].fields()["question"].tokens()[:3] == ["To", "whom", "did"]
-        assert instances[0].fields()["passage"].tokens()[:3] == ["Architecturally", ",", "the"]
-        assert instances[0].fields()["passage"].tokens()[-3:] == ["Mary", ".", "@@STOP@@"]
-        assert instances[0].fields()["span_start"].sequence_index() == 102
-        assert instances[0].fields()["span_end"].sequence_index() == 105
-        assert instances[1].fields()["question"].tokens()[:3] == ["What", "sits", "on"]
-        assert instances[1].fields()["passage"].tokens()[:3] == ["Architecturally", ",", "the"]
-        assert instances[1].fields()["passage"].tokens()[-3:] == ["Mary", ".", "@@STOP@@"]
-        assert instances[1].fields()["span_start"].sequence_index() == 17
-        assert instances[1].fields()["span_end"].sequence_index() == 24
+        assert instances[0].fields["question"].tokens[:3] == ["To", "whom", "did"]
+        assert instances[0].fields["passage"].tokens[:3] == ["Architecturally", ",", "the"]
+        assert instances[0].fields["passage"].tokens[-3:] == ["Mary", ".", "@@STOP@@"]
+        assert instances[0].fields["span_start"].sequence_index == 102
+        assert instances[0].fields["span_end"].sequence_index == 105
+        assert instances[1].fields["question"].tokens[:3] == ["What", "sits", "on"]
+        assert instances[1].fields["passage"].tokens[:3] == ["Architecturally", ",", "the"]
+        assert instances[1].fields["passage"].tokens[-3:] == ["Mary", ".", "@@STOP@@"]
+        assert instances[1].fields["span_start"].sequence_index == 17
+        assert instances[1].fields["span_end"].sequence_index == 24
 
     def test_can_build_from_params(self):
         reader = SquadReader.from_params(Params({}))
