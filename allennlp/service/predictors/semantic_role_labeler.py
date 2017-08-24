@@ -2,7 +2,7 @@ from typing import Dict
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Tokenizer, TokenIndexer
-from allennlp.data.fields import TextField, IndexField
+from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 
@@ -25,7 +25,9 @@ class SemanticRoleLabelerPredictor(Predictor):
         spacy_doc = self.nlp(sentence)
         for i, word in enumerate(spacy_doc):
             if word.pos_ == "VERB":
-                verb_indicator = IndexField(i, text)
+                verb_labels = [0 for _ in tokens]
+                verb_labels[i] = 1
+                verb_indicator = SequenceLabelField(verb_labels, text)
                 output = self.model.tag(text, verb_indicator)
                 results["verbs"].append({
                         "index": i,
