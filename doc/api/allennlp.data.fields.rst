@@ -29,7 +29,7 @@ Submodules
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.data.fields.tag_field
+.. automodule:: allennlp.data.fields.sequence_label_field
    :members:
    :undoc-members:
    :show-inheritance:

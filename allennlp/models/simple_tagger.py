@@ -37,7 +37,7 @@ class SimpleTagger(Model):
         super(SimpleTagger, self).__init__(vocab)
 
         self.text_field_embedder = text_field_embedder
-        self.num_classes = self.vocab.get_vocab_size("tags")
+        self.num_classes = self.vocab.get_vocab_size("labels")
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
@@ -63,9 +63,8 @@ class SimpleTagger(Model):
             which knows how to combine different word representations into a single vector per
             token in your input.
         tags : torch.LongTensor, optional (default = None)
-            A torch tensor representing the sequence of gold labels.  These can either be integer
-            indexes or one hot arrays of labels, so of shape ``(batch_size, num_tokens)`` or of
-            shape ``(batch_size, num_tokens, num_tags)``.
+            A torch tensor representing the sequence of integer gold class labels of shape
+            ``(batch_size, num_tokens)``.
 
         Returns
         -------
@@ -93,9 +92,6 @@ class SimpleTagger(Model):
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
         if tags is not None:
-            # Negative log likelihood criterion takes integer labels, not one hot.
-            if tags.dim() == 3:
-                _, tags = tags.max(-1)
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             for metric in self.metrics.values():
                 metric(logits, tags, mask.float())
@@ -135,7 +131,7 @@ class SimpleTagger(Model):
         predictions = output_dict["class_probabilities"].data.squeeze(0)
         _, argmax = predictions.max(-1)
         indices = argmax.numpy()
-        tags = [self.vocab.get_token_from_index(x, namespace="tags") for x in indices]
+        tags = [self.vocab.get_token_from_index(x, namespace="labels") for x in indices]
 
         return {"tags": tags, "class_probabilities": predictions.numpy()}
 

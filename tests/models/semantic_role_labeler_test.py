@@ -6,7 +6,7 @@ import numpy
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SrlReader
-from allennlp.data.fields import TextField, IndexField
+from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
@@ -34,10 +34,11 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
                         },
                 "stacked_encoder": {
                         "type": "lstm",
-                        "input_size": 6,
+                        "input_size": 8,
                         "hidden_size": 7,
                         "num_layers": 2
                         },
+                "binary_feature_dim": 3,
                 "initializer": {"default": "normal"},
                 })
 
@@ -48,10 +49,10 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
 
     def test_tag_returns_distributions_per_token(self):
         text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})
-        verb_indicator = IndexField(1, text)
+        verb_indicator = SequenceLabelField([0, 1, 0, 0], text)
 
         output = self.model.tag(text, verb_indicator)
-        possible_tags = self.vocab.get_index_to_token_vocabulary("tags").values()
+        possible_tags = self.vocab.get_index_to_token_vocabulary("labels").values()
         for tag in output["tags"]:
             assert tag in possible_tags
         # Predictions are a distribution.
