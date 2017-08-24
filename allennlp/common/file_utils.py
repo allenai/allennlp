@@ -65,9 +65,8 @@ def get_from_cache(url: str, cache_dir: str = DATASET_CACHE) -> str:
         # GET file object
         req = requests.get(url, stream=True)
         content_length = req.headers.get('Content-Length')
-        if content_length is not None:
-            content_length = int(content_length)
-        progress = tqdm.tqdm(unit="B", total=content_length)
+        total = int(content_length) if content_length is not None else None
+        progress = tqdm.tqdm(unit="B", total=total)
         with open(path, 'wb') as output_file:
             for chunk in req.iter_content(chunk_size=1024):
                 if chunk: # filter out keep-alive new chunks
