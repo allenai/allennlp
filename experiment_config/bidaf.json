@@ -99,6 +99,6 @@
     "patience": 12,
     "serialization_prefix": "/output",
     "cuda_device": 0,
-    "log_one_line_per_batch": false
+    "no_tqdm": true
   }
 }
