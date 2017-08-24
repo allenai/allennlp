@@ -21,9 +21,4 @@ class TestIndexField(AllenNlpTestCase):
     def test_as_array_converts_field_correctly(self):
         index_field = IndexField(4, self.text)
         array = index_field.as_array(index_field.get_padding_lengths())
-        numpy.testing.assert_array_equal(array, numpy.array([0, 0, 0, 0, 1]))
-
-    def test_as_array_handles_none_index_values(self):
-        index_field = IndexField(None, self.text)
-        array = index_field.as_array(index_field.get_padding_lengths())
-        numpy.testing.assert_array_equal(array, numpy.array([0, 0, 0, 0, 0]))
+        numpy.testing.assert_array_equal(array, numpy.array([4]))

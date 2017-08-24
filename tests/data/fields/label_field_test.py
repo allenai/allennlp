@@ -1,17 +1,19 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
+import pytest
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import LabelField
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.checks import ConfigurationError
 
 
 class TestLabelField(AllenNlpTestCase):
 
-    def test_pad_returns_one_hot_array(self):
-        label = LabelField(5, num_labels=10)
+    def test_as_array_returns_integer_array(self):
+        label = LabelField(5, skip_indexing=True)
         array = label.as_array(label.get_padding_lengths())
-        numpy.testing.assert_array_almost_equal(array, numpy.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0]))
+        numpy.testing.assert_array_almost_equal(array, numpy.array([5]))
 
     def test_label_field_can_index_with_vocab(self):
         vocab = Vocabulary()
@@ -22,4 +24,8 @@ class TestLabelField(AllenNlpTestCase):
         label = LabelField("entailment")
         label.index(vocab)
         array = label.as_array(label.get_padding_lengths())
-        numpy.testing.assert_array_almost_equal(array, numpy.array([1, 0, 0]))
+        numpy.testing.assert_array_almost_equal(array, numpy.array([0]))
+
+    def test_label_field_raises_with_non_integer_labels_and_no_indexing(self):
+        with pytest.raises(ConfigurationError):
+            _ = LabelField("non integer field", skip_indexing=True)

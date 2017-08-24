@@ -11,7 +11,7 @@ from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.fields import TextField, TagField
+from allennlp.data.fields import TextField, SequenceLabelField
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -69,7 +69,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
                 tags = [x[1] for x in tokens_and_tags]
 
                 sequence = TextField(tokens, self._token_indexers)
-                sequence_tags = TagField(tags, sequence)
+                sequence_tags = SequenceLabelField(tags, sequence)
                 instances.append(Instance({'tokens': sequence,
                                            'tags': sequence_tags}))
         if not instances:
