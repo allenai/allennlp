@@ -75,11 +75,11 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
             padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
         return padding_lengths
 
-    # @overrides
+    @overrides
     def sequence_length(self) -> int:
         return len(self.tokens)
 
-    # @overrides
+    @overrides
     def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.ndarray]:
         arrays = {}
         desired_num_tokens = padding_lengths['num_tokens']
@@ -91,7 +91,7 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
             arrays[indexer_name] = numpy.array(padded_array)
         return arrays
 
-    # @overrides
+    @overrides
     def empty_field(self):
         # pylint: disable=protected-access
         text_field = TextField([], self._token_indexers)
