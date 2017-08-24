@@ -66,13 +66,6 @@ class SequenceTaggingDatasetReader(DatasetReader):
                 tokens_and_tags = [pair.rsplit(self._word_tag_delimiter, 1)
                                    for pair in line.split(self._token_delimiter)]
                 tokens = [x[0] for x in tokens_and_tags]
-
-                def small(tag: str) -> str:
-                    if tag == "--":
-                        return tag
-                    else:
-                        return tag.split("-")[0]
-
                 tags = [x[1] for x in tokens_and_tags]
 
                 sequence = TextField(tokens, self._token_indexers)

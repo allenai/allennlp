@@ -13,8 +13,8 @@
     }
   },
   "non_padded_namespaces": [],
-  "train_data_path": "/Users/joelg/Downloads/brown/sentences.small.train",
-  "validation_data_path": "/Users/joelg/Downloads/brown/sentences.small.dev",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.train",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.dev",
   "model": {
     "type": "simple_tagger",
     "text_field_embedder": {
@@ -49,6 +49,7 @@
   "optimizer": "adam",
   "trainer": {
     "num_epochs": 40,
+    "patience": 10,
     "serialization_prefix": "/tmp/tutorials/getting_started",
     "cuda_device": -1
   }
