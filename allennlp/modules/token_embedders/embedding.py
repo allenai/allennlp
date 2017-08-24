@@ -221,10 +221,14 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
                                  "misspecified your embedding_dim parameter, or didn't "
                                  "pre-populate your Vocabulary")
 
+    all_embeddings = numpy.asarray(list(embeddings.values()))
+    embeddings_mean = float(numpy.mean(all_embeddings))
+    embeddings_std = float(numpy.std(all_embeddings))
     # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
     # then filling in the word vectors we just read.
     logger.info("Initializing pre-trained embedding layer")
-    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(0, 1)
+    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(embeddings_mean,
+                                                                            embeddings_std)
 
     for i in range(0, vocab_size):
         word = vocab.get_token_from_index(i, namespace)
