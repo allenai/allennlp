@@ -126,10 +126,13 @@ class SpacyWordSplitter(WordSplitter):
     A ``WordSplitter`` that uses spaCy's tokenizer.  It's fast and reasonable - this is the
     recommended ``WordSplitter``.
     """
+    en_nlp = None
+
     def __init__(self):
-        # Import is here because it's slow, and can be unnecessary.
-        import spacy
-        self.en_nlp = spacy.load('en')
+        if SpacyWordSplitter.en_nlp is None:
+            # Import is here because it's slow, and can be unnecessary.
+            import spacy
+            SpacyWordSplitter.en_nlp = spacy.load('en', parser=False, tagger=False, entity=False)
 
     @overrides
     def split_words(self, sentence: str) -> List[str]:
