@@ -1,4 +1,5 @@
-FROM nvidia/cuda:8.0-cudnn5-devel
+ARG from=nvidia/cuda:8.0-cudnn5-devel
+FROM $from
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
@@ -32,24 +33,23 @@ RUN apt-get update --fix-missing && apt-get install -y \
 RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
     wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-    rm ~/miniconda.sh && \
-    echo "source activate allennlp" >> ~/.bashrc
+    rm ~/miniconda.sh
 
-# Create a conda environment so we have a reproducible version of Python
-RUN conda create -n allennlp --yes python=3.5
-
-# Make sure we enter the allennlp Conda environment automatically
-RUN echo "source activate allennlp" >> ~/.bashrc
+# Use python 3.5
+RUN conda install python=3.5
 
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
 COPY requirements_test.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
-RUN bash -c 'source activate allennlp && INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh'
-RUN bash -c 'source activate allennlp && pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post1-cp35-cp35m-manylinux1_x86_64.whl'
+RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
+RUN pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post1-cp35-cp35m-manylinux1_x86_64.whl
 
-COPY . .
+COPY allennlp/ allennlp/
+COPY tests/ tests/
+COPY pytest.ini pytest.ini
+COPY scripts/ scripts/
 
 # Run tests to verify the Docker build
-RUN /bin/bash -c 'source activate allennlp && PYTHONDONTWRITEBYTECODE=1 pytest'
+RUN PYTHONDONTWRITEBYTECODE=1 pytest
