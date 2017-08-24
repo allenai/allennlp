@@ -395,7 +395,7 @@ def device_mapping(cuda_device: int):
 
 def ones_like(tensor: torch.Tensor) -> torch.Tensor:
     """
-    Use clone() + copy_() to make sure that a tensor ends up on the right
+    Use clone() + fill_() to make sure that a ones tensor ends up on the right
     device at runtime.
     """
-    return tensor.clone().copy_(torch.ones(tensor.shape))
+    return tensor.clone().fill_(1)
