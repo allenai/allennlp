@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
+from collections import Counter
 import os
 import pathlib
 import pytest
@@ -8,8 +9,48 @@ import responses
 from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, cached_path
 from allennlp.common.testing import AllenNlpTestCase
 
+def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
+    # Mock response for the datastore url that returns glove vectors
+    responses.add(
+            responses.GET,
+            url,
+            body=byt,
+            status=200,
+            content_type='application/gzip',
+            stream=True,
+            headers={'Content-Length': str(len(byt))}
+    )
+
+    etags_left = change_etag_every
+    etag = "0"
+    def head_callback(_):
+        """
+        Writing this as a callback allows different responses to different HEAD requests.
+        In our case, we're going to change the ETag header every `change_etag_every`
+        requests, which will allow us to simulate having a new version of the file.
+        """
+        nonlocal etags_left, etag
+        headers = {"ETag": etag}
+        # countdown and change ETag
+        etags_left -= 1
+        if etags_left <= 0:
+            etags_left = change_etag_every
+            etag = str(int(etag) + 1)
+        return (200, headers, "")
+
+    responses.add_callback(
+            responses.HEAD,
+            url,
+            callback=head_callback
+    )
+
 
 class TestFileUtils(AllenNlpTestCase):
+    def setUp(self):
+        super().setUp()
+        self.glove_file = 'tests/fixtures/glove.6B.100d.sample.txt.gz'
+        with open(self.glove_file, 'rb') as glove:
+            self.glove_bytes = glove.read()
 
     def test_url_to_filename(self):
         for url in ['http://allenai.org', 'http://allennlp.org',
@@ -17,65 +58,68 @@ class TestFileUtils(AllenNlpTestCase):
             filename = url_to_filename(url)
             assert "http" not in filename
             pathlib.Path(os.path.join(self.TEST_DIR, filename)).touch()
-            back_to_url = filename_to_url(filename)
+            back_to_url, etag = filename_to_url(filename)
             assert back_to_url == url
+            assert etag is None
+
+    def test_url_to_filename_with_etags(self):
+        for url in ['http://allenai.org', 'http://allennlp.org',
+                    'https://www.google.com', 'http://pytorch.org']:
+            filename = url_to_filename(url, etag="mytag")
+            assert "http" not in filename
+            pathlib.Path(os.path.join(self.TEST_DIR, filename)).touch()
+            back_to_url, etag = filename_to_url(filename)
+            assert back_to_url == url
+            assert etag == "mytag"
 
     @responses.activate
     def test_get_from_cache(self):
         url = 'http://fake.datastore.com/glove.txt.gz'
-
-        with open('tests/fixtures/glove.6B.100d.sample.txt.gz', 'rb') as glove:
-            glove_bytes = glove.read()
-
-        # Mock response for the datastore url that returns glove vectors
-        responses.add(
-                responses.GET,
-                url,
-                body=glove_bytes,
-                status=200,
-                content_type='application/gzip',
-                stream=True,
-                headers={'Content-Length': str(len(glove_bytes))}
-        )
+        set_up_glove(url, self.glove_bytes, change_etag_every=2)
 
         filename = get_from_cache(url, cache_dir=self.TEST_DIR)
+        assert filename == os.path.join(self.TEST_DIR, url_to_filename(url, etag="0"))
 
-        # We should have made a HTTP call and cached the result
-        assert filename == os.path.join(self.TEST_DIR, url_to_filename(url))
-        assert len(responses.calls) == 1
+        # We should have made one HEAD request and one GET request.
+        method_counts = Counter(call.request.method for call in responses.calls)
+        assert len(method_counts) == 2
+        assert method_counts['HEAD'] == 1
+        assert method_counts['GET'] == 1
 
         # And the cached file should have the correct contents
         with open(filename, 'rb') as cached_file:
-            assert cached_file.read() == glove_bytes
+            assert cached_file.read() == self.glove_bytes
 
-        # A second call to `get_from_cache` should not make a HTTP call
-        # but should just return the cached filename.
+        # A second call to `get_from_cache` should make another HEAD call
+        # but not another GET call.
         filename2 = get_from_cache(url, cache_dir=self.TEST_DIR)
         assert filename2 == filename
-        assert len(responses.calls) == 1
+
+        method_counts = Counter(call.request.method for call in responses.calls)
+        assert len(method_counts) == 2
+        assert method_counts['HEAD'] == 2
+        assert method_counts['GET'] == 1
 
         with open(filename2, 'rb') as cached_file:
-            assert cached_file.read() == glove_bytes
+            assert cached_file.read() == self.glove_bytes
 
+        # A third call should have a different ETag and should force a new download,
+        # which means another HEAD call and another GET call.
+        filename3 = get_from_cache(url, cache_dir=self.TEST_DIR)
+        assert filename3 == os.path.join(self.TEST_DIR, url_to_filename(url, etag="1"))
+
+        method_counts = Counter(call.request.method for call in responses.calls)
+        assert len(method_counts) == 2
+        assert method_counts['HEAD'] == 3
+        assert method_counts['GET'] == 2
+
+        with open(filename3, 'rb') as cached_file:
+            assert cached_file.read() == self.glove_bytes
 
     @responses.activate
     def test_cached_path(self):
         url = 'http://fake.datastore.com/glove.txt.gz'
-        glove_file = 'tests/fixtures/glove.6B.100d.sample.txt.gz'
-
-        with open(glove_file, 'rb') as glove:
-            glove_bytes = glove.read()
-
-        # Mock response for the datastore url that returns glove vectors
-        responses.add(
-                responses.GET,
-                url,
-                body=glove_bytes,
-                status=200,
-                content_type='application/gzip',
-                stream=True,
-                headers={'Content-Length': str(len(glove_bytes))}
-        )
+        set_up_glove(url, self.glove_bytes)
 
         # non-existent file
         with pytest.raises(FileNotFoundError):
@@ -86,13 +130,13 @@ class TestFileUtils(AllenNlpTestCase):
             filename = cached_path("fakescheme://path/to/fake/file.tar.gz")
 
         # existing file as path
-        assert cached_path(glove_file) == glove_file
+        assert cached_path(self.glove_file) == self.glove_file
 
         # caches urls
         filename = cached_path(url, cache_dir=self.TEST_DIR)
 
-        assert len(responses.calls) == 1
-        assert filename == os.path.join(self.TEST_DIR, url_to_filename(url))
+        assert len(responses.calls) == 2
+        assert filename == os.path.join(self.TEST_DIR, url_to_filename(url, etag="0"))
 
         with open(filename, 'rb') as cached_file:
-            assert cached_file.read() == glove_bytes
+            assert cached_file.read() == self.glove_bytes
