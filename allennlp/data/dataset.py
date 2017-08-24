@@ -25,7 +25,7 @@ class Dataset:
         types).  If you change the constructor, you also have to override all methods in this base
         class that call the constructor, such as `truncate()`.
         """
-        all_instance_fields_and_types = [{k: v.__class__.__name__ for k, v in x.fields().items()}
+        all_instance_fields_and_types = [{k: v.__class__.__name__ for k, v in x.fields.items()}
                                          for x in instances]  # type: List[Dict[str, str]]
         # Check all the field names and Field types are the same for every instance.
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):

@@ -25,25 +25,17 @@ class IndexField(Field[numpy.ndarray]):
         A field containing the sequence that this ``IndexField`` is a pointer into.
     """
     def __init__(self, index: int, sequence_field: SequenceField) -> None:
-        self._index = index
-        self._sequence_field = sequence_field
+        self.sequence_index = index
+        self.sequence_field = sequence_field
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        return {'num_options': self._sequence_field.sequence_length()}
+        return {'num_options': self.sequence_field.sequence_length()}
 
     @overrides
     def as_array(self, padding_lengths: Dict[str, int]) -> numpy.array:  # pylint: disable=unused-argument
-        return numpy.asarray([self._index])
+        return numpy.asarray([self.sequence_index])
 
     @overrides
     def empty_field(self):
         return IndexField(None, None)
-
-    def sequence_field(self):
-        return self._sequence_field
-
-    def sequence_index(self):
-        # This method can't be called index,
-        # as that name is already reserved.
-        return self._index
