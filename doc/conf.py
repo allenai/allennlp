@@ -229,4 +229,4 @@ def linkcode_resolve(domain, info):
         linespec = ""
 
     filename = info['module'].replace('.', '/')
-    return "http://github.com/allenai/deep_qa/blob/master/%s.py%s" % (filename, linespec)
+    return "http://github.com/allenai/allennlp/blob/master/%s.py%s" % (filename, linespec)
