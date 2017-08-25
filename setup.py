@@ -10,28 +10,24 @@ index-servers =
   pypitest
 
 [pypi]
-repository=https://pypi.python.org/pypi
-username=deep-qa
+username=allennlp
 password= Get the password from LastPass.
 
 [pypitest]
-repository=https://testpypi.python.org/pypi
-username=deep-qa
+repository=https://test.pypi.org/legacy/
+username=allennlp
 password= Get the password from LastPass.
 ```
 run chmod 600 ./pypirc so only you can read/write.
 
+1. Change the version in docs/conf.py and setup.py.
 
-2. Update the RELEASE.md with the new features, bug fixes and api changes provided in this release.
+2. Commit these changes with the message: "Release: VERSION"
 
-3. Change the version in docs/conf.py and setup.py.
-
-4. Commit these changes with the message: "Release: VERSION"
-
-5. Add a tag in git to mark the release: "git tag VERSION -m'Adds tag VERSION for pypi' "
+3. Add a tag in git to mark the release: "git tag VERSION -m'Adds tag VERSION for pypi' "
    Push the tag to git: git push --tags origin master
 
-6. Build both the sources and the wheel. Do not change anything in setup.py between
+4. Build both the sources and the wheel. Do not change anything in setup.py between
    creating the wheel and the source distribution (obviously).
 
    For the wheel, run: "python setup.py bdist_wheel" in the top level allennlp directory.
@@ -40,7 +36,7 @@ run chmod 600 ./pypirc so only you can read/write.
    For the sources, run: "python setup.py sdist"
    You should now have a /dist directory with both .whl and .tar.gz source versions of allennlp.
 
-7. Check that everything looks correct by uploading the package to the pypi test server:
+5. Check that everything looks correct by uploading the package to the pypi test server:
 
    twine upload dist/* -r pypitest
    (pypi suggest using twine as other methods upload files via plaintext.)
@@ -48,25 +44,43 @@ run chmod 600 ./pypirc so only you can read/write.
    Check that you can install it in a virtualenv by running:
    pip install -i https://testpypi.python.org/pypi allennlp
 
-8. Upload the final version to actual pypi:
+6. Upload the final version to actual pypi:
    twine upload dist/* -r pypi
 
-9. Copy the release notes from RELEASE.md to the tag in github once everything is looking hunky-dory.
+7. Copy the release notes from RELEASE.md to the tag in github once everything is looking hunky-dory.
 
 """
-
+import os
 from setuptools import setup, find_packages
-try:
-    import pypandoc
-    long_description = pypandoc.convert('README.md', 'rst')
-except(IOError, ImportError):
-    long_description = open('README.md').read()
+
+# PEP0440 compatible formatted version, see:
+# https://www.python.org/dev/peps/pep-0440/
+#
+# release markers:
+#   X.Y
+#   X.Y.Z   # For bugfix releases
+#
+# pre-release markers:
+#   X.YaN   # Alpha release
+#   X.YbN   # Beta release
+#   X.YrcN  # Release Candidate
+#   X.Y     # Final release
+
+VERSION = '0.1a4'
+
+
+def gen_data_files(*directories):
+    results = []
+    for src_dir in directories:
+        for root, dirs, files in os.walk(src_dir):
+            results.append((root, map(lambda f: root + "/" + f, files)))
+    return results
 
 setup(name='allennlp',
-      version='0.1.1',
-      description='A Natural Language Processing toolkit using distributed representations',
-      long_description=long_description,
+      version=VERSION,
+      description='An open-source NLP research library, built on PyTorch.',
       classifiers=[
+          'Intended Audience :: Science/Research',
           'Development Status :: 3 - Alpha',
           'License :: OSI Approved :: Apache Software License',
           'Programming Language :: Python :: 3.5',
@@ -74,22 +88,28 @@ setup(name='allennlp',
       ],
       keywords='allennlp NLP deep learning machine reading',
       url='https://github.com/allenai/allennlp',
-      author='Matt Gardner',
-      author_email='deep-qa@allenai.org',  # TODO(change me)
+      author='Allen Institute for Artificial Intelligence',
+      author_email='allennlp@allenai.org',
       license='Apache',
       packages=find_packages(),
       install_requires=[
-          'h5py',
-          'scikit-learn',
-          'pyhocon',
+          'pyhocon==0.3.35',
           'typing',
-          'numpy',
-          'matplotlib',
-          'spacy',
           'nltk',
-          'overrides'
+          'spacy',
+          'numpy',
+          'pillow',
+          'tensorboard-pytorch',
+          'awscli>=1.11.91',
+          'sanic==0.6.0',
+          'argparse',
+          'requests>=2.18',
+          'tqdm',
+          'jupyter'
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
+      dependency_links=['git+git://github.com/mkorpela/overrides.git@40f8bd1fae7a3364a1'],
       include_package_data=True,
+      python_requires='~=3.5',
       zip_safe=False)

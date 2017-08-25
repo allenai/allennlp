@@ -6,17 +6,11 @@
 # In order to use allennlp you will also need to install pytorch. Currently, the version depends on
 # your OS. Please visit http://pytorch.org/ and follow the instructions for installation.
 
-# Neural net and related libraries.
-h5py
-scikit-learn
-
 # Parameter parsing.
 pyhocon==0.3.35
 
 # Type checking for python
 typing
-
-#### NICE-TO-HAVE LIBRARIES FOR MAIN CODE ####
 
 # Adds an @overrides decorator for better documentation and error checking when using subclasses.
 # TODO(mattg): once overrides has a new release (>1.8), change this line back to `overrides`
@@ -31,7 +25,6 @@ spacy
 
 # Used by span prediction models.
 numpy
-matplotlib
 
 # Training visualisation using tensorboard.
 pillow # A dependency of tensorboard-pytorch which is not recorded.
@@ -47,34 +40,11 @@ sanic==0.6.0
 # argument parsing in for data cleaning scripts
 argparse
 
-# Used to read the NewsQA CSV and output a clean one.
-pandas==0.19.2
-
 # Used for downloading datasets over HTTP
 requests>=2.18
 
 # progress bars in data cleaning scripts
 tqdm
-
-#### DOC-RELATED PACKAGES ####
-
-# Builds our documentation.
-sphinx==1.5.3
-
-# Watches the documentation directory and rebuilds on changes.
-sphinx-autobuild
-
-# enables numpydoc formatting in sphinx
-numpydoc
-
-# doc theme
-sphinx_rtd_theme
-
-# Only used to convert our readme to reStructuredText on Pypi.
-pypandoc
-
-# Pypi uploads
-twine
 
 # Tutorial notebooks
 jupyter
