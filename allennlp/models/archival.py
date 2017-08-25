@@ -20,7 +20,6 @@ _CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 
 def archive_model(serialization_prefix: str,
-                  config_file: str,
                   weights: str = _DEFAULT_WEIGHTS) -> None:
     """
     Archives the model weights, its training configuration, and its
@@ -30,8 +29,6 @@ def archive_model(serialization_prefix: str,
     ----------
     serialization_prefix: ``str``
         The directory where the weights and vocabulary are written out.
-    config_file: ``str``
-        The path to the experiment configuration file used to train the model.
     weights: ``str``, optional (default=_DEFAULT_WEIGHTS)
         Which weights file to include in the archive. The default is ``best.th``.
     """
@@ -39,6 +36,10 @@ def archive_model(serialization_prefix: str,
     if not os.path.exists(weights_file):
         logger.error("weights file %s does not exist, unable to archive model", weights_file)
         return
+
+    config_file = os.path.join(serialization_prefix, "_model_params.json")
+    if not os.path.exists(config_file):
+        logger.error("config file %s does not exist, unable to archive model", config_file)
 
     archive_file = os.path.join(serialization_prefix, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)

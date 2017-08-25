@@ -1,12 +1,11 @@
 # pylint: disable=invalid-name
 import os
-import json
 
 import torch
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import train_model, _CONFIG_FILE_KEY
+from allennlp.commands.train import train_model
 from allennlp.models.archival import load_archive
 
 
@@ -40,13 +39,6 @@ class ArchivalTest(AllenNlpTestCase):
                         "serialization_prefix": self.TEST_DIR
                 }
         })
-
-        # write out config file
-        config_file = os.path.join(self.TEST_DIR, "config.json")
-        with open(config_file, 'w') as outfile:
-            json.dump(params.as_dict(), outfile)
-
-        params[_CONFIG_FILE_KEY] = config_file
 
         # `train_model` should create an archive
         model = train_model(params)

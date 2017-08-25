@@ -24,10 +24,6 @@ from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-# We need the path to the configuration file in order to archive the trained model,
-# so we add it to the `Params` object with this key.
-_CONFIG_FILE_KEY = "@CONFIG_FILE@"
-
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Train the specified model on the specified dataset.'''
     subparser = parser.add_parser(
@@ -93,7 +89,6 @@ def train_model_from_file(parameter_filename: str):
     # Load the experiment config from a file, and add its own filename
     # to the config so that we can include it in the archived results.
     params = Params.from_file(parameter_filename)
-    params[_CONFIG_FILE_KEY] = parameter_filename
     train_model(params)
 
 
@@ -115,17 +110,10 @@ def train_model(params: Params) -> Model:
     """
     prepare_environment(params)
 
-    trainer_params = params.pop("trainer")
-    log_dir = trainer_params.get("serialization_prefix")
-    non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
+    log_dir = params.get("trainer", {}).get("serialization_prefix")
 
     if log_dir is None:
         raise ConfigurationError("configuration must specify trainer.serialization_prefix")
-
-    try:
-        params_file = params.pop(_CONFIG_FILE_KEY)
-    except ConfigurationError:
-        raise ConfigurationError("{} must be specified for model archiving".format(_CONFIG_FILE_KEY))
 
     os.makedirs(log_dir, exist_ok=True)
     sys.stdout = TeeLogger(os.path.join(log_dir, "_stdout.log"), sys.stdout)  # type: ignore
@@ -155,6 +143,7 @@ def train_model(params: Params) -> Model:
         combined_data = train_data
 
     # TODO(Mark): work out how this is going to be built with different options.
+    non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
     vocab = Vocabulary.from_dataset(combined_data, non_padded_namespaces=non_padded_namespaces)
     if log_dir:
         vocab.save_to_files(os.path.join(log_dir, "vocabulary"))
@@ -168,6 +157,7 @@ def train_model(params: Params) -> Model:
     if validation_data:
         validation_data.index_instances(vocab)
 
+    trainer_params = params.pop("trainer")
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,
                                   trainer_params)
@@ -175,6 +165,6 @@ def train_model(params: Params) -> Model:
     trainer.train()
 
     # Now tar up results
-    archive_model(serialization_prefix=log_dir, config_file=params_file)
+    archive_model(serialization_prefix=log_dir)
 
     return model
