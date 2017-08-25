@@ -37,7 +37,7 @@ class ArchivalTest(AllenNlpTestCase):
                 "optimizer": "adam",
                 "trainer": {
                         "num_epochs": 2,
-                        "serialization_prefix": self.TEST_DIR
+                        "serialization_dir": self.TEST_DIR
                 }
         })
 

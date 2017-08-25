@@ -101,7 +101,7 @@ you might care about the `trainer` section, which specifies how we want to train
   "trainer": {
     "num_epochs": 40,
     "patience": 10,
-    "serialization_prefix": "/tmp/tutorials/getting_started",
+    "serialization_dir": "/tmp/tutorials/getting_started",
     "cuda_device": -1
   }
 ```
@@ -112,7 +112,7 @@ so this training should take about 40, unless it stops early. `patience`
 controls the early stopping -- if our validation metric doesn't improve for
 this many epochs, training halts.
 
-The `serialization_prefix` is the path where the model's vocabulary and checkpointed weights will be saved. And if you have a GPU you can change `cuda_device` to 0 to use it.
+The `serialization_dir` is the directory where the model's vocabulary and checkpointed weights will be saved. And if you have a GPU you can change `cuda_device` to 0 to use it.
 
 Change any of those if you want to, and then run
 

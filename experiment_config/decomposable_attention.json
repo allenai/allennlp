@@ -54,6 +54,6 @@
     "num_epochs": 20,
     "patience": 5,
     "cuda_device": 0,
-    "serialization_prefix" : "tmp_output"
+    "serialization_dir" : "tmp_output"
   }
 }

@@ -110,21 +110,21 @@ def train_model(params: Params) -> Model:
     """
     prepare_environment(params)
 
-    log_dir = params.get("trainer", {}).get("serialization_prefix")
+    serialization_dir = params.get("trainer", {}).get("serialization_dir")
 
-    if log_dir is None:
-        raise ConfigurationError("configuration must specify trainer.serialization_prefix")
+    if serialization_dir is None:
+        raise ConfigurationError("configuration must specify trainer.serialization_dir")
 
-    os.makedirs(log_dir, exist_ok=True)
-    sys.stdout = TeeLogger(os.path.join(log_dir, "_stdout.log"), sys.stdout)  # type: ignore
-    sys.stderr = TeeLogger(os.path.join(log_dir, "_stderr.log"), sys.stderr)  # type: ignore
-    handler = logging.FileHandler(os.path.join(log_dir, "_python_logging.log"))
+    os.makedirs(serialization_dir, exist_ok=True)
+    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout)  # type: ignore
+    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), sys.stderr)  # type: ignore
+    handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.getLogger().addHandler(handler)
-    serialisation_params = deepcopy(params).as_dict(quiet=True)
-    with open(os.path.join(log_dir, "_model_params.json"), "w") as param_file:
-        json.dump(serialisation_params, param_file)
+    serialization_params = deepcopy(params).as_dict(quiet=True)
+    with open(os.path.join(serialization_dir, "model_params.json"), "w") as param_file:
+        json.dump(serialization_params, param_file)
 
     # Now we begin assembling the required parts for the Trainer.
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
@@ -145,8 +145,7 @@ def train_model(params: Params) -> Model:
     # TODO(Mark): work out how this is going to be built with different options.
     non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
     vocab = Vocabulary.from_dataset(combined_data, non_padded_namespaces=non_padded_namespaces)
-    if log_dir:
-        vocab.save_to_files(os.path.join(log_dir, "vocabulary"))
+    vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
@@ -165,6 +164,6 @@ def train_model(params: Params) -> Model:
     trainer.train()
 
     # Now tar up results
-    archive_model(serialization_prefix=log_dir)
+    archive_model(serialization_dir)
 
     return model

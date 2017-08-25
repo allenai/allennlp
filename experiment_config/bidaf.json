@@ -103,7 +103,7 @@
     "grad_norm": 1.0,
     "patience": 20,
     "validation_metric": "+full_span_acc",
-    "serialization_prefix": "bidaf_with_spacy",
+    "serialization_dir": "bidaf_with_spacy",
     "cuda_device": 0,
     "no_tqdm": true
   }

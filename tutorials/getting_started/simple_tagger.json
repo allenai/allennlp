@@ -50,7 +50,7 @@
   "trainer": {
     "num_epochs": 40,
     "patience": 10,
-    "serialization_prefix": "/tmp/tutorials/getting_started",
+    "serialization_dir": "/tmp/tutorials/getting_started",
     "cuda_device": -1
   }
 }
