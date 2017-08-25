@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name
 import os
+import copy
 
 import torch
 
@@ -40,6 +41,9 @@ class ArchivalTest(AllenNlpTestCase):
                 }
         })
 
+        # copy params, since they'll get consumed during training
+        params_copy = copy.deepcopy(params.as_dict())
+
         # `train_model` should create an archive
         model = train_model(params)
 
@@ -64,3 +68,7 @@ class ArchivalTest(AllenNlpTestCase):
 
         assert vocab._token_to_index == vocab2._token_to_index  # pylint: disable=protected-access
         assert vocab._index_to_token == vocab2._index_to_token  # pylint: disable=protected-access
+
+        # check that params are the same
+        params2 = archive.config
+        assert params2.as_dict() == params_copy
