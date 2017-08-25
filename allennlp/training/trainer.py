@@ -165,12 +165,12 @@ class Trainer:
                 train_generator_tqdm.set_description(description)
                 batch_num_tot = num_training_batches * epoch + batch_num
                 if self._serialization_prefix and batch_num_tot % self._log_interval == 0:
-                    for name, param in self._model.named_parameters().items():
+                    for name, param in self._model.named_parameters():
                         train_log.add_scalar("PARAMETER_MEAN/" + name, param.data.mean(), batch_num_tot)
                         train_log.add_scalar("PARAMETER_STD/" + name, param.data.std(), batch_num_tot)
                         if param.grad is not None:
                             train_log.add_scalar("GRAD_MEAN/" + name, param.grad.data.mean(), batch_num_tot)
-                        train_log.add_scalar("GRAD_STD/" + name, param.grad.data.std(), batch_num_tot)
+                            train_log.add_scalar("GRAD_STD/" + name, param.grad.data.std(), batch_num_tot)
                     train_log.add_scalar("LOSS/loss_train", metrics["loss"], batch_num_tot)
                 if self._no_tqdm:
                     logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
