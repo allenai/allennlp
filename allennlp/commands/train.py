@@ -10,7 +10,7 @@ from typing import Any, Dict, Union
 import numpy
 import torch
 
-from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set, ConfigurationError
+from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.data import Dataset, Vocabulary
@@ -31,6 +31,10 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     subparser.add_argument('param_path',
                            type=str,
                            help='path to parameter file describing the model to be trained')
+    subparser.add_argument('-s', '--serialization_dir',
+                           type=str,
+                           required=True,
+                           help='directory in which to save the model and its logs')
     subparser.set_defaults(func=_train_model_from_args)
 
     return subparser
@@ -69,30 +73,31 @@ def prepare_environment(params: Union[Params, Dict[str, Any]]):
 
 def _train_model_from_args(args: argparse.Namespace):
     """
-    Just converts from an ``argparse.Namespace`` object to a string path.
+    Just converts from an ``argparse.Namespace`` object to string paths.
     """
-    train_model_from_file(args.param_path)
+    train_model_from_file(args.param_path, args.serialization_dir)
 
 
-def train_model_from_file(parameter_filename: str):
+def train_model_from_file(parameter_filename: str, serialization_dir: str):
     """
-    A wrapper around :func:`train_model` which loads json from a file.
+    A wrapper around :func:`train_model` which loads the params from a file.
 
     Parameters
     ----------
     param_path: str, required.
         A json parameter file specifying an AllenNLP experiment.
+    serialization_dir: str, required
+        The directory in which to save results and logs.
     """
     # We need the python hashseed to be set if we're training a model
     ensure_pythonhashseed_set()
 
-    # Load the experiment config from a file, and add its own filename
-    # to the config so that we can include it in the archived results.
+    # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename)
-    train_model(params)
+    train_model(params, serialization_dir)
 
 
-def train_model(params: Params) -> Model:
+def train_model(params: Params, serialization_dir: str) -> Model:
     """
     This function can be used as an entry point to running models in AllenNLP
     directly from a JSON specification using a :class:`Driver`. Note that if
@@ -107,13 +112,10 @@ def train_model(params: Params) -> Model:
     ----------
     params: Params, required.
         A parameter object specifying an AllenNLP Experiment.
+    serialization_dir: str, required
+        The directory in which to save results and logs.
     """
     prepare_environment(params)
-
-    serialization_dir = params.get("trainer", {}).get("serialization_dir")
-
-    if serialization_dir is None:
-        raise ConfigurationError("configuration must specify trainer.serialization_dir")
 
     os.makedirs(serialization_dir, exist_ok=True)
     sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout)  # type: ignore
@@ -157,7 +159,9 @@ def train_model(params: Params) -> Model:
         validation_data.index_instances(vocab)
 
     trainer_params = params.pop("trainer")
-    trainer = Trainer.from_params(model, optimizer, iterator,
+    trainer = Trainer.from_params(model,
+                                  serialization_dir,
+                                  optimizer, iterator,
                                   train_data, validation_data,
                                   trainer_params)
     params.assert_empty('base train command')

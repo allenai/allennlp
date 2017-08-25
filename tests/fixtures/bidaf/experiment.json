@@ -83,7 +83,6 @@
     "grad_norm": 100.0,
     "grad_clipping": 100,
     "patience" : 12,
-    "serialization_dir" : "tests/fixtures/bidaf/serialization",
     "cuda_device" : -1
   }
 }

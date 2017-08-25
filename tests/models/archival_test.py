@@ -36,8 +36,7 @@ class ArchivalTest(AllenNlpTestCase):
                 "iterator": {"type": "basic", "batch_size": 2},
                 "optimizer": "adam",
                 "trainer": {
-                        "num_epochs": 2,
-                        "serialization_dir": self.TEST_DIR
+                        "num_epochs": 2
                 }
         })
 
@@ -45,7 +44,7 @@ class ArchivalTest(AllenNlpTestCase):
         params_copy = copy.deepcopy(params.as_dict())
 
         # `train_model` should create an archive
-        model = train_model(params)
+        model = train_model(params, serialization_dir=self.TEST_DIR)
 
         archive_path = os.path.join(self.TEST_DIR, "model.tar.gz")
 

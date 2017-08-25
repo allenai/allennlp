@@ -101,7 +101,6 @@
     "grad_norm": 5.0,
     "patience": 20,
     "validation_metric": "+full_span_acc",
-    "serialization_dir": "/output",
     "cuda_device": 0,
     "no_tqdm": true
   }

@@ -290,6 +290,7 @@ class Trainer:
     @classmethod
     def from_params(cls,
                     model: Model,
+                    serialization_dir: str,
                     optimizer: torch.optim.Optimizer,
                     iterator: DataIterator,
                     train_dataset: Dataset,
@@ -300,7 +301,6 @@ class Trainer:
         patience = params.pop("patience", 2)
         validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop("num_epochs", 20)
-        serialization_dir = params.pop("serialization_dir", None)
         cuda_device = params.pop("cuda_device", -1)
         grad_norm = params.pop("grad_norm", None)
         grad_clipping = params.pop("grad_clipping", None)

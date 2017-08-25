@@ -45,6 +45,6 @@ class TestDecomposableAttention(AllenNlpTestCase):
 
     def test_model_load(self):
         params = Params.from_file('tests/fixtures/decomposable_attention/experiment.json')
-        model = Model.load(params)
+        model = Model.load(params, serialization_dir='tests/fixtures/decomposable_attention/serialization')
 
         assert isinstance(model, DecomposableAttention)
