@@ -62,6 +62,6 @@
     "num_epochs": 20,
     "patience": 5,
     "cuda_device": -1,
-    "serialization_prefix" : "tests/fixtures/decomposable_attention/serialization"
+    "serialization_dir" : "tests/fixtures/decomposable_attention/serialization"
   }
 }

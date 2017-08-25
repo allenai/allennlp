@@ -1,11 +1,9 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
-import os
-import json
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import train_model, add_subparser, _train_model_from_args, _CONFIG_FILE_KEY
+from allennlp.commands.train import train_model, add_subparser, _train_model_from_args
 
 
 class TestTrain(AllenNlpTestCase):
@@ -33,15 +31,10 @@ class TestTrain(AllenNlpTestCase):
                 "optimizer": "adam",
                 "trainer": {
                         "num_epochs": 2,
-                        "serialization_prefix": self.TEST_DIR
+                        "serialization_dir": self.TEST_DIR
                 }
         })
 
-        # Write params to file for archiving purposes
-        config_file = os.path.join(self.TEST_DIR, "config.json")
-        with open(config_file, 'w') as outfile:
-            json.dump(params.as_dict(), outfile)
-        params[_CONFIG_FILE_KEY] = config_file
         train_model(params)
 
     def test_train_args(self):

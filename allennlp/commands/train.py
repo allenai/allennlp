@@ -24,10 +24,6 @@ from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-# We need the path to the configuration file in order to archive the trained model,
-# so we add it to the `Params` object with this key.
-_CONFIG_FILE_KEY = "@CONFIG_FILE@"
-
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Train the specified model on the specified dataset.'''
     subparser = parser.add_parser(
@@ -93,7 +89,6 @@ def train_model_from_file(parameter_filename: str):
     # Load the experiment config from a file, and add its own filename
     # to the config so that we can include it in the archived results.
     params = Params.from_file(parameter_filename)
-    params[_CONFIG_FILE_KEY] = parameter_filename
     train_model(params)
 
 
@@ -115,28 +110,21 @@ def train_model(params: Params) -> Model:
     """
     prepare_environment(params)
 
-    trainer_params = params.pop("trainer")
-    log_dir = trainer_params.get("serialization_prefix")
-    non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
+    serialization_dir = params.get("trainer", {}).get("serialization_dir")
 
-    if log_dir is None:
-        raise ConfigurationError("configuration must specify trainer.serialization_prefix")
+    if serialization_dir is None:
+        raise ConfigurationError("configuration must specify trainer.serialization_dir")
 
-    try:
-        params_file = params.pop(_CONFIG_FILE_KEY)
-    except ConfigurationError:
-        raise ConfigurationError("{} must be specified for model archiving".format(_CONFIG_FILE_KEY))
-
-    os.makedirs(log_dir, exist_ok=True)
-    sys.stdout = TeeLogger(os.path.join(log_dir, "_stdout.log"), sys.stdout)  # type: ignore
-    sys.stderr = TeeLogger(os.path.join(log_dir, "_stderr.log"), sys.stderr)  # type: ignore
-    handler = logging.FileHandler(os.path.join(log_dir, "_python_logging.log"))
+    os.makedirs(serialization_dir, exist_ok=True)
+    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout)  # type: ignore
+    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), sys.stderr)  # type: ignore
+    handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.getLogger().addHandler(handler)
-    serialisation_params = deepcopy(params).as_dict(quiet=True)
-    with open(os.path.join(log_dir, "_model_params.json"), "w") as param_file:
-        json.dump(serialisation_params, param_file)
+    serialization_params = deepcopy(params).as_dict(quiet=True)
+    with open(os.path.join(serialization_dir, "model_params.json"), "w") as param_file:
+        json.dump(serialization_params, param_file)
 
     # Now we begin assembling the required parts for the Trainer.
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
@@ -155,9 +143,9 @@ def train_model(params: Params) -> Model:
         combined_data = train_data
 
     # TODO(Mark): work out how this is going to be built with different options.
+    non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
     vocab = Vocabulary.from_dataset(combined_data, non_padded_namespaces=non_padded_namespaces)
-    if log_dir:
-        vocab.save_to_files(os.path.join(log_dir, "vocabulary"))
+    vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
@@ -168,6 +156,7 @@ def train_model(params: Params) -> Model:
     if validation_data:
         validation_data.index_instances(vocab)
 
+    trainer_params = params.pop("trainer")
     trainer = Trainer.from_params(model, optimizer, iterator,
                                   train_data, validation_data,
                                   trainer_params)
@@ -175,6 +164,6 @@ def train_model(params: Params) -> Model:
     trainer.train()
 
     # Now tar up results
-    archive_model(serialization_prefix=log_dir, config_file=params_file)
+    archive_model(serialization_dir)
 
     return model

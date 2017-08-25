@@ -52,7 +52,7 @@
     "grad_clipping": 1.0,
     "patience": 20,
     "validation_metric": "+f1-measure-overall",
-    "serialization_prefix": "/net/efs/aristo/allennlp/srl/luheng-xavier",
+    "serialization_dir": "/net/efs/aristo/allennlp/srl/luheng-xavier",
     "cuda_device": 0
   }
 }

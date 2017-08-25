@@ -42,7 +42,7 @@
     "num_epochs": 1,
     "grad_norm": 1.0,
     "patience": 500,
-    "serialization_prefix": "tests/fixtures/srl/serialization",
+    "serialization_dir": "tests/fixtures/srl/serialization",
     "cuda_device": -1
   }
 }

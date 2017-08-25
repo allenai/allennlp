@@ -104,7 +104,7 @@ class Model(torch.nn.Module, Registrable):
     @classmethod
     def load(cls,
              config: Params,
-             serialization_prefix: str = None,
+             serialization_dir: str = None,
              weights_file: str = None,
              cuda_device: int = -1) -> 'Model':
         """
@@ -117,8 +117,8 @@ class Model(torch.nn.Module, Registrable):
             The configuration that was used to train the model. It should definitely
             have a `model` section, and should probably have a `trainer` section
             as well.
-        serialization_prefix: str = None
-            By default we look at `config['trainer']['serialization_prefix']` to
+        serialization_dir: str = None
+            By default we look at `config['trainer']['serialization_dir']` to
             get the path to the serialized model, but you can override that
             value here.
         weights_file: str = None
@@ -136,15 +136,15 @@ class Model(torch.nn.Module, Registrable):
             vocabulary and the trained weights.
         """
         trainer_config = config.get("trainer", {})
-        serialization_prefix = (serialization_prefix or
-                                trainer_config.get('serialization_prefix'))
-        if serialization_prefix is None:
-            raise ConfigurationError('serialization_prefix must be specified')
+        serialization_dir = (serialization_dir or
+                             trainer_config.get('serialization_dir'))
+        if serialization_dir is None:
+            raise ConfigurationError('serialization_dir must be specified')
 
-        weights_file = weights_file or os.path.join(serialization_prefix, _DEFAULT_WEIGHTS)
+        weights_file = weights_file or os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
 
         # Load vocabulary from file
-        vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
+        vocab_dir = os.path.join(serialization_dir, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
         model_params = config.get('model')
