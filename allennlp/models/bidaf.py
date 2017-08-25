@@ -132,6 +132,9 @@ class BidirectionalAttentionFlow(Model):
             probabilities of the span end position (exclusive).
         span_end_probs : torch.FloatTensor
             The result of ``softmax(span_end_logits)``.
+        best_span : torch.IntTensor
+            The result of a constrained inference over ``span_start_logits`` and
+            ``span_end_logits`` to find the most probable span.  Shape is ``(batch_size, 2)``.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
 
@@ -208,17 +211,18 @@ class BidirectionalAttentionFlow(Model):
         span_end_input = self._dropout(torch.cat([final_merged_passage, encoded_span_end], dim=-1))
         span_end_logits = self._span_end_predictor(span_end_input).squeeze(-1)
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
+        best_span = self._get_best_span(span_start_logits, span_end_logits)
 
         output_dict = {"span_start_logits": span_start_logits,
                        "span_start_probs": span_start_probs,
                        "span_end_logits": span_end_logits,
-                       "span_end_probs": span_end_probs}
+                       "span_end_probs": span_end_probs,
+                       "best_span": best_span}
         if span_start is not None:
             loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1))
             self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
             loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.squeeze(-1))
             self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
-            best_span = self._get_best_span(span_start_logits, span_end_logits)
             self._span_accuracy(best_span, torch.stack([span_start, span_end], -1))
             output_dict["loss"] = loss
 

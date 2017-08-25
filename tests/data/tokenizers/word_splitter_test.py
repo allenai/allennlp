@@ -1,11 +1,15 @@
 # pylint: disable=no-self-use,invalid-name
 
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers.word_splitter import SimpleWordSplitter
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
 
-class TestSimpleWordSplitter:
-    word_splitter = SimpleWordSplitter()
+class TestSimpleWordSplitter(AllenNlpTestCase):
+    def setUp(self):
+        super(TestSimpleWordSplitter, self).setUp()
+        self.word_splitter = SimpleWordSplitter()
+
     def test_tokenize_handles_complex_punctuation(self):
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
         expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", '"',
@@ -40,8 +44,11 @@ class TestSimpleWordSplitter:
         assert tokens == expected_tokens
 
 
-class TestSpacyWordSplitter:
-    word_splitter = SpacyWordSplitter()
+class TestSpacyWordSplitter(AllenNlpTestCase):
+    def setUp(self):
+        super(TestSpacyWordSplitter, self).setUp()
+        self.word_splitter = SpacyWordSplitter()
+
     def test_tokenize_handles_complex_punctuation(self):
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
         expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", '"',

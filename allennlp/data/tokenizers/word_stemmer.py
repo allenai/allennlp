@@ -1,16 +1,10 @@
-from collections import OrderedDict
-from typing import Dict, Type  # pylint: disable=unused-import
-
 from nltk.stem import PorterStemmer as NltkPorterStemmer
 from overrides import overrides
 
-from allennlp.common import Params
+from allennlp.common import Params, Registrable
 
-# pylint: disable=invalid-name
-word_stemmers = OrderedDict()  # type: Dict[str, Type[WordStemmer]]
-# pylint: enable=invalid-name
 
-class WordStemmer:
+class WordStemmer(Registrable):
     """
     A ``WordStemmer`` lemmatizes words.  This means that we map words to their root form, so that,
     e.g., "have", "has", and "had" all have the same internal representation.
@@ -20,17 +14,20 @@ class WordStemmer:
     inflected language, or in a low-data setting, you might need it anyway.  The default
     ``WordStemmer`` does nothing, just returning the work token as-is.
     """
+    default_implementation = 'pass_through'
+
     def stem_word(self, word: str) -> str:
         """Converts a word to its lemma"""
         raise NotImplementedError
 
-    @staticmethod
-    def from_params(params: Params) -> 'WordStemmer':
-        choice = params.pop_choice('type', list(word_stemmers.keys()), default_to_first_choice=True)
+    @classmethod
+    def from_params(cls, params: Params) -> 'WordStemmer':
+        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
         params.assert_empty('WordStemmer')
-        return word_stemmers[choice]()
+        return cls.by_name(choice)()
 
 
+@WordStemmer.register('pass_through')
 class PassThroughWordStemmer(WordStemmer):
     """
     Does not stem words; it's a no-op.  This is the default word stemmer.
@@ -40,6 +37,7 @@ class PassThroughWordStemmer(WordStemmer):
         return word
 
 
+@WordStemmer.register('porter')
 class PorterStemmer(WordStemmer):
     """
     Uses NLTK's PorterStemmer to stem words.
@@ -50,7 +48,3 @@ class PorterStemmer(WordStemmer):
     @overrides
     def stem_word(self, word: str) -> str:
         return self.stemmer.stem(word)
-
-
-word_stemmers['pass_through'] = PassThroughWordStemmer
-word_stemmers['porter'] = PorterStemmer

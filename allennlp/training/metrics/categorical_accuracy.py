@@ -58,12 +58,13 @@ class CategoricalAccuracy(Metric):
 
         # This is of shape (batch_size, ..., top_k).
         correct = top_k.eq(gold_labels.long().unsqueeze(-1)).float()
-        count = torch.ones(gold_labels.size())
+
         if mask is not None:
             correct *= mask.unsqueeze(-1)
-            count *= mask
+            self.total_count += mask.sum()
+        else:
+            self.total_count += gold_labels.numel()
         self.correct_count += correct.sum()
-        self.total_count += count.sum()
 
     def get_metric(self, reset: bool = False):
         """
