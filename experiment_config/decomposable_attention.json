@@ -6,17 +6,18 @@
         "type": "single_id",
         "lowercase_tokens": true
       }
-    }
+    },
+    "append_null": true
   },
-  "train_data_path": "/net/efs/aristo/dlfa/snli/snli_1.0_train.jsonl",
-  "validation_data_path": "/net/efs/aristo/dlfa/snli/snli_1.0_dev.jsonl",
+  "train_data_path": "/snli/snli_1.0_train.jsonl",
+  "validation_data_path": "/snli/snli_1.0_dev.jsonl",
   "model": {
     "type": "decomposable_attention",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
         "projection_dim": 200,
-        "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.300d.txt.gz",
+        "pretrained_file": "/glove/glove.6B.300d.txt.gz",
         "embedding_dim": 300,
         "trainable": false
       }
@@ -25,35 +26,47 @@
       "input_dim": 200,
       "num_layers": 2,
       "hidden_dims": 200,
-      "activations": "relu"
+      "activations": "relu",
+      "dropout": 0.2
     },
     "similarity_function": {"type": "dot_product"},
     "compare_feedforward": {
       "input_dim": 400,
       "num_layers": 2,
       "hidden_dims": 200,
-      "activations": "relu"
+      "activations": "relu",
+      "dropout": 0.2
     },
     "aggregate_feedforward": {
       "input_dim": 400,
       "num_layers": 2,
       "hidden_dims": [200, 3],
-      "activations": ["relu", "linear"]
+      "activations": ["relu", "linear"],
+      "dropout": [0.2, 0.0]
+    },
+    "initializer": {
+      "default": {
+        "type": "normal",
+        "mean": 0,
+        "std": 0.01
+      },
+      "exclude": ["token_embedder_tokens"]
     }
   },
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["premise", "num_tokens"], ["hypothesis", "num_tokens"]],
-    "batch_size": 40
+    "batch_size": 32
   },
   "optimizer": {
-    "type": "adadelta",
-    "lr": 1.0
+    "type": "adagrad",
+    "lr": 0.05
   },
   "trainer": {
-    "num_epochs": 20,
+    "num_epochs": 40,
     "patience": 5,
     "cuda_device": 0,
-    "serialization_dir" : "tmp_output"
+    "serialization_dir" : "/output",
+    "no_tqdm": true
   }
 }
