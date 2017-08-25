@@ -43,14 +43,6 @@
       "hidden_dims": [200, 3],
       "activations": ["relu", "linear"],
       "dropout": [0.2, 0.0]
-    },
-    "initializer": {
-      "default": {
-        "type": "normal",
-        "mean": 0,
-        "std": 0.01
-      },
-      "exclude": ["token_embedder_tokens"]
     }
   },
   "iterator": {

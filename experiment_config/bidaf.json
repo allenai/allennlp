@@ -70,23 +70,7 @@
       "num_layers": 2,
       "dropout": 0.2
     },
-    "dropout": 0.2,
-    "initializer": {
-      "bias": {
-        "type": "normal",
-        "mean": 0,
-        "std": 0.01
-      },
-      "similarity_function.*weight_vector": {
-        "type": "normal",
-        "mean": 0,
-        "std": 0.1
-      },
-      "default": {
-        "type": "xavier_uniform"
-      },
-      "exclude": ["token_embedder_tokens"]
-    }
+    "dropout": 0.2
   },
   "iterator": {
     "type": "bucket",

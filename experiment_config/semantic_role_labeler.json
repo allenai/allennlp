@@ -11,22 +11,29 @@
         "trainable": true
       }
     },
-    "initializer": {
-      "default": {"type": "normal", "std": 0.01},
-      "tag_projection_layer.*weight": {"type": "xavier_uniform"},
-      "stacked_encoder\._module.layer_0\.input_linearity\.weight": {
-        "type": "block_orthogonal",
-        "split_sizes": [300, 200]
-        },
-      "stacked_encoder\._module\.layer_0\.state_linearity\.weight": {
-        "type": "block_orthogonal",
-        "split_sizes": [300, 300]
-        },
-      "stacked_encoder.*layer_[1-7].*weight": {
-        "type": "block_orthogonal",
-        "split_sizes": [300, 300]
+    "initializer": [
+      [
+        "stacked_encoder\._module.layer_0\.input_linearity\.weight",
+        {
+          "type": "block_orthogonal",
+          "split_sizes": [300, 200]
         }
-    },
+      ],
+      [
+        "stacked_encoder\._module\.layer_0\.state_linearity\.weight",
+        {
+          "type": "block_orthogonal",
+          "split_sizes": [300, 300]
+        }
+      ],
+      [
+        "stacked_encoder.*layer_[1-7].*weight",
+        {
+          "type": "block_orthogonal",
+          "split_sizes": [300, 300]
+        }
+      ]
+    ],
     "stacked_encoder": {
       "type": "alternating_lstm",
       "input_size": 200,

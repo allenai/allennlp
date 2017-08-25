@@ -39,14 +39,6 @@
       "num_layers": 1,
       "hidden_dims": 3,
       "activations": "linear"
-    },
-    "initializer": {
-      "default": {
-        "type": "normal",
-        "mean": 0,
-        "std": 0.1
-      },
-      "exclude": ["token_embedder_tokens"]
     }
   },
   "iterator": {
