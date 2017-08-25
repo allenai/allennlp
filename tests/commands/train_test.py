@@ -30,25 +30,31 @@ class TestTrain(AllenNlpTestCase):
                 "iterator": {"type": "basic", "batch_size": 2},
                 "optimizer": "adam",
                 "trainer": {
-                        "num_epochs": 2,
-                        "serialization_dir": self.TEST_DIR
+                        "num_epochs": 2
                 }
         })
 
-        train_model(params)
+        train_model(params, serialization_dir=self.TEST_DIR)
 
     def test_train_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
         add_subparser(subparsers)
 
-        raw_args = ["train", "path/to/params"]
+        raw_args = ["train", "path/to/params", "-s", "serialization_dir"]
 
         args = parser.parse_args(raw_args)
 
         assert args.func == _train_model_from_args
         assert args.param_path == "path/to/params"
+        assert args.serialization_dir == "serialization_dir"
 
+        # config is required
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
-            args = parser.parse_args(["train"])
+            args = parser.parse_args(["train", "-s", "serialization_dir"])
+            assert cm.exception.code == 2  # argparse code for incorrect usage
+
+        # serialization dir is required
+        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+            args = parser.parse_args(["train", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage

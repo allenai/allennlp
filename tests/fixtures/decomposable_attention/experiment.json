@@ -61,7 +61,6 @@
   "trainer": {
     "num_epochs": 20,
     "patience": 5,
-    "cuda_device": -1,
-    "serialization_dir" : "tests/fixtures/decomposable_attention/serialization"
+    "cuda_device": -1
   }
 }
