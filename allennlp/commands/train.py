@@ -80,18 +80,19 @@ def _train_model_from_args(args: argparse.Namespace):
 
 def train_model_from_file(parameter_filename: str, serialization_dir: str):
     """
-    A wrapper around :func:`train_model` which loads json from a file.
+    A wrapper around :func:`train_model` which loads the params from a file.
 
     Parameters
     ----------
     param_path: str, required.
         A json parameter file specifying an AllenNLP experiment.
+    serialization_dir: str, required
+        The directory in which to save results and logs.
     """
     # We need the python hashseed to be set if we're training a model
     ensure_pythonhashseed_set()
 
-    # Load the experiment config from a file, and add its own filename
-    # to the config so that we can include it in the archived results.
+    # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename)
     train_model(params, serialization_dir)
 
@@ -111,6 +112,8 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     ----------
     params: Params, required.
         A parameter object specifying an AllenNLP Experiment.
+    serialization_dir: str, required
+        The directory in which to save results and logs.
     """
     prepare_environment(params)
 
