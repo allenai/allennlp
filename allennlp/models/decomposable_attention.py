@@ -174,7 +174,9 @@ class DecomposableAttention(Model):
     def predict_entailment(self, premise: TextField, hypothesis: TextField) -> Dict[str, torch.Tensor]:
         """
         Given a premise and a hypothesis sentence, predict the entailment relationship between
-        them.
+        them.  Note that in the paper, a null token was appended to each sentence, to allow for
+        words to align to nothing in the other sentence.  If you've trained your model with a null
+        token, you probably want to include it here, too.
 
         Parameters
         ----------

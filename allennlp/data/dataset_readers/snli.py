@@ -33,11 +33,21 @@ class SnliReader(DatasetReader):
         We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
+    append_null : ``bool``, optional (default=False)
+        If you want a NULL token added to the end of each sentence (both the premise and the
+        hypothesis), you can do that here.  If you're trying to do a word-level alignment between
+        the premise and the hypothesis, for instance, this is an easy way to allow some words to
+        align to nothing.  It will also mess a little with RNN encoders.  The Decomposable
+        Attention model did this, but you might not want to do it with every model.
     """
+    null_token = "@@NULL@@"
+
     def __init__(self,
                  tokenizer: Tokenizer = WordTokenizer(),
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 append_null: bool = False) -> None:
         super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
+        self._append_null = append_null
 
     @overrides
     def read(self, file_path: str):
@@ -58,9 +68,14 @@ class SnliReader(DatasetReader):
                 label_field = LabelField(label)
 
                 premise = example["sentence1"]
-                premise_field = TextField(self._tokenizer.tokenize(premise), self._token_indexers)
+                premise_tokens = self._tokenizer.tokenize(premise)
                 hypothesis = example["sentence2"]
-                hypothesis_field = TextField(self._tokenizer.tokenize(hypothesis), self._token_indexers)
+                hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
+                if self._append_null:
+                    premise_tokens.append(self.null_token)
+                    hypothesis_tokens.append(self.null_token)
+                premise_field = TextField(premise_tokens, self._token_indexers)
+                hypothesis_field = TextField(hypothesis_tokens, self._token_indexers)
                 instances.append(Instance({'label': label_field,
                                            'premise': premise_field,
                                            'hypothesis': hypothesis_field}))
@@ -71,13 +86,6 @@ class SnliReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'SnliReader':
-        """
-        Parameters
-        ----------
-        filename : ``str``
-        tokenizer : ``Params``, optional
-        token_indexers: ``List[Params]``, optional
-        """
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = {}
         token_indexer_params = params.pop('token_indexers', Params({}))
@@ -87,6 +95,8 @@ class SnliReader(DatasetReader):
         # so if no parameters are given we must pass None.
         if token_indexers == {}:
             token_indexers = None
+        append_null = params.pop('append_null', False)
         params.assert_empty(cls.__name__)
         return SnliReader(tokenizer=tokenizer,
-                          token_indexers=token_indexers)
+                          token_indexers=token_indexers,
+                          append_null=append_null)

@@ -6,23 +6,24 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestSnliReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
-        reader = SnliReader()
+        reader = SnliReader(append_null=True)
         dataset = reader.read('tests/fixtures/data/snli.jsonl')
 
-        instance1 = {"premise": ["A", "person", "on", "a", "horse",
-                                 "jumps", "over", "a", "broken", "down", "airplane", "."],
-                     "hypothesis": ["A", "person", "is", "training",
-                                    "his", "horse", "for", "a", "competition", "."],
+        instance1 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
+                                 "down", "airplane", ".", reader.null_token],
+                     "hypothesis": ["A", "person", "is", "training", "his", "horse", "for", "a",
+                                    "competition", ".", reader.null_token],
                      "label": "neutral"}
 
-        instance2 = {"premise": ["A", "person", "on", "a", "horse",
-                                 "jumps", "over", "a", "broken", "down", "airplane", "."],
-                     "hypothesis": ["A", "person", "is", "at", "a", "diner",
-                                    ",", "ordering", "an", "omelette", "."],
+        instance2 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
+                                 "down", "airplane", ".", reader.null_token],
+                     "hypothesis": ["A", "person", "is", "at", "a", "diner", ",", "ordering", "an",
+                                    "omelette", ".", reader.null_token],
                      "label": "contradiction"}
-        instance3 = {"premise": ["A", "person", "on", "a", "horse",
-                                 "jumps", "over", "a", "broken", "down", "airplane", "."],
-                     "hypothesis": ["A", "person", "is", "outdoors", ",", "on", "a", "horse", "."],
+        instance3 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
+                                 "down", "airplane", ".", reader.null_token],
+                     "hypothesis": ["A", "person", "is", "outdoors", ",", "on", "a", "horse", ".",
+                                    reader.null_token],
                      "label": "entailment"}
 
         assert len(dataset.instances) == 3

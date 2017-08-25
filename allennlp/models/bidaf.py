@@ -317,7 +317,7 @@ class BidirectionalAttentionFlow(Model):
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
         modeling_layer = Seq2SeqEncoder.from_params(params.pop("modeling_layer"))
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
-        initializer = InitializerApplicator.from_params(params.pop("initializer"))
+        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
         dropout = params.pop('dropout', 0.2)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,

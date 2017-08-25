@@ -1,3 +1,4 @@
+from typing import Tuple
 import os
 import base64
 import logging
@@ -11,21 +12,33 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 CACHE_ROOT = os.path.expanduser(os.path.join('~', '.allennlp'))
 DATASET_CACHE = os.path.join(CACHE_ROOT, "datasets")
 
-def url_to_filename(url: str) -> str:
+def url_to_filename(url: str, etag: str = None) -> str:
     """
     Converts a url into a filename in a reversible way.
+    If `etag` is specified, add it on the end, separated by a period
+    (which necessarily won't appear in the base64-encoded filename).
     """
     url_bytes = url.encode('utf-8')
     b64_bytes = base64.b64encode(url_bytes)
-    return b64_bytes.decode('utf-8')
+    decoded = b64_bytes.decode('utf-8')
 
-def filename_to_url(filename: str) -> str:
+    return decoded if etag is None else "{}.{}".format(decoded, etag)
+
+def filename_to_url(filename: str) -> Tuple[str, str]:
     """
-    Recovers the the url from the encoded filename.
+    Recovers the the url from the encoded filename. Returns it and the ETag
+    (which may be ``None``)
     """
-    filename_bytes = filename.encode('utf-8')
+    try:
+        # If there is an etag, it's everything after the first period
+        decoded, etag = filename.split(".", 1)
+    except ValueError:
+        # Otherwise, use None
+        decoded, etag = filename, None
+
+    filename_bytes = decoded.encode('utf-8')
     url_bytes = base64.b64decode(filename_bytes)
-    return url_bytes.decode('utf-8')
+    return url_bytes.decode('utf-8'), etag
 
 def cached_path(url_or_filename: str, cache_dir: str = DATASET_CACHE) -> str:
     """
@@ -57,7 +70,17 @@ def get_from_cache(url: str, cache_dir: str = DATASET_CACHE) -> str:
     If it's not there, download it. Then return the path to the cached file.
     """
     os.makedirs(cache_dir, exist_ok=True)
-    path = os.path.join(cache_dir, url_to_filename(url))
+
+    # make HEAD request to check ETag
+    response = requests.head(url)
+    if response.status_code != 200:
+        raise IOError("HEAD request failed for url {}".format(url))
+
+    # add ETag to filename if it exists
+    etag = response.headers.get("ETag")
+    filename = url_to_filename(url, etag)
+
+    path = os.path.join(cache_dir, filename)
 
     if not os.path.exists(path):
         logger.info("%s not found in cache, downloading to %s", url, path)

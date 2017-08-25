@@ -1,12 +1,12 @@
 # pylint: disable=invalid-name
 import os
-import json
+import copy
 
 import torch
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import train_model, _CONFIG_FILE_KEY
+from allennlp.commands.train import train_model
 from allennlp.models.archival import load_archive
 
 
@@ -36,20 +36,15 @@ class ArchivalTest(AllenNlpTestCase):
                 "iterator": {"type": "basic", "batch_size": 2},
                 "optimizer": "adam",
                 "trainer": {
-                        "num_epochs": 2,
-                        "serialization_prefix": self.TEST_DIR
+                        "num_epochs": 2
                 }
         })
 
-        # write out config file
-        config_file = os.path.join(self.TEST_DIR, "config.json")
-        with open(config_file, 'w') as outfile:
-            json.dump(params.as_dict(), outfile)
-
-        params[_CONFIG_FILE_KEY] = config_file
+        # copy params, since they'll get consumed during training
+        params_copy = copy.deepcopy(params.as_dict())
 
         # `train_model` should create an archive
-        model = train_model(params)
+        model = train_model(params, serialization_dir=self.TEST_DIR)
 
         archive_path = os.path.join(self.TEST_DIR, "model.tar.gz")
 
@@ -72,3 +67,7 @@ class ArchivalTest(AllenNlpTestCase):
 
         assert vocab._token_to_index == vocab2._token_to_index  # pylint: disable=protected-access
         assert vocab._index_to_token == vocab2._index_to_token  # pylint: disable=protected-access
+
+        # check that params are the same
+        params2 = archive.config
+        assert params2.as_dict() == params_copy

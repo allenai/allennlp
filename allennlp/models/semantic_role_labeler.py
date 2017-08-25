@@ -222,7 +222,7 @@ class SemanticRoleLabeler(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
         binary_feature_dim = params.pop("binary_feature_dim")
-        initializer = InitializerApplicator.from_params(params.pop("initializer"))
+        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,

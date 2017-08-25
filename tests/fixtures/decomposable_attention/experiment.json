@@ -39,14 +39,6 @@
       "num_layers": 1,
       "hidden_dims": 3,
       "activations": "linear"
-    },
-    "initializer": {
-      "default": {
-        "type": "normal",
-        "mean": 0,
-        "std": 0.1
-      },
-      "exclude": ["token_embedder_tokens"]
     }
   },
   "iterator": {
@@ -61,7 +53,6 @@
   "trainer": {
     "num_epochs": 20,
     "patience": 5,
-    "cuda_device": -1,
-    "serialization_prefix" : "tests/fixtures/decomposable_attention/serialization"
+    "cuda_device": -1
   }
 }

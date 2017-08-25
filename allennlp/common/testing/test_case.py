@@ -58,7 +58,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     def get_trainer_params(self, additional_arguments=None):
         params = Params({})
         params['save_models'] = False
-        params['serialization_prefix'] = self.MODEL_FILE
+        params['serialization_dir'] = self.MODEL_FILE
         params['num_epochs'] = 1
 
         if additional_arguments:

@@ -18,14 +18,6 @@
       "hidden_size": 10,
       "num_layers": 1
     },
-    "initializer": {
-      "default": {
-        "type": "normal",
-        "mean": 0,
-        "std": 0.1
-      },
-      "exclude": ["token_embedder_tokens"]
-    },
     "binary_feature_dim": 50
   },
   "iterator": {
@@ -42,7 +34,6 @@
     "num_epochs": 1,
     "grad_norm": 1.0,
     "patience": 500,
-    "serialization_prefix": "tests/fixtures/srl/serialization",
     "cuda_device": -1
   }
 }

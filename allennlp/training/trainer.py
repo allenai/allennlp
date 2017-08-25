@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+import time
 from typing import Dict, Optional, List  # pylint: disable=unused-import
 
 import torch
@@ -28,7 +29,7 @@ class Trainer:
                  patience: int = 2,
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
-                 serialization_prefix: Optional[str] = None,
+                 serialization_dir: Optional[str] = None,
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
@@ -58,7 +59,7 @@ class Trainer:
             is an increasing or decreasing function.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
-        serialization_prefix : str, optional (default=None)
+        serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
         cuda_device : int, optional (default = -1)
@@ -76,7 +77,7 @@ class Trainer:
             after every batch.  This is nice if you're running training on a local shell, but can
             cause problems with log files from, e.g., a docker image running on kubernetes.  If
             ``no_tqdm`` is ``True``, we will not use tqdm, and instead log batch statistics using
-            ``logger.info``.
+            ``logger.info``, outputting a line at most every 10 seconds.
         """
         self._model = model
         self._iterator = iterator
@@ -86,11 +87,10 @@ class Trainer:
 
         self._patience = patience
         self._num_epochs = num_epochs
-        self._serialization_prefix = serialization_prefix
+        self._serialization_dir = serialization_dir
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
-        self._log_interval = 100
 
         increase_or_decrease = validation_metric[0]
         if increase_or_decrease not in ["+", "-"]:
@@ -103,15 +103,18 @@ class Trainer:
         if self._cuda_device >= 0:
             self._model = self._model.cuda(self._cuda_device)
 
+        self._log_interval = 10  # seconds
+        self._summary_interval = 100  # num batches between logging to tensorboard
+
     def train(self) -> None:
         epoch_counter = 0
         # Resume from serialization path if it contains a saved model.
-        if self._serialization_prefix is not None:
+        if self._serialization_dir is not None:
             # Set up tensorboard logging.
-            train_log = SummaryWriter(os.path.join(self._serialization_prefix, "log", "train"))
-            validation_log = SummaryWriter(os.path.join(self._serialization_prefix, "log", "validation"))
+            train_log = SummaryWriter(os.path.join(self._serialization_dir, "log", "train"))
+            validation_log = SummaryWriter(os.path.join(self._serialization_dir, "log", "validation"))
             if any(["model_state_epoch_" in x
-                    for x in os.listdir(self._serialization_prefix)]):
+                    for x in os.listdir(self._serialization_dir)]):
                 logger.info("Loading model from checkpoint.")
                 epoch_counter = self._restore_checkpoint()
 
@@ -139,6 +142,7 @@ class Trainer:
             train_generator_tqdm = tqdm.tqdm(train_generator,
                                              disable=self._no_tqdm,
                                              total=num_training_batches)
+            last_log = time.time()
             batch_num = 0
             logger.info("Training")
             for batch in train_generator_tqdm:
@@ -163,8 +167,9 @@ class Trainer:
                 metrics["loss"] = float(train_loss / batch_num)
                 description = self._description_from_metrics(metrics)
                 train_generator_tqdm.set_description(description)
+
                 batch_num_tot = num_training_batches * epoch + batch_num
-                if self._serialization_prefix and batch_num_tot % self._log_interval == 0:
+                if self._serialization_prefix and batch_num_tot % self._summary_interval == 0:
                     for name, param in self._model.named_parameters():
                         train_log.add_scalar("PARAMETER_MEAN/" + name, param.data.mean(), batch_num_tot)
                         train_log.add_scalar("PARAMETER_STD/" + name, param.data.std(), batch_num_tot)
@@ -172,8 +177,9 @@ class Trainer:
                             train_log.add_scalar("GRAD_MEAN/" + name, param.grad.data.mean(), batch_num_tot)
                             train_log.add_scalar("GRAD_STD/" + name, param.grad.data.std(), batch_num_tot)
                     train_log.add_scalar("LOSS/loss_train", metrics["loss"], batch_num_tot)
-                if self._no_tqdm:
+                if self._no_tqdm and time.time() - last_log > self._log_interval:
                     logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
+                    last_log = time.time()
             metrics = self._model.get_metrics(reset=True)
             metrics["loss"] = float(train_loss / batch_num)
 
@@ -196,14 +202,15 @@ class Trainer:
                     val_metrics["loss"] = float(val_loss / batch_num)
                     description = self._description_from_metrics(val_metrics)
                     val_generator_tqdm.set_description(description)
-                    if self._no_tqdm:
+                    if self._no_tqdm and time.time() - last_log > self._log_interval:
                         logger.info("Batch %d/%d: %s", batch_num, num_validation_batches, description)
+                        last_log = time.time()
                 val_metrics = self._model.get_metrics(reset=True)
                 val_metrics["loss"] = float(val_loss / batch_num)
                 message_template = "Training %s : %3f    Validation %s : %3f "
                 for name, value in metrics.items():
                     logger.info(message_template, name, value, name, val_metrics[name])
-                    if self._serialization_prefix:
+                    if self._serialization_dir:
                         train_log.add_scalar(name, value, epoch)
                         validation_log.add_scalar(name, val_metrics[name], epoch)
 
@@ -224,15 +231,15 @@ class Trainer:
                     is_best_so_far = this_epoch == min(validation_metric_per_epoch)
                 else:
                     is_best_so_far = this_epoch == max(validation_metric_per_epoch)
-                if self._serialization_prefix:
+                if self._serialization_dir:
                     self._save_checkpoint(epoch, is_best=is_best_so_far)
             else:
                 message_template = "Training %s : %3f "
                 for name, value in metrics.items():
                     logger.info(message_template, name, value)
-                    if self._serialization_prefix:
+                    if self._serialization_dir:
                         train_log.add_scalar(name, value, epoch)
-                if self._serialization_prefix:
+                if self._serialization_dir:
                     self._save_checkpoint(epoch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
@@ -252,21 +259,21 @@ class Trainer:
             be copied to a "best.th" file. The value of this flag should
             be based on some validation metric computed by your model.
         """
-        model_path = os.path.join(self._serialization_prefix, "model_state_epoch_{}.th".format(epoch))
+        model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}.th".format(epoch))
         model_state = self._model.state_dict()
         torch.save(model_state, model_path)
 
         training_state = {'epoch': epoch, 'optimizer': self._optimizer.state_dict()}
-        torch.save(training_state, os.path.join(self._serialization_prefix,
+        torch.save(training_state, os.path.join(self._serialization_dir,
                                                 "training_state_epoch_{}.th".format(epoch)))
         if is_best:
             logger.info("Best validation performance so far. "
-                        "Copying weights to %s/best.th'.", self._serialization_prefix)
-            shutil.copyfile(model_path, os.path.join(self._serialization_prefix, "best.th"))
+                        "Copying weights to %s/best.th'.", self._serialization_dir)
+            shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
 
     def _restore_checkpoint(self) -> int:
         """
-        Restores a model from a serialization_prefix to the last saved checkpoint.
+        Restores a model from a serialization_dir to the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
         from  model parameters. This function should only be used to continue training -
         if you wish to load a model for inference/load parts of a model into a new
@@ -278,17 +285,17 @@ class Trainer:
         epoch: int
             The epoch at which to resume training.
         """
-        if not self._serialization_prefix:
-            raise ConfigurationError("serialization_prefix not specified - cannot "
+        if not self._serialization_dir:
+            raise ConfigurationError("serialization_dir not specified - cannot "
                                      "restore a model without a directory path.")
 
-        serialization_files = os.listdir(self._serialization_prefix)
+        serialization_files = os.listdir(self._serialization_dir)
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
         epoch_to_load = max([int(x.split("model_state_epoch_")[-1].strip(".th")) for x in model_checkpoints])
 
-        model_path = os.path.join(self._serialization_prefix,
+        model_path = os.path.join(self._serialization_dir,
                                   "model_state_epoch_{}.th".format(epoch_to_load))
-        training_state_path = os.path.join(self._serialization_prefix,
+        training_state_path = os.path.join(self._serialization_dir,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
 
         model_state = torch.load(model_path, map_location=device_mapping(self._cuda_device))
@@ -300,6 +307,7 @@ class Trainer:
     @classmethod
     def from_params(cls,
                     model: Model,
+                    serialization_dir: str,
                     optimizer: torch.optim.Optimizer,
                     iterator: DataIterator,
                     train_dataset: Dataset,
@@ -310,7 +318,6 @@ class Trainer:
         patience = params.pop("patience", 2)
         validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop("num_epochs", 20)
-        serialization_prefix = params.pop("serialization_prefix", None)
         cuda_device = params.pop("cuda_device", -1)
         grad_norm = params.pop("grad_norm", None)
         grad_clipping = params.pop("grad_clipping", None)
@@ -321,7 +328,7 @@ class Trainer:
                        patience=patience,
                        validation_metric=validation_metric,
                        num_epochs=num_epochs,
-                       serialization_prefix=serialization_prefix,
+                       serialization_dir=serialization_dir,
                        cuda_device=cuda_device,
                        grad_norm=grad_norm,
                        grad_clipping=grad_clipping,

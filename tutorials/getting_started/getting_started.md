@@ -101,7 +101,6 @@ you might care about the `trainer` section, which specifies how we want to train
   "trainer": {
     "num_epochs": 40,
     "patience": 10,
-    "serialization_prefix": "/tmp/tutorials/getting_started",
     "cuda_device": -1
   }
 ```
@@ -110,17 +109,17 @@ Here the `num_epochs` parameter specifies that we want to make 40 training passe
 On a recent Macbook each epoch of this model on this dataset takes about a minute,
 so this training should take about 40, unless it stops early. `patience`
 controls the early stopping -- if our validation metric doesn't improve for
-this many epochs, training halts.
-
-The `serialization_prefix` is the path where the model's vocabulary and checkpointed weights will be saved. And if you have a GPU you can change `cuda_device` to 0 to use it.
+this many epochs, training halts. And if you have a GPU you can change `cuda_device` to 0 to use it.
 
 Change any of those if you want to, and then run
 
 ```
-allennlp/run train tutorials/getting_started/simple_tagger.json
+allennlp/run train tutorials/getting_started/simple_tagger.json --serialization_dir /tmp/tutorials/getting_started
 ```
 
-It will download the datasets and cache them locally,
+The `serialization_dir` argument specifies the directory where the model's vocabulary and checkpointed weights will be saved.
+
+This command will download the datasets and cache them locally,
 log all of the parameters it's using,
 and then display the progress and results of each epoch:
 
