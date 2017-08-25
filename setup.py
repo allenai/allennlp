@@ -66,7 +66,7 @@ from setuptools import setup, find_packages
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
-VERSION = '0.1a4'
+VERSION = '0.1a6'
 
 
 def gen_data_files(*directories):
@@ -95,7 +95,7 @@ setup(name='allennlp',
       install_requires=[
           'pyhocon==0.3.35',
           'typing',
-          'overrides'
+          'overrides',
           'nltk',
           'spacy',
           'numpy',
