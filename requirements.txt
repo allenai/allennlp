@@ -45,5 +45,8 @@ requests>=2.18
 # progress bars in data cleaning scripts
 tqdm
 
+# In SQuAD eval script, we use this to see if we likely have some tokenization problem.
+editdistance
+
 # Tutorial notebooks
 jupyter

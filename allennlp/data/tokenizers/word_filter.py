@@ -1,16 +1,11 @@
-from collections import OrderedDict
-from typing import List, Dict, Type  # pylint: disable=unused-import
+from typing import List
 
 from overrides import overrides
 
-from allennlp.common import Params
-
-# pylint: disable=invalid-name
-word_filters = OrderedDict()  # type: Dict[str, Type[WordFilter]]
-# pylint: enable=invalid-name
+from allennlp.common import Params, Registrable
 
 
-class WordFilter:
+class WordFilter(Registrable):
     """
     A ``WordFilter`` removes words from a token list.  Typically, this is for stopword removal,
     though you could feasibly use it for more domain-specific removal if you want.
@@ -18,17 +13,20 @@ class WordFilter:
     Word removal happens `before` stemming, so keep that in mind if you're designing a list of
     words to be removed.
     """
+    default_implementation = 'pass_through'
+
     def filter_words(self, words: List[str]) -> List[str]:
         """Filters words from the given word list"""
         raise NotImplementedError
 
-    @staticmethod
-    def from_params(params: Params) -> 'WordFilter':
-        choice = params.pop_choice('type', list(word_filters.keys()), default_to_first_choice=True)
+    @classmethod
+    def from_params(cls, params: Params) -> 'WordFilter':
+        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
         params.assert_empty('WordFilter')
-        return word_filters[choice]()
+        return cls.by_name(choice)()
 
 
+@WordFilter.register('pass_through')
 class PassThroughWordFilter(WordFilter):
     """
     Does not filter words; it's a no-op.  This is the default word filter.
@@ -38,6 +36,7 @@ class PassThroughWordFilter(WordFilter):
         return words
 
 
+@WordFilter.register('stopwords')
 class StopwordFilter(WordFilter):
     """
     Uses a list of stopwords to filter.
@@ -72,7 +71,3 @@ class StopwordFilter(WordFilter):
     @overrides
     def filter_words(self, words: List[str]) -> List[str]:
         return [word for word in words if word not in self.stopwords]
-
-
-word_filters['pass_through'] = PassThroughWordFilter
-word_filters['stopwords'] = StopwordFilter

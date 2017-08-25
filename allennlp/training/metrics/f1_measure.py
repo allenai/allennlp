@@ -4,6 +4,7 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import ones_like
 from allennlp.common.checks import ConfigurationError
 
 
@@ -52,7 +53,7 @@ class F1Measure(Metric):
             raise ConfigurationError("A gold label passed to F1Measure contains an id >= {}, "
                                      "the number of classes.".format(num_classes))
         if mask is None:
-            mask = torch.ones(gold_labels.size())
+            mask = ones_like(gold_labels)
         mask = mask.float()
         gold_labels = gold_labels.float()
         positive_label_mask = gold_labels.eq(self._positive_label).float()
