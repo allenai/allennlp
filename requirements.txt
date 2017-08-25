@@ -13,8 +13,7 @@ pyhocon==0.3.35
 typing
 
 # Adds an @overrides decorator for better documentation and error checking when using subclasses.
-# TODO(mattg): once overrides has a new release (>1.8), change this line back to `overrides`
-git+git://github.com/mkorpela/overrides.git@40f8bd1fae7a3364a1
+overrides
 
 # Used by some old code.  We moved away from it because it's too slow, but some old code still
 # imports this.

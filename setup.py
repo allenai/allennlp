@@ -95,6 +95,7 @@ setup(name='allennlp',
       install_requires=[
           'pyhocon==0.3.35',
           'typing',
+          'overrides'
           'nltk',
           'spacy',
           'numpy',
@@ -109,7 +110,6 @@ setup(name='allennlp',
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
-      dependency_links=['git+git://github.com/mkorpela/overrides.git@40f8bd1fae7a3364a1'],
       include_package_data=True,
       python_requires='~=3.5',
       zip_safe=False)
