@@ -30,7 +30,7 @@ class TestFeedForward(AllenNlpTestCase):
         feedforward = FeedForward.from_params(params)
 
         constant_init = lambda tensor: torch.nn.init.constant(tensor, 1.)
-        initializer = InitializerApplicator(default_initializer=constant_init)
+        initializer = InitializerApplicator([(".*", constant_init)])
         initializer(feedforward)
 
         input_tensor = Variable(torch.FloatTensor([[-3, 1]]))

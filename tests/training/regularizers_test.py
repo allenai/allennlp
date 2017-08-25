@@ -8,13 +8,12 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestRegularizers(AllenNlpTestCase):
-
     def test_l1_regularization(self):
         model = torch.nn.Sequential(
                 torch.nn.Linear(5, 10),
                 torch.nn.Linear(10, 5)
         )
-        initializer = InitializerApplicator(default_initializer=lambda tensor: constant(tensor, -1))
+        initializer = InitializerApplicator([(".*", lambda tensor: constant(tensor, -1))])
         initializer(model)
         value = RegularizerApplicator({"": L1Regularizer(1.0)})(model)
         # 115 because of biases.
@@ -25,7 +24,7 @@ class TestRegularizers(AllenNlpTestCase):
                 torch.nn.Linear(5, 10),
                 torch.nn.Linear(10, 5)
         )
-        initializer = InitializerApplicator(default_initializer=lambda tensor: constant(tensor, 0.5))
+        initializer = InitializerApplicator([(".*", lambda tensor: constant(tensor, 0.5))])
         initializer(model)
         value = RegularizerApplicator({"": L2Regularizer(1.0)})(model)
         assert value.data.numpy() == 28.75
@@ -35,7 +34,7 @@ class TestRegularizers(AllenNlpTestCase):
                 torch.nn.Linear(5, 10),
                 torch.nn.Linear(10, 5)
         )
-        initializer = InitializerApplicator(default_initializer=lambda tensor: constant(tensor, 1.))
+        initializer = InitializerApplicator([(".*", lambda tensor: constant(tensor, 1.))])
         initializer(model)
         value = RegularizerApplicator({"weight": L2Regularizer(0.5),
                                        "bias": L1Regularizer(1.0)})(model)

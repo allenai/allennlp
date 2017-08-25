@@ -5,6 +5,7 @@ import os
 import sys
 import logging
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 from allennlp.models.archival import _CONFIG_NAME, _WEIGHTS_NAME
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

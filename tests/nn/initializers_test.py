@@ -6,7 +6,6 @@ import pytest
 import pyhocon
 import torch
 from torch.autograd import Variable
-from torch.nn.init import constant
 
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.initializers import block_orthogonal
@@ -23,16 +22,6 @@ class TestInitializers(AllenNlpTestCase):
         super(TestInitializers, self).tearDown()
         logging.getLogger('allennlp.nn.initializers').disabled = True
 
-    def test_all_parameters_are_initialized(self):
-        model = torch.nn.Sequential(
-                torch.nn.Linear(5, 10),
-                torch.nn.Linear(10, 5)
-        )
-        initializer = InitializerApplicator(default_initializer=lambda tensor: constant(tensor, 5))
-        initializer(model)
-        for parameter in model.parameters():
-            assert torch.equal(parameter.data, torch.ones(parameter.size()) * 5)
-
     def test_regex_matches_are_initialized_correctly(self):
         class Net(torch.nn.Module):
             def __init__(self):
@@ -46,14 +35,13 @@ class TestInitializers(AllenNlpTestCase):
 
         # pyhocon does funny things if there's a . in a key.  This test makes sure that we
         # handle these kinds of regexes correctly.
-        json_params = """{
-        "conv": {"type": "constant", "val": 5},
-        "funky_na.*bi": {"type": "constant", "val": 7},
-        "default": {"type": "constant", "val": 10}
-        }
+        json_params = """{"initializer": [
+        ["conv", {"type": "constant", "val": 5}],
+        ["funky_na.*bi", {"type": "constant", "val": 7}]
+        ]}
         """
         params = Params(pyhocon.ConfigFactory.parse_string(json_params))
-        initializers = InitializerApplicator.from_params(params)
+        initializers = InitializerApplicator.from_params(params['initializer'])
         model = Net()
         initializers(model)
 
@@ -62,55 +50,6 @@ class TestInitializers(AllenNlpTestCase):
 
         parameter = model.linear_1_with_funky_name.bias
         assert torch.equal(parameter.data, torch.ones(parameter.size()) * 7)
-        parameter = model.linear_1_with_funky_name.weight
-        assert torch.equal(parameter.data, torch.ones(parameter.size()) * 10)
-
-        for parameter in model.linear_2.parameters():
-            assert torch.equal(parameter.data, torch.ones(parameter.size()) * 10)
-
-    def test_from_params(self):
-
-        to_exclude = ["this", "and", "that"]
-        params = Params({
-                "conv": "orthogonal",
-                "linear": {
-                        "type": "constant",
-                        "val": 1
-                },
-                "exclude": to_exclude
-        })
-        initializer_applicator = InitializerApplicator.from_params(params)
-        # pylint: disable=protected-access
-        assert initializer_applicator._exclude == to_exclude
-        initializers = initializer_applicator._initializers
-        assert initializers["conv"]._init_function == torch.nn.init.orthogonal
-
-        tensor = torch.FloatTensor([0, 0, 0, 0, 0])
-        initializers["linear"](tensor)
-        numpy.testing.assert_array_equal(tensor.numpy(), numpy.array([1, 1, 1, 1, 1]))
-
-    def test_exclude_works_properly(self):
-        class Net(torch.nn.Module):
-            def __init__(self):
-                super(Net, self).__init__()
-                self.linear1 = torch.nn.Linear(5, 10)
-                self.linear2 = torch.nn.Linear(10, 5)
-                self.linear2.weight.data.fill_(7)
-                self.linear2.bias.data.fill_(7)
-
-            def forward(self, inputs):  # pylint: disable=arguments-differ
-                pass
-
-        initializers = InitializerApplicator(default_initializer=lambda tensor: constant(tensor, 10),
-                                             exclude=["linear2"])
-        model = Net()
-        initializers(model)
-
-        for parameter in list(model.linear1.parameters()):
-            assert torch.equal(parameter.data, torch.ones(parameter.size()) * 10)
-
-        for parameter in list(model.linear2.parameters()):
-            assert torch.equal(parameter.data, torch.ones(parameter.size()) * 7)
 
     def test_block_orthogonal_can_initialize(self):
         tensor = Variable(torch.zeros([10, 6]))

@@ -54,7 +54,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         augmented_lstm = AugmentedLstm(10, 11)
         pytorch_lstm = LSTM(10, 11, num_layers=1, batch_first=True)
         # Initialize all weights to be == 1.
-        initializer = InitializerApplicator(default_initializer=lambda tensor: torch.nn.init.constant(tensor, 1.))
+        initializer = InitializerApplicator([(".*", lambda tensor: torch.nn.init.constant(tensor, 1.))])
         initializer(augmented_lstm)
         initializer(pytorch_lstm)
 

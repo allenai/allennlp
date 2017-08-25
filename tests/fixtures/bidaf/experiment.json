@@ -58,14 +58,6 @@
       "input_size": 70,
       "hidden_size": 10,
       "num_layers": 1
-    },
-    "initializer": {
-        "default": {
-          "type": "normal",
-          "mean": 0,
-          "std": 0.1
-        },
-        "exclude": ["token_embedder_tokens"]
     }
   },
   "iterator": {
