@@ -59,13 +59,13 @@
     "batch_size": 32
   },
   "optimizer": {
-    "type": "adagrad",
-    "lr": 0.05
+    "type": "adam"
   },
   "trainer": {
     "num_epochs": 40,
     "patience": 5,
     "cuda_device": 0,
+    "validation_metric": "+accuracy",
     "no_tqdm": true
   }
 }

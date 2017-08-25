@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+import time
 from typing import Dict, Optional, List  # pylint: disable=unused-import
 
 import torch
@@ -76,7 +77,7 @@ class Trainer:
             after every batch.  This is nice if you're running training on a local shell, but can
             cause problems with log files from, e.g., a docker image running on kubernetes.  If
             ``no_tqdm`` is ``True``, we will not use tqdm, and instead log batch statistics using
-            ``logger.info``.
+            ``logger.info``, outputting a line at most every 10 seconds.
         """
         self._model = model
         self._iterator = iterator
@@ -101,6 +102,8 @@ class Trainer:
 
         if self._cuda_device >= 0:
             self._model = self._model.cuda(self._cuda_device)
+
+        self._log_interval = 10  # seconds
 
     def train(self) -> None:
         epoch_counter = 0
@@ -138,6 +141,7 @@ class Trainer:
             train_generator_tqdm = tqdm.tqdm(train_generator,
                                              disable=self._no_tqdm,
                                              total=num_training_batches)
+            last_log = time.time()
             batch_num = 0
             logger.info("Training")
             for batch in train_generator_tqdm:
@@ -162,8 +166,9 @@ class Trainer:
                 metrics["loss"] = float(train_loss / batch_num)
                 description = self._description_from_metrics(metrics)
                 train_generator_tqdm.set_description(description)
-                if self._no_tqdm:
+                if self._no_tqdm and time.time() - last_log > self._log_interval:
                     logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
+                    last_log = time.time()
             metrics = self._model.get_metrics(reset=True)
             metrics["loss"] = float(train_loss / batch_num)
 
@@ -186,8 +191,9 @@ class Trainer:
                     val_metrics["loss"] = float(val_loss / batch_num)
                     description = self._description_from_metrics(val_metrics)
                     val_generator_tqdm.set_description(description)
-                    if self._no_tqdm:
+                    if self._no_tqdm and time.time() - last_log > self._log_interval:
                         logger.info("Batch %d/%d: %s", batch_num, num_validation_batches, description)
+                        last_log = time.time()
                 val_metrics = self._model.get_metrics(reset=True)
                 val_metrics["loss"] = float(val_loss / batch_num)
                 message_template = "Training %s : %3f    Validation %s : %3f "

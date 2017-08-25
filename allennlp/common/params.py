@@ -74,7 +74,8 @@ class Params(MutableMapping):
                 raise ConfigurationError("key \"{}\" is required at location \"{}\"".format(key, self.history))
         else:
             value = self.params.pop(key, default)
-        logger.param(self.history + key + " = " + str(value))  # type: ignore
+        if not isinstance(value, dict):
+            logger.param(self.history + key + " = " + str(value))  # type: ignore
         return self.__check_is_dict(key, value)
 
     @overrides
