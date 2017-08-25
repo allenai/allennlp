@@ -90,6 +90,7 @@ class Trainer:
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
+        self._log_interval = 100
 
         increase_or_decrease = validation_metric[0]
         if increase_or_decrease not in ["+", "-"]:
@@ -162,6 +163,12 @@ class Trainer:
                 metrics["loss"] = float(train_loss / batch_num)
                 description = self._description_from_metrics(metrics)
                 train_generator_tqdm.set_description(description)
+                batch_num_tot = num_training_batches * epoch + batch_num
+                if self._serialization_prefix and batch_num_tot % self._log_interval == 0:
+                    for name, values in self._model.state_dict().items():
+                        train_log.add_scalar("PARAMETER_MEAN/" + name, values.mean(), batch_num_tot)
+                        train_log.add_scalar("PARAMETER_STD/" + name, values.std(), batch_num_tot)
+                    train_log.add_scalar("LOSS/loss_train", metrics["loss"], batch_num_tot)
                 if self._no_tqdm:
                     logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
             metrics = self._model.get_metrics(reset=True)
