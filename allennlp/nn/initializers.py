@@ -146,15 +146,24 @@ class InitializerApplicator:
             The Pytorch module to apply the initializers to.
         """
         logger.info("Initializing parameters")
+        unused_regexes = set([initializer[0] for initializer in self._initializers])
+        uninitialized_parameters = set()
         # Store which initialisers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
                 if re.search(initializer_regex, name):
                     logger.info("Initializing %s using %s intitializer", name, initializer_regex)
                     initializer(parameter)
+                    unused_regexes.discard(initializer_regex)
                     break
-        logger.info("Done initializing parameters; all parameters not mentioned used whatever "
-                    "their default initialization is in their code")
+            else:  # no break
+                uninitialized_parameters.add(name)
+        for regex in unused_regexes:
+            logger.warning("Did not use initialization regex that was passed: %s", regex)
+        logger.info("Done initializing parameters; the following parameters are using their "
+                    "default initialization from their code")
+        for name in uninitialized_parameters:
+            logger.info("   %s", name)
 
     @classmethod
     def from_params(cls, params: List[Tuple[str, Params]]) -> "InitializerApplicator":
