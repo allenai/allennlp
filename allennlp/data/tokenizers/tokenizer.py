@@ -1,7 +1,6 @@
 from typing import List
 
-from allennlp.common import Params
-from allennlp.common.registrable import Registrable
+from allennlp.common import Params, Registrable
 
 
 class Tokenizer(Registrable):

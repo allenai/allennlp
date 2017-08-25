@@ -39,7 +39,7 @@ class LabelField(Field[numpy.ndarray]):
                  label: Union[str, int],
                  label_namespace: str = 'labels',
                  skip_indexing: bool = False) -> None:
-        self._label = label
+        self.label = label
         self._label_namespace = label_namespace
         self._label_id = None
         if not self._label_namespace.endswith("labels"):
@@ -57,12 +57,12 @@ class LabelField(Field[numpy.ndarray]):
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         if self._label_id is None:
-            counter[self._label_namespace][self._label] += 1  # type: ignore
+            counter[self._label_namespace][self.label] += 1  # type: ignore
 
     @overrides
     def index(self, vocab: Vocabulary):
         if self._label_id is None:
-            self._label_id = vocab.get_token_index(self._label, self._label_namespace)  # type: ignore
+            self._label_id = vocab.get_token_index(self.label, self._label_namespace)  # type: ignore
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
@@ -75,6 +75,3 @@ class LabelField(Field[numpy.ndarray]):
     @overrides
     def empty_field(self):
         return LabelField(0, self._label_namespace)
-
-    def label(self):
-        return self._label

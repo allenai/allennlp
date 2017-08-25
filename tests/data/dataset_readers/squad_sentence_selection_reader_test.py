@@ -92,51 +92,51 @@ class TestSquadSentenceSelectionReader(AllenNlpTestCase):
             sentence_tokens = tuple(self.tokenizer.tokenize(sentence.replace("\\\"", "\"")))
             expected_tokens.add(sentence_tokens)
         actual_tokens = set()
-        for field in list_field.fields():
-            actual_tokens.add(tuple(field.tokens()))
+        for field in list_field.field_list:
+            actual_tokens.add(tuple(field.tokens))
         assert expected_tokens == actual_tokens
 
     def assert_index_field_points_to_correct_sentence(self, index_field: IndexField, sentence: str):
         sentence_tokens = tuple(self.tokenizer.tokenize(sentence.replace("\\\"", "\"")))
-        tokens_list = [tuple(field.tokens()) for field in index_field.sequence_field().fields()]
-        assert index_field.sequence_index() == tokens_list.index(sentence_tokens)
+        tokens_list = [tuple(field.tokens) for field in index_field.sequence_field.field_list]
+        assert index_field.sequence_index == tokens_list.index(sentence_tokens)
 
     def test_default_squad_sentence_selection_reader(self):
         reader = SquadSentenceSelectionReader()
         instances = reader.read(self.squad_file).instances
-        assert instances[0].fields()["question"].tokens() == self.tokenizer.tokenize(self.question0)
-        self.assert_list_field_contains_correct_sentences(instances[0].fields()["sentences"],
+        assert instances[0].fields["question"].tokens == self.tokenizer.tokenize(self.question0)
+        self.assert_list_field_contains_correct_sentences(instances[0].fields["sentences"],
                                                           self.sentences[:7])
-        self.assert_index_field_points_to_correct_sentence(instances[0].fields()['correct_sentence'],
+        self.assert_index_field_points_to_correct_sentence(instances[0].fields['correct_sentence'],
                                                            self.sentences[5])
-        assert instances[1].fields()["question"].tokens() == self.tokenizer.tokenize(self.question1)
-        self.assert_list_field_contains_correct_sentences(instances[1].fields()["sentences"],
+        assert instances[1].fields["question"].tokens == self.tokenizer.tokenize(self.question1)
+        self.assert_list_field_contains_correct_sentences(instances[1].fields["sentences"],
                                                           self.sentences[:7])
-        self.assert_index_field_points_to_correct_sentence(instances[1].fields()['correct_sentence'],
+        self.assert_index_field_points_to_correct_sentence(instances[1].fields['correct_sentence'],
                                                            self.sentences[2])
 
     def test_negative_question_choice_works(self):
         reader = SquadSentenceSelectionReader(negative_sentence_selection="question")
         instances = reader.read(self.squad_file).instances
-        self.assert_list_field_contains_correct_sentences(instances[0].fields()["sentences"],
+        self.assert_list_field_contains_correct_sentences(instances[0].fields["sentences"],
                                                           [self.sentences[5], self.question0])
-        self.assert_index_field_points_to_correct_sentence(instances[0].fields()['correct_sentence'],
+        self.assert_index_field_points_to_correct_sentence(instances[0].fields['correct_sentence'],
                                                            self.sentences[5])
-        self.assert_list_field_contains_correct_sentences(instances[1].fields()["sentences"],
+        self.assert_list_field_contains_correct_sentences(instances[1].fields["sentences"],
                                                           [self.sentences[2], self.question1])
-        self.assert_index_field_points_to_correct_sentence(instances[1].fields()['correct_sentence'],
+        self.assert_index_field_points_to_correct_sentence(instances[1].fields['correct_sentence'],
                                                            self.sentences[2])
 
     def test_negative_random_question_choice_works(self):
         reader = SquadSentenceSelectionReader(negative_sentence_selection="questions-random-2")
         instances = reader.read(self.squad_file).instances
-        self.assert_list_field_contains_correct_sentences(instances[0].fields()["sentences"],
+        self.assert_list_field_contains_correct_sentences(instances[0].fields["sentences"],
                                                           [self.sentences[5], self.question0, self.question1])
-        self.assert_index_field_points_to_correct_sentence(instances[0].fields()['correct_sentence'],
+        self.assert_index_field_points_to_correct_sentence(instances[0].fields['correct_sentence'],
                                                            self.sentences[5])
-        self.assert_list_field_contains_correct_sentences(instances[1].fields()["sentences"],
+        self.assert_list_field_contains_correct_sentences(instances[1].fields["sentences"],
                                                           [self.sentences[2], self.question0, self.question1])
-        self.assert_index_field_points_to_correct_sentence(instances[1].fields()['correct_sentence'],
+        self.assert_index_field_points_to_correct_sentence(instances[1].fields['correct_sentence'],
                                                            self.sentences[2])
 
     def test_negative_random_and_pad_work(self):
@@ -144,9 +144,9 @@ class TestSquadSentenceSelectionReader(AllenNlpTestCase):
         # least make sure that we get the expected number of results.
         reader = SquadSentenceSelectionReader(negative_sentence_selection="random-2,pad-to-5")
         instances = reader.read(self.squad_file).instances
-        assert instances[0].fields()['sentences'].sequence_length() == 6
-        self.assert_index_field_points_to_correct_sentence(instances[0].fields()['correct_sentence'],
+        assert instances[0].fields['sentences'].sequence_length() == 6
+        self.assert_index_field_points_to_correct_sentence(instances[0].fields['correct_sentence'],
                                                            self.sentences[5])
-        assert instances[1].fields()['sentences'].sequence_length() == 6
-        self.assert_index_field_points_to_correct_sentence(instances[1].fields()['correct_sentence'],
+        assert instances[1].fields['sentences'].sequence_length() == 6
+        self.assert_index_field_points_to_correct_sentence(instances[1].fields['correct_sentence'],
                                                            self.sentences[2])
