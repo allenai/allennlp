@@ -104,6 +104,7 @@ class Trainer:
             self._model = self._model.cuda(self._cuda_device)
 
         self._log_interval = 10  # seconds
+        self._summary_interval = 100  # num batches between logging to tensorboard
 
     def train(self) -> None:
         epoch_counter = 0
@@ -166,6 +167,16 @@ class Trainer:
                 metrics["loss"] = float(train_loss / batch_num)
                 description = self._description_from_metrics(metrics)
                 train_generator_tqdm.set_description(description)
+
+                batch_num_total = num_training_batches * epoch + batch_num
+                if self._serialization_dir and batch_num_total % self._summary_interval == 0:
+                    for name, param in self._model.named_parameters():
+                        train_log.add_scalar("PARAMETER_MEAN/" + name, param.data.mean(), batch_num_total)
+                        train_log.add_scalar("PARAMETER_STD/" + name, param.data.std(), batch_num_total)
+                        if param.grad is not None:
+                            train_log.add_scalar("GRAD_MEAN/" + name, param.grad.data.mean(), batch_num_total)
+                            train_log.add_scalar("GRAD_STD/" + name, param.grad.data.std(), batch_num_total)
+                    train_log.add_scalar("LOSS/loss_train", metrics["loss"], batch_num_total)
                 if self._no_tqdm and time.time() - last_log > self._log_interval:
                     logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
                     last_log = time.time()
