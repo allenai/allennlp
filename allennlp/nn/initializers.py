@@ -162,7 +162,9 @@ class InitializerApplicator:
             logger.warning("Did not use initialization regex that was passed: %s", regex)
         logger.info("Done initializing parameters; the following parameters are using their "
                     "default initialization from their code")
-        for name in uninitialized_parameters:
+        uninitialized_parameter_list = list(uninitialized_parameters)
+        uninitialized_parameter_list.sort()
+        for name in uninitialized_parameter_list:
             logger.info("   %s", name)
 
     @classmethod

@@ -7,6 +7,7 @@ import shutil
 import sys
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 from allennlp.commands.train import train_model_from_file, train_model
 from allennlp.common import Params
 

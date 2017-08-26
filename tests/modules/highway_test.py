@@ -19,4 +19,4 @@ class TestHighway(AllenNlpTestCase):
         result = highway(input_tensor).data.numpy()
         assert result.shape == (2, 2)
         # This was checked by hand.
-        assert_almost_equal(result, [[-0.1357, -0.1357], [2.0, 2.0]], decimal=4)
+        assert_almost_equal(result, [[-0.0394, 0.0197], [1.7527, -0.5550]], decimal=4)
