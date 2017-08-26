@@ -103,10 +103,10 @@ class TestRegistrable(AllenNlpTestCase):
 
     def test_registry_has_builtin_learning_rate_schedulers(self):
         all_schedulers = {
-            "step": torch.optim.lr_scheduler.StepLR,
-            "multi_step": torch.optim.lr_scheduler.MultiStepLR,
-            "exponential": torch.optim.lr_scheduler.ExponentialLR,
-            "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau
+                "step": torch.optim.lr_scheduler.StepLR,
+                "multi_step": torch.optim.lr_scheduler.MultiStepLR,
+                "exponential": torch.optim.lr_scheduler.ExponentialLR,
+                "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau
         }
         for key, value in all_schedulers.items():
             assert LearningRateScheduler.by_name(key) == value
