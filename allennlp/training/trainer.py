@@ -5,6 +5,7 @@ import time
 from typing import Dict, Optional, List  # pylint: disable=unused-import
 
 import torch
+import torch.optim.lr_scheduler
 from torch.nn.utils.clip_grad import clip_grad_norm
 import tqdm
 from tensorboard import SummaryWriter
@@ -15,7 +16,7 @@ from allennlp.data import Dataset
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, device_mapping
-
+from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -33,6 +34,7 @@ class Trainer:
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
+                 learning_rate_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,  # pylint: disable=protected-access
                  no_tqdm: bool = False) -> None:
         """
         Parameters
@@ -72,6 +74,11 @@ class Trainer:
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
+        learning_rate_scheduler : torch.optim.lr_scheduler._LRScheduler, optional, (default = None)
+            A Pytorch learning rate scheduler. The learning rate will be decayed with respect to
+            this schedule at the end of each epoch. If you use
+            :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`, this will use the ``validation_metric``
+            provided to determine if learning has plateaued.
         no_tqdm : ``bool``, optional (default=False)
             We use ``tqdm`` for logging, which will print a nice progress bar that updates in place
             after every batch.  This is nice if you're running training on a local shell, but can
@@ -91,6 +98,7 @@ class Trainer:
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
+        self._learning_rate_scheduler = learning_rate_scheduler
 
         increase_or_decrease = validation_metric[0]
         if increase_or_decrease not in ["+", "-"]:
@@ -214,25 +222,35 @@ class Trainer:
                         train_log.add_scalar(name, value, epoch)
                         validation_log.add_scalar(name, val_metrics[name], epoch)
 
-                this_epoch = val_metrics[self._validation_metric]
+                this_epoch_val_metric = val_metrics[self._validation_metric]
                 if len(validation_metric_per_epoch) > self._patience:
                     # Is the worst validation performance in past self._patience
                     # epochs is better than current value?
                     if self._validation_metric_decreases:
-                        should_stop = max(validation_metric_per_epoch[-self._patience:]) < this_epoch
+                        should_stop = max(validation_metric_per_epoch[-self._patience:]) < this_epoch_val_metric
                     else:
-                        should_stop = min(validation_metric_per_epoch[-self._patience:]) > this_epoch
+                        should_stop = min(validation_metric_per_epoch[-self._patience:]) > this_epoch_val_metric
                     if should_stop:
                         logger.info("Ran out of patience.  Stopping training.")
                         break
-                validation_metric_per_epoch.append(this_epoch)
+                validation_metric_per_epoch.append(this_epoch_val_metric)
 
                 if self._validation_metric_decreases:
-                    is_best_so_far = this_epoch == min(validation_metric_per_epoch)
+                    is_best_so_far = this_epoch_val_metric == min(validation_metric_per_epoch)
                 else:
-                    is_best_so_far = this_epoch == max(validation_metric_per_epoch)
+                    is_best_so_far = this_epoch_val_metric == max(validation_metric_per_epoch)
                 if self._serialization_dir:
                     self._save_checkpoint(epoch, is_best=is_best_so_far)
+
+                if self._learning_rate_scheduler:
+                    # Grim hack to determine whether the validation metric we are recording
+                    # needs to be passed to the scheduler. This is required because the
+                    # step() function of the different schedulers are (understandably)
+                    # different to ReduceLROnPlateau.
+                    if isinstance(self._learning_rate_scheduler,
+                                  torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+                    self._learning_rate_scheduler.step(epoch)
             else:
                 message_template = "Training %s : %3f "
                 for name, value in metrics.items():
@@ -241,6 +259,13 @@ class Trainer:
                         train_log.add_scalar(name, value, epoch)
                 if self._serialization_dir:
                     self._save_checkpoint(epoch)
+                if self._learning_rate_scheduler:
+                    if isinstance(self._learning_rate_scheduler,
+                                  torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        raise ConfigurationError("The reduce_on_plateau learning rate scheduler requires "
+                                                 "a validation metric to compute the schedule and therefore "
+                                                 "must be used with a validation dataset.")
+                    self._learning_rate_scheduler.step()
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
@@ -321,6 +346,11 @@ class Trainer:
         cuda_device = params.pop("cuda_device", -1)
         grad_norm = params.pop("grad_norm", None)
         grad_clipping = params.pop("grad_clipping", None)
+        lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+        if lr_scheduler_params:
+            scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
+        else:
+            scheduler = None
         no_tqdm = params.pop("no_tqdm", False)
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
@@ -332,4 +362,5 @@ class Trainer:
                        cuda_device=cuda_device,
                        grad_norm=grad_norm,
                        grad_clipping=grad_clipping,
+                       learning_rate_scheduler=scheduler,
                        no_tqdm=no_tqdm)
