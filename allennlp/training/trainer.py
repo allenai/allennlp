@@ -7,6 +7,7 @@ from typing import Dict, Optional, List  # pylint: disable=unused-import
 import torch
 import torch.optim.lr_scheduler
 from torch.nn.utils.clip_grad import clip_grad_norm
+from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
 import tqdm
 from tensorboard import SummaryWriter
 
@@ -34,7 +35,7 @@ class Trainer:
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 learning_rate_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,  # pylint: disable=protected-access
+                 learning_rate_scheduler: Optional[PytorchLRScheduler] = None,
                  no_tqdm: bool = False) -> None:
         """
         Parameters
@@ -74,7 +75,7 @@ class Trainer:
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
-        learning_rate_scheduler : torch.optim.lr_scheduler._LRScheduler, optional, (default = None)
+        learning_rate_scheduler : PytorchLRScheduler, optional, (default = None)
             A Pytorch learning rate scheduler. The learning rate will be decayed with respect to
             this schedule at the end of each epoch. If you use
             :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`, this will use the ``validation_metric``
@@ -265,7 +266,7 @@ class Trainer:
                         raise ConfigurationError("The reduce_on_plateau learning rate scheduler requires "
                                                  "a validation metric to compute the schedule and therefore "
                                                  "must be used with a validation dataset.")
-                    self._learning_rate_scheduler.step()
+                    self._learning_rate_scheduler.step(epoch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
