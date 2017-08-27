@@ -58,7 +58,7 @@ class LinearSimilarity(SimilarityFunction):
         self.reset_parameters()
 
     def reset_parameters(self):
-        std = 6.0 / math.sqrt(self._weight_vector.size(0))
+        std = math.sqrt(6 / (self._weight_vector.size(0) + 1))
         self._weight_vector.data.uniform_(-std, std)
         self._bias.data.fill_(0)
 
