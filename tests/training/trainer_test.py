@@ -43,7 +43,7 @@ class TestTrainer(AllenNlpTestCase):
                           self.iterator, self.dataset, num_epochs=2)
         trainer.train()
 
-    def test_train_driver_can_resume_training(self):
+    def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.dataset,
                           num_epochs=1, serialization_dir=self.TEST_DIR)
