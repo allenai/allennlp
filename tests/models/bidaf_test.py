@@ -39,6 +39,8 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         assert span_start < span_end
         assert span_end < passage.sequence_length()
 
+        assert isinstance(output_dict['best_span_str'], str)
+
     def test_get_best_span(self):
         # pylint: disable=protected-access
 
