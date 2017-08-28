@@ -10,7 +10,7 @@ from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 
 
-def main(config_file, serialization_directory, device):
+def main(serialization_directory, device):
     """
 
     config_file : str, required.
@@ -21,7 +21,7 @@ def main(config_file, serialization_directory, device):
         The device to run the evaluation on.
     """
 
-    config = Params.from_file(config_file)
+    config = Params.from_file(os.path.join(serialization_directory, "model_params.json"))
     dataset_reader = DatasetReader.from_params(config['dataset_reader'])
     evaluation_data_path = config['validation_data_path']
 
@@ -29,8 +29,8 @@ def main(config_file, serialization_directory, device):
 
     prediction_file_path = os.path.join(serialization_directory, "predictions.txt")
     gold_file_path = os.path.join(serialization_directory, "gold.txt")
-    prediction_file = open(prediction_file_path, "r")
-    gold_file = open(gold_file_path, "r")
+    prediction_file = open(prediction_file_path, "w+")
+    gold_file = open(gold_file_path, "w+")
 
     # Load the evaluation data
     print("Reading evaluation data from {}".format(evaluation_data_path))
@@ -60,9 +60,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Write CONLL format SRL predictions"
                                                  " to file from a pretrained model.")
-    parser.add_argument('--config', type=str, help='The config file from training.')
     parser.add_argument('--path', type=str, help='The serialization directory.')
     parser.add_argument('--device', type=int, default=-1, help='The device to load the model onto.')
 
     args = parser.parse_args()
-    main(args.config, args.path, args.device)
+    main(args.path, args.device)
