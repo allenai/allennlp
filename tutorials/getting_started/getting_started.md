@@ -24,7 +24,7 @@ and shuts down the container when you exit the interactive shell.
 
 ## Installing using pip
 
-TODO(joelrus): add instructions when ready
+TODO(joelgrus): add instructions when ready
 
 ## Installing from source
 
