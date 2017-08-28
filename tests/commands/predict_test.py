@@ -6,7 +6,7 @@ import sys
 import tempfile
 from unittest import TestCase
 
-from allennlp.commands.main import main
+from allennlp.commands import main
 from allennlp.commands.predict import add_subparser, predict
 
 
