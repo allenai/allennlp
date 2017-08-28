@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Callable, Dict, Sequence, Type, List
+from typing import Callable, List, Tuple, Type
 import itertools
 
 import torch
@@ -120,110 +120,81 @@ Registrable._registry[Initializer] = {  # pylint: disable=protected-access
 
 class InitializerApplicator:
     """
-    Applies initializers to the parameters of a Module based on regex matches.
-    All parameters in the Module will be initialized.
+    Applies initializers to the parameters of a Module based on regex matches.  Any parameter not
+    explicitly matching a regex will not be initialized, instead using whatever the default
+    initialization was in the module's code.
     """
-    def __init__(self,
-                 initializers: Dict[str, Initializer] = None,
-                 default_initializer: Initializer = Initializer.by_name('normal')(),
-                 exclude: Sequence[str] = None) -> None:
+    def __init__(self, initializers: List[Tuple[str, Initializer]] = None) -> None:
         """
         Parameters
         ----------
-        initializers : ``Dict[str, Callable[[torch.Tensor], None]]``, optional (default = {})
-            A dictionary mapping parameter regexes to initializers to be applied to parameters
-            matching the regex.
-        default_initializer : ``Callable[[torch.Tensor], None]``, optional (default = torch.nn.init.normal)
-            A default initializer, which will be used in the case that the Applicator encounters a parameter
-            which does not match any of the regexes provided.
-        exclude : ``Sequence[str]``, optional (default=``[]``)
-            A set of regexes for parameters that should be excluded from the default
-            initialization.  This does *not* apply to the regexes passed in the ``initializers``
-            parameter; it only filters the list of parameters that would otherwise get initialized
-            by the default initializer.
+        initializers : ``List[Tuple[str, Initializer]]``, optional (default = [])
+            A list mapping parameter regexes to initializers.  We will check each parameter against
+            each regex in turn, and apply the initializer paired with the first matching regex, if
+            any.
         """
-        self._initializers = initializers or {}
-        self._default_initializer = default_initializer
-        self._exclude = exclude or []
+        self._initializers = initializers or []
 
     def __call__(self, module: torch.nn.Module) -> None:
         """
-        Applies a series of initializers to all parameters in a module if those parameters match a
-        regex. If no explicitly specified initializers are applied, a default initializer is applied.
+        Applies an initializer to all parameters in a module that match one of the regexes we were
+        given in this object's constructor.  Does nothing to parameters that do not match.
 
         Parameters
         ----------
         module : torch.nn.Module, required.
             The Pytorch module to apply the initializers to.
         """
-        logger.info("Initializing parameters; finding explicit regex matches first")
+        logger.info("Initializing parameters")
+        unused_regexes = set([initializer[0] for initializer in self._initializers])
+        uninitialized_parameters = set()
         # Store which initialisers were applied to which parameters.
-        not_explicitly_initialized_parameters = []
         for name, parameter in module.named_parameters():
-            is_initialized = False
-            for initializer_regex, initializer in self._initializers.items():
+            for initializer_regex, initializer in self._initializers:
                 if re.search(initializer_regex, name):
-                    initializer(parameter)
                     logger.info("Initializing %s using %s intitializer", name, initializer_regex)
-                    is_initialized = True
+                    initializer(parameter)
+                    unused_regexes.discard(initializer_regex)
                     break
-            if not is_initialized:
-                not_explicitly_initialized_parameters.append((name, parameter))
-
-        logger.info("Initializing remaining parameters with default initializer: %s",
-                    self._default_initializer)
-        for name, parameter in not_explicitly_initialized_parameters:
-            if any(re.search(exclude_regex, name) for exclude_regex in self._exclude):
-                logger.info("Excluding %s from default initialization", name)
-            else:
-                logger.info("Initializing %s using the default initializer", name)
-                self._default_initializer(parameter)
+            else:  # no break
+                uninitialized_parameters.add(name)
+        for regex in unused_regexes:
+            logger.warning("Did not use initialization regex that was passed: %s", regex)
+        logger.info("Done initializing parameters; the following parameters are using their "
+                    "default initialization from their code")
+        uninitialized_parameter_list = list(uninitialized_parameters)
+        uninitialized_parameter_list.sort()
+        for name in uninitialized_parameter_list:
+            logger.info("   %s", name)
 
     @classmethod
-    def from_params(cls, params: Params) -> "InitializerApplicator":
+    def from_params(cls, params: List[Tuple[str, Params]]) -> "InitializerApplicator":
         """
         Converts a Params object into an InitializerApplicator. The json should
         be formatted as follows::
 
-            {
-                "parameter_regex_match1": {
-                    "type": "normal"
-                    "mean": 0.01
-                    "std": 0.1
-                },
-                "parameter_regex_match2": "uniform",
-                "default": "orthogonal",
-                "exclude": ["exclude_regex"]
-            }
+            [
+                ["parameter_regex_match1",
+                    {
+                        "type": "normal"
+                        "mean": 0.01
+                        "std": 0.1
+                    }
+                ],
+                ["parameter_regex_match2", "uniform"]
+            ]
 
-        where the keys are regex matches to the parameters, with the exception of the "default" and
-        "exclude" keys.  The "default" key defines an initializer which will be used as the default
-        initializer for parameters which do not match any initializer regex passed to the
-        InitializerApplicator, except for any parameter with a name matching a regex in "exclude".
-
-        The values for parameter regexes and for the "default" key will be passed to
-        ``Initializer.from_params()``.  These values can either be strings, in which case they
-        correspond to the names of initializers, or dictionaries, in which case they must contain
-        the "type" key, corresponding to the name of an initializer.  In addition, they may contain
-        auxiliary named parameters which will be fed to the initializer itself. To determine valid
-        auxiliary parameters, please refer to the torch.nn.init documentation.
-
-        Parameters
-        ----------
-        params: Params, required.
-            A Params object containing an "initializers" key.
+        where the first item in each tuple is the regex that matches to parameters, and the second
+        item is a set of parameters that will be passed to ``Initialzer.from_params()``.  These
+        values can either be strings, in which case they correspond to the names of initializers,
+        or dictionaries, in which case they must contain the "type" key, corresponding to the name
+        of an initializer.  In addition, they may contain auxiliary named parameters which will be
+        fed to the initializer itself. To determine valid auxiliary parameters, please refer to the
+        torch.nn.init documentation.
 
         Returns
         -------
         An InitializerApplicator containing the specified initializers.
         """
-        exclude_regexes = params.pop("exclude", [])
-        initializers = {}
-        for name in list(params.keys()):
-            initializer_params = params.pop(name)
-            if name[0] == '"' and name[-1] == '"':
-                name = name[1:-1]
-            initializers[name] = Initializer.from_params(initializer_params)
-        default = initializers.pop("default", Initializer.by_name('normal')())
-        params.assert_empty(cls.__name__)
-        return InitializerApplicator(initializers, default, exclude_regexes)
+        initializers = [(name, Initializer.from_params(init_params)) for name, init_params in params]
+        return InitializerApplicator(initializers)

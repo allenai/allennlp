@@ -74,8 +74,9 @@ class Params(MutableMapping):
                 raise ConfigurationError("key \"{}\" is required at location \"{}\"".format(key, self.history))
         else:
             value = self.params.pop(key, default)
-        logger.param(self.history + key + " = " + str(value))  # type: ignore
-        return self.__check_is_dict(key, value)
+        if not isinstance(value, dict):
+            logger.param(self.history + key + " = " + str(value))  # type: ignore
+        return self._check_is_dict(key, value)
 
     @overrides
     def get(self, key: str, default: Any = DEFAULT):
@@ -90,7 +91,7 @@ class Params(MutableMapping):
                 raise ConfigurationError("key \"{}\" is required at location \"{}\"".format(key, self.history))
         else:
             value = self.params.get(key, default)
-        return self.__check_is_dict(key, value)
+        return self._check_is_dict(key, value)
 
     def pop_choice(self, key: str, choices: List[Any], default_to_first_choice: bool = False):
         """
@@ -171,7 +172,7 @@ class Params(MutableMapping):
 
     def __getitem__(self, key):
         if key in self.params:
-            return self.__check_is_dict(key, self.params[key])
+            return self._check_is_dict(key, self.params[key])
         else:
             raise KeyError
 
@@ -187,10 +188,12 @@ class Params(MutableMapping):
     def __len__(self):
         return len(self.params)
 
-    def __check_is_dict(self, new_history, value):
+    def _check_is_dict(self, new_history, value):
         if isinstance(value, dict):
             new_history = self.history + new_history + "."
             return Params(value, new_history)
+        if isinstance(value, list):
+            value = [self._check_is_dict(new_history + '.list', v) for v in value]
         return value
 
     @staticmethod

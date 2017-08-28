@@ -58,14 +58,6 @@
       "input_size": 70,
       "hidden_size": 10,
       "num_layers": 1
-    },
-    "initializer": {
-        "default": {
-          "type": "normal",
-          "mean": 0,
-          "std": 0.1
-        },
-        "exclude": ["token_embedder_tokens"]
     }
   },
   "iterator": {
@@ -83,7 +75,6 @@
     "grad_norm": 100.0,
     "grad_clipping": 100,
     "patience" : 12,
-    "serialization_prefix" : "tests/fixtures/bidaf/serialization",
     "cuda_device" : -1
   }
 }

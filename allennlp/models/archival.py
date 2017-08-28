@@ -19,8 +19,7 @@ Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
 _CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 
-def archive_model(serialization_prefix: str,
-                  config_file: str,
+def archive_model(serialization_dir: str,
                   weights: str = _DEFAULT_WEIGHTS) -> None:
     """
     Archives the model weights, its training configuration, and its
@@ -28,24 +27,26 @@ def archive_model(serialization_prefix: str,
 
     Parameters
     ----------
-    serialization_prefix: ``str``
+    serialization_dir: ``str``
         The directory where the weights and vocabulary are written out.
-    config_file: ``str``
-        The path to the experiment configuration file used to train the model.
     weights: ``str``, optional (default=_DEFAULT_WEIGHTS)
         Which weights file to include in the archive. The default is ``best.th``.
     """
-    weights_file = os.path.join(serialization_prefix, weights)
+    weights_file = os.path.join(serialization_dir, weights)
     if not os.path.exists(weights_file):
         logger.error("weights file %s does not exist, unable to archive model", weights_file)
         return
 
-    archive_file = os.path.join(serialization_prefix, "model.tar.gz")
+    config_file = os.path.join(serialization_dir, "model_params.json")
+    if not os.path.exists(config_file):
+        logger.error("config file %s does not exist, unable to archive model", config_file)
+
+    archive_file = os.path.join(serialization_dir, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
     with tarfile.open(archive_file, 'w:gz') as archive:
         archive.add(config_file, arcname=_CONFIG_NAME)
         archive.add(weights_file, arcname=_WEIGHTS_NAME)
-        archive.add(os.path.join(serialization_prefix, "vocabulary"),
+        archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
 
 def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
@@ -75,7 +76,7 @@ def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),
                        weights_file=os.path.join(tempdir, _WEIGHTS_NAME),
-                       serialization_prefix=tempdir,
+                       serialization_dir=tempdir,
                        cuda_device=cuda_device)
 
     # Clean up temp dir

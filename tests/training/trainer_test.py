@@ -43,14 +43,14 @@ class TestTrainer(AllenNlpTestCase):
                           self.iterator, self.dataset, num_epochs=2)
         trainer.train()
 
-    def test_train_driver_can_resume_training(self):
+    def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.dataset,
-                          num_epochs=1, serialization_prefix=self.TEST_DIR)
+                          num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
         new_trainer = Trainer(self.model, self.optimizer,
                               self.iterator, self.dataset,
-                              num_epochs=3, serialization_prefix=self.TEST_DIR)
+                              num_epochs=3, serialization_dir=self.TEST_DIR)
 
         epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 0
@@ -64,5 +64,5 @@ class TestTrainer(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             trainer = Trainer(FakeModel(), self.optimizer,
                               self.iterator, self.dataset,
-                              num_epochs=2, serialization_prefix=self.TEST_DIR)
+                              num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()

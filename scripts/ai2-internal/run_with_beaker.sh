@@ -41,6 +41,6 @@ CONFIG_DATASET_ID=$(beaker dataset create --quiet $PARAM_FILE)
 FILENAME=$(basename $PARAM_FILE)
 SOURCES_ARG="$SOURCES_ARG --source $CONFIG_DATASET_ID:/config"
 
-CMD="allennlp/run train /config/$FILENAME"
+CMD="allennlp/run train /config/$FILENAME -s /output"
 
 beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_NAME_ARG $GPU_ARG $DETACH_ARG $IMAGE $CMD

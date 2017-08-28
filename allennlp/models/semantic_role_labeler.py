@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, TextIO
 
 import torch
-from torch.nn.modules.linear import Linear
+from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
 
 from allennlp.common import Params
@@ -48,7 +48,8 @@ class SemanticRoleLabeler(Model):
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
                  binary_feature_dim: int,
-                 initializer: InitializerApplicator) -> None:
+                 initializer: InitializerApplicator,
+                 embedding_dropout: float = 0.0) -> None:
         super(SemanticRoleLabeler, self).__init__(vocab)
 
         self.text_field_embedder = text_field_embedder
@@ -63,6 +64,7 @@ class SemanticRoleLabeler(Model):
         self.binary_feature_embedding = Embedding(2, binary_feature_dim)
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
+        self.embedding_dropout = Dropout(p=embedding_dropout)
         initializer(self)
 
         if text_field_embedder.get_output_dim() + binary_feature_dim != stacked_encoder.get_input_dim():
@@ -108,7 +110,7 @@ class SemanticRoleLabeler(Model):
             A scalar loss to be optimised.
 
         """
-        embedded_text_input = self.text_field_embedder(tokens)
+        embedded_text_input = self.embedding_dropout(self.text_field_embedder(tokens))
         mask = get_text_field_mask(tokens)
         embedded_verb_indicator = self.binary_feature_embedding(verb_indicator.long())
         # Concatenate the verb feature onto the embedded text. This now
@@ -222,7 +224,7 @@ class SemanticRoleLabeler(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
         binary_feature_dim = params.pop("binary_feature_dim")
-        initializer = InitializerApplicator.from_params(params.pop("initializer"))
+        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,

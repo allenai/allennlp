@@ -12,7 +12,8 @@ from allennlp.models.archival import Archive
 DEFAULT_PREDICTORS = {
         'srl': 'semantic-role-labeling',
         'decomposable_attention': 'textual-entailment',
-        'bidaf': 'machine-comprehension'
+        'bidaf': 'machine-comprehension',
+        'simple_tagger': 'simple-tagger'
 }
 
 class Predictor(Registrable):

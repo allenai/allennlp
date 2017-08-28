@@ -54,7 +54,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         augmented_lstm = AugmentedLstm(10, 11)
         pytorch_lstm = LSTM(10, 11, num_layers=1, batch_first=True)
         # Initialize all weights to be == 1.
-        initializer = InitializerApplicator(default_initializer=lambda tensor: torch.nn.init.constant(tensor, 1.))
+        initializer = InitializerApplicator([(".*", lambda tensor: torch.nn.init.constant(tensor, 1.))])
         initializer(augmented_lstm)
         initializer(pytorch_lstm)
 
@@ -88,3 +88,17 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         tensor = torch.rand([5, 7, 9])
         with pytest.raises(ConfigurationError):
             lstm(tensor)
+
+    def test_augmented_lstm_is_initialized_with_correct_biases(self):
+        lstm = AugmentedLstm(2, 3)
+        true_state_bias = numpy.array([0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        true_input_bias = numpy.array([0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        numpy.testing.assert_array_equal(lstm.state_linearity.bias.data.numpy(), true_state_bias)
+        numpy.testing.assert_array_equal(lstm.input_linearity.bias.data.numpy(), true_input_bias)
+
+        # Non-highway case.
+        lstm = AugmentedLstm(2, 3, use_highway=False)
+        true_state_bias = numpy.array([0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0])
+        true_input_bias = numpy.array([0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0])
+        numpy.testing.assert_array_equal(lstm.state_linearity.bias.data.numpy(), true_state_bias)
+        numpy.testing.assert_array_equal(lstm.input_linearity.bias.data.numpy(), true_input_bias)

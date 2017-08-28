@@ -6,12 +6,15 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, Packed
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_dropout_mask
-
+from allennlp.nn.initializers import block_orthogonal
 
 class AugmentedLstm(torch.nn.Module):
     """
     An LSTM with Recurrent Dropout and the option to use highway
-    connections between layers.
+    connections between layers. Note: this implementation is slower
+    than the native Pytorch LSTM because it cannot make use of CUDNN
+    optimizations for stacked RNNs due to the highway layers and
+    variational dropout.
 
     Parameters
     ----------
@@ -67,6 +70,19 @@ class AugmentedLstm(torch.nn.Module):
         else:
             self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=True)
             self.state_linearity = torch.nn.Linear(hidden_size, 4 * hidden_size, bias=True)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        # Use sensible default initializations for parameters.
+        block_orthogonal(self.input_linearity.weight.data, [self.hidden_size, self.input_size])
+        block_orthogonal(self.state_linearity.weight.data, [self.hidden_size, self.hidden_size])
+
+        self.input_linearity.bias.data.fill_(0.0)
+        self.state_linearity.bias.data.fill_(0.0)
+        # Initialize forget gate biases to 1.0 as per An Empirical
+        # Exploration of Recurrent Network Architectures, (Jozefowicz, 2015).
+        self.input_linearity.bias.data[self.hidden_size:2 * self.hidden_size].fill_(1.0)
+        self.state_linearity.bias.data[self.hidden_size:2 * self.hidden_size].fill_(1.0)
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,

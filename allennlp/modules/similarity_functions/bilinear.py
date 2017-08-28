@@ -36,6 +36,11 @@ class BilinearSimilarity(SimilarityFunction):
         self._weight_matrix = Parameter(torch.Tensor(tensor_1_dim, tensor_2_dim))
         self._bias = Parameter(torch.Tensor(1))
         self._activation = activation
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        torch.nn.init.xavier_uniform(self._weight_matrix)
+        self._bias.data.fill_(0)
 
     @overrides
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:

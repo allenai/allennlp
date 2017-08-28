@@ -1,3 +1,5 @@
+import math
+
 from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
@@ -53,6 +55,12 @@ class LinearSimilarity(SimilarityFunction):
         self._weight_vector = Parameter(torch.Tensor(combined_dim))
         self._bias = Parameter(torch.Tensor(1))
         self._activation = activation
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        std = math.sqrt(6 / (self._weight_vector.size(0) + 1))
+        self._weight_vector.data.uniform_(-std, std)
+        self._bias.data.fill_(0)
 
     @overrides
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:

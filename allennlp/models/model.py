@@ -2,7 +2,6 @@ from typing import Dict
 import os
 import logging
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Vocabulary
@@ -104,7 +103,7 @@ class Model(torch.nn.Module, Registrable):
     @classmethod
     def load(cls,
              config: Params,
-             serialization_prefix: str = None,
+             serialization_dir: str,
              weights_file: str = None,
              cuda_device: int = -1) -> 'Model':
         """
@@ -117,10 +116,9 @@ class Model(torch.nn.Module, Registrable):
             The configuration that was used to train the model. It should definitely
             have a `model` section, and should probably have a `trainer` section
             as well.
-        serialization_prefix: str = None
-            By default we look at `config['trainer']['serialization_prefix']` to
-            get the path to the serialized model, but you can override that
-            value here.
+        serialization_dir: str = None
+            The directory containing the serialized weights, parameters, and vocabulary
+            of the model.
         weights_file: str = None
             By default we load the weights from `best.th` in the serialization
             directory, but you can override that value here.
@@ -135,16 +133,10 @@ class Model(torch.nn.Module, Registrable):
             The model specified in the configuration, loaded with the serialized
             vocabulary and the trained weights.
         """
-        trainer_config = config.get("trainer", {})
-        serialization_prefix = (serialization_prefix or
-                                trainer_config.get('serialization_prefix'))
-        if serialization_prefix is None:
-            raise ConfigurationError('serialization_prefix must be specified')
-
-        weights_file = weights_file or os.path.join(serialization_prefix, _DEFAULT_WEIGHTS)
+        weights_file = weights_file or os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
 
         # Load vocabulary from file
-        vocab_dir = os.path.join(serialization_prefix, 'vocabulary')
+        vocab_dir = os.path.join(serialization_dir, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
 
         model_params = config.get('model')
