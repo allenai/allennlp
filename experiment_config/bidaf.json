@@ -78,14 +78,21 @@
     "batch_size": 40
   },
   "optimizer": {
-    "type": "adadelta"
+    "type": "adam",
+    "betas": [0.9, 0.9]
   },
   "trainer": {
     "num_epochs": 20,
     "grad_norm": 5.0,
-    "patience": 20,
+    "patience": 10,
     "validation_metric": "+full_span_acc",
     "cuda_device": 0,
+    "learning_rate_scheduler":  {
+      "type": "reduce_on_plateau",
+      "factor": 0.5,
+      "mode": "max",
+      "patience": 2
+    },
     "no_tqdm": true
   }
 }
