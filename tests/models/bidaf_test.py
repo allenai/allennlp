@@ -4,48 +4,24 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
-from allennlp.common import Params
-from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.fields import TextField
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
-from allennlp.models import Model, BidirectionalAttentionFlow
+from allennlp.models import BidirectionalAttentionFlow
 from allennlp.nn.util import arrays_to_variables
-from allennlp.common.testing import AllenNlpTestCase
+from .model_test_case import ModelTestCase
 
 
-class BidirectionalAttentionFlowTest(AllenNlpTestCase):
+class BidirectionalAttentionFlowTest(ModelTestCase):
     def setUp(self):
         super(BidirectionalAttentionFlowTest, self).setUp()
-
-        reader_params = Params({
-                'token_indexers': {
-                        'tokens': {
-                                'type': 'single_id'
-                                },
-                        'token_characters': {
-                                'type': 'characters'
-                                }
-                        }
-                })
-        dataset = SquadReader.from_params(reader_params).read('tests/fixtures/data/squad.json')
-        vocab = Vocabulary.from_dataset(dataset)
-        self.vocab = vocab
-        dataset.index_instances(vocab)
-        self.dataset = dataset
-        self.token_indexers = {'tokens': SingleIdTokenIndexer(),
-                               'token_characters': TokenCharactersIndexer()}
-
-        params = Params.from_file('tests/fixtures/bidaf/experiment.json')["model"]
-        params.pop("type")
-        self.model = BidirectionalAttentionFlow.from_params(self.vocab, params)
+        self.set_up_model('tests/fixtures/bidaf/experiment.json', 'tests/fixtures/data/squad.json')
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = arrays_to_variables(self.dataset.as_array_dict())
         _ = self.model.forward(**training_arrays)
 
     def test_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.model, self.dataset)
+        self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_predict_span_gives_reasonable_outputs(self):
         # TODO(mattg): "What", "is", "?" crashed, because the CNN encoder expected at least 5
@@ -94,9 +70,3 @@ class BidirectionalAttentionFlowTest(AllenNlpTestCase):
         span_end_probs = Variable(torch.FloatTensor([[0.1, 0.5, 0.2, 0.05, 0.15]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
         assert_almost_equal(begin_end_idxs.data.numpy(), [[1, 2]])
-
-    def test_model_load(self):
-        params = Params.from_file('tests/fixtures/bidaf/experiment.json')
-        model = Model.load(params, serialization_dir='tests/fixtures/bidaf/serialization')
-
-        assert isinstance(model, BidirectionalAttentionFlow)

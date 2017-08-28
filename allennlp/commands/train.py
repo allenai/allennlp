@@ -78,7 +78,7 @@ def _train_model_from_args(args: argparse.Namespace):
     train_model_from_file(args.param_path, args.serialization_dir)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str):
+def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -94,7 +94,7 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str):
 
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename)
-    train_model(params, serialization_dir)
+    return train_model(params, serialization_dir)
 
 
 def train_model(params: Params, serialization_dir: str) -> Model:

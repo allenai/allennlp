@@ -1,44 +1,20 @@
 # pylint: disable=invalid-name
 import numpy
 
-from allennlp.common import Params
-from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.nn.util import arrays_to_variables
-from allennlp.common.testing import AllenNlpTestCase
+from .model_test_case import ModelTestCase
 
 
-class SimpleTaggerTest(AllenNlpTestCase):
+class SimpleTaggerTest(ModelTestCase):
     def setUp(self):
         super(SimpleTaggerTest, self).setUp()
-        dataset = SequenceTaggingDatasetReader().read('tests/fixtures/data/sequence_tagging.tsv')
-        vocab = Vocabulary.from_dataset(dataset)
-        self.vocab = vocab
-        dataset.index_instances(vocab)
-        self.dataset = dataset
-
-        params = Params({
-                "text_field_embedder": {
-                        "tokens": {
-                                "type": "embedding",
-                                "embedding_dim": 5
-                                }
-                        },
-                "stacked_encoder": {
-                        "type": "lstm",
-                        "input_size": 5,
-                        "hidden_size": 7,
-                        "num_layers": 2
-                        }
-                })
-
-        self.model = SimpleTagger.from_params(self.vocab, params)
+        self.set_up_model('tests/fixtures/simple_tagger/experiment.json',
+                          'tests/fixtures/data/sequence_tagging.tsv')
 
     def test_simple_tagger_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.model, self.dataset)
+        self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = self.dataset.as_array_dict()

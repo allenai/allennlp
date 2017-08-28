@@ -3,48 +3,20 @@ import subprocess
 import os
 import numpy
 
-from allennlp.common import Params
-from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers import SrlReader
 from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.models import Model
-from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
-from allennlp.common.testing import AllenNlpTestCase
+from .model_test_case import ModelTestCase
 
 
-class SemanticRoleLabelerTest(AllenNlpTestCase):
+class SemanticRoleLabelerTest(ModelTestCase):
     def setUp(self):
         super(SemanticRoleLabelerTest, self).setUp()
-
-        dataset = SrlReader().read('tests/fixtures/conll_2012/')
-        vocab = Vocabulary.from_dataset(dataset)
-        self.vocab = vocab
-        dataset.index_instances(vocab)
-        self.dataset = dataset
-
-        params = Params({
-                "text_field_embedder": {
-                        "tokens": {
-                                "type": "embedding",
-                                "embedding_dim": 5
-                                }
-                        },
-                "stacked_encoder": {
-                        "type": "lstm",
-                        "input_size": 8,
-                        "hidden_size": 7,
-                        "num_layers": 2
-                        },
-                "binary_feature_dim": 3,
-                })
-
-        self.model = SemanticRoleLabeler.from_params(self.vocab, params)
+        self.set_up_model('tests/fixtures/srl/experiment.json', 'tests/fixtures/conll_2012')
 
     def test_srl_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.model, self.dataset)
+        self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_tag_returns_distributions_per_token(self):
         text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})
@@ -79,9 +51,3 @@ class SemanticRoleLabelerTest(AllenNlpTestCase):
         perl_script_command = ["perl", "./scripts/srl-eval.pl", prediction_file_path, gold_file_path]
         exit_code = subprocess.check_call(perl_script_command)
         assert exit_code == 0
-
-    def test_model_load(self):
-        params = Params.from_file('tests/fixtures/srl/experiment.json')
-        model = Model.load(params, serialization_dir='tests/fixtures/srl/serialization')
-
-        assert isinstance(model, SemanticRoleLabeler)
