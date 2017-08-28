@@ -95,9 +95,10 @@ class Embedding(TokenEmbedder):
         if self.padding_index is not None:
             self.weight.data[self.padding_index].fill_(0)
 
-        self._projection = None
         if projection_dim:
             self._projection = torch.nn.Linear(embedding_dim, projection_dim)
+        else:
+            self._projection = None
 
     @overrides
     def get_output_dim(self) -> int:
