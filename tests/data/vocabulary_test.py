@@ -196,12 +196,12 @@ class TestVocabulary(AllenNlpTestCase):
         dataset = Dataset([Instance({"sentence": text_field})])
         vocab = Vocabulary.from_dataset(dataset)
         text_field.index(vocab)
-        indexed_tokens = deepcopy(text_field._indexed_tokens)
+        indexed_tokens = deepcopy(text_field._indexed_tokens)  # pylint: disable=protected-access
 
         vocab_dir = os.path.join(self.TEST_DIR, 'vocab_save')
         vocab.save_to_files(vocab_dir)
         vocab2 = Vocabulary.from_files(vocab_dir)
         text_field2 = TextField(tokens, {"characters": token_indexer})
         text_field2.index(vocab2)
-        indexed_tokens2 = deepcopy(text_field2._indexed_tokens)
+        indexed_tokens2 = deepcopy(text_field2._indexed_tokens)  # pylint: disable=protected-access
         assert indexed_tokens == indexed_tokens2

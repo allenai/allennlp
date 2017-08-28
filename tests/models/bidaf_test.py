@@ -4,11 +4,11 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
+from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.fields import TextField
 from allennlp.models import BidirectionalAttentionFlow
 from allennlp.nn.util import arrays_to_variables
-from .model_test_case import ModelTestCase
 
 
 class BidirectionalAttentionFlowTest(ModelTestCase):

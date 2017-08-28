@@ -1,10 +1,10 @@
 # pylint: disable=invalid-name
 import numpy
 
+from allennlp.common.testing import ModelTestCase
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.nn.util import arrays_to_variables
-from .model_test_case import ModelTestCase
 
 
 class SimpleTaggerTest(ModelTestCase):

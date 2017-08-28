@@ -3,15 +3,10 @@ import numpy
 from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params
-from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers import SnliReader
+from allennlp.common.testing import ModelTestCase
 from allennlp.data.fields import TextField
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models import DecomposableAttention, Model
-from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import arrays_to_variables
-from allennlp.common.testing import AllenNlpTestCase
-from .model_test_case import ModelTestCase
 
 
 class TestDecomposableAttention(ModelTestCase):

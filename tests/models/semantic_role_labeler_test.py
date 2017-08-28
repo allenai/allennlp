@@ -3,11 +3,11 @@ import subprocess
 import os
 import numpy
 
+from allennlp.common.testing import ModelTestCase
 from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
-from .model_test_case import ModelTestCase
 
 
 class SemanticRoleLabelerTest(ModelTestCase):
