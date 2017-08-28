@@ -1,11 +1,11 @@
 from typing import Sequence
-from common.checks import ensure_pythonhashseed_set
 import argparse
 
 import allennlp.commands.serve as serve
 import allennlp.commands.predict as predict
 import allennlp.commands.train as train
 import allennlp.commands.evaluate as evaluate
+from allennlp.common.checks import ensure_pythonhashseed_set
 
 def main(raw_args: Sequence[str]) -> None:
     ensure_pythonhashseed_set()
