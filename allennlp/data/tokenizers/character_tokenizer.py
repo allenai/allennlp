@@ -36,7 +36,7 @@ class CharacterTokenizer(Tokenizer):
         if self.lowercase_characters:
             text = text.lower()
         if self.byte_encoding is not None:
-            text = text.encode(self.byte_encoding)  # type: ignore
+            return [chr(x) for x in text.encode(self.byte_encoding)]
         return list(text)
 
     @classmethod
