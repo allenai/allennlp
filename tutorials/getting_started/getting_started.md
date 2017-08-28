@@ -22,9 +22,13 @@ start a Docker container, and launch an interactive shell.
 It also exposes port 8000, which is where the demo server runs,
 and shuts down the container when you exit the interactive shell.
 
-## Installing Not Using Docker
+## Installing using pip
 
-If you can't (or don't want to) use Docker, you can clone from our git repository:
+TODO(joelrus): add instructions when ready
+
+## Installing from source
+
+A third alternative is to clone from our git repository:
 
 ```bash
 git clone https://github.com/allenai/allennlp.git
@@ -44,11 +48,14 @@ from [their website](http://pytorch.org/).
 
 ## Once You've Installed
 
-A lot of the most common functionality can be accessed through the command line tool `allennlp/run`:
+
+If you just want to use the models and helper classes that are included with AllenNLP,
+you can use the included "run" script, which provides a command-line interface to
+common functionality around training and evaluating models.
 
 ```
-$ allennlp/run
-usage: run [command]
+$ python -m allennlp.run
+usage: run.py [command]
 
 Run AllenNLP
 
@@ -63,12 +70,18 @@ Commands:
     evaluate  Evaluate the specified model + dataset
 ```
 
+Eventually you'll want to create your own models and helper classes,
+at which point you'll need to create your own run script that knows
+about them.
+
+TODO(joelgrus): add link to tutorial
+
 ### Serving the Demo
 
 The `serve` command starts the demo server.
 
 ```
-$ allennlp/run serve
+$ python -m allennlp.run serve
 Starting a sanic server on port 8000.
 [... lots of logging omitted ...]
 2017-08-16 18:55:12 - (sanic)[INFO]: Goin' Fast @ http://0.0.0.0:8000
@@ -114,7 +127,7 @@ this many epochs, training halts. And if you have a GPU you can change `cuda_dev
 Change any of those if you want to, and then run
 
 ```
-allennlp/run train tutorials/getting_started/simple_tagger.json --serialization_dir /tmp/tutorials/getting_started
+$ python -m allennlp.run train tutorials/getting_started/simple_tagger.json --serialization_dir /tmp/tutorials/getting_started
 ```
 
 The `serialization_dir` argument specifies the directory where the model's vocabulary and checkpointed weights will be saved.
@@ -172,10 +185,10 @@ Once you've trained a model, you likely want to evaluate it on another dataset.
 We have another 1000 sentences in the file `sentences.small.test`, which
 is shared publicly on Amazon S3.
 
-We can use the `allennlp/run evaluate` command, giving it the archived model and the evaluation dataset:
+We can use the `evaluate` command, giving it the archived model and the evaluation dataset:
 
 ```
-$ allennlp/run evaluate --archive_file /tmp/tutorials/getting_started/model.tar.gz --evaluation_data_file https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
+$ python -m allennlp.run evaluate --archive_file /tmp/tutorials/getting_started/model.tar.gz --evaluation_data_file https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
 ```
 
 When you run this it will load the archived model, download and cache the evaluation dataset, and then make predictions:
@@ -205,4 +218,4 @@ TODO(joelgrus): write this part
 
 ### Next Steps
 
-Continue on to our Deep Dive tutorial.
+Continue on to our Configuration tutorial.

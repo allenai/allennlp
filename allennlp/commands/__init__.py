@@ -1,19 +1,19 @@
 import argparse
 
-import allennlp.commands.serve as serve
-import allennlp.commands.predict as predict
-import allennlp.commands.train as train
-import allennlp.commands.evaluate as evaluate
+from allennlp.commands.serve import add_subparser as add_serve_subparser
+from allennlp.commands.predict import add_subparser as add_predict_subparser
+from allennlp.commands.train import add_subparser as add_train_subparser
+from allennlp.commands.evaluate import add_subparser as add_evaluate_subparser
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]')
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 
     # Add sub-commands
-    predict.add_subparser(subparsers)
-    train.add_subparser(subparsers)
-    serve.add_subparser(subparsers)
-    evaluate.add_subparser(subparsers)
+    add_train_subparser(subparsers)
+    add_evaluate_subparser(subparsers)
+    add_predict_subparser(subparsers)
+    add_serve_subparser(subparsers)
 
     args = parser.parse_args()
 
