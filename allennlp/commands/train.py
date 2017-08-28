@@ -126,7 +126,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     logging.getLogger().addHandler(handler)
     serialization_params = deepcopy(params).as_dict(quiet=True)
     with open(os.path.join(serialization_dir, "model_params.json"), "w") as param_file:
-        json.dump(serialization_params, param_file)
+        json.dump(serialization_params, param_file, indent=4)
 
     # Now we begin assembling the required parts for the Trainer.
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
