@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import sys
 import tempfile
 from unittest import TestCase
 
@@ -41,13 +42,14 @@ class TestPredict(TestCase):
             f.write("""{"passage": "the mariners won the super bowl in 2037", """
                     """ "question": "when did the mariners win the super bowl?"}\n""")
 
-        args = ["predict",     # command
-                "tests/fixtures/bidaf/serialization/model.tar.gz",
-                infile,     # input_file
-                "--output-file", outfile,
-                "--print"]
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    "tests/fixtures/bidaf/serialization/model.tar.gz",
+                    infile,     # input_file
+                    "--output-file", outfile,
+                    "--print"]
 
-        main(args)
+        main()
 
         assert os.path.exists(outfile)
 
@@ -59,11 +61,12 @@ class TestPredict(TestCase):
             assert set(result.keys()) == {"span_start_probs", "span_end_probs", "best_span"}
 
     def test_fails_without_required_args(self):
-        args = ["predict",           # command
-                "/path/to/archive",  # archive, but no input file
-               ]
+        sys.argv = ["run.py",            # executable
+                    "predict",           # command
+                    "/path/to/archive",  # archive, but no input file
+                   ]
 
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
-            main(args)
+            main()
 
         assert cm.exception.code == 2  # argparse code for incorrect usage
