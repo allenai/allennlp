@@ -3,21 +3,21 @@ from allennlp.service.predictors import Predictor
 
 from sanic import Sanic, response, request
 from sanic.exceptions import ServerError
+from typing import Dict
 
-DEFAULT_ARCHIVE_FILES = {
-        'machine-comprehension': 'tests/fixtures/bidaf/serialization/model.tar.gz',
-        'semantic-role-labeling': 'tests/fixtures/srl/serialization/model.tar.gz',
+default_config = {
+        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.08.26.tar.gz',
+        'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.08.28.tar.gz',
         'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
 }
 
-def run(port: int, workers: int = 1) -> None:
+def run(port: int, workers: int, config: Dict[str, str]) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
     app = make_app()
-    # TODO(joelgrus): make this configurable
     app.predictors = {
             name: Predictor.from_archive(load_archive(archive_file))
-            for name, archive_file in DEFAULT_ARCHIVE_FILES.items()
+            for name, archive_file in config.items()
     }
     app.run(port=port, host="0.0.0.0", workers=workers)
 
