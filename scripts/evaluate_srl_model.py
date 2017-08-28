@@ -42,7 +42,12 @@ def main(serialization_directory, device):
         fields = instance.fields
         results = model.tag(fields["tokens"], fields["verb_indicator"])
 
-        verb_index = fields["verb_indicator"].labels.index(1)
+        try:
+            # Most sentences have a verbal predicate, but not all.
+            verb_index = fields["verb_indicator"].labels.index(1)
+        except ValueError:
+            verb_index = None
+
         gold_tags = fields["tags"].labels
         predicted_tags = results["tags"]
         sentence = fields["tokens"].tokens

@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, TextIO
+from typing import Dict, Any, List, TextIO, Optional
 
 import torch
 from torch.nn.modules import Linear, Dropout
@@ -233,7 +233,7 @@ class SemanticRoleLabeler(Model):
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,
-                             verb_index: int,
+                             verb_index: Optional[int],
                              sentence: List[str],
                              prediction: List[str],
                              gold_labels: List[str]):
@@ -247,9 +247,10 @@ def write_to_conll_eval_file(prediction_file: TextIO,
         A file reference to print predictions to.
     gold_file : TextIO, required.
         A file reference to print gold labels to.
-    verb_index : int, required.
+    verb_index : Optional[int], required.
         The index of the verbal predicate in the sentence which
-        the gold labels are the arguments for.
+        the gold labels are the arguments for, or None if the sentence
+        contains no verbal predicate.
     sentence : List[str], required.
         The word tokens.
     prediction : List[str], required.
@@ -258,7 +259,8 @@ def write_to_conll_eval_file(prediction_file: TextIO,
         The gold BIO labels.
     """
     verb_only_sentence = ["-"] * len(sentence)
-    verb_only_sentence[verb_index] = sentence[verb_index]
+    if verb_index:
+        verb_only_sentence[verb_index] = sentence[verb_index]
 
     conll_format_predictions = convert_bio_tags_to_conll_format(prediction)
     conll_format_gold_labels = convert_bio_tags_to_conll_format(gold_labels)
