@@ -20,15 +20,11 @@ spec:
           # for documentation on the resources section.
           resources:
             limits:
-              # One-half of a CPU.
-              cpu: 500m
-              # 500 megabytes.
+              cpu: 1000m
               memory: 2000Mi
             # "requests" specify how much your container will be granted as a baseline.
             requests:
-              # One-fifth of a CPU.
-              cpu: 200m
-              # 250 megabytes.
+              cpu: 1000m
               memory: 2000Mi
           command:
             - /bin/bash
