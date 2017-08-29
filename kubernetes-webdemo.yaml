@@ -6,7 +6,7 @@ metadata:
   labels:
     contact: allennlp
 spec:
-  replicas: 1
+  replicas: 2
   template:
     metadata:
       labels:
