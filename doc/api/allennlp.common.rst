@@ -1,8 +1,8 @@
 allennlp.common
 =======================
 
-Subpackages
------------
+These submodules contain common functionality
+that's used by datasets, models, trainers, and so on.
 
 .. toctree::
 
