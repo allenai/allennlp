@@ -1,23 +1,17 @@
-from allennlp.models.archival import load_archive
-from allennlp.service.predictors import Predictor
-
+from typing import Dict
 from sanic import Sanic, response, request
 from sanic.exceptions import ServerError
 
-DEFAULT_ARCHIVE_FILES = {
-        'machine-comprehension': 'tests/fixtures/bidaf/serialization/model.tar.gz',
-        'semantic-role-labeling': 'tests/fixtures/srl/serialization/model.tar.gz',
-        'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
-}
+from allennlp.models.archival import load_archive
+from allennlp.service.predictors import Predictor
 
-def run(port: int, workers: int = 1) -> None:
+def run(port: int, workers: int, config: Dict[str, str]) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
     app = make_app()
-    # TODO(joelgrus): make this configurable
     app.predictors = {
             name: Predictor.from_archive(load_archive(archive_file))
-            for name, archive_file in DEFAULT_ARCHIVE_FILES.items()
+            for name, archive_file in config.items()
     }
     app.run(port=port, host="0.0.0.0", workers=workers)
 

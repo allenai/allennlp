@@ -1,5 +1,4 @@
-ARG from=nvidia/cuda:8.0-cudnn5-devel
-FROM $from
+FROM nvidia/cuda:8.0-cudnn5-devel
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
@@ -44,7 +43,7 @@ COPY requirements.txt .
 COPY requirements_test.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
 RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
-RUN pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post1-cp35-cp35m-manylinux1_x86_64.whl
+RUN pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post3-cp35-cp35m-manylinux1_x86_64.whl
 
 COPY allennlp/ allennlp/
 COPY tests/ tests/

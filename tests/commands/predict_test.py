@@ -18,16 +18,14 @@ class TestPredict(TestCase):
 
         raw_args = ["predict",          # command
                     "/path/to/archive", # archive
-                    "/path/to/data",    # input_file
-                    "--output-file", "outfile",
+                    "/dev/null",    # input_file
+                    "--output-file", "/dev/null",
                     "--silent"]
 
         args = parser.parse_args(raw_args)
 
         assert args.func == predict
         assert args.archive_file == "/path/to/archive"
-        assert args.input_file == "/path/to/data"
-        assert args.output_file == "outfile"
         assert args.silent
 
     def test_works_with_known_model(self):

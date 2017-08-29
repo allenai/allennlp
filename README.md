@@ -10,7 +10,8 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 ## Quickstart
 
 The fastest way to get an environment to run AllenNLP is with Docker.  Once you have [installed Docker](https://docs.docker.com/engine/installation/)
-just run `docker run -it --rm allennlp/allennlp-cpu` to get an environment that will run on the cpu (use `allennlp-gpu` if you have a CUDA-supported GPU).
+just run `docker run -it --rm allennlp/allennlp` to get an environment that will run on either the cpu or gpu.
+
 Now you can do any of the following:
 
 * Run a model on example sentences with `allennlp/run bulk`.
@@ -126,35 +127,29 @@ It is easy to run a pre-built Docker development environment.  AllenNLP is confi
 new image on every update to the master branch.  To download an image from [Docker Hub](https://hub.docker.com/r/allennlp/):
 
 ```bash
-docker pull allennlp/allennlp-cpu:latest
-```
-
-You can alternatively download an environment set up to use a GPU.
-
-```bash
-docker pull allennlp/allennlp-gpu:latest
+docker pull allennlp/allennlp:latest
 ```
 
 ## Building a Docker image
 
-Following are instructions on creating a Docker environment that use the CPU.  To use the GPU, use the same instructions
-but substitute `gpu` for `cpu`.  The following command will take some time, as it completely builds the environment
-needed to run AllenNLP.
+Following are instructions on creating a Docker environment that works on a CPU
+or GPU.  The following command will take some time, as it completely builds the
+environment needed to run AllenNLP.
 
 ```bash
-docker build --file Dockerfile.cpu --tag allennlp/allennlp-cpu .
+docker build --tag allennlp/allennlp .
 ```
 
-You should now be able to see this image listed by running `docker images allennlp-cpu`.
+You should now be able to see this image listed by running `docker images allennlp`.
 
 ```
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-allennlp/allennlp-cpu        latest              b66aee6cb593        5 minutes ago       2.38GB
+allennlp/allennlp            latest              b66aee6cb593        5 minutes ago       2.38GB
 ```
 
 ## Running the Docker image
 
-You can run the image with `docker run --rm -it allennlp/allennlp-cpu`.  The `--rm` flag cleans up the image on exit and the
+You can run the image with `docker run --rm -it allennlp/allennlp`.  The `--rm` flag cleans up the image on exit and the
 `-it` flags make the session interactive so you can use the bash shell the Docker image starts.
 
 The Docker environment uses Conda to install Python and automatically enters the Conda environment "allennlp".

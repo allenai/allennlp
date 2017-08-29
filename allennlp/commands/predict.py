@@ -37,13 +37,12 @@ def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_t
 
 def predict(args: argparse.Namespace) -> None:
     predictor = get_predictor(args)
+    output_file = None
 
     # ExitStack allows us to conditionally context-manage `output_file`, which may or may not exist
     with ExitStack() as stack:
-        input_file = stack.enter_context(open(args.input_file, 'r'))  # type: ignore
+        input_file = stack.enter_context(args.input_file)  # type: ignore
         if args.output_file:
-            output_file = stack.enter_context(open(args.output_file, 'w'))  # type: ignore
-        else:
-            output_file = None
+            output_file = stack.enter_context(args.output_file)  # type: ignore
 
         run(predictor, input_file, output_file, not args.silent)
