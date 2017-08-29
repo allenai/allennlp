@@ -33,3 +33,11 @@ if [[ "$BUILD_DOCS" == "true" ]]; then
   make html-strict
   cd ..
 fi
+
+if [[ "$COVERAGE" == "true" ]]; then
+    # Ignore codecov failures as the codecov server is not
+    # very reliable but we don't want travis to report a failure
+    # in the github UI just because the coverage report failed to
+    # be published.
+    codecov || echo "codecov upload failed"
+fi

@@ -1,15 +1,11 @@
 # use new container-based travis workers
-sudo: false
+sudo: required
 dist: trusty
 
 language: python
 
-cache:
-  directories:
-  - /home/travis/nltk_data
-  - /home/travis/download
-  - /home/travis/miniconda3
-  - /home/travis/.cache/pip
+services:
+  - docker
 
 env:
   matrix:
@@ -21,13 +17,8 @@ env:
 notifications:
   email: false
 
-addons:
-  apt:
-    packages:
-      - dvipng
-      - texlive-latex-base
-      - texlive-latex-extra
-
 install: source build_tools/travis/install.sh
-script: bash build_tools/travis/test_script.sh
-after_success: source build_tools/travis/after_success.sh
+
+script:
+  - docker build -t allennlp/allennlp .
+  - docker run allennlp/allennlp -c /bin/bash -c "/stage/build_tools/travis/test_script.sh"
