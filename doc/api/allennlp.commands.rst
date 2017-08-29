@@ -1,32 +1,15 @@
 allennlp.commands
 =========================
 
-Submodules
-----------
+These submodules contain command line tools for things like
+training and evaluating models.
 
-.. automodule:: allennlp.commands.predict
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.commands.main
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.commands.serve
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.commands.train
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
+.. toctree::
+    allennlp.commands.evaluate
+    allennlp.commands.main
+    allennlp.commands.predict
+    allennlp.commands.serve
+    allennlp.commands.train
 
 .. automodule:: allennlp.commands
    :members:

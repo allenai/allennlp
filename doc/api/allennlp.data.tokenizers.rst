@@ -1,8 +1,10 @@
 allennlp.data.tokenizers
 ================================
 
-Submodules
-----------
+.. automodule:: allennlp.data.tokenizers
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.data.tokenizers.character_tokenizer
    :members:
@@ -34,11 +36,3 @@ Submodules
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: allennlp.data.tokenizers
-   :members:
-   :undoc-members:
-   :show-inheritance:

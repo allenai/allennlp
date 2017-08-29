@@ -6,39 +6,12 @@ Subpackages
 
 .. toctree::
 
+   allennlp.common.checks
+   allennlp.common.params
+   allennlp.common.registrable
+   allennlp.common.tee_logger
    allennlp.common.testing
-
-Submodules
-----------
-
-.. automodule:: allennlp.common.checks
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.common.params
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.common.registrable
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.common.tee_logger
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.common.util
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
+   allennlp.common.util
 
 .. automodule:: allennlp.common
    :members:
