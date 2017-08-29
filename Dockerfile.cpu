@@ -1,4 +1,4 @@
-ARG from=nvidia/cuda:8.0-cudnn5-devel
+ARG from=ubuntu:16.04
 FROM $from
 
 ENV LC_ALL=C.UTF-8
