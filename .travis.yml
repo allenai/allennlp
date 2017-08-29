@@ -17,3 +17,8 @@ install: source build_tools/travis/install.sh
 script:
 - docker build -t allennlp/allennlp .
 - docker run allennlp/allennlp -c /bin/bash -c "/stage/build_tools/travis/test_script.sh"
+after_success:
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+    docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+    docker push allennlp/allennlp-travis;
+    fi
