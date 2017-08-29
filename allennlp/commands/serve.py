@@ -25,7 +25,7 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
 
 def serve(args: argparse.Namespace) -> None:
     # Read a JSON configuration file, if specified
-    config = server_sanic.DEFAULT_CONFIG
+    config = DEFAULT_CONFIG
     if args.config_file is not None:
         with args.config_file as fopen:
             config = json.loads(fopen.read())
