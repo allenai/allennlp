@@ -1,5 +1,4 @@
 import os
-import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
@@ -56,10 +55,6 @@ def main(serialization_directory, device):
                                  verb_index, sentence, gold_tags, predicted_tags)
     prediction_file.close()
     gold_file.close()
-
-    # Run the perl evaluation script on the written files.
-    perl_script_command = ["perl", "scripts/srl-eval.pl", prediction_file_path, gold_file_path]
-    subprocess.call(perl_script_command, stdout=os.path.join(serialization_directory, "results.txt"))
 
 if __name__ == "__main__":
 
