@@ -3,6 +3,12 @@ import json
 
 from allennlp.service import server_sanic
 
+DEFAULT_CONFIG = {
+        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.08.26.tar.gz', # pylint: disable=line-too-long
+        'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.08.28.tar.gz', # pylint: disable=line-too-long
+        'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz' # pylint: disable=line-too-long
+}
+
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Run the web service, which provides an HTTP API as well as a web demo.'''
     subparser = parser.add_parser(

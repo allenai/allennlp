@@ -5,12 +5,6 @@ from sanic.exceptions import ServerError
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
-DEFAULT_CONFIG = {
-        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.08.26.tar.gz', # pylint: disable=line-too-long
-        'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.08.28.tar.gz', # pylint: disable=line-too-long
-        'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz' # pylint: disable=line-too-long
-}
-
 def run(port: int, workers: int, config: Dict[str, str]) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
