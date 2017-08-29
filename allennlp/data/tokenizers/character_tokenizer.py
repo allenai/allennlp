@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from overrides import overrides
 
@@ -32,12 +32,12 @@ class CharacterTokenizer(Tokenizer):
         self.lowercase_characters = lowercase_characters
 
     @overrides
-    def tokenize(self, text: str) -> List[str]:
+    def tokenize(self, text: str) -> Tuple[List[str], List[Tuple[int, int]]]:
         if self.lowercase_characters:
             text = text.lower()
         if self.byte_encoding is not None:
-            return [chr(x) for x in text.encode(self.byte_encoding)]
-        return list(text)
+            return [chr(x) for x in text.encode(self.byte_encoding)], None
+        return list(text), None
 
     @classmethod
     def from_params(cls, params: Params) -> 'CharacterTokenizer':

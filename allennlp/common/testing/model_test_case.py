@@ -1,6 +1,8 @@
 import os
+from inspect import signature
 
 from numpy.testing import assert_allclose
+import torch
 
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
@@ -56,6 +58,9 @@ class ModelTestCase(AllenNlpTestCase):
 
         # The datasets themselves should be identical.
         for key in model_batch.keys():
+            if key == 'metadata':
+                assert model_batch[key] == loaded_batch[key]
+                continue
             field = model_batch[key]
             if isinstance(field, dict):
                 for subfield in field:
@@ -72,6 +77,9 @@ class ModelTestCase(AllenNlpTestCase):
         # Set eval mode, to turn off things like dropout, then get predictions.
         model.eval()
         loaded_model.eval()
+        if 'metadata' in model_batch and 'metadata' not in signature(model.forward).parameters:
+            del model_batch['metadata']
+            del loaded_batch['metadata']
         model_predictions = model.forward(**model_batch)
         loaded_model_predictions = loaded_model.forward(**loaded_batch)
 
@@ -82,9 +90,12 @@ class ModelTestCase(AllenNlpTestCase):
 
         # Both outputs should have the same keys and the values for these keys should be close.
         for key in model_predictions.keys():
-            assert_allclose(model_predictions[key].data.numpy(),
-                            loaded_model_predictions[key].data.numpy(),
-                            rtol=1e-5,
-                            err_msg=key)
+            if isinstance(model_predictions[key], torch.autograd.Variable):
+                assert_allclose(model_predictions[key].data.numpy(),
+                                loaded_model_predictions[key].data.numpy(),
+                                rtol=1e-5,
+                                err_msg=key)
+            else:
+                assert model_predictions[key] == loaded_model_predictions[key]
 
         return model, loaded_model

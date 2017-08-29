@@ -1,15 +1,11 @@
 """ Official evaluation script for v1.1 of the SQuAD dataset. """
 from __future__ import print_function
 from collections import Counter
-import editdistance
 import string
 import re
 import argparse
 import json
 import sys
-
-
-verbosity = 0
 
 
 def normalize_answer(s):
@@ -44,24 +40,7 @@ def f1_score(prediction, ground_truth):
 
 
 def exact_match_score(prediction, ground_truth):
-    normalized_prediction = normalize_answer(prediction)
-    normalized_ground_truth = normalize_answer(ground_truth)
-    correct = normalized_prediction == normalized_ground_truth
-    if verbosity > 0 and not correct:
-        pred_no_whitespace = normalized_prediction.replace(' ', '')
-        truth_no_whitespace = normalized_ground_truth.replace(' ', '')
-        if pred_no_whitespace == truth_no_whitespace:
-            print("Prediction and truth differ only in whitespace!")
-            print("Normalized ground truth:", normalized_ground_truth)
-            print("Normalized prediction:", normalized_prediction)
-            print()
-        if verbosity > 1:
-            if editdistance.eval(normalized_prediction, normalized_ground_truth) < 5:
-                print("Small edit distance between truth and prediction; could be a tokenization error")
-                print("Normalized ground truth:", normalized_ground_truth)
-                print("Normalized prediction:", normalized_prediction)
-                print()
-    return correct
+    return (normalize_answer(prediction) == normalize_answer(ground_truth))
 
 
 def metric_max_over_ground_truths(metric_fn, prediction, ground_truths):
@@ -81,7 +60,7 @@ def evaluate(dataset, predictions):
                 if qa['id'] not in predictions:
                     message = 'Unanswered question ' + qa['id'] + \
                               ' will receive score 0.'
-                    #print(message, file=sys.stderr)
+                    print(message, file=sys.stderr)
                     continue
                 ground_truths = list(map(lambda x: x['text'], qa['answers']))
                 prediction = predictions[qa['id']]
