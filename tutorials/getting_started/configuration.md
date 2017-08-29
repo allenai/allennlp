@@ -129,7 +129,7 @@ because the default split-on-whitespace behavior is already correct.
 
 If you look at the code for `SequenceTaggingDatasetReader.read()`,
 you can see that it turns each sentence into a `TextField`
-of tokens and a `SequenceLabelField` of POS tags. The latter isn't
+of tokens and a `SequenceLabelField` of tags. The latter isn't
 really configurable, but the former wants a dictionary of
 [TokenIndexer](http://docs.allennlp.org/en/latest/api/allennlp.data.token_indexers.html#allennlp.data.token_indexers.token_indexer.TokenIndexer)s,
 indicating how to convert the tokens into arrays.
