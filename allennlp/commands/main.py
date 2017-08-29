@@ -5,8 +5,11 @@ import allennlp.commands.serve as serve
 import allennlp.commands.predict as predict
 import allennlp.commands.train as train
 import allennlp.commands.evaluate as evaluate
+from allennlp.common.checks import ensure_pythonhashseed_set
 
 def main(raw_args: Sequence[str]) -> None:
+    ensure_pythonhashseed_set()
+
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]')
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 

@@ -18,16 +18,14 @@ class TestPredict(TestCase):
 
         raw_args = ["predict",          # command
                     "/path/to/archive", # archive
-                    "/path/to/data",    # input_file
-                    "--output-file", "outfile",
+                    "/dev/null",    # input_file
+                    "--output-file", "/dev/null",
                     "--print"]
 
         args = parser.parse_args(raw_args)
 
         assert args.func == predict
         assert args.archive_file == "/path/to/archive"
-        assert args.input_file == "/path/to/data"
-        assert args.output_file == "outfile"
         assert args.print
 
     def test_works_with_known_model(self):
@@ -56,7 +54,8 @@ class TestPredict(TestCase):
 
         assert len(results) == 2
         for result in results:
-            assert set(result.keys()) == {"span_start_probs", "span_end_probs", "best_span"}
+            assert set(result.keys()) == {"span_start_probs", "span_end_probs", "best_span",
+                                          "best_span_str"}
 
     def test_fails_without_required_args(self):
         args = ["predict",           # command

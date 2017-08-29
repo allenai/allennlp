@@ -285,6 +285,9 @@ class Vocabulary:
         Adds ``token`` to the index, if it is not already present.  Either way, we return the index of
         the token.
         """
+        if not isinstance(token, str):
+            raise ValueError("Vocabulary tokens must be strings, or saving and loading will break."
+                             "  Got %s (with type %s)" % (repr(token), type(token)))
         if token not in self._token_to_index[namespace]:
             index = len(self._token_to_index[namespace])
             self._token_to_index[namespace][token] = index
