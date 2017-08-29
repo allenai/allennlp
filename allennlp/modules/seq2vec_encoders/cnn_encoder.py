@@ -83,22 +83,21 @@ class CnnEncoder(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
-    def forward(self, tokens: torch.Tensor, **kwargs):  # pylint: disable=arguments-differ, unused-argument
-        # TODO(Mark, Matt): Decide how this fits into the Encoder APIs.
-        # Allow extra arguments to be passed here in order to fit with the :class:`Seq2VecEncoder` API.
+    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):  # pylint: disable=arguments-differ
+        if mask is not None:
+            tokens = tokens * mask.unsqueeze(-1).float()
 
         # Our input is expected to have shape `(batch_size, num_tokens, embedding_dim)`.  The
         # convolution layers expect input of shape `(batch_size, in_channels, sequence_length)`,
         # where the conv layer `in_channels` is our `embedding_dim`.  We thus need to transpose the
         # tensor first.
         tokens = torch.transpose(tokens, 1, 2)
-
         # Each convolution layer returns output of size `(batch_size, num_filters, pool_length)`,
-        # where `pool_length = num_tokens - ngram_size + 1`.  We then do an activation function
-        # (currently hard-coded to RELU), then do max pooling over each filter for the whole input
-        # sequence.  Because our max pooling is simple, we just use `torch.max`.  The resultant
-        # tensor of has shape `(batch_size, num_conv_layers * num_filters)`, which then gets
-        # projected using the projection layer, if requested.
+        # where `pool_length = num_tokens - ngram_size + 1`.  We then do an activation function,
+        # then do max pooling over each filter for the whole input sequence.  Because our max
+        # pooling is simple, we just use `torch.max`.  The resultant tensor of has shape
+        # `(batch_size, num_conv_layers * num_filters)`, which then gets projected using the
+        # projection layer, if requested.
 
         filter_outputs = [self._activation(convolution_layer(tokens)).max(dim=2)[0]
                           for convolution_layer in self._convolution_layers]

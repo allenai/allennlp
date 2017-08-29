@@ -53,6 +53,7 @@ class TestTokenCharactersEncoder(AllenNlpTestCase):
         encoder_output = self.encoder(inputs)
         reshaped_input = inputs.view(12, 7)
         embedded = self.embedding(reshaped_input)
-        reshaped_manual_output = self.inner_encoder(embedded)
+        mask = (inputs != 0).long().view(12, 7)
+        reshaped_manual_output = self.inner_encoder(embedded, mask)
         manual_output = reshaped_manual_output.view(3, 4, 3)
         assert_almost_equal(encoder_output.data.numpy(), manual_output.data.numpy())
