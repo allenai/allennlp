@@ -8,16 +8,19 @@ Now that we know how to train and evaluate models,
 let's take a deeper look at our experiment configuration file,
 [tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json).
 
-As you can probably tell from the filename, the configuration is a JSON object
+The configuration is a JSON (or [HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md)) object
 that defines all the parameters for our experiment and model.
 In this tutorial we'll go through
 each section in detail, explaining what all the parameters mean.
 
 ## A preliminary: `Registrable` and `from_params`
 
-Most AllenNLP classes inherit from the  [`Registrable`](http://docs.allennlp.org/en/latest/api/allennlp.common.html#allennlp.common.registrable.Registrable) base class,
+Most AllenNLP classes inherit from the
+[`Registrable`](http://docs.allennlp.org/en/latest/api/allennlp.common.html#allennlp.common.registrable.Registrable)
+base class,
 which gives them a named registry for their subclasses. This means that if we had
-a `Model(Registrable)` base class ([we do](http://docs.allennlp.org/en/latest/api/allennlp.models.html#allennlp.models.model.Model)), and we decorated a subclass like
+a `Model(Registrable)` base class ([we do](http://docs.allennlp.org/en/latest/api/allennlp.models.html#allennlp.models.model.Model)),
+and we decorated a subclass like
 
 ```python
 @Model.register("custom")
@@ -54,9 +57,10 @@ model = Model.by_name(model_name).from_params(model_params)
 Because a class doesn't get registered until it's loaded, any code that uses
 `BaseClass.by_name('subclass_name')` must have already imported the code for `Subclass`.
 In particular, this means that once you start creating your own named models and helper classes,
-the included `allennlp.run` command will not be aware of them. As `allennlp.run` is simply
-a thin wrapper around `allennlp.commands.main`, you just need to create your own script
-which imports all of your custom classes and then calls `allennlp.commands.main()`.
+the included `allennlp.run` command will not be aware of them. However, `allennlp.run` is simply
+a wrapper around the `allennlp.commands.main` function,
+which means you just need to create your own script
+that imports all of your custom classes and then calls `allennlp.commands.main()`.
 
 ## `Dataset`s and `Instance`s and `Field`s
 
@@ -64,9 +68,10 @@ We train and evaluate our models on `Dataset`s. A
 [`Dataset`](http://docs.allennlp.org/en/latest/api/allennlp.data.html#allennlp.data.dataset.Dataset)
 is a collection of
 [`Instance`](http://docs.allennlp.org/en/latest/api/allennlp.data.html#allennlp.data.instance.Instance)s.
-Here, each dataset is a collection of tagged sentences, and each instance is one of those tagged sentences.
+In our tagging experiment,
+each dataset is a collection of tagged sentences, and each instance is one of those tagged sentences.
 
-An instance is a collection of
+An instance consists of
 [`Field`](http://docs.allennlp.org/en/latest/api/allennlp.data.fields.html#allennlp.data.fields.field.Field)s,
 each of which represents some part of the instance as arrays suitable for feeding into a model.
 
@@ -78,7 +83,7 @@ representing the corresponding part-of-speech tags.
 
 How do we turn a text file full of sentences into a `Dataset`? With a
 [`DatasetReader`](http://docs.allennlp.org/en/latest/api/allennlp.data.dataset_readers.html#allennlp.data.dataset_readers.dataset_reader.DatasetReader)
-based on our configuration file.
+specified by our configuration file.
 
 ## `dataset_reader`
 
@@ -103,8 +108,8 @@ The first section of our configuration file defines the `dataset_reader`:
 
 Here we've specified that we want to use the `DatasetReader` subclass that's registered
 under the name `"sequence_tagging"`. Unsurprisingly, this is the
-[`SequenceTaggingDatasetReader`](https://github.com/allenai/allennlp/blob/master/allennlp/data/dataset_readers/sequence_tagging.py) subclass.
-This reader assumes a text file of newline-separated sentences, where each sentence looks like
+[`SequenceTaggingDatasetReader`](http://docs.allennlp.org/en/latest/api/allennlp.data.dataset_readers.html#allennlp.data.dataset_readers.sequence_tagging.SequenceTaggingDatasetReader)
+subclass. This reader assumes a text file of newline-separated sentences, where each sentence looks like
 
 ```
 word1{wtd}tag1{td}word2{wtd}tag2{td}...{td}wordn{wtd}tagn
@@ -125,14 +130,14 @@ which is why we need to specify
 ```
 
 We don't need to specify anything for the "token delimiter",
-because the default split-on-whitespace behavior is already correct.
+since the default split-on-whitespace behavior is already correct.
 
 If you look at the code for `SequenceTaggingDatasetReader.read()`,
-you can see that it turns each sentence into a `TextField`
+it turns each sentence into a `TextField`
 of tokens and a `SequenceLabelField` of tags. The latter isn't
 really configurable, but the former wants a dictionary of
-[TokenIndexer](http://docs.allennlp.org/en/latest/api/allennlp.data.token_indexers.html#allennlp.data.token_indexers.token_indexer.TokenIndexer)s,
-indicating how to convert the tokens into arrays.
+[TokenIndexer](http://docs.allennlp.org/en/latest/api/allennlp.data.token_indexers.html#allennlp.data.token_indexers.token_indexer.TokenIndexer)s
+that indicate how to convert the tokens into arrays.
 
 Our configuration specifies two token indexers:
 
@@ -148,14 +153,14 @@ Our configuration specifies two token indexers:
     }
 ```
 
-The first, `"tokens"`,
-is a [`SingleIdTokenIndexer`](https://github.com/allenai/allennlp/blob/master/allennlp/data/token_indexers/single_id_token_indexer.py)
+The first, `"tokens"`, is a
+[`SingleIdTokenIndexer`](http://docs.allennlp.org/en/latest/api/allennlp.data.token_indexers.html#allennlp.data.token_indexers.single_id_token_indexer.SingleIdTokenIndexer)
 that just represents each token (word) as a single integer.
 The configuration also specifies that we *lowercase* the tokens before encoding;
 that is, that this token indexer should ignore case.
 
 The second, `"token_characters"`, is a
-[`TokenCharactersIndexer`](https://github.com/allenai/allennlp/blob/master/allennlp/data/token_indexers/token_characters_indexer.py)
+[`TokenCharactersIndexer`](http://docs.allennlp.org/en/latest/api/allennlp.data.token_indexers.html#allennlp.data.token_indexers.token_characters_indexer.TokenCharactersIndexer)
 that represents each token as a list of int-encoded characters.
 
 Notice that this gives us two different encodings for each token.
@@ -209,9 +214,9 @@ The next section configures our model.
 
 This indicates we want to use the `Model` subclass that's registered as `"simple_tagger"`,
 which is the
-[`SimpleTagger`](http://docs.allennlp.org/en/latest/api/allennlp.models.html#allennlp.models.simple_tagger.SimpleTagger)
+[`SimpleTagger`](http://docs.allennlp.org/en/latest/api/allennlp.models.html#allennlp.models.simple_tagger.SimpleTagger) model.
 
-If you look at its documentation, it consists of a
+If you look at its code, you'll see it consists of a
 [`TextFieldEmbedder`](http://docs.allennlp.org/en/latest/api/allennlp.modules.text_field_embedders.html#allennlp.modules.text_field_embedders.text_field_embedder.TextFieldEmbedder)
 that embeds the output of our text fields, a
 [`Seq2SeqEncoder`](http://docs.allennlp.org/en/latest/api/allennlp.modules.seq2seq_encoders.html#allennlp.modules.seq2seq_encoders.seq2seq_encoder.Seq2SeqEncoder)
@@ -222,7 +227,7 @@ into logits representing the probabilities of predicted tags.
 
 ### The Text Field Embedder
 
-Let's first look at the text field embedder configuation:
+Let's first look at the text field embedder configuration:
 
 ```js
     "text_field_embedder": {

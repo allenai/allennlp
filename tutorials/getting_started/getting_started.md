@@ -70,6 +70,8 @@ Commands:
     evaluate  Evaluate the specified model + dataset
 ```
 
+It's what we'll be using throughout this tutorial.
+
 Eventually you'll want to create your own models and helper classes,
 at which point you'll need to create your own run script that knows
 about them.
@@ -79,6 +81,8 @@ TODO(joelgrus): add link to tutorial
 ### Serving the Demo
 
 The `serve` command starts the demo server.
+The first time you run it, it will download
+several large serialized models from Amazon S3.
 
 ```
 $ python -m allennlp.run serve
@@ -90,7 +94,7 @@ Starting a sanic server on port 8000.
 2017-08-16 18:55:12,323 - INFO - sanic - Starting worker [33290]
 ```
 
-If you visit `http://localhost:8000` in your browser, you can play around with the same demo
+If you now visit `http://localhost:8000` in your browser, you can play around with the same demo
 that runs on the AllenNLP website.
 
 TODO(joelgrus): screenshot
@@ -105,10 +109,13 @@ Our dataset will be a subset of the [Brown Corpus](http://www.nltk.org/nltk_data
 In particular, we will train a model on 4000 randomly chosen sentences (`sentences.small.train`) and use a different 1000 randomly chosen sentences
 as the validation set (`sentences.small.dev`).
 
-In AllenNLP we configure experiments using JSON files. Our experiment is defined in
-[tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json). You can peek at it
-if you want, we'll go through it in detail in the next tutorial.  Right at this instant
-you might care about the `trainer` section, which specifies how we want to train our model:
+One of the key design principles behind AllenNLP is that
+you configure experiments using JSON files. (More specifically, [HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md) files.)
+
+Our tagging experiment is defined in
+[tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json).
+You can peek at it now if you want; we'll go through it in detail in the next tutorial.
+Right at this instant you might care about the `trainer` section, which specifies how we want to train our model:
 
 ```js
   "trainer": {
