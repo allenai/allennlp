@@ -20,7 +20,7 @@ class TestPredict(TestCase):
                     "/path/to/archive", # archive
                     "/path/to/data",    # input_file
                     "--output-file", "outfile",
-                    "--print"]
+                    "--silent"]
 
         args = parser.parse_args(raw_args)
 
@@ -28,7 +28,7 @@ class TestPredict(TestCase):
         assert args.archive_file == "/path/to/archive"
         assert args.input_file == "/path/to/data"
         assert args.output_file == "outfile"
-        assert args.print
+        assert args.silent
 
     def test_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()
@@ -45,7 +45,7 @@ class TestPredict(TestCase):
                 "tests/fixtures/bidaf/serialization/model.tar.gz",
                 infile,     # input_file
                 "--output-file", outfile,
-                "--print"]
+                "--silent"]
 
         main(args)
 
