@@ -138,8 +138,8 @@ docker pull allennlp/allennlp-gpu:latest
 ## Building a Docker image
 
 Following are instructions on creating a Docker environment that use the CPU.  To use the GPU, use the same instructions
-but substitute `gpu` for `cpu`.  The following command will take some time, as it completely builds the environment
-needed to run AllenNLP.
+but substitute `Dockerfile` for `Dockerfile.cpu`.  The following command will take some time, as it completely builds the
+environment needed to run AllenNLP.
 
 ```bash
 docker build --file Dockerfile.cpu --tag allennlp/allennlp-cpu .
