@@ -4,8 +4,11 @@ from allennlp.commands.serve import add_subparser as add_serve_subparser
 from allennlp.commands.predict import add_subparser as add_predict_subparser
 from allennlp.commands.train import add_subparser as add_train_subparser
 from allennlp.commands.evaluate import add_subparser as add_evaluate_subparser
+from allennlp.common.checks import ensure_pythonhashseed_set
 
 def main(prog: str = None) -> None:
+    ensure_pythonhashseed_set()
+
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]', prog=prog)
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 

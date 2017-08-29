@@ -254,6 +254,7 @@ class BidirectionalAttentionFlow(Model):
         span_start_probs : numpy.ndarray
         span_end_probs : numpy.ndarray
         best_span : (int, int)
+        best_span_str : str
         """
         instance = Instance({'question': question, 'passage': passage})
         instance.index_fields(self.vocab)
@@ -266,11 +267,14 @@ class BidirectionalAttentionFlow(Model):
         span_start_logits = output_dict["span_start_logits"]
         span_end_logits = output_dict["span_end_logits"]
         best_span = self._get_best_span(span_start_logits, span_end_logits)
+        best_span = tuple(best_span.data.squeeze(0).numpy())
+        best_span_str = ' '.join(passage.tokens[best_span[0]:best_span[1]])
 
         return {
                 "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).numpy(),
                 "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).numpy(),
-                "best_span": tuple(best_span.data.squeeze(0).numpy()),
+                "best_span": best_span,
+                "best_span_str": best_span_str,
                 }
 
     @staticmethod

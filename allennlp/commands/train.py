@@ -78,7 +78,7 @@ def _train_model_from_args(args: argparse.Namespace):
     train_model_from_file(args.param_path, args.serialization_dir)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str):
+def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -94,7 +94,7 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str):
 
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename)
-    train_model(params, serialization_dir)
+    return train_model(params, serialization_dir)
 
 
 def train_model(params: Params, serialization_dir: str) -> Model:
@@ -126,7 +126,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     logging.getLogger().addHandler(handler)
     serialization_params = deepcopy(params).as_dict(quiet=True)
     with open(os.path.join(serialization_dir, "model_params.json"), "w") as param_file:
-        json.dump(serialization_params, param_file)
+        json.dump(serialization_params, param_file, indent=4)
 
     # Now we begin assembling the required parts for the Trainer.
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))

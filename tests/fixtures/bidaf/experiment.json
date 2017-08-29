@@ -7,7 +7,10 @@
         "lowercase_tokens": true
       },
       "token_characters": {
-        "type": "characters"
+        "type": "characters",
+        "character_tokenizer": {
+          "byte_encoding": "utf-8"
+        }
       }
     }
   },
@@ -63,6 +66,7 @@
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["passage", "num_tokens"], ["question", "num_tokens"]],
+    "padding_noise": 0.0,
     "batch_size": 40
   },
   "optimizer": {
@@ -72,8 +76,7 @@
   },
   "trainer": {
     "num_epochs": 1,
-    "grad_norm": 100.0,
-    "grad_clipping": 100,
+    "grad_norm": 10.0,
     "patience" : 12,
     "cuda_device" : -1
   }
