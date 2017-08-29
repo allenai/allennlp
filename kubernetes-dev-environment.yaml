@@ -15,7 +15,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: allennlp-dev-env
-          image: allennlp/allennlp-gpu:latest
+          image: allennlp/allennlp:latest
           stdin: true
           tty: true
           resources:

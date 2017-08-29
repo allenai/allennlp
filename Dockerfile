@@ -1,5 +1,4 @@
-ARG from=nvidia/cuda:8.0-cudnn5-devel
-FROM $from
+FROM nvidia/cuda:8.0-cudnn5-devel
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
