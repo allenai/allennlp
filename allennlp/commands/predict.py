@@ -11,7 +11,8 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     subparser = parser.add_parser(
             'predict', description=description, help='Use a trained model to make predictions.')
     subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
-    subparser.add_argument('input_file', metavar='input-file', type=argparse.FileType('r'), help='path to input file')
+    subparser.add_argument('input_file', metavar='input-file', type=argparse.FileType('r'),
+                           help='path to input file')
     subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
     subparser.add_argument('--print', action='store_true', help='print results to stdout')
 
@@ -37,6 +38,7 @@ def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_t
 
 def predict(args: argparse.Namespace) -> None:
     predictor = get_predictor(args)
+    output_file = None
 
     # ExitStack allows us to conditionally context-manage `output_file`, which may or may not exist
     with ExitStack() as stack:
@@ -44,4 +46,4 @@ def predict(args: argparse.Namespace) -> None:
         if args.output_file:
             output_file = stack.enter_context(args.output_file)  # type: ignore
 
-        run(predictor, input_file, args.output_file, args.print)
+        run(predictor, input_file, output_file, args.print)
