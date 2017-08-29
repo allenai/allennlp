@@ -19,7 +19,7 @@ class WordFilter(Registrable):
         """
         Decides whether to remove words from the given list.  To make it easier to deal with data
         associated with the word list (like character offsets), we return a list of boolean
-        decisions for each word, which the caller can process to actually filter the list.  
+        decisions for each word, which the caller can process to actually filter the list.
         """
         raise NotImplementedError
 
