@@ -9,11 +9,6 @@ Submodules
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.commands.main
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.commands.serve
    :members:
    :undoc-members:
