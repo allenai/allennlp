@@ -21,19 +21,19 @@ spec:
           resources:
             limits:
               # One-half of a CPU.
-              cpu: 4000m
+              cpu: 500m
               # 500 megabytes.
               memory: 2000Mi
             # "requests" specify how much your container will be granted as a baseline.
             requests:
               # One-fifth of a CPU.
-              cpu: 4000m
+              cpu: 200m
               # 250 megabytes.
               memory: 2000Mi
           command:
             - /bin/bash
             - -c
-            - "source activate allennlp && allennlp/run serve --workers 4"
+            - "source activate allennlp && allennlp/run serve"
           imagePullPolicy: Always
 ---
 apiVersion: v1
