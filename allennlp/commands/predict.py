@@ -13,7 +13,7 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
     subparser.add_argument('input_file', metavar='input-file', type=str, help='path to input file')
     subparser.add_argument('--output-file', type=str, help='path to output file')
-    subparser.add_argument('--print', action='store_true', help='print results to string')
+    subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
 
     subparser.set_defaults(func=predict)
 
@@ -46,4 +46,4 @@ def predict(args: argparse.Namespace) -> None:
         else:
             output_file = None
 
-        run(predictor, input_file, output_file, args.print)
+        run(predictor, input_file, output_file, not args.silent)
