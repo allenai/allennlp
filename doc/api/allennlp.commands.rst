@@ -4,7 +4,7 @@ allennlp.commands
 Submodules
 ----------
 
-.. automodule:: allennlp.commands.main
+.. automodule:: allennlp.commands.train
    :members:
    :undoc-members:
    :show-inheritance:
@@ -24,10 +24,6 @@ Submodules
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.commands.train
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 
 Module contents
