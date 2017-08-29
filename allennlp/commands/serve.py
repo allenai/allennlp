@@ -1,9 +1,6 @@
 import argparse
 import json
 
-import logging
-logger = logging.getLogger(__name__)
-
 from allennlp.service import server_sanic
 
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
@@ -13,7 +10,8 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
 
     subparser.add_argument('--port', type=int, default=8000)
     subparser.add_argument('--workers', type=int, default=1)
-    subparser.add_argument('--config-file', type=argparse.FileType('r'), default=None, help="path to a JSON file specifying the configuration for the models")
+    subparser.add_argument('--config-file', type=argparse.FileType('r'), default=None,
+                           help="path to a JSON file specifying the configuration for the models")
 
     subparser.set_defaults(func=serve)
 
@@ -21,9 +19,9 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
 
 def serve(args: argparse.Namespace) -> None:
     # Read a JSON configuration file, if specified
-    config = server_sanic.default_config
+    config = server_sanic.DEFAULT_CONFIG
     if args.config_file is not None:
-        with args.config_file as f:
-            config = json.loads(f.read())
+        with args.config_file as fopen:
+            config = json.loads(fopen.read())
 
     server_sanic.run(args.port, args.workers, config)

@@ -16,6 +16,7 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
 
+    @staticmethod
     def make_srl_string(words: List[str], tags: List[str]) -> str:
         frame = []
         chunk = []

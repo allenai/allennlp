@@ -1,14 +1,14 @@
+from typing import Dict
+from sanic import Sanic, response, request
+from sanic.exceptions import ServerError
+
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
-from sanic import Sanic, response, request
-from sanic.exceptions import ServerError
-from typing import Dict
-
-default_config = {
-        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.08.26.tar.gz',
-        'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.08.28.tar.gz',
-        'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
+DEFAULT_CONFIG = {
+        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.08.26.tar.gz', # pylint: disable=line-too-long
+        'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.08.28.tar.gz', # pylint: disable=line-too-long
+        'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz' # pylint: disable=line-too-long
 }
 
 def run(port: int, workers: int, config: Dict[str, str]) -> None:
