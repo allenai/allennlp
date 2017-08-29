@@ -14,6 +14,9 @@ class TestNotebooks(AllenNlpTestCase):
     def test_vocabulary_tutorial(self):
         assert self.execute_notebook("tutorials/notebooks/vocabulary.ipynb")
 
+    def test_data_pipeline_tutorial(self):
+        assert self.execute_notebook("tutorials/notebooks/data_pipeline.ipynb")
+
     @staticmethod
     def execute_notebook(notebook_path: str):
         with open(notebook_path, encoding='utf-8') as notebook:
