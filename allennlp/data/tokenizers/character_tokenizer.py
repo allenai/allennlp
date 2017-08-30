@@ -17,11 +17,7 @@ class CharacterTokenizer(Tokenizer):
         If not ``None``, we will use this encoding to encode the string as bytes, and use the byte
         sequence as characters, instead of the unicode characters in the python string.  E.g., the
         character 'á' would be a single token if this option is ``None``, but it would be two
-        tokens if this option is set to ``"utf-8"``: there is one token for the accent and another
-        token for the 'a' character.  Note, though, that with a utf-8 encoding, the token for an
-        accented 'a' will be different than the token for an unaccented 'a' - hopefully your
-        embedding will decide that they are at least similar - while the token for the accent is
-        indeed shared across different accented vowels.
+        tokens if this option is set to ``"utf-8"``.
 
         If this is not ``None``, ``tokenize`` will return a ``List[int]`` instead of a
         ``List[str]``, and we will bypass the vocabulary in the ``TokenIndexer``.
@@ -35,24 +31,17 @@ class CharacterTokenizer(Tokenizer):
     end_tokens : ``List[str]``, optional
         If given, these tokens will be added to the end of every string we tokenize.  If using byte
         encoding, this should actually be a ``List[int]``, not a ``List[str]``.
-    padding_index : ``int``, optional
-        If you're using byte encoding, we're bypassing the dictionary, and 0 might be a valid byte
-        for some inputs.  If you need to set the padding token to something other than 0, you can
-        do so here.  If this parameter is omitted, we will pad with zeros.  Note that this will not
-        behave well with our masking code, and you could get subtle bugs.
     """
     def __init__(self,
                  byte_encoding: str = None,
                  lowercase_characters: bool = False,
                  start_tokens: List[str] = None,
-                 end_tokens: List[str] = None,
-                 padding_index: int = None) -> None:
+                 end_tokens: List[str] = None) -> None:
         self._byte_encoding = byte_encoding
         self._lowercase_characters = lowercase_characters
         self._start_tokens = start_tokens or []
         self._start_tokens.reverse()
         self._end_tokens = end_tokens or []
-        self.padding_index = padding_index
 
     @overrides
     def tokenize(self, text: str) -> Tuple[List[str], List[Tuple[int, int]]]:
@@ -76,10 +65,8 @@ class CharacterTokenizer(Tokenizer):
         lowercase_characters = params.pop('lowercase_characters', False)
         start_tokens = params.pop('start_tokens', None)
         end_tokens = params.pop('end_tokens', None)
-        padding_index = params.pop('padding_index', None)
         params.assert_empty(cls.__name__)
         return cls(byte_encoding=byte_encoding,
                    lowercase_characters=lowercase_characters,
                    start_tokens=start_tokens,
-                   end_tokens=end_tokens,
-                   padding_index=padding_index)
+                   end_tokens=end_tokens)

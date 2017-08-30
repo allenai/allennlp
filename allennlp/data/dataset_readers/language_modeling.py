@@ -66,7 +66,6 @@ class LanguageModelingReader(DatasetReader):
             tokenized_strings = []
             logger.info("Creating dataset from all text in file: %s", file_path)
             for index in tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens - 1)):
-                print(tokenized_text[index:(index + num_tokens)])
                 tokenized_strings.append(tokenized_text[index:(index + num_tokens)])
         else:
             tokenized_strings = [self._tokenizer.tokenize(s)[0] for s in instance_strings]
