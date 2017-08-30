@@ -16,6 +16,7 @@ notifications:
   email: false
 before_install:
 - docker build -t allennlp/allennlp .
+install:
 script:
 - docker run allennlp/allennlp /bin/bash -c "/stage/build_tools/travis/test_script.sh"
 after_success:
