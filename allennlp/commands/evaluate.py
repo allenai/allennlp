@@ -67,11 +67,15 @@ def evaluate(model: Model,
 
     generator = iterator(dataset, num_epochs=1)
     logger.info("Iterating over dataset")
-    for batch in tqdm.tqdm(generator, total=iterator.get_num_batches(dataset)):
+    generator_tqdm = tqdm.tqdm(generator, total=iterator.get_num_batches(dataset))
+    for batch in generator_tqdm:
         tensor_batch = arrays_to_variables(batch, cuda_device, for_training=False)
         if 'metadata' in tensor_batch and 'metadata' not in signature(model.forward).parameters:
             del tensor_batch['metadata']
         model.forward(**tensor_batch)
+        metrics = model.get_metrics()
+        description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
+        generator_tqdm.set_description(description)
 
     return model.get_metrics()
 
