@@ -29,3 +29,7 @@ class TestLabelField(AllenNlpTestCase):
     def test_label_field_raises_with_non_integer_labels_and_no_indexing(self):
         with pytest.raises(ConfigurationError):
             _ = LabelField("non integer field", skip_indexing=True)
+
+    def test_label_field_raises_with_incorrect_label_type(self):
+        with pytest.raises(ConfigurationError):
+            _ = LabelField([], skip_indexing=False)

@@ -36,13 +36,22 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     @overrides
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
         for character in self.character_tokenizer.tokenize(token)[0]:
-            counter[self.namespace][character] += 1
+            # If our character tokenizer is using byte encoding, the character might already be an
+            # int.  In that case, we'll bypass the vocabulary entirely.
+            if not isinstance(character, int):
+                counter[self.namespace][character] += 1
 
     @overrides
     def token_to_indices(self, token: str, vocabulary: Vocabulary) -> List[int]:
         indices = []
         for character in self.character_tokenizer.tokenize(token)[0]:
-            indices.append(vocabulary.get_token_index(character, self.namespace))
+            # If our character tokenizer is using byte encoding, the character might already be an
+            # int.  In that case, we'll bypass the vocabulary entirely.
+            if isinstance(character, int):
+                index = character
+            else:
+                index = vocabulary.get_token_index(character, self.namespace)
+            indices.append(index)
         return indices
 
     @overrides
