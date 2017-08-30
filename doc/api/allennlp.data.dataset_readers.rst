@@ -1,8 +1,10 @@
 allennlp.data.dataset_readers
 =====================================
 
-Submodules
-----------
+.. automodule:: allennlp.data.dataset_readers
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.data.dataset_readers.dataset_reader
    :members:
@@ -35,10 +37,3 @@ Submodules
    :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: allennlp.data.dataset_readers
-   :members:
-   :undoc-members:
-   :show-inheritance:
