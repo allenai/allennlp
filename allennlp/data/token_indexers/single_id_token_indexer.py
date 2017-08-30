@@ -29,14 +29,19 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
 
     @overrides
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
-        if self.lowercase_tokens:
-            token = token.lower()
-        counter[self.namespace][token] += 1
+        if not isinstance(token, int):
+            if self.lowercase_tokens:
+                token = token.lower()
+            counter[self.namespace][token] += 1
 
     @overrides
     def token_to_indices(self, token: str, vocabulary: Vocabulary) -> int:
-        if self.lowercase_tokens:
-            token = token.lower()
+        if isinstance(token, int):
+            index = token
+        else:
+            if self.lowercase_tokens:
+                token = token.lower()
+            index = vocabulary.get_token_index(token, self.namespace)
         return vocabulary.get_token_index(token, self.namespace)
 
     @overrides
