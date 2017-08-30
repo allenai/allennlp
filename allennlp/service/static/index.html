@@ -3,6 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="css/main.css" />
+    <!-- hacky CSS overrides -->
+    <style>
+      .srl-tag.color0 {
+        background-color: lightpink;
+      }
+      .srl-tag.color1 {
+        background-color: lightskyblue;
+      }
+    </style>
     <title>AllenNLP - Demo</title>
     <!-- Libraries -->
     <script src="lib/react.js"></script>
@@ -102,17 +111,97 @@ class TeGraph extends React.Component {
   <SrlOutput /> Component
 *******************************************************************************/
 
+// Render the SRL tag for a single word as a table cell
+class SrlTagCell extends React.Component {
+
+  render() {
+    const { tag, color } = this.props;
+
+    // Don't show "O" tags, and slice off all the "B-" and "I-" prefixes.
+    const tagText = tag == "O" ? "" : tag.slice(2);
+
+    // Add a CSS class for the alternating color highlighting.
+    const colorClass = color == -1 ? "" : " color" + color
+
+    return (
+      <td className={'srl-tag srl-tag-' + tag.toLowerCase() + colorClass}>
+        {tagText}
+      </td>
+    )
+  }
+}
+
+// Render a SRL-tagged word as a table cell
+class SrlWordCell extends React.Component {
+  render() {
+    const { word } = this.props;
+
+    return (<td className="srl-word">{word}</td>)
+  }
+}
+
+class SrlFrame extends React.Component {
+  render() {
+    const { verb, words } = this.props;
+    const tags = verb["tags"];
+
+
+    // Skip frames that have only one tag; these are typically helper verbs.
+    // In an ideal world we'd filter these out on the backend, but the POS
+    // tagger we're using right now doesn't seem up to the task.
+    const numTags = tags.filter(tag => tag != "O").length
+    if (numTags <= 1) {
+      return (<div/>)
+    }
+
+    // Create an array indicating what color to highlight each tag cell.
+    // For "O" tags this should be -1, indicating no color.
+    // Otherwise it should toggle between 0 and 1 every time a "B-" tag occurs.
+    var colors = [];
+    var currentColor = 1;
+
+    tags.forEach(function(tag, i) {
+      if (tag == "O") {
+        // "O" tag, so append -1 for "no color"
+        colors.push(-1);
+      } else if (tag[0] == "B") {
+        // "B-" tag, so toggle the current color and then append
+        currentColor = (currentColor + 1) % 2;
+        colors.push(currentColor);
+      } else /* (tag[0] == "I") */ {
+        // "I-" tag, so append the current color
+        colors.push(currentColor);
+      }
+    })
+
+    return (
+      <div>
+        <label>{verb.verb}</label>
+        <table>
+          <tbody>
+            <tr>
+              {tags.map((tag, i) => <SrlTagCell tag={tag} key={i} color={colors[i]}/>)}
+            </tr>
+            <tr>
+              {words.map((word, i) => <SrlWordCell word={word} key={i}/>)}
+            </tr>
+          </tbody>
+        </table>
+        <hr/>
+      </div>
+    )
+  }
+}
+
 class SrlOutput extends React.Component {
   render() {
     const { rawOutput } = this.props;
+    const { words, verbs } = rawOutput;
 
     return (
       <div className="model__content">
         <div className="form__field">
-          <label>Annotated Text</label>
-          <pre>
-            <code>{ JSON.stringify(rawOutput, null, "  ") }</code>
-          </pre>
+          { verbs.map((verb, i) => (<SrlFrame verb={verb} words={words} key={i}/>)) }
         </div>
       </div>
     );
