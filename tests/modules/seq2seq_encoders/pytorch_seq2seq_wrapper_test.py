@@ -9,7 +9,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
-from allennlp.nn.util import sort_batch_by_length
+from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
 
 class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
     def test_get_dimension_is_correct(self):
@@ -27,7 +27,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         encoder = PytorchSeq2SeqWrapper(lstm)
         input_tensor = Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
         lstm_output = lstm(input_tensor)
-        encoder_output = encoder(input_tensor)
+        encoder_output = encoder(input_tensor, None)
         assert_almost_equal(encoder_output.data.numpy(), lstm_output[0].data.numpy())
 
     def test_forward_pulls_out_correct_tensor_with_sequence_lengths(self):
@@ -38,11 +38,18 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         tensor[2, 4:, :] = 0
         tensor[3, 2:, :] = 0
         tensor[4, 1:, :] = 0
+        mask = torch.ones(5, 7)
+        mask[1, 6:] = 0
+        mask[2, 4:] = 0
+        mask[3, 2:] = 0
+        mask[4, 1:] = 0
+
         input_tensor = Variable(tensor)
-        sequence_lengths = Variable(torch.LongTensor([7, 6, 4, 2, 1]))
+        mask = Variable(mask)
+        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         packed_sequence = pack_padded_sequence(input_tensor, sequence_lengths.data.tolist(), batch_first=True)
         lstm_output, _ = lstm(packed_sequence)
-        encoder_output = encoder(input_tensor, sequence_lengths)
+        encoder_output = encoder(input_tensor, mask)
         lstm_tensor, _ = pad_packed_sequence(lstm_output, batch_first=True)
         assert_almost_equal(encoder_output.data.numpy(), lstm_tensor.data.numpy())
 
@@ -54,15 +61,22 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         tensor[1, 4:, :] = 0
         tensor[2, 2:, :] = 0
         tensor[3, 6:, :] = 0
+        mask = torch.ones(5, 7)
+        mask[0, 3:] = 0
+        mask[1, 4:] = 0
+        mask[2, 2:] = 0
+        mask[3, 6:] = 0
+
         input_tensor = Variable(tensor)
-        sequence_lengths = Variable(torch.LongTensor([3, 4, 2, 6, 7]))
+        mask = Variable(mask)
+        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(input_tensor,
                                                                                            sequence_lengths)
         packed_sequence = pack_padded_sequence(sorted_inputs,
                                                sorted_sequence_lengths.data.tolist(),
                                                batch_first=True)
         lstm_output, _ = lstm(packed_sequence)
-        encoder_output = encoder(input_tensor, sequence_lengths)
+        encoder_output = encoder(input_tensor, mask)
         lstm_tensor, _ = pad_packed_sequence(lstm_output, batch_first=True)
         assert_almost_equal(encoder_output.data.numpy(),
                             lstm_tensor.index_select(0, restoration_indices).data.numpy())

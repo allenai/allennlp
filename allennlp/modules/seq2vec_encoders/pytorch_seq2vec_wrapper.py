@@ -3,7 +3,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-from allennlp.nn.util import sort_batch_by_length
+from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
 
 
 class PytorchSeq2VecWrapper(Seq2VecEncoder):
@@ -32,6 +32,10 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
 
     This is what pytorch's RNN's look like - just make sure your class looks like those, and it
     should work.
+
+    Note that we *require* you to pass sequence lengths when you call this module, to avoid subtle
+    bugs around masking.  If you already have a ``PackedSequence`` you can pass ``None`` as the
+    second parameter.
     """
     def __init__(self, module: torch.nn.modules.RNNBase) -> None:
         super(PytorchSeq2VecWrapper, self).__init__()
@@ -54,16 +58,16 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
-                sequence_lengths: torch.LongTensor = None,
+                mask: torch.Tensor,
                 hidden_state: torch.Tensor = None) -> torch.Tensor:
 
-        if sequence_lengths is None:
-            # If sequence_lengths aren't passed, there is no padding in the batch of
-            # instances, so we can just return the last sequence output as the state.
-            # This doesn't work in the case of variable length sequences, as the last
-            # state for each element of the batch won't be at the end of the max sequence
-            # length, so we have to use the state of the RNN below.
+        if mask is None:
+            # If a mask isn't passed, there is no padding in the batch of instances, so we can just
+            # return the last sequence output as the state.  This doesn't work in the case of
+            # variable length sequences, as the last state for each element of the batch won't be
+            # at the end of the max sequence length, so we have to use the state of the RNN below.
             return self._module(inputs, hidden_state)[0][:, -1, :]
+        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
         packed_sequence_input = pack_padded_sequence(sorted_inputs,
