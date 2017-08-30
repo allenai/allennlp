@@ -30,7 +30,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                     chunk = []
 
                 if tag.startswith("B-"):
-                    chunk.append(tag + " " + token)
+                    chunk.append(tag[2:] + ": " + token)
                 elif tag == "O":
                     frame.append(token)
 
