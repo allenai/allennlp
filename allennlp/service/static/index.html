@@ -5,10 +5,10 @@
     <link rel="stylesheet" href="css/main.css" />
     <!-- hacky CSS overrides -->
     <style>
-      .srl-tag.color0 {
+      .srl-tag.color0, .srl-word.color0 {
         background-color: lightpink;
       }
-      .srl-tag.color1 {
+      .srl-tag.color1, .srl-word.color1 {
         background-color: lightskyblue;
       }
     </style>
@@ -115,16 +115,13 @@ class TeGraph extends React.Component {
 class SrlTagCell extends React.Component {
 
   render() {
-    const { tag, color } = this.props;
+    const { tag, colorClass } = this.props;
 
     // Don't show "O" tags, and slice off all the "B-" and "I-" prefixes.
     const tagText = tag == "O" ? "" : tag.slice(2);
 
-    // Add a CSS class for the alternating color highlighting.
-    const colorClass = color == -1 ? "" : " color" + color
-
     return (
-      <td className={'srl-tag srl-tag-' + tag.toLowerCase() + colorClass}>
+      <td className={colorClass + ' srl-tag srl-tag-' + tag.toLowerCase()}>
         {tagText}
       </td>
     )
@@ -134,9 +131,9 @@ class SrlTagCell extends React.Component {
 // Render a SRL-tagged word as a table cell
 class SrlWordCell extends React.Component {
   render() {
-    const { word } = this.props;
+    const { word, colorClass } = this.props;
 
-    return (<td className="srl-word">{word}</td>)
+    return (<td className={colorClass + ' srl-word'}>{word}</td>)
   }
 }
 
@@ -157,20 +154,20 @@ class SrlFrame extends React.Component {
     // Create an array indicating what color to highlight each tag cell.
     // For "O" tags this should be -1, indicating no color.
     // Otherwise it should toggle between 0 and 1 every time a "B-" tag occurs.
-    var colors = [];
+    var colorClasses = [];
     var currentColor = 1;
 
     tags.forEach(function(tag, i) {
       if (tag == "O") {
-        // "O" tag, so append -1 for "no color"
-        colors.push(-1);
+        // "O" tag, so append "" for "no color"
+        colorClasses.push("");
       } else if (tag[0] == "B") {
         // "B-" tag, so toggle the current color and then append
         currentColor = (currentColor + 1) % 2;
-        colors.push(currentColor);
+        colorClasses.push("color" + currentColor);
       } else /* (tag[0] == "I") */ {
         // "I-" tag, so append the current color
-        colors.push(currentColor);
+        colorClasses.push("color" + currentColor);
       }
     })
 
@@ -180,10 +177,10 @@ class SrlFrame extends React.Component {
         <table>
           <tbody>
             <tr>
-              {tags.map((tag, i) => <SrlTagCell tag={tag} key={i} color={colors[i]}/>)}
+              {tags.map((tag, i) => <SrlTagCell tag={tag} key={i} colorClass={colorClasses[i]}/>)}
             </tr>
             <tr>
-              {words.map((word, i) => <SrlWordCell word={word} key={i}/>)}
+              {words.map((word, i) => <SrlWordCell word={word} key={i} colorClass={colorClasses[i]}/>)}
             </tr>
           </tbody>
         </table>
