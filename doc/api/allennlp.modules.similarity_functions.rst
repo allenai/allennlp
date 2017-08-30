@@ -1,8 +1,15 @@
 allennlp.modules.similarity_functions
 =============================================
 
-Submodules
-----------
+.. automodule:: allennlp.modules.similarity_function
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.modules.similarity_functions
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.modules.similarity_functions.bilinear
    :members:
@@ -20,15 +27,6 @@ Submodules
    :show-inheritance:
 
 .. automodule:: allennlp.modules.similarity_functions.linear
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: allennlp.modules.similarity_functions
    :members:
    :undoc-members:
    :show-inheritance:

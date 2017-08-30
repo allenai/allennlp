@@ -1,3 +1,24 @@
+"""
+The ``train`` subcommand can be used to train a model.
+It requires a configuration file and a directory in
+which to write the results.
+
+.. code-block:: bash
+
+   $ python -m allennlp.run train --help
+   usage: run [command] train [-h] -s SERIALIZATION_DIR param_path
+
+   Train the specified model on the specified dataset.
+
+   positional arguments:
+   param_path            path to parameter file describing the model to be trained
+
+   optional arguments:
+    -h, --help            show this help message and exit
+    -s SERIALIZATION_DIR, --serialization_dir SERIALIZATION_DIR
+                            directory in which to save the model and its logs
+"""
+
 import argparse
 import json
 import logging

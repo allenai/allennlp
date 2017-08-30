@@ -1,3 +1,27 @@
+"""
+The ``evaluate`` subcommand can be used to
+evaluate a trained model against a dataset
+and report any metrics calculated by the model.
+
+.. code-block:: bash
+
+    $ python -m allennlp.run evaluate --help
+    usage: run [command] evaluate [-h] --archive_file ARCHIVE_FILE
+                                --evaluation_data_file EVALUATION_DATA_FILE
+                                [--cuda_device CUDA_DEVICE]
+
+    Evaluate the specified model + dataset
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    --archive_file ARCHIVE_FILE
+                            path to an archived trained model
+    --evaluation_data_file EVALUATION_DATA_FILE
+                            path to the file containing the evaluation data
+    --cuda_device CUDA_DEVICE
+                            id of GPU to use (if any)
+"""
+
 from inspect import signature
 from typing import Dict, Any
 import argparse

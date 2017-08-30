@@ -9,7 +9,7 @@ Home
 AllenNLP is a libary built on top of PyTorch to make NLP easier.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Package Reference
 
    api/allennlp.commands

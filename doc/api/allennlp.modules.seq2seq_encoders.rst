@@ -1,8 +1,10 @@
 allennlp.modules.seq2seq_encoders
 =========================================
 
-Submodules
-----------
+.. automodule:: allennlp.modules.seq2seq_encoders
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper
    :members:
@@ -15,10 +17,3 @@ Submodules
    :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: allennlp.modules.seq2seq_encoders
-   :members:
-   :undoc-members:
-   :show-inheritance:
