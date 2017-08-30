@@ -312,7 +312,9 @@ with its default parameters.
 
 Finally, we'll run the training for 40 epochs;
 we'll stop prematurely if we get no improvement for 10 epochs;
-and we'll train on the CPU.
+and we'll train on the CPU.  If you wanted to train on a GPU,
+you'd change `cuda_device` to its device id.
+If you have just one GPU that should be `0`.
 
 That's our entire experiment configuration. If we want to change our optimizer,
 our batch size, our embedding dimensions, or any other hyperparameters,
