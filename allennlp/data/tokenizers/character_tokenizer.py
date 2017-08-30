@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from overrides import overrides
 
@@ -22,6 +22,9 @@ class CharacterTokenizer(Tokenizer):
         accented 'a' will be different than the token for an unaccented 'a' - hopefully your
         embedding will decide that they are at least similar - while the token for the accent is
         indeed shared across different accented vowels.
+
+        If this is not ``None``, ``tokenize`` will return a ``List[int]`` instead of a
+        ``List[str]``, and we will bypass the vocabulary in the ``TokenIndexer``.
     lowercase_characters : ``bool``, optional (default=``False``)
         If ``True``, we will lowercase all of the characters in the text before doing any other
         operation.  You probably do not want to do this, as character vocabularies are generally
@@ -32,12 +35,12 @@ class CharacterTokenizer(Tokenizer):
         self.lowercase_characters = lowercase_characters
 
     @overrides
-    def tokenize(self, text: str) -> List[str]:
+    def tokenize(self, text: str) -> Tuple[List[str], List[Tuple[int, int]]]:
         if self.lowercase_characters:
             text = text.lower()
         if self.byte_encoding is not None:
-            return [chr(x) for x in text.encode(self.byte_encoding)]
-        return list(text)
+            return list(text.encode(self.byte_encoding)), None  # type: ignore
+        return list(text), None
 
     @classmethod
     def from_params(cls, params: Params) -> 'CharacterTokenizer':

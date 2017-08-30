@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import time
+from inspect import signature
 from typing import Dict, Optional, List  # pylint: disable=unused-import
 
 import torch
@@ -156,9 +157,8 @@ class Trainer:
             logger.info("Training")
             for batch in train_generator_tqdm:
                 batch_num += 1
-                tensor_batch = arrays_to_variables(batch, self._cuda_device)
                 self._optimizer.zero_grad()
-                output_dict = self._model.forward(**tensor_batch)
+                output_dict = self._forward(batch, for_training=True)
                 try:
                     loss = output_dict["loss"]
                     loss.backward()
@@ -203,8 +203,7 @@ class Trainer:
                 batch_num = 0
                 for batch in val_generator_tqdm:
                     batch_num += 1
-                    tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=False)
-                    val_output_dict = self._model.forward(**tensor_batch)
+                    val_output_dict = self._forward(batch, for_training=False)
                     loss = val_output_dict["loss"]
                     val_loss += loss.data.cpu().numpy()
                     val_metrics = self._model.get_metrics()
@@ -267,6 +266,12 @@ class Trainer:
                                                  "a validation metric to compute the schedule and therefore "
                                                  "must be used with a validation dataset.")
                     self._learning_rate_scheduler.step(epoch)
+
+    def _forward(self, batch: dict, for_training: bool) -> dict:
+        tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=for_training)
+        if 'metadata' in tensor_batch and 'metadata' not in signature(self._model.forward).parameters:
+            del tensor_batch['metadata']
+        return self._model.forward(**tensor_batch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use

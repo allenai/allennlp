@@ -15,8 +15,12 @@ class WordFilter(Registrable):
     """
     default_implementation = 'pass_through'
 
-    def filter_words(self, words: List[str]) -> List[str]:
-        """Filters words from the given word list"""
+    def should_keep_words(self, words: List[str]) -> List[bool]:
+        """
+        Decides whether to remove words from the given list.  To make it easier to deal with data
+        associated with the word list (like character offsets), we return a list of boolean
+        decisions for each word, which the caller can process to actually filter the list.
+        """
         raise NotImplementedError
 
     @classmethod
@@ -32,8 +36,8 @@ class PassThroughWordFilter(WordFilter):
     Does not filter words; it's a no-op.  This is the default word filter.
     """
     @overrides
-    def filter_words(self, words: List[str]) -> List[str]:
-        return words
+    def should_keep_words(self, words: List[str]) -> List[bool]:
+        return [True] * len(words)
 
 
 @WordFilter.register('stopwords')
@@ -69,5 +73,5 @@ class StopwordFilter(WordFilter):
                               "'", '"', '&', '$', '#', '@', '(', ')', '?'])
 
     @overrides
-    def filter_words(self, words: List[str]) -> List[str]:
-        return [word for word in words if word not in self.stopwords]
+    def should_keep_words(self, words: List[str]) -> List[bool]:
+        return [word not in self.stopwords for word in words]

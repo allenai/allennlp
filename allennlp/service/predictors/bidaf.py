@@ -10,8 +10,11 @@ class BidafPredictor(Predictor):
         question_text = inputs["question"]
         passage_text = inputs["passage"]
 
-        question = TextField(self.tokenizer.tokenize(question_text), token_indexers=self.token_indexers)
-        passage = TextField(self.tokenizer.tokenize(passage_text) + [SquadReader.STOP_TOKEN],
-                            token_indexers=self.token_indexers)
+        question_tokens, _ = self.tokenizer.tokenize(question_text)
+        passage_tokens, _ = self.tokenizer.tokenize(passage_text)
+        passage_tokens.append(SquadReader.STOP_TOKEN)
+
+        question = TextField(question_tokens, token_indexers=self.token_indexers)
+        passage = TextField(passage_tokens, token_indexers=self.token_indexers)
 
         return sanitize(self.model.predict_span(question, passage))
