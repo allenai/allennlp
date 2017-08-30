@@ -1,3 +1,13 @@
+"""
+The ``main`` function is the entry point to all of
+AllenNLP's command line features. Any executable
+that calls ``main()`` automatically inherits all
+of its child commands. In particular, once you create
+your own models, you can create a script that imports
+them and then calls ``main()``, and then use that script
+to train and evaluate them from the command line.
+"""
+
 from typing import Sequence
 import argparse
 
@@ -8,6 +18,10 @@ import allennlp.commands.evaluate as evaluate
 from allennlp.common.checks import ensure_pythonhashseed_set
 
 def main(raw_args: Sequence[str]) -> None:
+    """
+    Any executable that calls this function automatically inherits
+    all of its subcommands.
+    """
     ensure_pythonhashseed_set()
 
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]')
