@@ -12,7 +12,7 @@ from allennlp.data.fields import SequenceLabelField, TextField
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
-from allennlp.nn.util import arrays_to_variables, viterbi_decode, get_lengths_from_binary_sequence_mask
+from allennlp.nn.util import arrays_to_variables, viterbi_decode
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import SpanBasedF1Measure
 
@@ -124,8 +124,7 @@ class SemanticRoleLabeler(Model):
                                      "specified. Therefore, the 'input_dim' of the stacked_encoder "
                                      "must be equal to total_embedding_dim + 1.")
 
-        batch_sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        encoded_text = self.stacked_encoder(embedded_text_with_verb_indicator, batch_sequence_lengths)
+        encoded_text = self.stacked_encoder(embedded_text_with_verb_indicator, mask)
 
         logits = self.tag_projection_layer(encoded_text)
         reshaped_log_probs = logits.view(-1, self.num_classes)

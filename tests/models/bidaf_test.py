@@ -19,6 +19,14 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
     def test_forward_pass_runs_correctly(self):
         training_arrays = arrays_to_variables(self.dataset.as_array_dict())
         _ = self.model.forward(**training_arrays)
+        metrics = self.model.get_metrics(reset=True)
+        # We've set up the data such that there's a fake answer that consists of the whole
+        # paragraph.  _Any_ valid prediction for that question should produce an F1 of greater than
+        # zero, while if we somehow haven't been able to load the evaluation data, or there was an
+        # error with using the evaluation script, this will fail.  This makes sure that we've
+        # loaded the evaluation data correctly and have hooked things up to the official evaluation
+        # script.
+        assert metrics['f1'] > 0
 
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
