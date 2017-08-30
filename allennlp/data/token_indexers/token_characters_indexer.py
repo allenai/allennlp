@@ -35,13 +35,13 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
 
     @overrides
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
-        for character in self.character_tokenizer.tokenize(token):
+        for character in self.character_tokenizer.tokenize(token)[0]:
             counter[self.namespace][character] += 1
 
     @overrides
     def token_to_indices(self, token: str, vocabulary: Vocabulary) -> List[int]:
         indices = []
-        for character in self.character_tokenizer.tokenize(token):
+        for character in self.character_tokenizer.tokenize(token)[0]:
             indices.append(vocabulary.get_token_index(character, self.namespace))
         return indices
 

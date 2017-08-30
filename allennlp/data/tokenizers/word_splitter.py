@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from overrides import overrides
 
@@ -14,7 +14,17 @@ class WordSplitter(Registrable):
     """
     default_implementation = 'spacy'
 
-    def split_words(self, sentence: str) -> List[str]:
+    def split_words(self, sentence: str) -> Tuple[List[str], List[Tuple[int, int]]]:
+        """
+        Splits ``sentence`` into tokens, returning the resulting tokens and the character offsets
+        for each token in the original string.  Not all ``WordSplitters`` implement character
+        offsets, so the second item in the returned tuple could be ``None``.
+
+        Returns
+        -------
+        tokens : ``List[str]``
+        offsets : ``List[Tuple[int, int]]``
+        """
         raise NotImplementedError
 
     @classmethod
@@ -43,7 +53,7 @@ class SimpleWordSplitter(WordSplitter):
         self.beginning_punctuation = set(['"', "'", '(', '[', '{', '#', '$', '“', "‘"])
 
     @overrides
-    def split_words(self, sentence: str) -> List[str]:
+    def split_words(self, sentence: str) -> Tuple[List[str], List[Tuple[int, int]]]:
         """
         Splits a sentence into word tokens.  We handle four kinds of things: words with punctuation
         that should be ignored as a special case (Mr. Mrs., etc.), contractions/genitives (isn't,
@@ -82,7 +92,7 @@ class SimpleWordSplitter(WordSplitter):
             if field:
                 tokens.append(field)
             tokens.extend(add_at_end)
-        return tokens
+        return tokens, None
 
     def _can_split(self, token: str):
         return token and token.lower() not in self.special_cases
@@ -100,8 +110,8 @@ class JustSpacesWordSplitter(WordSplitter):
     tokens does not matter.  This will never result in spaces being included as tokens.
     """
     @overrides
-    def split_words(self, sentence: str) -> List[str]:
-        return sentence.split()
+    def split_words(self, sentence: str) -> Tuple[List[str], List[Tuple[int, int]]]:
+        return sentence.split(), None
 
 
 @WordSplitter.register('nltk')
@@ -114,10 +124,10 @@ class NltkWordSplitter(WordSplitter):
     code, if you really want it.
     """
     @overrides
-    def split_words(self, sentence: str) -> List[str]:
+    def split_words(self, sentence: str) -> Tuple[List[str], List[Tuple[int, int]]]:
         # Import is here because it's slow, and by default unnecessary.
         from nltk.tokenize import word_tokenize
-        return word_tokenize(sentence.lower())
+        return word_tokenize(sentence.lower()), None
 
 
 @WordSplitter.register('spacy')
@@ -135,5 +145,8 @@ class SpacyWordSplitter(WordSplitter):
             SpacyWordSplitter.en_nlp = spacy.load('en', parser=False, tagger=False, entity=False)
 
     @overrides
-    def split_words(self, sentence: str) -> List[str]:
-        return [str(token) for token in self.en_nlp.tokenizer(sentence)]  # type: ignore
+    def split_words(self, sentence: str) -> Tuple[List[str], List[Tuple[int, int]]]:
+        tokens = self.en_nlp.tokenizer(sentence)  # type: ignore
+        words = [str(token) for token in tokens]
+        offsets = [(token.idx, token.idx + len(token)) for token in tokens]
+        return words, offsets

@@ -1,3 +1,4 @@
+from inspect import signature
 from typing import Dict, Any
 import argparse
 import logging
@@ -44,6 +45,8 @@ def evaluate(model: Model,
     logger.info("Iterating over dataset")
     for batch in tqdm.tqdm(generator, total=iterator.get_num_batches(dataset)):
         tensor_batch = arrays_to_variables(batch, cuda_device, for_training=False)
+        if 'metadata' in tensor_batch and 'metadata' not in signature(model.forward).parameters:
+            del tensor_batch['metadata']
         model.forward(**tensor_batch)
 
     return model.get_metrics()

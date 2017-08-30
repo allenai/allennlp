@@ -13,7 +13,7 @@ class TestSquadReader(AllenNlpTestCase):
             "Carter, at Lenox Hill Hospital in New York. Five months later, she performed for four " +\
             "nights at Revel Atlantic City's Ovation Hall to celebrate the resort's opening, her " +\
             "first performances since giving birth to Blue Ivy."
-        tokenized_passage = tokenizer.tokenize(passage)
+        tokenized_passage, _ = tokenizer.tokenize(passage)
         # "January 7, 2012"
         token_span = _char_span_to_token_span(passage, tokenized_passage, (3, 18), tokenizer)
         assert token_span == (1, 5)
