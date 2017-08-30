@@ -15,7 +15,8 @@ env:
 notifications:
   email: false
 before_install:
-- docker build -t allennlp/allennlp .
+- docker pull allennlp/allennlp:latest
+- docker build --cache-from allennlp/allennlp:latest -t allennlp/allennlp:latest .
 install:
 script:
 - docker run allennlp/allennlp /bin/bash -c "/stage/build_tools/travis/test_script.sh"
