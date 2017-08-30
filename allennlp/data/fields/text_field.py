@@ -34,6 +34,10 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
         self._token_indexers = token_indexers
         self._indexed_tokens = None  # type: Optional[Dict[str, TokenList]]
 
+        if not all([isinstance(x, str) for x in tokens]):
+            raise ConfigurationError("TextFields must be passed strings. "
+                                     "Found: {}".format([type(x) for x in tokens]))
+
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         for indexer in self._token_indexers.values():
