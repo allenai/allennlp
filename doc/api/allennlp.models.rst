@@ -1,37 +1,15 @@
 allennlp.models
 =======================
 
-Submodules
-----------
+These submodules contain the classes for AllenNLP models.
 
-.. automodule:: allennlp.models.bidaf
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
 
-.. automodule:: allennlp.models.decomposable_attention
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.models.model
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.models.semantic_role_labeler
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.models.simple_tagger
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
+  allennlp.models.bidaf
+  allennlp.models.decomposable_attention
+  allennlp.models.model
+  allennlp.models.semantic_role_labeler
+  allennlp.models.simple_tagger
 
 .. automodule:: allennlp.models
    :members:
