@@ -8,10 +8,13 @@ Now that we know how to train and evaluate models,
 let's take a deeper look at our experiment configuration file,
 [tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json).
 
-The configuration is a JSON (or [HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md)) object
-that defines all the parameters for our experiment and model.
+The configuration is a [HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md) file
+that defines all the parameters for our experiment and model. Don't worry if you're not familiar
+with HOCON, any JSON file is valid HOCON; indeed, the configuration file we use in this tutorial
+is just JSON.
+
 In this tutorial we'll go through
-each section in detail, explaining what all the parameters mean.
+each section of the configuration file in detail, explaining what all the parameters mean.
 
 ## A preliminary: `Registrable` and `from_params`
 
@@ -238,7 +241,7 @@ of these embeddings.
 The `"tokens"` namespace (which consists of integer encodings of the lowercased words in the input)
 gets fed into an
 [`Embedding`](http://docs.allennlp.org/en/latest/api/allennlp.modules.token_embedders.html?highlight=embedding#allennlp.modules.token_embedders.embedding.Embedding)
-module that embeds the vocabulary words in a 50-dimensional space.
+module that embeds the vocabulary words in a 50-dimensional space, as specified by the `embedding_dim` parameter.
 
 The `"token_characters"` namespace (which consists of integer-sequence encodings of the characters in each word)
 gets fed into a
@@ -254,7 +257,9 @@ that is, a 100-dimensional vector.
 
 ### The Seq2SeqEncoder
 
-The output of that embedding is processed by our `Seq2SeqEncoder`:
+The output of that embedding is processed by the "stacked encoder",
+which needs to be a
+[`Seq2SeqEncoder`](http://docs.allennlp.org/en/latest/api/allennlp.modules.seq2seq_encoders.html#allennlp.modules.seq2seq_encoders.seq2seq_encoder.Seq2SeqEncoder):
 
 ```js
     "stacked_encoder": {
@@ -267,7 +272,7 @@ The output of that embedding is processed by our `Seq2SeqEncoder`:
     }
 ```
 
-The `"lstm"` encoder is just a thin wrapper around
+Here the `"lstm"` encoder is just a thin wrapper around
 [`torch.nn.LSTM`](http://pytorch.org/docs/master/nn.html#torch.nn.LSTM),
 and its parameters are simply passed through to the PyTorch constructor.
 Its input size needs to match the 100-dimensional output size of the
@@ -315,7 +320,3 @@ all we need to do is modify this config file and `train` another model.
 
 The training configuration is always saved as part of the model archive,
 which means that you can always see how a saved model was trained.
-
-## What's Next
-
-TODO(joelgrus): next part of the tutorial
