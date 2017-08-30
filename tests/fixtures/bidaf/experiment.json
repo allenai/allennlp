@@ -28,6 +28,7 @@
       "token_characters": {
         "type": "character_encoding",
         "embedding": {
+          "num_embeddings": 260,
           "embedding_dim": 8
         },
         "encoder": {

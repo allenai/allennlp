@@ -121,14 +121,12 @@ class SquadReader(DatasetReader):
         for article in tqdm(dataset):
             for paragraph_json in article['paragraphs']:
                 paragraph = paragraph_json["context"]
-                # replace newlines in the paragraph
-                cleaned_paragraph = paragraph.replace("\n", " ")
 
                 # We add a special token to the end of the passage.  This is because our span
                 # labels are end-exclusive, and we do a softmax over the passage to determine span
                 # end.  So if we want to be able to include the last token of the passage, we need
                 # to have a special symbol at the end.
-                paragraph_tokens, paragraph_offsets = self._tokenizer.tokenize(cleaned_paragraph)
+                paragraph_tokens, paragraph_offsets = self._tokenizer.tokenize(paragraph)
                 paragraph_tokens.append(self.STOP_TOKEN)
                 paragraph_offsets.append((-1, -1))
 
@@ -326,11 +324,9 @@ class SquadSentenceSelectionReader(DatasetReader):
                 self._paragraph_sentences[paragraph_id] = []
 
                 context_article = paragraph["context"]
-                # replace newlines in the context article
-                cleaned_context_article = context_article.replace("\n", "")
 
-                # Split the cleaned_context_article into a list of sentences.
-                sentences = nltk.sent_tokenize(cleaned_context_article)
+                # Split the context_article into a list of sentences.
+                sentences = nltk.sent_tokenize(context_article)
 
                 # Make a dict from span indices to sentence. The end span is
                 # exclusive, and the start span is inclusive.

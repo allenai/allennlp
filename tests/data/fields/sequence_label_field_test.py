@@ -61,3 +61,8 @@ class TestSequenceLabelField(AllenNlpTestCase):
         padding_lengths = sequence_label_field.get_padding_lengths()
         array = sequence_label_field.as_array(padding_lengths)
         numpy.testing.assert_array_almost_equal(array, numpy.array([0, 1, 2, 2, 2]))
+
+    def test_sequence_label_field_raises_on_incorrect_type(self):
+
+        with pytest.raises(ConfigurationError):
+            _ = SequenceLabelField([[], [], [], [], []], self.text)
