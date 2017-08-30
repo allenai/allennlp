@@ -1,6 +1,5 @@
 sudo: required
 dist: trusty
-language: python
 services:
 - docker
 env:
@@ -17,7 +16,6 @@ notifications:
 before_install:
 - docker pull allennlp/allennlp:latest
 - docker build --cache-from allennlp/allennlp:latest -t allennlp/allennlp:latest .
-install:
 script:
 - docker run allennlp/allennlp /bin/bash -c "/stage/build_tools/travis/test_script.sh"
 after_success:
