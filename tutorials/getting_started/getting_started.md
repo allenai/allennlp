@@ -106,7 +106,7 @@ The model is defined in [allennlp/models/simple_tagger.py](https://github.com/al
 It consists of a word embedding layer followed by an LSTM.
 
 Our dataset will be a subset of the [Brown Corpus](http://www.nltk.org/nltk_data/).
-In particular, we will train a model on 4000 randomly chosen sentences (`sentences.small.train`) and use a different 1000 randomly chosen sentences
+In particular, we will train a model on 4000 randomly chosen sentences (`sentences.small.train`) and use a different ~1000 randomly chosen sentences
 as the validation set (`sentences.small.dev`).
 
 One of the key design principles behind AllenNLP is that

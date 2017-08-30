@@ -167,29 +167,6 @@ Notice that this gives us two different encodings for each token.
 Each encoding has a "namespace", in this case `"tokens"` and `"token_characters"`.
 The `SequenceLabelField` also has a namespace, `"labels"`.
 
-## non-padded namespaces
-
-Most namespaces are "padded", which means that in addition to whatever tokens
-are represented in the training data they also contain `"@@PADDING@@"` and
-`"@@UNKNOWN@@"` tokens.  You may not want this behavior for some namespaces;
-in particular, a "labels" namespace will probably never any kind of sequence padding,
-and is likely to have every possible token represented in the training set.
-
-To this end, you can specify "non padded namespaces".
-The default non-padded namespaces are `("*tags", "*labels")`;
-that is, any namespace that ends with `tags` or `labels`.
-
-It turns out that this tutorial dataset does have a small number of POS tags
-in the validation data that don't show up in the training data. This means
-that we need to override the list of non-padded namespaces:
-
-```js
-  "non_padded_namespaces": [],
-```
-
-after which every namespace (and, in particular, our `"labels"` namespace)
-will have tokens for padding and out-of-vocabulary tokens.
-
 ## Training and Validation Data
 
 The next section specifies the data to train and validate the model on:
