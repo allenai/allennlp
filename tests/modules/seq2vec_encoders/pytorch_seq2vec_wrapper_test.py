@@ -9,7 +9,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2vec_encoders import PytorchSeq2VecWrapper
-from allennlp.nn.util import sort_batch_by_length
+from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
 
 
 class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
@@ -28,7 +28,7 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         encoder = PytorchSeq2VecWrapper(lstm)
         input_tensor = Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
         lstm_output = lstm(input_tensor)
-        encoder_output = encoder(input_tensor)
+        encoder_output = encoder(input_tensor, None)
         assert_almost_equal(encoder_output.data.numpy(), lstm_output[0].data.numpy()[:, -1, :])
 
     def test_forward_pulls_out_correct_tensor_with_sequence_lengths(self):
@@ -40,9 +40,15 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         tensor[2, 4:, :] = 0
         tensor[3, 2:, :] = 0
         tensor[4, 1:, :] = 0
+        mask = torch.ones(5, 7)
+        mask[1, 6:] = 0
+        mask[2, 4:] = 0
+        mask[3, 2:] = 0
+        mask[4, 1:] = 0
 
         input_tensor = Variable(tensor)
-        sequence_lengths = Variable(torch.LongTensor([7, 6, 4, 2, 1]))
+        mask = Variable(mask)
+        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         packed_sequence = pack_padded_sequence(input_tensor, list(sequence_lengths.data), batch_first=True)
         _, state = lstm(packed_sequence)
         # Transpose output state, extract the last forward and backward states and
@@ -50,7 +56,7 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         reshaped_state = state[0].transpose(0, 1)[:, -2:, :].contiguous()
         explicitly_concatenated_state = torch.cat([reshaped_state[:, 0, :].squeeze(1),
                                                    reshaped_state[:, 1, :].squeeze(1)], -1)
-        encoder_output = encoder(input_tensor, sequence_lengths)
+        encoder_output = encoder(input_tensor, mask)
         assert_almost_equal(encoder_output.data.numpy(), explicitly_concatenated_state.data.numpy())
 
     def test_forward_pulls_out_correct_tensor_with_unsorted_batches(self):
@@ -62,8 +68,15 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         tensor[1, 4:, :] = 0
         tensor[2, 2:, :] = 0
         tensor[3, 6:, :] = 0
+        mask = torch.ones(5, 7)
+        mask[0, 3:] = 0
+        mask[1, 4:] = 0
+        mask[2, 2:] = 0
+        mask[3, 6:] = 0
+
         input_tensor = Variable(tensor)
-        sequence_lengths = Variable(torch.LongTensor([3, 4, 2, 6, 7]))
+        mask = Variable(mask)
+        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(input_tensor,
                                                                                            sequence_lengths)
         packed_sequence = pack_padded_sequence(sorted_inputs,
@@ -76,7 +89,7 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         reshaped_state = sorted_transposed_state[:, -2:, :].contiguous()
         explicitly_concatenated_state = torch.cat([reshaped_state[:, 0, :].squeeze(1),
                                                    reshaped_state[:, 1, :].squeeze(1)], -1)
-        encoder_output = encoder(input_tensor, sequence_lengths)
+        encoder_output = encoder(input_tensor, mask)
         assert_almost_equal(encoder_output.data.numpy(), explicitly_concatenated_state.data.numpy())
 
     def test_wrapper_raises_if_batch_first_is_false(self):

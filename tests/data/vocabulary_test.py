@@ -1,17 +1,17 @@
 # pylint: disable=no-self-use,invalid-name
 import codecs
 import os
+from copy import deepcopy
 
-from allennlp.data.dataset import Dataset
-from allennlp.data.fields.text_field import TextField
-from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data.vocabulary import Vocabulary, _NamespaceDependentDefaultDict, DEFAULT_OOV_TOKEN
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Dataset, Instance
+from allennlp.data.fields import TextField
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.tokenizers import CharacterTokenizer
+from allennlp.data.vocabulary import Vocabulary, _NamespaceDependentDefaultDict, DEFAULT_OOV_TOKEN
 
 
 class TestVocabulary(AllenNlpTestCase):
-
     def setUp(self):
         token_indexer = SingleIdTokenIndexer("tokens")
         text_field = TextField(["a", "a", "a", "a", "b", "b", "c", "c", "c"], {"tokens": token_indexer})
@@ -184,3 +184,24 @@ class TestVocabulary(AllenNlpTestCase):
         # Check the dictionaries containing the reverse mapping are identical.
         assert vocab.get_index_to_token_vocabulary("a") == vocab2.get_index_to_token_vocabulary("a")
         assert vocab.get_index_to_token_vocabulary("b") == vocab2.get_index_to_token_vocabulary("b")
+
+    def test_saving_and_loading_works_with_byte_encoding(self):
+        # We're going to set a vocabulary from a TextField using byte encoding, index it, save the
+        # vocab, load the vocab, then index the text field again, and make sure we get the same
+        # result.
+        tokenizer = CharacterTokenizer(byte_encoding='utf-8')
+        token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer)
+        tokens = ["Øyvind", "für", "汉字"]
+        text_field = TextField(tokens, {"characters": token_indexer})
+        dataset = Dataset([Instance({"sentence": text_field})])
+        vocab = Vocabulary.from_dataset(dataset)
+        text_field.index(vocab)
+        indexed_tokens = deepcopy(text_field._indexed_tokens)  # pylint: disable=protected-access
+
+        vocab_dir = os.path.join(self.TEST_DIR, 'vocab_save')
+        vocab.save_to_files(vocab_dir)
+        vocab2 = Vocabulary.from_files(vocab_dir)
+        text_field2 = TextField(tokens, {"characters": token_indexer})
+        text_field2.index(vocab2)
+        indexed_tokens2 = deepcopy(text_field2._indexed_tokens)  # pylint: disable=protected-access
+        assert indexed_tokens == indexed_tokens2

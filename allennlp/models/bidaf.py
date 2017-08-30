@@ -146,10 +146,8 @@ class BidirectionalAttentionFlow(Model):
         question_mask = util.get_text_field_mask(question).float()
         passage_mask = util.get_text_field_mask(passage).float()
 
-        question_sequence_lengths = util.get_lengths_from_binary_sequence_mask(question_mask)
-        passage_sentence_lengths = util.get_lengths_from_binary_sequence_mask(passage_mask)
-        encoded_question = self._dropout(self._phrase_layer(embedded_question, question_sequence_lengths))
-        encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_sentence_lengths))
+        encoded_question = self._dropout(self._phrase_layer(embedded_question, question_mask))
+        encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_mask))
         encoding_dim = encoded_question.size(-1)
 
         # Shape: (batch_size, passage_length, question_length)
@@ -182,7 +180,7 @@ class BidirectionalAttentionFlow(Model):
                                           encoded_passage * tiled_question_passage_vector],
                                          dim=-1)
 
-        modeled_passage = self._dropout(self._modeling_layer(final_merged_passage))
+        modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_mask))
         modeling_dim = modeled_passage.size(-1)
 
         # Shape: (batch_size, passage_length, encoding_dim * 4 + modeling_dim))
@@ -206,7 +204,7 @@ class BidirectionalAttentionFlow(Model):
                                              modeled_passage * tiled_start_representation],
                                             dim=-1)
         # Shape: (batch_size, passage_length, encoding_dim)
-        encoded_span_end = self._dropout(self._span_end_encoder(span_end_representation))
+        encoded_span_end = self._dropout(self._span_end_encoder(span_end_representation, passage_mask))
         # Shape: (batch_size, passage_length, encoding_dim * 4 + span_end_encoding_dim)
         span_end_input = self._dropout(torch.cat([final_merged_passage, encoded_span_end], dim=-1))
         span_end_logits = self._span_end_predictor(span_end_input).squeeze(-1)
@@ -254,6 +252,7 @@ class BidirectionalAttentionFlow(Model):
         span_start_probs : numpy.ndarray
         span_end_probs : numpy.ndarray
         best_span : (int, int)
+        best_span_str : str
         """
         instance = Instance({'question': question, 'passage': passage})
         instance.index_fields(self.vocab)
@@ -266,11 +265,14 @@ class BidirectionalAttentionFlow(Model):
         span_start_logits = output_dict["span_start_logits"]
         span_end_logits = output_dict["span_end_logits"]
         best_span = self._get_best_span(span_start_logits, span_end_logits)
+        best_span = tuple(best_span.data.squeeze(0).numpy())
+        best_span_str = ' '.join(passage.tokens[best_span[0]:best_span[1]])
 
         return {
                 "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).numpy(),
                 "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).numpy(),
-                "best_span": tuple(best_span.data.squeeze(0).numpy()),
+                "best_span": best_span,
+                "best_span_str": best_span_str,
                 }
 
     @staticmethod

@@ -1,3 +1,4 @@
+from allennlp.models.archival import archive_model, load_archive
 from allennlp.models.bidaf import BidirectionalAttentionFlow
 from allennlp.models.decomposable_attention import DecomposableAttention
 from allennlp.models.model import Model

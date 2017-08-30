@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Tokenizer, TokenIndexer
@@ -16,6 +16,29 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
 
+    @staticmethod
+    def make_srl_string(words: List[str], tags: List[str]) -> str:
+        frame = []
+        chunk = []
+
+        for (token, tag) in zip(words, tags):
+            if tag.startswith("I-"):
+                chunk.append(token)
+            else:
+                if chunk:
+                    frame.append("[" + " ".join(chunk) + "]")
+                    chunk = []
+
+                if tag.startswith("B-"):
+                    chunk.append(tag + " " + token)
+                elif tag == "O":
+                    frame.append(token)
+
+        if chunk:
+            frame.append("[" + " ".join(chunk) + "]")
+
+        return " ".join(frame)
+
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         sentence = inputs["sentence"]
         tokens = self.nlp.tokenizer(sentence)
@@ -23,17 +46,22 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         results = {"verbs": []}  # type: JsonDict
         spacy_doc = self.nlp(sentence)
+        words = [token.text for token in spacy_doc]
         for i, word in enumerate(spacy_doc):
             if word.pos_ == "VERB":
                 verb_labels = [0 for _ in tokens]
                 verb_labels[i] = 1
                 verb_indicator = SequenceLabelField(verb_labels, text)
                 output = self.model.tag(text, verb_indicator)
+
+                verb = word.text
+                tags = output["tags"]
+                description = SemanticRoleLabelerPredictor.make_srl_string(words, tags)
+
                 results["verbs"].append({
-                        "index": i,
-                        "verb": word.text,
-                        "tags": output["tags"],
-                        "class_probabilities": output["class_probabilities"]
+                        "verb": verb,
+                        "description": description,
+                        "tags": tags,
                 })
 
         return sanitize(results)

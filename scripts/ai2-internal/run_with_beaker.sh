@@ -14,7 +14,7 @@ EXPERIMENT_NAME=$2
 # just have a standard image, that we don't have to rebuild each time, and we can remove this
 # $RANDOM stuff.
 COMMIT=$(git rev-parse HEAD)
-IMAGE=$ECR_REPOSITORY/allennlp/allennlp-gpu:$COMMIT-$RANDOM
+IMAGE=$ECR_REPOSITORY/allennlp/allennlp:$COMMIT-$RANDOM
 
 if [ ! -n "$PARAM_FILE" ] ; then
   echo "USAGE: ./scripts/ai2-internal/run_on_beaker.sh PARAM_FILE [EXPERIMENT_NAME]"
@@ -43,4 +43,4 @@ SOURCES_ARG="$SOURCES_ARG --source $CONFIG_DATASET_ID:/config"
 
 CMD="allennlp/run train /config/$FILENAME -s /output"
 
-beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_NAME_ARG $GPU_ARG $DETACH_ARG $IMAGE $CMD
+beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_NAME_ARG $GPU_ARG $DETACH_ARG $IMAGE -- $CMD
