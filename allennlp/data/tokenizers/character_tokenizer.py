@@ -38,7 +38,8 @@ class CharacterTokenizer(Tokenizer):
     padding_index : ``int``, optional
         If you're using byte encoding, we're bypassing the dictionary, and 0 might be a valid byte
         for some inputs.  If you need to set the padding token to something other than 0, you can
-        do so here.  If this parameter is omitted, we will pad with zeros.
+        do so here.  If this parameter is omitted, we will pad with zeros.  Note that this will not
+        behave well with our masking code, and you could get subtle bugs.
     """
     def __init__(self,
                  byte_encoding: str = None,
@@ -58,8 +59,16 @@ class CharacterTokenizer(Tokenizer):
         if self._lowercase_characters:
             text = text.lower()
         if self._byte_encoding is not None:
-            return list(text.encode(self._byte_encoding)), None  # type: ignore
-        return list(text), None
+            # We add 1 here so that we can still use 0 for masking, no matter what bytes we get out
+            # of this.
+            tokens = [c + 1 for c in text.encode(self._byte_encoding)]
+        else:
+            tokens = list(text)  # type: ignore
+        for start_token in self._start_tokens:
+            tokens.insert(0, start_token)  # type: ignore
+        for end_token in self._end_tokens:
+            tokens.append(end_token)  # type: ignore
+        return tokens, None  # type: ignore
 
     @classmethod
     def from_params(cls, params: Params) -> 'CharacterTokenizer':

@@ -82,7 +82,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
             # "dummy token" to get the speed of itertools.zip_longest.
             padded_tokens.append([padding_index] * desired_token_length)
         # pad the list of lists to the longest sublist, appending 0's
-        padded_tokens = list(zip(*itertools.zip_longest(*padded_tokens, fillvalue=0)))
+        padded_tokens = list(zip(*itertools.zip_longest(*padded_tokens, fillvalue=padding_index)))
         if desired_token_length > len(longest_token):
             # now we remove the "dummy token" if we appended one.
             padded_tokens.pop()
