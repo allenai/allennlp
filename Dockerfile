@@ -50,3 +50,4 @@ COPY tests/ tests/
 COPY pytest.ini pytest.ini
 COPY scripts/ scripts/
 COPY tutorials/ tutorials/
+COPY build_tools/ build_tools/
