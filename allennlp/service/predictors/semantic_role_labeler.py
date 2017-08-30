@@ -42,11 +42,11 @@ class SemanticRoleLabelerPredictor(Predictor):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         sentence = inputs["sentence"]
         tokens = self.nlp.tokenizer(sentence)
-        text = TextField(tokens, token_indexers=self.token_indexers)
 
         results = {"verbs": []}  # type: JsonDict
         spacy_doc = self.nlp(sentence)
         words = [token.text for token in spacy_doc]
+        text = TextField(words, token_indexers=self.token_indexers)
         for i, word in enumerate(spacy_doc):
             if word.pos_ == "VERB":
                 verb_labels = [0 for _ in tokens]
