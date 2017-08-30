@@ -36,7 +36,7 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
 
         if not all([isinstance(x, str) for x in tokens]):
             raise ConfigurationError("TextFields must be passed strings. "
-                                     "Found: {}".format([type(x) for x in tokens]))
+                                     "Found: {} with types {}.".format(tokens, [type(x) for x in tokens]))
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
