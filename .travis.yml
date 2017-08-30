@@ -17,7 +17,7 @@ before_install:
 - docker pull allennlp/allennlp:latest
 - docker build --cache-from allennlp/allennlp:latest -t allennlp/allennlp:latest .
 script:
-- docker run allennlp/allennlp /bin/bash -c "/stage/build_tools/travis/test_script.sh"
+- docker run -e RUN_PYLINT=$RUN_PYLINT -e RUN_MYPY=$RUN_MYPY -e RUN_TESTS=$RUN_TESTS -e BUILD_DOCS=$BUILD_DOCS -e COVERAGE=$COVERAGE allennlp/allennlp /bin/bash -c "/stage/build_tools/travis/test_script.sh"
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then
     docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
