@@ -15,3 +15,17 @@
   color: blue;
   text-decoration: underline;
 }
+
+/* Match fonts to website */
+body {
+    font-family: "Source Sans Pro", sans-serif;
+}
+
+h1, h2, .rst-content .toctree-wrapper p.caption, h3, h4, h5, h6, legend, p.caption {
+    font-family: "Source Sans Pro", sans-serif;
+}
+
+/* Ensures that the logo scales properly */
+.wy-side-nav-search a {
+    display: block;
+}
