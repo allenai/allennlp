@@ -6,6 +6,7 @@ import numpy
 
 from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.common.checks import ConfigurationError
 
 
 class IndexField(Field[numpy.ndarray]):
@@ -28,6 +29,9 @@ class IndexField(Field[numpy.ndarray]):
         self.sequence_index = index
         self.sequence_field = sequence_field
 
+        if not isinstance(index, int):
+            raise ConfigurationError("IndexFields must be passed integer indices. "
+                                     "Found index: {} with type: {}.".format(index, type(index)))
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {'num_options': self.sequence_field.sequence_length()}
