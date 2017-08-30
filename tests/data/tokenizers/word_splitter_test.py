@@ -14,33 +14,33 @@ class TestSimpleWordSplitter(AllenNlpTestCase):
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
         expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", '"',
                            "punctuation", '"', "."]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, _ = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
 
     def test_tokenize_handles_contraction(self):
         sentence = "it ain't joe's problem; would've been yesterday"
         expected_tokens = ["it", "ai", "n't", "joe", "'s", "problem", ";", "would", "'ve", "been",
                            "yesterday"]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, _ = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
 
     def test_tokenize_handles_multiple_contraction(self):
         sentence = "wouldn't've"
         expected_tokens = ["would", "n't", "'ve"]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, _ = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
 
     def test_tokenize_handles_final_apostrophe(self):
         sentence = "the jones' house"
         expected_tokens = ["the", "jones", "'", "house"]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, _ = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
 
     def test_tokenize_handles_special_cases(self):
         sentence = "mr. and mrs. jones, etc., went to, e.g., the store"
         expected_tokens = ["mr.", "and", "mrs.", "jones", ",", "etc.", ",", "went", "to", ",",
                            "e.g.", ",", "the", "store"]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, _ = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
 
 
@@ -53,33 +53,43 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
         expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", '"',
                            "punctuation", '"', "."]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, offsets = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
+        for token, (start, end) in zip(tokens, offsets):
+            assert sentence[start:end] == token
 
     def test_tokenize_handles_contraction(self):
         # note that "would've" is kept together, while "ain't" is not.
         sentence = "it ain't joe's problem; would've been yesterday"
         expected_tokens = ["it", "ai", "n't", "joe", "'s", "problem", ";", "would've", "been",
                            "yesterday"]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, offsets = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
+        for token, (start, end) in zip(tokens, offsets):
+            assert sentence[start:end] == token
 
     def test_tokenize_handles_multiple_contraction(self):
         sentence = "wouldn't've"
         expected_tokens = ["would", "n't", "'ve"]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, offsets = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
+        for token, (start, end) in zip(tokens, offsets):
+            assert sentence[start:end] == token
 
     def test_tokenize_handles_final_apostrophe(self):
         sentence = "the jones' house"
         expected_tokens = ["the", "jones", "'", "house"]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, offsets = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
+        for token, (start, end) in zip(tokens, offsets):
+            assert sentence[start:end] == token
 
     def test_tokenize_handles_special_cases(self):
         # note that the etc. doesn't quite work --- we can special case this if we want.
         sentence = "Mr. and Mrs. Jones, etc., went to, e.g., the store"
         expected_tokens = ["Mr.", "and", "Mrs.", "Jones", ",", "etc", ".", ",", "went", "to", ",",
                            "e.g.", ",", "the", "store"]
-        tokens = self.word_splitter.split_words(sentence)
+        tokens, offsets = self.word_splitter.split_words(sentence)
         assert tokens == expected_tokens
+        for token, (start, end) in zip(tokens, offsets):
+            assert sentence[start:end] == token

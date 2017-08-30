@@ -8,9 +8,9 @@ class DecomposableAttentionPredictor(Predictor):
         premise_text = inputs["premise"]
         hypothesis_text = inputs["hypothesis"]
 
-        premise = TextField(self.tokenizer.tokenize(premise_text),
+        premise = TextField(self.tokenizer.tokenize(premise_text)[0],
                             token_indexers=self.token_indexers)
-        hypothesis = TextField(self.tokenizer.tokenize(hypothesis_text),
+        hypothesis = TextField(self.tokenizer.tokenize(hypothesis_text)[0],
                                token_indexers=self.token_indexers)
 
         return sanitize(self.model.predict_entailment(premise, hypothesis))
