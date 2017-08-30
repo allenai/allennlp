@@ -39,7 +39,7 @@ class CharacterTokenizer(Tokenizer):
         if self.lowercase_characters:
             text = text.lower()
         if self.byte_encoding is not None:
-            return list(text.encode(self.byte_encoding)), None
+            return list(text.encode(self.byte_encoding)), None  # type: ignore
         return list(text), None
 
     @classmethod
