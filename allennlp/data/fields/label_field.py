@@ -54,7 +54,7 @@ class LabelField(Field[numpy.ndarray]):
             else:
                 self._label_id = label
         else:
-            if not (isinstance(label, str)):
+            if not isinstance(label, str):
                 raise ConfigurationError("LabelFields must be passed a string label if skip_indexing=False. "
                                          "Found label: {} with type: {}.".format(label, type(label)))
 
