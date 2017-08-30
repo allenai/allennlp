@@ -33,7 +33,6 @@ calls ``main()``.
 
 .. toctree::
     allennlp.commands.evaluate
-    allennlp.commands.main
     allennlp.commands.predict
     allennlp.commands.serve
     allennlp.commands.train
