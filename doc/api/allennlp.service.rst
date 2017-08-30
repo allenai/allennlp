@@ -1,24 +1,14 @@
 allennlp.service
 ========================
 
-Subpackages
------------
+These submodules contain a server
+and ``Predictor`` wrappers for serving AllenNLP models
+via a REST API or similar.
 
 .. toctree::
 
    allennlp.service.predictors
-
-Submodules
-----------
-
-.. automodule:: allennlp.service.server_sanic
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
+   allennlp.service.server_sanic
 
 .. automodule:: allennlp.service
    :members:

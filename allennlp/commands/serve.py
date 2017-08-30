@@ -1,3 +1,26 @@
+"""
+The ``serve`` subcommand launches a server
+that exposes trained models via a REST API,
+and that includes a web interface for exploring
+their predictions.
+
+.. code-block:: bash
+
+    $ python -m allennlp.run serve --help
+    usage: run [command] serve [-h] [--port PORT] [--workers WORKERS]
+                            [--config-file CONFIG_FILE]
+
+    Run the web service, which provides an HTTP API as well as a web demo.
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    --port PORT
+    --workers WORKERS
+    --config-file CONFIG_FILE
+                            path to a JSON file specifying the configuration for
+                            the models
+"""
+
 import argparse
 import json
 

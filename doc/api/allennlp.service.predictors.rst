@@ -1,8 +1,16 @@
-allennlp.service.servable
+allennlp.service.predictors
 =================================
 
-Submodules
-----------
+A ``Predictor`` is a wrapper for an AllenNLP ``Model``
+that makes JSON predictions using JSON inputs. If you
+want to serve up a model through the web service
+(or using ``allennlp.commands.predict``), you'll need
+a ``Predictor`` that wraps it.
+
+.. automodule:: allennlp.service.predictors
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.service.predictors.predictor
    :members:
@@ -24,11 +32,3 @@ Submodules
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: allennlp.service.predictors
-   :members:
-   :undoc-members:
-   :show-inheritance:

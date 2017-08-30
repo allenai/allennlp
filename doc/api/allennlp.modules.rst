@@ -1,63 +1,24 @@
 allennlp.modules
 ========================
 
-Subpackages
------------
+This submodule contains custom PyTorch ``Module`` s
+that are used as components in AllenNLP ``Model`` s.
 
 .. toctree::
 
+   allennlp.modules.attention
+   allennlp.modules.augmented_lstm
+   allennlp.modules.feedforward
+   allennlp.modules.highway
+   allennlp.modules.matrix_attention
    allennlp.modules.seq2seq_encoders
    allennlp.modules.seq2vec_encoders
    allennlp.modules.similarity_functions
+   allennlp.modules.stacked_alternating_lstm
    allennlp.modules.text_field_embedders
+   allennlp.modules.time_distributed
    allennlp.modules.token_embedders
 
-Submodules
-----------
-
-.. automodule:: allennlp.modules.attention
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.modules.augmented_lstm
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.modules.feedforward
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.modules.highway
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.modules.matrix_attention
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.modules.similarity_function
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.modules.stacked_alternating_lstm
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.modules.time_distributed
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
 
 .. automodule:: allennlp.modules
    :members:
