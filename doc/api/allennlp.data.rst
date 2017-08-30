@@ -1,38 +1,18 @@
 allennlp.data
 =====================
 
-Subpackages
------------
+These submodules contain various functionality for working with data.
 
 .. toctree::
 
+   allennlp.data.dataset
    allennlp.data.dataset_readers
    allennlp.data.fields
+   allennlp.data.instance
    allennlp.data.iterators
    allennlp.data.token_indexers
    allennlp.data.tokenizers
-
-Submodules
-----------
-
-.. automodule:: allennlp.data.dataset
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.data.instance
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.data.vocabulary
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
+   allennlp.data.vocabulary
 
 .. automodule:: allennlp.data
    :members:

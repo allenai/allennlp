@@ -1,27 +1,15 @@
 allennlp.nn
 ===================
 
-Submodules
-----------
+These submodules contain utilities and helpers
+for working with PyTorch neural networks.
 
-.. automodule:: allennlp.nn.activations
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
 
-.. automodule:: allennlp.nn.initializers
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   allennlp.nn.activations
+   allennlp.nn.initializers
+   allennlp.nn.util
 
-.. automodule:: allennlp.nn.util
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
 
 .. automodule:: allennlp.nn
    :members:

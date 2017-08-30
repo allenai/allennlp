@@ -1,8 +1,10 @@
 allennlp.data.fields
 ============================
 
-Submodules
-----------
+.. automodule:: allennlp.data.fields
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.data.fields.field
    :members:
@@ -40,10 +42,3 @@ Submodules
    :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: allennlp.data.fields
-   :members:
-   :undoc-members:
-   :show-inheritance:
