@@ -1,6 +1,7 @@
 import argparse
 from contextlib import ExitStack
 import json
+import sys
 from typing import Optional, IO
 
 from allennlp.models.archival import load_archive
@@ -38,6 +39,11 @@ def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_t
 def predict(args: argparse.Namespace) -> None:
     predictor = get_predictor(args)
     output_file = None
+
+    if args.silent and not args.output_file:
+        print("--silent specified without --output-file.")
+        print("Exiting early because no output will be created.")
+        sys.exit(0)
 
     # ExitStack allows us to conditionally context-manage `output_file`, which may or may not exist
     with ExitStack() as stack:
