@@ -7,7 +7,6 @@ from torch.autograd import Variable
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import DatasetReader, Vocabulary
-from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.fields import TextField
 from allennlp.models import BidirectionalAttentionFlow, Model
 from allennlp.nn.util import arrays_to_variables
@@ -68,7 +67,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         # TODO(mattg): "What", "is", "?" crashed, because the CNN encoder expected at least 5
         # characters.  We need to fix that somehow.
         question = TextField(["Whatever", "is", "?"], token_indexers=self.token_indexers)
-        passage = TextField(["This", "is", "a", "passage", SquadReader.STOP_TOKEN],
+        passage = TextField(["This", "is", "a", "passage"],
                             token_indexers=self.token_indexers)
         output_dict = self.model.predict_span(question, passage)
 

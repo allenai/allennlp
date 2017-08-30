@@ -30,12 +30,12 @@ class TestSquadReader(AllenNlpTestCase):
         assert len(instances) == 5
         assert instances[0].fields["question"].tokens[:3] == ["To", "whom", "did"]
         assert instances[0].fields["passage"].tokens[:3] == ["Architecturally", ",", "the"]
-        assert instances[0].fields["passage"].tokens[-3:] == ["Mary", ".", "@@STOP@@"]
+        assert instances[0].fields["passage"].tokens[-2:] == ["Mary", "."]
         assert instances[0].fields["span_start"].sequence_index == 102
         assert instances[0].fields["span_end"].sequence_index == 105
         assert instances[1].fields["question"].tokens[:3] == ["What", "sits", "on"]
         assert instances[1].fields["passage"].tokens[:3] == ["Architecturally", ",", "the"]
-        assert instances[1].fields["passage"].tokens[-3:] == ["Mary", ".", "@@STOP@@"]
+        assert instances[1].fields["passage"].tokens[-2:] == ["Mary", "."]
         assert instances[1].fields["span_start"].sequence_index == 17
         assert instances[1].fields["span_end"].sequence_index == 24
 

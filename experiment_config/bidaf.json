@@ -9,9 +9,15 @@
       "token_characters": {
         "type": "characters",
         "character_tokenizer": {
-          "byte_encoding": "utf-8"
+          "byte_encoding": "utf-8",
+          "start_tokens": [259],
+          "end_tokens": [260],
+          "padding_index": 261
         }
       }
+    },
+    "tokenizer": {
+      "end_tokens": ["@@STOP@@"]
     }
   },
   "train_data_path": "/net/efs/aristo/dlfa/squad/train-v1.1.json",
@@ -29,7 +35,7 @@
       "token_characters": {
         "type": "character_encoding",
         "embedding": {
-          "num_embeddings": 260,
+          "num_embeddings": 262,
           "embedding_dim": 16
         },
         "encoder": {

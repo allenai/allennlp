@@ -5,11 +5,11 @@ from allennlp.common.params import Params
 
 class TestWordTokenizer:
     def test_passes_through_correctly(self):
-        tokenizer = WordTokenizer()
+        tokenizer = WordTokenizer(start_tokens=['@@', '%%'], end_tokens=['^^'])
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
         tokens, _ = tokenizer.tokenize(sentence)
-        expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", "\"",
-                           "punctuation", "\"", "."]
+        expected_tokens = ["@@", "%%", "this", "(", "sentence", ")", "has", "'", "crazy", "'", "\"",
+                           "punctuation", "\"", ".", "^^"]
         assert tokens == expected_tokens
 
     def test_stems_and_filters_correctly(self):
