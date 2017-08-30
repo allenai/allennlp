@@ -17,3 +17,11 @@ class TestTimeDistributed(AllenNlpTestCase):
         output = distributed_embedding(char_input)
         assert_almost_equal(output.data.numpy(),
                             [[[[.5, .5], [.4, .4]], [[.5, .5,], [.5, .5]]]])
+
+    def test_time_distributed_works_with_multiple_inputs(self):
+        module = lambda x, y: x + y
+        distributed = TimeDistributed(module)
+        x_input = Variable(torch.LongTensor([[[1, 2], [3, 4]]]))
+        y_input = Variable(torch.LongTensor([[[4, 2], [9, 1]]]))
+        output = distributed(x_input, y_input)
+        assert_almost_equal(output.data.numpy(), [[[5, 4], [12, 5]]])
