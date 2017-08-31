@@ -40,7 +40,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.archival import archive_model
 from allennlp.models.model import Model
-from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -172,8 +171,6 @@ def train_model(params: Params, serialization_dir: str) -> Model:
 
     model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
-    parameters = [p for p in model.parameters() if p.requires_grad]
-    optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
     train_data.index_instances(vocab)
     if validation_data:
@@ -182,8 +179,9 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     trainer_params = params.pop("trainer")
     trainer = Trainer.from_params(model,
                                   serialization_dir,
-                                  optimizer, iterator,
-                                  train_data, validation_data,
+                                  iterator,
+                                  train_data,
+                                  validation_data,
                                   trainer_params)
     params.assert_empty('base train command')
     trainer.train()

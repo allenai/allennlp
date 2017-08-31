@@ -47,13 +47,13 @@
     "padding_noise": 0.0,
     "batch_size": 40
   },
-  "optimizer": {
-    "type": "adadelta",
-    "lr": 1.0
-  },
   "trainer": {
     "num_epochs": 1,
     "patience": 5,
-    "cuda_device": -1
+    "cuda_device": -1,
+    "optimizer": {
+      "type": "adadelta",
+      "lr": 1.0
+     }
   }
 }
