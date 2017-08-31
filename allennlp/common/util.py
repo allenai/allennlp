@@ -9,9 +9,7 @@ JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
 def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name
     """
-    Sanitize x so that it can be JSON serialized.
-
-    This turn PyTorch and Numpy types into basic Python types so they
+    Sanitize turns PyTorch and Numpy types into basic Python types so they
     can be serialized into JSON.
     """
     if isinstance(x, (str, float, int, bool)):
