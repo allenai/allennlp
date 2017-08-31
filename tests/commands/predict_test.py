@@ -2,10 +2,11 @@
 import argparse
 import json
 import os
+import sys
 import tempfile
 from unittest import TestCase
 
-from allennlp.commands.main import main
+from allennlp.commands import main
 from allennlp.commands.predict import add_subparser, predict
 
 
@@ -20,13 +21,13 @@ class TestPredict(TestCase):
                     "/path/to/archive", # archive
                     "/dev/null",    # input_file
                     "--output-file", "/dev/null",
-                    "--print"]
+                    "--silent"]
 
         args = parser.parse_args(raw_args)
 
         assert args.func == predict
         assert args.archive_file == "/path/to/archive"
-        assert args.print
+        assert args.silent
 
     def test_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()
@@ -39,13 +40,14 @@ class TestPredict(TestCase):
             f.write("""{"passage": "the mariners won the super bowl in 2037", """
                     """ "question": "when did the mariners win the super bowl?"}\n""")
 
-        args = ["predict",     # command
-                "tests/fixtures/bidaf/serialization/model.tar.gz",
-                infile,     # input_file
-                "--output-file", outfile,
-                "--print"]
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    "tests/fixtures/bidaf/serialization/model.tar.gz",
+                    infile,     # input_file
+                    "--output-file", outfile,
+                    "--silent"]
 
-        main(args)
+        main()
 
         assert os.path.exists(outfile)
 
@@ -58,11 +60,12 @@ class TestPredict(TestCase):
                                           "best_span_str"}
 
     def test_fails_without_required_args(self):
-        args = ["predict",           # command
-                "/path/to/archive",  # archive, but no input file
-               ]
+        sys.argv = ["run.py",            # executable
+                    "predict",           # command
+                    "/path/to/archive",  # archive, but no input file
+                   ]
 
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
-            main(args)
+            main()
 
         assert cm.exception.code == 2  # argparse code for incorrect usage

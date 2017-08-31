@@ -46,7 +46,7 @@ def _char_span_to_token_span(sentence: str,
     # First we'll tokenize the span and the sentence, so we can count tokens and check for
     # matches.
     span_chars = sentence[span[0]:span[1]]
-    tokenized_span = tokenizer.tokenize(span_chars)
+    tokenized_span, _ = tokenizer.tokenize(span_chars)
     # Then we'll find what we think is the first token in the span
     chars_seen = 0
     index = 0
@@ -85,9 +85,10 @@ class SquadReader(DatasetReader):
     fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
     and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.
 
-    The ``Instances`` also store their ID and the original passage text in the instance metadata,
-    accessible as ``instance.metadata['id']`` and ``instance.metadata['original_passage']``.  You
-    will want this if you want to use the official SQuAD evaluation script.
+    The ``Instances`` also store their ID, the original passage text, and token offsets into the
+    original passage in the instance metadata, accessible as ``instance.metadata['id']``,
+    ``instance.metadata['original_passage']``, and ``instance.metadata['token_offsets']``.  This is
+    so that we can more easily use the official SQuAD evaluation script to get metrics.
 
     Parameters
     ----------
@@ -120,19 +121,19 @@ class SquadReader(DatasetReader):
         for article in tqdm(dataset):
             for paragraph_json in article['paragraphs']:
                 paragraph = paragraph_json["context"]
-                # replace newlines in the paragraph
-                cleaned_paragraph = paragraph.replace("\n", " ")
 
                 # We add a special token to the end of the passage.  This is because our span
                 # labels are end-exclusive, and we do a softmax over the passage to determine span
                 # end.  So if we want to be able to include the last token of the passage, we need
                 # to have a special symbol at the end.
-                tokenized_paragraph = self._tokenizer.tokenize(cleaned_paragraph) + [self.STOP_TOKEN]
+                paragraph_tokens, paragraph_offsets = self._tokenizer.tokenize(paragraph)
+                paragraph_tokens.append(self.STOP_TOKEN)
+                paragraph_offsets.append((-1, -1))
 
                 for question_answer in paragraph_json['qas']:
                     question_text = question_answer["question"].strip().replace("\n", "")
                     question_id = question_answer['id'].strip()
-                    tokenized_question = self._tokenizer.tokenize(question_text)
+                    question_tokens, _ = self._tokenizer.tokenize(question_text)
 
                     # There may be multiple answer annotations, so pick the one that occurs the
                     # most.
@@ -145,7 +146,7 @@ class SquadReader(DatasetReader):
                     # we need a token index for our models.  We convert them here.
                     char_span_end = char_span_start + len(answer_text)
                     span_start, span_end = _char_span_to_token_span(paragraph,
-                                                                    tokenized_paragraph,
+                                                                    paragraph_tokens,
                                                                     (char_span_start, char_span_end),
                                                                     self._tokenizer)
 
@@ -154,8 +155,8 @@ class SquadReader(DatasetReader):
                     # when indexing is done, and when padding is done).  I _think_ all of those
                     # operations would be safe with shared objects, but I'd rather just be safe by
                     # doing a copy here.  Extra memory usage should be minimal.
-                    paragraph_field = TextField(deepcopy(tokenized_paragraph), self._token_indexers)
-                    question_field = TextField(tokenized_question, self._token_indexers)
+                    paragraph_field = TextField(deepcopy(paragraph_tokens), self._token_indexers)
+                    question_field = TextField(question_tokens, self._token_indexers)
                     span_start_field = IndexField(span_start, paragraph_field)
                     span_end_field = IndexField(span_end, paragraph_field)
                     fields = {
@@ -164,7 +165,11 @@ class SquadReader(DatasetReader):
                             'span_start': span_start_field,
                             'span_end': span_end_field
                             }
-                    metadata = {'id': question_id, 'original_passage': paragraph}
+                    metadata = {
+                            'id': question_id,
+                            'original_passage': paragraph,
+                            'token_offsets': paragraph_offsets
+                            }
                     instance = Instance(fields, metadata)
                     instances.append(instance)
         if not instances:
@@ -319,11 +324,9 @@ class SquadSentenceSelectionReader(DatasetReader):
                 self._paragraph_sentences[paragraph_id] = []
 
                 context_article = paragraph["context"]
-                # replace newlines in the context article
-                cleaned_context_article = context_article.replace("\n", "")
 
-                # Split the cleaned_context_article into a list of sentences.
-                sentences = nltk.sent_tokenize(cleaned_context_article)
+                # Split the context_article into a list of sentences.
+                sentences = nltk.sent_tokenize(context_article)
 
                 # Make a dict from span indices to sentence. The end span is
                 # exclusive, and the start span is inclusive.
@@ -381,12 +384,12 @@ class SquadSentenceSelectionReader(DatasetReader):
             question_text = self._id_to_question[question_id]
             sentence_fields = []  # type: List[Field]
             for sentence in sentence_choices:
-                tokenized_sentence = self._tokenizer.tokenize(sentence)
+                tokenized_sentence, _ = self._tokenizer.tokenize(sentence)
                 sentence_field = TextField(tokenized_sentence, self._token_indexers)
                 sentence_fields.append(sentence_field)
             sentences_field = ListField(sentence_fields)
-            tokenized_question = self._tokenizer.tokenize(question_text)
-            question_field = TextField(tokenized_question, self._token_indexers)
+            question_tokens, _ = self._tokenizer.tokenize(question_text)
+            question_field = TextField(question_tokens, self._token_indexers)
             correct_sentence_field = IndexField(correct_choice, sentences_field)
             instances.append(Instance({'question': question_field,
                                        'sentences': sentences_field,

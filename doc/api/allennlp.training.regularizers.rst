@@ -1,8 +1,10 @@
 allennlp.training.regularizers
 ======================================
 
-Submodules
-----------
+.. automodule:: allennlp.training.regularizers
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.training.regularizers.regularizer
    :members:
@@ -19,11 +21,3 @@ Submodules
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: allennlp.training.regularizers
-   :members:
-   :undoc-members:
-   :show-inheritance:

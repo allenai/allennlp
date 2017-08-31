@@ -1,8 +1,10 @@
 allennlp.common.testing
 ===============================
 
-Submodules
-----------
+.. automodule:: allennlp.common.testing
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.common.testing.test_case
    :members:
@@ -10,10 +12,3 @@ Submodules
    :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: allennlp.common.testing
-   :members:
-   :undoc-members:
-   :show-inheritance:

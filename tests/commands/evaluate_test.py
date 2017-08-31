@@ -20,4 +20,4 @@ class TestEvaluate(AllenNlpTestCase):
 
         metrics = evaluate_from_args(args)
 
-        assert metrics == {'full_span_acc': 0.0, 'span_end_acc': 0.0, 'span_start_acc': 0.0}
+        assert metrics == {'span_acc': 0.0, 'end_acc': 0.0, 'start_acc': 0.0, 'em': 0.0, 'f1': 0.0}

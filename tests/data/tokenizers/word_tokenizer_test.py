@@ -3,19 +3,19 @@
 from allennlp.data.tokenizers.word_tokenizer import WordTokenizer
 from allennlp.common.params import Params
 
-class TestWordProcessor:
+class TestWordTokenizer:
     def test_passes_through_correctly(self):
-        word_processor = WordTokenizer()
+        tokenizer = WordTokenizer()
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
-        tokens = word_processor.tokenize(sentence)
+        tokens, _ = tokenizer.tokenize(sentence)
         expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", "\"",
                            "punctuation", "\"", "."]
         assert tokens == expected_tokens
 
     def test_stems_and_filters_correctly(self):
-        word_processor = WordTokenizer.from_params(Params({'word_stemmer': {'type': 'porter'},
-                                                           'word_filter': {'type': 'stopwords'}}))
+        tokenizer = WordTokenizer.from_params(Params({'word_stemmer': {'type': 'porter'},
+                                                      'word_filter': {'type': 'stopwords'}}))
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
         expected_tokens = ["sentenc", "ha", "crazi", "punctuat"]
-        tokens = word_processor.tokenize(sentence)
+        tokens, _ = tokenizer.tokenize(sentence)
         assert tokens == expected_tokens

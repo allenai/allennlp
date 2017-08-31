@@ -1,29 +1,14 @@
 allennlp.training
 =========================
 
-Subpackages
------------
+These submodules contain utilities and functions
+for training AllenNLP models.
 
 .. toctree::
 
+   allennlp.training.optimizers
    allennlp.training.regularizers
-
-Submodules
-----------
-
-.. automodule:: allennlp.training.optimizers
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.training.trainer
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
+   allennlp.training.trainer
 
 .. automodule:: allennlp.training
    :members:

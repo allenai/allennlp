@@ -1,9 +1,11 @@
-from typing import List
+from typing import List, Tuple
+
+from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers.word_filter import WordFilter, PassThroughWordFilter
-from allennlp.data.tokenizers.word_splitter import WordSplitter, SimpleWordSplitter
+from allennlp.data.tokenizers.word_splitter import WordSplitter, SpacyWordSplitter
 from allennlp.data.tokenizers.word_stemmer import WordStemmer, PassThroughWordStemmer
 
 
@@ -20,53 +22,46 @@ class WordTokenizer(Tokenizer):
 
     Parameters
     ----------
-    word_splitter : ``WordSplitter``, optional (default=``SimpleWordSplitter``)
-        The :class:`WordSplitter` to use for splitting text strings into word tokens.
+    word_splitter : ``WordSplitter``, optional
+        The :class:`WordSplitter` to use for splitting text strings into word tokens.  The default
+        is to use the spacy word splitter.
 
-    word_filter : ``WordFilter``, optional (default=``PassThroughWordFilter``)
+    word_filter : ``WordFilter``, optional
         The :class:`WordFilter` to use for, e.g., removing stopwords.  Default is to do no
         filtering.
 
-    word_stemmer : ``WordStemmer``, optional (default=``PassThroughWordStemmer``)
+    word_stemmer : ``WordStemmer``, optional
         The :class:`WordStemmer` to use.  Default is no stemming.
     """
     def __init__(self,
-                 word_splitter: WordSplitter = SimpleWordSplitter(),
+                 word_splitter: WordSplitter = SpacyWordSplitter(),
                  word_filter: WordFilter = PassThroughWordFilter(),
                  word_stemmer: WordStemmer = PassThroughWordStemmer()) -> None:
         self.word_splitter = word_splitter
         self.word_filter = word_filter
         self.word_stemmer = word_stemmer
 
-    def tokenize(self, text: str) -> List[str]:
+    @overrides
+    def tokenize(self, text: str) -> Tuple[List[str], List[Tuple[int, int]]]:
         """
         Does whatever processing is required to convert a string of text into a sequence of tokens.
 
         At a minimum, this uses a ``WordSplitter`` to split words into text.  It may also do
         stemming or stopword removal, depending on the parameters given to the constructor.
         """
-        words = self.word_splitter.split_words(text)
-        filtered_words = self.word_filter.filter_words(words)
+        words, offsets = self.word_splitter.split_words(text)
+        words_to_keep = self.word_filter.should_keep_words(words)
+        filtered_words = []
+        filtered_offsets = []
+        for i, should_keep in enumerate(words_to_keep):
+            if should_keep:
+                filtered_words.append(words[i])
+                filtered_offsets.append(offsets[i])
         stemmed_words = [self.word_stemmer.stem_word(word) for word in filtered_words]
-        return stemmed_words
+        return stemmed_words, filtered_offsets
 
     @classmethod
     def from_params(cls, params: Params) -> 'WordTokenizer':
-        """
-        Parameters
-        ----------
-        word_splitter : ``str``, default=``"simple"``
-            The string name of the ``WordSplitter`` of choice (see the options at the bottom of
-            ``word_splitter.py``).
-
-        word_filter : ``str``, default=``"pass_through"``
-            The name of the ``WordFilter`` to use (see the options at the bottom of
-            ``word_filter.py``).
-
-        word_stemmer : ``str``, default=``"pass_through"``
-            The name of the ``WordStemmer`` to use (see the options at the bottom of
-            ``word_stemmer.py``).
-        """
         word_splitter = WordSplitter.from_params(params.pop('word_splitter', {}))
         word_filter = WordFilter.from_params(params.pop('word_filter', {}))
         word_stemmer = WordStemmer.from_params(params.pop('word_stemmer', {}))

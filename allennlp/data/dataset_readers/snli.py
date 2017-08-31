@@ -68,9 +68,9 @@ class SnliReader(DatasetReader):
                 label_field = LabelField(label)
 
                 premise = example["sentence1"]
-                premise_tokens = self._tokenizer.tokenize(premise)
+                premise_tokens, _ = self._tokenizer.tokenize(premise)
                 hypothesis = example["sentence2"]
-                hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
+                hypothesis_tokens, _ = self._tokenizer.tokenize(hypothesis)
                 if self._append_null:
                     premise_tokens.append(self.null_token)
                     hypothesis_tokens.append(self.null_token)
