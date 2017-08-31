@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
+from flaky import flaky
 import numpy
 from numpy.testing import assert_almost_equal
 import torch
@@ -7,7 +8,6 @@ from torch.autograd import Variable
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import DatasetReader, Vocabulary
-from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.fields import TextField
 from allennlp.models import BidirectionalAttentionFlow, Model
 from allennlp.nn.util import arrays_to_variables
@@ -33,6 +33,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    @flaky
     def test_batch_predictions_are_consistent(self):
         # The CNN encoder has problems with this kind of test - it's not properly masked yet, so
         # changing the amount of padding in the batch will result in small differences in the
@@ -68,7 +69,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         # TODO(mattg): "What", "is", "?" crashed, because the CNN encoder expected at least 5
         # characters.  We need to fix that somehow.
         question = TextField(["Whatever", "is", "?"], token_indexers=self.token_indexers)
-        passage = TextField(["This", "is", "a", "passage", SquadReader.STOP_TOKEN],
+        passage = TextField(["This", "is", "a", "passage"],
                             token_indexers=self.token_indexers)
         output_dict = self.model.predict_span(question, passage)
 
@@ -77,39 +78,32 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
 
         span_start, span_end = output_dict['best_span']
         assert span_start >= 0
-        assert span_start < span_end
+        assert span_start <= span_end
         assert span_end < passage.sequence_length()
-
-        assert isinstance(output_dict['best_span_str'], str)
 
     def test_get_best_span(self):
         # pylint: disable=protected-access
 
-        # Note that the best span cannot be (1, 0) since even though 0.3 * 0.5 is the greatest
-        # value, the end span index is constrained to occur after the begin span index.
         span_begin_probs = Variable(torch.FloatTensor([[0.1, 0.3, 0.05, 0.3, 0.25]])).log()
-        span_end_probs = Variable(torch.FloatTensor([[0.5, 0.1, 0.2, 0.05, 0.15]])).log()
+        span_end_probs = Variable(torch.FloatTensor([[0.65, 0.05, 0.2, 0.05, 0.05]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
-        assert_almost_equal(begin_end_idxs.data.numpy(), [[1, 2]])
+        assert_almost_equal(begin_end_idxs.data.numpy(), [[0, 0]])
 
-        # Testing an edge case of the dynamic program here, for the order of when you update the
-        # best previous span position.  We should not get (1, 1), because that's an empty span.
+        # When we were using exlcusive span ends, this was an edge case of the dynamic program.
+        # We're keeping the test to make sure we get it right now, after the switch in inclusive
+        # span end.  The best answer is (1, 1).
         span_begin_probs = Variable(torch.FloatTensor([[0.4, 0.5, 0.1]])).log()
         span_end_probs = Variable(torch.FloatTensor([[0.3, 0.6, 0.1]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
-        assert_almost_equal(begin_end_idxs.data.numpy(), [[0, 1]])
+        assert_almost_equal(begin_end_idxs.data.numpy(), [[1, 1]])
 
-        # Testing another edge case of the dynamic program here, where (0, 0) is the best solution
-        # without constraints.
+        # Another instance that used to be an edge case.
         span_begin_probs = Variable(torch.FloatTensor([[0.8, 0.1, 0.1]])).log()
         span_end_probs = Variable(torch.FloatTensor([[0.8, 0.1, 0.1]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
-        assert_almost_equal(begin_end_idxs.data.numpy(), [[0, 1]])
+        assert_almost_equal(begin_end_idxs.data.numpy(), [[0, 0]])
 
-        # test higher-order input
-        # Note that the best span cannot be (1, 1) since even though 0.3 * 0.5 is the greatest
-        # value, the end span index is constrained to occur after the begin span index.
-        span_begin_probs = Variable(torch.FloatTensor([[0.1, 0.3, 0.05, 0.3, 0.25]])).log()
-        span_end_probs = Variable(torch.FloatTensor([[0.1, 0.5, 0.2, 0.05, 0.15]])).log()
+        span_begin_probs = Variable(torch.FloatTensor([[0.1, 0.2, 0.05, 0.3, 0.25]])).log()
+        span_end_probs = Variable(torch.FloatTensor([[0.1, 0.2, 0.5, 0.05, 0.15]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
         assert_almost_equal(begin_end_idxs.data.numpy(), [[1, 2]])
