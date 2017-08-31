@@ -1,12 +1,15 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
 
+from flaky import flaky
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.evaluate import evaluate_from_args, add_subparser
 
 
 class TestEvaluate(AllenNlpTestCase):
 
+    @flaky
     def test_evaluate_from_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
