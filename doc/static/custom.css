@@ -15,3 +15,8 @@
   color: blue;
   text-decoration: underline;
 }
+
+/* Ensures that the logo scales properly */
+.wy-side-nav-search a {
+    display: block;
+}

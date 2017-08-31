@@ -43,9 +43,9 @@ class SemanticRoleLabelerPredictor(Predictor):
         sentence = inputs["sentence"]
         tokens = self.nlp.tokenizer(sentence)
 
-        results = {"verbs": []}  # type: JsonDict
         spacy_doc = self.nlp(sentence)
         words = [token.text for token in spacy_doc]
+        results = {"words": words, "verbs": []}  # type: JsonDict
         text = TextField(words, token_indexers=self.token_indexers)
         for i, word in enumerate(spacy_doc):
             if word.pos_ == "VERB":

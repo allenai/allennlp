@@ -26,7 +26,6 @@ The included module ``allennlp.run`` is such a script:
         serve     Run the web service and demo.
         evaluate  Evaluate the specified model + dataset
 
-
 However, it only knows about the models and classes that are
 included with AllenNLP. Once you start creating custom models,
 you'll need to make your own script which imports them and then
@@ -34,7 +33,6 @@ calls ``main()``.
 
 .. toctree::
     allennlp.commands.evaluate
-    allennlp.commands.main
     allennlp.commands.predict
     allennlp.commands.serve
     allennlp.commands.train
