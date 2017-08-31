@@ -1,3 +1,26 @@
+"""
+The ``predict`` subcommand allows you to make bulk JSON-to-JSON
+predictions using a trained model and its ``Predictor`` wrapper.
+
+.. code-block:: bash
+
+    $ python -m allennlp.run predict --help
+    usage: run [command] predict [-h] [--output-file OUTPUT_FILE] [--print]
+                                archive_file input-file
+
+    Run the specified model against a JSON-lines input file.
+
+    positional arguments:
+    archive_file          the archived model to make predictions with
+    input-file            path to input file
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    --output-file OUTPUT_FILE
+                            path to output file
+    --print               print results to stdout
+"""
+
 import argparse
 from contextlib import ExitStack
 import json

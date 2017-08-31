@@ -30,7 +30,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                     chunk = []
 
                 if tag.startswith("B-"):
-                    chunk.append(tag + " " + token)
+                    chunk.append(tag[2:] + ": " + token)
                 elif tag == "O":
                     frame.append(token)
 
@@ -42,11 +42,11 @@ class SemanticRoleLabelerPredictor(Predictor):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         sentence = inputs["sentence"]
         tokens = self.nlp.tokenizer(sentence)
-        text = TextField(tokens, token_indexers=self.token_indexers)
 
-        results = {"verbs": []}  # type: JsonDict
         spacy_doc = self.nlp(sentence)
         words = [token.text for token in spacy_doc]
+        results = {"words": words, "verbs": []}  # type: JsonDict
+        text = TextField(words, token_indexers=self.token_indexers)
         for i, word in enumerate(spacy_doc):
             if word.pos_ == "VERB":
                 verb_labels = [0 for _ in tokens]

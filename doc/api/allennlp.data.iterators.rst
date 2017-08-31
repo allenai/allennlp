@@ -1,8 +1,10 @@
 allennlp.data.iterators
 ===============================
 
-Submodules
-----------
+.. automodule:: allennlp.data.iterators
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.data.iterators.adaptive_iterator
    :members:
@@ -25,10 +27,3 @@ Submodules
    :show-inheritance:
 
 
-Module contents
----------------
-
-.. automodule:: allennlp.data.iterators
-   :members:
-   :undoc-members:
-   :show-inheritance:

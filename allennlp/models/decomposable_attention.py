@@ -12,6 +12,7 @@ from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
 from allennlp.nn.util import arrays_to_variables
 from allennlp.training.metrics import CategoricalAccuracy
+from allennlp.nn.initializers import InitializerApplicator
 
 
 @Model.register("decomposable_attention")
@@ -49,6 +50,8 @@ class DecomposableAttention(Model):
     aggregate_feedforward : ``FeedForward``
         This final feedforward network is applied to the concatenated, summed result of the
         ``compare_feedforward`` network, and its output is used as the entailment class logits.
+    initializer : ``InitializerApplicator``
+        We will use this to initialize the parameters in the model, calling ``initializer(self)``.
     premise_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
         After embedding the premise, we can optionally apply an encoder.  If this is ``None``, we
         will do nothing.
@@ -63,6 +66,7 @@ class DecomposableAttention(Model):
                  similarity_function: SimilarityFunction,
                  compare_feedforward: FeedForward,
                  aggregate_feedforward: FeedForward,
+                 initializer: InitializerApplicator,
                  premise_encoder: Optional[Seq2SeqEncoder] = None,
                  hypothesis_encoder: Optional[Seq2SeqEncoder] = None) -> None:
         super(DecomposableAttention, self).__init__(vocab)
@@ -82,8 +86,7 @@ class DecomposableAttention(Model):
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
-
-        # TODO(mattg): figure out default initialization here
+        initializer(self)
 
     def forward(self,  # type: ignore
                 premise: Dict[str, torch.LongTensor],
@@ -220,6 +223,7 @@ class DecomposableAttention(Model):
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
         compare_feedforward = FeedForward.from_params(params.pop('compare_feedforward'))
         aggregate_feedforward = FeedForward.from_params(params.pop('aggregate_feedforward'))
+        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
@@ -227,5 +231,6 @@ class DecomposableAttention(Model):
                    similarity_function=similarity_function,
                    compare_feedforward=compare_feedforward,
                    aggregate_feedforward=aggregate_feedforward,
+                   initializer=initializer,
                    premise_encoder=premise_encoder,
                    hypothesis_encoder=hypothesis_encoder)

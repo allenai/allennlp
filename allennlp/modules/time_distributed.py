@@ -14,17 +14,19 @@ class TimeDistributed(torch.nn.Module):
         super(TimeDistributed, self).__init__()
         self._module = module
 
-    def forward(self, inputs):  # pylint: disable=arguments-differ
-        input_size = inputs.size()
-        if len(input_size) <= 2:
-            raise RuntimeError("No dimension to distribute: " + str(input_size))
+    def forward(self, *inputs):  # pylint: disable=arguments-differ
+        reshaped_inputs = []
+        for input_tensor in inputs:
+            input_size = input_tensor.size()
+            if len(input_size) <= 2:
+                raise RuntimeError("No dimension to distribute: " + str(input_size))
 
-        # Squash batch_size and time_steps into a single axis; result has shape
-        # (batch_size * time_steps, input_size).
-        squashed_shape = [-1] + [x for x in input_size[2:]]
-        reshaped_inputs = inputs.contiguous().view(*squashed_shape)
+            # Squash batch_size and time_steps into a single axis; result has shape
+            # (batch_size * time_steps, input_size).
+            squashed_shape = [-1] + [x for x in input_size[2:]]
+            reshaped_inputs.append(input_tensor.contiguous().view(*squashed_shape))
 
-        reshaped_outputs = self._module(reshaped_inputs)
+        reshaped_outputs = self._module(*reshaped_inputs)
 
         # Now get the output back into the right shape.
         # (batch_size, time_steps, [hidden_size])

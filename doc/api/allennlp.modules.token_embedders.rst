@@ -1,8 +1,10 @@
 allennlp.modules.token_embedders
 ========================================
 
-Submodules
-----------
+.. automodule:: allennlp.modules.token_embedders
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.modules.token_embedders.embedding
    :members:
@@ -19,11 +21,3 @@ Submodules
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: allennlp.modules.token_embedders
-   :members:
-   :undoc-members:
-   :show-inheritance:

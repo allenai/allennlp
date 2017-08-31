@@ -58,6 +58,11 @@ class SequenceLabelField(Field[numpy.ndarray]):
         if all([isinstance(x, int) for x in labels]):
             self._indexed_labels = labels
 
+        elif not all([isinstance(x, str) for x in labels]):
+            raise ConfigurationError("SequenceLabelFields must be passed either all "
+                                     "strings or all ints. Found labels {} with "
+                                     "types: {}.".format(labels, [type(x) for x in labels]))
+
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         if self._indexed_labels is None:
