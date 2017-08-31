@@ -43,15 +43,18 @@ class SemanticRoleLabelerPredictor(Predictor):
         return " ".join(frame)
 
     def predict_json(self, inputs: JsonDict) -> JsonDict:
-       """
+        """
         Expects JSON that looks like ``{"sentence": "..."}``
         and returns JSON that looks like
-        ``{"words": [...],
-           "verbs": [
-               {"verb": "...", "description": "...", "tags": [...]},
-               ...
-               {"verb": "...", "description": "...", "tags": [...]},
-           ]}
+
+        .. code-block:: js
+
+            {"words": [...],
+             "verbs": [
+                {"verb": "...", "description": "...", "tags": [...]},
+                ...
+                {"verb": "...", "description": "...", "tags": [...]},
+            ]}
         """
         sentence = inputs["sentence"]
         tokens = self.nlp.tokenizer(sentence)

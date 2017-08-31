@@ -1,5 +1,5 @@
 """
-:class:~`allennlp.common.registrable.Registrable` is a "mixin" for endowing
+:class:`~allennlp.common.registrable.Registrable` is a "mixin" for endowing
 any base class with a named registry for its subclasses and a decorator
 for registering them.
 """
