@@ -16,6 +16,9 @@ class SimpleTaggerTest(ModelTestCase):
     def test_simple_tagger_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    def test_batch_predictions_are_consistent(self):
+        self.ensure_batch_predictions_are_consistent()
+
     def test_forward_pass_runs_correctly(self):
         training_arrays = self.dataset.as_array_dict()
         _ = self.model.forward(**arrays_to_variables(training_arrays))

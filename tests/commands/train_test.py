@@ -28,9 +28,9 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "iterator": {"type": "basic", "batch_size": 2},
-                "optimizer": "adam",
                 "trainer": {
-                        "num_epochs": 2
+                        "num_epochs": 2,
+                        "optimizer": "adam"
                 }
         })
 
