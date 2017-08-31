@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name
 import os
 import copy
+import pathlib
 
 import torch
 
@@ -139,3 +140,54 @@ class ArchivalTest(AllenNlpTestCase):
         # Santizing config2 shouldn't do anything
         _sanitize_config(config2)
         assert config.as_dict() == config2.as_dict()
+
+    def test_sanitize_skips_existing_file(self):
+        super(ArchivalTest, self).setUp()
+
+        config = Params({
+                "model": {
+                        "type": "bidaf",
+                        "text_field_embedder": {
+                                "tokens": {
+                                        "type": "embedding",
+                                        "embedding_dim": 5
+                                }
+                        },
+                        "stacked_encoder": {
+                                "type": "lstm",
+                                "input_size": 5,
+                                "hidden_size": 7,
+                                "num_layers": 2
+                        }
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "iterator": {"type": "basic", "batch_size": 2},
+                "trainer": {
+                        "num_epochs": 2,
+                        "optimizer": "adam",
+                }
+        })
+
+        # Create file and add to config
+        filename = os.path.join(self.TEST_DIR, "existing_file")
+        pathlib.Path(filename).touch()
+        config["model"]["evaluation_json_file"] = filename
+
+        original = copy.deepcopy(config.as_dict())
+
+        # file exists, so nothing should happen
+        _sanitize_config(config)
+        assert "evaluation_json_file" in config["model"]
+        assert config.as_dict() == original
+
+        # remove file, then sanitize should get rid of the key
+        os.remove(filename)
+        _sanitize_config(config)
+        assert config.as_dict() != original
+        assert "evaluation_json_file" not in config["model"]
+
+
+
+

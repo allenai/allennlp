@@ -56,8 +56,11 @@ def _sanitize_config(config: Params) -> None:
     that are unlikely to exist on the un-archiving machine. To be extra-safe
     we just remove them from the config.
     """
-    # TODO(joelgrus): come up with a better solution for this
-    config.get("model", {}).pop('evaluation_json_file', None)
+    evaluation_json_file = config.get("model", {}).get('evaluation_json_file', None)
+
+    if evaluation_json_file and not os.path.exists(evaluation_json_file):
+        logger.warning("specified evaluation_json_file %s does not exist, removing key", evaluation_json_file)
+        config.get("model", {}).pop('evaluation_json_file')
 
 def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
     """
