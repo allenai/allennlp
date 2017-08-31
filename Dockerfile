@@ -52,3 +52,4 @@ COPY scripts/ scripts/
 COPY tutorials/ tutorials/
 COPY build_tools/ build_tools/
 COPY doc/ doc/
+COPY .pylintrc .pylintrc
