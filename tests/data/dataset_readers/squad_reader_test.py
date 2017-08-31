@@ -16,13 +16,13 @@ class TestSquadReader(AllenNlpTestCase):
             "first performances since giving birth to Blue Ivy."
         _, offsets = tokenizer.tokenize(passage)
         # "January 7, 2012"
-        token_span = _char_span_to_token_span(offsets, (3, 18))
+        token_span = _char_span_to_token_span(offsets, (3, 18))[0]
         assert token_span == (1, 4)
         # "Lenox Hill Hospital"
-        token_span = _char_span_to_token_span(offsets, (91, 110))
+        token_span = _char_span_to_token_span(offsets, (91, 110))[0]
         assert token_span == (22, 24)
         # "Lenox Hill Hospital in New York."
-        token_span = _char_span_to_token_span(offsets, (91, 123))
+        token_span = _char_span_to_token_span(offsets, (91, 123))[0]
         assert token_span == (22, 28)
 
     def test_char_span_to_token_span_handles_hard_cases(self):
@@ -44,7 +44,7 @@ class TestSquadReader(AllenNlpTestCase):
         start = 912
         end = 912 + len("Paris.")
         _, offsets = tokenizer.tokenize(passage)
-        token_span = _char_span_to_token_span(offsets, (start, end))
+        token_span = _char_span_to_token_span(offsets, (start, end))[0]
         assert token_span == (184, 185)
 
     def test_read_from_file(self):

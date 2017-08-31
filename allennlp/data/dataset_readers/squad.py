@@ -40,16 +40,35 @@ def _char_span_to_token_span(token_offsets: List[Tuple[int, int]],
     """
     # We have token offsets into the passage from the tokenizer; we _should_ be able to just find
     # the tokens that have the same offsets as our span.
+    error = False
     start_index = 0
     while start_index < len(token_offsets) and token_offsets[start_index][0] < character_span[0]:
         start_index += 1
     # start_index should now be pointing at the span start index.
-    assert token_offsets[start_index][0] == character_span[0]
+    if token_offsets[start_index][0] > character_span[0]:
+        # In this case, a tokenization or labeling issue made us go too far - the character span
+        # we're looking for actually starts in the previous token.  We'll back up one.
+        logger.debug("Bad labelling or tokenization - start offset doesn't match")
+        start_index -= 1
+    if token_offsets[start_index][0] != character_span[0]:
+        error = True
     end_index = start_index
     while end_index < len(token_offsets) and token_offsets[end_index][1] < character_span[1]:
         end_index += 1
-    assert token_offsets[end_index][1] == character_span[1]
-    return (start_index, end_index)
+    if end_index == start_index and token_offsets[end_index][1] > character_span[1]:
+        # Looks like there was a token that should have been split, like "1854-1855", where the
+        # answer is "1854".  We can't do much in this case, except keep the answer as the whole
+        # token.
+        logger.debug("Bad tokenization - end offset doesn't match")
+    elif token_offsets[end_index][1] > character_span[1]:
+        # This is a case where the given answer span is more than one token, and the last token is
+        # cut off for some reason, like "split with Luckett and Rober", when the original passage
+        # said "split with Luckett and Roberson".  In this case, we'll just keep the end index
+        # where it is, and assume the intent was to mark the whole token.
+        logger.debug("Bad labelling or tokenization - end offset doesn't match")
+    if token_offsets[end_index][1] != character_span[1]:
+        error = True
+    return (start_index, end_index), error
 
 
 @DatasetReader.register("squad")
@@ -113,8 +132,17 @@ class SquadReader(DatasetReader):
                     # SQuAD gives answer annotations as a character index into the paragraph, but
                     # we need a token index for our models.  We convert them here.
                     char_span_end = char_span_start + len(answer_text)
-                    span_start, span_end = _char_span_to_token_span(paragraph_offsets,
-                                                                    (char_span_start, char_span_end))
+                    (span_start, span_end), error = _char_span_to_token_span(paragraph_offsets,
+                                                                             (char_span_start,
+                                                                              char_span_end))
+                    if error:
+                        logger.debug("Passage:", paragraph)
+                        logger.debug("Passage tokens:", paragraph_tokens)
+                        logger.debug("Question:", question_text)
+                        logger.debug("Answer span:", char_span_start, char_span_end)
+                        logger.debug("Token span:", span_start, span_end)
+                        logger.debug("Tokens in answer:", paragraph_tokens[span_start:span_end + 1])
+                        logger.debug("Answer:", answer_text)
 
                     # Because the paragraph is shared across multiple questions, we do a deepcopy
                     # here to avoid any weird issues with shared state between instances (e.g.,
