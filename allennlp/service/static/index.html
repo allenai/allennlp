@@ -11,6 +11,12 @@
       .srl-tag.color1, .srl-word.color1 {
         background-color: lightskyblue;
       }
+      .passage-body {
+        font-weight: normal;
+      }
+      .passage-answer {
+        font-weight: bold;
+      }
     </style>
     <title>AllenNLP - Demo</title>
     <!-- Libraries -->
@@ -222,9 +228,9 @@ class McOutput extends React.Component {
           <label>Answer</label>
           <div className="model__content__summary">{ answer }</div>
           <div>
-            <span>{head}</span>
-            <span><strong>{answer}</strong></span>
-            <span>{tail}</span>
+            <span className="passage-body">{head}</span>
+            <span className="passage-answer"><strong>{answer}</strong></span>
+            <span className="passage-body">{tail}</span>
           </div>
         </div>
       </div>
