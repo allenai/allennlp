@@ -18,6 +18,9 @@ class SemanticRoleLabelerTest(ModelTestCase):
     def test_srl_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    def test_batch_predictions_are_consistent(self):
+        self.ensure_batch_predictions_are_consistent()
+
     def test_tag_returns_distributions_per_token(self):
         text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})
         verb_indicator = SequenceLabelField([0, 1, 0, 0], text)

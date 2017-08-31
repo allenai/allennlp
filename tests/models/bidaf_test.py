@@ -4,10 +4,12 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
+from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.fields import TextField
-from allennlp.models import BidirectionalAttentionFlow
+from allennlp.models import BidirectionalAttentionFlow, Model
 from allennlp.nn.util import arrays_to_variables
 
 
@@ -30,6 +32,37 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
 
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
+
+    def test_batch_predictions_are_consistent(self):
+        # The CNN encoder has problems with this kind of test - it's not properly masked yet, so
+        # changing the amount of padding in the batch will result in small differences in the
+        # output of the encoder.  Because BiDAF is so deep, these differences get magnified through
+        # the network and make this test impossible.  So, we'll remove the CNN encoder entirely
+        # from the model for this test.  If/when we fix the CNN encoder to work correctly with
+        # masking, we can change this back to how the other models run this test, with just a
+        # single line.
+        # pylint: disable=protected-access,attribute-defined-outside-init
+
+        # Save some state.
+        saved_dataset = self.dataset
+        saved_model = self.model
+
+        # Modify the state, run the test with modified state.
+        params = Params.from_file(self.param_file)
+        reader = DatasetReader.from_params(params['dataset_reader'])
+        reader._token_indexers = {'tokens': reader._token_indexers['tokens']}
+        self.dataset = reader.read('tests/fixtures/data/squad.json')
+        vocab = Vocabulary.from_dataset(self.dataset)
+        self.dataset.index_instances(vocab)
+        del params['model']['text_field_embedder']['token_characters']
+        params['model']['phrase_layer']['input_size'] = 2
+        self.model = Model.from_params(vocab, params['model'])
+
+        self.ensure_batch_predictions_are_consistent()
+
+        # Restore the state.
+        self.model = saved_model
+        self.dataset = saved_dataset
 
     def test_predict_span_gives_reasonable_outputs(self):
         # TODO(mattg): "What", "is", "?" crashed, because the CNN encoder expected at least 5

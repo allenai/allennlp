@@ -22,6 +22,9 @@ class TestDecomposableAttention(ModelTestCase):
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    def test_batch_predictions_are_consistent(self):
+        self.ensure_batch_predictions_are_consistent()
+
     def test_predict_entailment_gives_reasonable_outputs(self):
         premise = TextField(["A", "dog", "is", "a", "mammal"], token_indexers=self.token_indexers)
         hypothesis = TextField(["A", "dog", "is", "an", "animal"], token_indexers=self.token_indexers)
