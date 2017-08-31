@@ -93,7 +93,7 @@ class ModelTestCase(AllenNlpTestCase):
             if isinstance(model_predictions[key], torch.autograd.Variable):
                 assert_allclose(model_predictions[key].data.numpy(),
                                 loaded_model_predictions[key].data.numpy(),
-                                rtol=1e-5,
+                                rtol=1e-4,
                                 err_msg=key)
             else:
                 assert model_predictions[key] == loaded_model_predictions[key]

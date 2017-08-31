@@ -79,10 +79,7 @@
     "sorting_keys": [["passage", "num_tokens"], ["question", "num_tokens"]],
     "batch_size": 40
   },
-  "optimizer": {
-    "type": "adam",
-    "betas": [0.9, 0.9]
-  },
+
   "trainer": {
     "num_epochs": 20,
     "grad_norm": 5.0,
@@ -93,8 +90,13 @@
       "type": "reduce_on_plateau",
       "factor": 0.5,
       "mode": "max",
-      "patience": 2
+      "patience": 2,
+
     },
-    "no_tqdm": true
+    "no_tqdm": true,
+    "optimizer": {
+      "type": "adam",
+      "betas": [0.9, 0.9]
+    }
   }
 }
