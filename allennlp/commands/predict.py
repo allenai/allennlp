@@ -24,6 +24,7 @@ predictions using a trained model and its ``Predictor`` wrapper.
 import argparse
 from contextlib import ExitStack
 import json
+import sys
 from typing import Optional, IO
 
 from allennlp.models.archival import load_archive
@@ -37,7 +38,7 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     subparser.add_argument('input_file', metavar='input-file', type=argparse.FileType('r'),
                            help='path to input file')
     subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
-    subparser.add_argument('--print', action='store_true', help='print results to stdout')
+    subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
 
     subparser.set_defaults(func=predict)
 
@@ -63,10 +64,15 @@ def predict(args: argparse.Namespace) -> None:
     predictor = get_predictor(args)
     output_file = None
 
+    if args.silent and not args.output_file:
+        print("--silent specified without --output-file.")
+        print("Exiting early because no output will be created.")
+        sys.exit(0)
+
     # ExitStack allows us to conditionally context-manage `output_file`, which may or may not exist
     with ExitStack() as stack:
         input_file = stack.enter_context(args.input_file)  # type: ignore
         if args.output_file:
             output_file = stack.enter_context(args.output_file)  # type: ignore
 
-        run(predictor, input_file, output_file, args.print)
+        run(predictor, input_file, output_file, not args.silent)
