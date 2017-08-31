@@ -35,7 +35,8 @@ class TestTrainer(AllenNlpTestCase):
                         }
                 })
         self.model = SimpleTagger.from_params(self.vocab, self.model_params)
-        self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01)
+        parameters = [p for p in self.model.parameters() if p.requires_grad]
+        self.optimizer = torch.optim.SGD(parameters, 0.01)
         self.iterator = BasicIterator(batch_size=2)
 
     def test_trainer_can_run(self):
