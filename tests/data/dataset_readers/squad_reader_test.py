@@ -51,16 +51,30 @@ class TestSquadReader(AllenNlpTestCase):
         reader = SquadReader()
         instances = reader.read('tests/fixtures/data/squad.json').instances
         assert len(instances) == 5
+
         assert instances[0].fields["question"].tokens[:3] == ["To", "whom", "did"]
         assert instances[0].fields["passage"].tokens[:3] == ["Architecturally", ",", "the"]
-        assert instances[0].fields["passage"].tokens[-2:] == ["Mary", "."]
+        assert instances[0].fields["passage"].tokens[-3:] == ["of", "Mary", "."]
         assert instances[0].fields["span_start"].sequence_index == 102
         assert instances[0].fields["span_end"].sequence_index == 104
+
         assert instances[1].fields["question"].tokens[:3] == ["What", "sits", "on"]
         assert instances[1].fields["passage"].tokens[:3] == ["Architecturally", ",", "the"]
-        assert instances[1].fields["passage"].tokens[-2:] == ["Mary", "."]
+        assert instances[1].fields["passage"].tokens[-3:] == ["of", "Mary", "."]
         assert instances[1].fields["span_start"].sequence_index == 17
         assert instances[1].fields["span_end"].sequence_index == 23
+
+        # We're checking this case because I changed the answer text to only have a partial
+        # annotation for the last token, which happens occasionally in the training data.  We're
+        # making sure we get a reasonable output in that case here.
+        assert instances[3].fields["question"].tokens[:3] == ["Which", "individual", "worked"]
+        assert instances[3].fields["passage"].tokens[:3] == ["In", "1882", ","]
+        assert instances[3].fields["passage"].tokens[-3:] == ["Nuclear", "Astrophysics", "."]
+        span_start = instances[3].fields["span_start"].sequence_index
+        span_end = instances[3].fields["span_end"].sequence_index
+        answer_tokens = instances[3].fields["passage"].tokens[span_start:(span_end + 1)]
+        expected_answer_tokens = ["Father", "Julius", "Nieuwland"]
+        assert answer_tokens == expected_answer_tokens
 
     def test_can_build_from_params(self):
         reader = SquadReader.from_params(Params({}))

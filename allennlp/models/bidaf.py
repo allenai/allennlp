@@ -333,9 +333,9 @@ class BidirectionalAttentionFlow(Model):
         # Here we're just removing the batch dimension and converting things to numpy arrays /
         # tuples instead of pytorch variables.
         return {
-                "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).numpy(),
-                "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).numpy(),
-                "best_span": tuple(output_dict["best_span"].data.squeeze(0).numpy()),
+                "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).cpu().numpy(),
+                "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).cpu().numpy(),
+                "best_span": tuple(output_dict["best_span"].data.squeeze(0).cpu().numpy()),
                 }
 
     @staticmethod

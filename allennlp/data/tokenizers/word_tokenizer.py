@@ -45,6 +45,8 @@ class WordTokenizer(Tokenizer):
         self._word_filter = word_filter
         self._word_stemmer = word_stemmer
         self._start_tokens = start_tokens or []
+        # We reverse the tokens here because we're going to insert them with `insert(0)` later;
+        # this makes sure they show up in the right order.
         self._start_tokens.reverse()
         self._end_tokens = end_tokens or []
 

@@ -40,6 +40,8 @@ class CharacterTokenizer(Tokenizer):
         self._byte_encoding = byte_encoding
         self._lowercase_characters = lowercase_characters
         self._start_tokens = start_tokens or []
+        # We reverse the tokens here because we're going to insert them with `insert(0)` later;
+        # this makes sure they show up in the right order.
         self._start_tokens.reverse()
         self._end_tokens = end_tokens or []
 
