@@ -10,7 +10,7 @@ class TestMain(TestCase):
                     "unknown_model", # model_name
                     "bogus file",    # input_file
                     "--output-file", "bogus out file",
-                    "--print"]
+                    "--silent"]
 
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
             main()
