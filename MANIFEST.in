@@ -1,5 +1,6 @@
 include README.md
 include requirements.txt
-include scripts/*
-include example_experiments/*.json
+recursive-include scripts *
+recursive-include tutorials *
+recursive-include experiment_config *.json
 recursive-exclude tests *
