@@ -23,59 +23,33 @@ from allennlp.data.tokenizers import WordTokenizer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def _char_span_to_token_span(sentence: str,
-                             tokenized_sentence: List[str],
-                             span: Tuple[int, int],
-                             tokenizer: Tokenizer,
-                             slack: int = 3) -> Tuple[int, int]:
+def _char_span_to_token_span(token_offsets: List[Tuple[int, int]],
+                             character_span: Tuple[int, int]) -> Tuple[int, int]:
     """
-    Converts a character span from a sentence into the corresponding token span in the
-    tokenized version of the sentence.  If you pass in a character span that does not
-    correspond to complete tokens in the tokenized version, we'll do our best, but the behavior
-    is officially undefined.
+    Converts a character span from a passage into the corresponding token span in the tokenized
+    version of the passage.  If you pass in a character span that does not correspond to complete
+    tokens in the tokenized version, we'll do our best, but the behavior is officially undefined.
 
-    The basic outline of this method is to find the token that starts the same number of
-    characters into the sentence as the given character span.  We try to handle a bit of error
-    in the tokenization by checking `slack` tokens in either direction from that initial
-    estimate.
+    The basic outline of this method is to find the token that starts the same number of characters
+    into the passage as the given character span.  We try to handle a bit of error in the
+    tokenization by checking `slack` tokens in either direction from that initial estimate.
 
-    The returned ``(begin, end)`` indices are `inclusive` for ``begin``, and `exclusive` for
-    ``end``.  So, for example, ``(2, 2)`` is an empty span, ``(2, 3)`` is the one-word span
-    beginning at token index 2, and so on.
+    The returned ``(begin, end)`` indices are `inclusive` for both ``begin`` and ``end``.
+    So, for example, ``(2, 2)`` is the one word span beginning at token index 2, ``(3, 4)`` is the
+    two-word span beginning at token index 3, and so on.
     """
-    # First we'll tokenize the span and the sentence, so we can count tokens and check for
-    # matches.
-    span_chars = sentence[span[0]:span[1]]
-    tokenized_span, _ = tokenizer.tokenize(span_chars)
-    # Then we'll find what we think is the first token in the span
-    chars_seen = 0
-    index = 0
-    while index < len(tokenized_sentence) and chars_seen < span[0]:
-        chars_seen += len(tokenized_sentence[index]) + 1
-        index += 1
-    # index is now the span start index.  Is it a match?
-    if _spans_match(tokenized_sentence, tokenized_span, index):
-        return (index, index + len(tokenized_span))
-    for i in range(1, slack + 1):
-        if _spans_match(tokenized_sentence, tokenized_span, index + i):
-            return (index + i, index + i+ len(tokenized_span))
-        if _spans_match(tokenized_sentence, tokenized_span, index - i):
-            return (index - i, index - i + len(tokenized_span))
-    # No match; we'll just return our best guess.
-    return (index, index + len(tokenized_span))
-
-
-def _spans_match(sentence_tokens: List[str], span_tokens: List[str], index: int) -> bool:
-    if index < 0 or index >= len(sentence_tokens):
-        return False
-    if sentence_tokens[index] == span_tokens[0]:
-        span_index = 1
-        while (span_index < len(span_tokens) and
-               sentence_tokens[index + span_index] == span_tokens[span_index]):
-            span_index += 1
-        if span_index == len(span_tokens):
-            return True
-    return False
+    # We have token offsets into the passage from the tokenizer; we _should_ be able to just find
+    # the tokens that have the same offsets as our span.
+    start_index = 0
+    while start_index < len(token_offsets) and token_offsets[start_index][0] < character_span[0]:
+        start_index += 1
+    # start_index should now be pointing at the span start index.
+    assert token_offsets[start_index][0] == character_span[0]
+    end_index = start_index
+    while end_index < len(token_offsets) and token_offsets[end_index][1] < character_span[1]:
+        end_index += 1
+    assert token_offsets[end_index][1] == character_span[1]
+    return (start_index, end_index)
 
 
 @DatasetReader.register("squad")
@@ -139,10 +113,8 @@ class SquadReader(DatasetReader):
                     # SQuAD gives answer annotations as a character index into the paragraph, but
                     # we need a token index for our models.  We convert them here.
                     char_span_end = char_span_start + len(answer_text)
-                    span_start, span_end = _char_span_to_token_span(paragraph,
-                                                                    paragraph_tokens,
-                                                                    (char_span_start, char_span_end),
-                                                                    self._tokenizer)
+                    span_start, span_end = _char_span_to_token_span(paragraph_offsets,
+                                                                    (char_span_start, char_span_end))
 
                     # Because the paragraph is shared across multiple questions, we do a deepcopy
                     # here to avoid any weird issues with shared state between instances (e.g.,
