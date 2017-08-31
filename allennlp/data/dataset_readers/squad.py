@@ -24,19 +24,32 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def _char_span_to_token_span(token_offsets: List[Tuple[int, int]],
-                             character_span: Tuple[int, int]) -> Tuple[int, int]:
+                             character_span: Tuple[int, int]) -> Tuple[Tuple[int, int], bool]:
     """
     Converts a character span from a passage into the corresponding token span in the tokenized
     version of the passage.  If you pass in a character span that does not correspond to complete
     tokens in the tokenized version, we'll do our best, but the behavior is officially undefined.
+    We return an error flag in this case, and have some debug logging so you can figure out the
+    cause of this issue (in SQuAD, these are mostly either tokenization problems or annotation
+    problems; there's a fair amount of both).
 
-    The basic outline of this method is to find the token that starts the same number of characters
-    into the passage as the given character span.  We try to handle a bit of error in the
-    tokenization by checking `slack` tokens in either direction from that initial estimate.
+    The basic outline of this method is to find the token span that has the same offsets as the
+    input character span.  If the tokenizer tokenized the passage correctly and has matching
+    offsets, this is easy.  We try to be a little smart about cases where they don't match exactly,
+    but mostly just find the closest thing we can.
 
     The returned ``(begin, end)`` indices are `inclusive` for both ``begin`` and ``end``.
     So, for example, ``(2, 2)`` is the one word span beginning at token index 2, ``(3, 4)`` is the
     two-word span beginning at token index 3, and so on.
+
+    Returns
+    -------
+    token_span : ``Tuple[int, int]``
+        `Inclusive` span start and end token indices that match as closely as possible to the input
+        character spans.
+    error : ``bool``
+        Whether the token spans match the input character spans exactly.  If this is ``False``, it
+        means there was an error in either the tokenization or the annotated character span.
     """
     # We have token offsets into the passage from the tokenizer; we _should_ be able to just find
     # the tokens that have the same offsets as our span.
@@ -136,13 +149,13 @@ class SquadReader(DatasetReader):
                                                                              (char_span_start,
                                                                               char_span_end))
                     if error:
-                        logger.debug("Passage:", paragraph)
-                        logger.debug("Passage tokens:", paragraph_tokens)
-                        logger.debug("Question:", question_text)
-                        logger.debug("Answer span:", char_span_start, char_span_end)
-                        logger.debug("Token span:", span_start, span_end)
-                        logger.debug("Tokens in answer:", paragraph_tokens[span_start:span_end + 1])
-                        logger.debug("Answer:", answer_text)
+                        logger.debug("Passage: %s", paragraph)
+                        logger.debug("Passage tokens: %s", paragraph_tokens)
+                        logger.debug("Question: %s", question_text)
+                        logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
+                        logger.debug("Token span: (%d, %d)", span_start, span_end)
+                        logger.debug("Tokens in answer: %s", paragraph_tokens[span_start:span_end + 1])
+                        logger.debug("Answer: %s", answer_text)
 
                     # Because the paragraph is shared across multiple questions, we do a deepcopy
                     # here to avoid any weird issues with shared state between instances (e.g.,
