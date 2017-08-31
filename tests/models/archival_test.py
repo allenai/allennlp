@@ -79,74 +79,6 @@ class ArchivalTest(AllenNlpTestCase):
         config = Params({
                 "model": {
                         "type": "bidaf",
-                        "evaluation_json_file": "path/that/does/not/exist",
-                        "text_field_embedder": {
-                                "tokens": {
-                                        "type": "embedding",
-                                        "embedding_dim": 5
-                                }
-                        },
-                        "stacked_encoder": {
-                                "type": "lstm",
-                                "input_size": 5,
-                                "hidden_size": 7,
-                                "num_layers": 2
-                        }
-                },
-                "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                        "num_epochs": 2,
-                        "optimizer": "adam",
-                }
-        })
-
-        # same, but without the evaluation json file
-        config2 = Params({
-                "model": {
-                        "type": "bidaf",
-                        "text_field_embedder": {
-                                "tokens": {
-                                        "type": "embedding",
-                                        "embedding_dim": 5
-                                }
-                        },
-                        "stacked_encoder": {
-                                "type": "lstm",
-                                "input_size": 5,
-                                "hidden_size": 7,
-                                "num_layers": 2
-                        }
-                },
-                "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                        "num_epochs": 2,
-                        "optimizer": "adam",
-                }
-        })
-
-        # Should be different before sanitization
-        assert config.as_dict() != config2.as_dict()
-
-        # Should be the same after we sanitize config
-        _sanitize_config(config)
-        assert config.as_dict() == config2.as_dict()
-
-        # Santizing config2 shouldn't do anything
-        _sanitize_config(config2)
-        assert config.as_dict() == config2.as_dict()
-
-    def test_sanitize_skips_existing_file(self):
-        super(ArchivalTest, self).setUp()
-
-        config = Params({
-                "model": {
-                        "type": "bidaf",
                         "text_field_embedder": {
                                 "tokens": {
                                         "type": "embedding",
@@ -187,6 +119,10 @@ class ArchivalTest(AllenNlpTestCase):
         _sanitize_config(config)
         assert config.as_dict() != original
         assert "evaluation_json_file" not in config["model"]
+
+        # shouldn't have removed anything else
+        config["model"]["evaluation_json_file"] = filename
+        assert config.as_dict() == original
 
 
 
