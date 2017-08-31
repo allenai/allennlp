@@ -49,6 +49,16 @@ def archive_model(serialization_dir: str,
         archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
 
+def _sanitize_config(config: Params) -> None:
+    """
+    There are some elements of the model config that we need to get rid of
+    when we load from archive, as they refer to paths on the training machine
+    that are unlikely to exist on the un-archiving machine. To be extra-safe
+    we just remove them from the config.
+    """
+    # TODO(joelgrus): come up with a better solution for this
+    config.get("model", {}).pop('evaluation_json_file', None)
+
 def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
@@ -72,6 +82,7 @@ def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
 
     # Load config
     config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME))
+    _sanitize_config(config)
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),
