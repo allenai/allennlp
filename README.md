@@ -7,8 +7,6 @@
 An [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) NLP research library, built on PyTorch,
 for developing state-of-the-art deep learning models on a wide variety of linguistic tasks.
 
-*PLEASE NOTE that AllenNLP is currently pre-release!*  There are many rough edges.  We will have our first release in early September.
-
 ## Quickstart
 
 The fastest way to get an environment to run AllenNLP is with Docker.  Once you have [installed Docker](https://docs.docker.com/engine/installation/)
