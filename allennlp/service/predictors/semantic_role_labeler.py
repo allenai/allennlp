@@ -10,6 +10,9 @@ import spacy
 
 @Predictor.register("semantic-role-labeling")
 class SemanticRoleLabelerPredictor(Predictor):
+    """
+    Wrapper for the :class:`~allennlp.models.bidaf.SemanticRoleLabeler` model.
+    """
     def __init__(self, model: Model,
                  tokenizer: Tokenizer, token_indexers: Dict[str, TokenIndexer]) -> None:
         super().__init__(model, tokenizer, token_indexers)
@@ -40,6 +43,16 @@ class SemanticRoleLabelerPredictor(Predictor):
         return " ".join(frame)
 
     def predict_json(self, inputs: JsonDict) -> JsonDict:
+       """
+        Expects JSON that looks like ``{"sentence": "..."}``
+        and returns JSON that looks like
+        ``{"words": [...],
+           "verbs": [
+               {"verb": "...", "description": "...", "tags": [...]},
+               ...
+               {"verb": "...", "description": "...", "tags": [...]},
+           ]}
+        """
         sentence = inputs["sentence"]
         tokens = self.nlp.tokenizer(sentence)
 

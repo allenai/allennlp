@@ -11,4 +11,7 @@ allennlp.common.testing
    :undoc-members:
    :show-inheritance:
 
-
+.. automodule:: allennlp.common.testing.model_test_case
+   :members:
+   :undoc-members:
+   :show-inheritance:

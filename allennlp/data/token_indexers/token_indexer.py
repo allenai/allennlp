@@ -8,7 +8,8 @@ TokenType = TypeVar("TokenType", int, List[int])  # pylint: disable=invalid-name
 class TokenIndexer(Generic[TokenType], Registrable):
     """
     A ``TokenIndexer`` determines how string tokens get represented as arrays of indices in a model.
-    This class both converts strings into numerical values, with the help of a :class:`Vocabulary`,
+    This class both converts strings into numerical values, with the help of a
+    :class:`~allennlp.data.vocabulary.Vocabulary`,
     and it produces actual arrays.
 
     Tokens can be represented as single IDs (e.g., the word "cat" gets represented by the number

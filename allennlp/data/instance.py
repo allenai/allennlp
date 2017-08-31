@@ -6,7 +6,7 @@ from allennlp.data.vocabulary import Vocabulary
 
 class Instance:
     """
-    An ``Instance`` is a collection of :class:`Field` objects, specifying the inputs and outputs to
+    An ``Instance`` is a collection of :class:`~allennlp.data.fields.field.Field` objects, specifying the inputs and outputs to
     some model.  We don't make a distinction between inputs and outputs here, though - all
     operations are done on all fields, and when we return arrays, we return them as dictionaries
     keyed by field name.  A model can then decide which fields it wants to use as inputs as which

@@ -1,3 +1,8 @@
+"""
+A Vocabulary maps strings to integers, allowing for strings to be mapped to an
+out-of-vocabulary token.
+"""
+
 from collections import defaultdict
 from typing import Any, Callable, Dict, Union, Sequence
 import codecs

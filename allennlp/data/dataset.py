@@ -1,3 +1,8 @@
+"""
+A :class:`~Dataset` represents a collection of data suitable for feeding into a model.
+For example, when you train a model, you will likely have a _training_ dataset and a _validation_ dataset.
+"""
+
 import logging
 from collections import defaultdict
 from typing import Dict, List, Union
@@ -14,7 +19,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class Dataset:
     """
-    A collection of :class:`Instance` objects.  The ``Instances`` have ``Fields``, and the fields
+    A collection of :class:`~allennlp.data.instance.Instance` objects.  The ``Instances`` have ``Fields``, and the fields
     could be in an indexed or unindexed state - the ``Dataset`` has methods around indexing the
     data and converting the data into arrays.
     """

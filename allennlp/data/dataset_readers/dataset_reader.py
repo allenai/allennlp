@@ -27,5 +27,8 @@ class DatasetReader(Registrable):
 
     @classmethod
     def from_params(cls, params: Params) -> 'DatasetReader':
+        """
+        Static method that constructs the dataset reader described by ``params``.
+        """
         choice = params.pop_choice('type', cls.list_available())
         return cls.by_name(choice).from_params(params)

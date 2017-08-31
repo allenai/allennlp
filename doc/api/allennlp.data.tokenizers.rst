@@ -1,43 +1,51 @@
 allennlp.data.tokenizers
 ================================
 
-.. automodule:: allennlp.data.tokenizers.__init__
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 
 .. automodule:: allennlp.data.tokenizers
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.data.tokenizers.character_tokenizer
-   :members:
-   :undoc-members:
-   :show-inheritance:
+* :ref:`Tokenizer<tokenizer>`
+* :ref:`WordTokenizer<word-tokenizer>`
+* :ref:`CharacterTokenizer<character-tokenizer>`
+* :ref:`WordFilter<word-filter>`
+* :ref:`WordSplitter<word-splitter>`
+* :ref:`WordStemmer<word-stemmer>`
 
+.. _tokenizer:
 .. automodule:: allennlp.data.tokenizers.tokenizer
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. _word-tokenizer:
+.. automodule:: allennlp.data.tokenizers.word_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _character-tokenizer:
+.. automodule:: allennlp.data.tokenizers.character_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _word-filter:
 .. automodule:: allennlp.data.tokenizers.word_filter
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. _word-splitter:
 .. automodule:: allennlp.data.tokenizers.word_splitter
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. _word-stemmer:
 .. automodule:: allennlp.data.tokenizers.word_stemmer
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.data.tokenizers.word_tokenizer
    :members:
    :undoc-members:
    :show-inheritance:

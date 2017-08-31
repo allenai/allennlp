@@ -8,6 +8,11 @@ from allennlp.common.checks import log_pytorch_version_info
 
 
 class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
+    """
+    A custom subclass of :class:`~unittest.TestCase` that disables some of the
+    more verbose AllenNLP logging and that creates and destroys a temp directory
+    as a test fixture.
+    """
     TEST_DIR = './TMP_TEST/'
 
     def setUp(self):
