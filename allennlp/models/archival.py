@@ -55,6 +55,9 @@ def _sanitize_config(config: Params) -> None:
     when we load from archive, as they refer to paths on the training machine
     that are unlikely to exist on the un-archiving machine. To be extra-safe
     we just remove them from the config.
+
+    This is a temporary fix; once we implement https://github.com/allenai/allennlp/issues/244
+    it should become unnecessary.
     """
     evaluation_json_file = config.get("model", {}).get('evaluation_json_file', None)
 
