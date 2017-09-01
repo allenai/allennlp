@@ -2,7 +2,7 @@
 An initializer is just a PyTorch function.
 Here we implement a proxy class that allows us
 to register them and supply any additional function arguments
-(for example, the `mean` and `std` of a normal initializer)
+(for example, the ``mean`` and ``std`` of a normal initializer)
 as named arguments to the constructor.
 
 The available initialization functions are
