@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class Dataset:
     """
-    A collection of :class:`~allennlp.data.instance.Instance` objects.  The ``Instances`` have ``Fields``, and the fields
+    A collection of :class:`~allennlp.data.instance.Instance` objects.
+    The ``Instances`` have ``Fields``, and the fields
     could be in an indexed or unindexed state - the ``Dataset`` has methods around indexing the
     data and converting the data into arrays.
     """

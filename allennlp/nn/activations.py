@@ -1,7 +1,8 @@
 """
 An `Activation` is just a function
 that takes some parameters and returns an element-wise activation function.
-For the most part we just use `PyTorch activations <http://pytorch.org/docs/master/nn.html#non-linear-activations>`_.
+For the most part we just use
+`PyTorch activations <http://pytorch.org/docs/master/nn.html#non-linear-activations>`_.
 Here we provide a thin wrapper to allow registering them and instantiating them `from_params`.
 
 The available activation functions are
