@@ -138,14 +138,12 @@ class SpacyWordSplitter(WordSplitter):
     """
     en_nlp = None
 
-    def __init__(self):
-        if SpacyWordSplitter.en_nlp is None:
-            # Import is here because it's slow, and can be unnecessary.
-            import spacy
-            SpacyWordSplitter.en_nlp = spacy.load('en', parser=False, tagger=False, entity=False)
-
     @overrides
     def split_words(self, sentence: str) -> Tuple[List[str], List[Tuple[int, int]]]:
+        if SpacyWordSplitter.en_nlp is None:
+            # Import and load is here because it's slow, and can be unnecessary.
+            import spacy
+            SpacyWordSplitter.en_nlp = spacy.load('en', parser=False, tagger=False, entity=False)
         tokens = self.en_nlp.tokenizer(sentence)  # type: ignore
         words = [str(token) for token in tokens]
         offsets = [(token.idx, token.idx + len(token)) for token in tokens]
