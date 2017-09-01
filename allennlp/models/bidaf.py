@@ -60,7 +60,7 @@ class BidirectionalAttentionFlow(Model):
     dropout : ``float``, optional (default=0.2)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
-    mask_lstms : ``bool, optional (default=True)
+    mask_lstms : ``bool``, optional (default=True)
         If ``False``, we will skip passing the mask to the LSTM layers.  This gives a ~2x speedup,
         with only a slight performance decrease, if any.  We haven't experimented much with this
         yet, but have confirmed that we still get very similar performance with much faster
