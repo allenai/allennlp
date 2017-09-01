@@ -41,7 +41,11 @@ def make_app() -> Sanic:
     app.static('/', './allennlp/service/static/index.html')
     app.predictors = {}
 
-    cache_size = int(CACHE_SIZE)
+    try:
+        cache_size = int(CACHE_SIZE)
+    except ValueError:
+        logger.warning("unable to parse cache size %s as int, disabling cache", CACHE_SIZE)
+        cache_size = 0
 
     @lru_cache(maxsize=cache_size)
     def _caching_prediction(model: Predictor, data: str) -> JsonDict:
