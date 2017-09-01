@@ -17,7 +17,7 @@ class BidafPredictor(Predictor):
         question_text = inputs["question"]
         passage_text = inputs["passage"]
 
-        question_tokens, question_tokens_offsets = self.tokenizer.tokenize(question_text)
+        question_tokens, _ = self.tokenizer.tokenize(question_text)
         passage_tokens, passage_tokens_offsets = self.tokenizer.tokenize(passage_text)
 
         question = TextField(question_tokens, token_indexers=self.token_indexers)
