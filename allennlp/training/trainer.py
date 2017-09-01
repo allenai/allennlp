@@ -1,7 +1,17 @@
+"""
+A :class:`~allennlp.training.trainer.Trainer` is responsible for training a
+:class:`~allennlp.models.model.Model`.
+
+Typically you might create a configuration file specifying the model and
+training parameters and then use :mod:`~allennlp.commands.train`
+rather than instantiating a ``Trainer`` yourself.
+"""
+
 import logging
 import os
 import shutil
 import time
+from inspect import signature
 from typing import Dict, Optional, List  # pylint: disable=unused-import
 
 import torch
@@ -18,6 +28,7 @@ from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, device_mapping
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.optimizers import Optimizer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -156,9 +167,8 @@ class Trainer:
             logger.info("Training")
             for batch in train_generator_tqdm:
                 batch_num += 1
-                tensor_batch = arrays_to_variables(batch, self._cuda_device)
                 self._optimizer.zero_grad()
-                output_dict = self._model.forward(**tensor_batch)
+                output_dict = self._forward(batch, for_training=True)
                 try:
                     loss = output_dict["loss"]
                     loss.backward()
@@ -203,8 +213,7 @@ class Trainer:
                 batch_num = 0
                 for batch in val_generator_tqdm:
                     batch_num += 1
-                    tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=False)
-                    val_output_dict = self._model.forward(**tensor_batch)
+                    val_output_dict = self._forward(batch, for_training=False)
                     loss = val_output_dict["loss"]
                     val_loss += loss.data.cpu().numpy()
                     val_metrics = self._model.get_metrics()
@@ -267,6 +276,12 @@ class Trainer:
                                                  "a validation metric to compute the schedule and therefore "
                                                  "must be used with a validation dataset.")
                     self._learning_rate_scheduler.step(epoch)
+
+    def _forward(self, batch: dict, for_training: bool) -> dict:
+        tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=for_training)
+        if 'metadata' in tensor_batch and 'metadata' not in signature(self._model.forward).parameters:
+            del tensor_batch['metadata']
+        return self._model.forward(**tensor_batch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
@@ -334,13 +349,11 @@ class Trainer:
     def from_params(cls,
                     model: Model,
                     serialization_dir: str,
-                    optimizer: torch.optim.Optimizer,
                     iterator: DataIterator,
                     train_dataset: Dataset,
                     validation_dataset: Optional[Dataset],
-                    params: Optional[Params] = None) -> 'Trainer':
+                    params: Params) -> 'Trainer':
 
-        params = params or Params({})
         patience = params.pop("patience", 2)
         validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop("num_epochs", 20)
@@ -348,11 +361,18 @@ class Trainer:
         grad_norm = params.pop("grad_norm", None)
         grad_clipping = params.pop("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+
+        if cuda_device >= 0:
+            model = model.cuda(cuda_device)
+        parameters = [p for p in model.parameters() if p.requires_grad]
+        optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
+
         if lr_scheduler_params:
             scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
         else:
             scheduler = None
         no_tqdm = params.pop("no_tqdm", False)
+
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
                        train_dataset, validation_dataset,

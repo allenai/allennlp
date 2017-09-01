@@ -3,6 +3,21 @@
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="css/main.css" />
+    <!-- hacky CSS overrides -->
+    <style>
+      .srl-tag.color0, .srl-word.color0 {
+        background-color: lightpink;
+      }
+      .srl-tag.color1, .srl-word.color1 {
+        background-color: lightskyblue;
+      }
+      .passage-body {
+        font-weight: normal;
+      }
+      .passage-answer {
+        font-weight: bold;
+      }
+    </style>
     <title>AllenNLP - Demo</title>
     <!-- Libraries -->
     <script src="lib/react.js"></script>
@@ -102,17 +117,94 @@ class TeGraph extends React.Component {
   <SrlOutput /> Component
 *******************************************************************************/
 
+// Render the SRL tag for a single word as a table cell
+class SrlTagCell extends React.Component {
+
+  render() {
+    const { tag, colorClass } = this.props;
+
+    // Don't show "O" tags, and slice off all the "B-" and "I-" prefixes.
+    const tagText = tag == "O" ? "" : tag.slice(2);
+
+    return (
+      <td className={colorClass + ' srl-tag srl-tag-' + tag.toLowerCase()}>
+        {tagText}
+      </td>
+    )
+  }
+}
+
+// Render a SRL-tagged word as a table cell
+class SrlWordCell extends React.Component {
+  render() {
+    const { word, colorClass } = this.props;
+
+    return (<td className={colorClass + ' srl-word'}>{word}</td>)
+  }
+}
+
+class SrlFrame extends React.Component {
+  render() {
+    const { verb, words } = this.props;
+    const tags = verb["tags"];
+
+
+    // Skip frames that have only one tag; these are typically helper verbs.
+    // In an ideal world we'd filter these out on the backend, but the POS
+    // tagger we're using right now doesn't seem up to the task.
+    const numTags = tags.filter(tag => tag != "O").length
+    if (numTags <= 1) {
+      return (<div/>)
+    }
+
+    // Create an array indicating what color to highlight each tag cell.
+    // For "O" tags this should be -1, indicating no color.
+    // Otherwise it should toggle between 0 and 1 every time a "B-" tag occurs.
+    var colorClasses = [];
+    var currentColor = 1;
+
+    tags.forEach(function(tag, i) {
+      if (tag == "O") {
+        // "O" tag, so append "" for "no color"
+        colorClasses.push("");
+      } else if (tag[0] == "B") {
+        // "B-" tag, so toggle the current color and then append
+        currentColor = (currentColor + 1) % 2;
+        colorClasses.push("color" + currentColor);
+      } else /* (tag[0] == "I") */ {
+        // "I-" tag, so append the current color
+        colorClasses.push("color" + currentColor);
+      }
+    })
+
+    return (
+      <div>
+        <label>{verb.verb}</label>
+        <table>
+          <tbody>
+            <tr>
+              {tags.map((tag, i) => <SrlTagCell tag={tag} key={i} colorClass={colorClasses[i]}/>)}
+            </tr>
+            <tr>
+              {words.map((word, i) => <SrlWordCell word={word} key={i} colorClass={colorClasses[i]}/>)}
+            </tr>
+          </tbody>
+        </table>
+        <hr/>
+      </div>
+    )
+  }
+}
+
 class SrlOutput extends React.Component {
   render() {
     const { rawOutput } = this.props;
+    const { words, verbs } = rawOutput;
 
     return (
       <div className="model__content">
         <div className="form__field">
-          <label>Annotated Text</label>
-          <pre>
-            <code>{ JSON.stringify(rawOutput, null, "  ") }</code>
-          </pre>
+          { verbs.map((verb, i) => (<SrlFrame verb={verb} words={words} key={i}/>)) }
         </div>
       </div>
     );
@@ -125,13 +217,21 @@ class SrlOutput extends React.Component {
 
 class McOutput extends React.Component {
   render() {
-    const { rawOutput } = this.props;
+    const { passage, answer } = this.props;
+    const start = passage.indexOf(answer);
+    const head = passage.slice(0, start);
+    const tail = passage.slice(start + answer.length);
 
     return (
       <div className="model__content">
         <div className="form__field">
           <label>Answer</label>
-          <div className="model__content__summary">{ JSON.stringify(rawOutput, null, "  ") }</div>
+          <div className="model__content__summary">{ answer }</div>
+          <div>
+            <span className="passage-body">{head}</span>
+            <span className="passage-answer"><strong>{answer}</strong></span>
+            <span className="passage-body">{tail}</span>
+          </div>
         </div>
       </div>
     );
@@ -887,7 +987,8 @@ class McComponent extends React.Component {
 
     this.state = {
       outputState: "empty", // valid values: "working", "empty", "received", "error"
-      rawOutput: {},
+      passage: "",
+      answer: "",
     };
 
     this.runMcModel = this.runMcModel.bind(this);
@@ -912,7 +1013,8 @@ class McComponent extends React.Component {
     }).then((response) => {
       return response.json();
     }).then((json) => {
-      this.setState({rawOutput: json["best_span_str"]});
+      this.setState({answer: json["best_span_str"]});
+      this.setState({passage: inputs.passageValue});
       this.setState({outputState: "received"});
     }).catch((error) => {
       this.setState({outputState: "error"});
@@ -927,7 +1029,7 @@ class McComponent extends React.Component {
           <McInput runMcModel={this.runMcModel}/>
         </PaneLeft>
         <PaneRight outputState={this.state.outputState}>
-          <McOutput rawOutput={this.state.rawOutput}/>
+          <McOutput answer={this.state.answer} passage={this.state.passage} />
         </PaneRight>
       </div>
     );

@@ -18,6 +18,7 @@
   "validation_data_path": "tests/fixtures/data/squad.json",
   "model": {
     "type": "bidaf",
+    "evaluation_json_file": "tests/fixtures/data/squad.json",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
@@ -27,6 +28,7 @@
       "token_characters": {
         "type": "character_encoding",
         "embedding": {
+          "num_embeddings": 260,
           "embedding_dim": 8
         },
         "encoder": {
@@ -69,15 +71,15 @@
     "padding_noise": 0.0,
     "batch_size": 40
   },
-  "optimizer": {
-    "type": "adadelta",
-    "lr": 0.5,
-    "rho": 0.95
-  },
   "trainer": {
     "num_epochs": 1,
     "grad_norm": 10.0,
     "patience" : 12,
-    "cuda_device" : -1
+    "cuda_device" : -1,
+    "optimizer": {
+      "type": "adadelta",
+      "lr": 0.5,
+      "rho": 0.95
+    }
   }
 }

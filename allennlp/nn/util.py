@@ -1,3 +1,7 @@
+"""
+Assorted utilities for working with neural networks in AllenNLP.
+"""
+
 from typing import Dict, Optional, Union
 
 import numpy
@@ -125,6 +129,8 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
     """
     if isinstance(data_structure, dict):
         for key, value in data_structure.items():
+            if key == 'metadata':
+                continue
             data_structure[key] = arrays_to_variables(value, cuda_device, add_batch_dimension)
         return data_structure
     else:

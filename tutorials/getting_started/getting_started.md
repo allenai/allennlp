@@ -11,10 +11,8 @@ Welcome to AllenNLP!
 The easiest way to get started is using Docker. Assuming you have Docker installed, just run
 
 ```bash
-docker run -p 8000:8000 -it --rm allennlp/allennlp-cpu
+docker run -p 8000:8000 -it --rm allennlp/allennlp
 ```
-
-If your machine has GPUs, use `allennlp-gpu` instead.
 
 This will download the latest `allennlp` image to your machine
 (unless you already have it),
@@ -22,9 +20,13 @@ start a Docker container, and launch an interactive shell.
 It also exposes port 8000, which is where the demo server runs,
 and shuts down the container when you exit the interactive shell.
 
-## Installing Not Using Docker
+## Installing using pip
 
-If you can't (or don't want to) use Docker, you can clone from our git repository:
+TODO(joelgrus): add instructions when ready
+
+## Installing from source
+
+A third alternative is to clone from our git repository:
 
 ```bash
 git clone https://github.com/allenai/allennlp.git
@@ -44,11 +46,14 @@ from [their website](http://pytorch.org/).
 
 ## Once You've Installed
 
-A lot of the most common functionality can be accessed through the command line tool `allennlp/run`:
+
+If you just want to use the models and helper classes that are included with AllenNLP,
+you can use the included "run" script, which provides a command-line interface to
+common functionality around training and evaluating models.
 
 ```
-$ allennlp/run
-usage: run [command]
+$ python -m allennlp.run
+usage: run.py [command]
 
 Run AllenNLP
 
@@ -63,12 +68,22 @@ Commands:
     evaluate  Evaluate the specified model + dataset
 ```
 
+It's what we'll be using throughout this tutorial.
+
+Eventually you'll want to create your own models and helper classes,
+at which point you'll need to create your own run script that knows
+about them.
+
+TODO(joelgrus): add link to tutorial
+
 ### Serving the Demo
 
 The `serve` command starts the demo server.
+The first time you run it, it will download
+several large serialized models from Amazon S3.
 
 ```
-$ allennlp/run serve
+$ python -m allennlp.run serve
 Starting a sanic server on port 8000.
 [... lots of logging omitted ...]
 2017-08-16 18:55:12 - (sanic)[INFO]: Goin' Fast @ http://0.0.0.0:8000
@@ -77,7 +92,7 @@ Starting a sanic server on port 8000.
 2017-08-16 18:55:12,323 - INFO - sanic - Starting worker [33290]
 ```
 
-If you visit `http://localhost:8000` in your browser, you can play around with the same demo
+If you now visit `http://localhost:8000` in your browser, you can play around with the same demo
 that runs on the AllenNLP website.
 
 TODO(joelgrus): screenshot
@@ -89,13 +104,16 @@ The model is defined in [allennlp/models/simple_tagger.py](https://github.com/al
 It consists of a word embedding layer followed by an LSTM.
 
 Our dataset will be a subset of the [Brown Corpus](http://www.nltk.org/nltk_data/).
-In particular, we will train a model on 4000 randomly chosen sentences (`sentences.small.train`) and use a different 1000 randomly chosen sentences
+In particular, we will train a model on 4000 randomly chosen sentences (`sentences.small.train`) and use a different ~1000 randomly chosen sentences
 as the validation set (`sentences.small.dev`).
 
-In AllenNLP we configure experiments using JSON files. Our experiment is defined in
-[tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json). You can peek at it
-if you want, we'll go through it in detail in the next tutorial.  Right at this instant
-you might care about the `trainer` section, which specifies how we want to train our model:
+One of the key design principles behind AllenNLP is that
+you configure experiments using JSON files. (More specifically, [HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md) files.)
+
+Our tagging experiment is defined in
+[tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json).
+You can peek at it now if you want; we'll go through it in detail in the next tutorial.
+Right at this instant you might care about the `trainer` section, which specifies how we want to train our model:
 
 ```js
   "trainer": {
@@ -114,7 +132,7 @@ this many epochs, training halts. And if you have a GPU you can change `cuda_dev
 Change any of those if you want to, and then run
 
 ```
-allennlp/run train tutorials/getting_started/simple_tagger.json --serialization_dir /tmp/tutorials/getting_started
+$ python -m allennlp.run train tutorials/getting_started/simple_tagger.json --serialization_dir /tmp/tutorials/getting_started
 ```
 
 The `serialization_dir` argument specifies the directory where the model's vocabulary and checkpointed weights will be saved.
@@ -172,10 +190,10 @@ Once you've trained a model, you likely want to evaluate it on another dataset.
 We have another 1000 sentences in the file `sentences.small.test`, which
 is shared publicly on Amazon S3.
 
-We can use the `allennlp/run evaluate` command, giving it the archived model and the evaluation dataset:
+We can use the `evaluate` command, giving it the archived model and the evaluation dataset:
 
 ```
-$ allennlp/run evaluate --archive_file /tmp/tutorials/getting_started/model.tar.gz --evaluation_data_file https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
+$ python -m allennlp.run evaluate --archive_file /tmp/tutorials/getting_started/model.tar.gz --evaluation_data_file https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
 ```
 
 When you run this it will load the archived model, download and cache the evaluation dataset, and then make predictions:
@@ -205,4 +223,4 @@ TODO(joelgrus): write this part
 
 ### Next Steps
 
-Continue on to our Deep Dive tutorial.
+Continue on to our Configuration tutorial.

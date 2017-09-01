@@ -23,7 +23,7 @@ class TestDataset(AllenNlpTestCase):
         super(TestDataset, self).setUp()
 
     def test_instances_must_have_homogeneous_fields(self):
-        instance1 = Instance({"tag": (LabelField(1))})
+        instance1 = Instance({"tag": (LabelField(1, skip_indexing=True))})
         instance2 = Instance({"words": TextField(["hello"], {})})
         with pytest.raises(ConfigurationError):
             _ = Dataset([instance1, instance2])

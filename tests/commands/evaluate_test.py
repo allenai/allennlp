@@ -1,12 +1,15 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
 
+from flaky import flaky
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.evaluate import evaluate_from_args, add_subparser
 
 
 class TestEvaluate(AllenNlpTestCase):
 
+    @flaky
     def test_evaluate_from_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
@@ -20,4 +23,4 @@ class TestEvaluate(AllenNlpTestCase):
 
         metrics = evaluate_from_args(args)
 
-        assert metrics == {'full_span_acc': 0.0, 'span_end_acc': 0.0, 'span_start_acc': 0.0}
+        assert metrics.keys() == {'span_acc', 'end_acc', 'start_acc', 'em', 'f1'}

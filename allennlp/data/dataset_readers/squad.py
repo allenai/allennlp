@@ -23,59 +23,65 @@ from allennlp.data.tokenizers import WordTokenizer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def _char_span_to_token_span(sentence: str,
-                             tokenized_sentence: List[str],
-                             span: Tuple[int, int],
-                             tokenizer: Tokenizer,
-                             slack: int = 3) -> Tuple[int, int]:
+def _char_span_to_token_span(token_offsets: List[Tuple[int, int]],
+                             character_span: Tuple[int, int]) -> Tuple[Tuple[int, int], bool]:
     """
-    Converts a character span from a sentence into the corresponding token span in the
-    tokenized version of the sentence.  If you pass in a character span that does not
-    correspond to complete tokens in the tokenized version, we'll do our best, but the behavior
-    is officially undefined.
+    Converts a character span from a passage into the corresponding token span in the tokenized
+    version of the passage.  If you pass in a character span that does not correspond to complete
+    tokens in the tokenized version, we'll do our best, but the behavior is officially undefined.
+    We return an error flag in this case, and have some debug logging so you can figure out the
+    cause of this issue (in SQuAD, these are mostly either tokenization problems or annotation
+    problems; there's a fair amount of both).
 
-    The basic outline of this method is to find the token that starts the same number of
-    characters into the sentence as the given character span.  We try to handle a bit of error
-    in the tokenization by checking `slack` tokens in either direction from that initial
-    estimate.
+    The basic outline of this method is to find the token span that has the same offsets as the
+    input character span.  If the tokenizer tokenized the passage correctly and has matching
+    offsets, this is easy.  We try to be a little smart about cases where they don't match exactly,
+    but mostly just find the closest thing we can.
 
-    The returned ``(begin, end)`` indices are `inclusive` for ``begin``, and `exclusive` for
-    ``end``.  So, for example, ``(2, 2)`` is an empty span, ``(2, 3)`` is the one-word span
-    beginning at token index 2, and so on.
+    The returned ``(begin, end)`` indices are `inclusive` for both ``begin`` and ``end``.
+    So, for example, ``(2, 2)`` is the one word span beginning at token index 2, ``(3, 4)`` is the
+    two-word span beginning at token index 3, and so on.
+
+    Returns
+    -------
+    token_span : ``Tuple[int, int]``
+        `Inclusive` span start and end token indices that match as closely as possible to the input
+        character spans.
+    error : ``bool``
+        Whether the token spans match the input character spans exactly.  If this is ``False``, it
+        means there was an error in either the tokenization or the annotated character span.
     """
-    # First we'll tokenize the span and the sentence, so we can count tokens and check for
-    # matches.
-    span_chars = sentence[span[0]:span[1]]
-    tokenized_span = tokenizer.tokenize(span_chars)
-    # Then we'll find what we think is the first token in the span
-    chars_seen = 0
-    index = 0
-    while index < len(tokenized_sentence) and chars_seen < span[0]:
-        chars_seen += len(tokenized_sentence[index]) + 1
-        index += 1
-    # index is now the span start index.  Is it a match?
-    if _spans_match(tokenized_sentence, tokenized_span, index):
-        return (index, index + len(tokenized_span))
-    for i in range(1, slack + 1):
-        if _spans_match(tokenized_sentence, tokenized_span, index + i):
-            return (index + i, index + i+ len(tokenized_span))
-        if _spans_match(tokenized_sentence, tokenized_span, index - i):
-            return (index - i, index - i + len(tokenized_span))
-    # No match; we'll just return our best guess.
-    return (index, index + len(tokenized_span))
-
-
-def _spans_match(sentence_tokens: List[str], span_tokens: List[str], index: int) -> bool:
-    if index < 0 or index >= len(sentence_tokens):
-        return False
-    if sentence_tokens[index] == span_tokens[0]:
-        span_index = 1
-        while (span_index < len(span_tokens) and
-               sentence_tokens[index + span_index] == span_tokens[span_index]):
-            span_index += 1
-        if span_index == len(span_tokens):
-            return True
-    return False
+    # We have token offsets into the passage from the tokenizer; we _should_ be able to just find
+    # the tokens that have the same offsets as our span.
+    error = False
+    start_index = 0
+    while start_index < len(token_offsets) and token_offsets[start_index][0] < character_span[0]:
+        start_index += 1
+    # start_index should now be pointing at the span start index.
+    if token_offsets[start_index][0] > character_span[0]:
+        # In this case, a tokenization or labeling issue made us go too far - the character span
+        # we're looking for actually starts in the previous token.  We'll back up one.
+        logger.debug("Bad labelling or tokenization - start offset doesn't match")
+        start_index -= 1
+    if token_offsets[start_index][0] != character_span[0]:
+        error = True
+    end_index = start_index
+    while end_index < len(token_offsets) and token_offsets[end_index][1] < character_span[1]:
+        end_index += 1
+    if end_index == start_index and token_offsets[end_index][1] > character_span[1]:
+        # Looks like there was a token that should have been split, like "1854-1855", where the
+        # answer is "1854".  We can't do much in this case, except keep the answer as the whole
+        # token.
+        logger.debug("Bad tokenization - end offset doesn't match")
+    elif token_offsets[end_index][1] > character_span[1]:
+        # This is a case where the given answer span is more than one token, and the last token is
+        # cut off for some reason, like "split with Luckett and Rober", when the original passage
+        # said "split with Luckett and Roberson".  In this case, we'll just keep the end index
+        # where it is, and assume the intent was to mark the whole token.
+        logger.debug("Bad labelling or tokenization - end offset doesn't match")
+    if token_offsets[end_index][1] != character_span[1]:
+        error = True
+    return (start_index, end_index), error
 
 
 @DatasetReader.register("squad")
@@ -85,9 +91,10 @@ class SquadReader(DatasetReader):
     fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
     and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.
 
-    The ``Instances`` also store their ID and the original passage text in the instance metadata,
-    accessible as ``instance.metadata['id']`` and ``instance.metadata['original_passage']``.  You
-    will want this if you want to use the official SQuAD evaluation script.
+    The ``Instances`` also store their ID, the original passage text, and token offsets into the
+    original passage in the instance metadata, accessible as ``instance.metadata['id']``,
+    ``instance.metadata['original_passage']``, and ``instance.metadata['token_offsets']``.  This is
+    so that we can more easily use the official SQuAD evaluation script to get metrics.
 
     Parameters
     ----------
@@ -98,10 +105,6 @@ class SquadReader(DatasetReader):
         We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
     """
-    #: This gets added to the end of every passage, because we use an exclusive span end index.  In
-    #: order to be able to include the last token in the passage in the predicted span, we need a
-    #: special marker at the end.
-    STOP_TOKEN = '@@STOP@@'
     def __init__(self,
                  tokenizer: Tokenizer = WordTokenizer(),
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
@@ -120,19 +123,17 @@ class SquadReader(DatasetReader):
         for article in tqdm(dataset):
             for paragraph_json in article['paragraphs']:
                 paragraph = paragraph_json["context"]
-                # replace newlines in the paragraph
-                cleaned_paragraph = paragraph.replace("\n", " ")
 
                 # We add a special token to the end of the passage.  This is because our span
                 # labels are end-exclusive, and we do a softmax over the passage to determine span
                 # end.  So if we want to be able to include the last token of the passage, we need
                 # to have a special symbol at the end.
-                tokenized_paragraph = self._tokenizer.tokenize(cleaned_paragraph) + [self.STOP_TOKEN]
+                paragraph_tokens, paragraph_offsets = self._tokenizer.tokenize(paragraph)
 
                 for question_answer in paragraph_json['qas']:
                     question_text = question_answer["question"].strip().replace("\n", "")
                     question_id = question_answer['id'].strip()
-                    tokenized_question = self._tokenizer.tokenize(question_text)
+                    question_tokens, _ = self._tokenizer.tokenize(question_text)
 
                     # There may be multiple answer annotations, so pick the one that occurs the
                     # most.
@@ -144,18 +145,25 @@ class SquadReader(DatasetReader):
                     # SQuAD gives answer annotations as a character index into the paragraph, but
                     # we need a token index for our models.  We convert them here.
                     char_span_end = char_span_start + len(answer_text)
-                    span_start, span_end = _char_span_to_token_span(paragraph,
-                                                                    tokenized_paragraph,
-                                                                    (char_span_start, char_span_end),
-                                                                    self._tokenizer)
+                    (span_start, span_end), error = _char_span_to_token_span(paragraph_offsets,
+                                                                             (char_span_start,
+                                                                              char_span_end))
+                    if error:
+                        logger.debug("Passage: %s", paragraph)
+                        logger.debug("Passage tokens: %s", paragraph_tokens)
+                        logger.debug("Question: %s", question_text)
+                        logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
+                        logger.debug("Token span: (%d, %d)", span_start, span_end)
+                        logger.debug("Tokens in answer: %s", paragraph_tokens[span_start:span_end + 1])
+                        logger.debug("Answer: %s", answer_text)
 
                     # Because the paragraph is shared across multiple questions, we do a deepcopy
                     # here to avoid any weird issues with shared state between instances (e.g.,
                     # when indexing is done, and when padding is done).  I _think_ all of those
                     # operations would be safe with shared objects, but I'd rather just be safe by
                     # doing a copy here.  Extra memory usage should be minimal.
-                    paragraph_field = TextField(deepcopy(tokenized_paragraph), self._token_indexers)
-                    question_field = TextField(tokenized_question, self._token_indexers)
+                    paragraph_field = TextField(deepcopy(paragraph_tokens), self._token_indexers)
+                    question_field = TextField(question_tokens, self._token_indexers)
                     span_start_field = IndexField(span_start, paragraph_field)
                     span_end_field = IndexField(span_end, paragraph_field)
                     fields = {
@@ -164,7 +172,11 @@ class SquadReader(DatasetReader):
                             'span_start': span_start_field,
                             'span_end': span_end_field
                             }
-                    metadata = {'id': question_id, 'original_passage': paragraph}
+                    metadata = {
+                            'id': question_id,
+                            'original_passage': paragraph,
+                            'token_offsets': paragraph_offsets
+                            }
                     instance = Instance(fields, metadata)
                     instances.append(instance)
         if not instances:
@@ -319,11 +331,9 @@ class SquadSentenceSelectionReader(DatasetReader):
                 self._paragraph_sentences[paragraph_id] = []
 
                 context_article = paragraph["context"]
-                # replace newlines in the context article
-                cleaned_context_article = context_article.replace("\n", "")
 
-                # Split the cleaned_context_article into a list of sentences.
-                sentences = nltk.sent_tokenize(cleaned_context_article)
+                # Split the context_article into a list of sentences.
+                sentences = nltk.sent_tokenize(context_article)
 
                 # Make a dict from span indices to sentence. The end span is
                 # exclusive, and the start span is inclusive.
@@ -381,12 +391,12 @@ class SquadSentenceSelectionReader(DatasetReader):
             question_text = self._id_to_question[question_id]
             sentence_fields = []  # type: List[Field]
             for sentence in sentence_choices:
-                tokenized_sentence = self._tokenizer.tokenize(sentence)
+                tokenized_sentence, _ = self._tokenizer.tokenize(sentence)
                 sentence_field = TextField(tokenized_sentence, self._token_indexers)
                 sentence_fields.append(sentence_field)
             sentences_field = ListField(sentence_fields)
-            tokenized_question = self._tokenizer.tokenize(question_text)
-            question_field = TextField(tokenized_question, self._token_indexers)
+            question_tokens, _ = self._tokenizer.tokenize(question_text)
+            question_field = TextField(question_tokens, self._token_indexers)
             correct_sentence_field = IndexField(correct_choice, sentences_field)
             instances.append(Instance({'question': question_field,
                                        'sentences': sentences_field,

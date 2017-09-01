@@ -10,6 +10,9 @@ import spacy
 
 @Predictor.register("semantic-role-labeling")
 class SemanticRoleLabelerPredictor(Predictor):
+    """
+    Wrapper for the :class:`~allennlp.models.bidaf.SemanticRoleLabeler` model.
+    """
     def __init__(self, model: Model,
                  tokenizer: Tokenizer, token_indexers: Dict[str, TokenIndexer]) -> None:
         super().__init__(model, tokenizer, token_indexers)
@@ -30,7 +33,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                     chunk = []
 
                 if tag.startswith("B-"):
-                    chunk.append(tag + " " + token)
+                    chunk.append(tag[2:] + ": " + token)
                 elif tag == "O":
                     frame.append(token)
 
@@ -40,16 +43,28 @@ class SemanticRoleLabelerPredictor(Predictor):
         return " ".join(frame)
 
     def predict_json(self, inputs: JsonDict) -> JsonDict:
-        sentence = inputs["sentence"]
-        tokens = self.nlp.tokenizer(sentence)
-        text = TextField(tokens, token_indexers=self.token_indexers)
+        """
+        Expects JSON that looks like ``{"sentence": "..."}``
+        and returns JSON that looks like
 
-        results = {"verbs": []}  # type: JsonDict
+        .. code-block:: js
+
+            {"words": [...],
+             "verbs": [
+                {"verb": "...", "description": "...", "tags": [...]},
+                ...
+                {"verb": "...", "description": "...", "tags": [...]},
+            ]}
+        """
+        sentence = inputs["sentence"]
+
         spacy_doc = self.nlp(sentence)
         words = [token.text for token in spacy_doc]
+        results = {"words": words, "verbs": []}  # type: JsonDict
+        text = TextField(words, token_indexers=self.token_indexers)
         for i, word in enumerate(spacy_doc):
             if word.pos_ == "VERB":
-                verb_labels = [0 for _ in tokens]
+                verb_labels = [0 for _ in words]
                 verb_labels[i] = 1
                 verb_indicator = SequenceLabelField(verb_labels, text)
                 output = self.model.tag(text, verb_indicator)
@@ -63,5 +78,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                         "description": description,
                         "tags": tags,
                 })
+
+        results["tokens"] = [word.text for word in spacy_doc]
 
         return sanitize(results)

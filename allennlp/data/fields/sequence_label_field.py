@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class SequenceLabelField(Field[numpy.ndarray]):
     """
-    A ``SequenceLabelField`` assigns a categorical label to each element in a :class:`SequenceField`.
+    A ``SequenceLabelField`` assigns a categorical label to each element in a
+    :class:`~allennlp.data.fields.sequence_field.SequenceField`.
     Because it's a labeling of some other field, we take that field as input here, and we use it to
     determine our padding and other things.
 
@@ -57,6 +58,11 @@ class SequenceLabelField(Field[numpy.ndarray]):
 
         if all([isinstance(x, int) for x in labels]):
             self._indexed_labels = labels
+
+        elif not all([isinstance(x, str) for x in labels]):
+            raise ConfigurationError("SequenceLabelFields must be passed either all "
+                                     "strings or all ints. Found labels {} with "
+                                     "types: {}.".format(labels, [type(x) for x in labels]))
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

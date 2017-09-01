@@ -1,3 +1,9 @@
+"""
+The :class:`~allennlp.common.params.Params` class represents a dictionary of
+parameters (e.g. for configuring a model), with added functionality around
+logging and validation.
+"""
+
 from typing import Any, Dict, List
 from collections import MutableMapping
 import copy

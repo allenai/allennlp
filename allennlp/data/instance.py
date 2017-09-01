@@ -6,7 +6,8 @@ from allennlp.data.vocabulary import Vocabulary
 
 class Instance:
     """
-    An ``Instance`` is a collection of :class:`Field` objects, specifying the inputs and outputs to
+    An ``Instance`` is a collection of :class:`~allennlp.data.fields.field.Field` objects,
+    specifying the inputs and outputs to
     some model.  We don't make a distinction between inputs and outputs here, though - all
     operations are done on all fields, and when we return arrays, we return them as dictionaries
     keyed by field name.  A model can then decide which fields it wants to use as inputs as which
@@ -66,9 +67,14 @@ class Instance:
 
         If ``padding_lengths`` is omitted, we will call ``self.get_padding_lengths()`` to get the
         sizes of the arrays to create.
+
+        In the array dictionary, we also pass along the instance metadata, if any is given.  This
+        is contained in the ``'metadata'`` key.
         """
         padding_lengths = padding_lengths or self.get_padding_lengths()
         arrays = {}
         for field_name, field in self.fields.items():
             arrays[field_name] = field.as_array(padding_lengths[field_name])
+        if self.metadata:
+            arrays['metadata'] = self.metadata
         return arrays

@@ -1,3 +1,8 @@
+"""
+A :class:`~Dataset` represents a collection of data suitable for feeding into a model.
+For example, when you train a model, you will likely have a *training* dataset and a *validation* dataset.
+"""
+
 import logging
 from collections import defaultdict
 from typing import Dict, List, Union
@@ -14,7 +19,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class Dataset:
     """
-    A collection of :class:`Instance` objects.  The ``Instances`` have ``Fields``, and the fields
+    A collection of :class:`~allennlp.data.instance.Instance` objects.
+    The ``Instances`` have ``Fields``, and the fields
     could be in an indexed or unindexed state - the ``Dataset`` has methods around indexing the
     data and converting the data into arrays.
     """
@@ -140,17 +146,15 @@ class Dataset:
         field_arrays = defaultdict(list)  # type: Dict[str, list]
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
-            for instance in tqdm.tqdm(self.instances):
-                for field, arrays in instance.as_array_dict(lengths_to_use).items():
-                    field_arrays[field].append(arrays)
-        else:
-            for instance in self.instances:
-                for field, arrays in instance.as_array_dict(lengths_to_use).items():
-                    field_arrays[field].append(arrays)
+        for instance in self.instances:
+            for field, arrays in instance.as_array_dict(lengths_to_use).items():
+                field_arrays[field].append(arrays)
 
         # Finally, we combine the arrays that we got for each instance into one big array (or set
         # of arrays) per field.
         for field_name, field_array_list in field_arrays.items():
+            if field_name == 'metadata':
+                continue
             if isinstance(field_array_list[0], dict):
                 # This is creating a dict of {token_indexer_key: batch_array} for each
                 # token indexer used to index this field. This is mostly utilised by TextFields.

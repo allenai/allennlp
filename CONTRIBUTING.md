@@ -57,3 +57,15 @@ When creating your enhancement request, please:
 * Explain why the enhancement would be useful.  It may be helpful to highlight the feature in other libraries.
 
 * Include code examples to demonstrate how the enhancement would be used.
+
+### Do you have a new state-of-the-art model?
+
+We are always looking for new models to add to our collection.  If you have trained a model and would like to include it in 
+AllenNLP, please create [a pull request](https://github.com/allenai/allennlp/pulls) that includes:
+
+* Any code changes needed to support your new model.
+* A link to the model itself.  Please do not check your model into the GitHub repository, but instead upload it in the 
+PR conversation or provide a link to it at an external location.
+
+In the description of your PR, please clearly explain the task your model performs along with precision and recall statistics 
+on an established dataset.

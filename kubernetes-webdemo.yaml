@@ -6,7 +6,7 @@ metadata:
   labels:
     contact: allennlp
 spec:
-  replicas: 1
+  replicas: 2
   template:
     metadata:
       labels:
@@ -14,22 +14,18 @@ spec:
     spec:
       containers:
         - name: allennlp-webdemo
-          image: "allennlp/allennlp-cpu:latest"
+          image: "allennlp/allennlp:latest"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
           # for documentation on the resources section.
           resources:
             limits:
-              # One-half of a CPU.
-              cpu: 500m
-              # 500 megabytes.
-              memory: 1000Mi
+              cpu: 1000m
+              memory: 2000Mi
             # "requests" specify how much your container will be granted as a baseline.
             requests:
-              # One-fifth of a CPU.
-              cpu: 200m
-              # 250 megabytes.
-              memory: 1000Mi
+              cpu: 1000m
+              memory: 2000Mi
           command:
             - /bin/bash
             - -c

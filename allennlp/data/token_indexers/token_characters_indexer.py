@@ -30,19 +30,28 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     def __init__(self,
                  namespace: str = 'token_characters',
                  character_tokenizer: CharacterTokenizer = CharacterTokenizer()) -> None:
-        self.namespace = namespace
-        self.character_tokenizer = character_tokenizer
+        self._namespace = namespace
+        self._character_tokenizer = character_tokenizer
 
     @overrides
     def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
-        for character in self.character_tokenizer.tokenize(token):
-            counter[self.namespace][character] += 1
+        for character in self._character_tokenizer.tokenize(token)[0]:
+            # If our character tokenizer is using byte encoding, the character might already be an
+            # int.  In that case, we'll bypass the vocabulary entirely.
+            if not isinstance(character, int):
+                counter[self._namespace][character] += 1
 
     @overrides
     def token_to_indices(self, token: str, vocabulary: Vocabulary) -> List[int]:
         indices = []
-        for character in self.character_tokenizer.tokenize(token):
-            indices.append(vocabulary.get_token_index(character, self.namespace))
+        for character in self._character_tokenizer.tokenize(token)[0]:
+            # If our character tokenizer is using byte encoding, the character might already be an
+            # int.  In that case, we'll bypass the vocabulary entirely.
+            if isinstance(character, int):
+                index = character
+            else:
+                index = vocabulary.get_token_index(character, self._namespace)
+            indices.append(index)
         return indices
 
     @overrides
@@ -65,12 +74,13 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=lambda: [])
         desired_token_length = padding_lengths['num_token_characters']
         longest_token = max(tokens, key=len)
+        padding_index = 0
         if desired_token_length > len(longest_token):
             # Since we want to pad to greater than the longest token, we add a
             # "dummy token" to get the speed of itertools.zip_longest.
-            padded_tokens.append([0] * desired_token_length)
+            padded_tokens.append([padding_index] * desired_token_length)
         # pad the list of lists to the longest sublist, appending 0's
-        padded_tokens = list(zip(*itertools.zip_longest(*padded_tokens, fillvalue=0)))
+        padded_tokens = list(zip(*itertools.zip_longest(*padded_tokens, fillvalue=padding_index)))
         if desired_token_length > len(longest_token):
             # now we remove the "dummy token" if we appended one.
             padded_tokens.pop()

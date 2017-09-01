@@ -10,8 +10,9 @@ from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
-from allennlp.nn.util import arrays_to_variables, get_lengths_from_binary_sequence_mask
+from allennlp.nn.util import arrays_to_variables
 from allennlp.training.metrics import CategoricalAccuracy
+from allennlp.nn.initializers import InitializerApplicator
 
 
 @Model.register("decomposable_attention")
@@ -49,6 +50,8 @@ class DecomposableAttention(Model):
     aggregate_feedforward : ``FeedForward``
         This final feedforward network is applied to the concatenated, summed result of the
         ``compare_feedforward`` network, and its output is used as the entailment class logits.
+    initializer : ``InitializerApplicator``
+        We will use this to initialize the parameters in the model, calling ``initializer(self)``.
     premise_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
         After embedding the premise, we can optionally apply an encoder.  If this is ``None``, we
         will do nothing.
@@ -63,6 +66,7 @@ class DecomposableAttention(Model):
                  similarity_function: SimilarityFunction,
                  compare_feedforward: FeedForward,
                  aggregate_feedforward: FeedForward,
+                 initializer: InitializerApplicator,
                  premise_encoder: Optional[Seq2SeqEncoder] = None,
                  hypothesis_encoder: Optional[Seq2SeqEncoder] = None) -> None:
         super(DecomposableAttention, self).__init__(vocab)
@@ -82,8 +86,7 @@ class DecomposableAttention(Model):
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
-
-        # TODO(mattg): figure out default initialization here
+        initializer(self)
 
     def forward(self,  # type: ignore
                 premise: Dict[str, torch.LongTensor],
@@ -117,13 +120,11 @@ class DecomposableAttention(Model):
         embedded_hypothesis = self._text_field_embedder(hypothesis)
         premise_mask = get_text_field_mask(premise).float()
         hypothesis_mask = get_text_field_mask(hypothesis).float()
-        premise_sequence_lengths = get_lengths_from_binary_sequence_mask(premise_mask)
-        hypothesis_sequence_lengths = get_lengths_from_binary_sequence_mask(hypothesis_mask)
 
         if self._premise_encoder:
-            embedded_premise = self._premise_encoder(embedded_premise, premise_sequence_lengths)
+            embedded_premise = self._premise_encoder(embedded_premise, premise_mask)
         if self._hypothesis_encoder:
-            embedded_hypothesis = self._hypothesis_encoder(embedded_hypothesis, hypothesis_sequence_lengths)
+            embedded_hypothesis = self._hypothesis_encoder(embedded_hypothesis, hypothesis_mask)
 
         projected_premise = self._attend_feedforward(embedded_premise)
         projected_hypothesis = self._attend_feedforward(embedded_hypothesis)
@@ -222,6 +223,7 @@ class DecomposableAttention(Model):
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
         compare_feedforward = FeedForward.from_params(params.pop('compare_feedforward'))
         aggregate_feedforward = FeedForward.from_params(params.pop('aggregate_feedforward'))
+        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
@@ -229,5 +231,6 @@ class DecomposableAttention(Model):
                    similarity_function=similarity_function,
                    compare_feedforward=compare_feedforward,
                    aggregate_feedforward=aggregate_feedforward,
+                   initializer=initializer,
                    premise_encoder=premise_encoder,
                    hypothesis_encoder=hypothesis_encoder)

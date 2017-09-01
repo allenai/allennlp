@@ -126,12 +126,21 @@ class Embedding(TokenEmbedder):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':
-        embedding_dim = params.pop('embedding_dim')
+        """
+        We need the vocabulary here to know how many items we need to embed, and we look for a
+        ``vocab_namespace`` key in the parameter dictionary to know which vocabulary to use.  If
+        you know beforehand exactly how many embeddings you need, or aren't using a vocabulary
+        mapping for the things getting embedded here, then you can pass in the ``num_embeddings``
+        key directly, and the vocabulary will be ignored.
+        """
+        num_embeddings = params.pop('num_embeddings', None)
         vocab_namespace = params.pop("vocab_namespace", "tokens")
+        if num_embeddings is None:
+            num_embeddings = vocab.get_vocab_size(vocab_namespace)
+        embedding_dim = params.pop('embedding_dim')
         pretrained_file = params.pop("pretrained_file", None)
         projection_dim = params.pop("projection_dim", None)
         trainable = params.pop("trainable", True)
-        num_embeddings = vocab.get_vocab_size(vocab_namespace)
         padding_index = params.pop('padding_index', None)
         max_norm = params.pop('max_norm', None)
         norm_type = params.pop('norm_type', 2.)

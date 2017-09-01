@@ -1,29 +1,30 @@
 allennlp.data.token_indexers
 ====================================
 
-Submodules
-----------
-
-.. automodule:: allennlp.data.token_indexers.single_id_token_indexer
+.. automodule:: allennlp.data.token_indexers
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.data.token_indexers.token_characters_indexer
-   :members:
-   :undoc-members:
-   :show-inheritance:
+* :ref:`TokenIndexer<token-indexer>`
+* :ref:`SingleIdTokenIndexer<single-id-token-indexer>`
+* :ref:`TokenCharactersIndexer<token-characters-indexer>`
 
+.. _token-indexer:
 .. automodule:: allennlp.data.token_indexers.token_indexer
    :members:
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: allennlp.data.token_indexers
+.. _single-id-token-indexer:
+.. automodule:: allennlp.data.token_indexers.single_id_token_indexer
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _token-characters-indexer:
+.. automodule:: allennlp.data.token_indexers.token_characters_indexer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+

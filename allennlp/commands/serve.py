@@ -1,10 +1,33 @@
+"""
+The ``serve`` subcommand launches a server
+that exposes trained models via a REST API,
+and that includes a web interface for exploring
+their predictions.
+
+.. code-block:: bash
+
+    $ python -m allennlp.run serve --help
+    usage: run [command] serve [-h] [--port PORT] [--workers WORKERS]
+                            [--config-file CONFIG_FILE]
+
+    Run the web service, which provides an HTTP API as well as a web demo.
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    --port PORT
+    --workers WORKERS
+    --config-file CONFIG_FILE
+                            path to a JSON file specifying the configuration for
+                            the models
+"""
+
 import argparse
 import json
 
 from allennlp.service import server_sanic
 
 DEFAULT_CONFIG = {
-        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.08.26.tar.gz', # pylint: disable=line-too-long
+        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.08.31.tar.gz', # pylint: disable=line-too-long
         'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.08.28.tar.gz', # pylint: disable=line-too-long
         'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz' # pylint: disable=line-too-long
 }

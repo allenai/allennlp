@@ -18,10 +18,11 @@ TokenList = List[TokenType]  # pylint: disable=invalid-name
 class TextField(SequenceField[Dict[str, numpy.ndarray]]):
     """
     This ``Field`` represents a list of string tokens.  Before constructing this object, you need
-    to tokenize raw strings using a :class:`..tokenizers.Tokenizer`.
+    to tokenize raw strings using a :class:`~allennlp.data.tokenizers.tokenizer.Tokenizer`.
 
     Because string tokens can be represented as indexed arrays in a number of ways, we also take a
-    dictionary of :class:`TokenIndexer` objects that will be used to convert the tokens into indices.
+    dictionary of :class:`~allennlp.data.token_indexers.token_indexer.TokenIndexer`
+    objects that will be used to convert the tokens into indices.
     Each ``TokenIndexer`` could represent each token as a single ID, or a list of character IDs, or
     something else.
 
@@ -33,6 +34,10 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
         self.tokens = tokens
         self._token_indexers = token_indexers
         self._indexed_tokens = None  # type: Optional[Dict[str, TokenList]]
+
+        if not all([isinstance(x, str) for x in tokens]):
+            raise ConfigurationError("TextFields must be passed strings. "
+                                     "Found: {} with types {}.".format(tokens, [type(x) for x in tokens]))
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

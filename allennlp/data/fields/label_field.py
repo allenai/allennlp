@@ -14,8 +14,9 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 class LabelField(Field[numpy.ndarray]):
     """
     A ``LabelField`` is a categorical label of some kind, where the labels are either strings of
-    text or 0-indexed integers.  If the labels need indexing, we will use a :class:`Vocabulary` to
-    convert the string labels into integers.
+    text or 0-indexed integers (if you wish to skip indexing by passing skip_indexing=True).
+    If the labels need indexing, we will use a :class:`Vocabulary` to convert the string labels
+    into integers.
 
     This field will get converted into an integer index representing the class label.
 
@@ -32,8 +33,7 @@ class LabelField(Field[numpy.ndarray]):
         "passage_labels" and "question_labels").
     skip_indexing : ``bool``, optional (default=False)
         If your labels are 0-indexed integers, you can pass in this flag, and we'll skip the indexing
-        step.  If this is ``False``, no matter the type of ``label``, we'll use a vocabulary to give
-        the labels new IDs.
+        step.  If this is ``False`` and your labels are not strings, this throws a ``ConfigurationError``.
     """
     def __init__(self,
                  label: Union[str, int],
@@ -53,6 +53,10 @@ class LabelField(Field[numpy.ndarray]):
                                          "Found label = {}".format(label))
             else:
                 self._label_id = label
+        else:
+            if not isinstance(label, str):
+                raise ConfigurationError("LabelFields must be passed a string label if skip_indexing=False. "
+                                         "Found label: {} with type: {}.".format(label, type(label)))
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

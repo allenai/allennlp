@@ -1,3 +1,8 @@
+"""
+:py:class:`Model` is an abstract class representing
+an AllenNLP model.
+"""
+
 from typing import Dict
 import os
 import logging

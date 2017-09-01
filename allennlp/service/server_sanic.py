@@ -1,3 +1,10 @@
+"""
+A `Sanic <http://sanic.readthedocs.io/en/latest/>`_ server that serves up
+AllenNLP models as well as our demo.
+
+Usually you would use :mod:`~allennlp.commands.serve`
+rather than instantiating an ``app`` yourself.
+"""
 from typing import Dict
 from sanic import Sanic, response, request
 from sanic.exceptions import ServerError

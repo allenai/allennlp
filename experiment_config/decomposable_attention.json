@@ -7,7 +7,9 @@
         "lowercase_tokens": true
       }
     },
-    "append_null": true
+    "tokenizer": {
+      "end_tokens": ["@@NULL@@"]
+    }
   },
   "train_data_path": "/snli/snli_1.0_train.jsonl",
   "validation_data_path": "/snli/snli_1.0_dev.jsonl",
@@ -50,14 +52,15 @@
     "sorting_keys": [["premise", "num_tokens"], ["hypothesis", "num_tokens"]],
     "batch_size": 32
   },
-  "optimizer": {
-    "type": "adam"
-  },
+
   "trainer": {
     "num_epochs": 40,
     "patience": 5,
     "cuda_device": 0,
     "validation_metric": "+accuracy",
-    "no_tqdm": true
+    "no_tqdm": true,
+    "optimizer": {
+      "type": "adam"
+    }
   }
 }

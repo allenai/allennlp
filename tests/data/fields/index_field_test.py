@@ -1,10 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
-
+import pytest
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.common.testing import AllenNlpTestCase
-
+from allennlp.common.checks import ConfigurationError
 
 class TestIndexField(AllenNlpTestCase):
 
@@ -22,3 +22,7 @@ class TestIndexField(AllenNlpTestCase):
         index_field = IndexField(4, self.text)
         array = index_field.as_array(index_field.get_padding_lengths())
         numpy.testing.assert_array_equal(array, numpy.array([4]))
+
+    def test_index_field_raises_on_incorrect_label_type(self):
+        with pytest.raises(ConfigurationError):
+            _ = IndexField("hello", self.text)

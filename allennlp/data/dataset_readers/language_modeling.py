@@ -50,8 +50,6 @@ class LanguageModelingReader(DatasetReader):
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
         super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
         self._tokens_per_instance = tokens_per_instance
-        self._start_token = '<S>'
-        self._end_token = '</S>'
 
     @overrides
     def read(self, file_path: str):
@@ -60,23 +58,17 @@ class LanguageModelingReader(DatasetReader):
 
         with open(file_path, "r") as text_file:
             instance_strings = text_file.readlines()
+
         if self._tokens_per_instance is not None:
             all_text = " ".join([x.replace("\n", " ").strip() for x in instance_strings])
-            tokenized_text = self._tokenizer.tokenize(all_text)
-            num_tokens = self._tokens_per_instance
+            tokenized_text, _ = self._tokenizer.tokenize(all_text)
+            num_tokens = self._tokens_per_instance + 1
             tokenized_strings = []
             logger.info("Creating dataset from all text in file: %s", file_path)
-            for index in tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens)):
-                tokenized_strings.append(tokenized_text[index:index + num_tokens])
+            for index in tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens - 1)):
+                tokenized_strings.append(tokenized_text[index:(index + num_tokens)])
         else:
-            tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]
-
-        # TODO(matt): this isn't quite right, because you really want to split on sentences,
-        # tokenize the sentences, add the start and end tokens per sentence, then change the tokens
-        # per instance if desired.  But, we can fix that later, if someone actually wants to use
-        # this for language modeling.  This is just another example of how to use the data reader
-        # code, for now.
-        tokenized_strings = [[self._start_token] + x + [self._end_token] for x in tokenized_strings]
+            tokenized_strings = [self._tokenizer.tokenize(s)[0] for s in instance_strings]
 
         # No matter how you want to represent the input, we'll always represent the output as a
         # single token id.  This code lets you learn a language model that concatenates word

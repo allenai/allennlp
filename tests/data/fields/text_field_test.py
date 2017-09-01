@@ -182,3 +182,7 @@ class TestTextField(AllenNlpTestCase):
                                                              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))
+
+    def test_text_field_raises_on_non_string_input(self):
+        with pytest.raises(ConfigurationError):
+            _ = TextField([1, 2, 3, 4], {"tokens": SingleIdTokenIndexer()})

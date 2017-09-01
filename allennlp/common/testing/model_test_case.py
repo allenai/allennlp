@@ -1,16 +1,22 @@
 import os
+from inspect import signature
 
 from numpy.testing import assert_allclose
+import torch
 
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.data import DataIterator, DatasetReader, Vocabulary
+from allennlp.data import DataIterator, Dataset, DatasetReader, Vocabulary
 from allennlp.models import Model, load_archive
 from allennlp.nn.util import arrays_to_variables
 
 
 class ModelTestCase(AllenNlpTestCase):
+    """
+    A subclass of :class:`~allennlp.common.testing.test_case.AllenNlpTestCase`
+    with added methods for testing :class:`~allennlp.models.model.Model` subclasses.
+    """
     def set_up_model(self, param_file, dataset_file):
         # pylint: disable=attribute-defined-outside-init
         self.param_file = param_file
@@ -56,6 +62,9 @@ class ModelTestCase(AllenNlpTestCase):
 
         # The datasets themselves should be identical.
         for key in model_batch.keys():
+            if key == 'metadata':
+                assert model_batch[key] == loaded_batch[key]
+                continue
             field = model_batch[key]
             if isinstance(field, dict):
                 for subfield in field:
@@ -72,6 +81,9 @@ class ModelTestCase(AllenNlpTestCase):
         # Set eval mode, to turn off things like dropout, then get predictions.
         model.eval()
         loaded_model.eval()
+        if 'metadata' in model_batch and 'metadata' not in signature(model.forward).parameters:
+            del model_batch['metadata']
+            del loaded_batch['metadata']
         model_predictions = model.forward(**model_batch)
         loaded_model_predictions = loaded_model.forward(**loaded_batch)
 
@@ -82,9 +94,52 @@ class ModelTestCase(AllenNlpTestCase):
 
         # Both outputs should have the same keys and the values for these keys should be close.
         for key in model_predictions.keys():
-            assert_allclose(model_predictions[key].data.numpy(),
-                            loaded_model_predictions[key].data.numpy(),
-                            rtol=1e-5,
-                            err_msg=key)
+            if isinstance(model_predictions[key], torch.autograd.Variable):
+                assert_allclose(model_predictions[key].data.numpy(),
+                                loaded_model_predictions[key].data.numpy(),
+                                rtol=1e-4,
+                                err_msg=key)
+            else:
+                assert model_predictions[key] == loaded_model_predictions[key]
 
         return model, loaded_model
+
+    def ensure_batch_predictions_are_consistent(self):
+        self.model.eval()
+        single_predictions = []
+        for i, instance in enumerate(self.dataset.instances):
+            dataset = Dataset([instance])
+            arrays = dataset.as_array_dict(dataset.get_padding_lengths(), verbose=False)
+            variables = arrays_to_variables(arrays, for_training=False)
+            result = self.model.forward(**variables)
+            single_predictions.append(result)
+        batch_arrays = self.dataset.as_array_dict(self.dataset.get_padding_lengths(), verbose=False)
+        batch_variables = arrays_to_variables(batch_arrays, for_training=False)
+        batch_predictions = self.model.forward(**batch_variables)
+        for i, instance_predictions in enumerate(single_predictions):
+            for key, single_predicted in instance_predictions.items():
+                tolerance = 1e-6
+                if key == 'loss':
+                    # Loss is particularly unstable; we'll just be satisfied if everything else is
+                    # close.
+                    continue
+                single_predicted = single_predicted[0]
+                batch_predicted = batch_predictions[key][i]
+                if isinstance(single_predicted, torch.autograd.Variable):
+                    if single_predicted.size() != batch_predicted.size():
+                        # This is probably a sequence model, and our output shape has some padded
+                        # elements in the batched case.  Fixing this in general is complicated;
+                        # we'll just fix some easy cases that we actually have, for now.
+                        num_tokens = single_predicted.size(0)
+                        if batch_predicted.dim() == 1:
+                            batch_predicted = batch_predicted[:num_tokens]
+                        elif batch_predicted.dim() == 2:
+                            batch_predicted = batch_predicted[:num_tokens, :]
+                        else:
+                            raise NotImplementedError
+                    assert_allclose(single_predicted.data.numpy(),
+                                    batch_predicted.data.numpy(),
+                                    atol=tolerance,
+                                    err_msg=key)
+                else:
+                    assert single_predicted == batch_predicted, key

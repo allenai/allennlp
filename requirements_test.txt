@@ -34,7 +34,7 @@ responses>=0.7
 #### DOC-RELATED PACKAGES ####
 
 # Builds our documentation.
-sphinx
+sphinx==1.5.3
 
 # Watches the documentation directory and rebuilds on changes.
 sphinx-autobuild
