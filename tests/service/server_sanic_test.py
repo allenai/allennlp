@@ -146,6 +146,6 @@ class TestSanic(AllenNlpTestCase):
             assert response.status == 200
             assert json.loads(response.text) == data
 
-            # these should all be cached, so call counts should not be updated
+            # cache is disabled, so call count should keep incrementing
             assert predictor.calls[key] == i + 1
             assert len(predictor.calls) == 1
