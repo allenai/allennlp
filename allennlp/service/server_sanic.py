@@ -9,6 +9,7 @@ from typing import Dict
 import asyncio
 import json
 import logging
+import os
 from functools import lru_cache
 
 from sanic import Sanic, response, request
@@ -17,6 +18,9 @@ from sanic.exceptions import ServerError
 from allennlp.common.util import JsonDict
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
+
+# Can override cache size with an environment variable. If it's 0 then disable caching altogether.
+CACHE_SIZE = os.environ.get("SANIC_CACHE_SIZE") or 128
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -37,7 +41,7 @@ def make_app() -> Sanic:
     app.static('/', './allennlp/service/static/index.html')
     app.predictors = {}
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=int(CACHE_SIZE))
     def _caching_prediction(model: Predictor, data: str) -> JsonDict:
         """
         Just a wrapper around ``model.predict_json`` that allows us to use a cache decorator.
@@ -57,9 +61,13 @@ def make_app() -> Sanic:
         pre_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
 
         try:
-            # lru_cache insists that all function arguments be hashable,
-            # so unfortunately we have to stringify the data.
-            prediction = _caching_prediction(model, json.dumps(data))
+            if CACHE_SIZE > 0:
+                # lru_cache insists that all function arguments be hashable,
+                # so unfortunately we have to stringify the data.
+                prediction = _caching_prediction(model, json.dumps(data))
+            else:
+                # if CACHE_SIZE is 0, skip caching altogether
+                prediction = model.predict_json(data)
         except KeyError as err:
             raise ServerError("Required JSON field not found: " + err.args[0], status_code=400)
 

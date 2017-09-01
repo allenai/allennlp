@@ -15,6 +15,19 @@ TEST_ARCHIVE_FILES = {
         'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
 }
 
+class CountingPredictor(Predictor):
+    """
+    bogus predictor that just returns its input as is
+    and also counts how many times it was called with a given input
+    """
+    def __init__(self):                 # pylint: disable=super-init-not-called
+        self.calls = defaultdict(int)
+
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
+        key = json.dumps(inputs)
+        self.calls[key] += 1
+        return inputs
+
 class TestSanic(AllenNlpTestCase):
 
     client = None
@@ -74,16 +87,6 @@ class TestSanic(AllenNlpTestCase):
         assert "verbs" in results
 
     def test_caching(self):
-
-        class CountingPredictor(Predictor):
-            def __init__(self):                 # pylint: disable=super-init-not-called
-                self.calls = defaultdict(int)
-
-            def predict_json(self, inputs: JsonDict) -> JsonDict:
-                key = json.dumps(inputs)
-                self.calls[key] += 1
-                return inputs
-
         predictor = CountingPredictor()
         data = {"input1": "this is input 1", "input2": 10}
         key = json.dumps(data)
@@ -122,3 +125,27 @@ class TestSanic(AllenNlpTestCase):
             assert predictor.calls[key] == 1
             assert predictor.calls[json.dumps(noyes)] == 1
             assert len(predictor.calls) == 2
+
+    def test_disable_caching(self):
+        import allennlp.service.server_sanic as server_sanic
+        server_sanic.CACHE_SIZE = 0
+
+        predictor = CountingPredictor()
+        app = server_sanic.make_app()
+        app.predictors = {"counting": predictor}
+        app.testing = True
+        client = app.test_client
+
+        data = {"input1": "this is input 1", "input2": 10}
+        key = json.dumps(data)
+
+        assert not predictor.calls
+
+        for i in range(5):
+            _, response = client.post("/predict/counting", json=data)
+            assert response.status == 200
+            assert json.loads(response.text) == data
+
+            # these should all be cached, so call counts should not be updated
+            assert predictor.calls[key] == i + 1
+            assert len(predictor.calls) == 1
