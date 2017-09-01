@@ -42,7 +42,7 @@ def make_app() -> Sanic:
     app.predictors = {}
 
     try:
-        cache_size = int(CACHE_SIZE)
+        cache_size = int(CACHE_SIZE)  # type: ignore
     except ValueError:
         logger.warning("unable to parse cache size %s as int, disabling cache", CACHE_SIZE)
         cache_size = 0
