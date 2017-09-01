@@ -17,10 +17,17 @@ class BidafPredictor(Predictor):
         question_text = inputs["question"]
         passage_text = inputs["passage"]
 
-        question_tokens, _ = self.tokenizer.tokenize(question_text)
-        passage_tokens, _ = self.tokenizer.tokenize(passage_text)
+        question_tokens, question_tokens_offsets = self.tokenizer.tokenize(question_text)
+        passage_tokens, passage_tokens_offsets = self.tokenizer.tokenize(passage_text)
 
         question = TextField(question_tokens, token_indexers=self.token_indexers)
         passage = TextField(passage_tokens, token_indexers=self.token_indexers)
 
-        return sanitize(self.model.predict_span(question, passage))
+        prediction = self.model.predict_span(question, passage)
+
+        best_span = prediction["best_span"]
+        best_span_char_start = passage_tokens_offsets[best_span[0]][0]
+        best_span_char_end = passage_tokens_offsets[best_span[1]][1]
+        prediction["best_span_str"] = passage_text[best_span_char_start:best_span_char_end]
+
+        return sanitize(prediction)
