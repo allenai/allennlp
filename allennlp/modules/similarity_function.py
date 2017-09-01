@@ -1,7 +1,11 @@
+"""
+A ``SimilarityFunction`` takes a pair of tensors with the same shape, and computes a similarity
+function on the vectors in the last dimension.
+"""
+
 import torch
 
 from allennlp.common import Params, Registrable
-
 
 class SimilarityFunction(torch.nn.Module, Registrable):
     """
