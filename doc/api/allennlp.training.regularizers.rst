@@ -11,12 +11,12 @@ allennlp.training.regularizers
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.training.regularizers.regularizer_applicator
+.. automodule:: allennlp.training.regularizers.regularizers
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.training.regularizers.regularizers
+.. automodule:: allennlp.training.regularizers.regularizer_applicator
    :members:
    :undoc-members:
    :show-inheritance:

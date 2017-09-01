@@ -34,6 +34,11 @@ class Predictor(Registrable):
 
     @classmethod
     def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
+        """
+        Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
+        that is, from the result of training a model. Optionally specify which `Predictor`
+        subclass; otherwise, the default one for the model will be used.
+        """
         config = archive.config
 
         dataset_reader_params = config["dataset_reader"]

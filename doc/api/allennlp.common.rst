@@ -9,7 +9,6 @@ that's used by datasets, models, trainers, and so on.
    allennlp.common.checks
    allennlp.common.params
    allennlp.common.registrable
-   allennlp.common.tee_logger
    allennlp.common.testing
    allennlp.common.util
 
