@@ -123,7 +123,3 @@ class ArchivalTest(AllenNlpTestCase):
         # shouldn't have removed anything else
         config["model"]["evaluation_json_file"] = filename
         assert config.as_dict() == original
-
-
-
-
