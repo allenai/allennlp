@@ -278,7 +278,7 @@ class BidirectionalAttentionFlow(Model):
         offsets = metadata['token_offsets']
         question_id = metadata.get('id', None)
         start_offset = offsets[predicted_span[0]][0]
-        end_offset = offsets[predicted_span[1] - 1][1]  # span end is exclusive
+        end_offset = offsets[predicted_span[1]][1]
         span_string = passage[start_offset:end_offset]
         if question_id in self._official_eval_dataset:
             ground_truth = self._official_eval_dataset[question_id]
@@ -322,7 +322,6 @@ class BidirectionalAttentionFlow(Model):
         span_start_probs : numpy.ndarray
         span_end_probs : numpy.ndarray
         best_span : (int, int)
-        best_span_str : str
         """
         instance = Instance({'question': question, 'passage': passage})
         instance.index_fields(self.vocab)
@@ -331,18 +330,12 @@ class BidirectionalAttentionFlow(Model):
                                                for_training=False)
         output_dict = self.forward(**model_input)
 
-        # Remove batch dimension, as we only had one input.
-        span_start_logits = output_dict["span_start_logits"]
-        span_end_logits = output_dict["span_end_logits"]
-        best_span = self._get_best_span(span_start_logits, span_end_logits)
-        best_span = tuple(best_span.data.squeeze(0).numpy())
-        best_span_str = ' '.join(passage.tokens[best_span[0]:best_span[1]])
-
+        # Here we're just removing the batch dimension and converting things to numpy arrays /
+        # tuples instead of pytorch variables.
         return {
-                "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).numpy(),
-                "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).numpy(),
-                "best_span": best_span,
-                "best_span_str": best_span_str,
+                "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).cpu().numpy(),
+                "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).cpu().numpy(),
+                "best_span": tuple(output_dict["best_span"].data.squeeze(0).cpu().numpy()),
                 }
 
     @staticmethod
@@ -354,30 +347,23 @@ class BidirectionalAttentionFlow(Model):
         span_start_argmax = [0] * batch_size
         best_word_span = Variable(span_start_logits.data.new()
                                   .resize_(batch_size, 2).fill_(0)).long()
-        best_word_span[:, 1] = 1
 
         span_start_logits = span_start_logits.data.cpu().numpy()
         span_end_logits = span_end_logits.data.cpu().numpy()
 
         for b in range(batch_size):  # pylint: disable=invalid-name
             for j in range(passage_length):
-                if j == 0:
-                    # 0 is not a valid end index.
-                    continue
                 val1 = span_start_logits[b, span_start_argmax[b]]
+                if val1 < span_start_logits[b, j]:
+                    span_start_argmax[b] = j
+                    val1 = span_start_logits[b, j]
+
                 val2 = span_end_logits[b, j]
 
                 if val1 + val2 > max_span_log_prob[b]:
                     best_word_span[b, 0] = span_start_argmax[b]
                     best_word_span[b, 1] = j
                     max_span_log_prob[b] = val1 + val2
-
-                # We need to update best_span_argmax here _after_ we've checked the current span
-                # position, so that we don't allow things like (1, 1), which are empty spans.  We've
-                # added a special stop symbol to the end of the passage, so this still allows for all
-                # valid spans over the passage.
-                if val1 < span_start_logits[b, j]:
-                    span_start_argmax[b] = j
         return best_word_span
 
     @classmethod

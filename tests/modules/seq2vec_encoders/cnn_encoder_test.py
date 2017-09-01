@@ -42,7 +42,7 @@ class TestCnnEncoder(AllenNlpTestCase):
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(encoder)
         input_tensor = Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
-        encoder_output = encoder(input_tensor)
+        encoder_output = encoder(input_tensor, None)
         assert_almost_equal(encoder_output.data.numpy(), numpy.asarray([[1.6 + 1.0, 3.1 + 1.0]]))
 
     def test_forward_runs_with_larger_input(self):
@@ -51,4 +51,4 @@ class TestCnnEncoder(AllenNlpTestCase):
                              ngram_filter_sizes=(1, 2, 3, 4, 5),
                              output_dim=30)
         tensor = Variable(torch.rand(4, 8, 7))
-        assert encoder(tensor).size() == (4, 30)
+        assert encoder(tensor, None).size() == (4, 30)

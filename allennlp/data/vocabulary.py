@@ -185,7 +185,7 @@ class Vocabulary:
                 num_tokens = len(mapping)
                 start_index = 1 if mapping[0] == self._padding_token else 0
                 for i in range(start_index, num_tokens):
-                    print(mapping[i], file=token_file)
+                    print(mapping[i].replace('\n', '@@NEWLINE@@'), file=token_file)
 
     @classmethod
     def from_files(cls, directory: str) -> 'Vocabulary':
@@ -256,7 +256,7 @@ class Vocabulary:
         with codecs.open(filename, 'r', 'utf-8') as input_file:
             for i, line in enumerate(input_file.readlines()):
                 index = i + 1 if is_padded else i
-                token = line[:-1]
+                token = line[:-1].replace('@@NEWLINE@@', '\n')
                 if token == oov_token:
                     token = self._oov_token
                 self._token_to_index[namespace][token] = index

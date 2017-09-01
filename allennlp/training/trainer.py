@@ -28,6 +28,7 @@ from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables, device_mapping
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.optimizers import Optimizer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -348,13 +349,11 @@ class Trainer:
     def from_params(cls,
                     model: Model,
                     serialization_dir: str,
-                    optimizer: torch.optim.Optimizer,
                     iterator: DataIterator,
                     train_dataset: Dataset,
                     validation_dataset: Optional[Dataset],
-                    params: Optional[Params] = None) -> 'Trainer':
+                    params: Params) -> 'Trainer':
 
-        params = params or Params({})
         patience = params.pop("patience", 2)
         validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop("num_epochs", 20)
@@ -362,11 +361,18 @@ class Trainer:
         grad_norm = params.pop("grad_norm", None)
         grad_clipping = params.pop("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+
+        if cuda_device >= 0:
+            model = model.cuda(cuda_device)
+        parameters = [p for p in model.parameters() if p.requires_grad]
+        optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
+
         if lr_scheduler_params:
             scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
         else:
             scheduler = None
         no_tqdm = params.pop("no_tqdm", False)
+
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
                        train_dataset, validation_dataset,

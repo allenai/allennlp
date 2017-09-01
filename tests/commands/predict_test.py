@@ -21,13 +21,13 @@ class TestPredict(TestCase):
                     "/path/to/archive", # archive
                     "/dev/null",    # input_file
                     "--output-file", "/dev/null",
-                    "--print"]
+                    "--silent"]
 
         args = parser.parse_args(raw_args)
 
         assert args.func == predict
         assert args.archive_file == "/path/to/archive"
-        assert args.print
+        assert args.silent
 
     def test_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()
@@ -45,7 +45,7 @@ class TestPredict(TestCase):
                     "tests/fixtures/bidaf/serialization/model.tar.gz",
                     infile,     # input_file
                     "--output-file", outfile,
-                    "--print"]
+                    "--silent"]
 
         main()
 
@@ -56,8 +56,7 @@ class TestPredict(TestCase):
 
         assert len(results) == 2
         for result in results:
-            assert set(result.keys()) == {"span_start_probs", "span_end_probs", "best_span",
-                                          "best_span_str"}
+            assert set(result.keys()) == {"span_start_probs", "span_end_probs", "best_span"}
 
     def test_fails_without_required_args(self):
         sys.argv = ["run.py",            # executable
