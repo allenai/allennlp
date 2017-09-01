@@ -1,9 +1,6 @@
 allennlp.modules
 ========================
 
-This submodule contains custom PyTorch ``Module`` s
-that are used as components in AllenNLP ``Model`` s.
-
 .. toctree::
 
    allennlp.modules.attention
