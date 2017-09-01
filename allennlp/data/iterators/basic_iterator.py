@@ -14,7 +14,7 @@ from allennlp.data.instance import Instance
 @DataIterator.register("basic")
 class BasicIterator(DataIterator):
     """
-    A very basic iterator, which takes a dataset, pads all of it's instances to the maximum lengths
+    A very basic iterator, which takes a dataset, pads all of its instances to the maximum lengths
     of the relevant fields across the whole dataset, and yields fixed size batches.
 
     Parameters

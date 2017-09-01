@@ -1,3 +1,9 @@
+"""
+:class:`~allennlp.common.registrable.Registrable` is a "mixin" for endowing
+any base class with a named registry for its subclasses and a decorator
+for registering them.
+"""
+
 from collections import defaultdict
 from typing import TypeVar, Type, Dict, List  # pylint: disable=unused-import
 

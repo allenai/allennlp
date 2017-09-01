@@ -1,3 +1,7 @@
+"""
+Assorted utilities for working with neural networks in AllenNLP.
+"""
+
 from typing import Dict, Optional, Union
 
 import numpy

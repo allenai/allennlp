@@ -5,7 +5,15 @@ from allennlp.service.predictors.predictor import Predictor
 
 @Predictor.register('machine-comprehension')
 class BidafPredictor(Predictor):
+    """
+    Wrapper for the :class:`~allennlp.models.bidaf.BidirectionalAttentionFlow` model.
+    """
     def predict_json(self, inputs: JsonDict) -> JsonDict:
+        """
+        Expects JSON that looks like ``{"question": "...", "passage": "..."}``
+        and returns JSON that looks like
+        ``{"best_span": "...", "best_span_str": "...", "span_start_probs": "...", "span_end_probs": "..."}``
+        """
         question_text = inputs["question"]
         passage_text = inputs["passage"]
 

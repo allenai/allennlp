@@ -1,3 +1,8 @@
+"""
+A :class:`~allennlp.data.fields.field.Field` is some piece of data instance
+that ends up as an array in a model.
+"""
+
 from allennlp.data.fields.field import Field
 from allennlp.data.fields.index_field import IndexField
 from allennlp.data.fields.label_field import LabelField

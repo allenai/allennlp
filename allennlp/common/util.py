@@ -1,3 +1,7 @@
+"""
+Various utilities that don't fit anwhere else.
+"""
+
 from itertools import zip_longest
 from typing import Any, Callable, Dict, List, TypeVar
 import random
