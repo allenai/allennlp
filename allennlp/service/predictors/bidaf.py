@@ -30,4 +30,7 @@ class BidafPredictor(Predictor):
         best_span_char_end = passage_tokens_offsets[best_span[1]][1]
         prediction["best_span_str"] = passage_text[best_span_char_start:best_span_char_end]
 
+        # Add the question tokens, so the token intervals are useful
+        prediction["tokens"] = passage_tokens
+
         return sanitize(prediction)

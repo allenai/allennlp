@@ -57,7 +57,6 @@ class SemanticRoleLabelerPredictor(Predictor):
             ]}
         """
         sentence = inputs["sentence"]
-        tokens = self.nlp.tokenizer(sentence)
 
         spacy_doc = self.nlp(sentence)
         words = [token.text for token in spacy_doc]
@@ -65,7 +64,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         text = TextField(words, token_indexers=self.token_indexers)
         for i, word in enumerate(spacy_doc):
             if word.pos_ == "VERB":
-                verb_labels = [0 for _ in tokens]
+                verb_labels = [0 for _ in words]
                 verb_labels[i] = 1
                 verb_indicator = SequenceLabelField(verb_labels, text)
                 output = self.model.tag(text, verb_indicator)
@@ -79,5 +78,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                         "description": description,
                         "tags": tags,
                 })
+
+        results["tokens"] = [word.text for word in spacy_doc]
 
         return sanitize(results)
