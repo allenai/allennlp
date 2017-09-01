@@ -1,6 +1,6 @@
 """
 A :class:`~Dataset` represents a collection of data suitable for feeding into a model.
-For example, when you train a model, you will likely have a _training_ dataset and a _validation_ dataset.
+For example, when you train a model, you will likely have a *training* dataset and a *validation* dataset.
 """
 
 import logging

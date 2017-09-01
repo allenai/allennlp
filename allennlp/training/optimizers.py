@@ -1,7 +1,7 @@
 """
 AllenNLP just uses
 `PyTorch optimizers <http://pytorch.org/docs/master/optim.html>`_ ,
-with a thin wrapper to allow registering them and instantiating them `from_params`.
+with a thin wrapper to allow registering them and instantiating them ``from_params``.
 
 The available optimizers are
 

@@ -1,7 +1,7 @@
 """
 AllenNLP just uses
 `PyTorch learning rate schedulers <http://pytorch.org/docs/master/optim.html#how-to-adjust-learning-rate>`_,
-with a thin wrapper to allow registering them and instantiating them `from_params`.
+with a thin wrapper to allow registering them and instantiating them ``from_params``.
 
 The available learning rate schedulers are
 
