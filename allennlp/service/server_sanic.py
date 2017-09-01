@@ -41,7 +41,9 @@ def make_app() -> Sanic:
     app.static('/', './allennlp/service/static/index.html')
     app.predictors = {}
 
-    @lru_cache(maxsize=int(CACHE_SIZE))
+    cache_size = int(CACHE_SIZE)
+
+    @lru_cache(maxsize=cache_size)
     def _caching_prediction(model: Predictor, data: str) -> JsonDict:
         """
         Just a wrapper around ``model.predict_json`` that allows us to use a cache decorator.
@@ -61,12 +63,12 @@ def make_app() -> Sanic:
         pre_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
 
         try:
-            if CACHE_SIZE > 0:
+            if cache_size > 0:
                 # lru_cache insists that all function arguments be hashable,
                 # so unfortunately we have to stringify the data.
                 prediction = _caching_prediction(model, json.dumps(data))
             else:
-                # if CACHE_SIZE is 0, skip caching altogether
+                # if cache_size is 0, skip caching altogether
                 prediction = model.predict_json(data)
         except KeyError as err:
             raise ServerError("Required JSON field not found: " + err.args[0], status_code=400)
