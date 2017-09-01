@@ -1,6 +1,11 @@
 allennlp.modules
 ========================
 
+.. automodule:: allennlp.modules
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. toctree::
 
    allennlp.modules.attention
@@ -17,7 +22,3 @@ allennlp.modules
    allennlp.modules.token_embedders
 
 
-.. automodule:: allennlp.modules
-   :members:
-   :undoc-members:
-   :show-inheritance:

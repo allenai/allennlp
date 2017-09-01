@@ -1,6 +1,6 @@
 """
 Custom PyTorch
-`Modules <http://pytorch.org/docs/master/nn.html#torch.nn.Module>`_
+`Module <http://pytorch.org/docs/master/nn.html#torch.nn.Module>`_ s
 that are used as components in AllenNLP
 :class:`~allennlp.models.model.Model` s.
 """
