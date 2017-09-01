@@ -57,9 +57,15 @@ class BidirectionalAttentionFlow(Model):
         before predicting span end.
     initializer : ``InitializerApplicator``
         We will use this to initialize the parameters in the model, calling ``initializer(self)``.
-    dropout : ``float``, optional (default=``0.2``)
+    dropout : ``float``, optional (default=0.2)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
+    mask_lstms : ``bool, optional (default=True)
+        If ``False``, we will skip passing the mask to the LSTM layers.  This gives a ~2x speedup,
+        with only a slight performance decrease, if any.  We haven't experimented much with this
+        yet, but have confirmed that we still get very similar performance with much faster
+        training times.  We still use the mask for all softmaxes, but avoid the shuffling that's
+        required when using masking with pytorch LSTMs.
     evaluation_json_file : ``str``, optional
         If given, we will load this JSON into memory and use it to compute official metrics
         against.  We need this separately from the validation dataset, because the official metrics
@@ -74,6 +80,7 @@ class BidirectionalAttentionFlow(Model):
                  span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
+                 mask_lstms: bool = True,
                  evaluation_json_file: str = None) -> None:
         super(BidirectionalAttentionFlow, self).__init__(vocab)
 
@@ -103,6 +110,7 @@ class BidirectionalAttentionFlow(Model):
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
             self._dropout = lambda x: x
+        self._mask_lstms = mask_lstms
 
         if evaluation_json_file:
             logger.info("Prepping official evaluation dataset from %s", evaluation_json_file)
@@ -183,9 +191,11 @@ class BidirectionalAttentionFlow(Model):
         passage_length = embedded_passage.size(1)
         question_mask = util.get_text_field_mask(question).float()
         passage_mask = util.get_text_field_mask(passage).float()
+        question_lstm_mask = question_mask if self._mask_lstms else None
+        passage_lstm_mask = passage_mask if self._mask_lstms else None
 
-        encoded_question = self._dropout(self._phrase_layer(embedded_question, question_mask))
-        encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_mask))
+        encoded_question = self._dropout(self._phrase_layer(embedded_question, question_lstm_mask))
+        encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
         encoding_dim = encoded_question.size(-1)
 
         # Shape: (batch_size, passage_length, question_length)
@@ -218,7 +228,7 @@ class BidirectionalAttentionFlow(Model):
                                           encoded_passage * tiled_question_passage_vector],
                                          dim=-1)
 
-        modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_mask))
+        modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_lstm_mask))
         modeling_dim = modeled_passage.size(-1)
 
         # Shape: (batch_size, passage_length, encoding_dim * 4 + modeling_dim))
@@ -242,7 +252,8 @@ class BidirectionalAttentionFlow(Model):
                                              modeled_passage * tiled_start_representation],
                                             dim=-1)
         # Shape: (batch_size, passage_length, encoding_dim)
-        encoded_span_end = self._dropout(self._span_end_encoder(span_end_representation, passage_mask))
+        encoded_span_end = self._dropout(self._span_end_encoder(span_end_representation,
+                                                                passage_lstm_mask))
         # Shape: (batch_size, passage_length, encoding_dim * 4 + span_end_encoding_dim)
         span_end_input = self._dropout(torch.cat([final_merged_passage, encoded_span_end], dim=-1))
         span_end_logits = self._span_end_predictor(span_end_input).squeeze(-1)
@@ -378,6 +389,7 @@ class BidirectionalAttentionFlow(Model):
         initializer = InitializerApplicator.from_params(params.pop("initializer", []))
         dropout = params.pop('dropout', 0.2)
         evaluation_json_file = params.pop('evaluation_json_file', None)
+        mask_lstms = params.pop('mask_lstms', True)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
@@ -388,4 +400,5 @@ class BidirectionalAttentionFlow(Model):
                    span_end_encoder=span_end_encoder,
                    initializer=initializer,
                    dropout=dropout,
+                   mask_lstms=mask_lstms,
                    evaluation_json_file=evaluation_json_file)
