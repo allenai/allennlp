@@ -13,6 +13,10 @@ from allennlp.nn.util import arrays_to_variables
 
 
 class ModelTestCase(AllenNlpTestCase):
+    """
+    A subclass of :class:`~allennlp.common.testing.test_case.AllenNlpTestCase`
+    with added methods for testing :class:`~allennlp.models.model.Model` subclasses.
+    """
     def set_up_model(self, param_file, dataset_file):
         # pylint: disable=attribute-defined-outside-init
         self.param_file = param_file

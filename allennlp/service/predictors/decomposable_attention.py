@@ -4,7 +4,15 @@ from allennlp.service.predictors.predictor import Predictor
 
 @Predictor.register('textual-entailment')
 class DecomposableAttentionPredictor(Predictor):
+    """
+    Wrapper for the :class:`~allennlp.models.bidaf.DecomposableAttention` model.
+    """
     def predict_json(self, inputs: JsonDict) -> JsonDict:
+        """
+        Expects JSON that looks like ``{"premise": "...", "hypothesis": "..."}``
+        and returns JSON that looks like
+        ``{"label_probs": [entailment_prob, contradiction_prob, neutral_prob]}``
+        """
         premise_text = inputs["premise"]
         hypothesis_text = inputs["hypothesis"]
 
