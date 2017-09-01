@@ -56,7 +56,8 @@ class TestPredict(TestCase):
 
         assert len(results) == 2
         for result in results:
-            assert set(result.keys()) == {"span_start_probs", "span_end_probs", "best_span", "best_span_str", "tokens"}
+            assert set(result.keys()) == {"span_start_probs", "span_end_probs", "best_span",
+                                          "best_span_str", "tokens"}
 
     def test_fails_without_required_args(self):
         sys.argv = ["run.py",            # executable
