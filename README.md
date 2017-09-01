@@ -88,27 +88,33 @@ used for development along with all the dependencies needed to run AllenNLP.
 
 1.  [Download and install Conda](https://conda.io/docs/download.html).
 
-2.  Create a Conda environment with Python 3.
+2.  Change your directory to your clone of AllenNLP.
+
+    ```
+    cd allennlp
+    ```
+
+3.  Create a Conda environment with Python 3.
 
     ```
     conda create -n allennlp python=3.5
     ```
 
-3.  Now activate the Conda environment.
+4.  Now activate the Conda environment.  You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
 
     ```
     source activate allennlp
     ```
 
-4.  Install the required dependencies.
+5.  Install the required dependencies.
 
     ```
     INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
     ```
 
-5. Visit http://pytorch.org/ and install the relevant pytorch package.
+6. Visit http://pytorch.org/ and install the relevant pytorch package.
 
-6.  Set the `PYTHONHASHSEED` for repeatable experiments.
+7.  Set the `PYTHONHASHSEED` for repeatable experiments.  You may want to put this in your `.bashrc`.
 
     ```
     export PYTHONHASHSEED=2157
