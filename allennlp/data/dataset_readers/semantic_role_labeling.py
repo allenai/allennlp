@@ -12,7 +12,8 @@ from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.fields.field import Field  # pylint: disable=unused-import
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -125,9 +126,8 @@ class SrlReader(DatasetReader):
     A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
 
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__(token_indexers=token_indexers)
+    def __init__(self, token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     def _process_sentence(self,
                           sentence: List[str],
@@ -265,6 +265,24 @@ class SrlReader(DatasetReader):
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
         return Dataset(instances)
+
+    def text_to_instance(self,  # type: ignore
+                         tokens: List[str],
+                         verb_label: List[int],
+                         tags: List[str] = None) -> Instance:
+        """
+        We take `pre-tokenized` input here, along with a verb label.  The verb label should be a
+        one-hot binary vector, the same length as the tokens, indicating the position of the verb
+        to find arguments for.
+        """
+        # pylint: disable=arguments-differ
+        fields = {}  # type: Dict[str, Field]
+        text_field = TextField(tokens, token_indexers=self._token_indexers)
+        fields['tokens'] = text_field
+        fields['verb_indicator'] = SequenceLabelField(verb_label, text_field)
+        if tags:
+            fields['tags'] = SequenceLabelField(tags, text_field)
+        return Instance(fields)
 
     @classmethod
     def from_params(cls, params: Params) -> 'SrlReader':

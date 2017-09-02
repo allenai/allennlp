@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, TextIO
+from typing import Dict, List, TextIO
 
 import torch
 from torch.nn.modules import Linear, Dropout
@@ -7,12 +7,10 @@ import torch.nn.functional as F
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.initializers import InitializerApplicator
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields import SequenceLabelField, TextField
+from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
-from allennlp.nn.util import arrays_to_variables, viterbi_decode
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import SpanBasedF1Measure
 
@@ -136,50 +134,6 @@ class SemanticRoleLabeler(Model):
             output_dict["loss"] = loss
 
         return output_dict
-
-    def tag(self, text_field: TextField, verb_indicator: SequenceLabelField) -> Dict[str, Any]:
-        """
-        Perform inference on a ``Instance`` consisting of a single ``TextField`` representing
-        the sentence and a ``SequenceLabelField`` representing a binary per word feature
-        denoting the position of the verbal predicate.
-
-        Returned sequence is the maximum likelihood tag sequence under the constraint that
-        the sequence must be a valid BIO sequence.
-
-        Parameters
-        ----------
-        text_field : ``TextField``, required.
-            A ``TextField`` containing the text to be tagged.
-        verb_indicator: ``SequenceLabelField``, required.
-            The index of the verb whose arguments we are labeling.
-
-        Returns
-        -------
-        A Dict containing:
-
-        tags : List[str]
-            A list the length of the text input, containing the predicted (argmax) tag
-            from the model per token.
-        class_probabilities : numpy.Array
-            An array of shape (text_input_length, num_classes), where each row is a
-            distribution over classes for a given token in the sentence.
-        """
-        instance = Instance({"tokens": text_field, "verb_indicator": verb_indicator})
-        instance.index_fields(self.vocab)
-        model_input = arrays_to_variables(instance.as_array_dict(),
-                                          add_batch_dimension=True,
-                                          for_training=False)
-        output_dict = self.forward(**model_input)
-
-        # Remove batch dimension, as we only had one input.
-        predictions = output_dict["class_probabilities"].data.squeeze(0)
-        transition_matrix = self.get_viterbi_pairwise_potentials()
-
-        max_likelihood_sequence, _ = viterbi_decode(predictions, transition_matrix)
-        tags = [self.vocab.get_token_from_index(x, namespace="labels")
-                for x in max_likelihood_sequence]
-
-        return {"tags": tags, "class_probabilities": predictions.numpy()}
 
     def get_metrics(self, reset: bool = False):
         metric_dict = self.span_metric.get_metric(reset=reset)
