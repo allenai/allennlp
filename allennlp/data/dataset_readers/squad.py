@@ -3,7 +3,7 @@ import logging
 import random
 from collections import Counter
 from copy import deepcopy
-from typing import List, Tuple, Dict, Set  # pylint: disable=unused-import
+from typing import List, Tuple, Dict, Set
 
 import numpy
 from tqdm import tqdm
@@ -16,8 +16,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.fields import TextField, ListField, IndexField
-from allennlp.data.fields.field import Field  # pylint: disable=unused-import
+from allennlp.data.fields import Field, TextField, ListField, IndexField
 from allennlp.data.tokenizers import WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -137,7 +136,7 @@ class SquadReader(DatasetReader):
 
                     # There may be multiple answer annotations, so pick the one that occurs the
                     # most.
-                    candidate_answers = Counter() # type: Counter
+                    candidate_answers: Counter = Counter()
                     for answer in question_answer["answers"]:
                         candidate_answers[(answer["answer_start"], answer["text"])] += 1
                     char_span_start, answer_text = candidate_answers.most_common(1)[0][0]
@@ -245,24 +244,24 @@ class SquadSentenceSelectionReader(DatasetReader):
 
         # Initializing some data structures here that will be useful when reading a file.
         # Maps sentence strings to sentence indices
-        self._sentence_to_id = {}  # type: Dict[str, int]
+        self._sentence_to_id: Dict[str, int] = {}
         # Maps sentence indices to sentence strings
-        self._id_to_sentence = {}  # type: Dict[int, str]
+        self._id_to_sentence: Dict[int, str] = {}
         # Maps paragraph ids to lists of contained sentence ids
-        self._paragraph_sentences = {}  # type: Dict[int, List[int]]
+        self._paragraph_sentences: Dict[int, List[int]] = {}
         # Maps sentence ids to the containing paragraph id.
-        self._sentence_paragraph_map = {}  # type: Dict[int, int]
+        self._sentence_paragraph_map: Dict[int, int] = {}
         # Maps question strings to question indices
-        self._question_to_id = {}  # type: Dict[str, int]
+        self._question_to_id: Dict[str, int] = {}
         # Maps question indices to question strings
-        self._id_to_question = {}  # type: Dict[int, str]
+        self._id_to_question: Dict[int, str] = {}
 
     def _get_sentence_choices(self,
                               question_id: int,
                               answer_id: int) -> Tuple[List[str], int]:  # pylint: disable=invalid-sequence-index
         # Because sentences and questions have different indices, we need this to hold tuples of
         # ("sentence", id) or ("question", id), instead of just single ids.
-        negative_sentences = set()  # type: Set[Tuple[str, int]]
+        negative_sentences: Set[Tuple[str, int]] = set()
         for selection_method in self._negative_sentence_selection_methods:
             if selection_method == 'paragraph':
                 paragraph_id = self._sentence_paragraph_map[answer_id]
@@ -360,7 +359,7 @@ class SquadSentenceSelectionReader(DatasetReader):
 
                     # There may be multiple answer annotations, so pick the one
                     # that occurs the most.
-                    candidate_answer_start_indices = Counter() # type: Counter
+                    candidate_answer_start_indices: Counter = Counter()
                     for answer in question_answer["answers"]:
                         candidate_answer_start_indices[answer["answer_start"]] += 1
                     answer_start_index, _ = candidate_answer_start_indices.most_common(1)[0]
@@ -389,7 +388,7 @@ class SquadSentenceSelectionReader(DatasetReader):
         for question_id, answer_id in tqdm(questions):
             sentence_choices, correct_choice = self._get_sentence_choices(question_id, answer_id)
             question_text = self._id_to_question[question_id]
-            sentence_fields = []  # type: List[Field]
+            sentence_fields: List[Field] = []
             for sentence in sentence_choices:
                 tokenized_sentence, _ = self._tokenizer.tokenize(sentence)
                 sentence_field = TextField(tokenized_sentence, self._token_indexers)

@@ -70,8 +70,8 @@ class SimpleWordSplitter(WordSplitter):
         """
         fields = sentence.split()
         tokens = []
-        for field in fields:  # type: str
-            add_at_end = []  # type: List[str]
+        for field in fields:
+            add_at_end: List[str] = []
             while self._can_split(field) and field[0] in self.beginning_punctuation:
                 tokens.append(field[0])
                 field = field[1:]
@@ -144,7 +144,7 @@ class SpacyWordSplitter(WordSplitter):
         if SpacyWordSplitter.en_nlp is None:
             # Load is here because it's slow, and can be unnecessary.
             SpacyWordSplitter.en_nlp = spacy.load('en', parser=False, tagger=False, entity=False)
-        tokens = self.en_nlp.tokenizer(sentence)  # type: ignore
+        tokens = self.en_nlp.tokenizer(sentence)
         words = [str(token) for token in tokens]
         offsets = [(token.idx, token.idx + len(token)) for token in tokens]
         return words, offsets

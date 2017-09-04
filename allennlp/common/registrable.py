@@ -5,7 +5,7 @@ for registering them.
 """
 
 from collections import defaultdict
-from typing import TypeVar, Type, Dict, List  # pylint: disable=unused-import
+from typing import TypeVar, Type, Dict, List
 
 from allennlp.common.checks import ConfigurationError
 
@@ -34,8 +34,8 @@ class Registrable:
     a subclass to load all other subclasses and the abstract class).
     """
 
-    _registry = defaultdict(dict)  # type: Dict[Type, Dict[str, Type]]
-    default_implementation = None  # type: str
+    _registry: Dict[Type, Dict[str, Type]] = defaultdict(dict)
+    default_implementation: str = None
 
     @classmethod
     def register(cls: Type[T], name: str):
