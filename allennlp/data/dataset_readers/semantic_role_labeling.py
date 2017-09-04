@@ -130,18 +130,18 @@ class SrlReader(DatasetReader):
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     def _process_sentence(self,
-                          sentence: List[str],
+                          sentence_tokens: List[str],
                           verbal_predicates: List[int],
                           predicate_argument_labels: List[List[str]]) -> List[Instance]:
         """
         Parameters
         ----------
-        sentence : List[str], required.
+        sentence_tokens : ``List[str]``, required.
             The tokenised sentence.
-        verbal_predicates : List[int], required.
+        verbal_predicates : ``List[int]``, required.
             The indexes of the verbal predicates in the
             sentence which have an associated annotation.
-        predicate_argument_labels : List[List[str]], required.
+        predicate_argument_labels : ``List[List[str]]``, required.
             A list of predicate argument labels, one for each verbal_predicate. The
             internal lists are of length: len(sentence).
 
@@ -150,24 +150,18 @@ class SrlReader(DatasetReader):
         A list of Instances.
 
         """
-        sentence_field = TextField(sentence, self._token_indexers)
         if not verbal_predicates:
             # Sentence contains no predicates.
-            tags = SequenceLabelField(["O" for _ in sentence], sentence_field)
-            verb_indicator = SequenceLabelField([0 for _ in sentence], sentence_field)
-            instance = Instance(fields={"tokens": sentence_field, "verb_indicator": verb_indicator, "tags": tags})
-            return [instance]
+            tags = ["O" for _ in sentence_tokens]
+            verb_label = [0 for _ in sentence_tokens]
+            return [self.text_to_instance(sentence_tokens, verb_label, tags)]
         else:
             instances = []
             for verb_index, annotation in zip(verbal_predicates, predicate_argument_labels):
-
-                tags = SequenceLabelField(annotation, sentence_field)
-                indicator_ids = [0 for _ in sentence]
-                indicator_ids[verb_index] = 1
-                verb_indicator = SequenceLabelField(indicator_ids, sentence_field)
-                instances.append(Instance(fields={"tokens": sentence_field,
-                                                  "verb_indicator": verb_indicator,
-                                                  "tags": tags}))
+                tags = annotation
+                verb_label = [0 for _ in sentence_tokens]
+                verb_label[verb_index] = 1
+                instances.append(self.text_to_instance(sentence_tokens, verb_label, tags))
             return instances
 
     @overrides
