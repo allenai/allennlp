@@ -186,21 +186,8 @@ class SquadReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'SquadReader':
-        """
-        Parameters
-        ----------
-        tokenizer : ``Params``, optional (default=``{}``)
-        token_indexers: ``Params``, optional (default=``{}``)
-        """
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers', {})
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-        # The default parameters are contained within the class, so if no parameters are given we
-        # must pass None.
-        if token_indexers == {}:
-            token_indexers = None
+        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         params.assert_empty(cls.__name__)
         return cls(tokenizer=tokenizer, token_indexers=token_indexers)
 
@@ -409,23 +396,9 @@ class SquadSentenceSelectionReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'SquadSentenceSelectionReader':
-        """
-        Parameters
-        ----------
-        negative_sentence_selection : ``str``, optional (default="paragraph")
-        tokenizer : ``Params``, optional
-        token_indexers: ``List[Params]``, optional
-        """
         negative_sentence_selection = params.pop('negative_sentence_selection', 'paragraph')
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers', Params({}))
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-        # The default parameters are contained within the class,
-        # so if no parameters are given we must pass None.
-        if token_indexers == {}:
-            token_indexers = None
+        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         params.assert_empty(cls.__name__)
         return SquadSentenceSelectionReader(negative_sentence_selection=negative_sentence_selection,
                                             tokenizer=tokenizer,

@@ -79,23 +79,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'SequenceTaggingDatasetReader':
-        """
-        Parameters
-        ----------
-        token_indexers: ``Dict[Params]``, optional
-        """
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers', Params({}))
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-        # The default parameters are contained within the class,
-        # so if no parameters are given we must pass None.
-        if token_indexers == {}:
-            token_indexers = None
-
+        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         word_tag_delimiter = params.pop("word_tag_delimiter", DEFAULT_WORD_TAG_DELIMITER)
         token_delimiter = params.pop("token_delimiter", None)
-
         params.assert_empty(cls.__name__)
         return SequenceTaggingDatasetReader(token_indexers=token_indexers,
                                             word_tag_delimiter=word_tag_delimiter,
