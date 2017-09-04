@@ -12,6 +12,7 @@ from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 from allennlp.nn.util import arrays_to_variables, viterbi_decode
 
 
+
 def main(serialization_directory, device):
     """
     config_file : str, required.
