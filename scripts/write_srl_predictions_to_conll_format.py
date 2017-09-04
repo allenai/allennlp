@@ -3,15 +3,17 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 import argparse
+import tqdm
 from allennlp.common import Params
+from allennlp.data.iterators import BasicIterator
 from allennlp.data import DatasetReader
 from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
+from allennlp.nn.util import arrays_to_variables, viterbi_decode
 
 
 def main(serialization_directory, device):
     """
-
     config_file : str, required.
         A config file containing a model specification.
     serialization_directory : str, required.
@@ -31,16 +33,30 @@ def main(serialization_directory, device):
     prediction_file = open(prediction_file_path, "w+")
     gold_file = open(gold_file_path, "w+")
 
-    # Load the evaluation data
+    # Load the evaluation data and index it.
     print("Reading evaluation data from {}".format(evaluation_data_path))
     dataset = dataset_reader.read(evaluation_data_path)
+    dataset.index_instances(model._vocab)
+    iterator = BasicIterator(batch_size=32)
 
-    # We have to do this using the .tag() method, rather than in bulk, because we need
-    # to use the constrained inference to guarantee valid tag sequences.
-    for instance in dataset.instances:
+    model_predictions = []
+    for batch in tqdm.tqdm(iterator(dataset, num_epochs=1, shuffle=False)):
+        tensor_batch = arrays_to_variables(batch, device, for_training=False)
+        result = model.forward(**tensor_batch)
+
+        sequence_probabilities = result["class_probabilities"]
+        model_predictions.extend([x.data.cpu().squeeze(0) for x in
+                                  sequence_probabilities.split(1, 0)])
+
+    transition_matrix = model.get_viterbi_pairwise_potentials()
+    for instance, prediction in zip(dataset.instances, model_predictions):
         fields = instance.fields
-        results = model.tag(fields["tokens"], fields["verb_indicator"])
-
+        sentence_length = len(fields["tokens"].tokens)
+        # Clip to the length of the sentence here, because we did predictions in batch,
+        # so there might be padding tokens appended.
+        max_likelihood_sequence, _ = viterbi_decode(prediction[:, :sentence_length], transition_matrix)
+        predicted_tags = [model._vocab.get_token_from_index(x, namespace="labels")
+                          for x in max_likelihood_sequence]
         try:
             # Most sentences have a verbal predicate, but not all.
             verb_index = fields["verb_indicator"].labels.index(1)
@@ -48,7 +64,6 @@ def main(serialization_directory, device):
             verb_index = None
 
         gold_tags = fields["tags"].labels
-        predicted_tags = results["tags"]
         sentence = fields["tokens"].tokens
 
         write_to_conll_eval_file(prediction_file, gold_file,
