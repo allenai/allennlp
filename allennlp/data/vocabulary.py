@@ -290,7 +290,7 @@ class Vocabulary:
     @classmethod
     def from_params(cls, params: Params, dataset=None):
         """
-        There are two possible ways to build a vocabulary from a
+        There are two possible ways to build a vocabulary; from a
         pre-existing dataset, using :func:`Vocabulary.from_dataset`, or
         from a pre-saved vocabulary, using :func:`Vocabulary.from_files`.
         This method wraps both of these options, allowing their specification
