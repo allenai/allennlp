@@ -164,9 +164,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
         validation_data = None
         combined_data = train_data
 
-    # TODO(Mark): work out how this is going to be built with different options.
-    non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
-    vocab = Vocabulary.from_dataset(combined_data, non_padded_namespaces=non_padded_namespaces)
+    vocab = Vocabulary.from_params(params.pop("vocabulary", {}), combined_data)
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))
