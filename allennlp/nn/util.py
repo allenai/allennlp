@@ -129,7 +129,9 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
     """
     if isinstance(data_structure, dict):
         for key, value in data_structure.items():
-            if key == 'metadata':
+            # This check is a bit hacky, but I'm not sure how else to handle this.  By this point,
+            # we've lost all reference to the original `Field` object.
+            if 'metadata' in key:
                 if add_batch_dimension:
                     data_structure[key] = [value]
             else:

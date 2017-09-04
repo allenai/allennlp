@@ -11,7 +11,6 @@ import logging
 import os
 import shutil
 import time
-from inspect import signature
 from typing import Dict, Optional, List
 
 import torch
@@ -279,8 +278,6 @@ class Trainer:
 
     def _forward(self, batch: dict, for_training: bool) -> dict:
         tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=for_training)
-        if 'metadata' in tensor_batch and 'metadata' not in signature(self._model.forward).parameters:
-            del tensor_batch['metadata']
         return self._model.forward(**tensor_batch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
