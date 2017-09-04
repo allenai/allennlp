@@ -3,12 +3,15 @@ import codecs
 import os
 from copy import deepcopy
 
+import pytest
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Dataset, Instance
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
 from allennlp.data.vocabulary import Vocabulary, _NamespaceDependentDefaultDict, DEFAULT_OOV_TOKEN
+from allennlp.common.params import Params
+from allennlp.common.checks import ConfigurationError
 
 
 class TestVocabulary(AllenNlpTestCase):
@@ -205,3 +208,33 @@ class TestVocabulary(AllenNlpTestCase):
         text_field2.index(vocab2)
         indexed_tokens2 = deepcopy(text_field2._indexed_tokens)  # pylint: disable=protected-access
         assert indexed_tokens == indexed_tokens2
+
+    def test_from_params(self):
+        # Save a vocab to check we can load it from_params.
+        vocab_dir = os.path.join(self.TEST_DIR, 'vocab_save')
+        vocab = Vocabulary(non_padded_namespaces=["a", "c"])
+        vocab.add_token_to_namespace("a0", namespace="a")  # non-padded, should start at 0
+        vocab.add_token_to_namespace("a1", namespace="a")
+        vocab.add_token_to_namespace("a2", namespace="a")
+        vocab.add_token_to_namespace("b2", namespace="b")  # padded, should start at 2
+        vocab.add_token_to_namespace("b3", namespace="b")
+        vocab.save_to_files(vocab_dir)
+
+        params = Params({"vocabulary_directory": vocab_dir})
+        vocab2 = Vocabulary.from_params(params)
+        assert vocab.get_index_to_token_vocabulary("a") == vocab2.get_index_to_token_vocabulary("a")
+        assert vocab.get_index_to_token_vocabulary("b") == vocab2.get_index_to_token_vocabulary("b")
+
+        # Test case where we build a vocab from a dataset.
+        vocab2 = Vocabulary.from_params(Params({}), self.dataset)
+        assert vocab2.get_index_to_token_vocabulary("tokens") == {0: '@@PADDING@@',
+                                                                  1: '@@UNKNOWN@@',
+                                                                  2: 'a', 3: 'c', 4: 'b'}
+        # Test from_params raises when we have neither a dataset and a vocab_directory.
+        with pytest.raises(ConfigurationError):
+            _ = Vocabulary.from_params(Params({}))
+
+        # Test from_params raises when there are any other dict keys
+        # present apart from 'vocabulary_directory' and we aren't calling from_dataset.
+        with pytest.raises(ConfigurationError):
+            _ = Vocabulary.from_params(Params({"vocabulary_directory": vocab_dir, "min_count": 2}))

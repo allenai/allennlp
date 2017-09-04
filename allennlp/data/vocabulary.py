@@ -288,10 +288,13 @@ class Vocabulary:
                           non_padded_namespaces=non_padded_namespaces)
 
     @classmethod
-    def from_params(cls, params: Params, dataset: "Dataset" = None):
+    def from_params(cls, params: Params, dataset=None):
         """
-        There are two possible ways to build a vocabulary: using
-        :func:`Vocabulary.from_dataset`, or
+        There are two possible ways to build a vocabulary from a
+        pre-existing dataset, using :func:`Vocabulary.from_dataset`, or
+        from a pre-saved vocabulary, using :func:`Vocabulary.from_files`.
+        This method wraps both of these options, allowing their specification
+        from a ``Params`` object, generated from a JSON configuration file.
 
         Parameters
         ----------
@@ -307,15 +310,15 @@ class Vocabulary:
         vocabulary_directory = params.pop("vocabulary_directory", None)
         if not vocabulary_directory and not dataset:
             raise ConfigurationError("You must provide either a Params object containing a "
-                                     "vocab directory path or a Dataset to build a vocabulary from.")
+                                     "vocab_directory key or a Dataset to build a vocabulary from.")
         if vocabulary_directory and dataset:
-            logger.warn("from_params was passed both a vocabulary_directory and a Dataset. This behaviour "
-                        "is undefined, so backing off to building the Vocabulary from the Dataset.")
+            logger.warning("from_params was passed both a vocabulary_directory and a Dataset. This "
+                           "behaviour is not well defined, so backing off to using the vocabulary "
+                           "defined at %s.", vocabulary_directory)
 
-        if vocabulary_directory and not dataset:
+        if vocabulary_directory:
             params.assert_empty("Vocabulary - from files")
             return Vocabulary.from_files(vocabulary_directory)
-
         return Vocabulary.from_dataset(dataset, **params.as_dict())
 
     def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:

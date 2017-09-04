@@ -35,7 +35,6 @@ from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashse
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.data import Dataset, Vocabulary
-from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.archival import archive_model
