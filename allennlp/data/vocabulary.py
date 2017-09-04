@@ -319,7 +319,15 @@ class Vocabulary:
         if vocabulary_directory:
             params.assert_empty("Vocabulary - from files")
             return Vocabulary.from_files(vocabulary_directory)
-        return Vocabulary.from_dataset(dataset, **params.as_dict())
+
+        min_count = params.pop("min_count", 1)
+        max_vocab_size = params.pop("max_vocab_size", None)
+        non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
+        params.assert_empty("Vocabulary - from dataset")
+        return Vocabulary.from_dataset(dataset,
+                                       min_count,
+                                       max_vocab_size,
+                                       non_padded_namespaces)
 
     def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:
         """
