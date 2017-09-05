@@ -2,7 +2,7 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
-from typing import Dict, List, Optional  # pylint: disable=unused-import
+from typing import Dict, List, Optional
 
 from overrides import overrides
 import numpy
@@ -33,7 +33,7 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
     def __init__(self, tokens: List[str], token_indexers: Dict[str, TokenIndexer]) -> None:
         self.tokens = tokens
         self._token_indexers = token_indexers
-        self._indexed_tokens = None  # type: Optional[Dict[str, TokenList]]
+        self._indexed_tokens: Optional[Dict[str, TokenList]] = None
 
         if not all([isinstance(x, str) for x in tokens]):
             raise ConfigurationError("TextFields must be passed strings. "
