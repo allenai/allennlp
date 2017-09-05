@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 import logging
 
 from overrides import overrides
@@ -10,7 +10,7 @@ from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.fields import TextField, SequenceLabelField
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -43,7 +43,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
                  word_tag_delimiter: str = DEFAULT_WORD_TAG_DELIMITER,
                  token_delimiter: str = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__(token_indexers=token_indexers)
+        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._word_tag_delimiter = word_tag_delimiter
         self._token_delimiter = token_delimiter
 
@@ -76,6 +76,13 @@ class SequenceTaggingDatasetReader(DatasetReader):
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
         return Dataset(instances)
+
+    def text_to_instance(self, tokens: List[str]) -> Instance:  # type: ignore
+        """
+        We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
+        """
+        # pylint: disable=arguments-differ
+        return Instance({'tokens': TextField(tokens, token_indexers=self._token_indexers)})
 
     @classmethod
     def from_params(cls, params: Params) -> 'SequenceTaggingDatasetReader':

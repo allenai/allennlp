@@ -46,10 +46,23 @@ class LanguageModelingReader(DatasetReader):
     """
     def __init__(self,
                  tokens_per_instance: int = None,
-                 tokenizer: Tokenizer = WordTokenizer(),
+                 tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
+        self._tokenizer = tokenizer or WordTokenizer()
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._tokens_per_instance = tokens_per_instance
+
+        # No matter how you want to represent the input, we'll always represent the output as a
+        # single token id.  This code lets you learn a language model that concatenates word
+        # embeddings with character-level encoders, in order to predict the word token that comes
+        # next.
+        self._output_indexer: Dict[str, TokenIndexer] = None
+        for name, indexer in self._token_indexers.items():
+            if isinstance(indexer, SingleIdTokenIndexer):
+                self._output_indexer = {name: indexer}
+                break
+        else:
+            self._output_indexer = {"tokens": SingleIdTokenIndexer()}
 
     @overrides
     def read(self, file_path: str):
@@ -70,22 +83,10 @@ class LanguageModelingReader(DatasetReader):
         else:
             tokenized_strings = [self._tokenizer.tokenize(s)[0] for s in instance_strings]
 
-        # No matter how you want to represent the input, we'll always represent the output as a
-        # single token id.  This code lets you learn a language model that concatenates word
-        # embeddings with character-level encoders, in order to predict the word token that comes
-        # next.
-        output_indexer: Dict[str, TokenIndexer] = None
-        for name, indexer in self._token_indexers.items():
-            if isinstance(indexer, SingleIdTokenIndexer):
-                output_indexer = {name: indexer}
-                break
-        else:
-            output_indexer = {"tokens": SingleIdTokenIndexer()}
-
         instances = []
         for tokenized_string in tokenized_strings:
             input_field = TextField(tokenized_string[:-1], self._token_indexers)
-            output_field = TextField(tokenized_string[1:], output_indexer)
+            output_field = TextField(tokenized_string[1:], self._output_indexer)
             instances.append(Instance({'input_tokens': input_field,
                                        'output_tokens': output_field}))
 
@@ -93,6 +94,14 @@ class LanguageModelingReader(DatasetReader):
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
         return Dataset(instances)
+
+    @overrides
+    def text_to_instance(self, sentence: str) -> Instance:  # type: ignore
+        # pylint: disable=arguments-differ
+        tokenized_string, _ = self._tokenizer.tokenize(sentence)
+        input_field = TextField(tokenized_string[:-1], self._token_indexers)
+        output_field = TextField(tokenized_string[1:], self._output_indexer)
+        return Instance({'input_tokens': input_field, 'output_tokens': output_field})
 
     @classmethod
     def from_params(cls, params: Params) -> 'LanguageModelingReader':
