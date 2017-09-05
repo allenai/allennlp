@@ -1,8 +1,10 @@
 allennlp.modules
 ========================
 
-This submodule contains custom PyTorch ``Module`` s
-that are used as components in AllenNLP ``Model`` s.
+.. automodule:: allennlp.modules
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. toctree::
 
@@ -20,7 +22,3 @@ that are used as components in AllenNLP ``Model`` s.
    allennlp.modules.token_embedders
 
 
-.. automodule:: allennlp.modules
-   :members:
-   :undoc-members:
-   :show-inheritance:
