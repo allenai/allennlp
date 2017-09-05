@@ -139,6 +139,7 @@ class SquadReader(DatasetReader):
                     candidate_answers: Counter = Counter()
                     for answer in question_answer["answers"]:
                         candidate_answers[(answer["answer_start"], answer["text"])] += 1
+                    answer_texts = [answer['text'] for answer in question_answer['answers']]
                     char_span_start, answer_text = candidate_answers.most_common(1)[0][0]
 
                     # SQuAD gives answer annotations as a character index into the paragraph, but
@@ -174,7 +175,8 @@ class SquadReader(DatasetReader):
                     metadata = {
                             'id': question_id,
                             'original_passage': paragraph,
-                            'token_offsets': paragraph_offsets
+                            'token_offsets': paragraph_offsets,
+                            'answer_texts': answer_texts
                             }
                     instance = Instance(fields, metadata)
                     instances.append(instance)

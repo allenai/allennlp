@@ -80,8 +80,7 @@ class BidirectionalAttentionFlow(Model):
                  span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
-                 mask_lstms: bool = True,
-                 evaluation_json_file: str = None) -> None:
+                 mask_lstms: bool = True) -> None:
         super(BidirectionalAttentionFlow, self).__init__(vocab)
 
         self._text_field_embedder = text_field_embedder
@@ -111,22 +110,6 @@ class BidirectionalAttentionFlow(Model):
         else:
             self._dropout = lambda x: x
         self._mask_lstms = mask_lstms
-
-        if evaluation_json_file:
-            logger.info("Prepping official evaluation dataset from %s", evaluation_json_file)
-            with open(evaluation_json_file) as dataset_file:
-                dataset_json = json.load(dataset_file)
-            question_to_answers = {}
-            for article in dataset_json['data']:
-                for paragraph in article['paragraphs']:
-                    for question in paragraph['qas']:
-                        question_id = question['id']
-                        answers = [answer['text'] for answer in question['answers']]
-                        question_to_answers[question_id] = answers
-
-            self._official_eval_dataset = question_to_answers
-        else:
-            self._official_eval_dataset = None
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -274,7 +257,7 @@ class BidirectionalAttentionFlow(Model):
             self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
             self._span_accuracy(best_span, torch.stack([span_start, span_end], -1))
             output_dict["loss"] = loss
-        if metadata is not None and self._official_eval_dataset:
+        if metadata is not None:
             output_dict['best_span_str'] = []
             for i in range(batch_size):
                 predicted_span = tuple(best_span[i].data.cpu().numpy())
@@ -287,22 +270,20 @@ class BidirectionalAttentionFlow(Model):
                                   predicted_span: Tuple[int, int]) -> str:
         passage = metadata['original_passage']
         offsets = metadata['token_offsets']
-        question_id = metadata.get('id', None)
         start_offset = offsets[predicted_span[0]][0]
         end_offset = offsets[predicted_span[1]][1]
         span_string = passage[start_offset:end_offset]
-        if question_id in self._official_eval_dataset:
-            ground_truth = self._official_eval_dataset[question_id]
-            exact_match = squad_eval.metric_max_over_ground_truths(
-                    squad_eval.exact_match_score,
-                    span_string,
-                    ground_truth)
-            f1_score = squad_eval.metric_max_over_ground_truths(
-                    squad_eval.f1_score,
-                    span_string,
-                    ground_truth)
-            self._official_em(100 * exact_match)
-            self._official_f1(100 * f1_score)
+        answer_texts = metadata.get('answer_texts', [])
+        exact_match = squad_eval.metric_max_over_ground_truths(
+                squad_eval.exact_match_score,
+                span_string,
+                answer_texts)
+        f1_score = squad_eval.metric_max_over_ground_truths(
+                squad_eval.f1_score,
+                span_string,
+                answer_texts)
+        self._official_em(100 * exact_match)
+        self._official_f1(100 * f1_score)
         return span_string
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
@@ -388,7 +369,7 @@ class BidirectionalAttentionFlow(Model):
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
         initializer = InitializerApplicator.from_params(params.pop("initializer", []))
         dropout = params.pop('dropout', 0.2)
-        evaluation_json_file = params.pop('evaluation_json_file', None)
+        params.pop('evaluation_json_file', None)  # Temporary, for backwards compatibility
         mask_lstms = params.pop('mask_lstms', True)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
@@ -400,5 +381,4 @@ class BidirectionalAttentionFlow(Model):
                    span_end_encoder=span_end_encoder,
                    initializer=initializer,
                    dropout=dropout,
-                   mask_lstms=mask_lstms,
-                   evaluation_json_file=evaluation_json_file)
+                   mask_lstms=mask_lstms)
