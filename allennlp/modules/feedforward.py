@@ -1,3 +1,6 @@
+"""
+A feed-forward neural network.
+"""
 from typing import Sequence, Union
 
 import torch
