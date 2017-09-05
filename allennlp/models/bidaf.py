@@ -1,14 +1,13 @@
 import json
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import torch
 from torch.autograd import Variable
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, squad_eval
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields import TextField
+from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
@@ -274,36 +273,34 @@ class BidirectionalAttentionFlow(Model):
             self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
             self._span_accuracy(best_span, torch.stack([span_start, span_end], -1))
             output_dict["loss"] = loss
-        if metadata is not None and self._official_eval_dataset:
+        if metadata is not None:
             output_dict['best_span_str'] = []
             for i in range(batch_size):
+                passage_str = metadata[i]['original_passage']
+                offsets = metadata[i]['token_offsets']
                 predicted_span = tuple(best_span[i].data.cpu().numpy())
-                best_span_string = self._compute_official_metrics(metadata[i], predicted_span)  # type: ignore
+                start_offset = offsets[predicted_span[0]][0]
+                end_offset = offsets[predicted_span[1]][1]
+                best_span_string = passage_str[start_offset:end_offset]
                 output_dict['best_span_str'].append(best_span_string)
+                question_id = metadata[i].get('question_id')
+                if question_id:
+                    self._compute_official_metrics(best_span_string, question_id)
         return output_dict
 
-    def _compute_official_metrics(self,
-                                  metadata: Dict[str, Any],
-                                  predicted_span: Tuple[int, int]) -> str:
-        passage = metadata['original_passage']
-        offsets = metadata['token_offsets']
-        question_id = metadata.get('id', None)
-        start_offset = offsets[predicted_span[0]][0]
-        end_offset = offsets[predicted_span[1]][1]
-        span_string = passage[start_offset:end_offset]
-        if question_id in self._official_eval_dataset:
+    def _compute_official_metrics(self, answer_string: str, question_id: str):
+        if self._official_eval_dataset and question_id in self._official_eval_dataset:
             ground_truth = self._official_eval_dataset[question_id]
             exact_match = squad_eval.metric_max_over_ground_truths(
                     squad_eval.exact_match_score,
-                    span_string,
+                    answer_string,
                     ground_truth)
             f1_score = squad_eval.metric_max_over_ground_truths(
                     squad_eval.f1_score,
-                    span_string,
+                    answer_string,
                     ground_truth)
             self._official_em(100 * exact_match)
             self._official_f1(100 * f1_score)
-        return span_string
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
@@ -312,41 +309,6 @@ class BidirectionalAttentionFlow(Model):
                 'span_acc': self._span_accuracy.get_metric(reset),
                 'em': self._official_em.get_metric(reset),
                 'f1': self._official_f1.get_metric(reset),
-                }
-
-    def predict_span(self, question: TextField, passage: TextField) -> Dict[str, Any]:
-        """
-        Given a question and a passage, predicts the span in the passage that answers the question.
-
-        Parameters
-        ----------
-        question : ``TextField``
-        passage : ``TextField``
-            A ``TextField`` containing the tokens in the passage.  Note that we typically add
-            ``SquadReader.STOP_TOKEN`` as the final token in the passage, because we use exclusive
-            span indices.  Be sure you've added that to the passage you pass in here.
-
-        Returns
-        -------
-        A Dict containing:
-
-        span_start_probs : numpy.ndarray
-        span_end_probs : numpy.ndarray
-        best_span : (int, int)
-        """
-        instance = Instance({'question': question, 'passage': passage})
-        instance.index_fields(self.vocab)
-        model_input = util.arrays_to_variables(instance.as_array_dict(),
-                                               add_batch_dimension=True,
-                                               for_training=False)
-        output_dict = self.forward(**model_input)
-
-        # Here we're just removing the batch dimension and converting things to numpy arrays /
-        # tuples instead of pytorch variables.
-        return {
-                "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).cpu().numpy(),
-                "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).cpu().numpy(),
-                "best_span": tuple(output_dict["best_span"].data.squeeze(0).cpu().numpy()),
                 }
 
     @staticmethod

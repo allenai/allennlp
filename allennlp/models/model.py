@@ -9,9 +9,10 @@ import logging
 
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
-from allennlp.data import Vocabulary
-from allennlp.nn.util import device_mapping
+from allennlp.data import Instance, Vocabulary
+from allennlp.nn.util import arrays_to_variables, device_mapping
 
+import numpy
 import torch
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -84,6 +85,49 @@ class Model(torch.nn.Module, Registrable):
             scalar ``torch.Tensor`` representing the loss to be optimized.
         """
         raise NotImplementedError
+
+    def forward_on_instance(self, instance: Instance) -> Dict[str, numpy.ndarray]:
+        """
+        Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
+        converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
+        through :func:`self.forward()`, and returns the result.  Before returning the result, we
+        convert any ``torch.autograd.Variables`` or ``torch.Tensors`` into numpy arrays and remove
+        the batch dimension.
+        """
+        # Hack to see what cuda device the model is on, so we know where to put these inputs.  For
+        # complicated models, or machines with multiple GPUs, this will not work.  I couldn't find
+        # a way to actually query what device a tensor / parameter is on.
+        cuda_device = 0 if next(self.parameters()).is_cuda else -1
+        instance.index_fields(self.vocab)
+        model_input = arrays_to_variables(instance.as_array_dict(),
+                                          add_batch_dimension=True,
+                                          cuda_device=cuda_device,
+                                          for_training=False)
+        outputs = self.forward(**model_input)
+
+        for name, output in list(outputs.items()):
+            output = output[0]
+            if isinstance(output, torch.autograd.Variable):
+                output = output.data.cpu().numpy()
+            outputs[name] = output
+        return outputs
+
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Takes the result of :func:`forward` and runs inference / decoding / whatever
+        post-processing you need to do your model.  The intent is that ``model.forward()`` should
+        produce potentials or probabilities, and then ``model.decode()`` can take those results and
+        run some kind of beam search or constrained inference or whatever is necessary.  This does
+        not handle all possible decoding use cases, but it at least handles simple kinds of
+        decoding.
+
+        This method `modifies` the input dictionary, and also `returns` the same dictionary.
+
+        By default in the base class we do nothing.  If your model has some special decoding step,
+        override this method.
+        """
+        # pylint: disable=no-self-use
+        return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         """
