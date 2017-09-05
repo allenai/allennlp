@@ -16,7 +16,7 @@ is just JSON.
 In this tutorial we'll go through
 each section of the configuration file in detail, explaining what all the parameters mean.
 
-## A preliminary: `Registrable` and `from_params`
+## A preliminary: Registrable and from_params
 
 Most AllenNLP classes inherit from the
 [`Registrable`](http://docs.allennlp.org/en/latest/api/allennlp.common.html#allennlp.common.registrable.Registrable)
@@ -299,16 +299,10 @@ We'll iterate over our datasets using a
 [`BasicIterator`](http://docs.allennlp.org/en/latest/api/allennlp.data.iterators.html#allennlp.data.iterators.basic_iterator.BasicIterator)
 that pads our data and processes it in batches of size 32.
 
-```js
-  "optimizer": "adam",
-```
-
-We'll optimize using
-[`torch.optim.Adam`](http://pytorch.org/docs/master/optim.html#torch.optim.Adam)
-with its default parameters.
 
 ```js
   "trainer": {
+    "optimizer": "adam",
     "num_epochs": 40,
     "patience": 10,
     "cuda_device": -1
@@ -316,7 +310,10 @@ with its default parameters.
 }
 ```
 
-Finally, we'll run the training for 40 epochs;
+Finally, we'll optimize using
+[`torch.optim.Adam`](http://pytorch.org/docs/master/optim.html#torch.optim.Adam)
+with its default parameters;
+we'll run the training for 40 epochs;
 we'll stop prematurely if we get no improvement for 10 epochs;
 and we'll train on the CPU.  If you wanted to train on a GPU,
 you'd change `cuda_device` to its device id.
