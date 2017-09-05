@@ -220,7 +220,7 @@ class TestVocabulary(AllenNlpTestCase):
         vocab.add_token_to_namespace("b3", namespace="b")
         vocab.save_to_files(vocab_dir)
 
-        params = Params({"vocabulary_directory": vocab_dir})
+        params = Params({"directory_path": vocab_dir})
         vocab2 = Vocabulary.from_params(params)
         assert vocab.get_index_to_token_vocabulary("a") == vocab2.get_index_to_token_vocabulary("a")
         assert vocab.get_index_to_token_vocabulary("b") == vocab2.get_index_to_token_vocabulary("b")
@@ -237,4 +237,4 @@ class TestVocabulary(AllenNlpTestCase):
         # Test from_params raises when there are any other dict keys
         # present apart from 'vocabulary_directory' and we aren't calling from_dataset.
         with pytest.raises(ConfigurationError):
-            _ = Vocabulary.from_params(Params({"vocabulary_directory": vocab_dir, "min_count": 2}))
+            _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": 2}))

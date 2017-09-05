@@ -307,14 +307,12 @@ class Vocabulary:
         -------
         A ``Vocabulary``.
         """
-        vocabulary_directory = params.pop("vocabulary_directory", None)
+        vocabulary_directory = params.pop("directory_path", None)
         if not vocabulary_directory and not dataset:
             raise ConfigurationError("You must provide either a Params object containing a "
                                      "vocab_directory key or a Dataset to build a vocabulary from.")
         if vocabulary_directory and dataset:
-            logger.warning("from_params was passed both a vocabulary_directory and a Dataset. This "
-                           "behaviour is not well defined, so backing off to using the vocabulary "
-                           "defined at %s.", vocabulary_directory)
+            logger.info("Loading Vocab from files instead of dataset.")
 
         if vocabulary_directory:
             params.assert_empty("Vocabulary - from files")
