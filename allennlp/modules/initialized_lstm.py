@@ -24,6 +24,7 @@ class InitializedLstm(torch.nn.LSTM):
                 param.requires_grad = False
             elif param_name.startswith("bias_ih"):
                 bias = param.data
+                bias.fill_(0)
                 # The forget get bias is in the second hidden_size block
                 bias[hidden_size:2*hidden_size].fill_(1)
             elif param_name.startswith("weight_ih"):
