@@ -28,7 +28,7 @@ from allennlp.service import server_sanic
 
 DEFAULT_CONFIG = {
         'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.08.31.tar.gz', # pylint: disable=line-too-long
-        'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.08.28.tar.gz', # pylint: disable=line-too-long
+        'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
         'textual-entailment': 'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-2017.09.04.tar.gz' # pylint: disable=line-too-long
 }
 
