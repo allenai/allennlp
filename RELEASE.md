@@ -23,8 +23,8 @@ docker run -p 8000:8000 -it allennlp/allennlp:latest allennlp/run serve
 After testing, you can cut a new release of the web demo.  Versioning for the web demo is separate for the library, because typically we will have many more releases for our web demo than our library.  Web demo releases are annotated by date in `yyyy.mm.dd-i` format, where i is a release number that starts at 0 and goes up for each release on a given day.
 
 ```
-docker tag allennlp/allennlp allennlp/webdemo:2017.09.05-0
-docker push allennlp/webdemo:2017.09.05-0
+docker tag allennlp/allennlp allennlp/webdemo:2017-09-05-0
+docker push allennlp/webdemo:2017-09-05-0
 ```
 
 Now you can edit `kubernetes-webdemo.yml` with the latest version, and update the web demo with the following command.
