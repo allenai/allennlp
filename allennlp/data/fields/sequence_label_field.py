@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union  # pylint: disable=unused-import
+from typing import Dict, List, Union
 import logging
 
 from overrides import overrides

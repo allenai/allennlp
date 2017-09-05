@@ -74,7 +74,7 @@ class LanguageModelingReader(DatasetReader):
         # single token id.  This code lets you learn a language model that concatenates word
         # embeddings with character-level encoders, in order to predict the word token that comes
         # next.
-        output_indexer = None  # type: Dict[str, TokenIndexer]
+        output_indexer: Dict[str, TokenIndexer] = None
         for name, indexer in self._token_indexers.items():
             if isinstance(indexer, SingleIdTokenIndexer):
                 output_indexer = {name: indexer}
