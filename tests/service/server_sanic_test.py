@@ -20,6 +20,7 @@ class CountingPredictor(Predictor):
     bogus predictor that just returns its input as is
     and also counts how many times it was called with a given input
     """
+    # pylint: disable=abstract-method
     def __init__(self):                 # pylint: disable=super-init-not-called
         self.calls = defaultdict(int)
 
