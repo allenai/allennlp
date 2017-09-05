@@ -7,7 +7,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
 from allennlp.modules.augmented_lstm import AugmentedLstm
-from allennlp.modules.default_lstm import DefaultLstm
+from allennlp.modules.initialized_lstm import InitializedLstm
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 
 class _Seq2SeqWrapper:
@@ -36,7 +36,7 @@ class _Seq2SeqWrapper:
     ``PytorchSeq2SeqWrapper``.  This lets us use this class in the registry and have everything just
     work.
     """
-    PYTORCH_MODELS = [torch.nn.GRU, torch.nn.LSTM, torch.nn.RNN, DefaultLstm]
+    PYTORCH_MODELS = [torch.nn.GRU, torch.nn.LSTM, torch.nn.RNN, InitializedLstm]
 
     def __init__(self, module_class: Type[torch.nn.modules.RNNBase]) -> None:
         self._module_class = module_class
@@ -54,7 +54,7 @@ class _Seq2SeqWrapper:
 
 # pylint: disable=protected-access
 Seq2SeqEncoder.register("gru")(_Seq2SeqWrapper(torch.nn.GRU))
-Seq2SeqEncoder.register("lstm")(_Seq2SeqWrapper(DefaultLstm))
+Seq2SeqEncoder.register("lstm")(_Seq2SeqWrapper(InitializedLstm))
 Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))

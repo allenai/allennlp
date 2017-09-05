@@ -21,7 +21,7 @@ class TestSeq2SeqEncoder(AllenNlpTestCase):
         encoder = Seq2SeqEncoder.from_params(params)
         # pylint: disable=protected-access
         assert encoder.__class__.__name__ == 'PytorchSeq2SeqWrapper'
-        assert encoder._module.__class__.__name__ == 'DefaultLstm'
+        assert encoder._module.__class__.__name__ == 'InitializedLstm'
         assert encoder._module.num_layers == 3
         assert encoder._module.input_size == 5
         assert encoder._module.hidden_size == 7

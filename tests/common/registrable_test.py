@@ -121,14 +121,14 @@ class TestRegistrable(AllenNlpTestCase):
     def test_registry_has_builtin_seq2seq_encoders(self):
         # pylint: disable=protected-access
         assert Seq2SeqEncoder.by_name('gru')._module_class.__name__ == 'GRU'
-        assert Seq2SeqEncoder.by_name('lstm')._module_class.__name__ == 'DefaultLstm'
+        assert Seq2SeqEncoder.by_name('lstm')._module_class.__name__ == 'InitializedLstm'
         assert Seq2SeqEncoder.by_name('rnn')._module_class.__name__ == 'RNN'
 
     def test_registry_has_builtin_seq2vec_encoders(self):
         assert Seq2VecEncoder.by_name('cnn').__name__ == 'CnnEncoder'
         # pylint: disable=protected-access
         assert Seq2VecEncoder.by_name('gru')._module_class.__name__ == 'GRU'
-        assert Seq2VecEncoder.by_name('lstm')._module_class.__name__ == 'DefaultLstm'
+        assert Seq2VecEncoder.by_name('lstm')._module_class.__name__ == 'InitializedLstm'
         assert Seq2VecEncoder.by_name('rnn')._module_class.__name__ == 'RNN'
 
     def test_registry_has_builtin_similarity_functions(self):
