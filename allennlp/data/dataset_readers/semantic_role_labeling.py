@@ -1,7 +1,7 @@
 import codecs
 import os
 import logging
-from typing import Dict, List, Optional  # pylint: disable=unused-import
+from typing import Dict, List, Optional
 
 from overrides import overrides
 import tqdm
@@ -177,10 +177,10 @@ class SrlReader(DatasetReader):
 
         instances = []
 
-        sentence = []  # type: List[str]
-        verbal_predicates = []  # type: List[int]
-        predicate_argument_labels = []  # type: List[List[str]]
-        current_span_label = []  # type: List[Optional[str]]
+        sentence: List[str] = []
+        verbal_predicates: List[int] = []
+        predicate_argument_labels: List[List[str]] = []
+        current_span_label: List[Optional[str]] = []
 
         logger.info("Reading SRL instances from dataset files at: %s", file_path)
         for root, _, files in tqdm.tqdm(list(os.walk(file_path))):
@@ -268,18 +268,6 @@ class SrlReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'SrlReader':
-        """
-        Parameters
-        ----------
-        token_indexers: ``List[Params]``, optional
-        """
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers', Params({}))
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-        # The default parameters are contained within the class,
-        # so if no parameters are given we must pass None.
-        if token_indexers == {}:
-            token_indexers = None
+        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         params.assert_empty(cls.__name__)
         return SrlReader(token_indexers=token_indexers)
