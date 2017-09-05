@@ -155,4 +155,4 @@ class TestSanic(AllenNlpTestCase):
 
         with self.assertRaises(SystemExit) as cm:
             make_app(fake_dir)
-            assert cm.value.code == -1
+            assert cm.code == -1  # pylint: disable=no-member

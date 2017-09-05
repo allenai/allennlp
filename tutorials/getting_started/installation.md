@@ -11,7 +11,7 @@ Welcome to AllenNLP!
 The easiest way to get started is using Docker. Assuming you have Docker installed, just run
 
 ```bash
-docker run -p 8000:8000 -it --rm allennlp/allennlp
+$ docker run -p 8000:8000 -it --rm allennlp/allennlp
 ```
 
 This will download the latest `allennlp` image to your machine
@@ -45,13 +45,13 @@ so please let us know if anything doesn't work right.
 A third alternative is to clone from our git repository:
 
 ```bash
-git clone https://github.com/allenai/allennlp.git
+$ git clone https://github.com/allenai/allennlp.git
 ```
 
 Create a Python 3.6 virtual environment, and run
 
 ```bash
-INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
+$ INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
 ```
 
 changing the flag to `false` if you don't want to be able to run tests.
