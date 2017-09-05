@@ -149,3 +149,10 @@ class TestSanic(AllenNlpTestCase):
             # cache is disabled, so call count should keep incrementing
             assert predictor.calls[key] == i + 1
             assert len(predictor.calls) == 1
+
+    def test_missing_static_dir(self):
+        fake_dir = os.path.join(self.TEST_DIR, '/this/directory/does/not/exist')
+
+        with self.assertRaises(SystemExit) as cm:
+            make_app(fake_dir)
+            assert cm.value.code == -1

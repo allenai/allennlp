@@ -28,6 +28,15 @@ You can install `allennlp` using pip. Create a Python 3.6 virtual environment, a
 $ pip install allennlp
 ```
 
+You'll also need to install PyTorch 0.2, following the appropriate instructions
+for your platform from [their website](http://pytorch.org/).
+
+Finally, you'll need to download spaCy's English models:
+
+```bash
+$ python -m spacy download en
+```
+
 This is the least-battle-tested method of installation,
 so please let us know if anything doesn't work right.
 
@@ -49,10 +58,9 @@ changing the flag to `false` if you don't want to be able to run tests.
 (Narrator: You want to be able to run tests.)
 
 You'll also need to install PyTorch 0.2, following the appropriate instructions
-from [their website](http://pytorch.org/).
+for your platform from [their website](http://pytorch.org/).
 
 ## Once You've Installed
-
 
 If you just want to use the models and helper classes that are included with AllenNLP,
 you can use the included "run" script, which provides a command-line interface to
