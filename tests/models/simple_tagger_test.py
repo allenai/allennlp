@@ -1,10 +1,14 @@
 # pylint: disable=invalid-name
 from flaky import flaky
+import pytest
 import numpy
 
 from allennlp.common.testing import ModelTestCase
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.nn.util import arrays_to_variables
 
 
@@ -34,3 +38,11 @@ class SimpleTaggerTest(ModelTestCase):
         # Predictions are a distribution.
         numpy.testing.assert_almost_equal(numpy.sum(output["class_probabilities"], -1),
                                           numpy.array([1, 1, 1, 1]))
+
+    def test_mismatching_dimensions_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        # Make the stacked_encoder wrong - it should be 2 to match
+        # the embedding dimension from the text_field_embedder.
+        params["model"]["stacked_encoder"]["input_size"] = 10
+        with pytest.raises(ConfigurationError):
+            SimpleTagger.from_params(self.vocab, params)

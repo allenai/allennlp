@@ -1,11 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
 from flaky import flaky
+import pytest
 import numpy
 from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data.fields import TextField
@@ -107,3 +109,11 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         span_end_probs = Variable(torch.FloatTensor([[0.1, 0.2, 0.5, 0.05, 0.15]])).log()
         begin_end_idxs = BidirectionalAttentionFlow._get_best_span(span_begin_probs, span_end_probs)
         assert_almost_equal(begin_end_idxs.data.numpy(), [[1, 2]])
+
+    def test_mismatching_dimensions_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        # Make the phrase layer wrong - it should be 10 to match
+        # the embedding + char cnn dimensions.
+        params["model"]["phrase_layer"]["input_size"] = 12
+        with pytest.raises(ConfigurationError):
+            BidirectionalAttentionFlow.from_params(self.vocab, params)

@@ -1,14 +1,18 @@
 # pylint: disable=no-self-use,invalid-name
 import subprocess
+import pytest
 import os
 
 from flaky import flaky
 import numpy
 
 from allennlp.common.testing import ModelTestCase
+from allennlp.common.params import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
+from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 
 
@@ -57,3 +61,11 @@ class SemanticRoleLabelerTest(ModelTestCase):
         perl_script_command = ["perl", "./scripts/srl-eval.pl", prediction_file_path, gold_file_path]
         exit_code = subprocess.check_call(perl_script_command)
         assert exit_code == 0
+
+    def test_mismatching_dimensions_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        # Make the phrase layer wrong - it should be 150 to match
+        # the embedding + binary feature dimensions.
+        params["model"]["stacked_encoder"]["input_size"] = 10
+        with pytest.raises(ConfigurationError):
+            SemanticRoleLabeler.from_params(self.vocab, params)

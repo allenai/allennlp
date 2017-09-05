@@ -7,6 +7,7 @@ from torch.autograd import Variable
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, squad_eval
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.models.model import Model
@@ -101,6 +102,12 @@ class BidirectionalAttentionFlow(Model):
         span_end_input_dim = encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
         initializer(self)
+
+        if text_field_embedder.get_output_dim() != phrase_layer.get_input_dim():
+            raise ConfigurationError("The output dimension of the text_field_embedder (embedding_dim + "
+                                     "char_cnn) must match the input dimension of the phrase_encoder. "
+                                     "Found {} and {}, respectively.".format(text_field_embedder.get_output_dim(),
+                                                                             phrase_layer.get_input_dim()))
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
         self._span_accuracy = BooleanAccuracy()
