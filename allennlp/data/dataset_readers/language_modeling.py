@@ -74,7 +74,7 @@ class LanguageModelingReader(DatasetReader):
         # single token id.  This code lets you learn a language model that concatenates word
         # embeddings with character-level encoders, in order to predict the word token that comes
         # next.
-        output_indexer = None  # type: Dict[str, TokenIndexer]
+        output_indexer: Dict[str, TokenIndexer] = None
         for name, indexer in self._token_indexers.items():
             if isinstance(indexer, SingleIdTokenIndexer):
                 output_indexer = {name: indexer}
@@ -96,24 +96,9 @@ class LanguageModelingReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'LanguageModelingReader':
-        """
-        Parameters
-        ----------
-        filename : ``str``
-        tokens_per_instance : ``int``, optional (default=``None``)
-        tokenizer : ``Params``, optional
-        token_indexers: ``List[Params]``, optional
-        """
         tokens_per_instance = params.pop('tokens_per_instance', None)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers', Params({}))
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-        # The default parameters are contained within the class,
-        # so if no parameters are given we must pass None.
-        if token_indexers == {}:
-            token_indexers = None
+        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         params.assert_empty(cls.__name__)
         return LanguageModelingReader(tokens_per_instance=tokens_per_instance,
                                       tokenizer=tokenizer,

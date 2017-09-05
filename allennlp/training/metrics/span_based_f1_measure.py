@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Set, Tuple  # pylint: disable=unused-import
+from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
 
 import torch
@@ -52,9 +52,9 @@ class SpanBasedF1Measure(Metric):
         self._ignore_classes = ignore_classes or []
 
         # These will hold per label span counts.
-        self._true_positives = defaultdict(int)  # type: Dict[str, int]
-        self._false_positives = defaultdict(int)  # type: Dict[str, int]
-        self._false_negatives = defaultdict(int)  # type: Dict[str, int]
+        self._true_positives: Dict[str, int] = defaultdict(int)
+        self._false_positives: Dict[str, int] = defaultdict(int)
+        self._false_negatives: Dict[str, int] = defaultdict(int)
 
     def __call__(self,
                  predictions: torch.Tensor,
@@ -187,7 +187,7 @@ class SpanBasedF1Measure(Metric):
         Additionally, an ``overall`` key is included, which provides the precision,
         recall and f1-measure for all spans.
         """
-        all_tags = set()  # type: Set[str]
+        all_tags: Set[str] = set()
         all_tags.update(self._true_positives.keys())
         all_tags.update(self._false_positives.keys())
         all_tags.update(self._false_negatives.keys())

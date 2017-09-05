@@ -3,21 +3,6 @@
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="css/main.css" />
-    <!-- hacky CSS overrides -->
-    <style>
-      .srl-tag.color0, .srl-word.color0 {
-        background-color: lightpink;
-      }
-      .srl-tag.color1, .srl-word.color1 {
-        background-color: lightskyblue;
-      }
-      .passage-body {
-        font-weight: normal;
-      }
-      .passage-answer {
-        font-weight: bold;
-      }
-    </style>
     <title>AllenNLP - Demo</title>
     <!-- Libraries -->
     <script src="lib/react.js"></script>
@@ -180,7 +165,7 @@ class SrlFrame extends React.Component {
     return (
       <div>
         <label>{verb.verb}</label>
-        <table>
+        <table className="srl-table">
           <tbody>
             <tr>
               {tags.map((tag, i) => <SrlTagCell tag={tag} key={i} colorClass={colorClasses[i]}/>)}
@@ -190,7 +175,6 @@ class SrlFrame extends React.Component {
             </tr>
           </tbody>
         </table>
-        <hr/>
       </div>
     )
   }
@@ -202,7 +186,7 @@ class SrlOutput extends React.Component {
     const { words, verbs } = rawOutput;
 
     return (
-      <div className="model__content">
+      <div className="model__content model__content--srl-output">
         <div className="form__field">
           { verbs.map((verb, i) => (<SrlFrame verb={verb} words={words} key={i}/>)) }
         </div>
@@ -227,10 +211,14 @@ class McOutput extends React.Component {
         <div className="form__field">
           <label>Answer</label>
           <div className="model__content__summary">{ answer }</div>
-          <div>
-            <span className="passage-body">{head}</span>
-            <span className="passage-answer"><strong>{answer}</strong></span>
-            <span className="passage-body">{tail}</span>
+        </div>
+
+        <div className="form__field">
+          <label>Passage Context</label>
+          <div className="passage model__content__summary">
+            <span>{head}</span>
+            <span className="passage__answer">{answer}</span>
+            <span>{tail}</span>
           </div>
         </div>
       </div>
@@ -351,7 +339,6 @@ class TeOutput extends React.Component {
             </table>
           </div>
         </div>
-        <code>{JSON.stringify(rawOutput)}</code>
       </div>
     );
   }
@@ -405,11 +392,11 @@ class ModelIntro extends React.Component {
 *******************************************************************************/
 
 const srlSentences = [
-  "The quick brown fox jumps over the lazy dog.",
-  "After evaluating the danger posed by the solar flare, the robot resumed work on its spaceship.",
+  "The keys, which were needed to access the building, were locked in the car.",
+  "However, voters decided that if the stadium was such a good idea someone would build it himself, and rejected it 59% to 41%.",
   "Did Uriah honestly think he could beat the game in under three hours?",
   "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!",
-  "John, Paul and Ringo were always everyone's favorites.",
+  "More than a few CEOs say the red-carpet treatment tempts them to return to a heartland city for future meetings.",
 ];
 
 const srlDataIds = [
@@ -626,16 +613,16 @@ class McInput extends React.Component {
 *******************************************************************************/
 
 const tePremises = [
-  "The toddler got excited when she heard her favorite song on the radio.",
-  "A white rabbit was spotted hopping through the grass.",
+  "If you help the needy, God will reward you.",
+  "Two women are wandering along the shore drinking iced tea.",
   "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
   "A large, gray elephant walked beside a herd of zebras.",
   "A handmade djembe was on display at the Smithsonian.",
 ];
 
 const teHypotheses = [
-  "The toddler is playing with her toys.",
-  "There are no rabbits.",
+  "Giving money to the poor has good consequences.",
+  "Two women are sitting on a blanket near some rocks talking about politics.",
   "The spacecraft has the ability to travel between planets.",
   "The elephant was lost.",
   "Visitors could see the djembe."
@@ -841,10 +828,6 @@ class App extends React.Component {
 
     const { selectedModel, rawOutput } = this.state;
 
-    const labelProbs = {
-      "label_probs": [0.2976710796, 0.4121640921, 0.2901648283]
-    };
-
     const ModelComponent = () => {
       if (selectedModel == "srl") {
         return (<SrlComponent />)
@@ -910,7 +893,7 @@ class SrlComponent extends React.Component {
     return (
       <div className="pane model">
         <PaneLeft>
-          <SrlInput runSrlModel={this.runSrlModel}/>
+          <SrlInput runSrlModel={this.runSrlModel} outputState={this.state.outputState}/>
         </PaneLeft>
         <PaneRight outputState={this.state.outputState}>
           <SrlOutput rawOutput={this.state.rawOutput}/>
@@ -967,7 +950,7 @@ class TeComponent extends React.Component {
     return (
       <div className="pane model">
         <PaneLeft>
-          <TeInput runTeModel={this.runTeModel}/>
+          <TeInput runTeModel={this.runTeModel} outputState={this.state.outputState}/>
         </PaneLeft>
         <PaneRight outputState={this.state.outputState}>
           <TeOutput rawOutput={this.state.rawOutput}/>
@@ -1026,7 +1009,7 @@ class McComponent extends React.Component {
     return (
       <div className="pane model">
         <PaneLeft>
-          <McInput runMcModel={this.runMcModel}/>
+          <McInput runMcModel={this.runMcModel} outputState={this.state.outputState}/>
         </PaneLeft>
         <PaneRight outputState={this.state.outputState}>
           <McOutput answer={this.state.answer} passage={this.state.passage} />

@@ -1,3 +1,8 @@
+"""
+An *attention* module that computes the similarity between
+an input vector and the rows of a matrix.
+"""
+
 import torch
 from overrides import overrides
 
