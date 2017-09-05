@@ -841,10 +841,6 @@ class App extends React.Component {
 
     const { selectedModel, rawOutput } = this.state;
 
-    const labelProbs = {
-      "label_probs": [0.2976710796, 0.4121640921, 0.2901648283]
-    };
-
     const ModelComponent = () => {
       if (selectedModel == "srl") {
         return (<SrlComponent />)
@@ -910,7 +906,7 @@ class SrlComponent extends React.Component {
     return (
       <div className="pane model">
         <PaneLeft>
-          <SrlInput runSrlModel={this.runSrlModel}/>
+          <SrlInput runSrlModel={this.runSrlModel} outputState={this.state.outputState}/>
         </PaneLeft>
         <PaneRight outputState={this.state.outputState}>
           <SrlOutput rawOutput={this.state.rawOutput}/>
@@ -967,7 +963,7 @@ class TeComponent extends React.Component {
     return (
       <div className="pane model">
         <PaneLeft>
-          <TeInput runTeModel={this.runTeModel}/>
+          <TeInput runTeModel={this.runTeModel} outputState={this.state.outputState}/>
         </PaneLeft>
         <PaneRight outputState={this.state.outputState}>
           <TeOutput rawOutput={this.state.rawOutput}/>
@@ -1026,7 +1022,7 @@ class McComponent extends React.Component {
     return (
       <div className="pane model">
         <PaneLeft>
-          <McInput runMcModel={this.runMcModel}/>
+          <McInput runMcModel={this.runMcModel} outputState={this.state.outputState}/>
         </PaneLeft>
         <PaneRight outputState={this.state.outputState}>
           <McOutput answer={this.state.answer} passage={this.state.passage} />
