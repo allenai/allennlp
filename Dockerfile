@@ -49,6 +49,7 @@ COPY allennlp/ allennlp/
 COPY tests/ tests/
 COPY pytest.ini pytest.ini
 COPY scripts/ scripts/
+COPY tutorials/ tutorials/
 
 # Run tests to verify the Docker build
 RUN PYTHONDONTWRITEBYTECODE=1 pytest
