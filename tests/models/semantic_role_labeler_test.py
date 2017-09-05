@@ -1,9 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 import subprocess
-import pytest
 import os
 
 from flaky import flaky
+import pytest
 import numpy
 
 from allennlp.common.testing import ModelTestCase
