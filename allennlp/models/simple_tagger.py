@@ -1,5 +1,6 @@
 from typing import Dict
 
+from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
@@ -44,6 +45,7 @@ class SimpleTagger(Model):
                 "accuracy3": CategoricalAccuracy(top_k=3)
         }
 
+    @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
@@ -96,6 +98,31 @@ class SimpleTagger(Model):
 
         return output_dict
 
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Does a simple position-wise argmax over each token, converts indices to string labels, and
+        adds a ``"tags"`` key to the dictionary with the result.
+        """
+        all_predictions = output_dict['class_probabilities']
+        if not isinstance(all_predictions, numpy.ndarray):
+            all_predictions = all_predictions.cpu().numpy()
+        if all_predictions.ndim == 3:
+            predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
+        else:
+            predictions_list = [all_predictions]
+        all_tags = []
+        for predictions in predictions_list:
+            argmax_indices = numpy.argmax(predictions, axis=-1)
+            tags = [self.vocab.get_token_from_index(x, namespace="labels")
+                    for x in argmax_indices]
+            all_tags.append(tags)
+        if len(all_tags) == 1:
+            all_tags = all_tags[0]
+        output_dict['tags'] = all_tags
+        return output_dict
+
+    @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
 

@@ -29,12 +29,3 @@ class SimpleTaggerPredictor(Predictor):
         sentence = json["sentence"]
         tokens, _ = self._tokenizer.tokenize(sentence)
         return self._dataset_reader.text_to_instance(tokens)
-
-    @overrides
-    def _predictions_to_json(self, model_outputs: Dict[str, Any]) -> JsonDict:
-        predictions = model_outputs['class_probabilities']
-        argmax_indices = numpy.argmax(predictions, axis=-1)
-        tags = [self._model.vocab.get_token_from_index(x, namespace="labels")
-                for x in argmax_indices]
-        model_outputs['tags'] = tags
-        return super(SimpleTaggerPredictor, self)._predictions_to_json(model_outputs)

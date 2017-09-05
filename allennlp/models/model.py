@@ -112,6 +112,22 @@ class Model(torch.nn.Module, Registrable):
             outputs[name] = output
         return outputs
 
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Takes the result of :func:`forward` and runs inference / decoding / whatever
+        post-processing you need to do your model.  The intent is that ``model.forward()`` should
+        produce potentials or probabilities, and then ``model.decode()`` can take those results and
+        run some kind of beam search or constrained inference or whatever is necessary.  This does
+        not handle all possible decoding use cases, but it at least handles simple kinds of
+        decoding.
+
+        This method `modifies` the input dictionary, and also `returns` the same dictionary.
+
+        By default in the base class we do nothing.  If your model has some special decoding step,
+        override this method.
+        """
+        return output_dict
+
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         """
         Returns a dictionary of metrics. This method will be called by

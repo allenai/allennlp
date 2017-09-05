@@ -26,21 +26,14 @@ class Predictor(Registrable):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance)
-        return self._predictions_to_json(outputs)
+        outputs = self._model.decode(outputs)
+        return sanitize(outputs)
 
     def _json_to_instance(self, json: JsonDict) -> Instance:
         """
         Converts a JSON object into an :class:`~allennlp.data.instance.Instance`.
         """
         raise NotImplementedError
-
-    def _predictions_to_json(self, model_outputs: Dict[str, Any]) -> JsonDict:
-        """
-        Takes the output of :func:`~allennlp.models.model.Model.instance_forward()` and converts it
-        into a JSON object, for a single instance.
-        """
-        # pylint: disable=no-self-use
-        return sanitize(model_outputs)
 
     @classmethod
     def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':

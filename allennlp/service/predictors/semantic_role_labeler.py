@@ -7,7 +7,6 @@ import torch
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
-from allennlp.nn.util import viterbi_decode
 from allennlp.service.predictors.predictor import Predictor
 
 
@@ -75,13 +74,8 @@ class SemanticRoleLabelerPredictor(Predictor):
                 verb_labels = [0 for _ in words]
                 verb_labels[i] = 1
                 instance = self._dataset_reader.text_to_instance(words, verb_labels)
-                output = self._model.forward_on_instance(instance)
-                transition_matrix = self._model.get_viterbi_pairwise_potentials()
-
-                predictions = torch.from_numpy(output['class_probabilities'])
-                max_likelihood_sequence, _ = viterbi_decode(predictions, transition_matrix)
-                tags = [self._model.vocab.get_token_from_index(x, namespace="labels")
-                        for x in max_likelihood_sequence]
+                output = self._model.decode(self._model.forward_on_instance(instance))
+                tags = output['tags']
 
                 description = SemanticRoleLabelerPredictor.make_srl_string(words, tags)
 

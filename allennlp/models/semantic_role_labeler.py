@@ -1,5 +1,7 @@
 from typing import Dict, List, TextIO
 
+import numpy
+from overrides import overrides
 import torch
 from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
@@ -11,7 +13,7 @@ from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, viterbi_decode
 from allennlp.training.metrics import SpanBasedF1Measure
 
 
@@ -133,6 +135,32 @@ class SemanticRoleLabeler(Model):
             self.span_metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
+        return output_dict
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Does constrained viterbi decoding on class probabilities output in :func:`forward`.  The
+        constraint simply specifies that the output tags must be a valid BIO sequence.  We add a
+        ``"tags"`` key to the dictionary with the result.
+        """
+        all_predictions = output_dict['class_probabilities']
+        if isinstance(all_predictions, numpy.ndarray):
+            all_predictions = torch.from_numpy(all_predictions)
+        if all_predictions.dim() == 3:
+            predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
+        else:
+            predictions_list = [all_predictions]
+        all_tags = []
+        transition_matrix = self.get_viterbi_pairwise_potentials()
+        for predictions in predictions_list:
+            max_likelihood_sequence, _ = viterbi_decode(predictions, transition_matrix)
+            tags = [self.vocab.get_token_from_index(x, namespace="labels")
+                    for x in max_likelihood_sequence]
+            all_tags.append(tags)
+        if len(all_tags) == 1:
+            all_tags = all_tags[0]
+        output_dict['tags'] = all_tags
         return output_dict
 
     def get_metrics(self, reset: bool = False):
