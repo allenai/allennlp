@@ -1,5 +1,6 @@
 from typing import Dict
 
+import numpy
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
@@ -118,7 +119,7 @@ class SimpleTagger(Model):
                     for x in argmax_indices]
             all_tags.append(tags)
         if len(all_tags) == 1:
-            all_tags = all_tags[0]
+            all_tags = all_tags[0]  # type: ignore
         output_dict['tags'] = all_tags
         return output_dict
 

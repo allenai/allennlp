@@ -126,6 +126,7 @@ class Model(torch.nn.Module, Registrable):
         By default in the base class we do nothing.  If your model has some special decoding step,
         override this method.
         """
+        # pylint: disable=no-self-use
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

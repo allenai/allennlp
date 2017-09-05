@@ -2,7 +2,6 @@ from typing import List
 
 from overrides import overrides
 import spacy
-import torch
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance

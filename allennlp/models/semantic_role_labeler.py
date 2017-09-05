@@ -159,7 +159,7 @@ class SemanticRoleLabeler(Model):
                     for x in max_likelihood_sequence]
             all_tags.append(tags)
         if len(all_tags) == 1:
-            all_tags = all_tags[0]
+            all_tags = all_tags[0]  # type: ignore
         output_dict['tags'] = all_tags
         return output_dict
 
