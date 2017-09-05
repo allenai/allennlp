@@ -32,7 +32,7 @@ A third alternative is to clone from our git repository:
 git clone https://github.com/allenai/allennlp.git
 ```
 
-Create a Python 3.5 (or 3.6) virtual environment, and run
+Create a Python 3.6 virtual environment, and run
 
 ```bash
 INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh

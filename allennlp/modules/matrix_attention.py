@@ -1,3 +1,7 @@
+"""
+A ``Module`` that takes two matrices as input and returns a matrix of attentions.
+"""
+
 import torch
 from overrides import overrides
 

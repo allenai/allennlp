@@ -118,7 +118,7 @@ class AdaptiveIterator(BucketIterator):
     def _adaptive_grouping(self, dataset: Dataset):
         batches = []
         current_batch = []
-        current_lengths = defaultdict(dict)  # type: Dict[str, Dict[str, int]]
+        current_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
         logger.debug("Creating adaptive groups")
         for instance in dataset.instances:
             current_batch.append(instance)

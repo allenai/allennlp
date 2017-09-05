@@ -37,12 +37,12 @@ class TokenCharactersEncoder(TokenEmbedder):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':
-        embedding_params = params.pop("embedding")  # type: Params
+        embedding_params: Params = params.pop("embedding")
         # Embedding.from_params() uses "tokens" as the default namespace, but we need to change
         # that to be "token_characters" by default.
         embedding_params.setdefault("vocab_namespace", "token_characters")
         embedding = Embedding.from_params(vocab, embedding_params)
-        encoder_params = params.pop("encoder")  # type: Params
+        encoder_params: Params = params.pop("encoder")
         encoder = Seq2VecEncoder.from_params(encoder_params)
         dropout = params.pop("dropout", 0.0)
         params.assert_empty(cls.__name__)
