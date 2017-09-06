@@ -410,29 +410,6 @@ const srlSentences = [
   "More than a few CEOs say the red-carpet treatment tempts them to return to a heartland city for future meetings.",
 ];
 
-const srlDataIds = [
-  {
-    "id": 0,
-    "sentence": srlSentences[0]
-  },
-  {
-    "id": 1,
-    "sentence": srlSentences[1]
-  },
-  {
-    "id": 2,
-    "sentence": srlSentences[2]
-  },
-  {
-    "id": 3,
-    "sentence": srlSentences[3]
-  },
-  {
-    "id": 4,
-    "sentence": srlSentences[4]
-  }
-];
-
 class SrlInput extends React.Component {
   constructor() {
     super();
@@ -476,9 +453,9 @@ class SrlInput extends React.Component {
         <div className="form__instructions"><span>Enter text or</span>
           <select disabled={outputState === "working"} onChange={this.handleListChange}>
             <option value="">Choose an example...</option>
-            {srlDataIds.map((obj) => {
+            {srlSentences.map((sentence, index) => {
               return (
-                <option value={obj.id} key={obj.id}>{obj.sentence}</option>
+                <option value={index} key={index}>{sentence}</option>
               );
             })}
           </select>
@@ -499,40 +476,23 @@ class SrlInput extends React.Component {
   <McInput /> Component
 *******************************************************************************/
 
-const mcPassages = [
-  "A reusable launch system (RLS, or reusable launch vehicle, RLV) is a launch system which is capable of launching a payload into space more than once. This contrasts with expendable launch systems, where each launch vehicle is launched once and then discarded. No completely reusable orbital launch system has ever been created. Two partially reusable launch systems were developed, the Space Shuttle and Falcon 9. The Space Shuttle was partially reusable: the orbiter (which included the Space Shuttle main engines and the Orbital Maneuvering System engines), and the two solid rocket boosters were reused after several months of refitting work for each launch. The external tank was discarded after each flight.",
-
-  "Robotics is an interdisciplinary branch of engineering and science that includes mechanical engineering, electrical engineering, computer science, and others. Robotics deals with the design, construction, operation, and use of robots, as well as computer systems for their control, sensory feedback, and information processing. These technologies are used to develop machines that can substitute for humans. Robots can be used in any situation and for any purpose, but today many are used in dangerous environments (including bomb detection and de-activation), manufacturing processes, or where humans cannot survive. Robots can take on any form but some are made to resemble humans in appearance. This is said to help in the acceptance of a robot in certain replicative behaviors usually performed by people. Such robots attempt to replicate walking, lifting, speech, cognition, and basically anything a human can do.",
-
-  "The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called \"the Matrix\", created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer \"Neo\" learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the \"dream world.\"",
-
-  "Kerbal Space Program (KSP) is a space flight simulation video game developed and published by Squad for Microsoft Windows, OS X, Linux, PlayStation 4, Xbox One, with a Wii U version that was supposed to be released at a later date. The developers have stated that the gaming landscape has changed since that announcement and more details will be released soon. In the game, players direct a nascent space program, staffed and crewed by humanoid aliens known as \"Kerbals\". The game features a realistic orbital physics engine, allowing for various real-life orbital maneuvers such as Hohmann transfer orbits and bi-elliptic transfer orbits.",
-];
-
-const mcQuestions = [
-  "How many partially reusable launch systems were developed?",
-  "What do robots that resemble humans attempt to do?",
-  "Who stars in The Matrix?",
-  "What does the physics engine allow for?",
-];
-
-const mcDataIds = [
+const mcExamples = [
   {
-    "id": 0,
-    "passage": mcPassages[0]
+    passage: "A reusable launch system (RLS, or reusable launch vehicle, RLV) is a launch system which is capable of launching a payload into space more than once. This contrasts with expendable launch systems, where each launch vehicle is launched once and then discarded. No completely reusable orbital launch system has ever been created. Two partially reusable launch systems were developed, the Space Shuttle and Falcon 9. The Space Shuttle was partially reusable: the orbiter (which included the Space Shuttle main engines and the Orbital Maneuvering System engines), and the two solid rocket boosters were reused after several months of refitting work for each launch. The external tank was discarded after each flight.",
+    question: "How many partially reusable launch systems were developed?",
   },
   {
-    "id": 1,
-    "passage": mcPassages[1]
+    passage: "Robotics is an interdisciplinary branch of engineering and science that includes mechanical engineering, electrical engineering, computer science, and others. Robotics deals with the design, construction, operation, and use of robots, as well as computer systems for their control, sensory feedback, and information processing. These technologies are used to develop machines that can substitute for humans. Robots can be used in any situation and for any purpose, but today many are used in dangerous environments (including bomb detection and de-activation), manufacturing processes, or where humans cannot survive. Robots can take on any form but some are made to resemble humans in appearance. This is said to help in the acceptance of a robot in certain replicative behaviors usually performed by people. Such robots attempt to replicate walking, lifting, speech, cognition, and basically anything a human can do.",
+    question: "What do robots that resemble humans attempt to do?",
   },
   {
-    "id": 2,
-    "passage": mcPassages[2]
+    passage: "The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called \"the Matrix\", created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer \"Neo\" learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the \"dream world.\"",
+    question: "Who stars in The Matrix?",
   },
   {
-    "id": 3,
-    "passage": mcPassages[3]
-  },
+    passage: "Kerbal Space Program (KSP) is a space flight simulation video game developed and published by Squad for Microsoft Windows, OS X, Linux, PlayStation 4, Xbox One, with a Wii U version that was supposed to be released at a later date. The developers have stated that the gaming landscape has changed since that announcement and more details will be released soon. In the game, players direct a nascent space program, staffed and crewed by humanoid aliens known as \"Kerbals\". The game features a realistic orbital physics engine, allowing for various real-life orbital maneuvers such as Hohmann transfer orbits and bi-elliptic transfer orbits.",
+    question: "What does the physics engine allow for?",
+  }
 ];
 
 class McInput extends React.Component {
@@ -550,8 +510,8 @@ class McInput extends React.Component {
   handleListChange(e) {
     if (e.target.value !== "") {
       this.setState({
-        mcPassageValue: mcPassages[e.target.value],
-        mcQuestionValue: mcQuestions[e.target.value],
+        mcPassageValue: mcExamples[e.target.value].passage,
+        mcQuestionValue: mcExamples[e.target.value].question,
       });
     }
   }
@@ -589,9 +549,9 @@ class McInput extends React.Component {
         <div className="form__instructions"><span>Enter text or</span>
           <select disabled={outputState === "working"} onChange={this.handleListChange}>
             <option value="">Choose an example...</option>
-            {mcDataIds.map((obj) => {
+            {mcExamples.map((example, index) => {
               return (
-                <option value={obj.id} key={obj.id}>{obj.passage.substring(0,60) + "..."}</option>
+                <option value={index} key={index}>{example.passage.substring(0,60) + "..."}</option>
               );
             })}
           </select>
@@ -616,43 +576,27 @@ class McInput extends React.Component {
   <TeInput /> Component
 *******************************************************************************/
 
-const tePremises = [
-  "If you help the needy, God will reward you.",
-  "Two women are wandering along the shore drinking iced tea.",
-  "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
-  "A large, gray elephant walked beside a herd of zebras.",
-  "A handmade djembe was on display at the Smithsonian.",
-];
-
-const teHypotheses = [
-  "Giving money to the poor has good consequences.",
-  "Two women are sitting on a blanket near some rocks talking about politics.",
-  "The spacecraft has the ability to travel between planets.",
-  "The elephant was lost.",
-  "Visitors could see the djembe."
-];
-
-const teDataIds = [
+const teExamples = [
   {
-    "id": 0,
-    "premise": tePremises[0]
+    premise: "If you help the needy, God will reward you.",
+    hypothesis: "Giving money to the poor has good consequences.",
   },
   {
-    "id": 1,
-    "premise": tePremises[1]
+    premise: "Two women are wandering along the shore drinking iced tea.",
+    hypothesis: "Two women are sitting on a blanket near some rocks talking about politics.",
   },
   {
-    "id": 2,
-    "premise": tePremises[2]
+    premise: "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
+    hypothesis: "The spacecraft has the ability to travel between planets.",
   },
   {
-    "id": 3,
-    "premise": tePremises[3]
+    premise: "A large, gray elephant walked beside a herd of zebras.",
+    hypothesis: "The elephant was lost.",
   },
   {
-    "id": 4,
-    "premise": tePremises[4]
-  }
+    premise: "A handmade djembe was on display at the Smithsonian.",
+    hypothesis: "Visitors could see the djembe.",
+  },
 ];
 
 class TeInput extends React.Component {
@@ -670,8 +614,8 @@ class TeInput extends React.Component {
   handleListChange(e) {
     if (e.target.value !== "") {
       this.setState({
-        tePremiseValue: tePremises[e.target.value],
-        teHypothesisValue: teHypotheses[e.target.value],
+        tePremiseValue: teExamples[e.target.value].premise,
+        teHypothesisValue: teExamples[e.target.value].hypothesis,
       });
     }
   }
@@ -709,9 +653,9 @@ class TeInput extends React.Component {
         <div className="form__instructions"><span>Enter text or</span>
           <select disabled={outputState === "working"} onChange={this.handleListChange}>
             <option value="">Choose an example...</option>
-            {teDataIds.map((obj) => {
+            {teExamples.map((example, index) => {
               return (
-                <option value={obj.id} key={obj.id}>{obj.premise}</option>
+                <option value={index} key={index}>{example.premise}</option>
               );
             })}
           </select>
