@@ -89,9 +89,10 @@ class SquadReader(DatasetReader):
     Reads a JSON-formatted SQuAD file and returns a ``Dataset`` where the ``Instances`` have four
     fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
     and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.  We also add a
-    ``MetadataField`` that stores the instance's ID, the original passage text, and token offsets
-    into the original passage, accessible as ``metadata['id']``, ``metadata['original_passage']``,
-    and ``metadata['token_offsets']``.  This is so that we can more easily use the official SQuAD
+    ``MetadataField`` that stores the instance's ID, the original passage text, gold answer strings,
+    and token offsets into the original passage, accessible as ``metadata['id']``,
+    ``metadata['original_passage']``, ``metadata['answer_texts']`` and
+    ``metadata['token_offsets']``.  This is so that we can more easily use the official SQuAD
     evaluation script to get metrics.
 
     Parameters
@@ -138,6 +139,7 @@ class SquadReader(DatasetReader):
                     candidate_answers: Counter = Counter()
                     for answer in question_answer["answers"]:
                         candidate_answers[(answer["answer_start"], answer["text"])] += 1
+                    answer_texts = [answer['text'] for answer in question_answer['answers']]
                     char_span_start, answer_text = candidate_answers.most_common(1)[0][0]
 
                     instance = self.text_to_instance(question_text,
@@ -145,7 +147,8 @@ class SquadReader(DatasetReader):
                                                      question_id,
                                                      answer_text,
                                                      char_span_start,
-                                                     tokenized_paragraph)
+                                                     tokenized_paragraph,
+                                                     answer_texts)
                     instances.append(instance)
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
@@ -159,7 +162,8 @@ class SquadReader(DatasetReader):
                          question_id: str = None,
                          answer_text: str = None,
                          char_span_start: int = None,
-                         tokenized_passage: Tuple[List[str], List[Tuple[int, int]]] = None) -> Instance:
+                         tokenized_passage: Tuple[List[str], List[Tuple[int, int]]] = None,
+                         answer_texts: List[str] = None) -> Instance:
         # pylint: disable=arguments-differ
         fields = {}  # type: Dict[str, Field]
         if tokenized_passage:
@@ -196,6 +200,8 @@ class SquadReader(DatasetReader):
                 }
         if question_id:
             metadata['question_id'] = question_id
+        if answer_texts:
+            metadata['answer_texts'] = answer_texts
         fields['metadata'] = MetadataField(metadata)
         return Instance(fields)
 

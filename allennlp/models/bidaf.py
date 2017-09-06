@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any, Dict, List
 
@@ -80,8 +79,7 @@ class BidirectionalAttentionFlow(Model):
                  span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
-                 mask_lstms: bool = True,
-                 evaluation_json_file: str = None) -> None:
+                 mask_lstms: bool = True) -> None:
         super(BidirectionalAttentionFlow, self).__init__(vocab)
 
         self._text_field_embedder = text_field_embedder
@@ -134,22 +132,6 @@ class BidirectionalAttentionFlow(Model):
         else:
             self._dropout = lambda x: x
         self._mask_lstms = mask_lstms
-
-        if evaluation_json_file:
-            logger.info("Prepping official evaluation dataset from %s", evaluation_json_file)
-            with open(evaluation_json_file) as dataset_file:
-                dataset_json = json.load(dataset_file)
-            question_to_answers = {}
-            for article in dataset_json['data']:
-                for paragraph in article['paragraphs']:
-                    for question in paragraph['qas']:
-                        question_id = question['id']
-                        answers = [answer['text'] for answer in question['answers']]
-                        question_to_answers[question_id] = answers
-
-            self._official_eval_dataset = question_to_answers
-        else:
-            self._official_eval_dataset = None
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -307,24 +289,20 @@ class BidirectionalAttentionFlow(Model):
                 end_offset = offsets[predicted_span[1]][1]
                 best_span_string = passage_str[start_offset:end_offset]
                 output_dict['best_span_str'].append(best_span_string)
-                question_id = metadata[i].get('question_id')
-                if question_id:
-                    self._compute_official_metrics(best_span_string, question_id)
+                answer_texts = metadata[i].get('answer_texts', [])
+                exact_match = f1_score = 0
+                if answer_texts:
+                    exact_match = squad_eval.metric_max_over_ground_truths(
+                            squad_eval.exact_match_score,
+                            best_span_string,
+                            answer_texts)
+                    f1_score = squad_eval.metric_max_over_ground_truths(
+                            squad_eval.f1_score,
+                            best_span_string,
+                            answer_texts)
+                self._official_em(100 * exact_match)
+                self._official_f1(100 * f1_score)
         return output_dict
-
-    def _compute_official_metrics(self, answer_string: str, question_id: str):
-        if self._official_eval_dataset and question_id in self._official_eval_dataset:
-            ground_truth = self._official_eval_dataset[question_id]
-            exact_match = squad_eval.metric_max_over_ground_truths(
-                    squad_eval.exact_match_score,
-                    answer_string,
-                    ground_truth)
-            f1_score = squad_eval.metric_max_over_ground_truths(
-                    squad_eval.f1_score,
-                    answer_string,
-                    ground_truth)
-            self._official_em(100 * exact_match)
-            self._official_f1(100 * f1_score)
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
@@ -374,7 +352,12 @@ class BidirectionalAttentionFlow(Model):
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
         initializer = InitializerApplicator.from_params(params.pop("initializer", []))
         dropout = params.pop('dropout', 0.2)
+
+        # TODO: Remove the following when fully deprecated
         evaluation_json_file = params.pop('evaluation_json_file', None)
+        if evaluation_json_file is not None:
+            logger.warning("the 'evaluation_json_file' model parameter is deprecated, please remove")
+
         mask_lstms = params.pop('mask_lstms', True)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
@@ -386,5 +369,4 @@ class BidirectionalAttentionFlow(Model):
                    span_end_encoder=span_end_encoder,
                    initializer=initializer,
                    dropout=dropout,
-                   mask_lstms=mask_lstms,
-                   evaluation_json_file=evaluation_json_file)
+                   mask_lstms=mask_lstms)
