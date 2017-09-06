@@ -1,9 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
 from flaky import flaky
+import pytest
 import numpy
 from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import ModelTestCase
 from allennlp.models import DecomposableAttention, Model
 from allennlp.nn.util import arrays_to_variables
@@ -32,3 +34,17 @@ class TestDecomposableAttention(ModelTestCase):
         model = Model.load(params, serialization_dir='tests/fixtures/decomposable_attention/serialization')
 
         assert isinstance(model, DecomposableAttention)
+
+    def test_mismatched_dimensions_raise_configuration_errors(self):
+        params = Params.from_file(self.param_file)
+        # Make the input_dim to the first feedforward_layer wrong - it should be 2.
+        params["model"]["attend_feedforward"]["input_dim"] = 10
+        with pytest.raises(ConfigurationError):
+            Model.from_params(self.vocab, params.pop("model"))
+
+        params = Params.from_file(self.param_file)
+        # Make the projection output_dim of the last layer wrong - it should be
+        # 3, equal to the number of classes.
+        params["model"]["aggregate_feedforward"]["output_dim"] = 10
+        with pytest.raises(ConfigurationError):
+            Model.from_params(self.vocab, params.pop("model"))

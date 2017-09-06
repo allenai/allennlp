@@ -7,6 +7,7 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
@@ -41,6 +42,12 @@ class SimpleTagger(Model):
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
+
+        if text_field_embedder.get_output_dim() != stacked_encoder.get_input_dim():
+            raise ConfigurationError("The output dimension of the text_field_embedder must match the "
+                                     "input dimension of the phrase_encoder. Found {} and {}, "
+                                     "respectively.".format(text_field_embedder.get_output_dim(),
+                                                            stacked_encoder.get_input_dim()))
         self.metrics = {
                 "accuracy": CategoricalAccuracy(),
                 "accuracy3": CategoricalAccuracy(top_k=3)

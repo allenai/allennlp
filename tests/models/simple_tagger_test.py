@@ -1,8 +1,12 @@
 # pylint: disable=invalid-name
 from flaky import flaky
+import pytest
 import numpy
 
 from allennlp.common.testing import ModelTestCase
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
+from allennlp.models import Model
 from allennlp.nn.util import arrays_to_variables
 
 
@@ -24,3 +28,11 @@ class SimpleTaggerTest(ModelTestCase):
         output_dict = self.model.forward(**arrays_to_variables(training_arrays))
         class_probs = output_dict['class_probabilities'][0].data.numpy()
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.array([1, 1, 1, 1]))
+
+    def test_mismatching_dimensions_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        # Make the stacked_encoder wrong - it should be 2 to match
+        # the embedding dimension from the text_field_embedder.
+        params["model"]["stacked_encoder"]["input_size"] = 10
+        with pytest.raises(ConfigurationError):
+            Model.from_params(self.vocab, params.pop("model"))
