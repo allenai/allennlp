@@ -1,5 +1,4 @@
 import os
-from inspect import signature
 
 from numpy.testing import assert_allclose
 import torch
@@ -62,28 +61,19 @@ class ModelTestCase(AllenNlpTestCase):
 
         # The datasets themselves should be identical.
         for key in model_batch.keys():
-            if key == 'metadata':
-                assert model_batch[key] == loaded_batch[key]
-                continue
             field = model_batch[key]
             if isinstance(field, dict):
                 for subfield in field:
-                    assert_allclose(model_batch[key][subfield].data.numpy(),
-                                    loaded_batch[key][subfield].data.numpy(),
-                                    rtol=1e-6,
-                                    err_msg=key + "." + subfield)
+                    self.assert_fields_equal(model_batch[key][subfield],
+                                             loaded_batch[key][subfield],
+                                             tolerance=1e-6,
+                                             name=key + '.' + subfield)
             else:
-                assert_allclose(model_batch[key].data.numpy(),
-                                loaded_batch[key].data.numpy(),
-                                rtol=1e-6,
-                                err_msg=key)
+                self.assert_fields_equal(model_batch[key], loaded_batch[key], 1e-6, key)
 
         # Set eval mode, to turn off things like dropout, then get predictions.
         model.eval()
         loaded_model.eval()
-        if 'metadata' in model_batch and 'metadata' not in signature(model.forward).parameters:
-            del model_batch['metadata']
-            del loaded_batch['metadata']
         model_predictions = model.forward(**model_batch)
         loaded_model_predictions = loaded_model.forward(**loaded_batch)
 
@@ -94,15 +84,22 @@ class ModelTestCase(AllenNlpTestCase):
 
         # Both outputs should have the same keys and the values for these keys should be close.
         for key in model_predictions.keys():
-            if isinstance(model_predictions[key], torch.autograd.Variable):
-                assert_allclose(model_predictions[key].data.numpy(),
-                                loaded_model_predictions[key].data.numpy(),
-                                rtol=1e-4,
-                                err_msg=key)
-            else:
-                assert model_predictions[key] == loaded_model_predictions[key]
+            self.assert_fields_equal(model_predictions[key],
+                                     loaded_model_predictions[key],
+                                     tolerance=1e-4,
+                                     name=key)
 
         return model, loaded_model
+
+    @staticmethod
+    def assert_fields_equal(field1, field2, tolerance: float = 1e-6, name: str = None) -> None:
+        if isinstance(field1, torch.autograd.Variable):
+            assert_allclose(field1.data.numpy(),
+                            field2.data.numpy(),
+                            rtol=tolerance,
+                            err_msg=name)
+        else:
+            assert field1 == field2
 
     def ensure_batch_predictions_are_consistent(self):
         self.model.eval()

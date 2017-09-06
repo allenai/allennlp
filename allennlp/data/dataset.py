@@ -152,20 +152,11 @@ class Dataset:
                 field_arrays[field].append(arrays)
 
         # Finally, we combine the arrays that we got for each instance into one big array (or set
-        # of arrays) per field.
+        # of arrays) per field.  The `Field` classes themselves have the logic for batching the
+        # arrays together, so we grab a dictionary of field_name -> field class from the first
+        # instance in the dataset.
+        field_classes = self.instances[0].fields
+        final_fields = {}
         for field_name, field_array_list in field_arrays.items():
-            if field_name == 'metadata':
-                continue
-            if isinstance(field_array_list[0], dict):
-                # This is creating a dict of {token_indexer_key: batch_array} for each
-                # token indexer used to index this field. This is mostly utilised by TextFields.
-                token_indexer_key_to_batch_dict: Dict[str, List[numpy.ndarray]] = defaultdict(list)
-                for namespace_dict in field_array_list:
-                    for indexer_name, array in namespace_dict.items():
-                        token_indexer_key_to_batch_dict[indexer_name].append(array)
-                field_arrays[field_name] = {indexer_name: numpy.asarray(array_list) for  # type: ignore
-                                            indexer_name, array_list in token_indexer_key_to_batch_dict.items()}
-            else:
-                field_arrays[field_name] = numpy.asarray(field_array_list)
-        # Unpack into a standard dict to remove defaultdict functionality.
-        return {**field_arrays}
+            final_fields[field_name] = field_classes[field_name].batch_arrays(field_array_list)
+        return final_fields
