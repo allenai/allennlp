@@ -90,9 +90,10 @@ class SquadReader(DatasetReader):
     fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
     and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.
 
-    The ``Instances`` also store their ID, the original passage text, and token offsets into the
-    original passage in the instance metadata, accessible as ``instance.metadata['id']``,
-    ``instance.metadata['original_passage']``, and ``instance.metadata['token_offsets']``.  This is
+    The ``Instances`` also store their ID, the original passage text, gold answer strings, and
+    token offsets into the original passage in the instance metadata, accessible as
+    ``instance.metadata['id']``, ``instance.metadata['original_passage']``,
+    ``instance.metadata['answer_texts']``, and ``instance.metadata['token_offsets']``.  This is
     so that we can more easily use the official SQuAD evaluation script to get metrics.
 
     Parameters

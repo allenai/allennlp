@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any, Dict, List
 
@@ -270,13 +269,13 @@ class BidirectionalAttentionFlow(Model):
                 exact_match = f1_score = 0
                 if answer_texts:
                     exact_match = squad_eval.metric_max_over_ground_truths(
-                        squad_eval.exact_match_score,
-                        best_span_string,
-                        answer_texts)
+                            squad_eval.exact_match_score,
+                            best_span_string,
+                            answer_texts)
                     f1_score = squad_eval.metric_max_over_ground_truths(
-                        squad_eval.f1_score,
-                        best_span_string,
-                        answer_texts)
+                            squad_eval.f1_score,
+                            best_span_string,
+                            answer_texts)
                 self._official_em(100 * exact_match)
                 self._official_f1(100 * f1_score)
         return output_dict
@@ -329,7 +328,12 @@ class BidirectionalAttentionFlow(Model):
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
         initializer = InitializerApplicator.from_params(params.pop("initializer", []))
         dropout = params.pop('dropout', 0.2)
-        params.pop('evaluation_json_file', None)  # Temporary, for backwards compatibility
+
+        # TODO: Remove the following when fully deprecated
+        evaluation_json_file = params.pop('evaluation_json_file', None)
+        if evaluation_json_file is not None:
+            logger.warning("the 'evaluation_json_file' model parameter is deprecated, please remove")
+
         mask_lstms = params.pop('mask_lstms', True)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
