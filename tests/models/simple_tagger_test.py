@@ -47,5 +47,4 @@ class SimpleTaggerTest(ModelTestCase):
         # the embedding dimension from the text_field_embedder.
         params["model"]["stacked_encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
-            SimpleTagger.from_params(self.vocab, params)
-
+            SimpleTagger.from_params(self.vocab, params.pop("model"))

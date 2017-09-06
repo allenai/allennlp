@@ -62,4 +62,4 @@ class SemanticRoleLabelerTest(ModelTestCase):
         # the embedding + binary feature dimensions.
         params["model"]["stacked_encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
-            SemanticRoleLabeler.from_params(self.vocab, params)
+            SemanticRoleLabeler.from_params(self.vocab, params.pop("model"))
