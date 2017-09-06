@@ -8,7 +8,7 @@ To create a new release, check out the SHA for which you want to cut a release a
 
 ```
 git tag -a v0.2.0 -m "v0.2.0"
-git push v0.2.0
+git push origin v0.2.0
 ```
 
 ## Updating the web demo
