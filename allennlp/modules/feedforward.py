@@ -64,9 +64,13 @@ class FeedForward(torch.nn.Module):
         dropout_layers = [torch.nn.Dropout(p=value) for value in dropout]
         self._dropout = torch.nn.ModuleList(dropout_layers)
         self._output_dim = hidden_dims[-1]
+        self.input_dim = input_dim
 
     def get_output_dim(self):
         return self._output_dim
+
+    def get_input_dim(self):
+        return self.input_dim
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         # pylint: disable=arguments-differ

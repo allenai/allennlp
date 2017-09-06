@@ -31,16 +31,6 @@ class SimpleTaggerTest(ModelTestCase):
         class_probs = output_dict['class_probabilities'][0].data.numpy()
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.array([1, 1, 1, 1]))
 
-    def test_tag_returns_distributions_per_token(self):
-        text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})
-        output = self.model.tag(text)
-        possible_tags = self.vocab.get_index_to_token_vocabulary("labels").values()
-        for tag in output["tags"]:
-            assert tag in possible_tags
-        # Predictions are a distribution.
-        numpy.testing.assert_almost_equal(numpy.sum(output["class_probabilities"], -1),
-                                          numpy.array([1, 1, 1, 1]))
-
     def test_mismatching_dimensions_throws_configuration_error(self):
         params = Params.from_file(self.param_file)
         # Make the stacked_encoder wrong - it should be 2 to match

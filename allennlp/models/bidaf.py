@@ -102,6 +102,14 @@ class BidirectionalAttentionFlow(Model):
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
         initializer(self)
 
+        # Bidaf has lots of layer dimensions which need to match up - these
+        # aren't necessarily obvious from the configuration files, so we check
+        # here.
+        if modeling_layer.get_input_dim() != 4 * encoding_dim:
+            raise ConfigurationError("The input dimension to the modelling_layer must be "
+                                     "equal to 4 times the encoding dimension of the phrase_layer. "
+                                     "Found {} and 4 * {} respectively.".format(modeling_layer.get_input_dim(),
+                                                                                encoding_dim))
         if text_field_embedder.get_output_dim() != phrase_layer.get_input_dim():
             raise ConfigurationError("The output dimension of the text_field_embedder (embedding_dim + "
                                      "char_cnn) must match the input dimension of the phrase_encoder. "
