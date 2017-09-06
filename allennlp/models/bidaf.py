@@ -115,6 +115,15 @@ class BidirectionalAttentionFlow(Model):
                                      "char_cnn) must match the input dimension of the phrase_encoder. "
                                      "Found {} and {}, respectively.".format(text_field_embedder.get_output_dim(),
                                                                              phrase_layer.get_input_dim()))
+
+        if span_end_encoder.get_input_dim() != encoding_dim * 4 + modeling_dim * 3:
+            raise ConfigurationError("The input dimension of the span_end_encoder should be equal to "
+                                     "4 * phrase_layer.output_dim + 3 * modeling_layer.output_dim. "
+                                     "Found {} and (4 * {} + 3 * {}) "
+                                     "respectively.".format(span_end_encoder.get_input_dim(),
+                                                            encoding_dim,
+                                                            modeling_dim))
+
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
         self._span_accuracy = BooleanAccuracy()

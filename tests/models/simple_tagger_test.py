@@ -6,8 +6,6 @@ import numpy
 from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.data.fields import TextField
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.nn.util import arrays_to_variables
 
