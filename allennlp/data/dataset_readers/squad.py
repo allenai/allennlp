@@ -16,7 +16,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.fields import Field, TextField, ListField, IndexField
+from allennlp.data.fields import Field, TextField, ListField, IndexField, MetadataField
 from allennlp.data.tokenizers import WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -88,13 +88,12 @@ class SquadReader(DatasetReader):
     """
     Reads a JSON-formatted SQuAD file and returns a ``Dataset`` where the ``Instances`` have four
     fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
-    and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.
-
-    The ``Instances`` also store their ID, the original passage text, gold answer strings, and
-    token offsets into the original passage in the instance metadata, accessible as
-    ``instance.metadata['id']``, ``instance.metadata['original_passage']``,
-    ``instance.metadata['answer_texts']``, and ``instance.metadata['token_offsets']``.  This is
-    so that we can more easily use the official SQuAD evaluation script to get metrics.
+    and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.  We also add a
+    ``MetadataField`` that stores the instance's ID, the original passage text, gold answer strings,
+    and token offsets into the original passage, accessible as ``metadata['id']``,
+    ``metadata['original_passage']``, ``metadata['answer_texts']`` and
+    ``metadata['token_offsets']``.  This is so that we can more easily use the official SQuAD
+    evaluation script to get metrics.
 
     Parameters
     ----------
@@ -203,7 +202,8 @@ class SquadReader(DatasetReader):
             metadata['question_id'] = question_id
         if answer_texts:
             metadata['answer_texts'] = answer_texts
-        return Instance(fields, metadata)
+        fields['metadata'] = MetadataField(metadata)
+        return Instance(fields)
 
     @classmethod
     def from_params(cls, params: Params) -> 'SquadReader':

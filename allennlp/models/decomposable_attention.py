@@ -78,6 +78,12 @@ class DecomposableAttention(Model):
         self._hypothesis_encoder = hypothesis_encoder or premise_encoder
 
         self._num_labels = vocab.get_vocab_size(namespace="labels")
+
+        if text_field_embedder.get_output_dim() != attend_feedforward.get_input_dim():
+            raise ConfigurationError("Output dimension of the text_field_embedder (dim: {}), "
+                                     "must match the input_dim of the FeedForward layer "
+                                     "attend_feedforward, (dim: {}). ".format(text_field_embedder.get_output_dim(),
+                                                                              attend_feedforward.get_input_dim()))
         if aggregate_feedforward.get_output_dim() != self._num_labels:
             raise ConfigurationError("Final output dimension (%d) must equal num labels (%d)" %
                                      (aggregate_feedforward.get_output_dim(), self._num_labels))

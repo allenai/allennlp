@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Dict
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
@@ -21,17 +21,9 @@ class Instance:
     ----------
     fields : ``Dict[str, Field]``
         The ``Field`` objects that will be used to produce data arrays for this instance.
-    metadata : ``Any``
-        If you need to associate additional information with an ``Instance`` that will `not` be
-        converted into data arrays, you can use this parameter.  For example, you might have an
-        instance ID that you need to save, in order to have a more convenient output format as part
-        of some pipeline; that information can go here.  It's likely that you'll want ``metadata``
-        to be a ``Dict``, but you can use it however you want, accessed as ``instance.metadata``.
-        None of the library code will touch this field.
     """
-    def __init__(self, fields: Dict[str, Field], metadata: Any = None) -> None:
+    def __init__(self, fields: Dict[str, Field]) -> None:
         self.fields = fields
-        self.metadata = metadata
 
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
@@ -67,14 +59,9 @@ class Instance:
 
         If ``padding_lengths`` is omitted, we will call ``self.get_padding_lengths()`` to get the
         sizes of the arrays to create.
-
-        In the array dictionary, we also pass along the instance metadata, if any is given.  This
-        is contained in the ``'metadata'`` key.
         """
         padding_lengths = padding_lengths or self.get_padding_lengths()
         arrays = {}
         for field_name, field in self.fields.items():
             arrays[field_name] = field.as_array(padding_lengths[field_name])
-        if self.metadata:
-            arrays['metadata'] = self.metadata
         return arrays

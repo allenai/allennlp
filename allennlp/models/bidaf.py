@@ -6,6 +6,7 @@ from torch.autograd import Variable
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, squad_eval
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
@@ -98,6 +99,29 @@ class BidirectionalAttentionFlow(Model):
         span_end_input_dim = encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
         initializer(self)
+
+        # Bidaf has lots of layer dimensions which need to match up - these
+        # aren't necessarily obvious from the configuration files, so we check
+        # here.
+        if modeling_layer.get_input_dim() != 4 * encoding_dim:
+            raise ConfigurationError("The input dimension to the modeling_layer must be "
+                                     "equal to 4 times the encoding dimension of the phrase_layer. "
+                                     "Found {} and 4 * {} respectively.".format(modeling_layer.get_input_dim(),
+                                                                                encoding_dim))
+        if text_field_embedder.get_output_dim() != phrase_layer.get_input_dim():
+            raise ConfigurationError("The output dimension of the text_field_embedder (embedding_dim + "
+                                     "char_cnn) must match the input dimension of the phrase_encoder. "
+                                     "Found {} and {}, respectively.".format(text_field_embedder.get_output_dim(),
+                                                                             phrase_layer.get_input_dim()))
+
+        if span_end_encoder.get_input_dim() != encoding_dim * 4 + modeling_dim * 3:
+            raise ConfigurationError("The input dimension of the span_end_encoder should be equal to "
+                                     "4 * phrase_layer.output_dim + 3 * modeling_layer.output_dim. "
+                                     "Found {} and (4 * {} + 3 * {}) "
+                                     "respectively.".format(span_end_encoder.get_input_dim(),
+                                                            encoding_dim,
+                                                            modeling_dim))
+
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
         self._span_accuracy = BooleanAccuracy()

@@ -3,10 +3,14 @@ import subprocess
 import os
 
 from flaky import flaky
+import pytest
 import numpy
 
 from allennlp.common.testing import ModelTestCase
+from allennlp.common.params import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
+from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 from allennlp.nn.util import arrays_to_variables
 
@@ -51,3 +55,11 @@ class SemanticRoleLabelerTest(ModelTestCase):
         perl_script_command = ["perl", "./scripts/srl-eval.pl", prediction_file_path, gold_file_path]
         exit_code = subprocess.check_call(perl_script_command)
         assert exit_code == 0
+
+    def test_mismatching_dimensions_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        # Make the phrase layer wrong - it should be 150 to match
+        # the embedding + binary feature dimensions.
+        params["model"]["stacked_encoder"]["input_size"] = 10
+        with pytest.raises(ConfigurationError):
+            Model.from_params(self.vocab, params.pop("model"))
