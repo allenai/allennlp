@@ -12,8 +12,9 @@ from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.fields import TextField, LabelField
+from allennlp.data.fields.field import Field  # pylint: disable=unused-import
 from allennlp.data.tokenizers import WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -36,9 +37,10 @@ class SnliReader(DatasetReader):
     """
 
     def __init__(self,
-                 tokenizer: Tokenizer = WordTokenizer(),
+                 tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
+        self._tokenizer = tokenizer or WordTokenizer()
+        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @overrides
     def read(self, file_path: str):
@@ -56,21 +58,29 @@ class SnliReader(DatasetReader):
                     # These were cases where the annotators disagreed; we'll just skip them.  It's
                     # like 800 out of 500k examples in the training data.
                     continue
-                label_field = LabelField(label)
 
                 premise = example["sentence1"]
-                premise_tokens, _ = self._tokenizer.tokenize(premise)
                 hypothesis = example["sentence2"]
-                hypothesis_tokens, _ = self._tokenizer.tokenize(hypothesis)
-                premise_field = TextField(premise_tokens, self._token_indexers)
-                hypothesis_field = TextField(hypothesis_tokens, self._token_indexers)
-                instances.append(Instance({'label': label_field,
-                                           'premise': premise_field,
-                                           'hypothesis': hypothesis_field}))
+                instances.append(self.text_to_instance(premise, hypothesis, label))
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
         return Dataset(instances)
+
+    @overrides
+    def text_to_instance(self,  # type: ignore
+                         premise: str,
+                         hypothesis: str,
+                         label: str = None) -> Instance:
+        # pylint: disable=arguments-differ
+        fields = {}  # type: Dict[str, Field]
+        premise_tokens, _ = self._tokenizer.tokenize(premise)
+        hypothesis_tokens, _ = self._tokenizer.tokenize(hypothesis)
+        fields['premise'] = TextField(premise_tokens, self._token_indexers)
+        fields['hypothesis'] = TextField(hypothesis_tokens, self._token_indexers)
+        if label:
+            fields['label'] = LabelField(label)
+        return Instance(fields)
 
     @classmethod
     def from_params(cls, params: Params) -> 'SnliReader':

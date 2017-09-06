@@ -1,14 +1,13 @@
 import json
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import torch
 from torch.autograd import Variable
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, squad_eval
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields import TextField
+from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
@@ -260,31 +259,27 @@ class BidirectionalAttentionFlow(Model):
         if metadata is not None:
             output_dict['best_span_str'] = []
             for i in range(batch_size):
+                passage_str = metadata[i]['original_passage']
+                offsets = metadata[i]['token_offsets']
                 predicted_span = tuple(best_span[i].data.cpu().numpy())
-                best_span_string = self._compute_official_metrics(metadata[i], predicted_span)  # type: ignore
+                start_offset = offsets[predicted_span[0]][0]
+                end_offset = offsets[predicted_span[1]][1]
+                best_span_string = passage_str[start_offset:end_offset]
                 output_dict['best_span_str'].append(best_span_string)
+                answer_texts = metadata[i].get('answer_texts', [])
+                exact_match = f1_score = 0
+                if answer_texts:
+                    exact_match = squad_eval.metric_max_over_ground_truths(
+                        squad_eval.exact_match_score,
+                        best_span_string,
+                        answer_texts)
+                    f1_score = squad_eval.metric_max_over_ground_truths(
+                        squad_eval.f1_score,
+                        best_span_string,
+                        answer_texts)
+                self._official_em(100 * exact_match)
+                self._official_f1(100 * f1_score)
         return output_dict
-
-    def _compute_official_metrics(self,
-                                  metadata: Dict[str, Any],
-                                  predicted_span: Tuple[int, int]) -> str:
-        passage = metadata['original_passage']
-        offsets = metadata['token_offsets']
-        start_offset = offsets[predicted_span[0]][0]
-        end_offset = offsets[predicted_span[1]][1]
-        span_string = passage[start_offset:end_offset]
-        answer_texts = metadata.get('answer_texts', [])
-        exact_match = squad_eval.metric_max_over_ground_truths(
-                squad_eval.exact_match_score,
-                span_string,
-                answer_texts)
-        f1_score = squad_eval.metric_max_over_ground_truths(
-                squad_eval.f1_score,
-                span_string,
-                answer_texts)
-        self._official_em(100 * exact_match)
-        self._official_f1(100 * f1_score)
-        return span_string
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
@@ -293,41 +288,6 @@ class BidirectionalAttentionFlow(Model):
                 'span_acc': self._span_accuracy.get_metric(reset),
                 'em': self._official_em.get_metric(reset),
                 'f1': self._official_f1.get_metric(reset),
-                }
-
-    def predict_span(self, question: TextField, passage: TextField) -> Dict[str, Any]:
-        """
-        Given a question and a passage, predicts the span in the passage that answers the question.
-
-        Parameters
-        ----------
-        question : ``TextField``
-        passage : ``TextField``
-            A ``TextField`` containing the tokens in the passage.  Note that we typically add
-            ``SquadReader.STOP_TOKEN`` as the final token in the passage, because we use exclusive
-            span indices.  Be sure you've added that to the passage you pass in here.
-
-        Returns
-        -------
-        A Dict containing:
-
-        span_start_probs : numpy.ndarray
-        span_end_probs : numpy.ndarray
-        best_span : (int, int)
-        """
-        instance = Instance({'question': question, 'passage': passage})
-        instance.index_fields(self.vocab)
-        model_input = util.arrays_to_variables(instance.as_array_dict(),
-                                               add_batch_dimension=True,
-                                               for_training=False)
-        output_dict = self.forward(**model_input)
-
-        # Here we're just removing the batch dimension and converting things to numpy arrays /
-        # tuples instead of pytorch variables.
-        return {
-                "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).cpu().numpy(),
-                "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).cpu().numpy(),
-                "best_span": tuple(output_dict["best_span"].data.squeeze(0).cpu().numpy()),
                 }
 
     @staticmethod

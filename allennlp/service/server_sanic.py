@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from functools import lru_cache
 
 from sanic import Sanic, response, request
@@ -42,6 +43,10 @@ def make_app(static_dir: str = None) -> Sanic:
         # Need path to static assets to be relative to this file.
         dir_path = os.path.dirname(os.path.realpath(__file__))
         static_dir = os.path.join(dir_path, 'static')
+
+    if not os.path.exists(static_dir):
+        logger.error("app directory %s does not exist, aborting", static_dir)
+        sys.exit(-1)
 
     app.static('/', os.path.join(static_dir, 'index.html'))
     app.static('/', static_dir)

@@ -45,8 +45,8 @@
     }
   },
   "iterator": {"type": "basic", "batch_size": 32},
-  "optimizer": "adam",
   "trainer": {
+    "optimizer": "adam",
     "num_epochs": 40,
     "patience": 10,
     "cuda_device": -1
