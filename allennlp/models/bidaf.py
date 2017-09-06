@@ -106,7 +106,7 @@ class BidirectionalAttentionFlow(Model):
         # aren't necessarily obvious from the configuration files, so we check
         # here.
         if modeling_layer.get_input_dim() != 4 * encoding_dim:
-            raise ConfigurationError("The input dimension to the modelling_layer must be "
+            raise ConfigurationError("The input dimension to the modeling_layer must be "
                                      "equal to 4 times the encoding dimension of the phrase_layer. "
                                      "Found {} and 4 * {} respectively.".format(modeling_layer.get_input_dim(),
                                                                                 encoding_dim))
