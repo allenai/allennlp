@@ -2,10 +2,10 @@ import json
 import logging
 import random
 from collections import Counter
-from copy import deepcopy
-from typing import List, Tuple, Dict, Set  # pylint: disable=unused-import
+from typing import List, Tuple, Dict, Set
 
 import numpy
+from overrides import overrides
 from tqdm import tqdm
 
 from allennlp.common import Params
@@ -14,10 +14,9 @@ from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.fields import TextField, ListField, IndexField
-from allennlp.data.fields.field import Field  # pylint: disable=unused-import
+from allennlp.data.fields import Field, TextField, ListField, IndexField, MetadataField
 from allennlp.data.tokenizers import WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -89,12 +88,11 @@ class SquadReader(DatasetReader):
     """
     Reads a JSON-formatted SQuAD file and returns a ``Dataset`` where the ``Instances`` have four
     fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
-    and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.
-
-    The ``Instances`` also store their ID, the original passage text, and token offsets into the
-    original passage in the instance metadata, accessible as ``instance.metadata['id']``,
-    ``instance.metadata['original_passage']``, and ``instance.metadata['token_offsets']``.  This is
-    so that we can more easily use the official SQuAD evaluation script to get metrics.
+    and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.  We also add a
+    ``MetadataField`` that stores the instance's ID, the original passage text, and token offsets
+    into the original passage, accessible as ``metadata['id']``, ``metadata['original_passage']``,
+    and ``metadata['token_offsets']``.  This is so that we can more easily use the official SQuAD
+    evaluation script to get metrics.
 
     Parameters
     ----------
@@ -106,10 +104,12 @@ class SquadReader(DatasetReader):
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
     """
     def __init__(self,
-                 tokenizer: Tokenizer = WordTokenizer(),
+                 tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
+        self._tokenizer = tokenizer or WordTokenizer()
+        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
+    @overrides
     def read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
@@ -123,84 +123,86 @@ class SquadReader(DatasetReader):
         for article in tqdm(dataset):
             for paragraph_json in article['paragraphs']:
                 paragraph = paragraph_json["context"]
-
-                # We add a special token to the end of the passage.  This is because our span
-                # labels are end-exclusive, and we do a softmax over the passage to determine span
-                # end.  So if we want to be able to include the last token of the passage, we need
-                # to have a special symbol at the end.
-                paragraph_tokens, paragraph_offsets = self._tokenizer.tokenize(paragraph)
+                tokenized_paragraph = self._tokenizer.tokenize(paragraph)
 
                 for question_answer in paragraph_json['qas']:
                     question_text = question_answer["question"].strip().replace("\n", "")
                     question_id = question_answer['id'].strip()
-                    question_tokens, _ = self._tokenizer.tokenize(question_text)
 
-                    # There may be multiple answer annotations, so pick the one that occurs the
-                    # most.
-                    candidate_answers = Counter() # type: Counter
+                    # There may be multiple answer annotations, so we pick the one that occurs the
+                    # most.  This only matters on the SQuAD dev set, and it means our computed
+                    # metrics ("start_acc", "end_acc", and "span_acc") aren't quite the same as the
+                    # official metrics, which look at all of the annotations.  This is why we have
+                    # a separate official SQuAD metric calculation (the "em" and "f1" metrics use
+                    # the official script).
+                    candidate_answers: Counter = Counter()
                     for answer in question_answer["answers"]:
                         candidate_answers[(answer["answer_start"], answer["text"])] += 1
                     char_span_start, answer_text = candidate_answers.most_common(1)[0][0]
 
-                    # SQuAD gives answer annotations as a character index into the paragraph, but
-                    # we need a token index for our models.  We convert them here.
-                    char_span_end = char_span_start + len(answer_text)
-                    (span_start, span_end), error = _char_span_to_token_span(paragraph_offsets,
-                                                                             (char_span_start,
-                                                                              char_span_end))
-                    if error:
-                        logger.debug("Passage: %s", paragraph)
-                        logger.debug("Passage tokens: %s", paragraph_tokens)
-                        logger.debug("Question: %s", question_text)
-                        logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
-                        logger.debug("Token span: (%d, %d)", span_start, span_end)
-                        logger.debug("Tokens in answer: %s", paragraph_tokens[span_start:span_end + 1])
-                        logger.debug("Answer: %s", answer_text)
-
-                    # Because the paragraph is shared across multiple questions, we do a deepcopy
-                    # here to avoid any weird issues with shared state between instances (e.g.,
-                    # when indexing is done, and when padding is done).  I _think_ all of those
-                    # operations would be safe with shared objects, but I'd rather just be safe by
-                    # doing a copy here.  Extra memory usage should be minimal.
-                    paragraph_field = TextField(deepcopy(paragraph_tokens), self._token_indexers)
-                    question_field = TextField(question_tokens, self._token_indexers)
-                    span_start_field = IndexField(span_start, paragraph_field)
-                    span_end_field = IndexField(span_end, paragraph_field)
-                    fields = {
-                            'question': question_field,
-                            'passage': paragraph_field,
-                            'span_start': span_start_field,
-                            'span_end': span_end_field
-                            }
-                    metadata = {
-                            'id': question_id,
-                            'original_passage': paragraph,
-                            'token_offsets': paragraph_offsets
-                            }
-                    instance = Instance(fields, metadata)
+                    instance = self.text_to_instance(question_text,
+                                                     paragraph,
+                                                     question_id,
+                                                     answer_text,
+                                                     char_span_start,
+                                                     tokenized_paragraph)
                     instances.append(instance)
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
         return Dataset(instances)
 
+    @overrides
+    def text_to_instance(self,  # type: ignore
+                         question_text: str,
+                         passage_text: str,
+                         question_id: str = None,
+                         answer_text: str = None,
+                         char_span_start: int = None,
+                         tokenized_passage: Tuple[List[str], List[Tuple[int, int]]] = None) -> Instance:
+        # pylint: disable=arguments-differ
+        fields = {}  # type: Dict[str, Field]
+        if tokenized_passage:
+            passage_tokens, passage_offsets = tokenized_passage
+        else:
+            passage_tokens, passage_offsets = self._tokenizer.tokenize(passage_text)
+        question_tokens, _ = self._tokenizer.tokenize(question_text)
+        # Separate so we can reference it later with a known type.
+        passage_field = TextField(passage_tokens, self._token_indexers)
+        fields['passage'] = passage_field
+        fields['question'] = TextField(question_tokens, self._token_indexers)
+
+        if answer_text:
+            # SQuAD gives answer annotations as a character index into the paragraph, but we need a
+            # token index for our models.  We convert them here.
+            char_span_end = char_span_start + len(answer_text)
+            (span_start, span_end), error = _char_span_to_token_span(passage_offsets,
+                                                                     (char_span_start,
+                                                                      char_span_end))
+            if error:
+                logger.debug("Passage: %s", passage_text)
+                logger.debug("Passage tokens: %s", passage_tokens)
+                logger.debug("Question: %s", question_text)
+                logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
+                logger.debug("Token span: (%d, %d)", span_start, span_end)
+                logger.debug("Tokens in answer: %s", passage_tokens[span_start:span_end + 1])
+                logger.debug("Answer: %s", answer_text)
+
+            fields['span_start'] = IndexField(span_start, passage_field)
+            fields['span_end'] = IndexField(span_end, passage_field)
+        metadata = {
+                'original_passage': passage_text,
+                'token_offsets': passage_offsets
+                }
+        if question_id:
+            metadata['question_id'] = question_id
+        fields['metadata'] = MetadataField(metadata)
+        return Instance(fields)
+
     @classmethod
     def from_params(cls, params: Params) -> 'SquadReader':
-        """
-        Parameters
-        ----------
-        tokenizer : ``Params``, optional (default=``{}``)
-        token_indexers: ``Params``, optional (default=``{}``)
-        """
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers', {})
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-        # The default parameters are contained within the class, so if no parameters are given we
-        # must pass None.
-        if token_indexers == {}:
-            token_indexers = None
+        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         params.assert_empty(cls.__name__)
         return cls(tokenizer=tokenizer, token_indexers=token_indexers)
 
@@ -238,31 +240,32 @@ class SquadSentenceSelectionReader(DatasetReader):
     """
     def __init__(self,
                  negative_sentence_selection: str = "paragraph",
-                 tokenizer: Tokenizer = WordTokenizer(),
+                 tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
+        self._tokenizer = tokenizer or WordTokenizer()
+        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._negative_sentence_selection_methods = negative_sentence_selection.split(",")
 
         # Initializing some data structures here that will be useful when reading a file.
         # Maps sentence strings to sentence indices
-        self._sentence_to_id = {}  # type: Dict[str, int]
+        self._sentence_to_id: Dict[str, int] = {}
         # Maps sentence indices to sentence strings
-        self._id_to_sentence = {}  # type: Dict[int, str]
+        self._id_to_sentence: Dict[int, str] = {}
         # Maps paragraph ids to lists of contained sentence ids
-        self._paragraph_sentences = {}  # type: Dict[int, List[int]]
+        self._paragraph_sentences: Dict[int, List[int]] = {}
         # Maps sentence ids to the containing paragraph id.
-        self._sentence_paragraph_map = {}  # type: Dict[int, int]
+        self._sentence_paragraph_map: Dict[int, int] = {}
         # Maps question strings to question indices
-        self._question_to_id = {}  # type: Dict[str, int]
+        self._question_to_id: Dict[str, int] = {}
         # Maps question indices to question strings
-        self._id_to_question = {}  # type: Dict[int, str]
+        self._id_to_question: Dict[int, str] = {}
 
     def _get_sentence_choices(self,
                               question_id: int,
                               answer_id: int) -> Tuple[List[str], int]:  # pylint: disable=invalid-sequence-index
         # Because sentences and questions have different indices, we need this to hold tuples of
         # ("sentence", id) or ("question", id), instead of just single ids.
-        negative_sentences = set()  # type: Set[Tuple[str, int]]
+        negative_sentences: Set[Tuple[str, int]] = set()
         for selection_method in self._negative_sentence_selection_methods:
             if selection_method == 'paragraph':
                 paragraph_id = self._sentence_paragraph_map[answer_id]
@@ -314,6 +317,7 @@ class SquadSentenceSelectionReader(DatasetReader):
                 sentence_choices.append(self._id_to_question[index])
         return sentence_choices, correct_choice
 
+    @overrides
     def read(self, file_path: str):
         # Import is here, since it isn't necessary by default.
         import nltk
@@ -360,7 +364,7 @@ class SquadSentenceSelectionReader(DatasetReader):
 
                     # There may be multiple answer annotations, so pick the one
                     # that occurs the most.
-                    candidate_answer_start_indices = Counter() # type: Counter
+                    candidate_answer_start_indices: Counter = Counter()
                     for answer in question_answer["answers"]:
                         candidate_answer_start_indices[answer["answer_start"]] += 1
                     answer_start_index, _ = candidate_answer_start_indices.most_common(1)[0]
@@ -389,43 +393,40 @@ class SquadSentenceSelectionReader(DatasetReader):
         for question_id, answer_id in tqdm(questions):
             sentence_choices, correct_choice = self._get_sentence_choices(question_id, answer_id)
             question_text = self._id_to_question[question_id]
-            sentence_fields = []  # type: List[Field]
-            for sentence in sentence_choices:
-                tokenized_sentence, _ = self._tokenizer.tokenize(sentence)
-                sentence_field = TextField(tokenized_sentence, self._token_indexers)
-                sentence_fields.append(sentence_field)
-            sentences_field = ListField(sentence_fields)
-            question_tokens, _ = self._tokenizer.tokenize(question_text)
-            question_field = TextField(question_tokens, self._token_indexers)
-            correct_sentence_field = IndexField(correct_choice, sentences_field)
-            instances.append(Instance({'question': question_field,
-                                       'sentences': sentences_field,
-                                       'correct_sentence': correct_sentence_field}))
+            instance = self.text_to_instance(question_text, sentence_choices, correct_choice)
+            instances.append(instance)
 
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
         return Dataset(instances)
 
+    @overrides
+    def text_to_instance(self,  # type: ignore
+                         question: str,
+                         sentences: List[str],
+                         correct_choice: int = None) -> Instance:
+        # pylint: disable=arguments-differ
+        fields: Dict[str, Field] = {}
+        sentence_fields: List[Field] = []
+        for sentence in sentences:
+            tokenized_sentence, _ = self._tokenizer.tokenize(sentence)
+            sentence_field = TextField(tokenized_sentence, self._token_indexers)
+            sentence_fields.append(sentence_field)
+        # Separate so we can reference it later with a known type.
+        sentences_field = ListField(sentence_fields)
+        fields['sentences'] = sentences_field
+        question_tokens, _ = self._tokenizer.tokenize(question)
+        fields['question'] = TextField(question_tokens, self._token_indexers)
+        if correct_choice is not None:
+            fields['correct_sentence'] = IndexField(correct_choice, sentences_field)
+        return Instance(fields)
+
     @classmethod
     def from_params(cls, params: Params) -> 'SquadSentenceSelectionReader':
-        """
-        Parameters
-        ----------
-        negative_sentence_selection : ``str``, optional (default="paragraph")
-        tokenizer : ``Params``, optional
-        token_indexers: ``List[Params]``, optional
-        """
         negative_sentence_selection = params.pop('negative_sentence_selection', 'paragraph')
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers', Params({}))
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-        # The default parameters are contained within the class,
-        # so if no parameters are given we must pass None.
-        if token_indexers == {}:
-            token_indexers = None
+        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         params.assert_empty(cls.__name__)
         return SquadSentenceSelectionReader(negative_sentence_selection=negative_sentence_selection,
                                             tokenizer=tokenizer,

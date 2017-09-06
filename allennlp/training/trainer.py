@@ -11,8 +11,7 @@ import logging
 import os
 import shutil
 import time
-from inspect import signature
-from typing import Dict, Optional, List  # pylint: disable=unused-import
+from typing import Dict, Optional, List
 
 import torch
 import torch.optim.lr_scheduler
@@ -150,7 +149,7 @@ class Trainer:
         num_training_batches = self._iterator.get_num_batches(self._train_dataset)
         if self._validation_dataset is not None:
             num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
-        validation_metric_per_epoch = []  # type: List[float]
+        validation_metric_per_epoch: List[float] = []
         for epoch in range(epoch_counter, self._num_epochs):
             logger.info("Epoch %d/%d", epoch + 1, self._num_epochs)
             train_loss = 0.0
@@ -279,8 +278,6 @@ class Trainer:
 
     def _forward(self, batch: dict, for_training: bool) -> dict:
         tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=for_training)
-        if 'metadata' in tensor_batch and 'metadata' not in signature(self._model.forward).parameters:
-            del tensor_batch['metadata']
         return self._model.forward(**tensor_batch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:

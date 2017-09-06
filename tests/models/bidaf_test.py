@@ -10,7 +10,6 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import DatasetReader, Vocabulary
-from allennlp.data.fields import TextField
 from allennlp.models import BidirectionalAttentionFlow, Model
 from allennlp.nn.util import arrays_to_variables
 
@@ -22,7 +21,8 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
 
     def test_forward_pass_runs_correctly(self):
         training_arrays = arrays_to_variables(self.dataset.as_array_dict())
-        _ = self.model.forward(**training_arrays)
+        output_dict = self.model.forward(**training_arrays)
+
         metrics = self.model.get_metrics(reset=True)
         # We've set up the data such that there's a fake answer that consists of the whole
         # paragraph.  _Any_ valid prediction for that question should produce an F1 of greater than
@@ -31,6 +31,16 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         # loaded the evaluation data correctly and have hooked things up to the official evaluation
         # script.
         assert metrics['f1'] > 0
+
+        span_start_probs = output_dict['span_start_probs'][0].data.numpy()
+        span_end_probs = output_dict['span_start_probs'][0].data.numpy()
+        assert_almost_equal(numpy.sum(span_start_probs, -1), 1, decimal=6)
+        assert_almost_equal(numpy.sum(span_end_probs, -1), 1, decimal=6)
+        span_start, span_end = tuple(output_dict['best_span'][0].data.numpy())
+        assert span_start >= 0
+        assert span_start <= span_end
+        assert span_end < self.dataset.instances[0].fields['passage'].sequence_length()
+        assert isinstance(output_dict['best_span_str'][0], str)
 
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -66,22 +76,6 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         # Restore the state.
         self.model = saved_model
         self.dataset = saved_dataset
-
-    def test_predict_span_gives_reasonable_outputs(self):
-        # TODO(mattg): "What", "is", "?" crashed, because the CNN encoder expected at least 5
-        # characters.  We need to fix that somehow.
-        question = TextField(["Whatever", "is", "?"], token_indexers=self.token_indexers)
-        passage = TextField(["This", "is", "a", "passage"],
-                            token_indexers=self.token_indexers)
-        output_dict = self.model.predict_span(question, passage)
-
-        assert_almost_equal(numpy.sum(output_dict["span_start_probs"], -1), 1, decimal=6)
-        assert_almost_equal(numpy.sum(output_dict["span_end_probs"], -1), 1, decimal=6)
-
-        span_start, span_end = output_dict['best_span']
-        assert span_start >= 0
-        assert span_start <= span_end
-        assert span_end < passage.sequence_length()
 
     def test_get_best_span(self):
         # pylint: disable=protected-access

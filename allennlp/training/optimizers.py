@@ -16,8 +16,7 @@ from typing import List
 
 import torch
 
-from allennlp.common.params import Params  # pylint: disable=unused-import
-from allennlp.common.registrable import Registrable
+from allennlp.common import Params, Registrable
 
 
 class Optimizer(Registrable):

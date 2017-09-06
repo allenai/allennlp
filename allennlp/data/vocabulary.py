@@ -278,7 +278,7 @@ class Vocabulary:
         :func:`__init__`.  See that method for a description of what the other parameters do.
         """
         logger.info("Fitting token dictionary from dataset.")
-        namespace_token_counts = defaultdict(lambda: defaultdict(int))  # type: Dict[str, Dict[str, int]]
+        namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for instance in tqdm.tqdm(dataset.instances):
             instance.count_vocab_items(namespace_token_counts)
 

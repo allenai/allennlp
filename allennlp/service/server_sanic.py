@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from functools import lru_cache
 
 from sanic import Sanic, response, request
@@ -24,21 +25,31 @@ CACHE_SIZE = os.environ.get("SANIC_CACHE_SIZE") or 128
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-def run(port: int, workers: int, config: Dict[str, str]) -> None:
+def run(port: int, workers: int, config: Dict[str, str], static_dir: str = None) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
-    app = make_app()
+
+    app = make_app(static_dir)
     app.predictors = {
             name: Predictor.from_archive(load_archive(archive_file))
             for name, archive_file in config.items()
     }
     app.run(port=port, host="0.0.0.0", workers=workers)
 
-def make_app() -> Sanic:
+def make_app(static_dir: str = None) -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
 
-    app.static('/', './allennlp/service/static/')
-    app.static('/', './allennlp/service/static/index.html')
+    if static_dir is None:
+        # Need path to static assets to be relative to this file.
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        static_dir = os.path.join(dir_path, 'static')
+
+    if not os.path.exists(static_dir):
+        logger.error("app directory %s does not exist, aborting", static_dir)
+        sys.exit(-1)
+
+    app.static('/', os.path.join(static_dir, 'index.html'))
+    app.static('/', static_dir)
     app.predictors = {}
 
     try:

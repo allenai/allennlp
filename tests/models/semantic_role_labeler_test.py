@@ -9,11 +9,10 @@ import numpy
 from allennlp.common.testing import ModelTestCase
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.fields import TextField, SequenceLabelField
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
+from allennlp.nn.util import arrays_to_variables
 
 
 class SemanticRoleLabelerTest(ModelTestCase):
@@ -28,17 +27,12 @@ class SemanticRoleLabelerTest(ModelTestCase):
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
 
-    def test_tag_returns_distributions_per_token(self):
-        text = TextField(["This", "is", "a", "sentence"], token_indexers={"tokens": SingleIdTokenIndexer()})
-        verb_indicator = SequenceLabelField([0, 1, 0, 0], text)
-
-        output = self.model.tag(text, verb_indicator)
-        possible_tags = self.vocab.get_index_to_token_vocabulary("labels").values()
-        for tag in output["tags"]:
-            assert tag in possible_tags
-        # Predictions are a distribution.
-        numpy.testing.assert_almost_equal(numpy.sum(output["class_probabilities"], -1),
-                                          numpy.array([1, 1, 1, 1]))
+    def test_forward_pass_runs_correctly(self):
+        training_arrays = arrays_to_variables(self.dataset.as_array_dict())
+        output_dict = self.model.forward(**training_arrays)
+        class_probs = output_dict['class_probabilities'][0].data.numpy()
+        numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1),
+                                          numpy.ones(class_probs.shape[0]))
 
     def test_bio_tags_correctly_convert_to_conll_format(self):
         bio_tags = ["B-ARG-1", "I-ARG-1", "O", "B-V", "B-ARGM-ADJ", "O"]

@@ -29,7 +29,8 @@ class ListField(SequenceField[DataArray]):
         field_class_set = set([field.__class__ for field in field_list])
         assert len(field_class_set) == 1, "ListFields must contain a single field type, found " +\
                                           str(field_class_set)
-        self.field_list = field_list  # type: List[Field]
+        # Not sure why mypy has a hard time with this type...
+        self.field_list: List[Field] = field_list
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

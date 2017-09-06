@@ -1,101 +1,8 @@
 ---
 layout: tutorial
-title: Getting Started
-id: getting-started
+title: Training a Model
+id: training-a-model
 ---
-
-Welcome to AllenNLP!
-
-## Installing using Docker
-
-The easiest way to get started is using Docker. Assuming you have Docker installed, just run
-
-```bash
-docker run -p 8000:8000 -it --rm allennlp/allennlp
-```
-
-This will download the latest `allennlp` image to your machine
-(unless you already have it),
-start a Docker container, and launch an interactive shell.
-It also exposes port 8000, which is where the demo server runs,
-and shuts down the container when you exit the interactive shell.
-
-## Installing using pip
-
-TODO(joelgrus): add instructions when ready
-
-## Installing from source
-
-A third alternative is to clone from our git repository:
-
-```bash
-git clone https://github.com/allenai/allennlp.git
-```
-
-Create a Python 3.5 (or 3.6) virtual environment, and run
-
-```bash
-INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
-```
-
-changing the flag to `false` if you don't want to be able to run tests.
-(Narrator: You want to be able to run tests.)
-
-You'll also need to install PyTorch 0.2, following the appropriate instructions
-from [their website](http://pytorch.org/).
-
-## Once You've Installed
-
-
-If you just want to use the models and helper classes that are included with AllenNLP,
-you can use the included "run" script, which provides a command-line interface to
-common functionality around training and evaluating models.
-
-```
-$ python -m allennlp.run
-usage: run.py [command]
-
-Run AllenNLP
-
-optional arguments:
-  -h, --help  show this help message and exit
-
-Commands:
-
-    predict   Use a trained model to make predictions.
-    train     Train a model
-    serve     Run the web service and demo.
-    evaluate  Evaluate the specified model + dataset
-```
-
-It's what we'll be using throughout this tutorial.
-
-Eventually you'll want to create your own models and helper classes,
-at which point you'll need to create your own run script that knows
-about them.
-
-TODO(joelgrus): add link to tutorial
-
-### Serving the Demo
-
-The `serve` command starts the demo server.
-The first time you run it, it will download
-several large serialized models from Amazon S3.
-
-```
-$ python -m allennlp.run serve
-Starting a sanic server on port 8000.
-[... lots of logging omitted ...]
-2017-08-16 18:55:12 - (sanic)[INFO]: Goin' Fast @ http://0.0.0.0:8000
-2017-08-16 18:55:12,321 - INFO - sanic - Goin' Fast @ http://0.0.0.0:8000
-2017-08-16 18:55:12 - (sanic)[INFO]: Starting worker [33290]
-2017-08-16 18:55:12,323 - INFO - sanic - Starting worker [33290]
-```
-
-If you now visit `http://localhost:8000` in your browser, you can play around with the same demo
-that runs on the AllenNLP website.
-
-TODO(joelgrus): screenshot
 
 ### Training a Model
 
@@ -219,8 +126,32 @@ There is also a command line option to use a GPU, if you have one.
 
 ### Making Predictions
 
-TODO(joelgrus): write this part
+Finally, what's the good of training a model if you can't use it to make predictions?
+The `predict` command takes an archived model and a [JSON lines](https://en.wikipedia.org/wiki/JSON_Streaming#Line_delimited_JSON)
+file of inputs and makes predictions using the model.
+
+Here, the "predictor" for the tagging model expects a JSON blob containing a sentence:
+
+```bash
+$ cat <<EOF >> inputs.txt
+{"sentence": "I am reading a tutorial."}
+{"sentence": "Natural language processing is easy."}
+EOF
+```
+
+After which we can make predictions:
+
+```bash
+$ python -m allennlp.run predict /tmp/tutorials/getting_started/model.tar.gz inputs.txt
+... lots of logging omitted
+{"tags": ["ppss", "bem", "vbg", "at", "nn", "."], "class_probabilities": [[ ... ]]}
+{"tags": ["jj", "nn", "nn", "bez", "jj", "."], "class_probabilities": [[ ... ]]}
+```
+
+Here the `"tags"` are the part-of-speech tags for each sentence, and the
+`"class_probabilities"` are the predicted distributions of tags for each sentence
+(and are not shown above, as there are a lot of them).
 
 ### Next Steps
 
-Continue on to our Configuration tutorial.
+Continue on to our [Configuration](configuration.md) tutorial.

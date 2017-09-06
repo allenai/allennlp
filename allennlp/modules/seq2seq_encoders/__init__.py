@@ -1,3 +1,18 @@
+"""
+Modules that transform a sequence of input vectors
+into a sequence of output vectors.
+Some are just basic wrappers around existing PyTorch modules,
+others are AllenNLP modules.
+
+The available Seq2Seq encoders are
+
+* `"gru" <http://pytorch.org/docs/master/nn.html#torch.nn.GRU>`_
+* `"lstm" <http://pytorch.org/docs/master/nn.html#torch.nn.LSTM>`_
+* `"rnn" <http://pytorch.org/docs/master/nn.html#torch.nn.RNN>`_
+* :class:`"augmented_lstm" <allennlp.modules.augmented_lstm.AugmentedLstm>`
+* :class:`"alternating_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm>`
+"""
+
 from typing import Type
 
 import torch
