@@ -40,11 +40,11 @@ class TestDecomposableAttention(ModelTestCase):
         # Make the input_dim to the first feedforward_layer wrong - it should be 2.
         params["model"]["attend_feedforward"]["input_dim"] = 10
         with pytest.raises(ConfigurationError):
-            DecomposableAttention.from_params(self.vocab, params.pop("model"))
+            Model.from_params(self.vocab, params.pop("model"))
 
         params = Params.from_file(self.param_file)
         # Make the projection output_dim of the last layer wrong - it should be
         # 3, equal to the number of classes.
         params["model"]["aggregate_feedforward"]["output_dim"] = 10
         with pytest.raises(ConfigurationError):
-            DecomposableAttention.from_params(self.vocab, params.pop("model"))
+            Model.from_params(self.vocab, params.pop("model"))

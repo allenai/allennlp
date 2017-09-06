@@ -110,18 +110,18 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         # the embedding + char cnn dimensions.
         params["model"]["phrase_layer"]["input_size"] = 12
         with pytest.raises(ConfigurationError):
-            BidirectionalAttentionFlow.from_params(self.vocab, params.pop("model"))
+            Model.from_params(self.vocab, params.pop("model"))
 
         params = Params.from_file(self.param_file)
         # Make the modeling layer input_dimension wrong - it should be 40 to match
         # 4 * output_dim of the phrase_layer.
         params["model"]["phrase_layer"]["input_size"] = 30
         with pytest.raises(ConfigurationError):
-            BidirectionalAttentionFlow.from_params(self.vocab, params.pop("model"))
+            Model.from_params(self.vocab, params.pop("model"))
 
         params = Params.from_file(self.param_file)
         # Make the modeling layer input_dimension wrong - it should be 70 to match
         # 4 * phrase_layer.output_dim + 3 * modeling_layer.output_dim.
         params["model"]["span_end_encoder"]["input_size"] = 50
         with pytest.raises(ConfigurationError):
-            BidirectionalAttentionFlow.from_params(self.vocab, params.pop("model"))
+            Model.from_params(self.vocab, params.pop("model"))

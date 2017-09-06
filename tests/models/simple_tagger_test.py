@@ -6,7 +6,7 @@ import numpy
 from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.models.simple_tagger import SimpleTagger
+from allennlp.models import Model
 from allennlp.nn.util import arrays_to_variables
 
 
@@ -35,4 +35,4 @@ class SimpleTaggerTest(ModelTestCase):
         # the embedding dimension from the text_field_embedder.
         params["model"]["stacked_encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
-            SimpleTagger.from_params(self.vocab, params.pop("model"))
+            Model.from_params(self.vocab, params.pop("model"))

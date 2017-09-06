@@ -10,7 +10,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
-from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
+from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 from allennlp.nn.util import arrays_to_variables
 
@@ -62,4 +62,4 @@ class SemanticRoleLabelerTest(ModelTestCase):
         # the embedding + binary feature dimensions.
         params["model"]["stacked_encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
-            SemanticRoleLabeler.from_params(self.vocab, params.pop("model"))
+            Model.from_params(self.vocab, params.pop("model"))
