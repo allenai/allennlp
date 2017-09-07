@@ -13,6 +13,23 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
 
+"""
+IDEAS FOR TESTING
+
+1. Most of the problem is packing and unpacking the sequence 16 times. benchmark/remove this.
+
+2. Hand rolled LSTMs are the problem. Test by benchmarking the new stacked LSTM
+   for speed using packed sequences vs not, vs the same thing for this implementation.
+
+3. Can we do variational dropout in the CUDNN lstms by temporarily modifying
+   the weights inplace? Super hacky...
+
+4. The Highway bias - shouldn't this be biased towards carrying through a linear combo
+   of the input? 
+
+"""
+
+
 class AugmentedLstm(torch.nn.Module):
     """
     An LSTM with Recurrent Dropout and the option to use highway
