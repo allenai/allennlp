@@ -133,8 +133,8 @@ AllenNLP also has a pip package if you wish to use allennlp as a library. Instal
 pip install allennlp
 ```
 
-This installation method is still a little experimental. Please let us know if things don't
-work as expected!
+This installation method is still a little experimental. Please [open an issue](https://github.com/allenai/allennlp/issues)
+if you encounter issues after following the instructions to create a virtual environment above.
 
 ### Setting up a Docker development environment
 
