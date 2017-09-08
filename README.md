@@ -128,7 +128,7 @@ Docker provides a virtual machine with everything set up to run AllenNLP--whethe
 run on a CPU.  Docker provides more isolation and consistency, and also makes it easy to distribute your environment
 to a compute cluster.
 
-## Downloading a pre-built Docker image
+#### Downloading a pre-built Docker image
 
 It is easy to run a pre-built Docker development environment.  AllenNLP is configured with Docker Cloud to build a
 new image on every update to the master branch.  To download an image from [Docker Hub](https://hub.docker.com/r/allennlp/):
@@ -137,7 +137,7 @@ new image on every update to the master branch.  To download an image from [Dock
 docker pull allennlp/allennlp:latest
 ```
 
-## Building a Docker image
+#### Building a Docker image
 
 Following are instructions on creating a Docker environment that works on a CPU
 or GPU.  The following command will take some time, as it completely builds the
@@ -154,7 +154,7 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 allennlp/allennlp            latest              b66aee6cb593        5 minutes ago       2.38GB
 ```
 
-## Running the Docker image
+#### Running the Docker image
 
 You can run the image with `docker run --rm -it allennlp/allennlp`.  The `--rm` flag cleans up the image on exit and the
 `-it` flags make the session interactive so you can use the bash shell the Docker image starts.
