@@ -19,6 +19,9 @@ Now you can do any of the following:
 * Start a web service to host our models with `allennlp/run serve`.
 * Interactively code against AllenNLP from the Python interpreter with `python`.
 
+You can also install via the `pip` package manager or by cloning this repository into a Python 3.6 virtualenv.
+See below for more detailed instructions.
+
 ## What is AllenNLP?
 
 Built on PyTorch, AllenNLP makes it easy to design and evaluate new deep
@@ -121,6 +124,17 @@ used for development along with all the dependencies needed to run AllenNLP.
     ```
 
 You should now be able to test your installation with `pytest -v`.  Congratulations!
+
+### Installing via pip
+
+AllenNLP also has a pip package if you wish to use allennlp as a library. Install with:
+
+```
+pip install allennlp
+```
+
+This installation method is still a little experimental. Please let us know if things don't
+work as expected!
 
 ### Setting up a Docker development environment
 
