@@ -72,5 +72,4 @@ class _Seq2VecWrapper:
 Seq2VecEncoder.register("gru")(_Seq2VecWrapper(torch.nn.GRU))
 Seq2VecEncoder.register("lstm")(_Seq2VecWrapper(torch.nn.LSTM))
 Seq2VecEncoder.register("rnn")(_Seq2VecWrapper(torch.nn.RNN))
-Seq2VecEncoder.register("augmented_lstm")(_Seq2VecWrapper(AugmentedLstm))
 Seq2VecEncoder.register("alternating_lstm")(_Seq2VecWrapper(StackedAlternatingLstm))

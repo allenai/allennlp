@@ -5,7 +5,7 @@ the sequence and going backwards.
 
 from typing import Optional, Tuple
 import torch
-from torch.nn.utils.rnn import PackedSequence
+from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_padded_sequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.common.checks import ConfigurationError
 
@@ -82,6 +82,9 @@ class StackedAlternatingLstm(torch.nn.Module):
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers, batch_size, hidden_size).
         """
+        # The Augmented LSTM does not take padded sequences, so we unpack and repack
+        # after passing it through the Augmented LSTM layers.
+        inputs, sequence_lengths = pad_packed_sequence(inputs, batch_first=True)
         if not initial_state:
             hidden_states = [None] * len(self.lstm_layers)
         elif initial_state[0].size()[0] != len(self.lstm_layers):
@@ -95,8 +98,8 @@ class StackedAlternatingLstm(torch.nn.Module):
         final_states = []
         for layer, state in zip(self.lstm_layers, hidden_states):
             # The state is duplicated to mirror the Pytorch API for LSTMs.
-            output_sequence, final_state = layer(output_sequence, state)
+            output_sequence, final_state = layer(output_sequence, sequence_lengths,  state)
             final_states.append(final_state)
-
+        output_sequence = pack_padded_sequence(output_sequence, sequence_lengths, batch_first=True)
         final_state_tuple = (torch.cat(state_list, 0) for state_list in zip(*final_states))
         return output_sequence, final_state_tuple
