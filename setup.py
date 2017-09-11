@@ -66,7 +66,7 @@ from setuptools import setup, find_packages
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 
 
 setup(name='allennlp',
