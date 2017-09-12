@@ -30,10 +30,6 @@ class BidirectionalAttentionFlow(Model):
     part that is at all non-standard), pass this through another few layers of bi-LSTMs/GRUs, and
     do a softmax over span start and span end.
 
-    To instantiate this model with parameters matching those in the original paper, simply use
-    ``BidirectionalAttentionFlow.from_params(vocab, Params({}))``.  This will construct all of the
-    various dependencies needed for the constructor for you.
-
     Parameters
     ----------
     vocab : ``Vocabulary``
@@ -148,9 +144,7 @@ class BidirectionalAttentionFlow(Model):
         passage : Dict[str, torch.LongTensor]
             From a ``TextField``.  The model assumes that this passage contains the answer to the
             question, and predicts the beginning and ending positions of the answer within the
-            passage.  The ending position is `exclusive`, so our
-            :class:`~allennlp.data.dataset_readers.SquadReader` adds a special ending token to the
-            end of the passage, to allow for the last token to be included in the answer span.
+            passage.
         span_start : ``torch.IntTensor``, optional
             From an ``IndexField``.  This is one of the things we are trying to predict - the
             beginning position of the answer with the passage.  This is an `inclusive` index.  If
