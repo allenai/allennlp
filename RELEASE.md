@@ -33,4 +33,6 @@ Now you can edit `kubernetes-webdemo.yml` with the latest version, and update th
 kubectl apply -f kubernetes-webdemo.yml
 ```
 
+You should commit your modifications to `kubernetes-webdemo.yml` and push them to master after you deploy.
+
 ## Releasing a new version on pip
