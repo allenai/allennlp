@@ -36,8 +36,10 @@ class TestSanic(AllenNlpTestCase):
 
     def setUp(self):
         super().setUp()
+        # Create index.html in TEST_DIR
+        pathlib.Path(os.path.join(self.TEST_DIR, 'index.html')).touch()
+
         if self.client is None:
-            pathlib.Path(os.path.join(self.TEST_DIR, 'index.html')).touch()
 
             self.app = make_app(build_dir=self.TEST_DIR)
             self.app.predictors = {
