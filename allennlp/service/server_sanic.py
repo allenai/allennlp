@@ -96,10 +96,22 @@ def make_app(static_dir: str = None) -> Sanic:
             log_blob["cached"] = True
             await asyncio.sleep(0.25)
 
+        # The model predictions are extremely verbose, so we only log the most human-readable
+        # parts of them.
         if model_name == "machine-comprehension":
             log_blob["outputs"]["best_span_str"] = prediction["best_span_str"]
         elif model_name == "textual-entailment":
             log_blob["outputs"]["label_probs"] = prediction["label_probs"]
+        elif model_name == "semantic-role-labeling":
+            verbs = []
+
+            for verb in prediction["verbs"]:
+                # Don't want to log boring verbs with no semantic parses.
+                good_tags = [tag for tag in verb["tags"] if tag != "0"]
+                if len(good_tags) > 1:
+                    verbs.append({"verb": verb["verb"], "description": verb["description"]})
+
+            log_blob["outputs"]["verbs"] = verbs
 
         logger.info("prediction: %s", json.dumps(log_blob))
 
