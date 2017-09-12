@@ -16,6 +16,7 @@ CMD ["/bin/bash"]
 RUN apt-get update --fix-missing && apt-get install -y \
     bzip2 \
     ca-certificates \
+    curl \
     gcc \
     git \
     libc-dev \
@@ -37,6 +38,9 @@ RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
 # Use python 3.6
 RUN conda install python=3.6
 
+# Install npm
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && apt-get install -y nodejs
+
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
@@ -46,10 +50,14 @@ RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
 RUN pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post3-cp36-cp36m-manylinux1_x86_64.whl
 
 COPY allennlp/ allennlp/
+COPY demo/ demo/
 COPY tests/ tests/
 COPY pytest.ini pytest.ini
 COPY scripts/ scripts/
 COPY tutorials/ tutorials/
+
+# Build demo
+RUN cd demo && npm install && npm run build && cd ..
 
 # Run tests to verify the Docker build
 RUN PYTHONDONTWRITEBYTECODE=1 pytest
