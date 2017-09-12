@@ -73,6 +73,7 @@ def make_app(static_dir: str = None) -> Sanic:
             raise ServerError("unknown model: {}".format(model_name), status_code=400)
 
         data = req.json
+        logger.info("model: %s inputs: %s", model_name, json.dumps(data))
 
         # See if we hit or not. In theory this could result in false positives.
         pre_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
