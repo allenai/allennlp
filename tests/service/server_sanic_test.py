@@ -37,10 +37,9 @@ class TestSanic(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         if self.client is None:
-            self.build_dir = self.TEST_DIR
-            pathlib.Path(os.path.join(self.build_dir, 'index.html')).touch()
+            pathlib.Path(os.path.join(self.TEST_DIR, 'index.html')).touch()
 
-            self.app = make_app(build_dir=self.build_dir)
+            self.app = make_app(build_dir=self.TEST_DIR)
             self.app.predictors = {
                     name: Predictor.from_archive(load_archive(archive_file))
                     for name, archive_file in TEST_ARCHIVE_FILES.items()
@@ -136,7 +135,7 @@ class TestSanic(AllenNlpTestCase):
         server_sanic.CACHE_SIZE = 0
 
         predictor = CountingPredictor()
-        app = server_sanic.make_app(build_dir=self.build_dir)
+        app = server_sanic.make_app(build_dir=self.TEST_DIR)
         app.predictors = {"counting": predictor}
         app.testing = True
         client = app.test_client
