@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import json
 import os
+import pathlib
 from collections import defaultdict
 
 from allennlp.common.util import JsonDict
@@ -36,7 +37,10 @@ class TestSanic(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         if self.client is None:
-            self.app = make_app()
+            self.build_dir = self.TEST_DIR
+            pathlib.Path(os.path.join(self.build_dir, 'index.html')).touch()
+
+            self.app = make_app(build_dir=self.build_dir)
             self.app.predictors = {
                     name: Predictor.from_archive(load_archive(archive_file))
                     for name, archive_file in TEST_ARCHIVE_FILES.items()
@@ -132,7 +136,7 @@ class TestSanic(AllenNlpTestCase):
         server_sanic.CACHE_SIZE = 0
 
         predictor = CountingPredictor()
-        app = server_sanic.make_app()
+        app = server_sanic.make_app(build_dir=self.build_dir)
         app.predictors = {"counting": predictor}
         app.testing = True
         client = app.test_client
