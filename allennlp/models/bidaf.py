@@ -157,7 +157,7 @@ class BidirectionalAttentionFlow(Model):
             this is given, we will compute a loss that gets included in the output dictionary.
         span_end : ``torch.IntTensor``, optional
             From an ``IndexField``.  This is one of the things we are trying to predict - the
-            ending position of the answer with the passage.  This is an `exclusive` index.  If
+            ending position of the answer with the passage.  This is an `inclusive` index.  If
             this is given, we will compute a loss that gets included in the output dictionary.
         metadata : ``List[Dict[str, Any]]``, optional
             If present, this should contain the question ID, original passage text, and token
@@ -177,7 +177,7 @@ class BidirectionalAttentionFlow(Model):
             The result of ``softmax(span_start_logits)``.
         span_end_logits : torch.FloatTensor
             A tensor of shape ``(batch_size, passage_length)`` representing unnormalised log
-            probabilities of the span end position (exclusive).
+            probabilities of the span end position (inclusive).
         span_end_probs : torch.FloatTensor
             The result of ``softmax(span_end_logits)``.
         best_span : torch.IntTensor
