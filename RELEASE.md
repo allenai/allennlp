@@ -27,12 +27,14 @@ docker tag allennlp/allennlp allennlp/webdemo:2017-09-05-0
 docker push allennlp/webdemo:2017-09-05-0
 ```
 
-Now you can edit `kubernetes-webdemo.yml` with the latest version, and update the web demo with the following command.
+If you get an "denied:" error at the last step, make sure to `docker login`.
+
+Now you can edit `kubernetes-webdemo.yaml` with the latest version, and update the web demo with the following command.
 
 ```
-kubectl apply -f kubernetes-webdemo.yml
+kubectl apply -f kubernetes-webdemo.yaml
 ```
 
-You should commit your modifications to `kubernetes-webdemo.yml` and push them to master after you deploy.
+You should commit your modifications to `kubernetes-webdemo.yaml` and push them to master after you deploy.
 
 ## Releasing a new version on pip
