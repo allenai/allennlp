@@ -50,10 +50,23 @@ class _HighwayLSTMFunction(NestedIOFunction):
         tmp_i = input.new(self.mini_batch, 6 * self.hidden_size)
         tmp_h = input.new(self.mini_batch, 5 * self.hidden_size)
 
-        highway_lstm_layer.highway_lstm_forward_cuda(
-            self.input_size, self.hidden_size, self.mini_batch, self.num_layers,
-            self.seq_length, input, lengths, hy, cy, tmp_i, tmp_h, weight,
-            bias, dropout, self.recurrent_dropout_prob, gates, 1 if self.train else 0)
+        highway_lstm_layer.highway_lstm_forward_cuda(self.input_size,
+                                                     self.hidden_size,
+                                                     self.mini_batch,
+                                                     self.num_layers,
+                                                     self.seq_length,
+                                                     input,
+                                                     lengths,
+                                                     hy,
+                                                     cy,
+                                                     tmp_i,
+                                                     tmp_h,
+                                                     weight,
+                                                     bias,
+                                                     dropout,
+                                                     self.recurrent_dropout_prob,
+                                                     gates,
+                                                     1 if self.train else 0)
 
         self.save_for_backward(input, lengths, weight, bias, hy, cy, dropout, gates)
 
@@ -152,7 +165,7 @@ class HighwayLSTMLayer(torch.nn.Module):
             self.bias.data[bias_index + self.hidden_size:bias_index + 2 * self.hidden_size].fill_(1)
             bias_index += 5 * self.hidden_size
 
-    def forward(self, input, dropout_weights=None):
+    def forward(self, input, initial_state: torch.Tensor = None):
 
         assert isinstance(input, PackedSequence), "HighwayLSTMLayer only accepts PackedSequence input"
         input, lengths = pad_packed_sequence(input, batch_first=self.batch_first)
@@ -168,12 +181,11 @@ class HighwayLSTMLayer(torch.nn.Module):
         cy = Variable(input.data.new(self.num_layers, (self.seq_length + 1), self.mini_batch, self.hidden_size).zero_(),
                       requires_grad=False)
 
-        if dropout_weights is None:
-            dropout_weights = input.data.new()
-            if self.training:
-                dropout_weights.resize_(self.num_layers, self.mini_batch, self.hidden_size)
-                dropout_weights.bernoulli_(1 - self.recurrent_dropout_prob)
-            dropout_weights = Variable(dropout_weights, requires_grad=False)
+        dropout_weights = input.data.new()
+        if self.training:
+            dropout_weights.resize_(self.num_layers, self.mini_batch, self.hidden_size)
+            dropout_weights.bernoulli_(1 - self.recurrent_dropout_prob)
+        dropout_weights = Variable(dropout_weights, requires_grad=False)
 
         gates = Variable(
             input.data.new().resize_(self.num_layers, self.seq_length, self.mini_batch, 6 * self.hidden_size))
