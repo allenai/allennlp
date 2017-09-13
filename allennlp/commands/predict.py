@@ -51,7 +51,7 @@ def get_predictor(args: argparse.Namespace) -> Predictor:
 
 def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_to_console: bool) -> None:
     for line in input_file:
-        if line.strip() != "":
+        if not line.isspace():
             data = json.loads(line)
             result = predictor.predict_json(data)
             output = json.dumps(result)
