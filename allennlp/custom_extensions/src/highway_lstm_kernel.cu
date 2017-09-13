@@ -176,11 +176,25 @@ __global__ void elementWise_fp(int hiddenSize, int miniBatch, int numCovered,
 
 void highway_lstm_backward_ongpu(
     int inputSize, int hiddenSize, int miniBatch, int numLayers, int seqLength,
-    float *out_grad, int *lengths, float *h_data_grad, float *c_data_grad,
-    float *x, float *h_data, float *c_data, float *T, float *gates_out,
-    float *dropout_in, float dropout_p, float *h_gates_grad,
-    float *i_gates_grad, float *ones, float *h_out_grad, float *x_grad,
-    float *T_grad, float *bias_grad, int isTraining, int do_weight_grad,
+    const float * __restrict__ out_grad,
+    const int * __restrict__ lengths,
+    const float * __restrict__ h_data_grad,
+    const float * __restrict__ c_data_grad,
+    const float * __restrict__ x,
+    const float * __restrict__ h_data,
+    const float * __restrict__ c_data,
+    const float * __restrict__ T,
+    const float * __restrict__ gates_out,
+    const float * __restrict__ dropout_in,
+    const float dropout_p,
+    const float * __restrict__ h_gates_grad,
+    const float * __restrict__ i_gates_grad,
+    const float * __restrict__ ones,
+    const float * __restrict__ h_out_grad,
+    const float * __restrict__ x_grad,
+    const float * __restrict__ T_grad,
+    const float * __restrict__ bias_grad,
+    int isTraining, int do_weight_grad,
     cudaStream_t stream, cublasHandle_t handle) {
 
   const int numElements = hiddenSize * miniBatch;
@@ -323,10 +337,15 @@ void highway_lstm_backward_ongpu(
 
 void highway_lstm_forward_ongpu(int inputSize, int hiddenSize, int miniBatch,
                                 int numLayers, int seqLength, float *x,
-                                int *lengths, float *h_data, float *c_data,
-                                float *tmp_i, float *tmp_h, float *T,
-                                float *bias, float *dropout, float dropout_p,
-                                float *gates, int is_training,
+                                const int * __restrict__ lengths,
+                                const float * __restrict__ h_data,
+                                const float * __restrict__ c_data,
+                                const float * __restrict__ tmp_i,
+                                const float * __restrict__ tmp_h,
+                                const float * __restrict__ T,
+                                const float * __restrict__ bias,
+                                const float * __restrict__ dropout, float dropout_p,
+                                const float * __restrict__ gates, int is_training,
                                 cudaStream_t stream, cublasHandle_t handle) {
 
   const int numElements = hiddenSize * miniBatch;
