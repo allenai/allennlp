@@ -7,7 +7,7 @@ from cupy.cuda import function
 from pynvrtc.compiler import Program
 from collections import namedtuple
 
-
+tmp_ = torch.randn([1,1]).cuda()
 SRU_CODE = """
 extern "C" {
 
