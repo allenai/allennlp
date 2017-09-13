@@ -1,4 +1,4 @@
-FROM nvidia/cuda:8.0-cudnn5-devel
+FROM nvidia/cuda:8.0-cudnn5-runtime
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
