@@ -482,8 +482,8 @@ class SRU(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=2, dropout=0, rnn_dropout=0,
                 use_tanh=1, bidirectional=False):
         super(SRU, self).__init__()
-        self.n_in = input_size
-        self.n_out = hidden_size
+        self.input_size = input_size
+        self.hidden_size = hidden_size
         self.depth = num_layers
         self.dropout = dropout
         self.rnn_dropout = rnn_dropout
@@ -493,8 +493,8 @@ class SRU(nn.Module):
 
         for i in range(num_layers):
             l = SRUCell(
-                n_in=self.n_in if i==0 else self.out_size,
-                n_out=self.n_out,
+                n_in=self.input_size if i == 0 else self.out_size,
+                n_out=self.hidden_size,
                 dropout = dropout if i+1 != num_layers else 0,
                 rnn_dropout = rnn_dropout,
                 use_tanh = use_tanh,
@@ -515,7 +515,7 @@ class SRU(nn.Module):
         dir_ = 2 if self.bidirectional else 1
         if c0 is None:
             zeros = Variable(input.data.new(
-                input.size(1), self.n_out*dir_
+                input.size(1), self.hidden_size * dir_
             ).zero_())
             c0 = [zeros for _ in range(self.depth)]
         else:
