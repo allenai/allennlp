@@ -34,10 +34,10 @@ mine = HighwayLSTMLayer(I, O, num_layers=L, recurrent_dropout_prob=dp).cuda()
 #    p.data.fill_(.0001)
 curr_weight_ind = 0
 curr_bias_ind = 0
-print mine.weight.nelement()
-for x in xrange(L):
-    print x, curr_weight_ind
-    print curr_bias_ind
+print("CUDA lstm - weight elements: ", mine.weight.nelement())
+for x in range(L):
+    print("Layer: ", x,"Weight Index: ", curr_weight_ind)
+    print("bias index: ", curr_bias_ind)
     x_weight = getattr(baseline, 'layer_%d'%x).xlin.weight
     h_weight = getattr(baseline, 'layer_%d'%x).hlin.weight
     bias = getattr(baseline, 'layer_%d'%x).hlin.bias
@@ -60,7 +60,7 @@ input2 = input.clone()
 
 baseline_input = Variable(input, requires_grad=True)
 mine_input = Variable(input2, requires_grad=True)
-lengths = [T-(i/2) for i in xrange(B)]
+lengths = [T-(i/2) for i in range(B)]
 lengths = lengths[:B]
 baseline_input_packed = pack_padded_sequence(baseline_input, lengths, batch_first=True)
 mine_input_packed = pack_padded_sequence(mine_input, lengths, batch_first=True)
@@ -73,12 +73,12 @@ else:
 with Timer('Baseline'):
     baseline_output = baseline(baseline_input_packed, dropout_weights = dropout)
     baseline_output, _ = pad_packed_sequence(baseline_output, batch_first = True)
-    print baseline_output
+    print("baseline output: ", baseline_output)
 
 with Timer("Mine"):
     mine_output, _ = mine(mine_input_packed, dropout_weights = dropout)
     mine_output, _ = pad_packed_sequence(mine_output, batch_first = True)
-    print mine_output
+    print("CUDA output: ", mine_output)
 
 diff = torch.max(baseline_output.data - mine_output.data)
 assert diff < 1e-4, "Output does not match: " + str(diff)
@@ -96,8 +96,8 @@ assert input_grad_diff < 1e-4, "Input grad does not match: " + str(input_grad_di
 
 weight_ind = 0
 bias_ind = 0
-for x in xrange(L):
-    print "TEST %d"%(x)
+for x in range(L):
+    print("TEST %d"%(x))
     x_grad = getattr(baseline, 'layer_%d'%x).xlin.weight.grad
     h_grad = getattr(baseline, 'layer_%d'%x).hlin.weight.grad
     bias = getattr(baseline, 'layer_%d'%x).hlin.bias.grad
@@ -120,4 +120,5 @@ for x in xrange(L):
     bias_diff = torch.max(mine_bias.data - bias.data)
     assert bias_diff < 1e-4, "Layer %d bias does not match: "%x + str(bias_diff)
 
-print "PASSED!"
+print("PASSED!")
+
