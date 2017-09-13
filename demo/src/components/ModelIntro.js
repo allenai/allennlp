@@ -8,22 +8,17 @@ import React from 'react';
 class ModelIntro extends React.Component {
     render() {
 
-      const { title, tooltip } = this.props;
+      const { title, description } = this.props;
 
       return (
-        <h2>
-          <span>{title}</span>
-          <div className="tooltip">
-            <svg className="tooltip__trigger">
-              <use xlinkHref="#icon__help"></use>
-            </svg>
-            <div className="tooltip__cursor-container">
-              <div className="tooltip__box">{tooltip}</div>
-            </div>
-          </div>
-        </h2>
+        <div>
+          <h2>
+            <span>{title}</span>
+          </h2>
+          <p>{description}</p>
+        </div>
       );
-    }
   }
+}
 
-  export default ModelIntro;
+export default ModelIntro;
