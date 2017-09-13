@@ -66,15 +66,8 @@ from setuptools import setup, find_packages
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
-VERSION = '0.1a6'
+VERSION = '0.2.1'
 
-
-def gen_data_files(*directories):
-    results = []
-    for src_dir in directories:
-        for root, dirs, files in os.walk(src_dir):
-            results.append((root, map(lambda f: root + "/" + f, files)))
-    return results
 
 setup(name='allennlp',
       version=VERSION,
@@ -111,5 +104,5 @@ setup(name='allennlp',
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
       include_package_data=True,
-      python_requires='~=3.5',
+      python_requires='>=3.6',
       zip_safe=False)

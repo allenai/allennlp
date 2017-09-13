@@ -36,20 +36,20 @@ def run(port: int, workers: int, config: Dict[str, str], static_dir: str = None)
     }
     app.run(port=port, host="0.0.0.0", workers=workers)
 
-def make_app(static_dir: str = None) -> Sanic:
+def make_app(build_dir: str = None) -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
 
-    if static_dir is None:
+    if build_dir is None:
         # Need path to static assets to be relative to this file.
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        static_dir = os.path.join(dir_path, 'static')
+        build_dir = os.path.join(dir_path, '../../demo/build')
 
-    if not os.path.exists(static_dir):
-        logger.error("app directory %s does not exist, aborting", static_dir)
+    if not os.path.exists(build_dir):
+        logger.error("app directory %s does not exist, aborting", build_dir)
         sys.exit(-1)
 
-    app.static('/', os.path.join(static_dir, 'index.html'))
-    app.static('/', static_dir)
+    app.static('/', os.path.join(build_dir, 'index.html'))
+    app.static('/', build_dir)
     app.predictors = {}
 
     try:
@@ -73,6 +73,7 @@ def make_app(static_dir: str = None) -> Sanic:
             raise ServerError("unknown model: {}".format(model_name), status_code=400)
 
         data = req.json
+        log_blob = {"model": model_name, "inputs": data, "cached": False, "outputs": {}}
 
         # See if we hit or not. In theory this could result in false positives.
         pre_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
@@ -92,8 +93,27 @@ def make_app(static_dir: str = None) -> Sanic:
 
         if post_hits > pre_hits:
             # Cache hit, so insert an artifical pause
-            logger.info("cache hit: %s %s", model_name, json.dumps(data))
+            log_blob["cached"] = True
             await asyncio.sleep(0.25)
+
+        # The model predictions are extremely verbose, so we only log the most human-readable
+        # parts of them.
+        if model_name == "machine-comprehension":
+            log_blob["outputs"]["best_span_str"] = prediction["best_span_str"]
+        elif model_name == "textual-entailment":
+            log_blob["outputs"]["label_probs"] = prediction["label_probs"]
+        elif model_name == "semantic-role-labeling":
+            verbs = []
+
+            for verb in prediction["verbs"]:
+                # Don't want to log boring verbs with no semantic parses.
+                good_tags = [tag for tag in verb["tags"] if tag != "0"]
+                if len(good_tags) > 1:
+                    verbs.append({"verb": verb["verb"], "description": verb["description"]})
+
+            log_blob["outputs"]["verbs"] = verbs
+
+        logger.info("prediction: %s", json.dumps(log_blob))
 
         return response.json(prediction)
 
