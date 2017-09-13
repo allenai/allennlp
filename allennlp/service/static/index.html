@@ -380,20 +380,15 @@ class Button extends React.Component {
 class ModelIntro extends React.Component {
   render() {
 
-    const { title, tooltip } = this.props;
+    const { title, description } = this.props;
 
     return (
-      <h2>
-        <span>{title}</span>
-        <div className="tooltip">
-          <svg className="tooltip__trigger">
-            <use xlinkHref="#icon__help"></use>
-          </svg>
-          <div className="tooltip__cursor-container">
-            <div className="tooltip__box">{tooltip}</div>
-          </div>
-        </div>
-      </h2>
+      <div>
+        <h2>
+          <span>{title}</span>
+        </h2>
+        <p>{description}</p>
+      </div>
     );
   }
 }
@@ -443,13 +438,13 @@ class SrlInput extends React.Component {
     };
 
     const title = "Semantic Role Labeling";
-    const tooltip = (
-      <div><strong>Semantic Role Labeling (SRL)</strong> is a technique that detects the semantic arguments associated with the verb of a sentence.</div>
+    const description = (
+      <div>Semantic Role Labeling (SRL) recovers the latent predicate argument structure of a sentence, providing representations that answer basic questions about sentence meaning, including “who” did “what” to “whom,” etc. The AllenNLP toolkit provides the following SRL visualization, which can be used for any SRL model in AllenNLP.  This page demonstrates a reimplementation of a deep BiLSTM model (He et al, 2017), which is currently state of the art for PropBank SRL (Newswire sentences).</div>
     );
 
     return (
       <div className="model__content">
-      <ModelIntro title={title} tooltip={tooltip} />
+      <ModelIntro title={title} description={description} />
         <div className="form__instructions"><span>Enter text or</span>
           <select disabled={outputState === "working"} onChange={this.handleListChange}>
             <option value="">Choose an example...</option>
@@ -539,13 +534,13 @@ class McInput extends React.Component {
     };
 
     const title = "Machine Comprehension";
-    const tooltip = (
-      <div><strong>Machine Comprehension (MC)</strong>, based on BiDAF, or Bi-Directional Attention Flow, is an approach to answering questions. Given a passage and a question about the contents of the passage, the MC model will provide an answer.</div>
+    const description = (
+      <div>Machine Comprehension (MC) answers natural language questions by selecting an answer span within an evidence text.  The AllenNLP toolkit provides the following MC visualization, which can be used for any MC model in AllenNLP.  This page demonstrates a reimplementation of BiDAF (Seo et al, 2017), or Bi-Directional Attention Flow, a widely used MC baseline that achieved state-of-the-art accuracies on the SQuAD dataset (Wikipedia sentences) in early 2017.</div>
     );
 
     return (
       <div className="model__content">
-      <ModelIntro title={title} tooltip={tooltip} />
+      <ModelIntro title={title} description={description} />
         <div className="form__instructions"><span>Enter text or</span>
           <select disabled={outputState === "working"} onChange={this.handleListChange}>
             <option value="">Choose an example...</option>
@@ -643,13 +638,13 @@ class TeInput extends React.Component {
     };
 
     const title = "Textual Entailment";
-    const tooltip = (
-      <div><strong>Textual Entailment (TE)</strong> is a task in natural language processing for determining whether a phrase (hypothesis) is true given a premise.</div>
+    const description = (
+      <div>Textual Entailment (TE) takes a pair of sentences and predicts whether the facts in the first necessarily imply the facts in the second one.  The AllenNLP toolkit provides the following TE visualization, which can be run for any TE model you develop.  This page demonstrates a reimplementation of the decomposable attention model (Parikh et al, 2017), which was state of the art for the SNLI benchmark (short sentences about visual scenes) in 2016.</div>
     );
 
     return (
       <div className="model__content">
-      <ModelIntro title={title} tooltip={tooltip} />
+      <ModelIntro title={title} description={description} />
         <div className="form__instructions"><span>Enter text or</span>
           <select disabled={outputState === "working"} onChange={this.handleListChange}>
             <option value="">Choose an example...</option>
@@ -989,9 +984,6 @@ ReactDOM.render(
       </symbol>
       <symbol id="icon__disclosure" viewBox="0 0 7 12">
         <polygon points="0.7,12 0,11.3 5.5,6 0,0.7 0.7,0 7,6"></polygon>
-      </symbol>
-      <symbol id="icon__help" viewBox="0 0 17 17">
-        <path d="M8.5,0C3.8,0,0,3.8,0,8.5S3.8,17,8.5,17S17,13.2,17,8.5S13.2,0,8.5,0z M9.8,13.8c0,0.2-0.1,0.3-0.3,0.3H7.6 c-0.2,0-0.3-0.1-0.3-0.3V12c0-0.2,0.1-0.3,0.3-0.3h1.9c0.2,0,0.3,0.1,0.3,0.3V13.8z M11.6,7.5c-0.2,0.3-0.5,0.6-1,1l-0.4,0.3 C9.9,8.9,9.8,9.1,9.7,9.3c0,0.1-0.1,0.3-0.1,0.7c0,0.2-0.1,0.3-0.3,0.3H7.7c-0.1,0-0.1,0-0.2-0.1C7.4,10.1,7.4,10,7.4,10 c0-0.7,0.1-1.3,0.2-1.6c0.1-0.3,0.4-0.7,1-1.1L9,6.9c0.1-0.1,0.2-0.2,0.3-0.3C9.5,6.4,9.6,6.2,9.6,6c0-0.3-0.1-0.5-0.2-0.7 C9.2,5.1,8.9,5,8.5,5S7.9,5.1,7.7,5.4C7.5,5.6,7.4,5.9,7.4,6.3c0,0.2-0.1,0.3-0.3,0.3H5.3c-0.1,0-0.1,0-0.2-0.1C5,6.4,5,6.3,5,6.2 c0.1-1.3,0.5-2.3,1.4-2.8c0.5-0.3,1.2-0.5,2-0.5c1,0,1.9,0.2,2.6,0.7c0.7,0.5,1.1,1.3,1.1,2.3C12,6.5,11.9,7,11.6,7.5z"></path>
       </symbol>
       <symbol id="icon__allennlp-logo" viewBox="0 0 124 22">
         <path d="M19.3,0.4h3.8v16c0,0.6,0.1,1,0.4,1.3c0.3,0.3,0.6,0.5,1.1,0.5c0.2,0,0.5,0,0.8-0.1c0.3-0.1,0.5-0.2,0.8-0.3l0.5,2.9 c-0.5,0.2-1.1,0.4-1.8,0.6c-0.7,0.1-1.3,0.2-1.9,0.2c-1.2,0-2.1-0.3-2.8-1c-0.7-0.6-1-1.5-1-2.7V0.4z"></path>
