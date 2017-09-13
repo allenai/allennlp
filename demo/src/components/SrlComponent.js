@@ -48,13 +48,24 @@ const srlSentences = [
       };
 
       const title = "Semantic Role Labeling";
-      const tooltip = (
-        <div><strong>Semantic Role Labeling (SRL)</strong> is a technique that detects the semantic arguments associated with the verb of a sentence.</div>
+      const description = (
+        <div>
+          <span>
+            Semantic Role Labeling (SRL) recovers the latent predicate argument structure of a sentence,
+            providing representations that answer basic questions about sentence meaning, including “who” did “what” to “whom,” etc.
+            The AllenNLP toolkit provides the following SRL visualization, which can be used for any SRL model in AllenNLP.
+            This page demonstrates a reimplementation of
+          </span>
+          <a href = "https://www.semanticscholar.org/paper/Deep-Semantic-Role-Labeling-What-Works-and-What-s-He-Lee/a3ccff7ad63c2805078b34b8514fa9eab80d38e9" target="_blank" rel="noopener noreferrer">{' '} a deep BiLSTM model (He et al, 2017)</a>
+          <span>
+            , which is currently state of the art for PropBank SRL (Newswire sentences).
+          </span>
+        </div>
       );
 
       return (
         <div className="model__content">
-        <ModelIntro title={title} tooltip={tooltip} />
+        <ModelIntro title={title} description={description} />
           <div className="form__instructions"><span>Enter text or</span>
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
               <option value="">Choose an example...</option>

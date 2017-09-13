@@ -75,13 +75,28 @@ const teExamples = [
       };
 
       const title = "Textual Entailment";
-      const tooltip = (
-        <div><strong>Textual Entailment (TE)</strong> is a task in natural language processing for determining whether a phrase (hypothesis) is true given a premise.</div>
+      const description = (
+        <div>
+          <span>
+            Textual Entailment (TE) takes a pair of sentences and predicts whether the facts in the first
+            necessarily imply the facts in the second one.  The AllenNLP toolkit provides the following TE visualization,
+            which can be run for any TE model you develop.
+            This page demonstrates a reimplementation of
+          </span>
+          <a href = "https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27" target="_blanke" rel="noopener noreferrer">{' '} the decomposable attention model (Parikh et al, 2017) {' '}</a>
+          <span>
+            , which was state of the art for
+          </span>
+          <a href = "https://nlp.stanford.edu/projects/snli/" target="_blank" rel="noopener noreferrer">{' '} the SNLI benchmark {' '}</a>
+          <span>
+            (short sentences about visual scenes) in 2016.
+          </span>
+        </div>
       );
 
       return (
         <div className="model__content">
-        <ModelIntro title={title} tooltip={tooltip} />
+        <ModelIntro title={title} description={description} />
           <div className="form__instructions"><span>Enter text or</span>
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
               <option value="">Choose an example...</option>
