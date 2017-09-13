@@ -47,14 +47,21 @@ __forceinline__ __device__ float tanh2f(float in) {
 }
 
 __global__ void elementWise_bp(int hiddenSize, int miniBatch, int numCovered,
-                               // Inputs
-                               float *out_grad, float *h_out_grad,
-                               float *c_out_grad, float *c_in, float *c_out,
-                               float *h_out, float *gates_out,
-                               float *dropout_in, float dropout_p,
-                               // Outputs
-                               float *c_in_grad, float *i_gates_grad,
-                               float *h_gates_grad, int training) {
+                               // Inputs are constant and restricted (we know they are unique pointers).
+                               const float * __restrict__ out_grad,
+                               const float * __restrict__ h_out_grad,
+                               const float * __restrict__ c_out_grad,
+                               const float * __restrict__ c_in,
+                               const float * __restrict__ c_out,
+                               const float * __restrict__ h_out,
+                               const float * __restrict__ gates_out,
+                               const float * __restrict__ dropout_in,
+                               const float dropout_p,
+                               // Outputs are only restricted as we modify them.
+                               float * __restrict__ c_in_grad,
+                               float * __restrict__ i_gates_grad,
+                               float * __restrict__ h_gates_grad,
+                               const int training) {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (index >= numCovered * hiddenSize)
@@ -79,8 +86,7 @@ __global__ void elementWise_bp(int hiddenSize, int miniBatch, int numCovered,
   float lin_gate = gates_out[i_gateIndex + 5 * hiddenSize];
 
   float d_out = d_h * r_gate;
-  float d_c =
-      d_out * out_gate * (1.f - tanh2f(c_out[index])) + c_out_grad[index];
+  float d_c = d_out * out_gate * (1.f - tanh2f(c_out[index])) + c_out_grad[index];
   float h_prime = out_gate * tanhf(c_out[index]);
 
   float d_in_gate = d_c * act_gate * in_gate * (1.f - in_gate);
@@ -108,10 +114,16 @@ __global__ void elementWise_bp(int hiddenSize, int miniBatch, int numCovered,
 
 // Fused forward kernel
 __global__ void elementWise_fp(int hiddenSize, int miniBatch, int numCovered,
-                               float *tmp_h, float *tmp_i, float *bias,
-                               float *linearGates, float *h_out,
-                               float *dropout_in, float dropout_p, float *c_in,
-                               float *c_out, int training) {
+                               const float * __restrict__ tmp_h,
+                               const float * __restrict__ tmp_i,
+                               const float * __restrict__ bias,
+                               float * __restrict__ linearGates,
+                               float * __restrict__ h_out,
+                               const float * __restrict__ dropout_in,
+                               const float dropout_p,
+                               const float * __restrict__ c_in,
+                               float *c_out,
+                               const int training) {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (index >= numCovered * hiddenSize)
