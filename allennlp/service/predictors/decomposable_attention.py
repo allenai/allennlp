@@ -1,24 +1,20 @@
-from allennlp.common.util import JsonDict, sanitize
-from allennlp.data.fields import TextField
+from overrides import overrides
+
+from allennlp.common.util import JsonDict
+from allennlp.data import Instance
 from allennlp.service.predictors.predictor import Predictor
+
 
 @Predictor.register('textual-entailment')
 class DecomposableAttentionPredictor(Predictor):
     """
     Wrapper for the :class:`~allennlp.models.bidaf.DecomposableAttention` model.
     """
-    def predict_json(self, inputs: JsonDict) -> JsonDict:
+    @overrides
+    def _json_to_instance(self, json: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"premise": "...", "hypothesis": "..."}``
-        and returns JSON that looks like
-        ``{"label_probs": [entailment_prob, contradiction_prob, neutral_prob]}``
+        Expects JSON that looks like ``{"premise": "...", "hypothesis": "..."}``.
         """
-        premise_text = inputs["premise"]
-        hypothesis_text = inputs["hypothesis"]
-
-        premise = TextField(self.tokenizer.tokenize(premise_text)[0],
-                            token_indexers=self.token_indexers)
-        hypothesis = TextField(self.tokenizer.tokenize(hypothesis_text)[0],
-                               token_indexers=self.token_indexers)
-
-        return sanitize(self.model.predict_entailment(premise, hypothesis))
+        premise_text = json["premise"]
+        hypothesis_text = json["hypothesis"]
+        return self._dataset_reader.text_to_instance(premise_text, hypothesis_text)

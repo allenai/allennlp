@@ -8,7 +8,7 @@ To create a new release, check out the SHA for which you want to cut a release a
 
 ```
 git tag -a v0.2.0 -m "v0.2.0"
-git push v0.2.0
+git push origin v0.2.0
 ```
 
 ## Updating the web demo
@@ -27,10 +27,14 @@ docker tag allennlp/allennlp allennlp/webdemo:2017-09-05-0
 docker push allennlp/webdemo:2017-09-05-0
 ```
 
-Now you can edit `kubernetes-webdemo.yml` with the latest version, and update the web demo with the following command.
+If you get an "denied:" error at the last step, make sure to `docker login`.
+
+Now you can edit `kubernetes-webdemo.yaml` with the latest version, and update the web demo with the following command.
 
 ```
-kubectl apply -f kubernetes-webdemo.yml
+kubectl apply -f kubernetes-webdemo.yaml
 ```
+
+You should commit your modifications to `kubernetes-webdemo.yaml` and push them to master after you deploy.
 
 ## Releasing a new version on pip

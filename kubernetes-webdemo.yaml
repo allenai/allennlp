@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: allennlp-webdemo
-          image: "allennlp/webdemo:2017.09.05"
+          image: "allennlp/webdemo:2017-09-12-2"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
           # for documentation on the resources section.

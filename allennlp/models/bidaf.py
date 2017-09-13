@@ -1,14 +1,13 @@
-import json
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import torch
 from torch.autograd import Variable
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params, squad_eval
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields import TextField
+from allennlp.common.checks import ConfigurationError
+from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
@@ -30,10 +29,6 @@ class BidirectionalAttentionFlow(Model):
     attentions to put question information into the passage word representations (this is the only
     part that is at all non-standard), pass this through another few layers of bi-LSTMs/GRUs, and
     do a softmax over span start and span end.
-
-    To instantiate this model with parameters matching those in the original paper, simply use
-    ``BidirectionalAttentionFlow.from_params(vocab, Params({}))``.  This will construct all of the
-    various dependencies needed for the constructor for you.
 
     Parameters
     ----------
@@ -80,8 +75,7 @@ class BidirectionalAttentionFlow(Model):
                  span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
-                 mask_lstms: bool = True,
-                 evaluation_json_file: str = None) -> None:
+                 mask_lstms: bool = True) -> None:
         super(BidirectionalAttentionFlow, self).__init__(vocab)
 
         self._text_field_embedder = text_field_embedder
@@ -101,6 +95,29 @@ class BidirectionalAttentionFlow(Model):
         span_end_input_dim = encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
         initializer(self)
+
+        # Bidaf has lots of layer dimensions which need to match up - these
+        # aren't necessarily obvious from the configuration files, so we check
+        # here.
+        if modeling_layer.get_input_dim() != 4 * encoding_dim:
+            raise ConfigurationError("The input dimension to the modeling_layer must be "
+                                     "equal to 4 times the encoding dimension of the phrase_layer. "
+                                     "Found {} and 4 * {} respectively.".format(modeling_layer.get_input_dim(),
+                                                                                encoding_dim))
+        if text_field_embedder.get_output_dim() != phrase_layer.get_input_dim():
+            raise ConfigurationError("The output dimension of the text_field_embedder (embedding_dim + "
+                                     "char_cnn) must match the input dimension of the phrase_encoder. "
+                                     "Found {} and {}, respectively.".format(text_field_embedder.get_output_dim(),
+                                                                             phrase_layer.get_input_dim()))
+
+        if span_end_encoder.get_input_dim() != encoding_dim * 4 + modeling_dim * 3:
+            raise ConfigurationError("The input dimension of the span_end_encoder should be equal to "
+                                     "4 * phrase_layer.output_dim + 3 * modeling_layer.output_dim. "
+                                     "Found {} and (4 * {} + 3 * {}) "
+                                     "respectively.".format(span_end_encoder.get_input_dim(),
+                                                            encoding_dim,
+                                                            modeling_dim))
+
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
         self._span_accuracy = BooleanAccuracy()
@@ -111,22 +128,6 @@ class BidirectionalAttentionFlow(Model):
         else:
             self._dropout = lambda x: x
         self._mask_lstms = mask_lstms
-
-        if evaluation_json_file:
-            logger.info("Prepping official evaluation dataset from %s", evaluation_json_file)
-            with open(evaluation_json_file) as dataset_file:
-                dataset_json = json.load(dataset_file)
-            question_to_answers = {}
-            for article in dataset_json['data']:
-                for paragraph in article['paragraphs']:
-                    for question in paragraph['qas']:
-                        question_id = question['id']
-                        answers = [answer['text'] for answer in question['answers']]
-                        question_to_answers[question_id] = answers
-
-            self._official_eval_dataset = question_to_answers
-        else:
-            self._official_eval_dataset = None
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -143,16 +144,14 @@ class BidirectionalAttentionFlow(Model):
         passage : Dict[str, torch.LongTensor]
             From a ``TextField``.  The model assumes that this passage contains the answer to the
             question, and predicts the beginning and ending positions of the answer within the
-            passage.  The ending position is `exclusive`, so our
-            :class:`~allennlp.data.dataset_readers.SquadReader` adds a special ending token to the
-            end of the passage, to allow for the last token to be included in the answer span.
+            passage.
         span_start : ``torch.IntTensor``, optional
             From an ``IndexField``.  This is one of the things we are trying to predict - the
             beginning position of the answer with the passage.  This is an `inclusive` index.  If
             this is given, we will compute a loss that gets included in the output dictionary.
         span_end : ``torch.IntTensor``, optional
             From an ``IndexField``.  This is one of the things we are trying to predict - the
-            ending position of the answer with the passage.  This is an `exclusive` index.  If
+            ending position of the answer with the passage.  This is an `inclusive` index.  If
             this is given, we will compute a loss that gets included in the output dictionary.
         metadata : ``List[Dict[str, Any]]``, optional
             If present, this should contain the question ID, original passage text, and token
@@ -172,7 +171,7 @@ class BidirectionalAttentionFlow(Model):
             The result of ``softmax(span_start_logits)``.
         span_end_logits : torch.FloatTensor
             A tensor of shape ``(batch_size, passage_length)`` representing unnormalised log
-            probabilities of the span end position (exclusive).
+            probabilities of the span end position (inclusive).
         span_end_probs : torch.FloatTensor
             The result of ``softmax(span_end_logits)``.
         best_span : torch.IntTensor
@@ -274,36 +273,30 @@ class BidirectionalAttentionFlow(Model):
             self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
             self._span_accuracy(best_span, torch.stack([span_start, span_end], -1))
             output_dict["loss"] = loss
-        if metadata is not None and self._official_eval_dataset:
+        if metadata is not None:
             output_dict['best_span_str'] = []
             for i in range(batch_size):
+                passage_str = metadata[i]['original_passage']
+                offsets = metadata[i]['token_offsets']
                 predicted_span = tuple(best_span[i].data.cpu().numpy())
-                best_span_string = self._compute_official_metrics(metadata[i], predicted_span)  # type: ignore
+                start_offset = offsets[predicted_span[0]][0]
+                end_offset = offsets[predicted_span[1]][1]
+                best_span_string = passage_str[start_offset:end_offset]
                 output_dict['best_span_str'].append(best_span_string)
+                answer_texts = metadata[i].get('answer_texts', [])
+                exact_match = f1_score = 0
+                if answer_texts:
+                    exact_match = squad_eval.metric_max_over_ground_truths(
+                            squad_eval.exact_match_score,
+                            best_span_string,
+                            answer_texts)
+                    f1_score = squad_eval.metric_max_over_ground_truths(
+                            squad_eval.f1_score,
+                            best_span_string,
+                            answer_texts)
+                self._official_em(100 * exact_match)
+                self._official_f1(100 * f1_score)
         return output_dict
-
-    def _compute_official_metrics(self,
-                                  metadata: Dict[str, Any],
-                                  predicted_span: Tuple[int, int]) -> str:
-        passage = metadata['original_passage']
-        offsets = metadata['token_offsets']
-        question_id = metadata.get('id', None)
-        start_offset = offsets[predicted_span[0]][0]
-        end_offset = offsets[predicted_span[1]][1]
-        span_string = passage[start_offset:end_offset]
-        if question_id in self._official_eval_dataset:
-            ground_truth = self._official_eval_dataset[question_id]
-            exact_match = squad_eval.metric_max_over_ground_truths(
-                    squad_eval.exact_match_score,
-                    span_string,
-                    ground_truth)
-            f1_score = squad_eval.metric_max_over_ground_truths(
-                    squad_eval.f1_score,
-                    span_string,
-                    ground_truth)
-            self._official_em(100 * exact_match)
-            self._official_f1(100 * f1_score)
-        return span_string
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
@@ -312,41 +305,6 @@ class BidirectionalAttentionFlow(Model):
                 'span_acc': self._span_accuracy.get_metric(reset),
                 'em': self._official_em.get_metric(reset),
                 'f1': self._official_f1.get_metric(reset),
-                }
-
-    def predict_span(self, question: TextField, passage: TextField) -> Dict[str, Any]:
-        """
-        Given a question and a passage, predicts the span in the passage that answers the question.
-
-        Parameters
-        ----------
-        question : ``TextField``
-        passage : ``TextField``
-            A ``TextField`` containing the tokens in the passage.  Note that we typically add
-            ``SquadReader.STOP_TOKEN`` as the final token in the passage, because we use exclusive
-            span indices.  Be sure you've added that to the passage you pass in here.
-
-        Returns
-        -------
-        A Dict containing:
-
-        span_start_probs : numpy.ndarray
-        span_end_probs : numpy.ndarray
-        best_span : (int, int)
-        """
-        instance = Instance({'question': question, 'passage': passage})
-        instance.index_fields(self.vocab)
-        model_input = util.arrays_to_variables(instance.as_array_dict(),
-                                               add_batch_dimension=True,
-                                               for_training=False)
-        output_dict = self.forward(**model_input)
-
-        # Here we're just removing the batch dimension and converting things to numpy arrays /
-        # tuples instead of pytorch variables.
-        return {
-                "span_start_probs": output_dict["span_start_probs"].data.squeeze(0).cpu().numpy(),
-                "span_end_probs": output_dict["span_end_probs"].data.squeeze(0).cpu().numpy(),
-                "best_span": tuple(output_dict["best_span"].data.squeeze(0).cpu().numpy()),
                 }
 
     @staticmethod
@@ -388,7 +346,12 @@ class BidirectionalAttentionFlow(Model):
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
         initializer = InitializerApplicator.from_params(params.pop("initializer", []))
         dropout = params.pop('dropout', 0.2)
+
+        # TODO: Remove the following when fully deprecated
         evaluation_json_file = params.pop('evaluation_json_file', None)
+        if evaluation_json_file is not None:
+            logger.warning("the 'evaluation_json_file' model parameter is deprecated, please remove")
+
         mask_lstms = params.pop('mask_lstms', True)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
@@ -400,5 +363,4 @@ class BidirectionalAttentionFlow(Model):
                    span_end_encoder=span_end_encoder,
                    initializer=initializer,
                    dropout=dropout,
-                   mask_lstms=mask_lstms,
-                   evaluation_json_file=evaluation_json_file)
+                   mask_lstms=mask_lstms)

@@ -4,13 +4,11 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields import TextField
+from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
-from allennlp.nn.util import arrays_to_variables
 from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.nn.initializers import InitializerApplicator
 
@@ -80,6 +78,12 @@ class DecomposableAttention(Model):
         self._hypothesis_encoder = hypothesis_encoder or premise_encoder
 
         self._num_labels = vocab.get_vocab_size(namespace="labels")
+
+        if text_field_embedder.get_output_dim() != attend_feedforward.get_input_dim():
+            raise ConfigurationError("Output dimension of the text_field_embedder (dim: {}), "
+                                     "must match the input_dim of the FeedForward layer "
+                                     "attend_feedforward, (dim: {}). ".format(text_field_embedder.get_output_dim(),
+                                                                              attend_feedforward.get_input_dim()))
         if aggregate_feedforward.get_output_dim() != self._num_labels:
             raise ConfigurationError("Final output dimension (%d) must equal num labels (%d)" %
                                      (aggregate_feedforward.get_output_dim(), self._num_labels))
@@ -171,36 +175,6 @@ class DecomposableAttention(Model):
         return {
                 'accuracy': self._accuracy.get_metric(reset),
                 }
-
-    def predict_entailment(self, premise: TextField, hypothesis: TextField) -> Dict[str, torch.Tensor]:
-        """
-        Given a premise and a hypothesis sentence, predict the entailment relationship between
-        them.  Note that in the paper, a null token was appended to each sentence, to allow for
-        words to align to nothing in the other sentence.  If you've trained your model with a null
-        token, you probably want to include it here, too.
-
-        Parameters
-        ----------
-        premise : ``TextField``
-        hypothesis : ``TextField``
-
-        Returns
-        -------
-        A Dict containing:
-
-        label_probs : torch.FloatTensor
-            A tensor of shape ``(num_labels,)`` representing probabilities of the entailment label.
-        """
-        instance = Instance({"premise": premise, "hypothesis": hypothesis})
-        instance.index_fields(self.vocab)
-        model_input = arrays_to_variables(instance.as_array_dict(),
-                                          add_batch_dimension=True,
-                                          for_training=False)
-        output_dict = self.forward(**model_input)
-
-        # Remove batch dimension, as we only had one input.
-        label_probs = output_dict["label_probs"].data.squeeze(0)
-        return {'label_probs': label_probs.numpy()}
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'DecomposableAttention':
