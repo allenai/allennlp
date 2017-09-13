@@ -1,8 +1,9 @@
-from typing import List, Tuple
+from typing import List
 
 from overrides import overrides
 
 from allennlp.common import Params
+from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 
@@ -46,20 +47,28 @@ class CharacterTokenizer(Tokenizer):
         self._end_tokens = end_tokens or []
 
     @overrides
-    def tokenize(self, text: str) -> Tuple[List[str], List[Tuple[int, int]]]:
+    def tokenize(self, text: str) -> List[Token]:
         if self._lowercase_characters:
             text = text.lower()
         if self._byte_encoding is not None:
             # We add 1 here so that we can still use 0 for masking, no matter what bytes we get out
             # of this.
-            tokens = [c + 1 for c in text.encode(self._byte_encoding)]
+            tokens = [Token(text_id=c + 1) for c in text.encode(self._byte_encoding)]
         else:
-            tokens = list(text)  # type: ignore
+            tokens = list(map(Token, list(text)))
         for start_token in self._start_tokens:
-            tokens.insert(0, start_token)  # type: ignore
+            if isinstance(start_token, int):
+                token = Token(text_id=start_token, idx=0)
+            else:
+                token = Token(text=start_token, idx=0)
+            tokens.insert(0, token)
         for end_token in self._end_tokens:
-            tokens.append(end_token)  # type: ignore
-        return tokens, None  # type: ignore
+            if isinstance(end_token, int):
+                token = Token(text_id=end_token, idx=0)
+            else:
+                token = Token(text=end_token, idx=0)
+            tokens.append(token)
+        return tokens
 
     @classmethod
     def from_params(cls, params: Params) -> 'CharacterTokenizer':

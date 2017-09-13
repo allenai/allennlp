@@ -6,8 +6,10 @@ from typing import Dict, List, Optional
 
 from overrides import overrides
 import numpy
+from spacy.tokens import Token as SpacyToken
 
 from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
@@ -30,13 +32,13 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
     ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
-    def __init__(self, tokens: List[str], token_indexers: Dict[str, TokenIndexer]) -> None:
+    def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
         self.tokens = tokens
         self._token_indexers = token_indexers
         self._indexed_tokens: Optional[Dict[str, TokenList]] = None
 
-        if not all([isinstance(x, str) for x in tokens]):
-            raise ConfigurationError("TextFields must be passed strings. "
+        if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
+            raise ConfigurationError("TextFields must be passed Tokens. "
                                      "Found: {} with types {}.".format(tokens, [type(x) for x in tokens]))
 
     @overrides

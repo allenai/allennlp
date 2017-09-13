@@ -3,6 +3,7 @@ from typing import List
 from overrides import overrides
 
 from allennlp.common import Params, Registrable
+from allennlp.data.tokenizers.token import Token
 
 
 class WordFilter(Registrable):
@@ -15,11 +16,9 @@ class WordFilter(Registrable):
     """
     default_implementation = 'pass_through'
 
-    def should_keep_words(self, words: List[str]) -> List[bool]:
+    def filter_words(self, words: List[Token]) -> List[Token]:
         """
-        Decides whether to remove words from the given list.  To make it easier to deal with data
-        associated with the word list (like character offsets), we return a list of boolean
-        decisions for each word, which the caller can process to actually filter the list.
+        Returns a filtered list of words.
         """
         raise NotImplementedError
 
@@ -36,8 +35,8 @@ class PassThroughWordFilter(WordFilter):
     Does not filter words; it's a no-op.  This is the default word filter.
     """
     @overrides
-    def should_keep_words(self, words: List[str]) -> List[bool]:
-        return [True] * len(words)
+    def filter_words(self, words: List[Token]) -> List[Token]:
+        return words
 
 
 @WordFilter.register('stopwords')
@@ -73,5 +72,5 @@ class StopwordFilter(WordFilter):
                               "'", '"', '&', '$', '#', '@', '(', ')', '?'])
 
     @overrides
-    def should_keep_words(self, words: List[str]) -> List[bool]:
-        return [word not in self.stopwords for word in words]
+    def filter_words(self, words: List[Token]) -> List[Token]:
+        return [word for word in words if word.text not in self.stopwords]

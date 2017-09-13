@@ -13,11 +13,10 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.fields import Field, TextField, ListField, IndexField, MetadataField
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.instance import Instance
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
+from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -162,15 +161,14 @@ class SquadReader(DatasetReader):
                          question_id: str = None,
                          answer_text: str = None,
                          char_span_start: int = None,
-                         tokenized_passage: Tuple[List[str], List[Tuple[int, int]]] = None,
+                         passage_tokens: List[Token] = None,
                          answer_texts: List[str] = None) -> Instance:
         # pylint: disable=arguments-differ
-        fields = {}  # type: Dict[str, Field]
-        if tokenized_passage:
-            passage_tokens, passage_offsets = tokenized_passage
-        else:
-            passage_tokens, passage_offsets = self._tokenizer.tokenize(passage_text)
-        question_tokens, _ = self._tokenizer.tokenize(question_text)
+        fields: Dict[str, Field] = {}
+        if not passage_tokens:
+            passage_tokens = self._tokenizer.tokenize(passage_text)
+        passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
+        question_tokens = self._tokenizer.tokenize(question_text)
         # Separate so we can reference it later with a known type.
         passage_field = TextField(passage_tokens, self._token_indexers)
         fields['passage'] = passage_field
@@ -416,13 +414,13 @@ class SquadSentenceSelectionReader(DatasetReader):
         fields: Dict[str, Field] = {}
         sentence_fields: List[Field] = []
         for sentence in sentences:
-            tokenized_sentence, _ = self._tokenizer.tokenize(sentence)
+            tokenized_sentence = self._tokenizer.tokenize(sentence)
             sentence_field = TextField(tokenized_sentence, self._token_indexers)
             sentence_fields.append(sentence_field)
         # Separate so we can reference it later with a known type.
         sentences_field = ListField(sentence_fields)
         fields['sentences'] = sentences_field
-        question_tokens, _ = self._tokenizer.tokenize(question)
+        question_tokens = self._tokenizer.tokenize(question)
         fields['question'] = TextField(question_tokens, self._token_indexers)
         if correct_choice is not None:
             fields['correct_sentence'] = IndexField(correct_choice, sentences_field)

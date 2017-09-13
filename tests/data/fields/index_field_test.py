@@ -1,16 +1,17 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
 import pytest
+
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Token
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.checks import ConfigurationError
 
 class TestIndexField(AllenNlpTestCase):
-
     def setUp(self):
         super(TestIndexField, self).setUp()
-        self.text = TextField(["here", "is", "a", "sentence", "."],
+        self.text = TextField(list(map(Token, ["here", "is", "a", "sentence", "."])),
                               {"words": SingleIdTokenIndexer("words")})
 
     def test_index_field_inherits_padding_lengths_from_text_field(self):

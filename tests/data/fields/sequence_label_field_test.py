@@ -4,18 +4,17 @@ from collections import defaultdict
 import pytest
 import numpy
 
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.fields import TextField, SequenceLabelField
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Token, Vocabulary
+from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
 class TestSequenceLabelField(AllenNlpTestCase):
-
     def setUp(self):
         super(TestSequenceLabelField, self).setUp()
-        self.text = TextField(["here", "are", "some", "words", "."],
+        self.text = TextField(list(map(Token, ["here", "are", "some", "words", "."])),
                               {"words": SingleIdTokenIndexer("words")})
 
     def test_tag_length_mismatch_raises(self):

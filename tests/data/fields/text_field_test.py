@@ -4,7 +4,7 @@ from collections import defaultdict
 import pytest
 import numpy
 
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 
@@ -26,7 +26,7 @@ class TestTextField(AllenNlpTestCase):
         super(TestTextField, self).setUp()
 
     def test_field_counts_vocab_items_correctly(self):
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"words": SingleIdTokenIndexer("words")})
         namespace_token_counts = defaultdict(lambda: defaultdict(int))
         field.count_vocab_items(namespace_token_counts)
@@ -38,7 +38,7 @@ class TestTextField(AllenNlpTestCase):
         assert namespace_token_counts["words"]["."] == 1
         assert list(namespace_token_counts.keys()) == ["words"]
 
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"characters": TokenCharactersIndexer("characters")})
         namespace_token_counts = defaultdict(lambda: defaultdict(int))
         field.count_vocab_items(namespace_token_counts)
@@ -55,7 +55,7 @@ class TestTextField(AllenNlpTestCase):
         assert namespace_token_counts["characters"]["."] == 1
         assert list(namespace_token_counts.keys()) == ["characters"]
 
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"words": SingleIdTokenIndexer("words"),
                                           "characters": TokenCharactersIndexer("characters")})
         namespace_token_counts = defaultdict(lambda: defaultdict(int))
@@ -88,17 +88,18 @@ class TestTextField(AllenNlpTestCase):
         t_index = vocab.add_token_to_namespace("t", namespace='characters')
         c_index = vocab.add_token_to_namespace("c", namespace='characters')
 
-        field = TextField(["A", "sentence"], {"words": SingleIdTokenIndexer(namespace="words")})
+        field = TextField(list(map(Token, ["A", "sentence"])), {"words": SingleIdTokenIndexer(namespace="words")})
         field.index(vocab)
         # pylint: disable=protected-access
         assert field._indexed_tokens["words"] == [capital_a_index, sentence_index]
 
-        field1 = TextField(["A", "sentence"], {"characters": TokenCharactersIndexer(namespace="characters")})
+        field1 = TextField(list(map(Token, ["A", "sentence"])),
+                           {"characters": TokenCharactersIndexer(namespace="characters")})
         field1.index(vocab)
         assert field1._indexed_tokens["characters"] == [[capital_a_char_index],
                                                         [s_index, e_index, n_index, t_index,
                                                          e_index, n_index, c_index, e_index]]
-        field2 = TextField(["A", "sentence"],
+        field2 = TextField(list(map(Token, ["A", "sentence"])),
                            token_indexers={"words": SingleIdTokenIndexer(namespace="words"),
                                            "characters": TokenCharactersIndexer(namespace="characters")})
         field2.index(vocab)
@@ -110,25 +111,25 @@ class TestTextField(AllenNlpTestCase):
 
     def test_get_padding_lengths_raises_if_no_indexed_tokens(self):
 
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"words": SingleIdTokenIndexer("words")})
         with pytest.raises(ConfigurationError):
             field.get_padding_lengths()
 
     def test_padding_lengths_are_computed_correctly(self):
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"words": SingleIdTokenIndexer("words")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {"num_tokens": 5}
 
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"characters": TokenCharactersIndexer("characters")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {"num_tokens": 5, "num_token_characters": 8}
 
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"characters": TokenCharactersIndexer("characters"),
                                           "words": SingleIdTokenIndexer("words")})
         field.index(self.vocab)
@@ -136,7 +137,7 @@ class TestTextField(AllenNlpTestCase):
         assert padding_lengths == {"num_tokens": 5, "num_token_characters": 8}
 
     def test_as_array_handles_words(self):
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"words": SingleIdTokenIndexer("words")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
@@ -144,7 +145,7 @@ class TestTextField(AllenNlpTestCase):
         numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 1, 1, 2, 1]))
 
     def test_as_array_handles_longer_lengths(self):
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"words": SingleIdTokenIndexer("words")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
@@ -153,7 +154,7 @@ class TestTextField(AllenNlpTestCase):
         numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 1, 1, 2, 1, 0, 0, 0, 0, 0]))
 
     def test_as_array_handles_characters(self):
-        field = TextField(["This", "is", "a", "sentence", "."],
+        field = TextField(list(map(Token, ["This", "is", "a", "sentence", "."])),
                           token_indexers={"characters": TokenCharactersIndexer("characters")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
@@ -166,7 +167,7 @@ class TestTextField(AllenNlpTestCase):
         numpy.testing.assert_array_almost_equal(array_dict["characters"], expected_character_array)
 
     def test_as_array_handles_words_and_characters_with_longer_lengths(self):
-        field = TextField(["a", "sentence", "."],
+        field = TextField(list(map(Token, ["a", "sentence", "."])),
                           token_indexers={"words": SingleIdTokenIndexer("words"),
                                           "characters": TokenCharactersIndexer("characters")})
         field.index(self.vocab)
@@ -182,7 +183,3 @@ class TestTextField(AllenNlpTestCase):
                                                              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))
-
-    def test_text_field_raises_on_non_string_input(self):
-        with pytest.raises(ConfigurationError):
-            _ = TextField([1, 2, 3, 4], {"tokens": SingleIdTokenIndexer()})

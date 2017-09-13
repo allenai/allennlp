@@ -9,9 +9,10 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.data.tokenizers import Token
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -65,7 +66,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
                 tokens_and_tags = [pair.rsplit(self._word_tag_delimiter, 1)
                                    for pair in line.split(self._token_delimiter)]
-                tokens = [x[0] for x in tokens_and_tags]
+                tokens = [Token(x[0]) for x in tokens_and_tags]
                 tags = [x[1] for x in tokens_and_tags]
 
                 sequence = TextField(tokens, self._token_indexers)
@@ -77,7 +78,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
                                      "Is the path correct?".format(file_path))
         return Dataset(instances)
 
-    def text_to_instance(self, tokens: List[str]) -> Instance:  # type: ignore
+    def text_to_instance(self, tokens: List[Token]) -> Instance:  # type: ignore
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """

@@ -74,14 +74,14 @@ class LanguageModelingReader(DatasetReader):
 
         if self._tokens_per_instance is not None:
             all_text = " ".join([x.replace("\n", " ").strip() for x in instance_strings])
-            tokenized_text, _ = self._tokenizer.tokenize(all_text)
+            tokenized_text = self._tokenizer.tokenize(all_text)
             num_tokens = self._tokens_per_instance + 1
             tokenized_strings = []
             logger.info("Creating dataset from all text in file: %s", file_path)
             for index in tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens - 1)):
                 tokenized_strings.append(tokenized_text[index:(index + num_tokens)])
         else:
-            tokenized_strings = [self._tokenizer.tokenize(s)[0] for s in instance_strings]
+            tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]
 
         instances = []
         for tokenized_string in tokenized_strings:
@@ -98,7 +98,7 @@ class LanguageModelingReader(DatasetReader):
     @overrides
     def text_to_instance(self, sentence: str) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
-        tokenized_string, _ = self._tokenizer.tokenize(sentence)
+        tokenized_string = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokenized_string[:-1], self._token_indexers)
         output_field = TextField(tokenized_string[1:], self._output_indexer)
         return Instance({'input_tokens': input_field, 'output_tokens': output_field})
