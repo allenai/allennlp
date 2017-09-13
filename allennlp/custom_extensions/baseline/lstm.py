@@ -16,7 +16,7 @@ class AlternatingLSTM(nn.Module):
         self.num_layers = num_layers
 
         layers = []
-        for i in xrange(num_layers):
+        for i in range(num_layers):
             if i == 0:
                 i_size = input_size
             else:
@@ -87,7 +87,7 @@ class LSTMLayer(nn.Module):
             dropout_weights = dropout_weights > self.recurrent_dropout_prob
             dropout_weights = dropout_weights.float()
 
-        for ii in xrange(T):
+        for ii in range(T):
             ind = ii if self.direction == 1 else T-ii-1
 
             if self.direction == 1:

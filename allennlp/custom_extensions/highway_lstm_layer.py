@@ -101,7 +101,7 @@ class HighwayLSTMLayer(torch.nn.Module):
         self.bias.data.zero_()
         weight_index = 0
         bias_index = 0
-        for i in xrange(self.num_layers):
+        for i in range(self.num_layers):
             insize = self.input_size if i == 0 else self.hidden_size
             i_weights = block_orthonormal_initialization(insize, self.hidden_size, 6)
             self.weight.data[weight_index:weight_index + i_weights.nelement()].copy_(i_weights)
