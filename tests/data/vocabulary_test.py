@@ -5,7 +5,7 @@ from copy import deepcopy
 
 import pytest
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Dataset, Instance
+from allennlp.data import Dataset, Instance, Token
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
@@ -17,7 +17,8 @@ from allennlp.common.checks import ConfigurationError
 class TestVocabulary(AllenNlpTestCase):
     def setUp(self):
         token_indexer = SingleIdTokenIndexer("tokens")
-        text_field = TextField(["a", "a", "a", "a", "b", "b", "c", "c", "c"], {"tokens": token_indexer})
+        text_field = TextField([Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]],
+                               {"tokens": token_indexer})
         self.instance = Instance({"text": text_field})
         self.dataset = Dataset([self.instance])
         super(TestVocabulary, self).setUp()
@@ -194,7 +195,7 @@ class TestVocabulary(AllenNlpTestCase):
         # result.
         tokenizer = CharacterTokenizer(byte_encoding='utf-8')
         token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer)
-        tokens = ["Øyvind", "für", "汉字"]
+        tokens = [Token(t) for t in ["Øyvind", "für", "汉字"]]
         text_field = TextField(tokens, {"characters": token_indexer})
         dataset = Dataset([Instance({"sentence": text_field})])
         vocab = Vocabulary.from_dataset(dataset)

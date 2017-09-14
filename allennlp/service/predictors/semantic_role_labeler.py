@@ -64,15 +64,15 @@ class SemanticRoleLabelerPredictor(Predictor):
         """
         sentence = inputs["sentence"]
 
-        spacy_doc = self.nlp(sentence)
-        words = [token.text for token in spacy_doc]
+        tokens = self.nlp(sentence)
+        words = [token.text for token in tokens]
         results: JsonDict = {"words": words, "verbs": []}
-        for i, word in enumerate(spacy_doc):
+        for i, word in enumerate(tokens):
             if word.pos_ == "VERB":
                 verb = word.text
                 verb_labels = [0 for _ in words]
                 verb_labels[i] = 1
-                instance = self._dataset_reader.text_to_instance(words, verb_labels)
+                instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
                 output = self._model.decode(self._model.forward_on_instance(instance))
                 tags = output['tags']
 
@@ -84,6 +84,6 @@ class SemanticRoleLabelerPredictor(Predictor):
                         "tags": tags,
                 })
 
-        results["tokens"] = [word.text for word in spacy_doc]
+        results["tokens"] = words
 
         return sanitize(results)

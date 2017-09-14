@@ -7,14 +7,14 @@ from overrides import overrides
 import tqdm
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
-from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, SequenceLabelField
-from allennlp.data.fields.field import Field  # pylint: disable=unused-import
+from allennlp.data.fields import Field, TextField, SequenceLabelField
+from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.common.checks import ConfigurationError
+from allennlp.data.tokenizers import Token
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -150,18 +150,19 @@ class SrlReader(DatasetReader):
         A list of Instances.
 
         """
+        tokens = [Token(t) for t in sentence_tokens]
         if not verbal_predicates:
             # Sentence contains no predicates.
             tags = ["O" for _ in sentence_tokens]
             verb_label = [0 for _ in sentence_tokens]
-            return [self.text_to_instance(sentence_tokens, verb_label, tags)]
+            return [self.text_to_instance(tokens, verb_label, tags)]
         else:
             instances = []
             for verb_index, annotation in zip(verbal_predicates, predicate_argument_labels):
                 tags = annotation
                 verb_label = [0 for _ in sentence_tokens]
                 verb_label[verb_index] = 1
-                instances.append(self.text_to_instance(sentence_tokens, verb_label, tags))
+                instances.append(self.text_to_instance(tokens, verb_label, tags))
             return instances
 
     @overrides
@@ -261,7 +262,7 @@ class SrlReader(DatasetReader):
         return Dataset(instances)
 
     def text_to_instance(self,  # type: ignore
-                         tokens: List[str],
+                         tokens: List[Token],
                          verb_label: List[int],
                          tags: List[str] = None) -> Instance:
         """
@@ -270,7 +271,7 @@ class SrlReader(DatasetReader):
         to find arguments for.
         """
         # pylint: disable=arguments-differ
-        fields = {}  # type: Dict[str, Field]
+        fields: Dict[str, Field] = {}
         text_field = TextField(tokens, token_indexers=self._token_indexers)
         fields['tokens'] = text_field
         fields['verb_indicator'] = SequenceLabelField(verb_label, text_field)
