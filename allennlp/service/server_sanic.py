@@ -36,20 +36,20 @@ def run(port: int, workers: int, config: Dict[str, str], static_dir: str = None)
     }
     app.run(port=port, host="0.0.0.0", workers=workers)
 
-def make_app(static_dir: str = None) -> Sanic:
+def make_app(build_dir: str = None) -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
 
-    if static_dir is None:
+    if build_dir is None:
         # Need path to static assets to be relative to this file.
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        static_dir = os.path.join(dir_path, 'static')
+        build_dir = os.path.join(dir_path, '../../demo/build')
 
-    if not os.path.exists(static_dir):
-        logger.error("app directory %s does not exist, aborting", static_dir)
+    if not os.path.exists(build_dir):
+        logger.error("app directory %s does not exist, aborting", build_dir)
         sys.exit(-1)
 
-    app.static('/', os.path.join(static_dir, 'index.html'))
-    app.static('/', static_dir)
+    app.static('/', os.path.join(build_dir, 'index.html'))
+    app.static('/', build_dir)
     app.predictors = {}
 
     try:
