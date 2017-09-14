@@ -9,8 +9,8 @@ import random
 import torch
 import numpy
 
-from allennlp.common import Params
 from allennlp.common.checks import log_pytorch_version_info
+from allennlp.common.params import Params
 
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 

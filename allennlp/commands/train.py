@@ -23,13 +23,8 @@ import argparse
 import json
 import logging
 import os
-import random
 import sys
 from copy import deepcopy
-from typing import Any, Dict, Union
-
-import numpy
-import torch
 
 from allennlp.common.checks import ensure_pythonhashseed_set
 from allennlp.common.params import Params
