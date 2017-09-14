@@ -8,7 +8,7 @@ class TestWordTokenizer(AllenNlpTestCase):
     def test_passes_through_correctly(self):
         tokenizer = WordTokenizer(start_tokens=['@@', '%%'], end_tokens=['^^'])
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
-        tokens, _ = tokenizer.tokenize(sentence)
+        tokens = [t.text for t in tokenizer.tokenize(sentence)]
         expected_tokens = ["@@", "%%", "this", "(", "sentence", ")", "has", "'", "crazy", "'", "\"",
                            "punctuation", "\"", ".", "^^"]
         assert tokens == expected_tokens
@@ -18,5 +18,5 @@ class TestWordTokenizer(AllenNlpTestCase):
                                                       'word_filter': {'type': 'stopwords'}}))
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
         expected_tokens = ["sentenc", "ha", "crazi", "punctuat"]
-        tokens, _ = tokenizer.tokenize(sentence)
+        tokens = [t.text for t in tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens

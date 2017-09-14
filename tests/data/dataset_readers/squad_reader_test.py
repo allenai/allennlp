@@ -1,9 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common import Params
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.dataset_readers.squad import _char_span_to_token_span
 from allennlp.data.tokenizers import WordTokenizer
-from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestSquadReader(AllenNlpTestCase):
@@ -14,7 +14,8 @@ class TestSquadReader(AllenNlpTestCase):
             "Carter, at Lenox Hill Hospital in New York. Five months later, she performed for four " +\
             "nights at Revel Atlantic City's Ovation Hall to celebrate the resort's opening, her " +\
             "first performances since giving birth to Blue Ivy."
-        _, offsets = tokenizer.tokenize(passage)
+        tokens = tokenizer.tokenize(passage)
+        offsets = [(t.idx, t.idx + len(t.text)) for t in tokens]
         # "January 7, 2012"
         token_span = _char_span_to_token_span(offsets, (3, 18))[0]
         assert token_span == (1, 4)
@@ -43,7 +44,8 @@ class TestSquadReader(AllenNlpTestCase):
             "to shoot the album cover for her 4, and unexpectedly became pregnant in Paris."
         start = 912
         end = 912 + len("Paris.")
-        _, offsets = tokenizer.tokenize(passage)
+        tokens = tokenizer.tokenize(passage)
+        offsets = [(t.idx, t.idx + len(t.text)) for  t in tokens]
         token_span = _char_span_to_token_span(offsets, (start, end))[0]
         assert token_span == (184, 185)
 
@@ -52,29 +54,29 @@ class TestSquadReader(AllenNlpTestCase):
         instances = reader.read('tests/fixtures/data/squad.json').instances
         assert len(instances) == 5
 
-        assert instances[0].fields["question"].tokens[:3] == ["To", "whom", "did"]
-        assert instances[0].fields["passage"].tokens[:3] == ["Architecturally", ",", "the"]
-        assert instances[0].fields["passage"].tokens[-3:] == ["of", "Mary", "."]
+        assert [t.text for t in instances[0].fields["question"].tokens[:3]] == ["To", "whom", "did"]
+        assert [t.text for t in instances[0].fields["passage"].tokens[:3]] == ["Architecturally", ",", "the"]
+        assert [t.text for t in instances[0].fields["passage"].tokens[-3:]] == ["of", "Mary", "."]
         assert instances[0].fields["span_start"].sequence_index == 102
         assert instances[0].fields["span_end"].sequence_index == 104
 
-        assert instances[1].fields["question"].tokens[:3] == ["What", "sits", "on"]
-        assert instances[1].fields["passage"].tokens[:3] == ["Architecturally", ",", "the"]
-        assert instances[1].fields["passage"].tokens[-3:] == ["of", "Mary", "."]
+        assert [t.text for t in instances[1].fields["question"].tokens[:3]] == ["What", "sits", "on"]
+        assert [t.text for t in instances[1].fields["passage"].tokens[:3]] == ["Architecturally", ",", "the"]
+        assert [t.text for t in instances[1].fields["passage"].tokens[-3:]] == ["of", "Mary", "."]
         assert instances[1].fields["span_start"].sequence_index == 17
         assert instances[1].fields["span_end"].sequence_index == 23
 
         # We're checking this case because I changed the answer text to only have a partial
         # annotation for the last token, which happens occasionally in the training data.  We're
         # making sure we get a reasonable output in that case here.
-        assert instances[3].fields["question"].tokens[:3] == ["Which", "individual", "worked"]
-        assert instances[3].fields["passage"].tokens[:3] == ["In", "1882", ","]
-        assert instances[3].fields["passage"].tokens[-3:] == ["Nuclear", "Astrophysics", "."]
+        assert [t.text for t in instances[3].fields["question"].tokens[:3]] == ["Which", "individual", "worked"]
+        assert [t.text for t in instances[3].fields["passage"].tokens[:3]] == ["In", "1882", ","]
+        assert [t.text for t in instances[3].fields["passage"].tokens[-3:]] == ["Nuclear", "Astrophysics", "."]
         span_start = instances[3].fields["span_start"].sequence_index
         span_end = instances[3].fields["span_end"].sequence_index
         answer_tokens = instances[3].fields["passage"].tokens[span_start:(span_end + 1)]
         expected_answer_tokens = ["Father", "Julius", "Nieuwland"]
-        assert answer_tokens == expected_answer_tokens
+        assert [t.text for t in answer_tokens] == expected_answer_tokens
 
     def test_can_build_from_params(self):
         reader = SquadReader.from_params(Params({}))

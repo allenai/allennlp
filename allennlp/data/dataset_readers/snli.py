@@ -10,12 +10,10 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.fields import Field, TextField, LabelField
 from allennlp.data.instance import Instance
-from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.fields import TextField, LabelField
-from allennlp.data.fields.field import Field  # pylint: disable=unused-import
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -73,9 +71,9 @@ class SnliReader(DatasetReader):
                          hypothesis: str,
                          label: str = None) -> Instance:
         # pylint: disable=arguments-differ
-        fields = {}  # type: Dict[str, Field]
-        premise_tokens, _ = self._tokenizer.tokenize(premise)
-        hypothesis_tokens, _ = self._tokenizer.tokenize(hypothesis)
+        fields: Dict[str, Field] = {}
+        premise_tokens = self._tokenizer.tokenize(premise)
+        hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
         fields['premise'] = TextField(premise_tokens, self._token_indexers)
         fields['hypothesis'] = TextField(hypothesis_tokens, self._token_indexers)
         if label:
