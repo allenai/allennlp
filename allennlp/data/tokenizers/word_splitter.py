@@ -1,3 +1,4 @@
+import re
 from typing import List, Tuple
 
 from overrides import overrides
@@ -97,6 +98,21 @@ class SimpleWordSplitter(WordSplitter):
 
     def _can_split(self, token: str):
         return token and token.lower() not in self.special_cases
+
+
+@WordSplitter.register('letters_digits')
+class LettersDigitsSplitter(WordSplitter):
+    """
+    A ``WordSplitter`` which keeps runs of letters and runs of digits together, while every
+    other non-whitespace character becomes a separate word.
+    """
+    @overrides
+    def split_words(self, sentence: str) -> Tuple[List[str], List[Tuple[int, int]]]:
+        # We use the [^\W\d_] pattern as a trick to match unicode letters
+        tokens = [(m.group(), m.start()) for m in re.finditer(r'[^\W\d_]+|\d+|\S', sentence)]
+        words = [word for word, _ in tokens]
+        offsets = [(start, start + len(word)) for word, start in tokens]
+        return words, offsets
 
 
 @WordSplitter.register('just_spaces')
