@@ -1,7 +1,6 @@
 from typing import List
 
 from overrides import overrides
-import spacy
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
