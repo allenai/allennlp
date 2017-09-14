@@ -53,7 +53,7 @@ class TestTrainer(AllenNlpTestCase):
                               num_epochs=3, serialization_dir=self.TEST_DIR)
 
         epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
-        assert epoch == 0
+        assert epoch == 1
         new_trainer.train()
 
     def test_train_driver_raises_on_model_with_no_loss_key(self):
