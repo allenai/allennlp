@@ -321,7 +321,8 @@ class Trainer:
         Returns
         -------
         epoch: int
-            The epoch at which to resume training.
+            The epoch at which to resume training, which should be one after the epoch
+            in the saved training state.
         """
         if not self._serialization_dir:
             raise ConfigurationError("serialization_dir not specified - cannot "
@@ -340,7 +341,7 @@ class Trainer:
         training_state = torch.load(training_state_path)
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
-        return training_state["epoch"]
+        return training_state["epoch"] + 1
 
     @classmethod
     def from_params(cls,
