@@ -283,19 +283,18 @@ class BidirectionalAttentionFlow(Model):
                 best_span_string = passage_str[start_offset:end_offset]
                 output_dict['best_span_str'].append(best_span_string)
                 answer_texts = metadata[i].get('answer_texts', [])
-                exact_match = f1_score = 0
                 if answer_texts:
                     self._squad_metrics(best_span_string, answer_texts)
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        exact_match, f1 = self._squad_metrics.get_metric(reset)
+        exact_match, f1_score = self._squad_metrics.get_metric(reset)
         return {
                 'start_acc': self._span_start_accuracy.get_metric(reset),
                 'end_acc': self._span_end_accuracy.get_metric(reset),
                 'span_acc': self._span_accuracy.get_metric(reset),
                 'em': exact_match,
-                'f1': f1,
+                'f1': f1_score,
                 }
 
     @staticmethod

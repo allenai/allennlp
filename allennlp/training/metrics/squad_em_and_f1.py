@@ -47,10 +47,10 @@ class SquadEmAndF1(Metric):
         over all inputs.
         """
         exact_match = self._total_em / self._count if self._count > 0 else 0
-        f1 = self._total_f1 / self._count if self._count > 0 else 0
+        f1_score = self._total_f1 / self._count if self._count > 0 else 0
         if reset:
             self.reset()
-        return exact_match, f1
+        return exact_match, f1_score
 
     @overrides
     def reset(self):
