@@ -97,7 +97,7 @@ class SimpleWordSplitter(WordSplitter):
 
 
 @WordSplitter.register('letters_digits')
-class LettersDigitsSplitter(WordSplitter):
+class LettersDigitsWordSplitter(WordSplitter):
     """
     A ``WordSplitter`` which keeps runs of (unicode) letters and runs of digits together, while
     every other non-whitespace character becomes a separate word.
