@@ -46,10 +46,14 @@ class TestDataset(AllenNlpTestCase):
                                                                     [2, 3, 1, 0, 0, 0]]))
 
     def get_dataset(self):
-        field1 = TextField(list(map(Token, ["this", "is", "a", "sentence", "."])), self.token_indexer)
-        field2 = TextField(list(map(Token, ["this", "is", "a", "different", "sentence", "."])), self.token_indexer)
-        field3 = TextField(list(map(Token, ["here", "is", "a", "sentence", "."])), self.token_indexer)
-        field4 = TextField(list(map(Token, ["this", "is", "short"])), self.token_indexer)
+        field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence", "."]],
+                           self.token_indexer)
+        field2 = TextField([Token(t) for t in ["this", "is", "a", "different", "sentence", "."]],
+                           self.token_indexer)
+        field3 = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]],
+                           self.token_indexer)
+        field4 = TextField([Token(t) for t in ["this", "is", "short"]],
+                           self.token_indexer)
         instances = [Instance({"text1": field1, "text2": field2}),
                      Instance({"text1": field3, "text2": field4})]
         return Dataset(instances)

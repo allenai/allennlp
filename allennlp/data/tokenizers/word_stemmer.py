@@ -19,7 +19,7 @@ class WordStemmer(Registrable):
 
     def stem_word(self, word: Token) -> Token:
         """
-        `Modifies` the ``text`` field in the input token, and also returns the same token.
+        Returns a new ``Token`` with ``word.text`` replaced by a stemmed word.
         """
         raise NotImplementedError
 

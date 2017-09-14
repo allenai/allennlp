@@ -40,7 +40,9 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         if token.text is None:
             raise ConfigurationError('TokenCharactersIndexer needs a tokenizer that retains text')
         for character in self._character_tokenizer.tokenize(token.text):
-            if character.text is not None:
+            # If `text_id` is set on the character token (e.g., if we're using byte encoding), we
+            # will not be using the vocab for this character.
+            if getattr(character, 'text_id', None) is None:
                 counter[self._namespace][character.text] += 1
 
     @overrides
@@ -50,6 +52,8 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
             raise ConfigurationError('TokenCharactersIndexer needs a tokenizer that retains text')
         for character in self._character_tokenizer.tokenize(token.text):
             if getattr(character, 'text_id', None) is not None:
+                # `text_id` being set on the token means that we aren't using the vocab, we just
+                # use this id instead.
                 index = character.text_id
             else:
                 index = vocabulary.get_token_index(character.text, self._namespace)

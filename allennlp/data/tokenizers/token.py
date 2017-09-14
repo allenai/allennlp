@@ -22,6 +22,9 @@ class Token:
         will bypass the vocabulary when indexing this token, regardless of whether ``text`` is also
         set.  You can `also` set ``text`` with the original text, if you want, so that you can
         still use a character-level representation in addition to a hash-based word embedding.
+
+        The other fields on ``Token`` follow the fields on spacy's ``Token`` object; this is one we
+        added, similar to spacy's ``lex_id``.
     """
     def __init__(self,
                  text: str = None,

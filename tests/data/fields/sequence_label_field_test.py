@@ -14,7 +14,7 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 class TestSequenceLabelField(AllenNlpTestCase):
     def setUp(self):
         super(TestSequenceLabelField, self).setUp()
-        self.text = TextField(list(map(Token, ["here", "are", "some", "words", "."])),
+        self.text = TextField([Token(t) for t in ["here", "are", "some", "words", "."]],
                               {"words": SingleIdTokenIndexer("words")})
 
     def test_tag_length_mismatch_raises(self):

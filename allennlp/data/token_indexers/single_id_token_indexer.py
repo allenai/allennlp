@@ -29,6 +29,8 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
+        # If `text_id` is set on the token (e.g., if we're using some kind of hash-based word
+        # encoding), we will not be using the vocab for this token.
         if getattr(token, 'text_id', None) is None:
             text = token.text
             if self.lowercase_tokens:
@@ -38,6 +40,8 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
     @overrides
     def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
         if getattr(token, 'text_id', None) is not None:
+            # `text_id` being set on the token means that we aren't using the vocab, we just use
+            # this id instead.
             index = token.text_id
         else:
             text = token.text

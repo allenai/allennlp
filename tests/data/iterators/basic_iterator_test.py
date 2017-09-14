@@ -31,7 +31,7 @@ class IteratorTest(AllenNlpTestCase):
         self.dataset = Dataset(self.instances)
 
     def create_instance(self, str_tokens: List[str]):
-        tokens = list(map(Token, str_tokens))
+        tokens = [Token(t) for t in str_tokens]
         instance = Instance({'text': TextField(tokens, self.token_indexers)})
         instance.index_fields(self.vocab)
         return instance

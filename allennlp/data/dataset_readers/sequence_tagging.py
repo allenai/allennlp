@@ -66,8 +66,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
                 tokens_and_tags = [pair.rsplit(self._word_tag_delimiter, 1)
                                    for pair in line.split(self._token_delimiter)]
-                tokens = [Token(x[0]) for x in tokens_and_tags]
-                tags = [x[1] for x in tokens_and_tags]
+                tokens = [Token(token) for token, tag in tokens_and_tags]
+                tags = [tag for token, tag in tokens_and_tags]
 
                 sequence = TextField(tokens, self._token_indexers)
                 sequence_tags = SequenceLabelField(tags, sequence)

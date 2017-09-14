@@ -11,7 +11,7 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 class TestIndexField(AllenNlpTestCase):
     def setUp(self):
         super(TestIndexField, self).setUp()
-        self.text = TextField(list(map(Token, ["here", "is", "a", "sentence", "."])),
+        self.text = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]],
                               {"words": SingleIdTokenIndexer("words")})
 
     def test_index_field_inherits_padding_lengths_from_text_field(self):

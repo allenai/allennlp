@@ -150,7 +150,7 @@ class SrlReader(DatasetReader):
         A list of Instances.
 
         """
-        tokens = list(map(Token, sentence_tokens))
+        tokens = [Token(t) for t in sentence_tokens]
         if not verbal_predicates:
             # Sentence contains no predicates.
             tags = ["O" for _ in sentence_tokens]

@@ -73,4 +73,4 @@ class StopwordFilter(WordFilter):
 
     @overrides
     def filter_words(self, words: List[Token]) -> List[Token]:
-        return [word for word in words if word.text not in self.stopwords]
+        return [word for word in words if word.text.lower() not in self.stopwords]

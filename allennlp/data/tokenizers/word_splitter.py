@@ -18,21 +18,13 @@ class WordSplitter(Registrable):
 
     def split_words(self, sentence: str) -> List[Token]:
         """
-        Splits ``sentence`` into tokens, returning the resulting tokens and the character offsets
-        for each token in the original string.  Not all ``WordSplitters`` implement character
-        offsets, so the second item in the returned tuple could be ``None``.
-
-        Returns
-        -------
-        tokens : ``List[Token]``
+        Splits ``sentence`` into a list of :class:`Token` objects.
         """
         raise NotImplementedError
 
     @classmethod
     def from_params(cls, params: Params) -> 'WordSplitter':
         choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        # None of the word splitters take parameters, so we just make sure the parameters are empty
-        # here.
         return cls.by_name(choice).from_params(params)
 
 
@@ -116,7 +108,7 @@ class JustSpacesWordSplitter(WordSplitter):
     """
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
-        return list(map(Token, sentence.split()))
+        return [Token(t) for t in sentence.split()]
 
     @classmethod
     def from_params(cls, params: Params) -> 'WordSplitter':
@@ -137,7 +129,7 @@ class NltkWordSplitter(WordSplitter):
     def split_words(self, sentence: str) -> List[Token]:
         # Import is here because it's slow, and by default unnecessary.
         from nltk.tokenize import word_tokenize
-        return list(map(Token, word_tokenize(sentence.lower())))
+        return [Token(t) for t in word_tokenize(sentence.lower())]
 
     @classmethod
     def from_params(cls, params: Params) -> 'WordSplitter':
@@ -151,6 +143,9 @@ class SpacyWordSplitter(WordSplitter):
     A ``WordSplitter`` that uses spaCy's tokenizer.  It's fast and reasonable - this is the
     recommended ``WordSplitter``.
     """
+    # In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
+    # keyed by the options we used to create the spacy model, so any particular configuration only
+    # gets loaded once.
     _spacy_tokenizers: Dict[Tuple, Any] = {}
     def __init__(self,
                  language: str = 'en',

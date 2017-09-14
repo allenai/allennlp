@@ -55,7 +55,7 @@ class CharacterTokenizer(Tokenizer):
             # of this.
             tokens = [Token(text_id=c + 1) for c in text.encode(self._byte_encoding)]
         else:
-            tokens = list(map(Token, list(text)))
+            tokens = [Token(t) for t in list(text)]
         for start_token in self._start_tokens:
             if isinstance(start_token, int):
                 token = Token(text_id=start_token, idx=0)

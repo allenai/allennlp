@@ -23,11 +23,11 @@ class TestListField(AllenNlpTestCase):
         self.word_indexer = {"words": SingleIdTokenIndexer("words")}
         self.words_and_characters_indexer = {"words": SingleIdTokenIndexer("words"),
                                              "characters": TokenCharactersIndexer("characters")}
-        self.field1 = TextField(list(map(Token, ["this", "is", "a", "sentence"])),
+        self.field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence"]],
                                 self.word_indexer)
-        self.field2 = TextField(list(map(Token, ["this", "is", "a", "different", "sentence"])),
+        self.field2 = TextField([Token(t) for t in ["this", "is", "a", "different", "sentence"]],
                                 self.word_indexer)
-        self.field3 = TextField(list(map(Token, ["this", "is", "another", "sentence"])),
+        self.field3 = TextField([Token(t) for t in ["this", "is", "another", "sentence"]],
                                 self.word_indexer)
         super(TestListField, self).setUp()
 

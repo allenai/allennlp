@@ -49,9 +49,6 @@ class WordTokenizer(Tokenizer):
         By default we do not load spacy's parsing model, to save loading time and memory.  Set this
         to ``True`` if you want to have access to spacy's NER tags in the returned tokens.
     """
-    # In order to avoid loady spacy models a whole bunch of times, we'll save references to them,
-    # keyed by the options we used to create the spacy model, so any particular configuration only
-    # gets loaded once.
     def __init__(self,
                  word_splitter: WordSplitter = None,
                  word_filter: WordFilter = PassThroughWordFilter(),
