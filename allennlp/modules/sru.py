@@ -7,6 +7,8 @@ from cupy.cuda import function
 from pynvrtc.compiler import Program
 from collections import namedtuple
 
+from allennlp.nn.initializers import block_orthogonal
+
 SRU_PROG = Program(SRU_CODE.encode('utf-8'), 'sru_prog.cu'.encode('utf-8'))
 SRU_PTX = SRU_PROG.compile()
 SRU_MOD = function.Module()
@@ -140,9 +142,7 @@ class SRUCell(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        val_range = (3.0 / self.input_size) ** 0.5
-        self.weight.data.uniform_(-val_range, val_range)
-        self.bias.data.zero_()
+        block_orthogonal(self.weight.data, [self.input_size, self.hidden_size])
 
         if self.bidirectional:
             self.bias.data[self.hidden_size * 2:].zero_().fill_(1.0)
