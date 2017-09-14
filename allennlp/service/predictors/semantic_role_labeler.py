@@ -5,6 +5,7 @@ import spacy
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 
@@ -16,7 +17,7 @@ class SemanticRoleLabelerPredictor(Predictor):
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
-        self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
+        self._tokenizer = SpacyWordSplitter(language='en', pos_tags=True)
 
     @staticmethod
     def make_srl_string(words: List[str], tags: List[str]) -> str:
@@ -64,7 +65,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         """
         sentence = inputs["sentence"]
 
-        tokens = self.nlp(sentence)
+        tokens = self._tokenizer.split_words(sentence)
         words = [token.text for token in tokens]
         results: JsonDict = {"words": words, "verbs": []}
         for i, word in enumerate(tokens):
