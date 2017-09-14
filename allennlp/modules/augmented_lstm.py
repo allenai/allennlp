@@ -3,15 +3,15 @@ An LSTM with Recurrent Dropout and the option to use highway
 connections between layers.
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 import torch
 from torch.autograd import Variable
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, PackedSequence
+from torch.nn.utils.rnn import PackedSequence
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
+
 
 class AugmentedLstm(torch.nn.Module):
     """
@@ -91,14 +91,16 @@ class AugmentedLstm(torch.nn.Module):
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,
+                batch_lengths: List[int] = None,
                 initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         """
         Parameters
         ----------
-        inputs : PackedSequence, required.
+        inputs : ``torch.Tensor``, required.
             A tensor of shape (batch_size, num_timesteps, input_size)
             to apply the LSTM over.
-
+        batch_lengths: List[int], optional.
+            A list of integer per-batch sequence lengths.
         initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM. Each tensor has shape (1, batch_size, output_dimension).
@@ -111,21 +113,19 @@ class AugmentedLstm(torch.nn.Module):
         the LSTM state, with shape (1, batch_size, hidden_size) to
         match the Pytorch API.
         """
-        if not isinstance(inputs, PackedSequence):
-            raise ConfigurationError('inputs must be PackedSequence but got %s' % (type(inputs)))
 
-        sequence_tensor, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
-        batch_size = sequence_tensor.size()[0]
-        total_timesteps = sequence_tensor.size()[1]
-
+        batch_size = inputs.size()[0]
+        total_timesteps = inputs.size()[1]
+        if batch_lengths is None:
+            batch_lengths = [total_timesteps for _ in range(batch_size)]
         # We have to use this '.data.new().resize_.fill_' pattern to create tensors with the correct
         # type - forward has no knowledge of whether these are torch.Tensors or torch.cuda.Tensors.
-        output_accumulator = Variable(sequence_tensor.data.new()
+        output_accumulator = Variable(inputs.data.new()
                                       .resize_(batch_size, total_timesteps, self.hidden_size).fill_(0))
         if initial_state is None:
-            full_batch_previous_memory = Variable(sequence_tensor.data.new()
+            full_batch_previous_memory = Variable(inputs.data.new()
                                                   .resize_(batch_size, self.hidden_size).fill_(0))
-            full_batch_previous_state = Variable(sequence_tensor.data.new()
+            full_batch_previous_state = Variable(inputs.data.new()
                                                  .resize_(batch_size, self.hidden_size).fill_(0))
         else:
             full_batch_previous_state = initial_state[0].squeeze(0)
@@ -165,7 +165,7 @@ class AugmentedLstm(torch.nn.Module):
             # Actually get the slices of the batch which we need for the computation at this timestep.
             previous_memory = full_batch_previous_memory[0: current_length_index + 1].clone()
             previous_state = full_batch_previous_state[0: current_length_index + 1].clone()
-            timestep_input = sequence_tensor[0: current_length_index + 1, index]
+            timestep_input = inputs[0: current_length_index + 1, index]
 
             # Do the projections for all the gates all at once.
             projected_input = self.input_linearity(timestep_input)
@@ -202,8 +202,6 @@ class AugmentedLstm(torch.nn.Module):
             full_batch_previous_memory[0:current_length_index + 1] = memory
             full_batch_previous_state[0:current_length_index + 1] = timestep_output
             output_accumulator[0:current_length_index + 1, index] = timestep_output
-
-        output_accumulator = pack_padded_sequence(output_accumulator, batch_lengths, batch_first=True)
 
         # Mimic the pytorch API by returning state in the following shape:
         # (num_layers * num_directions, batch_size, hidden_size). As this

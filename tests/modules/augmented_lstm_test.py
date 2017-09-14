@@ -28,27 +28,23 @@ class TestAugmentedLSTM(AllenNlpTestCase):
 
     def test_variable_length_sequences_return_correctly_padded_outputs(self):
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
-        tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
         lstm = AugmentedLstm(10, 11)
-        output, _ = lstm(tensor)
-        output_sequence, _ = pad_packed_sequence(output, batch_first=True)
+        output, _ = lstm(sorted_tensor, sorted_sequence.data.tolist())
 
-        numpy.testing.assert_array_equal(output_sequence.data[1, 6:, :].numpy(), 0.0)
-        numpy.testing.assert_array_equal(output_sequence.data[2, 4:, :].numpy(), 0.0)
-        numpy.testing.assert_array_equal(output_sequence.data[3, 3:, :].numpy(), 0.0)
-        numpy.testing.assert_array_equal(output_sequence.data[4, 2:, :].numpy(), 0.0)
+        numpy.testing.assert_array_equal(output.data[1, 6:, :].numpy(), 0.0)
+        numpy.testing.assert_array_equal(output.data[2, 4:, :].numpy(), 0.0)
+        numpy.testing.assert_array_equal(output.data[3, 3:, :].numpy(), 0.0)
+        numpy.testing.assert_array_equal(output.data[4, 2:, :].numpy(), 0.0)
 
     def test_variable_length_sequences_run_backward_return_correctly_padded_outputs(self):
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
-        tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
         lstm = AugmentedLstm(10, 11, go_forward=False)
-        output, _ = lstm(tensor)
-        output_sequence, _ = pad_packed_sequence(output, batch_first=True)
+        output, _ = lstm(sorted_tensor, sorted_sequence.data.tolist())
 
-        numpy.testing.assert_array_equal(output_sequence.data[1, 6:, :].numpy(), 0.0)
-        numpy.testing.assert_array_equal(output_sequence.data[2, 4:, :].numpy(), 0.0)
-        numpy.testing.assert_array_equal(output_sequence.data[3, 3:, :].numpy(), 0.0)
-        numpy.testing.assert_array_equal(output_sequence.data[4, 2:, :].numpy(), 0.0)
+        numpy.testing.assert_array_equal(output.data[1, 6:, :].numpy(), 0.0)
+        numpy.testing.assert_array_equal(output.data[2, 4:, :].numpy(), 0.0)
+        numpy.testing.assert_array_equal(output.data[3, 3:, :].numpy(), 0.0)
+        numpy.testing.assert_array_equal(output.data[4, 2:, :].numpy(), 0.0)
 
     def test_augmented_lstm_computes_same_function_as_pytorch_lstm(self):
         augmented_lstm = AugmentedLstm(10, 11)
@@ -65,13 +61,13 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor * 5., self.sequence_lengths)
         lstm_input = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
 
-        augmented_output, augmented_state = augmented_lstm(lstm_input, (initial_state, initial_memory))
+        augmented_output, augmented_state = augmented_lstm(sorted_tensor, sorted_sequence.data.tolist(),
+                                                           (initial_state, initial_memory))
         pytorch_output, pytorch_state = pytorch_lstm(lstm_input, (initial_state, initial_memory))
         pytorch_output_sequence, _ = pad_packed_sequence(pytorch_output, batch_first=True)
-        augmented_output_sequence, _ = pad_packed_sequence(augmented_output, batch_first=True)
 
         numpy.testing.assert_array_almost_equal(pytorch_output_sequence.data.numpy(),
-                                                augmented_output_sequence.data.numpy(), decimal=4)
+                                                augmented_output.data.numpy(), decimal=4)
         numpy.testing.assert_array_almost_equal(pytorch_state[0].data.numpy(),
                                                 augmented_state[0].data.numpy(), decimal=4)
         numpy.testing.assert_array_almost_equal(pytorch_state[1].data.numpy(),
@@ -80,14 +76,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
     def test_augmented_lstm_works_with_highway_connections(self):
         augmented_lstm = AugmentedLstm(10, 11, use_highway=True)
         sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
-        lstm_input = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
-        augmented_lstm(lstm_input)
-
-    def test_augmented_lstm_throws_error_on_non_packed_sequence_input(self):
-        lstm = AugmentedLstm(3, 5)
-        tensor = torch.rand([5, 7, 9])
-        with pytest.raises(ConfigurationError):
-            lstm(tensor)
+        augmented_lstm(sorted_tensor)
 
     def test_augmented_lstm_is_initialized_with_correct_biases(self):
         lstm = AugmentedLstm(2, 3)
