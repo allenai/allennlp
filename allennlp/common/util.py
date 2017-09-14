@@ -3,11 +3,14 @@ Various utilities that don't fit anwhere else.
 """
 
 from itertools import zip_longest
-from typing import Any, Callable, Dict, List, TypeVar
+from typing import Any, Callable, Dict, List, TypeVar, Union
 import random
 
 import torch
-import numpy as np
+import numpy
+
+from allennlp.common.checks import log_pytorch_version_info
+from allennlp.common.params import Params
 
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
@@ -22,10 +25,10 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name
     elif isinstance(x, torch.Tensor):
         # tensor needs to be converted to a list (and moved to cpu if necessary)
         return x.cpu().tolist()
-    elif isinstance(x, np.ndarray):
+    elif isinstance(x, numpy.ndarray):
         # array needs to be converted to a list
         return x.tolist()
-    elif isinstance(x, np.number):
+    elif isinstance(x, numpy.number):
         # NumPy numbers need to be converted to Python numbers
         return x.item()
     elif isinstance(x, dict):
@@ -118,3 +121,35 @@ def namespace_match(pattern: str, namespace: str):
     elif pattern == namespace:
         return True
     return False
+
+
+def prepare_environment(params: Union[Params, Dict[str, Any]]):
+    """
+    Sets random seeds for reproducible experiments. This may not work as expected
+    if you use this from within a python project in which you have already imported Pytorch.
+    If you use the scripts/run_model.py entry point to training models with this library,
+    your experiments should be reasonably reproducible. If you are using this from your own
+    project, you will want to call this function before importing Pytorch. Complete determinism
+    is very difficult to achieve with libraries doing optimized linear algebra due to massively
+    parallel execution, which is exacerbated by using GPUs.
+
+    Parameters
+    ----------
+    params: Params object or dict, required.
+        A ``Params`` object or dict holding the json parameters.
+    """
+    seed = params.pop("random_seed", 13370)
+    numpy_seed = params.pop("numpy_seed", 1337)
+    torch_seed = params.pop("pytorch_seed", 133)
+
+    if seed is not None:
+        random.seed(seed)
+    if numpy_seed is not None:
+        numpy.random.seed(numpy_seed)
+    if torch_seed is not None:
+        torch.manual_seed(torch_seed)
+        # Seed all GPUs with the same seed if available.
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(torch_seed)
+
+    log_pytorch_version_info()
