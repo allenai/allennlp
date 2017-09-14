@@ -2,14 +2,13 @@
 import numpy
 import pytest
 
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.fields import LabelField
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.fields import LabelField
+from allennlp.data.vocabulary import Vocabulary
 
 
 class TestLabelField(AllenNlpTestCase):
-
     def test_as_array_returns_integer_array(self):
         label = LabelField(5, skip_indexing=True)
         array = label.as_array(label.get_padding_lengths())

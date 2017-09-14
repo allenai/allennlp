@@ -27,6 +27,7 @@ import logging
 
 import tqdm
 
+from allennlp.common.util import prepare_environment
 from allennlp.data import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
@@ -87,6 +88,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     # Load from archive
     archive = load_archive(args.archive_file, args.cuda_device)
     config = archive.config
+    prepare_environment(config)
     model = archive.model
     model.eval()
 

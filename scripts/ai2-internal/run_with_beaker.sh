@@ -8,7 +8,7 @@ DETACH_ARG="--detach"  # or ""
 ECR_REPOSITORY=896129387501.dkr.ecr.us-west-2.amazonaws.com
 
 PARAM_FILE=$1
-EXPERIMENT_NAME=$2
+EXPERIMENT_DESCRIPTION=$2
 
 # TODO(matt): if beaker makes it possible to run experiments from the web UI, we probably should
 # just have a standard image, that we don't have to rebuild each time, and we can remove this
@@ -17,16 +17,16 @@ COMMIT=$(git rev-parse HEAD)
 IMAGE=$ECR_REPOSITORY/allennlp/allennlp:$COMMIT-$RANDOM
 
 if [ ! -n "$PARAM_FILE" ] ; then
-  echo "USAGE: ./scripts/ai2-internal/run_on_beaker.sh PARAM_FILE [EXPERIMENT_NAME]"
+  echo "USAGE: ./scripts/ai2-internal/run_on_beaker.sh PARAM_FILE [EXPERIMENT_DESCRIPTION]"
   exit 1
 fi
 
-if [ -n "$EXPERIMENT_NAME" ] ; then
-  EXPERIMENT_NAME_ARG="--name=$EXPERIMENT_NAME"
+# TODO: Need to quote spaces in $EXPERIMENT_DESCRIPTION appropriately
+if [ -n "$EXPERIMENT_DESCRIPTION" ] ; then
+  EXPERIMENT_DESC_ARG="--desc=$EXPERIMENT_DESCRIPTION"
 else
-  EXPERIMENT_NAME_ARG=""
+  EXPERIMENT_DESC_ARG=""
 fi
-
 
 set -e
 
@@ -43,4 +43,4 @@ SOURCES_ARG="$SOURCES_ARG --source $CONFIG_DATASET_ID:/config"
 
 CMD="allennlp/run train /config/$FILENAME -s /output"
 
-beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_NAME_ARG $GPU_ARG $DETACH_ARG $IMAGE $CMD
+beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_DESC_ARG $GPU_ARG $DETACH_ARG $IMAGE $CMD

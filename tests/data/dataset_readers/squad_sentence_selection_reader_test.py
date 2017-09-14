@@ -89,27 +89,29 @@ class TestSquadSentenceSelectionReader(AllenNlpTestCase):
     def assert_list_field_contains_correct_sentences(self, list_field: ListField, sentences: List[str]):
         expected_tokens = set()
         for sentence in sentences:
-            sentence_tokens = tuple(self.tokenizer.tokenize(sentence.replace("\\\"", "\""))[0])
+            sentence_tokens = tuple(t.text for t in self.tokenizer.tokenize(sentence.replace("\\\"", "\"")))
             expected_tokens.add(sentence_tokens)
         actual_tokens = set()
         for field in list_field.field_list:
-            actual_tokens.add(tuple(field.tokens))
+            actual_tokens.add(tuple([t.text for t in field.tokens]))
         assert expected_tokens == actual_tokens
 
     def assert_index_field_points_to_correct_sentence(self, index_field: IndexField, sentence: str):
-        sentence_tokens = tuple(self.tokenizer.tokenize(sentence.replace("\\\"", "\""))[0])
-        tokens_list = [tuple(field.tokens) for field in index_field.sequence_field.field_list]
+        sentence_tokens = tuple(t.text for t in self.tokenizer.tokenize(sentence.replace("\\\"", "\"")))
+        tokens_list = [tuple(t.text for t in field.tokens) for field in index_field.sequence_field.field_list]
         assert index_field.sequence_index == tokens_list.index(sentence_tokens)
 
     def test_default_squad_sentence_selection_reader(self):
         reader = SquadSentenceSelectionReader()
         instances = reader.read(self.squad_file).instances
-        assert instances[0].fields["question"].tokens == self.tokenizer.tokenize(self.question0)[0]
+        tokens = [t.text for t in instances[0].fields['question'].tokens]
+        assert tokens == [t.text for t in self.tokenizer.tokenize(self.question0)]
         self.assert_list_field_contains_correct_sentences(instances[0].fields["sentences"],
                                                           self.sentences[:7])
         self.assert_index_field_points_to_correct_sentence(instances[0].fields['correct_sentence'],
                                                            self.sentences[5])
-        assert instances[1].fields["question"].tokens == self.tokenizer.tokenize(self.question1)[0]
+        tokens = [t.text for t in instances[1].fields['question'].tokens]
+        assert tokens == [t.text for t in self.tokenizer.tokenize(self.question1)]
         self.assert_list_field_contains_correct_sentences(instances[1].fields["sentences"],
                                                           self.sentences[:7])
         self.assert_index_field_points_to_correct_sentence(instances[1].fields['correct_sentence'],
