@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List
+from typing import Dict, List, Set
 
 from overrides import overrides
 
@@ -26,16 +26,22 @@ class DepLabelIndexer(TokenIndexer[int]):
     # pylint: disable=no-self-use
     def __init__(self, namespace: str = 'dep_labels') -> None:
         self.namespace = namespace
+        self._logged_errors: Set[str] = set()
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
-        if not token.dep_:
-            logger.warning("Token had no dependency label: %s", token.text)
-        counter[self.namespace][token.dep_] += 1
+        dep_label = token.dep_
+        if not dep_label:
+            if token.text not in self._logged_errors:
+                logger.warning("Token had no dependency label: %s", token.text)
+                self._logged_errors.add(token.text)
+            dep_label = 'NONE'
+        counter[self.namespace][dep_label] += 1
 
     @overrides
     def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
-        return vocabulary.get_token_index(token.dep_, self.namespace)
+        dep_label = token.dep_ or 'NONE'
+        return vocabulary.get_token_index(dep_label, self.namespace)
 
     @overrides
     def get_padding_token(self) -> int:

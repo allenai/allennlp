@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List
+from typing import Dict, List, Set
 
 from overrides import overrides
 
@@ -30,6 +30,7 @@ class PosTagIndexer(TokenIndexer[int]):
     def __init__(self, namespace: str = 'pos_tags', coarse_tags: bool = False) -> None:
         self._namespace = namespace
         self._coarse_tags = coarse_tags
+        self._logged_errors: Set[str] = set()
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -38,7 +39,10 @@ class PosTagIndexer(TokenIndexer[int]):
         else:
             tag = token.tag_
         if not tag:
-            logger.warning("Token had no POS tag: %s", token.text)
+            if token.text not in self._logged_errors:
+                logger.warning("Token had no POS tag: %s", token.text)
+                self._logged_errors.add(token.text)
+            tag = 'NONE'
         counter[self._namespace][tag] += 1
 
     @overrides
@@ -47,6 +51,8 @@ class PosTagIndexer(TokenIndexer[int]):
             tag = token.pos_
         else:
             tag = token.tag_
+        if tag is None:
+            tag = 'NONE'
         return vocabulary.get_token_index(tag, self._namespace)
 
     @overrides
