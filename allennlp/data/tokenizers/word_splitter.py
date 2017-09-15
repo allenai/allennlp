@@ -1,3 +1,4 @@
+import re
 from typing import Any, Dict, List, Tuple
 
 from overrides import overrides
@@ -95,6 +96,25 @@ class SimpleWordSplitter(WordSplitter):
         return cls()
 
 
+@WordSplitter.register('letters_digits')
+class LettersDigitsWordSplitter(WordSplitter):
+    """
+    A ``WordSplitter`` which keeps runs of (unicode) letters and runs of digits together, while
+    every other non-whitespace character becomes a separate word.
+    """
+    @overrides
+    def split_words(self, sentence: str) -> List[Token]:
+        # We use the [^\W\d_] pattern as a trick to match unicode letters
+        tokens = [Token(m.group(), idx=m.start())
+                  for m in re.finditer(r'[^\W\d_]+|\d+|\S', sentence)]
+        return tokens
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'WordSplitter':
+        params.assert_empty(cls.__name__)
+        return cls()
+
+
 @WordSplitter.register('just_spaces')
 class JustSpacesWordSplitter(WordSplitter):
     """
@@ -161,7 +181,14 @@ class SpacyWordSplitter(WordSplitter):
     def _get_spacy_model(self, language: str, pos_tags: bool, parse: bool, ner: bool) -> Any:
         options = (language, pos_tags, parse, ner)
         if options not in self._spacy_tokenizers:
-            spacy_model = spacy.load(language, parser=parse, tagger=pos_tags, entity=ner)
+            kwargs = {'vectors': False}
+            if not pos_tags:
+                kwargs['tagger'] = False
+            if not parse:
+                kwargs['parser'] = False
+            if not ner:
+                kwargs['entity'] = False
+            spacy_model = spacy.load(language, **kwargs)
             self._spacy_tokenizers[options] = spacy_model
         return self._spacy_tokenizers[options]
 
