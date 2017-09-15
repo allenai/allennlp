@@ -24,7 +24,6 @@ from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 from allennlp.modules.stacked_alternating_lstm_cuda import HighwayLSTMLayer
 from allennlp.modules.augmented_lstm import AugmentedLstm
-from allennlp.modules.sru import SRU
 
 class _Seq2SeqWrapper:
     """
@@ -73,6 +72,5 @@ Seq2SeqEncoder.register("gru")(_Seq2SeqWrapper(torch.nn.GRU))
 Seq2SeqEncoder.register("lstm")(_Seq2SeqWrapper(torch.nn.LSTM))
 Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
-Seq2SeqEncoder.register("sru")(_Seq2SeqWrapper(SRU))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
 Seq2SeqEncoder.register("alternating_lstm_cuda")(_Seq2SeqWrapper(HighwayLSTMLayer))
