@@ -107,6 +107,33 @@ class _HighwayLSTMFunction(NestedIOFunction):
 
 
 class HighwayLSTM(torch.nn.Module):
+    """
+    A stacked LSTM with LSTM layers which alternate between going forwards over
+    the sequence and going backwards. This implementation is based on the
+    description in `Deep Semantic Role Labelling - What works and what's next
+    <https://homes.cs.washington.edu/~luheng/files/acl2017_hllz.pdf>`_ .
+
+    Parameters
+    ----------
+    input_size : int, required
+        The dimension of the inputs to the LSTM.
+    hidden_size : int, required
+        The dimension of the outputs of the LSTM.
+    num_layers : int, required
+        The number of stacked LSTMs to use.
+    recurrent_dropout_prob: float, optional (default = 0.0)
+        The dropout probability to be used in a dropout scheme as stated in
+        `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
+        <https://arxiv.org/abs/1512.05287>`_ .
+
+    Returns
+    -------
+    output_accumulator : PackedSequence
+        The outputs of the interleaved LSTMs per timestep. A tensor of shape
+        (batch_size, max_timesteps, hidden_size) where for a given batch
+        element, all outputs past the sequence length for that batch are
+        zero tensors.
+    """
     def __init__(self,
                  input_size: int,
                  hidden_size: int,
@@ -163,6 +190,22 @@ class HighwayLSTM(torch.nn.Module):
 
     def forward(self, inputs: PackedSequence,
                 initial_state: torch.Tensor = None):
+        """
+        Parameters
+        ----------
+        inputs : ``PackedSequence``, required.
+            A batch first ``PackedSequence`` to run the stacked LSTM over.
+        initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
+            Currently, this is ignored.
+
+        Returns
+        -------
+        output_sequence : PackedSequence
+            The encoded sequence of shape (batch_size, sequence_length, hidden_size)
+        final_states: torch.Tensor
+            The per-layer final (state, memory) states of the LSTM, each with shape
+            (num_layers, batch_size, hidden_size).
+        """
 
         inputs, lengths = pad_packed_sequence(inputs, batch_first=self.batch_first)
         inputs = inputs.transpose(0, 1)
