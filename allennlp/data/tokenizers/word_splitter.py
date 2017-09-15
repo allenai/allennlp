@@ -181,7 +181,14 @@ class SpacyWordSplitter(WordSplitter):
     def _get_spacy_model(self, language: str, pos_tags: bool, parse: bool, ner: bool) -> Any:
         options = (language, pos_tags, parse, ner)
         if options not in self._spacy_tokenizers:
-            spacy_model = spacy.load(language, parser=parse, tagger=pos_tags, entity=ner)
+            kwargs = {'vectors': False}
+            if not pos_tags:
+                kwargs['tagger'] = False
+            if not parse:
+                kwargs['parser'] = False
+            if not ner:
+                kwargs['entity'] = False
+            spacy_model = spacy.load(language, **kwargs)
             self._spacy_tokenizers[options] = spacy_model
         return self._spacy_tokenizers[options]
 

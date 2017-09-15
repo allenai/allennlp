@@ -67,15 +67,6 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
 
     @classmethod
     def from_params(cls, params: Params) -> 'SingleIdTokenIndexer':
-        """
-        Parameters
-        ----------
-        namespace : ``str``, optional (default=``tokens``)
-            We will use this namespace in the :class:`Vocabulary` to map strings to indices.
-        lowercase_tokens : ``bool``, optional (default=``False``)
-            If ``True``, we will call ``token.lower()`` before getting an index for the token from the
-            vocabulary.
-        """
         namespace = params.pop('namespace', 'tokens')
         lowercase_tokens = params.pop('lowercase_tokens', False)
         params.assert_empty(cls.__name__)
