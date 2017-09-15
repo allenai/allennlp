@@ -11,7 +11,7 @@ class TestServe(TestCase):
     def test_add_serve(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
-        add_subparser(subparsers, trained_models=DEFAULT_MODELS, predictors=DEFAULT_PREDICTORS)
+        add_subparser(subparsers, trained_models=DEFAULT_MODELS)
 
         raw_args = ["serve",
                     "--port", "8000"]

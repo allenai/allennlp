@@ -27,8 +27,7 @@ from typing import Dict
 from allennlp.service import server_sanic
 
 def add_subparser(parser: argparse._SubParsersAction,
-                  trained_models: Dict[str, str],
-                  predictors: Dict[str, str]) -> argparse.ArgumentParser:
+                  trained_models: Dict[str, str]) -> argparse.ArgumentParser:
     # pylint: disable=protected-access
     description = '''Run the web service, which provides an HTTP API as well as a web demo.'''
     subparser = parser.add_parser(
@@ -37,12 +36,12 @@ def add_subparser(parser: argparse._SubParsersAction,
     subparser.add_argument('--port', type=int, default=8000)
     subparser.add_argument('--workers', type=int, default=1)
 
-    subparser.set_defaults(func=serve(trained_models, predictors))
+    subparser.set_defaults(func=serve(trained_models))
 
     return subparser
 
-def serve(trained_models: Dict[str, str], predictors: Dict[str, str]):
+def serve(trained_models: Dict[str, str]):
     def serve_inner(args: argparse.Namespace) -> None:
-        server_sanic.run(args.port, args.workers, trained_models, predictors)
+        server_sanic.run(args.port, args.workers, trained_models)
 
     return serve_inner

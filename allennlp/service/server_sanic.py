@@ -27,21 +27,16 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def run(port: int, workers: int,
         trained_models: Dict[str, str],
-        predictors: Dict[str, str],
         static_dir: str = None) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
 
     app = make_app(static_dir)
 
-    for model_name, archive_file in trained_models.items():
-        predictor_name = predictors.get(model_name)
-        if predictor_name is None:
-            logger.warning("no predictor found for model %s, skipping", model_name)
-        else:
-            archive = load_archive(archive_file)
-            predictor = Predictor.from_archive(archive, predictor_name)
-            app.predictors[model_name] = predictor
+    for predictor_name, archive_file in trained_models.items():
+        archive = load_archive(archive_file)
+        predictor = Predictor.from_archive(archive, predictor_name)
+        app.predictors[predictor_name] = predictor
 
     app.run(port=port, host="0.0.0.0", workers=workers)
 

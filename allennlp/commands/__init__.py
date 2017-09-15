@@ -7,7 +7,7 @@ from allennlp.commands.train import add_subparser as add_train_subparser
 from allennlp.commands.evaluate import add_subparser as add_evaluate_subparser
 from allennlp.common.checks import ensure_pythonhashseed_set
 
-# a mapping from model `type` to the location of the trained model of that type
+# a mapping from predictor `type` to the location of the trained model of that type
 DEFAULT_MODELS = {
         'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.08.31.tar.gz', # pylint: disable=line-too-long
         'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
@@ -38,7 +38,7 @@ def main(prog: str = None,
     add_train_subparser(subparsers)
     add_evaluate_subparser(subparsers)
     add_predict_subparser(subparsers, predictors=predictors)
-    add_serve_subparser(subparsers, trained_models=trained_models, predictors=predictors)
+    add_serve_subparser(subparsers, trained_models=trained_models)
 
     args = parser.parse_args()
 
