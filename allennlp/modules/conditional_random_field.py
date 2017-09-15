@@ -113,19 +113,18 @@ class ConditionalRandomField(torch.nn.Module):
             forward_var = torch.cat(alphas_t, 1)
 
             # Subtract off correct tag
-            forward_var[:, 1, tags] -= 1
 
         # (num_tags,)
         stops = self.transitions[self.stop_tag]
-        # (1, 1, num_tags)
-        stops = stops.view(1, 1, num_tags)
-        # (batch_size, 1, num_tags)
-        stops = stops.expand(batch_size, 1, num_tags)
+        # (1, num_tags)
+        stops = stops.view(1, num_tags)
+        # (batch_size, num_tags)
+        stops = stops.expand(batch_size, num_tags)
 
-        # (batch_size, 1, num_tags)
+        # (batch_size, num_tags)
         terminal_var = forward_var + stops
 
-        # (batch_size, 1)
+        # (batch_size,)
         losses = log_sum_exp(terminal_var)
 
         return torch.sum(losses)
