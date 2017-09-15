@@ -75,8 +75,9 @@ class TestPredict(TestCase):
 
     def test_can_override_predictors(self):
 
-        @Predictor.register('bidaf-override')
+        @Predictor.register('bidaf-override')  # pylint: disable=unused-variable
         class Bidaf2Predictor(BidafPredictor):
+            """same as bidaf predictor but with an extra field"""
             def predict_json(self, inputs: JsonDict) -> JsonDict:
                 result = super().predict_json(inputs)
                 result["overridden"] = True
@@ -111,4 +112,3 @@ class TestPredict(TestCase):
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
                                           "span_start_probs", "span_end_probs", "best_span",
                                           "best_span_str", "overridden"}
-
