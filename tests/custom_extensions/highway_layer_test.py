@@ -26,32 +26,29 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         args = self.get_models_and_inputs(83, 103, 311, 8, 101, 0.0)
         self.forward_and_backward_outputs_match(*args)
 
-    @staticmethod
-    def forward_and_backward_outputs_match(baseline_model, kernel_model,
+    def forward_and_backward_outputs_match(self, baseline_model, kernel_model,
                                            baseline_input, kernel_input, dropout):
 
         with Timer('Baseline'):
             baseline_output = baseline_model(baseline_input, dropout_weights=dropout)
             baseline_output, _ = pad_packed_sequence(baseline_output, batch_first=True)
-            print("baseline output: ", baseline_output)
 
         with Timer("Mine"):
-            baseline_output, _ = baseline_input(baseline_input, dropout_weights=dropout)
-            baseline_output, _ = pad_packed_sequence(baseline_output, batch_first=True)
-            print("CUDA output: ", baseline_output)
+            kernel_output, _ = kernel_model(kernel_input, dropout_weights=dropout)
+            kernel_output, _ = pad_packed_sequence(kernel_output, batch_first=True)
 
-        diff = torch.max(baseline_output.data - baseline_output.data)
+        diff = torch.max(baseline_output.data - kernel_output.data)
         assert diff < 1e-4, "Output does not match: " + str(diff)
 
         # Backprop some random error.
-        back_err = torch.randn(baseline_input.size()).cuda()
+        back_err = torch.randn(baseline_output.size()).cuda()
         baseline_model.zero_grad()
         baseline_output.backward(back_err)
 
         kernel_model.zero_grad()
-        baseline_output.backward(back_err)
-
-        input_grad_diff = torch.max(baseline_input.grad.data - kernel_input.grad.data)
+        kernel_output.backward(back_err)
+        
+        input_grad_diff = torch.max(self.baseline_input.grad.data - self.mine_input.grad.data)
         assert input_grad_diff < 1e-4, "Input grad does not match: " + str(input_grad_diff)
 
         weight_ind = 0
@@ -109,12 +106,12 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
 
         input = torch.randn(batch_size, timesteps, input_size).cuda()
         input2 = input.clone()
-        baseline_input = Variable(input, requires_grad=True)
-        mine_input = Variable(input2, requires_grad=True)
+        self.baseline_input = Variable(input, requires_grad=True)
+        self.mine_input = Variable(input2, requires_grad=True)
         lengths = [timesteps - (i / 2) for i in range(batch_size)]
         lengths = lengths[:batch_size]
-        baseline_input = pack_padded_sequence(baseline_input, lengths, batch_first=True)
-        kernel_version_input = pack_padded_sequence(mine_input, lengths, batch_first=True)
+        baseline_input = pack_padded_sequence(self.baseline_input, lengths, batch_first=True)
+        kernel_version_input = pack_padded_sequence(self.mine_input, lengths, batch_first=True)
         if dropout_prob > 0:
             dropout = Variable(torch.Tensor(num_layers,
                                             batch_size,

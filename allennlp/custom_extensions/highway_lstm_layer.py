@@ -3,7 +3,7 @@ import numpy
 from torch.autograd import Function, NestedIOFunction, Variable
 from torch.nn import Parameter
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_padded_sequence
-from _ext import highway_lstm_layer
+from ._ext import highway_lstm_layer
 
 class HighwayLSTMFunction(NestedIOFunction):
     def __init__(self, input_size, hidden_size, num_layers=1,
