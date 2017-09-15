@@ -9,8 +9,6 @@ ENV PYTHONHASHSEED 2157
 ENV LD_LIBRARY_PATH /usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
 
 WORKDIR /stage
-EXPOSE 8000
-CMD ["/bin/bash"]
 
 # Install base packages.
 RUN apt-get update --fix-missing && apt-get install -y \
@@ -61,3 +59,8 @@ COPY tutorials/ tutorials/
 
 # Run tests to verify the Docker build
 RUN PYTHONDONTWRITEBYTECODE=1 pytest
+
+LABEL maintainer="allennlp-contact@allenai.org"
+
+EXPOSE 8000
+CMD ["/bin/bash"]
