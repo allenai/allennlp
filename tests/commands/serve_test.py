@@ -2,7 +2,7 @@
 import argparse
 from unittest import TestCase
 
-from allennlp.commands import DEFAULT_MODELS, DEFAULT_PREDICTORS
+from allennlp.commands import DEFAULT_MODELS
 from allennlp.commands.serve import add_subparser
 
 
