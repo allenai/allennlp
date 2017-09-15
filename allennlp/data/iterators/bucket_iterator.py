@@ -76,7 +76,7 @@ class BucketIterator(BasicIterator):
             random.shuffle(grouped_instances)
         else:
             logger.warning("shuffle parameter is set to False,"
-                           " while these iterators by definition change the order of your data.")
+                           " while bucket iterators by definition change the order of your data.")
         if self._biggest_batch_first:
             grouped_instances.insert(0, penultimate_batch)
             grouped_instances.insert(0, last_batch)

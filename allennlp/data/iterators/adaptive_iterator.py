@@ -115,7 +115,7 @@ class AdaptiveIterator(BucketIterator):
             random.shuffle(grouped_instances)
         else:
             logger.warning("shuffle parameter is set to False,"
-                           " while these iterators by definition change the order of your data.")
+                           " while adaptive iterators by definition change the order of your data.")
         return grouped_instances
 
     def _adaptive_grouping(self, dataset: Dataset):
