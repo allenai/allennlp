@@ -25,15 +25,24 @@ CACHE_SIZE = os.environ.get("SANIC_CACHE_SIZE") or 128
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-def run(port: int, workers: int, config: Dict[str, str], static_dir: str = None) -> None:
+def run(port: int, workers: int,
+        trained_models: Dict[str, str],
+        predictors: Dict[str, str],
+        static_dir: str = None) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
 
     app = make_app(static_dir)
-    app.predictors = {
-            name: Predictor.from_archive(load_archive(archive_file))
-            for name, archive_file in config.items()
-    }
+
+    for model_name, archive_file in trained_models.items():
+        predictor_name = predictors.get(model_name)
+        if predictor_name is None:
+            logger.warning("no predictor found for model %s, skipping", model_name)
+        else:
+            archive = load_archive(archive_file)
+            predictor = Predictor.from_archive(archive, predictor_name)
+            app.predictors[model_name] = predictor
+
     app.run(port=port, host="0.0.0.0", workers=workers)
 
 def make_app(build_dir: str = None) -> Sanic:

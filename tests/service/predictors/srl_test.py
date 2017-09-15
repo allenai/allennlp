@@ -12,7 +12,7 @@ class TestSrlPredictor(TestCase):
         }
 
         archive = load_archive('tests/fixtures/srl/serialization/model.tar.gz')
-        predictor = Predictor.from_archive(archive)
+        predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
 
         result = predictor.predict_json(inputs)
 

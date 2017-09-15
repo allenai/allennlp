@@ -6,7 +6,7 @@ import sys
 import tempfile
 from unittest import TestCase
 
-from allennlp.commands import main
+from allennlp.commands import main, DEFAULT_PREDICTORS
 from allennlp.commands.predict import add_subparser, predict
 
 
@@ -15,7 +15,7 @@ class TestPredict(TestCase):
     def test_add_predict_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
-        add_subparser(subparsers)
+        add_subparser(subparsers, DEFAULT_PREDICTORS)
 
         raw_args = ["predict",          # command
                     "/path/to/archive", # archive
@@ -25,7 +25,7 @@ class TestPredict(TestCase):
 
         args = parser.parse_args(raw_args)
 
-        assert args.func == predict
+        assert args.func.__name__ == 'predict_inner'
         assert args.archive_file == "/path/to/archive"
         assert args.silent
 
