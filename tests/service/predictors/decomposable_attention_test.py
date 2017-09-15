@@ -13,7 +13,7 @@ class TestDecomposableAttentionPredictor(TestCase):
         }
 
         archive = load_archive('tests/fixtures/decomposable_attention/serialization/model.tar.gz')
-        predictor = Predictor.from_archive(archive)
+        predictor = Predictor.from_archive(archive, 'textual-entailment')
         result = predictor.predict_json(inputs)
 
         assert "label_probs" in result
