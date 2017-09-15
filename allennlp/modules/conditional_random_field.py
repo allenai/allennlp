@@ -10,16 +10,16 @@ from allennlp.common.checks import ConfigurationError
 def log_sum_exp(x: torch.autograd.Variable) -> torch.autograd.Variable:
     """
     numerically stable log(sum(exp(x))) over only the last dimension.
-    assumes x is 3-dimensional
+    assumes x is 2-dimensional
     """
-    batch_size, sequence_length, num_tags = x.shape
+    batch_size, num_tags = x.shape
 
     # (batch_size, sequence_length)
     maxes, _ = torch.max(x, -1)
-    broadcast = maxes.view(batch_size, sequence_length, 1).expand(batch_size, sequence_length, num_tags)
+    broadcast = maxes.view(batch_size, 1).expand(batch_size, num_tags)
     exps = torch.exp(x - broadcast)
 
-    # (batch_size, sequence_length)
+    # (batch_size,)
     return torch.log(torch.sum(exps, -1))
 
 
@@ -88,27 +88,29 @@ class ConditionalRandomField(torch.nn.Module):
         for i in range(sequence_length):
             alphas_t = []
 
+            # TODO(joelgrus): vectorize this once it works
             for next_tag in range(num_tags):
                 # (batch_size,)
                 emit_score = inputs[:, i, next_tag]
-                # (batch_size, 1, 1)
-                emit_score = emit_score.view(batch_size, 1, 1)
-                # (batch_size, 1, num_tags)
-                emit_score = emit_score.expand(batch_size, 1, num_tags)
+                # (batch_size, 1)
+                emit_score = emit_score.view(batch_size, 1)
+                # (batch_size, num_tags)
+                emit_score = emit_score.expand(batch_size, num_tags)
 
                 # (num_tags,) probability of transitioning from each to next_tag
                 trans_score = self.transitions[next_tag]
-                # (1, 1, num_tags)
-                trans_score = trans_score.view(1, 1, num_tags)
-                # (batch_size, 1, num_tags)
-                trans_score = trans_score.expand(batch_size, 1, num_tags)
+                # (1, num_tags)
+                trans_score = trans_score.view(1, num_tags)
+                # (batch_size, num_tags)
+                trans_score = trans_score.expand(batch_size, num_tags)
 
-                # (batch_size, 1, num_tags)
+                # (batch_size, num_tags)
                 next_tag_var = forward_var + trans_score + emit_score
-                alphas_t.append(log_sum_exp(next_tag_var))
+                alphas_t.append(log_sum_exp(next_tag_var).view(batch_size, 1))
 
             # At this point alphas_t is a list of num_tags (batch_size, 1) tensors
-            forward_var = torch.cat(alphas_t, 1).view(batch_size, 1, num_tags)
+            # Concatenate to get (batch_size, num_tags)
+            forward_var = torch.cat(alphas_t, 1)
 
             # Subtract off correct tag
             forward_var[:, 1, tags] -= 1
