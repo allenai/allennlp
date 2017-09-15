@@ -25,6 +25,18 @@ DEFAULT_PREDICTORS = {
 def main(prog: str = None,
          model_overrides: Dict[str, str] = {},
          predictor_overrides: Dict[str, str] = {}) -> None:
+    """
+    The :mod:``allennlp.run`` command only knows about the registered classes
+    in the ``allennlp`` codebase. In particular, once you start creating your own
+    ``Model``s and so forth, it won't work for them. However, ``allennlp.run`` is
+    simply a wrapper around this function. To use the command line interface with your
+    own custom classes, just create your own script that imports all of the classes you want
+    and then calls ``main()``.
+
+    The default models for ``serve`` and the default predictors for ``predict`` are
+    defined above. If you'd like to add more or use different ones, the
+    ``model_overrides`` and ``predictor_overrides`` arguments will take precedence over the defaults.
+    """
     # pylint: disable=dangerous-default-value
     ensure_pythonhashseed_set()
 
