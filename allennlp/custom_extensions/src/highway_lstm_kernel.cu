@@ -53,7 +53,6 @@ __global__ void elementWise_bp(int hiddenSize, int miniBatch, int numCovered,
                                float *h_out,
                                float *gates_out,
                                float *dropout_in,
-                               float dropout_p,
                                // Outputs
                                float *c_in_grad,
                                float *i_gates_grad,
@@ -68,11 +67,7 @@ __global__ void elementWise_bp(int hiddenSize, int miniBatch, int numCovered,
    int i_gateIndex = (index % hiddenSize) + 6 * batch * hiddenSize;   
 
    float d_h = out_grad[index] + h_out_grad[index];
-   if (training==1) {
-       d_h = d_h * dropout_in[index];
-   } else {
-       d_h = d_h * (1. - dropout_p);
-   }
+   d_h = d_h * dropout_in[index];
 
    float in_gate = gates_out[i_gateIndex];
    float forget_gate = gates_out[i_gateIndex + 1 * hiddenSize];
@@ -117,7 +112,6 @@ __global__ void elementWise_fp(int hiddenSize, int miniBatch, int numCovered,
                                float *linearGates,
                                float *h_out,
                                float *dropout_in,
-                               float dropout_p,
                                float *c_in,
                                float *c_out,
                                int training) {
@@ -160,11 +154,7 @@ __global__ void elementWise_fp(int hiddenSize, int miniBatch, int numCovered,
 
    val = out_gate * tanhf(val);                                   
    val = val * r_gate + (1. - r_gate) * lin_gate;
-   if (training==1) {
-       val = val * dropout_in[index];
-   } else {
-       val = val * (1. - dropout_p);
-   }
+   val = val * dropout_in[index];
 
    h_out[index] = val;
 }
@@ -173,8 +163,8 @@ void highway_lstm_backward_ongpu(int inputSize, int hiddenSize, int miniBatch,
         int numLayers, int seqLength, float *out_grad, int *lengths,
         float *h_data_grad, float * c_data_grad, float *x, float *h_data,
         float *c_data, float *T,
-        float *gates_out, float *dropout_in, float dropout_p, float *h_gates_grad,
-        float *i_gates_grad, float * ones, float *h_out_grad, float *x_grad, float *T_grad, float *bias_grad,
+        float *gates_out, float *dropout_in, float *h_gates_grad,
+        float *i_gates_grad, float *h_out_grad, float *x_grad, float *T_grad, float *bias_grad,
         int isTraining, int do_weight_grad, cudaStream_t stream, cublasHandle_t handle) {
 
 
@@ -194,6 +184,14 @@ void highway_lstm_backward_ongpu(int inputSize, int hiddenSize, int miniBatch,
 
     float one = 1.f;
     float zero = 0.f;
+
+    float *ones_host = new float[miniBatch];
+    for (int i=0; i < miniBatch; i++) {
+        ones_host[i] = 1.f;
+    }
+    float *ones;
+    cudaErrCheck(cudaMalloc((void**)&ones, miniBatch * sizeof(float)));
+    cudaErrCheck(cudaMemcpy(ones, ones_host, miniBatch * sizeof(float), cudaMemcpyHostToDevice));
 
     for (int layer = numLayers-1; layer >= 0; layer--) {
         int direction;
@@ -255,7 +253,6 @@ void highway_lstm_backward_ongpu(int inputSize, int hiddenSize, int miniBatch,
                  h_data + (t+1) * numElements + layer * (seqLength + 1) * numElements,
                  gates_out + t * 6 * numElements + layer * seqLength * 6 * numElements,
                  dropout_in + layer * numElements,
-                 dropout_p,
                  c_data_grad + (t+1) * numElements + layer * (seqLength + 1) * numElements,
                  i_gates_grad,
                  h_gates_grad,
@@ -371,13 +368,15 @@ void highway_lstm_backward_ongpu(int inputSize, int hiddenSize, int miniBatch,
    cudaErrCheck(cudaStreamDestroy(stream_wh));
    cudaErrCheck(cudaStreamDestroy(stream_wb));
 
+   free(ones_host);
+
    cudaErrCheck(cudaDeviceSynchronize());
 }
 
 void highway_lstm_forward_ongpu(int inputSize, int hiddenSize, int miniBatch, 
         int numLayers, int seqLength, float *x, int *lengths, float *h_data, 
         float *c_data, float *tmp_i, float *tmp_h, float *T, float *bias,
-        float *dropout, float dropout_p, float *gates, int is_training, cudaStream_t stream, cublasHandle_t handle) {
+        float *dropout, float *gates, int is_training, cudaStream_t stream, cublasHandle_t handle) {
 
     const int numElements = hiddenSize * miniBatch;
 
@@ -479,7 +478,6 @@ void highway_lstm_forward_ongpu(int inputSize, int hiddenSize, int miniBatch,
                  is_training ? gates + 6 * (t * numElements + layer * seqLength * numElements) : NULL,
                  h_data + (t + 1) * numElements + layer * (seqLength + 1) * numElements,
                  dropout + layer * numElements,
-                 dropout_p,
                  c_data + prevIndex * numElements + layer * (seqLength + 1) * numElements,
                  c_data + (t + 1) * numElements + layer * (seqLength + 1) * numElements,
                  is_training);

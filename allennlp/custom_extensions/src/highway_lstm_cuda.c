@@ -14,7 +14,6 @@ int highway_lstm_forward_cuda(int inputSize, int hiddenSize, int miniBatch,
         THCudaTensor *T,
         THCudaTensor *bias,
         THCudaTensor *dropout,
-        float dropout_p,
         THCudaTensor *gates,
         int isTraining) {
 
@@ -39,7 +38,7 @@ int highway_lstm_forward_cuda(int inputSize, int hiddenSize, int miniBatch,
 
     highway_lstm_forward_ongpu(inputSize, hiddenSize, miniBatch, numLayers, 
             seqLength, x_ptr, lengths_ptr, h_data_ptr, c_data_ptr, tmp_i_ptr,
-            tmp_h_ptr, T_ptr, bias_ptr, dropout_ptr, dropout_p, gates_ptr,
+            tmp_h_ptr, T_ptr, bias_ptr, dropout_ptr, gates_ptr,
             isTraining, stream, handle);
 
     return 1;
@@ -57,10 +56,8 @@ int highway_lstm_backward_cuda(int inputSize, int hiddenSize, int miniBatch, int
         THCudaTensor *T,
         THCudaTensor *gates_out,
         THCudaTensor *dropout_in,
-        float dropout_p,
         THCudaTensor *h_gates_grad,
         THCudaTensor *i_gates_grad,
-        THCudaTensor *ones,
         THCudaTensor *h_out_grad,
         THCudaTensor *x_grad,
         THCudaTensor *T_grad,
@@ -80,7 +77,6 @@ int highway_lstm_backward_cuda(int inputSize, int hiddenSize, int miniBatch, int
     float * dropout_in_ptr = THCudaTensor_data(state, dropout_in);
     float * h_gates_grad_ptr = THCudaTensor_data(state, h_gates_grad);
     float * i_gates_grad_ptr = THCudaTensor_data(state, i_gates_grad);
-    float * ones_ptr = THCudaTensor_data(state, ones);
     float * h_out_grad_ptr = THCudaTensor_data(state, h_out_grad);
     float * x_grad_ptr = THCudaTensor_data(state, x_grad);
     float * T_grad_ptr = THCudaTensor_data(state, T_grad);
@@ -92,7 +88,7 @@ int highway_lstm_backward_cuda(int inputSize, int hiddenSize, int miniBatch, int
     highway_lstm_backward_ongpu(inputSize, hiddenSize, miniBatch, numLayers,
             seqLength, out_grad_ptr, lengths_ptr, h_data_grad_ptr, c_data_grad_ptr,
             x_ptr, h_data_ptr, c_data_ptr, T_ptr, gates_out_ptr, dropout_in_ptr,
-            dropout_p, h_gates_grad_ptr, i_gates_grad_ptr, ones_ptr, h_out_grad_ptr,
+            h_gates_grad_ptr, i_gates_grad_ptr, h_out_grad_ptr,
             x_grad_ptr, T_grad_ptr, bias_grad_ptr, isTraining, do_weight_grad,
             stream, handle);
 
