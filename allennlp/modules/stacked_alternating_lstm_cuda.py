@@ -91,12 +91,13 @@ class _HighwayLSTMFunction(NestedIOFunction):
         tmp_i_gates_grad = input.new().resize_(batch_size, 6 * self.hidden_size).zero_()
         tmp_h_gates_grad = input.new().resize_(batch_size, 5 * self.hidden_size).zero_()
 
+        is_training = 1 if self.train else 0
         highway_lstm_layer.highway_lstm_backward_cuda(
-            input_size, self.hidden_size, batch_size, self.num_layers,
-            sequence_length, grad_output, lengths, grad_hx, grad_cx, input,
-            hy, cy, weight, gates, dropout,
-            tmp_h_gates_grad, tmp_i_gates_grad, grad_hy, grad_input,
-            grad_weight, grad_bias, 1 if self.train else 0, 1 if self.needs_input_grad[1] else 0)
+            input_size, self.hidden_size, batch_size,
+            self.num_layers, sequence_length, grad_output,
+            lengths, grad_hx, grad_cx, input, hy, cy, weight,
+            gates, dropout, tmp_h_gates_grad, tmp_i_gates_grad,
+            grad_hy, grad_input, grad_weight, grad_bias, is_training, 1 if self.needs_input_grad[1] else 0)
 
         return grad_input, grad_weight, grad_bias, grad_hx, grad_cx, grad_dropout, grad_lengths, grad_gates
 
@@ -172,11 +173,11 @@ class HighwayLSTM(torch.nn.Module):
         for i in range(self.num_layers):
             insize = self.input_size if i == 0 else self.hidden_size
             i_weights = block_orthonormal_initialization(insize, self.hidden_size, 6)
-            self.weight.data[weight_index:weight_index + i_weights.nelement()].copy_(i_weights)
+            self.weight.data[weight_index:weight_index + i_weights.nelement()].view_as(i_weights).copy_(i_weights)
             weight_index += i_weights.nelement()
 
             h_weights = block_orthonormal_initialization(self.hidden_size, self.hidden_size, 5)
-            self.weight.data[weight_index:weight_index + h_weights.nelement()].copy_(h_weights)
+            self.weight.data[weight_index:weight_index + h_weights.nelement()].view_as(h_weights).copy_(h_weights)
             weight_index += h_weights.nelement()
 
             # forget bias
@@ -201,8 +202,7 @@ class HighwayLSTM(torch.nn.Module):
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers, batch_size, hidden_size).
         """
-
-        inputs, lengths = pad_packed_sequence(inputs, batch_first=self.batch_first)
+        inputs, lengths = pad_packed_sequence(inputs, batch_first=True)
 
         # Kernel takes sequence length first tensors.
         inputs = inputs.transpose(0, 1)
@@ -214,7 +214,6 @@ class HighwayLSTM(torch.nn.Module):
 
         dropout_weights = inputs.data.new().resize_(self.num_layers, batch_size, self.hidden_size).fill_(1.0)
         if self.training:
-            dropout_weights.resize_(self.num_layers, batch_size, self.hidden_size)
             dropout_weights.bernoulli_(1 - self.recurrent_dropout_prob).div_((1 - self.recurrent_dropout_prob))
 
         dropout_weights = Variable(dropout_weights, requires_grad=False)
@@ -233,6 +232,6 @@ class HighwayLSTM(torch.nn.Module):
                                         memory_accumulator, dropout_weights, lengths_var, gates)
 
         output = output.transpose(0, 1)
-        output = pack_padded_sequence(output, lengths, batch_first=self.batch_first)
+        output = pack_padded_sequence(output, lengths, batch_first=True)
         return output, hidden
 

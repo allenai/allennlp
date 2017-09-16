@@ -3,9 +3,8 @@ from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.custom_extensions.baseline.lstm import AlternatingLSTM
-from allennlp.custom_extensions.highway_lstm_layer import HighwayLSTMLayer
-from allennlp.custom_extensions.baseline.measurements import Timer
+from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
+from allennlp.modules.stacked_alternating_lstm_cuda import HighwayLSTM
 
 
 class TestCustomHighwayLSTM(AllenNlpTestCase):
@@ -20,60 +19,58 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
 
     def test_validation_forward_pass_is_deterministic_in_model_with_dropout(self):
 
-        _, model, _, model_input, dropout_weight = self.get_models_and_inputs(5, 3, 11, 2, 5, 0.5)
-
+        _, model, _, model_input, _ = self.get_models_and_inputs(5, 3, 11, 2, 5, dropout_prob=0.5)
         model.eval()
-        output = model(model_input, dropout_weight)
-        output, _ = pad_packed_sequence(model_input, batch_first=True)
+        output = model(model_input)
+        output, _ = pad_packed_sequence(output, batch_first=True)
 
         for i in range(3):
-            output_new = model(model_input, dropout_weight)
-            output_new, _ = pad_packed_sequence(model_input, batch_first=True)
+            output_new = model(model_input)
+            output_new, _ = pad_packed_sequence(output_new, batch_first=True)
             diff = torch.max(output.data - output_new.data)
             assert diff < 1e-4, "forward pass is not deterministic in validation mode."
             output = output_new
 
     def forward_and_backward_outputs_match(self, baseline_model, kernel_model,
-                                           baseline_input, kernel_input, dropout):
+                                           baseline_input, kernel_input, lengths):
 
-        with Timer('Baseline'):
-            baseline_output = baseline_model(baseline_input, dropout_weights=dropout)
-            baseline_output, _ = pad_packed_sequence(baseline_output, batch_first=True)
+        packed_baseline_input = pack_padded_sequence(baseline_input, lengths, batch_first=True)
+        baseline_output = baseline_model(packed_baseline_input)
+        baseline_output, _ = pad_packed_sequence(baseline_output, batch_first=True)
 
-        with Timer("Mine"):
-            kernel_output, _ = kernel_model(kernel_input, dropout_weights=dropout)
-            kernel_output, _ = pad_packed_sequence(kernel_output, batch_first=True)
+        packed_kernel_input = pack_padded_sequence(kernel_input, lengths, batch_first=True)
+        kernel_output, _ = kernel_model(packed_kernel_input)
+        kernel_output, _ = pad_packed_sequence(kernel_output, batch_first=True)
 
         diff = torch.max(baseline_output.data - kernel_output.data)
         assert diff < 1e-4, "Output does not match: " + str(diff)
 
         # Backprop some random error.
-        back_err = torch.randn(baseline_output.size()).cuda()
+        random_error = torch.randn(baseline_output.size()).cuda()
         baseline_model.zero_grad()
-        baseline_output.backward(back_err)
+        baseline_output.backward(random_error)
 
         kernel_model.zero_grad()
-        kernel_output.backward(back_err)
+        kernel_output.backward(random_error)
         
         input_grad_diff = torch.max(self.baseline_input.grad.data - self.mine_input.grad.data)
         assert input_grad_diff < 1e-4, "Input grad does not match: " + str(input_grad_diff)
 
-        weight_ind = 0
-        bias_ind = 0
+        weight_index = 0
+        bias_index = 0
         for layer in range(baseline_model.num_layers):
-            print("TEST %d" % (layer))
-            x_grad = getattr(baseline_model, 'layer_%d' % layer).xlin.weight.grad
-            h_grad = getattr(baseline_model, 'layer_%d' % layer).hlin.weight.grad
-            bias = getattr(baseline_model, 'layer_%d' % layer).hlin.bias.grad
+            x_grad = getattr(baseline_model, 'layer_%d' % layer).input_linearity.weight.grad
+            h_grad = getattr(baseline_model, 'layer_%d' % layer).state_linearity.weight.grad
+            bias = getattr(baseline_model, 'layer_%d' % layer).state_linearity.bias.grad
 
-            mine_x_grad = kernel_model.weight.grad[weight_ind:weight_ind+x_grad.nelement()].view(x_grad.size(1), x_grad.size(0)).t()
-            weight_ind += x_grad.nelement()
+            mine_x_grad = kernel_model.weight.grad[weight_index: weight_index+x_grad.nelement()].view(x_grad.size(1), x_grad.size(0)).t()
+            weight_index += x_grad.nelement()
 
-            mine_h_grad = kernel_model.weight.grad[weight_ind:weight_ind+h_grad.nelement()].view(h_grad.size(1), h_grad.size(0)).t()
-            weight_ind += h_grad.nelement()
+            mine_h_grad = kernel_model.weight.grad[weight_index: weight_index + h_grad.nelement()].view(h_grad.size(1), h_grad.size(0)).t()
+            weight_index += h_grad.nelement()
 
-            mine_bias = kernel_model.bias.grad[bias_ind:bias_ind+bias.nelement()]
-            bias_ind += bias.nelement()
+            mine_bias = kernel_model.bias.grad[bias_index:bias_index+bias.nelement()]
+            bias_index += bias.nelement()
 
             x_diff = torch.max(mine_x_grad.data - x_grad.data)
             assert x_diff < 1e-4, "Layer %d x_weight does not match: " % layer + str(x_diff)
@@ -84,46 +81,36 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             bias_diff = torch.max(mine_bias.data - bias.data)
             assert bias_diff < 1e-4, "Layer %d bias does not match: " % layer + str(bias_diff)
 
-    def get_models_and_inputs(self, batch_size, input_size,
-                              output_size, num_layers, timesteps, dropout_prob):
+    @staticmethod
+    def get_models_and_inputs(batch_size, input_size, output_size, num_layers, timesteps, dropout_prob):
 
-        baseline = AlternatingLSTM(input_size,
-                                   output_size,
-                                   num_layers,
-                                   recurrent_dropout_prob=dropout_prob).cuda()
-        kernel_version = HighwayLSTMLayer(input_size,
-                                          output_size,
-                                          num_layers=num_layers,
-                                          recurrent_dropout_prob=dropout_prob).cuda()
-        curr_weight_ind = 0
-        curr_bias_ind = 0
+        baseline = StackedAlternatingLstm(input_size, output_size, num_layers, dropout_prob).cuda()
+        kernel_version = HighwayLSTM(input_size, output_size, num_layers, dropout_prob).cuda()
+
+        # Copy weights from non-cuda version into cuda version,
+        # so we are starting from exactly the same place.
+        weight_index = 0
+        bias_index = 0
         print("CUDA lstm - weight elements: ", kernel_version.weight.nelement())
         for layer in range(num_layers):
-            print("Layer: ", layer, "Weight Index: ", curr_weight_ind)
-            print("bias index: ", curr_bias_ind)
-            x_weight = getattr(baseline, 'layer_%d' % layer).xlin.weight
-            h_weight = getattr(baseline, 'layer_%d' % layer).hlin.weight
-            bias = getattr(baseline, 'layer_%d' % layer).hlin.bias
-            kernel_version.weight.data[curr_weight_ind:curr_weight_ind+x_weight.nelement()].copy_(x_weight.data.t())
-            curr_weight_ind += x_weight.nelement()
-            kernel_version.weight.data[curr_weight_ind:curr_weight_ind+h_weight.nelement()].copy_(h_weight.data.t())
-            curr_weight_ind += h_weight.nelement()
-            kernel_version.bias.data[curr_bias_ind:curr_bias_ind+bias.nelement()].copy_(bias.data)
-            curr_bias_ind += bias.nelement()
+
+            input_weight = getattr(baseline, 'layer_%d' % layer).input_linearity.weight
+            state_weight = getattr(baseline, 'layer_%d' % layer).state_linearity.weight
+            bias = getattr(baseline, 'layer_%d' % layer).state_linearity.bias
+            kernel_version.weight.data[weight_index:weight_index+input_weight.nelement()].copy_(input_weight.data.t())
+            weight_index += input_weight.nelement()
+            kernel_version.weight.data[weight_index:weight_index+state_weight.nelement()].copy_(state_weight.data.t())
+            weight_index += state_weight.nelement()
+            kernel_version.bias.data[bias_index:bias_index+bias.nelement()].copy_(bias.data)
+            bias_index += bias.nelement()
 
         input = torch.randn(batch_size, timesteps, input_size).cuda()
+        # Clone variable so different models are
+        # completely separate in the graph.
         input2 = input.clone()
-        self.baseline_input = Variable(input, requires_grad=True)
-        self.mine_input = Variable(input2, requires_grad=True)
+        baseline_input = Variable(input, requires_grad=True)
+        kernel_version_input = Variable(input2, requires_grad=True)
         lengths = [timesteps - (i / 2) for i in range(batch_size)]
         lengths = lengths[:batch_size]
-        baseline_input = pack_padded_sequence(self.baseline_input, lengths, batch_first=True)
-        kernel_version_input = pack_padded_sequence(self.mine_input, lengths, batch_first=True)
-        if dropout_prob > 0:
-            dropout = Variable(torch.Tensor(num_layers,
-                                            batch_size,
-                                            output_size).cuda().bernoulli_(dropout_prob))
-        else:
-            dropout = None
 
-        return baseline, kernel_version, baseline_input, kernel_version_input, dropout
+        return baseline, kernel_version, baseline_input, kernel_version_input, lengths
