@@ -14,19 +14,11 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         args = self.get_models_and_inputs(5, 3, 11, 2, 5, 0.0)
         self.forward_and_backward_outputs_match(*args)
 
-    def test_small_model_with_dropout(self):
-        args = self.get_models_and_inputs(5, 3, 11, 2, 5, 0.5)
-        self.forward_and_backward_outputs_match(*args)
-
     def test_large_model(self):
         args = self.get_models_and_inputs(83, 103, 311, 8, 101, 0.0)
         self.forward_and_backward_outputs_match(*args)
 
-    def test_large_model_with_dropout(self):
-        args = self.get_models_and_inputs(83, 103, 311, 8, 101, 0.0)
-        self.forward_and_backward_outputs_match(*args)
-
-    def test_validation_forward_pass_is_deterministic(self):
+    def test_validation_forward_pass_is_deterministic_in_model_with_dropout(self):
 
         _, model, _, model_input, dropout_weight = self.get_models_and_inputs(5, 3, 11, 2, 5, 0.5)
 
@@ -34,7 +26,7 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         output = model(model_input, dropout_weight)
         output, _ = pad_packed_sequence(model_input, batch_first=True)
 
-        for i in range(10):
+        for i in range(3):
             output_new = model(model_input, dropout_weight)
             output_new, _ = pad_packed_sequence(model_input, batch_first=True)
             diff = torch.max(output.data - output_new.data)
