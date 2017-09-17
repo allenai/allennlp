@@ -146,14 +146,14 @@ class HighwayLSTM(torch.nn.Module):
 
             # Create a tensor of the right size and initialize it.
             init_tensor = self.weight.data.new(input_size, self.hidden_size * 6).zero_()
-            block_orthogonal(init_tensor, [self.input_size, self.hidden_size])
+            block_orthogonal(init_tensor, [input_size, self.hidden_size])
             # Copy it into the flat weight.
             self.weight.data[weight_index: weight_index + init_tensor.nelement()].view_as(init_tensor).copy_(init_tensor)
             weight_index += init_tensor.nelement()
 
             # Same for the recurrent connection weight.
             init_tensor = self.weight.data.new(input_size, self.hidden_size * 5).zero_()
-            block_orthogonal(init_tensor, [self.input_size, self.hidden_size])
+            block_orthogonal(init_tensor, [input_size, self.hidden_size])
             self.weight.data[weight_index: weight_index + init_tensor.nelement()].view_as(init_tensor).copy_(init_tensor)
             weight_index += init_tensor.nelement()
 
