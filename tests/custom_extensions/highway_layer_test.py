@@ -98,11 +98,14 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             input_weight = getattr(baseline, 'layer_%d' % layer).input_linearity.weight
             state_weight = getattr(baseline, 'layer_%d' % layer).state_linearity.weight
             bias = getattr(baseline, 'layer_%d' % layer).state_linearity.bias
+
             kernel_version.weight.data[weight_index:weight_index+input_weight.nelement()].copy_(input_weight.data.t())
             weight_index += input_weight.nelement()
+
             kernel_version.weight.data[weight_index:weight_index+state_weight.nelement()].copy_(state_weight.data.t())
             weight_index += state_weight.nelement()
-            kernel_version.bias.data[bias_index:bias_index+bias.nelement()].copy_(bias.data)
+
+            kernel_version.bias.data[bias_index:bias_index + bias.nelement()].copy_(bias.data)
             bias_index += bias.nelement()
 
         input = torch.randn(batch_size, timesteps, input_size).cuda()
@@ -111,7 +114,7 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         input2 = input.clone()
         baseline_input = Variable(input, requires_grad=True)
         kernel_version_input = Variable(input2, requires_grad=True)
-        lengths = [timesteps - (i / 2) for i in range(batch_size)]
+        lengths = [timesteps - int((i / 2)) for i in range(batch_size)]
         lengths = lengths[:batch_size]
 
         return baseline, kernel_version, baseline_input, kernel_version_input, lengths
