@@ -36,7 +36,7 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
                                            baseline_input, kernel_input, lengths):
 
         packed_baseline_input = pack_padded_sequence(baseline_input, lengths, batch_first=True)
-        baseline_output = baseline_model(packed_baseline_input)
+        baseline_output, _ = baseline_model(packed_baseline_input)
         baseline_output, _ = pad_packed_sequence(baseline_output, batch_first=True)
 
         packed_kernel_input = pack_padded_sequence(kernel_input, lengths, batch_first=True)
