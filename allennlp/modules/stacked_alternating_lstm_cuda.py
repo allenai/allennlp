@@ -1,34 +1,10 @@
 import torch
-import numpy
 from torch.autograd import NestedIOFunction, Variable
 from torch.nn import Parameter
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_padded_sequence
+
+from allennlp.nn.initializers import block_orthogonal
 from allennlp.custom_extensions._ext import highway_lstm_layer
-
-def orthonormal_initialization(dim_in, dim_out, factor=1.0, seed=None, dtype='float64'):
-    rng = numpy.random.RandomState(seed)
-    if dim_in == dim_out:
-        M = rng.randn(*[dim_in, dim_out]).astype(dtype)
-        Q, R = numpy.linalg.qr(M)
-        Q = Q * numpy.sign(numpy.diag(R))
-        param = torch.Tensor(Q * factor)
-    else:
-        M1 = rng.randn(dim_in, dim_in).astype(dtype)
-        M2 = rng.randn(dim_out, dim_out).astype(dtype)
-        Q1, R1 = numpy.linalg.qr(M1)
-        Q2, R2 = numpy.linalg.qr(M2)
-        Q1 = Q1 * numpy.sign(numpy.diag(R1))
-        Q2 = Q2 * numpy.sign(numpy.diag(R2))
-        n_min = min(dim_in, dim_out)
-        param = numpy.dot(Q1[:, :n_min], Q2[:n_min, :]) * factor
-        param = torch.Tensor(param)
-    return param
-
-
-def block_orthonormal_initialization(dim_in, dim_out, num_blocks, factor=1.0, seed=None, dtype='float64'):
-    param = torch.cat([orthonormal_initialization(dim_in, dim_out, factor, seed, dtype)
-                       for _ in range(num_blocks)], 1)
-    return param
 
 
 class _HighwayLSTMFunction(NestedIOFunction):
@@ -134,13 +110,11 @@ class HighwayLSTM(torch.nn.Module):
                  input_size: int,
                  hidden_size: int,
                  num_layers: int = 1,
-                 bias: bool = True,
                  recurrent_dropout_prob: float = 0):
         super(HighwayLSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.bias = bias
         self.recurrent_dropout_prob = recurrent_dropout_prob
         self.training = True
 
@@ -157,13 +131,10 @@ class HighwayLSTM(torch.nn.Module):
             hh_weights = self.hh_size * hidden_size
             weight_size += ih_weights + hh_weights
 
-            if bias:
-                bias_size += self.bias_size
+            bias_size += self.bias_size
 
         self.weight = Parameter(torch.FloatTensor(weight_size))
-        if bias:
-            self.bias = Parameter(torch.FloatTensor(bias_size))
-
+        self.bias = Parameter(torch.FloatTensor(bias_size))
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -171,14 +142,20 @@ class HighwayLSTM(torch.nn.Module):
         weight_index = 0
         bias_index = 0
         for i in range(self.num_layers):
-            insize = self.input_size if i == 0 else self.hidden_size
-            i_weights = block_orthonormal_initialization(insize, self.hidden_size, 6)
-            self.weight.data[weight_index:weight_index + i_weights.nelement()].view_as(i_weights).copy_(i_weights)
-            weight_index += i_weights.nelement()
+            input_size = self.input_size if i == 0 else self.hidden_size
 
-            h_weights = block_orthonormal_initialization(self.hidden_size, self.hidden_size, 5)
-            self.weight.data[weight_index:weight_index + h_weights.nelement()].view_as(h_weights).copy_(h_weights)
-            weight_index += h_weights.nelement()
+            # Create a tensor of the right size and initialize it.
+            init_tensor = self.weight.data.new(input_size, self.hidden_size * 6).zero_()
+            block_orthogonal(init_tensor, [self.input_size, self.hidden_size])
+            # Copy it into the flat weight.
+            self.weight.data[weight_index: weight_index + init_tensor.nelement()].view_as(init_tensor).copy_(init_tensor)
+            weight_index += init_tensor.nelement()
+
+            # Same for the recurrent connection weight.
+            init_tensor = self.weight.data.new(input_size, self.hidden_size * 5).zero_()
+            block_orthogonal(init_tensor, [self.input_size, self.hidden_size])
+            self.weight.data[weight_index: weight_index + init_tensor.nelement()].view_as(init_tensor).copy_(init_tensor)
+            weight_index += init_tensor.nelement()
 
             # forget bias
             self.bias.data[bias_index + self.hidden_size:bias_index + 2 * self.hidden_size].fill_(1)
