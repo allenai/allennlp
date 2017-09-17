@@ -54,32 +54,32 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         kernel_model.zero_grad()
         kernel_output.backward(random_error)
         
-        input_grad_diff = torch.max(self.baseline_input.grad.data - self.mine_input.grad.data)
+        input_grad_diff = torch.max(baseline_input.grad.data - kernel_input.grad.data)
         assert input_grad_diff < 1e-4, "Input grad does not match: " + str(input_grad_diff)
 
         weight_index = 0
         bias_index = 0
         for layer in range(baseline_model.num_layers):
-            x_grad = getattr(baseline_model, 'layer_%d' % layer).input_linearity.weight.grad
-            h_grad = getattr(baseline_model, 'layer_%d' % layer).state_linearity.weight.grad
-            bias = getattr(baseline_model, 'layer_%d' % layer).state_linearity.bias.grad
+            input_grad = getattr(baseline_model, 'layer_%d' % layer).input_linearity.weight.grad
+            state_grad = getattr(baseline_model, 'layer_%d' % layer).state_linearity.weight.grad
+            bias_grad = getattr(baseline_model, 'layer_%d' % layer).state_linearity.bias.grad
 
-            mine_x_grad = kernel_model.weight.grad[weight_index: weight_index+x_grad.nelement()].view(x_grad.size(1), x_grad.size(0)).t()
-            weight_index += x_grad.nelement()
+            kernel_input_grad = kernel_model.weight.grad[weight_index: weight_index+input_grad.nelement()].view(input_grad.size(1), input_grad.size(0)).t()
+            weight_index += input_grad.nelement()
 
-            mine_h_grad = kernel_model.weight.grad[weight_index: weight_index + h_grad.nelement()].view(h_grad.size(1), h_grad.size(0)).t()
-            weight_index += h_grad.nelement()
+            mine_h_grad = kernel_model.weight.grad[weight_index: weight_index + state_grad.nelement()].view(state_grad.size(1), state_grad.size(0)).t()
+            weight_index += state_grad.nelement()
 
-            mine_bias = kernel_model.bias.grad[bias_index:bias_index+bias.nelement()]
-            bias_index += bias.nelement()
+            mine_bias = kernel_model.bias.grad[bias_index:bias_index+bias_grad.nelement()]
+            bias_index += bias_grad.nelement()
 
-            x_diff = torch.max(mine_x_grad.data - x_grad.data)
+            x_diff = torch.max(kernel_input_grad.data - input_grad.data)
             assert x_diff < 1e-4, "Layer %d x_weight does not match: " % layer + str(x_diff)
 
-            h_diff = torch.max(mine_h_grad.data - h_grad.data)
+            h_diff = torch.max(mine_h_grad.data - state_grad.data)
             assert h_diff < 1e-4, "Layer %d h_weight does not match: " % layer + str(h_diff)
 
-            bias_diff = torch.max(mine_bias.data - bias.data)
+            bias_diff = torch.max(mine_bias.data - bias_grad.data)
             assert bias_diff < 1e-4, "Layer %d bias does not match: " % layer + str(bias_diff)
 
     @staticmethod
