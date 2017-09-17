@@ -19,8 +19,9 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
 
     def test_validation_forward_pass_is_deterministic_in_model_with_dropout(self):
 
-        _, model, _, model_input, _ = self.get_models_and_inputs(5, 3, 11, 2, 5, dropout_prob=0.5)
+        _, model, _, model_input, lengths = self.get_models_and_inputs(5, 3, 11, 2, 5, dropout_prob=0.5)
         model.eval()
+        model_input = pack_padded_sequence(model_input, lengths, batch_first=True)
         output = model(model_input)
         output, _ = pad_packed_sequence(output, batch_first=True)
 
