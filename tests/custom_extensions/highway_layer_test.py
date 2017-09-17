@@ -22,11 +22,11 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         _, model, _, model_input, lengths = self.get_models_and_inputs(5, 3, 11, 2, 5, dropout_prob=0.5)
         model.eval()
         model_input = pack_padded_sequence(model_input, lengths, batch_first=True)
-        output = model(model_input)
+        output, _ = model(model_input)
         output, _ = pad_packed_sequence(output, batch_first=True)
 
         for i in range(3):
-            output_new = model(model_input)
+            output_new, _ = model(model_input)
             output_new, _ = pad_packed_sequence(output_new, batch_first=True)
             diff = torch.max(output.data - output_new.data)
             assert diff < 1e-4, "forward pass is not deterministic in validation mode."
