@@ -27,7 +27,7 @@ class _AlternatingHighwayLSTMFunction(Function):
                 memory_accumulator: torch.Tensor,
                 dropout_mask: torch.Tensor,
                 lengths: torch.Tensor,
-                gates: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+                gates: torch.Tensor) -> Tuple[torch.Tensor, None]:
         sequence_length, batch_size, input_size = inputs.size()
         tmp_i = inputs.new(batch_size, 6 * self.hidden_size)
         tmp_h = inputs.new(batch_size, 5 * self.hidden_size)
@@ -55,8 +55,10 @@ class _AlternatingHighwayLSTMFunction(Function):
         # The state_accumulator has shape: (num_layers, sequence_length + 1, batch_size, hidden_size)
         # so for the output, we want the last layer and all but the first timestep, which was the
         # initial state.
+        # TODO(Mark): Also return the state here by using index_select with the lengths so we can use
+        # it as a Seq2VecEncoder.
         output = state_accumulator[-1, 1:, :, :]
-        return output, state_accumulator[:, 1:, :, :]
+        return output, None
 
     @overrides
     def backward(self, grad_output, grad_hy):  # pylint: disable=arguments-differ
