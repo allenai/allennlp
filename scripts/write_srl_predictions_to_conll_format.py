@@ -43,20 +43,12 @@ def main(serialization_directory, device):
     for batch in tqdm.tqdm(iterator(dataset, num_epochs=1, shuffle=False)):
         tensor_batch = arrays_to_variables(batch, device, for_training=False)
         result = model.forward(**tensor_batch)
+        predictions = model.decode(result)
+        model_predictions.extend(predictions["tags"])
 
-        sequence_probabilities = result["class_probabilities"]
-        model_predictions.extend([x.data.cpu().squeeze(0) for x in
-                                  sequence_probabilities.split(1, 0)])
-
-    transition_matrix = model.get_viterbi_pairwise_potentials()
     for instance, prediction in zip(dataset.instances, model_predictions):
         fields = instance.fields
-        sentence_length = len(fields["tokens"].tokens)
-        # Clip to the length of the sentence here, because we did predictions in batch,
-        # so there might be padding tokens appended.
-        max_likelihood_sequence, _ = viterbi_decode(prediction[:, :sentence_length], transition_matrix)
-        predicted_tags = [model._vocab.get_token_from_index(x, namespace="labels")
-                          for x in max_likelihood_sequence]
+        predicted_tags = [model._vocab.get_token_from_index(x, namespace="labels") for x in prediction]
         try:
             # Most sentences have a verbal predicate, but not all.
             verb_index = fields["verb_indicator"].labels.index(1)

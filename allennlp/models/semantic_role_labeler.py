@@ -13,7 +13,8 @@ from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, viterbi_decode
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics import SpanBasedF1Measure
 
 
@@ -135,6 +136,10 @@ class SemanticRoleLabeler(Model):
             self.span_metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
+        # We need to retain the mask in the output dictionary
+        # so that we can crop the sequences to remove padding
+        # when we do viterbi inference in self.decode.
+        output_dict["mask"] = mask
         return output_dict
 
     @overrides
@@ -145,16 +150,18 @@ class SemanticRoleLabeler(Model):
         ``"tags"`` key to the dictionary with the result.
         """
         all_predictions = output_dict['class_probabilities']
+        sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
+
         if isinstance(all_predictions, numpy.ndarray):
             all_predictions = torch.from_numpy(all_predictions)
         if all_predictions.dim() == 3:
-            predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
+            predictions_list = [all_predictions[i].data.cpu() for i in range(all_predictions.size(0))]
         else:
             predictions_list = [all_predictions]
         all_tags = []
         transition_matrix = self.get_viterbi_pairwise_potentials()
-        for predictions in predictions_list:
-            max_likelihood_sequence, _ = viterbi_decode(predictions, transition_matrix)
+        for predictions, length in zip(predictions_list, sequence_lengths):
+            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix)
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
             all_tags.append(tags)
