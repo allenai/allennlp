@@ -9,8 +9,6 @@ ENV PYTHONHASHSEED 2157
 ENV LD_LIBRARY_PATH /usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
 
 WORKDIR /stage
-EXPOSE 8000
-CMD ["/bin/bash"]
 
 # Install base packages.
 RUN apt-get update --fix-missing && apt-get install -y \
@@ -49,15 +47,20 @@ COPY scripts/install_requirements.sh scripts/install_requirements.sh
 RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
 RUN pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post3-cp36-cp36m-manylinux1_x86_64.whl
 
-COPY allennlp/ allennlp/
+# Build demo
 COPY demo/ demo/
+RUN cd demo && npm install && npm run build && cd ..
+
+COPY allennlp/ allennlp/
 COPY tests/ tests/
 COPY pytest.ini pytest.ini
 COPY scripts/ scripts/
 COPY tutorials/ tutorials/
 
-# Build demo
-RUN cd demo && npm install && npm run build && cd ..
-
 # Run tests to verify the Docker build
 RUN PYTHONDONTWRITEBYTECODE=1 pytest
+
+LABEL maintainer="allennlp-contact@allenai.org"
+
+EXPOSE 8000
+CMD ["/bin/bash"]

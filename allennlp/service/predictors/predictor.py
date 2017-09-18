@@ -4,13 +4,6 @@ from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.models.archival import Archive
 
-# a mapping from model `type` to the default Predictor for that type
-DEFAULT_PREDICTORS = {
-        'srl': 'semantic-role-labeling',
-        'decomposable_attention': 'textual-entailment',
-        'bidaf': 'machine-comprehension',
-        'simple_tagger': 'simple-tagger'
-}
 
 class Predictor(Registrable):
     """
@@ -33,7 +26,7 @@ class Predictor(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
+    def from_archive(cls, archive: Archive, predictor_name: str) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
@@ -47,6 +40,4 @@ class Predictor(Registrable):
         model = archive.model
         model.eval()
 
-        model_name = config.get("model").get("type")
-        predictor_name = predictor_name or DEFAULT_PREDICTORS[model_name]
         return Predictor.by_name(predictor_name)(model, dataset_reader)
