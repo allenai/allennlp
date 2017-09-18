@@ -1,6 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers.word_splitter import LettersDigitsWordSplitter
 from allennlp.data.tokenizers.word_splitter import SimpleWordSplitter
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
@@ -40,6 +42,33 @@ class TestSimpleWordSplitter(AllenNlpTestCase):
         sentence = "mr. and mrs. jones, etc., went to, e.g., the store"
         expected_tokens = ["mr.", "and", "mrs.", "jones", ",", "etc.", ",", "went", "to", ",",
                            "e.g.", ",", "the", "store"]
+        tokens = [t.text for t in self.word_splitter.split_words(sentence)]
+        assert tokens == expected_tokens
+
+
+class TestLettersDigitsWordSplitter(AllenNlpTestCase):
+    def setUp(self):
+        super(TestLettersDigitsWordSplitter, self).setUp()
+        self.word_splitter = LettersDigitsWordSplitter()
+
+    def test_tokenize_handles_complex_punctuation(self):
+        sentence = "this (sentence) has 'crazy' \"punctuation\"."
+        expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", '"',
+                           "punctuation", '"', "."]
+        tokens = [t.text for t in self.word_splitter.split_words(sentence)]
+        assert tokens == expected_tokens
+
+    def test_tokenize_handles_unicode_letters(self):
+        sentence = "HAL9000   and    Ångström"
+        expected_tokens = [Token("HAL", 0), Token("9000", 3), Token("and", 10), Token("Ångström", 17)]
+        tokens = self.word_splitter.split_words(sentence)
+        assert [t.text for t in tokens] == [t.text for t in expected_tokens]
+        assert [t.idx for t in tokens] == [t.idx for t in expected_tokens]
+
+    def test_tokenize_handles_splits_all_punctuation(self):
+        sentence = "wouldn't.[have] -3.45(m^2)"
+        expected_tokens = ["wouldn", "'", "t", ".", "[", "have", "]", "-", "3",
+                           ".", "45", "(", "m", "^", "2", ")"]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 

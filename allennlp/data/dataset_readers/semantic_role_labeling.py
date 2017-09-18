@@ -183,7 +183,7 @@ class SrlReader(DatasetReader):
                 # These are a relic of the dataset pre-processing. Every file will be duplicated
                 # - one file called filename.gold_skel and one generated from the preprocessing
                 # called filename.gold_conll.
-                if 'gold_conll' not in data_file:
+                if not data_file.endswith("gold_conll"):
                     continue
                 with codecs.open(os.path.join(root, data_file), 'r', encoding='utf8') as open_file:
                     for line in open_file:

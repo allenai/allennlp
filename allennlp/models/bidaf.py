@@ -5,14 +5,14 @@ import torch
 from torch.autograd import Variable
 from torch.nn.functional import nll_loss
 
-from allennlp.common import Params, squad_eval
+from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, util
-from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccuracy
+from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -121,8 +121,7 @@ class BidirectionalAttentionFlow(Model):
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
         self._span_accuracy = BooleanAccuracy()
-        self._official_em = Average()
-        self._official_f1 = Average()
+        self._squad_metrics = SquadEmAndF1()
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
@@ -284,27 +283,18 @@ class BidirectionalAttentionFlow(Model):
                 best_span_string = passage_str[start_offset:end_offset]
                 output_dict['best_span_str'].append(best_span_string)
                 answer_texts = metadata[i].get('answer_texts', [])
-                exact_match = f1_score = 0
                 if answer_texts:
-                    exact_match = squad_eval.metric_max_over_ground_truths(
-                            squad_eval.exact_match_score,
-                            best_span_string,
-                            answer_texts)
-                    f1_score = squad_eval.metric_max_over_ground_truths(
-                            squad_eval.f1_score,
-                            best_span_string,
-                            answer_texts)
-                self._official_em(100 * exact_match)
-                self._official_f1(100 * f1_score)
+                    self._squad_metrics(best_span_string, answer_texts)
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        exact_match, f1_score = self._squad_metrics.get_metric(reset)
         return {
                 'start_acc': self._span_start_accuracy.get_metric(reset),
                 'end_acc': self._span_end_accuracy.get_metric(reset),
                 'span_acc': self._span_accuracy.get_metric(reset),
-                'em': self._official_em.get_metric(reset),
-                'f1': self._official_f1.get_metric(reset),
+                'em': exact_match,
+                'f1': f1_score,
                 }
 
     @staticmethod
