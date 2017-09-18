@@ -32,7 +32,7 @@ class _AlternatingHighwayLSTMFunction(Function):
         tmp_i = inputs.new(batch_size, 6 * self.hidden_size)
         tmp_h = inputs.new(batch_size, 5 * self.hidden_size)
         is_training = 1 if self.train else 0
-        highway_lstm_layer.highway_lstm_forward_cuda(input_size,  # pylint: disable=no-member
+        highway_lstm_layer.highway_lstm_forward_cuda(input_size,  # type: ignore # pylint: disable=no-member
                                                      self.hidden_size,
                                                      batch_size,
                                                      self.num_layers,
