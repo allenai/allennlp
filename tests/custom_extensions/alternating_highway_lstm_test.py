@@ -66,10 +66,12 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             state_grad = getattr(baseline_model, 'layer_%d' % layer).state_linearity.weight.grad
             bias_grad = getattr(baseline_model, 'layer_%d' % layer).state_linearity.bias.grad
 
-            kernel_input_grad = kernel_model.weight.grad[weight_index: weight_index+input_grad.nelement()].view(input_grad.size(1), input_grad.size(0)).t()
+            kernel_input_grad = kernel_model.weight.grad[weight_index: weight_index+input_grad.nelement()]\
+                .view(input_grad.size(1), input_grad.size(0)).t()
             weight_index += input_grad.nelement()
 
-            kernel_state_grad = kernel_model.weight.grad[weight_index: weight_index + state_grad.nelement()].view(state_grad.size(1), state_grad.size(0)).t()
+            kernel_state_grad = kernel_model.weight.grad[weight_index: weight_index + state_grad.nelement()]\
+                .view(state_grad.size(1), state_grad.size(0)).t()
             weight_index += state_grad.nelement()
 
             kernel_bias_grad = kernel_model.bias.grad[bias_index:bias_index+bias_grad.nelement()]
@@ -85,10 +87,11 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
     @staticmethod
     def get_models_and_inputs(batch_size, input_size, output_size, num_layers, timesteps, dropout_prob):
 
-        from allennlp.modules.stacked_alternating_lstm_cuda import HighwayLSTM
+        # Import is here because the layer requires a GPU.
+        from allennlp.modules.alternating_highway_lstm import AlternatingHighwayLSTM
 
         baseline = StackedAlternatingLstm(input_size, output_size, num_layers, dropout_prob).cuda()
-        kernel_version = HighwayLSTM(input_size, output_size, num_layers, dropout_prob).cuda()
+        kernel_version = AlternatingHighwayLSTM(input_size, output_size, num_layers, dropout_prob).cuda()
 
         # Copy weights from non-cuda version into cuda version,
         # so we are starting from exactly the same place.
@@ -101,10 +104,12 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             state_weight = layer.state_linearity.weight
             bias = layer.state_linearity.bias
 
-            kernel_version.weight.data[weight_index: weight_index + input_weight.nelement()].view_as(input_weight.t()).copy_(input_weight.data.t())
+            kernel_version.weight.data[weight_index: weight_index + input_weight.nelement()]\
+                .view_as(input_weight.t()).copy_(input_weight.data.t())
             weight_index += input_weight.nelement()
 
-            kernel_version.weight.data[weight_index: weight_index + state_weight.nelement()].view_as(state_weight.t()).copy_(state_weight.data.t())
+            kernel_version.weight.data[weight_index: weight_index + state_weight.nelement()]\
+                .view_as(state_weight.t()).copy_(state_weight.data.t())
             weight_index += state_weight.nelement()
 
             kernel_version.bias.data[bias_index:bias_index + bias.nelement()].copy_(bias.data)

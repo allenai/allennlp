@@ -73,5 +73,5 @@ Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
 if torch.cuda.is_available():
-    from allennlp.modules.stacked_alternating_lstm_cuda import HighwayLSTM
-    Seq2SeqEncoder.register("alternating_lstm_cuda")(_Seq2SeqWrapper(HighwayLSTM))
+    from allennlp.modules.alternating_highway_lstm import HighwayLSTM
+    Seq2SeqEncoder.register("alternating_highway_lstm_cuda")(_Seq2SeqWrapper(HighwayLSTM))

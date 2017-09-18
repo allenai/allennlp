@@ -10,9 +10,9 @@ from allennlp.nn.initializers import block_orthogonal
 from allennlp.custom_extensions._ext import highway_lstm_layer
 
 
-class _HighwayLSTMFunction(Function):
+class _AlternatingHighwayLSTMFunction(Function):
     def __init__(self, input_size: int, hidden_size: int, num_layers: int, train: bool) -> None:
-        super(_HighwayLSTMFunction, self).__init__()
+        super(_AlternatingHighwayLSTMFunction, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -32,7 +32,7 @@ class _HighwayLSTMFunction(Function):
         tmp_i = inputs.new(batch_size, 6 * self.hidden_size)
         tmp_h = inputs.new(batch_size, 5 * self.hidden_size)
         is_training = 1 if self.train else 0
-        highway_lstm_layer.highway_lstm_forward_cuda(input_size,
+        highway_lstm_layer.highway_lstm_forward_cuda(input_size,  # pylint: disable=no-member
                                                      self.hidden_size,
                                                      batch_size,
                                                      self.num_layers,
@@ -85,7 +85,7 @@ class _HighwayLSTMFunction(Function):
         tmp_h_gates_grad = inputs.new().resize_(batch_size, 5 * self.hidden_size).zero_()
 
         is_training = 1 if self.train else 0
-        highway_lstm_layer.highway_lstm_backward_cuda(input_size,
+        highway_lstm_layer.highway_lstm_backward_cuda(input_size,  # pylint: disable=no-member
                                                       self.hidden_size,
                                                       batch_size,
                                                       self.num_layers,
@@ -113,7 +113,7 @@ class _HighwayLSTMFunction(Function):
                 grad_memory_accumulator, grad_dropout, grad_lengths, grad_gates)
 
 
-class HighwayLSTM(torch.nn.Module):
+class AlternatingHighwayLSTM(torch.nn.Module):
     """
     A stacked LSTM with LSTM layers which alternate between going forwards over
     the sequence and going backwards. This implementation is based on the
@@ -146,7 +146,7 @@ class HighwayLSTM(torch.nn.Module):
                  hidden_size: int,
                  num_layers: int = 1,
                  recurrent_dropout_prob: float = 0) -> None:
-        super(HighwayLSTM, self).__init__()
+        super(AlternatingHighwayLSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -243,10 +243,10 @@ class HighwayLSTM(torch.nn.Module):
                                                    batch_size, 6 * self.hidden_size))
 
         lengths_variable = Variable(torch.IntTensor(lengths))
-        implementation = _HighwayLSTMFunction(self.input_size,
-                                              self.hidden_size,
-                                              num_layers=self.num_layers,
-                                              train=self.training)
+        implementation = _AlternatingHighwayLSTMFunction(self.input_size,
+                                                         self.hidden_size,
+                                                         num_layers=self.num_layers,
+                                                         train=self.training)
         output, final_states = implementation(inputs, self.weight, self.bias, state_accumulator,
                                               memory_accumulator, dropout_weights, lengths_variable, gates)
 
