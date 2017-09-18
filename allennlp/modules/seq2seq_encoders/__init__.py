@@ -11,6 +11,7 @@ The available Seq2Seq encoders are
 * `"rnn" <http://pytorch.org/docs/master/nn.html#torch.nn.RNN>`_
 * :class:`"augmented_lstm" <allennlp.modules.augmented_lstm.AugmentedLstm>`
 * :class:`"alternating_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm>`
+* :class:`"alternating_highway_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm> (GPU only)`
 """
 
 from typing import Type
@@ -73,5 +74,5 @@ Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
 if torch.cuda.is_available():
-    from allennlp.modules.alternating_highway_lstm import HighwayLSTM
-    Seq2SeqEncoder.register("alternating_highway_lstm_cuda")(_Seq2SeqWrapper(HighwayLSTM))
+    from allennlp.modules.alternating_highway_lstm import AlternatingHighwayLSTM
+    Seq2SeqEncoder.register("alternating_highway_lstm_cuda")(_Seq2SeqWrapper(AlternatingHighwayLSTM))
