@@ -210,13 +210,13 @@ class HighwayLSTM(torch.nn.Module):
         dropout_weights = Variable(dropout_weights, requires_grad=False)
         gates = Variable(inputs.data.new().resize_(self.num_layers, sequence_length, batch_size, 6 * self.hidden_size))
 
-        lengths = Variable(torch.IntTensor(lengths))
+        lengths_variable = Variable(torch.IntTensor(lengths))
         implementation = _HighwayLSTMFunction(self.input_size,
                                               self.hidden_size,
                                               num_layers=self.num_layers,
                                               train=self.training)
         output, final_states = implementation(inputs, self.weight, self.bias, state_accumulator,
-                                              memory_accumulator, dropout_weights, lengths, gates)
+                                              memory_accumulator, dropout_weights, lengths_variable, gates)
 
         output = output.transpose(0, 1)
         output = pack_padded_sequence(output, lengths, batch_first=True)
