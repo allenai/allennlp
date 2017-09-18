@@ -9,7 +9,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 
 
-@pytest.mark.skip
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
 class TestCustomHighwayLSTM(AllenNlpTestCase):
 
     def test_small_model(self):
@@ -57,8 +57,8 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         kernel_model.zero_grad()
         kernel_output.backward(random_error)
         
-        numpy.testing.assert_array_almost_equal(baseline_input.data.grad.cpu().numpy(),
-                                                kernel_input.data.grad.cpu().numpy())
+        numpy.testing.assert_array_almost_equal(baseline_input.grad.data.cpu().numpy(),
+                                                kernel_input.grad.data.cpu().numpy())
         weight_index = 0
         bias_index = 0
         for layer in range(baseline_model.num_layers):
@@ -76,11 +76,11 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             bias_index += bias_grad.nelement()
 
             numpy.testing.assert_array_almost_equal(kernel_input_grad.data.cpu().numpy(),
-                                                    input_grad.data.cpu().numpy())
+                                                    input_grad.data.cpu().numpy(), decimal=4) 
             numpy.testing.assert_array_almost_equal(kernel_state_grad.data.cpu().numpy(),
-                                                    state_grad.data.cpu().numpy())
+                                                    state_grad.data.cpu().numpy(), decimal=4)
             numpy.testing.assert_array_almost_equal(kernel_bias_grad.data.cpu().numpy(),
-                                                    bias_grad.data.cpu().numpy())
+                                                    bias_grad.data.cpu().numpy(), decimal=4)
 
     @staticmethod
     def get_models_and_inputs(batch_size, input_size, output_size, num_layers, timesteps, dropout_prob):
@@ -101,20 +101,20 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             state_weight = layer.state_linearity.weight
             bias = layer.state_linearity.bias
 
-            kernel_version.weight.data[weight_index: weight_index + input_weight.nelement()].copy_(input_weight.data.t())
+            kernel_version.weight.data[weight_index: weight_index + input_weight.nelement()].view_as(input_weight.t()).copy_(input_weight.data.t())
             weight_index += input_weight.nelement()
 
-            kernel_version.weight.data[weight_index: weight_index + state_weight.nelement()].copy_(state_weight.data.t())
+            kernel_version.weight.data[weight_index: weight_index + state_weight.nelement()].view_as(state_weight.t()).copy_(state_weight.data.t())
             weight_index += state_weight.nelement()
 
             kernel_version.bias.data[bias_index:bias_index + bias.nelement()].copy_(bias.data)
             bias_index += bias.nelement()
 
-        input = torch.randn(batch_size, timesteps, input_size).cuda()
+        inputs = torch.randn(batch_size, timesteps, input_size).cuda()
         # Clone variable so different models are
         # completely separate in the graph.
-        input2 = input.clone()
-        baseline_input = Variable(input, requires_grad=True)
+        input2 = inputs.clone()
+        baseline_input = Variable(inputs, requires_grad=True)
         kernel_version_input = Variable(input2, requires_grad=True)
         lengths = [timesteps - int((i / 2)) for i in range(batch_size)]
         lengths = lengths[:batch_size]
