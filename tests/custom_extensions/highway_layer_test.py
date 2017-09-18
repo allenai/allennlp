@@ -2,11 +2,14 @@ import torch
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+import numpy
+import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
-from allennlp.modules.stacked_alternating_lstm_cuda import HighwayLSTM
 
 
+@pytest.mark.skip
 class TestCustomHighwayLSTM(AllenNlpTestCase):
 
     def test_small_model(self):
@@ -28,8 +31,7 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         for i in range(3):
             output_new, _ = model(model_input)
             output_new, _ = pad_packed_sequence(output_new, batch_first=True)
-            diff = torch.max(output.data - output_new.data)
-            assert diff < 1e-4, "forward pass is not deterministic in validation mode."
+            numpy.testing.assert_array_almost_equal(output.data.cpu().numpy(), output_new.data.cpu().numpy())
             output = output_new
 
     @staticmethod
@@ -44,8 +46,8 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         kernel_output, _ = kernel_model(packed_kernel_input)
         kernel_output, _ = pad_packed_sequence(kernel_output, batch_first=True)
 
-        diff = torch.max(baseline_output.data - kernel_output.data)
-        assert diff < 1e-4, "Output does not match: " + str(diff)
+        numpy.testing.assert_array_almost_equal(baseline_output.data.cpu().numpy(),
+                                                kernel_output.data.cpu().numpy())
 
         # Backprop some random error.
         random_error = torch.randn(baseline_output.size()).cuda()
@@ -55,9 +57,8 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         kernel_model.zero_grad()
         kernel_output.backward(random_error)
         
-        input_grad_diff = torch.max(baseline_input.grad.data - kernel_input.grad.data)
-        assert input_grad_diff < 1e-4, "Input grad does not match: " + str(input_grad_diff)
-
+        numpy.testing.assert_array_almost_equal(baseline_input.data.grad.cpu().numpy(),
+                                                kernel_input.data.grad.cpu().numpy())
         weight_index = 0
         bias_index = 0
         for layer in range(baseline_model.num_layers):
@@ -68,23 +69,23 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             kernel_input_grad = kernel_model.weight.grad[weight_index: weight_index+input_grad.nelement()].view(input_grad.size(1), input_grad.size(0)).t()
             weight_index += input_grad.nelement()
 
-            mine_h_grad = kernel_model.weight.grad[weight_index: weight_index + state_grad.nelement()].view(state_grad.size(1), state_grad.size(0)).t()
+            kernel_state_grad = kernel_model.weight.grad[weight_index: weight_index + state_grad.nelement()].view(state_grad.size(1), state_grad.size(0)).t()
             weight_index += state_grad.nelement()
 
-            mine_bias = kernel_model.bias.grad[bias_index:bias_index+bias_grad.nelement()]
+            kernel_bias_grad = kernel_model.bias.grad[bias_index:bias_index+bias_grad.nelement()]
             bias_index += bias_grad.nelement()
 
-            x_diff = torch.max(kernel_input_grad.data - input_grad.data)
-            assert x_diff < 1e-4, "Layer %d x_weight does not match: " % layer + str(x_diff)
-
-            h_diff = torch.max(mine_h_grad.data - state_grad.data)
-            assert h_diff < 1e-4, "Layer %d h_weight does not match: " % layer + str(h_diff)
-
-            bias_diff = torch.max(mine_bias.data - bias_grad.data)
-            assert bias_diff < 1e-4, "Layer %d bias does not match: " % layer + str(bias_diff)
+            numpy.testing.assert_array_almost_equal(kernel_input_grad.data.cpu().numpy(),
+                                                    input_grad.data.cpu().numpy())
+            numpy.testing.assert_array_almost_equal(kernel_state_grad.data.cpu().numpy(),
+                                                    state_grad.data.cpu().numpy())
+            numpy.testing.assert_array_almost_equal(kernel_bias_grad.data.cpu().numpy(),
+                                                    bias_grad.data.cpu().numpy())
 
     @staticmethod
     def get_models_and_inputs(batch_size, input_size, output_size, num_layers, timesteps, dropout_prob):
+
+        from allennlp.modules.stacked_alternating_lstm_cuda import HighwayLSTM
 
         baseline = StackedAlternatingLstm(input_size, output_size, num_layers, dropout_prob).cuda()
         kernel_version = HighwayLSTM(input_size, output_size, num_layers, dropout_prob).cuda()
