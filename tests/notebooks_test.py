@@ -13,6 +13,9 @@ class TestNotebooks(AllenNlpTestCase):
     def test_data_pipeline_tutorial(self):
         assert self.execute_notebook("tutorials/notebooks/data_pipeline.ipynb")
 
+    def test_embedding_tokens_tutorial(self):
+        assert self.execute_notebook("tutorials/notebooks/embedding_tokens.ipynb")
+
     @staticmethod
     def execute_notebook(notebook_path: str):
         with open(notebook_path, encoding='utf-8') as notebook:

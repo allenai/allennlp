@@ -43,7 +43,8 @@ class TestSanic(AllenNlpTestCase):
 
             self.app = make_app(build_dir=self.TEST_DIR)
             self.app.predictors = {
-                    name: Predictor.from_archive(load_archive(archive_file))
+                    name: Predictor.from_archive(load_archive(archive_file),
+                                                 predictor_name=name)
                     for name, archive_file in TEST_ARCHIVE_FILES.items()
             }
 

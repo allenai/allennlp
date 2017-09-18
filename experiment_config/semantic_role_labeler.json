@@ -7,6 +7,7 @@
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
+        "embedding_dim": 100,
         "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.6B.100d.txt.gz",
         "trainable": true
       }
