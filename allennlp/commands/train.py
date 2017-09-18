@@ -23,19 +23,14 @@ import argparse
 import json
 import logging
 import os
-import random
 import sys
 from copy import deepcopy
-from typing import Any, Dict, Union
 
-import numpy
-import torch
-
-from allennlp.common.checks import log_pytorch_version_info, ensure_pythonhashseed_set
+from allennlp.common.checks import ensure_pythonhashseed_set
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
+from allennlp.common.util import prepare_environment
 from allennlp.data import Dataset, Vocabulary
-from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.archival import archive_model
@@ -58,37 +53,6 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
     subparser.set_defaults(func=_train_model_from_args)
 
     return subparser
-
-def prepare_environment(params: Union[Params, Dict[str, Any]]):
-    """
-    Sets random seeds for reproducible experiments. This may not work as expected
-    if you use this from within a python project in which you have already imported Pytorch.
-    If you use the scripts/run_model.py entry point to training models with this library,
-    your experiments should be reasonably reproducible. If you are using this from your own
-    project, you will want to call this function before importing Pytorch. Complete determinism
-    is very difficult to achieve with libraries doing optimized linear algebra due to massively
-    parallel execution, which is exacerbated by using GPUs.
-
-    Parameters
-    ----------
-    params: Params object or dict, required.
-        A ``Params`` object or dict holding the json parameters.
-    """
-    seed = params.pop("random_seed", 13370)
-    numpy_seed = params.pop("numpy_seed", 1337)
-    torch_seed = params.pop("pytorch_seed", 133)
-
-    if seed is not None:
-        random.seed(seed)
-    if numpy_seed is not None:
-        numpy.random.seed(numpy_seed)
-    if torch_seed is not None:
-        torch.manual_seed(torch_seed)
-        # Seed all GPUs with the same seed if available.
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(torch_seed)
-
-    log_pytorch_version_info()
 
 
 def _train_model_from_args(args: argparse.Namespace):
@@ -164,9 +128,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
         validation_data = None
         combined_data = train_data
 
-    # TODO(Mark): work out how this is going to be built with different options.
-    non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
-    vocab = Vocabulary.from_dataset(combined_data, non_padded_namespaces=non_padded_namespaces)
+    vocab = Vocabulary.from_params(params.pop("vocabulary", {}), combined_data)
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))

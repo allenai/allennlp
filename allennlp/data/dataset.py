@@ -31,8 +31,9 @@ class Dataset:
         types).  If you change the constructor, you also have to override all methods in this base
         class that call the constructor, such as `truncate()`.
         """
-        all_instance_fields_and_types = [{k: v.__class__.__name__ for k, v in x.fields.items()}
-                                         for x in instances]  # type: List[Dict[str, str]]
+        all_instance_fields_and_types: List[Dict[str, str]] = [{k: v.__class__.__name__
+                                                                for k, v in x.fields.items()}
+                                                               for x in instances]
         # Check all the field names and Field types are the same for every instance.
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
             raise ConfigurationError("You cannot construct a Dataset with non-homogeneous Instances.")
@@ -67,12 +68,12 @@ class Dataset:
         This can then be used to convert this dataset into arrays of consistent length, or to set
         model parameters, etc.
         """
-        padding_lengths = defaultdict(dict)  # type: Dict[str, Dict[str, int]]
-        all_instance_lengths = [instance.get_padding_lengths()
-                                for instance in self.instances]  # type: List[Dict[str, Dict[str, int]]]
+        padding_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
+        all_instance_lengths: List[Dict[str, Dict[str, int]]] = [instance.get_padding_lengths()
+                                                                 for instance in self.instances]
         if not all_instance_lengths:
             return {**padding_lengths}
-        all_field_lengths = defaultdict(list)  # type: Dict[str, List[Dict[str, int]]]
+        all_field_lengths: Dict[str, List[Dict[str, int]]] = defaultdict(list)
         for instance_lengths in all_instance_lengths:
             for field_name, instance_field_lengths in instance_lengths.items():
                 all_field_lengths[field_name].append(instance_field_lengths)
@@ -134,7 +135,7 @@ class Dataset:
         instance_padding_lengths = self.get_padding_lengths()
         if verbose:
             logger.info("Instance max lengths: %s", str(instance_padding_lengths))
-        lengths_to_use = defaultdict(dict)  # type: Dict[str, Dict[str, int]]
+        lengths_to_use: Dict[str, Dict[str, int]] = defaultdict(dict)
         for field_name, instance_field_lengths in instance_padding_lengths.items():
             for padding_key in instance_field_lengths.keys():
                 if padding_lengths[field_name].get(padding_key) is not None:
@@ -143,7 +144,7 @@ class Dataset:
                     lengths_to_use[field_name][padding_key] = instance_field_lengths[padding_key]
 
         # Now we actually pad the instances to numpy arrays.
-        field_arrays = defaultdict(list)  # type: Dict[str, list]
+        field_arrays: Dict[str, list] = defaultdict(list)
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
         for instance in self.instances:
@@ -151,20 +152,11 @@ class Dataset:
                 field_arrays[field].append(arrays)
 
         # Finally, we combine the arrays that we got for each instance into one big array (or set
-        # of arrays) per field.
+        # of arrays) per field.  The `Field` classes themselves have the logic for batching the
+        # arrays together, so we grab a dictionary of field_name -> field class from the first
+        # instance in the dataset.
+        field_classes = self.instances[0].fields
+        final_fields = {}
         for field_name, field_array_list in field_arrays.items():
-            if field_name == 'metadata':
-                continue
-            if isinstance(field_array_list[0], dict):
-                # This is creating a dict of {token_indexer_key: batch_array} for each
-                # token indexer used to index this field. This is mostly utilised by TextFields.
-                token_indexer_key_to_batch_dict = defaultdict(list)  # type: Dict[str, List[numpy.ndarray]]
-                for namespace_dict in field_array_list:
-                    for indexer_name, array in namespace_dict.items():
-                        token_indexer_key_to_batch_dict[indexer_name].append(array)
-                field_arrays[field_name] = {indexer_name: numpy.asarray(array_list) for  # type: ignore
-                                            indexer_name, array_list in token_indexer_key_to_batch_dict.items()}
-            else:
-                field_arrays[field_name] = numpy.asarray(field_array_list)
-        # Unpack into a standard dict to remove defaultdict functionality.
-        return {**field_arrays}
+            final_fields[field_name] = field_classes[field_name].batch_arrays(field_array_list)
+        return final_fields

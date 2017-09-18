@@ -27,7 +27,7 @@ if [[ ! -f /home/travis/miniconda3/bin/activate ]]
     fi
     chmod +x miniconda.sh && ./miniconda.sh -b -f
     conda update --yes conda
-    conda create -n testenv --yes python=3.5
+    conda create -n testenv --yes python=3.6
 fi
 cd ..
 popd
@@ -37,7 +37,7 @@ source activate testenv
 
 # Install requirements via pip and download data inside our conda environment.
 INSTALL_TEST_REQUIREMENTS="true" bash scripts/install_requirements.sh
-pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post3-cp35-cp35m-manylinux1_x86_64.whl
+pip install --no-cache-dir -q http://download.pytorch.org/whl/cu80/torch-0.2.0.post3-cp36-cp36m-manylinux1_x86_64.whl
 
 # List the packages to get their versions for debugging
 pip list

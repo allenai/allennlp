@@ -129,9 +129,13 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
     """
     if isinstance(data_structure, dict):
         for key, value in data_structure.items():
-            if key == 'metadata':
-                continue
-            data_structure[key] = arrays_to_variables(value, cuda_device, add_batch_dimension)
+            # This check is a bit hacky, but I'm not sure how else to handle this.  By this point,
+            # we've lost all reference to the original `Field` object.
+            if 'metadata' in key:
+                if add_batch_dimension:
+                    data_structure[key] = [value]
+            else:
+                data_structure[key] = arrays_to_variables(value, cuda_device, add_batch_dimension)
         return data_structure
     else:
         tensor = torch.from_numpy(data_structure)
@@ -220,9 +224,8 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
 
     # Evaluate the scores for all possible paths.
     for timestep in range(1, sequence_length):
-        # TODO(Mark): Use broadcasting here once Pytorch 0.2 is released.
-        tiled_path_scores = path_scores[timestep - 1].expand_as(transition_matrix).transpose(0, 1)
-        summed_potentials = tiled_path_scores + transition_matrix
+        # Add pairwise potentials to current scores.
+        summed_potentials = path_scores[timestep - 1].unsqueeze(-1) + transition_matrix
         scores, paths = torch.max(summed_potentials, 0)
         path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
         path_indices.append(paths.squeeze())

@@ -1,23 +1,22 @@
-from typing import Dict, List
+from typing import List
+
+from overrides import overrides
 
 from allennlp.common.util import JsonDict, sanitize
-from allennlp.data import Tokenizer, TokenIndexer
-from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.data import DatasetReader, Instance
+from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 
-import spacy
 
 @Predictor.register("semantic-role-labeling")
 class SemanticRoleLabelerPredictor(Predictor):
     """
     Wrapper for the :class:`~allennlp.models.bidaf.SemanticRoleLabeler` model.
     """
-    def __init__(self, model: Model,
-                 tokenizer: Tokenizer, token_indexers: Dict[str, TokenIndexer]) -> None:
-        super().__init__(model, tokenizer, token_indexers)
-
-        self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
+    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+        super().__init__(model, dataset_reader)
+        self._tokenizer = SpacyWordSplitter(language='en', pos_tags=True)
 
     @staticmethod
     def make_srl_string(words: List[str], tags: List[str]) -> str:
@@ -42,6 +41,13 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         return " ".join(frame)
 
+    def _json_to_instance(self, json: JsonDict) -> Instance:
+        # We're overriding `predict_json` directly, so we don't need this.  But I'd rather have a
+        # useless stub here then make the base class throw a RuntimeError instead of a
+        # NotImplementedError - the checking on the base class is worth it.
+        raise RuntimeError("this should never be called")
+
+    @overrides
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         """
         Expects JSON that looks like ``{"sentence": "..."}``
@@ -58,19 +64,18 @@ class SemanticRoleLabelerPredictor(Predictor):
         """
         sentence = inputs["sentence"]
 
-        spacy_doc = self.nlp(sentence)
-        words = [token.text for token in spacy_doc]
-        results = {"words": words, "verbs": []}  # type: JsonDict
-        text = TextField(words, token_indexers=self.token_indexers)
-        for i, word in enumerate(spacy_doc):
+        tokens = self._tokenizer.split_words(sentence)
+        words = [token.text for token in tokens]
+        results: JsonDict = {"words": words, "verbs": []}
+        for i, word in enumerate(tokens):
             if word.pos_ == "VERB":
+                verb = word.text
                 verb_labels = [0 for _ in words]
                 verb_labels[i] = 1
-                verb_indicator = SequenceLabelField(verb_labels, text)
-                output = self.model.tag(text, verb_indicator)
+                instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
+                output = self._model.decode(self._model.forward_on_instance(instance))
+                tags = output['tags']
 
-                verb = word.text
-                tags = output["tags"]
                 description = SemanticRoleLabelerPredictor.make_srl_string(words, tags)
 
                 results["verbs"].append({
@@ -79,6 +84,6 @@ class SemanticRoleLabelerPredictor(Predictor):
                         "tags": tags,
                 })
 
-        results["tokens"] = [word.text for word in spacy_doc]
+        results["tokens"] = words
 
         return sanitize(results)

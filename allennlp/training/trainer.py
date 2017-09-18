@@ -11,8 +11,7 @@ import logging
 import os
 import shutil
 import time
-from inspect import signature
-from typing import Dict, Optional, List  # pylint: disable=unused-import
+from typing import Dict, Optional, List
 
 import torch
 import torch.optim.lr_scheduler
@@ -150,9 +149,9 @@ class Trainer:
         num_training_batches = self._iterator.get_num_batches(self._train_dataset)
         if self._validation_dataset is not None:
             num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
-        validation_metric_per_epoch = []  # type: List[float]
+        validation_metric_per_epoch: List[float] = []
         for epoch in range(epoch_counter, self._num_epochs):
-            logger.info("Epoch %d/%d", epoch + 1, self._num_epochs)
+            logger.info("Epoch %d/%d", epoch, self._num_epochs)
             train_loss = 0.0
             val_loss = 0.0
             # Set the model to "train" mode.
@@ -190,12 +189,12 @@ class Trainer:
                 batch_num_total = num_training_batches * epoch + batch_num
                 if self._serialization_dir and batch_num_total % self._summary_interval == 0:
                     for name, param in self._model.named_parameters():
-                        train_log.add_scalar("PARAMETER_MEAN/" + name, param.data.mean(), batch_num_total)
-                        train_log.add_scalar("PARAMETER_STD/" + name, param.data.std(), batch_num_total)
+                        train_log.add_scalar("paramter_mean/" + name, param.data.mean(), batch_num_total)
+                        train_log.add_scalar("parameter_mean/" + name, param.data.std(), batch_num_total)
                         if param.grad is not None:
-                            train_log.add_scalar("GRAD_MEAN/" + name, param.grad.data.mean(), batch_num_total)
-                            train_log.add_scalar("GRAD_STD/" + name, param.grad.data.std(), batch_num_total)
-                    train_log.add_scalar("LOSS/loss_train", metrics["loss"], batch_num_total)
+                            train_log.add_scalar("gradient_mean/" + name, param.grad.data.mean(), batch_num_total)
+                            train_log.add_scalar("gradient_mean/" + name, param.grad.data.std(), batch_num_total)
+                    train_log.add_scalar("loss/loss_train", metrics["loss"], batch_num_total)
                 if self._no_tqdm and time.time() - last_log > self._log_interval:
                     logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
                     last_log = time.time()
@@ -279,8 +278,6 @@ class Trainer:
 
     def _forward(self, batch: dict, for_training: bool) -> dict:
         tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=for_training)
-        if 'metadata' in tensor_batch and 'metadata' not in signature(self._model.forward).parameters:
-            del tensor_batch['metadata']
         return self._model.forward(**tensor_batch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
@@ -324,7 +321,8 @@ class Trainer:
         Returns
         -------
         epoch: int
-            The epoch at which to resume training.
+            The epoch at which to resume training, which should be one after the epoch
+            in the saved training state.
         """
         if not self._serialization_dir:
             raise ConfigurationError("serialization_dir not specified - cannot "
@@ -343,7 +341,7 @@ class Trainer:
         training_state = torch.load(training_state_path)
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
-        return training_state["epoch"]
+        return training_state["epoch"] + 1
 
     @classmethod
     def from_params(cls,

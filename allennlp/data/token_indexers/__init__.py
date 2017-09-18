@@ -5,3 +5,5 @@ A ``TokenIndexer`` determines how string tokens get represented as arrays of ind
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.token_indexers.token_characters_indexer import TokenCharactersIndexer
 from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
+from allennlp.data.token_indexers.pos_tag_indexer import PosTagIndexer
+from allennlp.data.token_indexers.dep_label_indexer import DepLabelIndexer

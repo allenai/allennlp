@@ -21,12 +21,13 @@ and report any metrics calculated by the model.
     --cuda_device CUDA_DEVICE
                             id of GPU to use (if any)
 """
-
-from inspect import signature
 from typing import Dict, Any
 import argparse
 import logging
 
+import tqdm
+
+from allennlp.common.util import prepare_environment
 from allennlp.data import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
@@ -34,9 +35,8 @@ from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 from allennlp.nn.util import arrays_to_variables
 
-import tqdm
-
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
     description = '''Evaluate the specified model + dataset'''
@@ -59,6 +59,7 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
 
     return subparser
 
+
 def evaluate(model: Model,
              dataset: Dataset,
              iterator: DataIterator,
@@ -70,14 +71,13 @@ def evaluate(model: Model,
     generator_tqdm = tqdm.tqdm(generator, total=iterator.get_num_batches(dataset))
     for batch in generator_tqdm:
         tensor_batch = arrays_to_variables(batch, cuda_device, for_training=False)
-        if 'metadata' in tensor_batch and 'metadata' not in signature(model.forward).parameters:
-            del tensor_batch['metadata']
         model.forward(**tensor_batch)
         metrics = model.get_metrics()
         description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
         generator_tqdm.set_description(description)
 
     return model.get_metrics()
+
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     # Disable some of the more verbose logging statements
@@ -88,6 +88,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     # Load from archive
     archive = load_archive(args.archive_file, args.cuda_device)
     config = archive.config
+    prepare_environment(config)
     model = archive.model
     model.eval()
 

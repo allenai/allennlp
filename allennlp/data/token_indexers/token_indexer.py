@@ -1,7 +1,8 @@
 from typing import Dict, List, TypeVar, Generic
 
-from allennlp.data.vocabulary import Vocabulary
 from allennlp.common import Params, Registrable
+from allennlp.data.tokenizers.token import Token
+from allennlp.data.vocabulary import Vocabulary
 
 TokenType = TypeVar("TokenType", int, List[int])  # pylint: disable=invalid-name
 
@@ -19,7 +20,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
     """
     default_implementation = 'single_id'
 
-    def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
+    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         """
         The :class:`Vocabulary` needs to assign indices to whatever strings we see in the training
         data (possibly doing some frequency filtering and using an OOV token).  This method takes
@@ -30,20 +31,11 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def token_to_indices(self, token: str, vocabulary: Vocabulary) -> TokenType:
+    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> TokenType:
         """
         Takes a string token and converts it into indices in some fashion.  This could be returning
         an ID for the token from the vocabulary, or it could be splitting the token into characters
         and return a list of IDs for each character from the vocabulary, or something else.
-        """
-        raise NotImplementedError
-
-    def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):
-        """
-        Returns the shape of an input array containing tokens representated by this
-        ``TokenIndexer``, not including the batch size.  ``padding_lengths`` contains the
-        same keys returned by :func:`get_padding_lengths`.  For single ID tokens, this shape will
-        just be ``(num_tokens,)``; it will be more complicated for more complex representations.
         """
         raise NotImplementedError
 
@@ -79,3 +71,22 @@ class TokenIndexer(Generic[TokenType], Registrable):
     def from_params(cls, params: Params) -> 'TokenIndexer':  # type: ignore
         choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
         return cls.by_name(choice).from_params(params)
+
+    @classmethod
+    def dict_from_params(cls, params: Params) -> 'Dict[str, TokenIndexer]':  # type: ignore
+        """
+        We typically use ``TokenIndexers`` in a dictionary, with each ``TokenIndexer`` getting a
+        name.  The specification for this in a ``Params`` object is typically ``{"name" ->
+        {indexer_params}}``.  This method reads that whole set of parameters and returns a
+        dictionary suitable for use in a ``TextField``.
+
+        Because default values for token indexers are typically handled in the calling class to
+        this and are based on checking for ``None``, if there were no parameters specifying any
+        token indexers in the given ``params``, we return ``None`` instead of an empty dictionary.
+        """
+        token_indexers = {}
+        for name, indexer_params in params.items():
+            token_indexers[name] = cls.from_params(indexer_params)
+        if token_indexers == {}:
+            token_indexers = None
+        return token_indexers

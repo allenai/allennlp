@@ -1,3 +1,8 @@
+"""
+A `Highway layer <https://arxiv.org/abs/1505.00387>`_ that does a gated combination of a linear
+transformation and a non-linear transformation of its input.
+"""
+
 from typing import Callable
 
 import torch

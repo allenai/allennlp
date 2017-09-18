@@ -20,7 +20,6 @@
   "validation_data_path": "/squad/dev-v1.1.json",
   "model": {
     "type": "bidaf",
-    "evaluation_json_file": "/squad/dev-v1.1.json",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",

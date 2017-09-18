@@ -40,7 +40,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                                                             str(text_field_input.keys()))
             raise ConfigurationError(message)
         embedded_representations = []
-        for key, tensor in text_field_input.items():
+        keys = sorted(text_field_input.keys())
+        for key in keys:
+            tensor = text_field_input[key]
             embedder = self._token_embedders[key]
             token_vectors = embedder(tensor)
             embedded_representations.append(token_vectors)

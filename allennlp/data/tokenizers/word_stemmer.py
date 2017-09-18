@@ -2,6 +2,7 @@ from nltk.stem import PorterStemmer as NltkPorterStemmer
 from overrides import overrides
 
 from allennlp.common import Params, Registrable
+from allennlp.data.tokenizers.token import Token
 
 
 class WordStemmer(Registrable):
@@ -16,8 +17,10 @@ class WordStemmer(Registrable):
     """
     default_implementation = 'pass_through'
 
-    def stem_word(self, word: str) -> str:
-        """Converts a word to its lemma"""
+    def stem_word(self, word: Token) -> Token:
+        """
+        Returns a new ``Token`` with ``word.text`` replaced by a stemmed word.
+        """
         raise NotImplementedError
 
     @classmethod
@@ -33,7 +36,7 @@ class PassThroughWordStemmer(WordStemmer):
     Does not stem words; it's a no-op.  This is the default word stemmer.
     """
     @overrides
-    def stem_word(self, word: str) -> str:
+    def stem_word(self, word: Token) -> Token:
         return word
 
 
@@ -46,5 +49,6 @@ class PorterStemmer(WordStemmer):
         self.stemmer = NltkPorterStemmer()
 
     @overrides
-    def stem_word(self, word: str) -> str:
-        return self.stemmer.stem(word)
+    def stem_word(self, word: Token) -> Token:
+        new_text = self.stemmer.stem(word.text)
+        return Token(new_text, word.idx, word.pos_, word.tag_, word.dep_, getattr(word, 'text_id', None))

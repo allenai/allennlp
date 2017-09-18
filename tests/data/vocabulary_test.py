@@ -3,18 +3,22 @@ import codecs
 import os
 from copy import deepcopy
 
+import pytest
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Dataset, Instance
+from allennlp.data import Dataset, Instance, Token
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
 from allennlp.data.vocabulary import Vocabulary, _NamespaceDependentDefaultDict, DEFAULT_OOV_TOKEN
+from allennlp.common.params import Params
+from allennlp.common.checks import ConfigurationError
 
 
 class TestVocabulary(AllenNlpTestCase):
     def setUp(self):
         token_indexer = SingleIdTokenIndexer("tokens")
-        text_field = TextField(["a", "a", "a", "a", "b", "b", "c", "c", "c"], {"tokens": token_indexer})
+        text_field = TextField([Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]],
+                               {"tokens": token_indexer})
         self.instance = Instance({"text": text_field})
         self.dataset = Dataset([self.instance])
         super(TestVocabulary, self).setUp()
@@ -191,7 +195,7 @@ class TestVocabulary(AllenNlpTestCase):
         # result.
         tokenizer = CharacterTokenizer(byte_encoding='utf-8')
         token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer)
-        tokens = ["Øyvind", "für", "汉字"]
+        tokens = [Token(t) for t in ["Øyvind", "für", "汉字"]]
         text_field = TextField(tokens, {"characters": token_indexer})
         dataset = Dataset([Instance({"sentence": text_field})])
         vocab = Vocabulary.from_dataset(dataset)
@@ -205,3 +209,33 @@ class TestVocabulary(AllenNlpTestCase):
         text_field2.index(vocab2)
         indexed_tokens2 = deepcopy(text_field2._indexed_tokens)  # pylint: disable=protected-access
         assert indexed_tokens == indexed_tokens2
+
+    def test_from_params(self):
+        # Save a vocab to check we can load it from_params.
+        vocab_dir = os.path.join(self.TEST_DIR, 'vocab_save')
+        vocab = Vocabulary(non_padded_namespaces=["a", "c"])
+        vocab.add_token_to_namespace("a0", namespace="a")  # non-padded, should start at 0
+        vocab.add_token_to_namespace("a1", namespace="a")
+        vocab.add_token_to_namespace("a2", namespace="a")
+        vocab.add_token_to_namespace("b2", namespace="b")  # padded, should start at 2
+        vocab.add_token_to_namespace("b3", namespace="b")
+        vocab.save_to_files(vocab_dir)
+
+        params = Params({"directory_path": vocab_dir})
+        vocab2 = Vocabulary.from_params(params)
+        assert vocab.get_index_to_token_vocabulary("a") == vocab2.get_index_to_token_vocabulary("a")
+        assert vocab.get_index_to_token_vocabulary("b") == vocab2.get_index_to_token_vocabulary("b")
+
+        # Test case where we build a vocab from a dataset.
+        vocab2 = Vocabulary.from_params(Params({}), self.dataset)
+        assert vocab2.get_index_to_token_vocabulary("tokens") == {0: '@@PADDING@@',
+                                                                  1: '@@UNKNOWN@@',
+                                                                  2: 'a', 3: 'c', 4: 'b'}
+        # Test from_params raises when we have neither a dataset and a vocab_directory.
+        with pytest.raises(ConfigurationError):
+            _ = Vocabulary.from_params(Params({}))
+
+        # Test from_params raises when there are any other dict keys
+        # present apart from 'vocabulary_directory' and we aren't calling from_dataset.
+        with pytest.raises(ConfigurationError):
+            _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": 2}))

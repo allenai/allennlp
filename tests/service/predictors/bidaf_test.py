@@ -13,7 +13,7 @@ class TestBidafPredictor(TestCase):
         }
 
         archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
-        predictor = Predictor.from_archive(archive)
+        predictor = Predictor.from_archive(archive, 'machine-comprehension')
 
         result = predictor.predict_json(inputs)
 

@@ -1,3 +1,8 @@
+"""
+An LSTM with Recurrent Dropout and the option to use highway
+connections between layers.
+"""
+
 from typing import Optional, Tuple
 
 import torch

@@ -1,3 +1,8 @@
+"""
+A stacked LSTM with LSTM layers which alternate between going forwards over
+the sequence and going backwards.
+"""
+
 from typing import Optional, Tuple
 import torch
 from torch.nn.utils.rnn import PackedSequence
