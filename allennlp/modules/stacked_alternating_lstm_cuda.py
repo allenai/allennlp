@@ -1,6 +1,6 @@
 from overrides import overrides
 import torch
-from torch.autograd import NestedIOFunction, Variable
+from torch.autograd import Function, Variable
 from torch.nn import Parameter
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_padded_sequence
 
@@ -8,7 +8,7 @@ from allennlp.nn.initializers import block_orthogonal
 from allennlp.custom_extensions._ext import highway_lstm_layer
 
 
-class _HighwayLSTMFunction(NestedIOFunction):
+class _HighwayLSTMFunction(Function):
     def __init__(self, input_size: int, hidden_size: int, num_layers: int, train: bool):
         super(_HighwayLSTMFunction, self).__init__()
         self.input_size = input_size
@@ -17,7 +17,7 @@ class _HighwayLSTMFunction(NestedIOFunction):
         self.train = train
 
     @overrides
-    def forward_extended(self,  # pylint: disable=arguments-differ
+    def forward(self,  # pylint: disable=arguments-differ
                          inputs: torch.Tensor,
                          weight: torch.Tensor,
                          bias: torch.Tensor,
