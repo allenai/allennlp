@@ -11,7 +11,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, ConditionalRandomField
 from allennlp.models.model import Model
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.nn.util import get_text_field_mask, viterbi_decode
 from allennlp.training.metrics import CategoricalAccuracy
 
 START_TAG = "@@START@@"
@@ -65,7 +65,7 @@ class HierarchicalTagger(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                tags: torch.LongTensor) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -98,31 +98,29 @@ class HierarchicalTagger(Model):
         # (batch_size, sequence_length, num_)
         logits = self.tag_projection_layer(encoded_text)
         log_likelihood = self.crf.forward(logits, tags, mask)
+        for metric in self.metrics.values():
+            metric(logits, tags, mask.float())
 
-        return {"loss": -log_likelihood}
+        return {"loss": -log_likelihood, "logits": logits}
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Does a simple position-wise argmax over each token, converts indices to string labels, and
-        adds a ``"tags"`` key to the dictionary with the result.
+        Uses viterbi algorithm to find most likely tags
         """
-        all_predictions = output_dict['class_probabilities']
-        if not isinstance(all_predictions, numpy.ndarray):
-            all_predictions = all_predictions.cpu().numpy()
-        if all_predictions.ndim == 3:
-            predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
+        logits = output_dict["logits"]
+        if not isinstance(logits, numpy.ndarray):
+            logits = logits.cpu().numpy()
+        if logits.ndim == 3:
+            predictions_list = [logits[i] for i in range(logits.shape[0])]
         else:
-            predictions_list = [all_predictions]
+            predictions_list = [logits]
         all_tags = []
-        for predictions in predictions_list:
-            argmax_indices = numpy.argmax(predictions, axis=-1)
-            tags = [self.vocab.get_token_from_index(x, namespace="labels")
-                    for x in argmax_indices]
+        for prediction in predictions_list:
+            viterbi_path, _ = viterbi_decode(prediction, self.crf.transitions.T)
+            tags = [self.vocab.get_token_from_index(ix, "tags") for ix in viterbi_path]
             all_tags.append(tags)
-        if len(all_tags) == 1:
-            all_tags = all_tags[0]  # type: ignore
-        output_dict['tags'] = all_tags
+        output_dict["tags"] = all_tags
         return output_dict
 
     @overrides
@@ -130,7 +128,7 @@ class HierarchicalTagger(Model):
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SimpleTagger':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'HierarchicalTagger':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))

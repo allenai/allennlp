@@ -2,17 +2,16 @@
 Conditional random field
 """
 
-from typing import Optional, Tuple
 import torch
 
-from allennlp.common.checks import ConfigurationError
+from allennlp.nn.util import viterbi_decode
 
-def log_sum_exp(x: torch.autograd.Variable) -> torch.autograd.Variable:
+def log_sum_exp(x: torch.autograd.Variable) -> torch.autograd.Variable:  # pylint: disable=invalid-name
     """
     numerically stable log(sum(exp(x))) over only the last dimension.
     assumes x is 2-dimensional
     """
-    batch_size, num_tags = x.shape
+    batch_size, num_tags = x.data.shape
 
     # (batch_size, sequence_length)
     maxes, _ = torch.max(x, -1)
@@ -59,30 +58,12 @@ class ConditionalRandomField(torch.nn.Module):
         self.transitions.data[:, stop_tag] = -10000
 
 
-    def forward(self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.Tensor=None):
-        # pylint: disable=arguments-differ
-        """
-        Parameters
-        ----------
-        inputs : ``torch.Tensor``, required.
-            A (batch_size, sequence_length, num_tags) Tensor.
-        tags: ``torch.Tensor``, required.
-            A (batch_size, sequence_length) Tensor
-        mask: ``torch.Tensor``.
-            A (batch_size, sequence_length) mask
-
-        Returns
-        -------
-        log_likelihood
-            The CRF log-likelihood of the input sequence[s]
-        """
-        batch_size, sequence_length, num_tags = inputs.shape
+    def _log_likelihood_denominator(self, inputs: torch.Tensor) -> torch.Tensor:
+        batch_size, sequence_length, num_tags = inputs.data.shape
 
         # at step 0, start_tag has all of the score
-        alphas = torch.Tensor(batch_size, 1, num_tags).fill_(-10000.)
-        alphas[:, 0, self.start_tag] = 0.
-
-        forward_var = torch.autograd.Variable(alphas)
+        forward_var = torch.autograd.Variable(torch.Tensor(batch_size, num_tags).fill_(-10000.))
+        forward_var[:, self.start_tag] = 0.
 
         # Iterate through the sentence
         for i in range(sequence_length):
@@ -90,42 +71,75 @@ class ConditionalRandomField(torch.nn.Module):
 
             # TODO(joelgrus): vectorize this once it works
             for next_tag in range(num_tags):
-                # (batch_size,)
-                emit_score = inputs[:, i, next_tag]
-                # (batch_size, 1)
-                emit_score = emit_score.view(batch_size, 1)
-                # (batch_size, num_tags)
-                emit_score = emit_score.expand(batch_size, num_tags)
+                # (batch_size,) -> (batch_size, num_tags)
+                emit_score = inputs[:, i, next_tag].contiguous()
+                emit_score = emit_score.view(batch_size, 1).expand(batch_size, num_tags)
 
-                # (num_tags,) probability of transitioning from each to next_tag
-                trans_score = self.transitions[next_tag]
-                # (1, num_tags)
-                trans_score = trans_score.view(1, num_tags)
-                # (batch_size, num_tags)
-                trans_score = trans_score.expand(batch_size, num_tags)
+                # (num_tags,) -> (batch_size, num_tags)
+                trans_score = self.transitions[next_tag].view(1, num_tags).expand(batch_size, num_tags)
 
                 # (batch_size, num_tags)
                 next_tag_var = forward_var + trans_score + emit_score
+
+                # for this tag we log_sum_exp over all the next_tags
                 alphas_t.append(log_sum_exp(next_tag_var).view(batch_size, 1))
 
             # At this point alphas_t is a list of num_tags (batch_size, 1) tensors
             # Concatenate to get (batch_size, num_tags)
             forward_var = torch.cat(alphas_t, 1)
 
-            # Subtract off correct tag
-
-        # (num_tags,)
-        stops = self.transitions[self.stop_tag]
-        # (1, num_tags)
-        stops = stops.view(1, num_tags)
-        # (batch_size, num_tags)
-        stops = stops.expand(batch_size, num_tags)
+        # (num_tags,) -> (batch_size, num_tags)
+        stops = self.transitions[self.stop_tag].view(1, num_tags).expand(batch_size, num_tags)
 
         # (batch_size, num_tags)
         terminal_var = forward_var + stops
 
+        # again log_sum_exp over the tags
         # (batch_size,)
-        losses = log_sum_exp(terminal_var)
+        return log_sum_exp(terminal_var)
 
-        return torch.sum(losses)
+    def _log_likelihood_numerator(self,
+                                  inputs: torch.Tensor,
+                                  tags: torch.Tensor,
+                                  mask: torch.ByteTensor=None) -> torch.Tensor:
+        batch_size, sequence_length, num_tags = inputs.data.shape
 
+        # Variable to hold the numerators
+        score = torch.autograd.Variable(torch.Tensor(batch_size).fill_(0.))
+
+        # Initial transitions:
+        # TODO(joelgrus) vectorize
+        for j in range(batch_size):
+            prev_tag, next_tag = self.start_tag, tags[j, 0]
+            score[j] = score[j] + self.transitions.index_select(0, next_tag)[0, prev_tag]
+
+        for i in range(sequence_length - 1):
+            # TODO(joelgrus) vectorize
+            for j in range(batch_size):
+                if mask is None or mask[j, i].data[0]:
+                    prev_tag, next_tag = tags[j, i], tags[j, i+1]
+                    trans = self.transitions.index_select(0, next_tag).index_select(1, prev_tag)
+                    inp = inputs[j, i].index_select(0, next_tag)
+                    score[j] = score[j] + trans + inp
+
+        # and add the last transition too
+        # TODO(joelgrus) vectorize
+        for j in range(batch_size):
+            prev_tag, next_tag = tags[j, -1], self.stop_tag
+            trans = self.transitions[next_tag].index_select(0, prev_tag)
+            score[j] = score[j] + trans
+
+        return score
+
+    def forward(self,
+                inputs: torch.Tensor,
+                tags: torch.Tensor,
+                mask: torch.ByteTensor=None) -> torch.Tensor:
+        """
+        ``forward`` only computes the loss
+        """
+        # pylint: disable=arguments-differ
+        log_denominator = self._log_likelihood_denominator(inputs)
+        log_numerator = self._log_likelihood_numerator(inputs, tags, mask)
+
+        return torch.sum(log_numerator - log_denominator)

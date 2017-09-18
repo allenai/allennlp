@@ -66,14 +66,17 @@ class Conll2003DatasetReader(DatasetReader):
                     fields = [line.strip().split() for line in lines]
                     # unzipping trick returns tuples, but our Fields need lists
                     tokens, pos_tags, chunk_tags, ner_tags = [list(field) for field in zip(*fields)]
+                    # TextField requires ``Token`` objects
+                    tokens = [Token(token) for token in tokens]
                     sequence = TextField(tokens, self._token_indexers)
                     # Put each tag in a different namespace, so that models can use
                     # Vocabulary.get_vocab_size(namespace) to get the right number of classes
                     instances.append(Instance({
                             'tokens': sequence,
-                            'pos_tags': SequenceLabelField(pos_tags, sequence, "pos_labels"),
-                            'chunk_tags': SequenceLabelField(chunk_tags, sequence, "chunk_labels"),
-                            'ner_tags': SequenceLabelField(ner_tags, sequence, "ner_labels")
+                            #'pos_tags': SequenceLabelField(pos_tags, sequence, "pos_labels"),
+                            #'chunk_tags': SequenceLabelField(chunk_tags, sequence, "chunk_labels"),
+                            #'ner_tags': SequenceLabelField(ner_tags, sequence, "ner_labels")
+                            'tags': SequenceLabelField(ner_tags, sequence)
                     }))
 
         return Dataset(instances)
