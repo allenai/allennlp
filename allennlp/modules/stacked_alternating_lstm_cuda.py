@@ -1,3 +1,4 @@
+from overrides import overrides
 import torch
 from torch.autograd import NestedIOFunction, Variable
 from torch.nn import Parameter
@@ -15,7 +16,8 @@ class _HighwayLSTMFunction(NestedIOFunction):
         self.num_layers = num_layers
         self.train = train
 
-    def forward_extended(self,
+    @overrides
+    def forward_extended(self,  # pylint: disable=arguments-differ
                          inputs: torch.Tensor,
                          weight: torch.Tensor,
                          bias: torch.Tensor,
@@ -54,21 +56,25 @@ class _HighwayLSTMFunction(NestedIOFunction):
         output = state_accumulator[-1, 1:, :, :]
         return output, state_accumulator[:, 1:, :, :]
 
-    def backward(self, grad_output, grad_hy):
-        inputs, lengths, weight, bias, hy, cy, dropout_mask, gates = self.saved_tensors
+    @overrides
+    def backward(self, grad_output, grad_hy):  # pylint: disable=arguments-differ
+        inputs, lengths, weight, bias, state_accumulator, \
+            memory_accumulator, dropout_mask, gates = self.saved_tensors
+
         inputs = inputs.contiguous()
         sequence_length, batch_size, input_size = inputs.size()
+        parameters_need_grad = 1 if self.needs_input_grad[1] else 0  # pylint: disable=unsubscriptable-object
 
         grad_input = inputs.new().resize_as_(inputs).zero_()
-        grad_hx = inputs.new().resize_as_(hy).zero_()
-        grad_cx = inputs.new().resize_as_(cy).zero_()
+        grad_state_accumulator = inputs.new().resize_as_(state_accumulator).zero_()
+        grad_memory_accumulator = inputs.new().resize_as_(memory_accumulator).zero_()
         grad_weight = inputs.new()
         grad_bias = inputs.new()
         grad_dropout = None
         grad_lengths = None
         grad_gates = None
 
-        if self.needs_input_grad[1]:
+        if parameters_need_grad:
             grad_weight.resize_as_(weight).zero_()
             grad_bias.resize_as_(bias).zero_()
 
@@ -76,14 +82,32 @@ class _HighwayLSTMFunction(NestedIOFunction):
         tmp_h_gates_grad = inputs.new().resize_(batch_size, 5 * self.hidden_size).zero_()
 
         is_training = 1 if self.train else 0
-        highway_lstm_layer.highway_lstm_backward_cuda(
-            input_size, self.hidden_size, batch_size,
-            self.num_layers, sequence_length, grad_output,
-            lengths, grad_hx, grad_cx, inputs, hy, cy, weight,
-            gates, dropout_mask, tmp_h_gates_grad, tmp_i_gates_grad,
-            grad_hy, grad_input, grad_weight, grad_bias, is_training, 1 if self.needs_input_grad[1] else 0)
+        highway_lstm_layer.highway_lstm_backward_cuda(input_size,
+                                                      self.hidden_size,
+                                                      batch_size,
+                                                      self.num_layers,
+                                                      sequence_length,
+                                                      grad_output,
+                                                      lengths,
+                                                      grad_state_accumulator,
+                                                      grad_memory_accumulator,
+                                                      inputs,
+                                                      state_accumulator,
+                                                      memory_accumulator,
+                                                      weight,
+                                                      gates,
+                                                      dropout_mask,
+                                                      tmp_h_gates_grad,
+                                                      tmp_i_gates_grad,
+                                                      grad_hy,
+                                                      grad_input,
+                                                      grad_weight,
+                                                      grad_bias,
+                                                      is_training,
+                                                      parameters_need_grad)
 
-        return grad_input, grad_weight, grad_bias, grad_hx, grad_cx, grad_dropout, grad_lengths, grad_gates
+        return grad_input, grad_weight, grad_bias, grad_state_accumulator,\
+            grad_memory_accumulator, grad_dropout, grad_lengths, grad_gates
 
 
 class HighwayLSTM(torch.nn.Module):
@@ -161,21 +185,23 @@ class HighwayLSTM(torch.nn.Module):
             init_tensor = self.weight.data.new(input_size, self.hidden_size * 6).zero_()
             block_orthogonal(init_tensor, [input_size, self.hidden_size])
             # Copy it into the flat weight.
-            self.weight.data[weight_index: weight_index + init_tensor.nelement()].view_as(init_tensor).copy_(init_tensor)
+            self.weight.data[weight_index: weight_index + init_tensor.nelement()]\
+                .view_as(init_tensor).copy_(init_tensor)
             weight_index += init_tensor.nelement()
 
             # Same for the recurrent connection weight.
             init_tensor = self.weight.data.new(input_size, self.hidden_size * 5).zero_()
             block_orthogonal(init_tensor, [input_size, self.hidden_size])
-            self.weight.data[weight_index: weight_index + init_tensor.nelement()].view_as(init_tensor).copy_(init_tensor)
+            self.weight.data[weight_index: weight_index + init_tensor.nelement()]\
+                .view_as(init_tensor).copy_(init_tensor)
             weight_index += init_tensor.nelement()
 
             # forget bias
             self.bias.data[bias_index + self.hidden_size:bias_index + 2 * self.hidden_size].fill_(1)
             bias_index += 5 * self.hidden_size
 
-    def forward(self, inputs: PackedSequence,
-                initial_state: torch.Tensor = None):
+    def forward(self, inputs: PackedSequence,  # pylint: disable=arguments-differ
+                initial_state: torch.Tensor = None):  # pylint: disable=unused-argument
         """
         Parameters
         ----------
@@ -197,7 +223,7 @@ class HighwayLSTM(torch.nn.Module):
         # Kernel takes sequence length first tensors.
         inputs = inputs.transpose(0, 1)
 
-        sequence_length, batch_size, input_size = inputs.size()
+        sequence_length, batch_size, _ = inputs.size()
         accumulator_shape = [self.num_layers, sequence_length + 1, batch_size, self.hidden_size]
         state_accumulator = Variable(inputs.data.new(*accumulator_shape).zero_(), requires_grad=False)
         memory_accumulator = Variable(inputs.data.new(*accumulator_shape).zero_(), requires_grad=False)
@@ -208,7 +234,9 @@ class HighwayLSTM(torch.nn.Module):
             dropout_weights.bernoulli_(1 - self.recurrent_dropout_prob).div_((1 - self.recurrent_dropout_prob))
 
         dropout_weights = Variable(dropout_weights, requires_grad=False)
-        gates = Variable(inputs.data.new().resize_(self.num_layers, sequence_length, batch_size, 6 * self.hidden_size))
+        gates = Variable(inputs.data.new().resize_(self.num_layers,
+                                                   sequence_length,
+                                                   batch_size, 6 * self.hidden_size))
 
         lengths_variable = Variable(torch.IntTensor(lengths))
         implementation = _HighwayLSTMFunction(self.input_size,
@@ -221,4 +249,3 @@ class HighwayLSTM(torch.nn.Module):
         output = output.transpose(0, 1)
         output = pack_padded_sequence(output, lengths, batch_first=True)
         return output, final_states
-

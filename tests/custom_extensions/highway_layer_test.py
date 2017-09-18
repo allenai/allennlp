@@ -32,7 +32,8 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             assert diff < 1e-4, "forward pass is not deterministic in validation mode."
             output = output_new
 
-    def forward_and_backward_outputs_match(self, baseline_model, kernel_model,
+    @staticmethod
+    def forward_and_backward_outputs_match(baseline_model, kernel_model,
                                            baseline_input, kernel_input, lengths):
 
         packed_baseline_input = pack_padded_sequence(baseline_input, lengths, batch_first=True)
@@ -92,17 +93,17 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         # so we are starting from exactly the same place.
         weight_index = 0
         bias_index = 0
-        print("CUDA lstm - weight elements: ", kernel_version.weight.nelement())
-        for layer in range(num_layers):
+        for layer_index in range(num_layers):
 
-            input_weight = getattr(baseline, 'layer_%d' % layer).input_linearity.weight
-            state_weight = getattr(baseline, 'layer_%d' % layer).state_linearity.weight
-            bias = getattr(baseline, 'layer_%d' % layer).state_linearity.bias
+            layer = getattr(baseline, 'layer_%d' % layer_index)
+            input_weight = layer.input_linearity.weight
+            state_weight = layer.state_linearity.weight
+            bias = layer.state_linearity.bias
 
-            kernel_version.weight.data[weight_index:weight_index+input_weight.nelement()].copy_(input_weight.data.t())
+            kernel_version.weight.data[weight_index: weight_index + input_weight.nelement()].copy_(input_weight.data.t())
             weight_index += input_weight.nelement()
 
-            kernel_version.weight.data[weight_index:weight_index+state_weight.nelement()].copy_(state_weight.data.t())
+            kernel_version.weight.data[weight_index: weight_index + state_weight.nelement()].copy_(state_weight.data.t())
             weight_index += state_weight.nelement()
 
             kernel_version.bias.data[bias_index:bias_index + bias.nelement()].copy_(bias.data)
