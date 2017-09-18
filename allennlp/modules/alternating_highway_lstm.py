@@ -118,8 +118,9 @@ class _AlternatingHighwayLSTMFunction(Function):
 class AlternatingHighwayLSTM(torch.nn.Module):
     """
     A stacked LSTM with LSTM layers which alternate between going forwards over
-    the sequence and going backwards. This implementation is based on the
-    description in `Deep Semantic Role Labelling - What works and what's next
+    the sequence and going backwards, with highway connections between each of
+    the alternating layers. This implementation is based on the description in
+    `Deep Semantic Role Labelling - What works and what's next
     <https://homes.cs.washington.edu/~luheng/files/acl2017_hllz.pdf>`_ .
 
     Parameters
@@ -137,7 +138,7 @@ class AlternatingHighwayLSTM(torch.nn.Module):
 
     Returns
     -------
-    output_accumulator : PackedSequence
+    output : PackedSequence
         The outputs of the interleaved LSTMs per timestep. A tensor of shape
         (batch_size, max_timesteps, hidden_size) where for a given batch
         element, all outputs past the sequence length for that batch are
@@ -163,7 +164,9 @@ class AlternatingHighwayLSTM(torch.nn.Module):
         bias_size = 5 * hidden_size
 
         # Here we are creating a single weight and bias with the
-        # parameters for each layer unfolded into it.
+        # parameters for all layers unfolded into it. This is necessary
+        # because unpacking and re-packing the weights inside the
+        # kernel would be slow, as it would happen every time it is called.
         total_weight_size = 0
         total_bias_size = 0
         for layer in range(num_layers):
@@ -201,7 +204,7 @@ class AlternatingHighwayLSTM(torch.nn.Module):
                 .view_as(init_tensor).copy_(init_tensor)
             weight_index += init_tensor.nelement()
 
-            # forget bias
+            # Set the forget bias to 1.
             self.bias.data[bias_index + self.hidden_size:bias_index + 2 * self.hidden_size].fill_(1)
             bias_index += 5 * self.hidden_size
 
