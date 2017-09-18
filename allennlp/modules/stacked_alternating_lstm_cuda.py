@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from overrides import overrides
 import torch
 from torch.autograd import Function, Variable
@@ -9,7 +11,7 @@ from allennlp.custom_extensions._ext import highway_lstm_layer
 
 
 class _HighwayLSTMFunction(Function):
-    def __init__(self, input_size: int, hidden_size: int, num_layers: int, train: bool):
+    def __init__(self, input_size: int, hidden_size: int, num_layers: int, train: bool) -> None:
         super(_HighwayLSTMFunction, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -18,14 +20,14 @@ class _HighwayLSTMFunction(Function):
 
     @overrides
     def forward(self,  # pylint: disable=arguments-differ
-                         inputs: torch.Tensor,
-                         weight: torch.Tensor,
-                         bias: torch.Tensor,
-                         state_accumulator: torch.Tensor,
-                         memory_accumulator: torch.Tensor,
-                         dropout_mask: torch.Tensor,
-                         lengths: torch.Tensor,
-                         gates: torch.Tensor):
+                inputs: torch.Tensor,
+                weight: torch.Tensor,
+                bias: torch.Tensor,
+                state_accumulator: torch.Tensor,
+                memory_accumulator: torch.Tensor,
+                dropout_mask: torch.Tensor,
+                lengths: torch.Tensor,
+                gates: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         sequence_length, batch_size, input_size = inputs.size()
         tmp_i = inputs.new(batch_size, 6 * self.hidden_size)
         tmp_h = inputs.new(batch_size, 5 * self.hidden_size)
@@ -58,8 +60,9 @@ class _HighwayLSTMFunction(Function):
 
     @overrides
     def backward(self, grad_output, grad_hy):  # pylint: disable=arguments-differ
-        inputs, lengths, weight, bias, state_accumulator, \
-            memory_accumulator, dropout_mask, gates = self.saved_tensors
+
+        (inputs, lengths, weight, bias, state_accumulator,  # pylint: disable=unpacking-non-sequence
+         memory_accumulator, dropout_mask, gates) = self.saved_tensors
 
         inputs = inputs.contiguous()
         sequence_length, batch_size, input_size = inputs.size()
@@ -106,8 +109,8 @@ class _HighwayLSTMFunction(Function):
                                                       is_training,
                                                       parameters_need_grad)
 
-        return grad_input, grad_weight, grad_bias, grad_state_accumulator,\
-            grad_memory_accumulator, grad_dropout, grad_lengths, grad_gates
+        return (grad_input, grad_weight, grad_bias, grad_state_accumulator,
+                grad_memory_accumulator, grad_dropout, grad_lengths, grad_gates)
 
 
 class HighwayLSTM(torch.nn.Module):
@@ -142,7 +145,7 @@ class HighwayLSTM(torch.nn.Module):
                  input_size: int,
                  hidden_size: int,
                  num_layers: int = 1,
-                 recurrent_dropout_prob: float = 0):
+                 recurrent_dropout_prob: float = 0) -> None:
         super(HighwayLSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -174,7 +177,7 @@ class HighwayLSTM(torch.nn.Module):
         self.bias = Parameter(torch.FloatTensor(total_bias_size))
         self.reset_parameters()
 
-    def reset_parameters(self):
+    def reset_parameters(self) -> None:
         self.bias.data.zero_()
         weight_index = 0
         bias_index = 0
@@ -201,7 +204,8 @@ class HighwayLSTM(torch.nn.Module):
             bias_index += 5 * self.hidden_size
 
     def forward(self, inputs: PackedSequence,  # pylint: disable=arguments-differ
-                initial_state: torch.Tensor = None):  # pylint: disable=unused-argument
+                # pylint: disable=unused-argument
+                initial_state: torch.Tensor = None)-> Tuple[PackedSequence, torch.Tensor]:
         """
         Parameters
         ----------
