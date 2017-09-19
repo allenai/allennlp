@@ -65,7 +65,7 @@ class HierarchicalTagger(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                tags: torch.LongTensor) -> Dict[str, torch.Tensor]:
+                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -97,28 +97,31 @@ class HierarchicalTagger(Model):
 
         # (batch_size, sequence_length, num_)
         logits = self.tag_projection_layer(encoded_text)
-        log_likelihood = self.crf.forward(logits, tags, mask)
-        for metric in self.metrics.values():
-            metric(logits, tags, mask.float())
+        output = {"logits": logits}
 
-        return {"loss": -log_likelihood, "logits": logits}
+        if tags is not None:
+            log_likelihood = self.crf.forward(logits, tags, mask)
+            output["loss"] = -log_likelihood
+
+            for metric in self.metrics.values():
+                metric(logits, tags, mask.float())
+
+        return output
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Uses viterbi algorithm to find most likely tags
         """
-        logits = output_dict["logits"]
-        if not isinstance(logits, numpy.ndarray):
-            logits = logits.cpu().numpy()
-        if logits.ndim == 3:
+        logits = torch.Tensor(output_dict["logits"])
+        if logits.ndimension() == 3:
             predictions_list = [logits[i] for i in range(logits.shape[0])]
         else:
             predictions_list = [logits]
         all_tags = []
         for prediction in predictions_list:
-            viterbi_path, _ = viterbi_decode(prediction, self.crf.transitions.T)
-            tags = [self.vocab.get_token_from_index(ix, "tags") for ix in viterbi_path]
+            viterbi_path, _ = viterbi_decode(prediction, self.crf.transitions.data.transpose(1, 0))
+            tags = [self.vocab.get_token_from_index(ix, "labels") for ix in viterbi_path]
             all_tags.append(tags)
         output_dict["tags"] = all_tags
         return output_dict
