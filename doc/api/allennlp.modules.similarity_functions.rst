@@ -12,9 +12,10 @@ allennlp.modules.similarity_functions
 * :ref:`CosineSimilarity<cosine>`
 * :ref:`DotProductSimilarity<dot-product>`
 * :ref:`LinearSimilarity<linear>`
+* :ref:`MultiHeadedSimilarity<multi-headed>`
 
 .. _similarity-function:
-.. automodule:: allennlp.modules.similarity_function
+.. automodule:: allennlp.modules.similarity_functions.similarity_function
    :members:
    :undoc-members:
    :show-inheritance:
@@ -39,6 +40,12 @@ allennlp.modules.similarity_functions
 
 .. _linear:
 .. automodule:: allennlp.modules.similarity_functions.linear
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _multi-headed:
+.. automodule:: allennlp.modules.similarity_functions.multiheaded
    :members:
    :undoc-members:
    :show-inheritance:
