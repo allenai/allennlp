@@ -78,24 +78,20 @@ class MultiHeadedSimilarity(SimilarityFunction):
         projected_tensor_1 = torch.matmul(tensor_1, self._tensor_1_projection)
         projected_tensor_2 = torch.matmul(tensor_2, self._tensor_2_projection)
 
-        # split_tensor_{1,2} are both tuples of length num_heads, where each element in the tuple
-        # is a tensor of shape (..., projected_dim / num_heads).
-        split_size = projected_tensor_1.size(-1) // self._num_heads
-        split_tensor_1 = projected_tensor_1.split(split_size, dim=-1)
-        split_size = projected_tensor_2.size(-1) // self._num_heads
-        split_tensor_2 = projected_tensor_2.split(split_size, dim=-1)
-
-        # We then stack the tensors, inserting a new dimension in the _second-to-last_ position,
-        # giving us a tensor of shape (..., num_heads, projected_dim / num_heads).
-        stacked_tensor_1 = torch.stack(split_tensor_1, dim=-2)
-        stacked_tensor_2 = torch.stack(split_tensor_2, dim=-2)
+        # Here we split the last dimension of the tensors from (..., projected_dim) to
+        # (..., num_heads, projected_dim / num_heads), using tensor.view().
+        last_dim_size = projected_tensor_1.size(-1) // self._num_heads
+        new_shape = list(projected_tensor_1.size())[:-1] + [self._num_heads, last_dim_size]
+        split_tensor_1 = projected_tensor_1.view(*new_shape)
+        last_dim_size = projected_tensor_2.size(-1) // self._num_heads
+        new_shape = list(projected_tensor_2.size())[:-1] + [self._num_heads, last_dim_size]
+        split_tensor_2 = projected_tensor_2.view(*new_shape)
 
         # And then we pass this off to our internal similarity function.  Because the similarity
         # functions don't care what dimension their input has, and only look at the last dimension,
         # we don't need to do anything special here.  It will just compute similarity on the
-        # (..., num_heads, *projected_dim / num_heads*) dimension, returning a tensor of shape
-        # (..., num_heads).
-        return self._internal_similarity(stacked_tensor_1, stacked_tensor_2)
+        # projection dimension for each head, returning a tensor of shape (..., num_heads).
+        return self._internal_similarity(split_tensor_1, split_tensor_2)
 
     @classmethod
     def from_params(cls, params: Params) -> 'MultiHeadedSimilarity':
