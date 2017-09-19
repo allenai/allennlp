@@ -55,10 +55,8 @@ class _AlternatingHighwayLSTMFunction(Function):
         # The state_accumulator has shape: (num_layers, sequence_length + 1, batch_size, hidden_size)
         # so for the output, we want the last layer and all but the first timestep, which was the
         # initial state.
-        # TODO(Mark): Also return the state here by using index_select with the lengths so we can use
-        # it as a Seq2VecEncoder.
         output = state_accumulator[-1, 1:, :, :]
-        return output, None
+        return output, state_accumulator[:, 1:, :, :]
 
     @overrides
     def backward(self, grad_output, grad_hy):  # pylint: disable=arguments-differ
@@ -252,9 +250,11 @@ class AlternatingHighwayLSTM(torch.nn.Module):
                                                          self.hidden_size,
                                                          num_layers=self.num_layers,
                                                          train=self.training)
-        output, final_states = implementation(inputs, self.weight, self.bias, state_accumulator,
+        output, _ = implementation(inputs, self.weight, self.bias, state_accumulator,
                                               memory_accumulator, dropout_weights, lengths_variable, gates)
 
+        # TODO(Mark): Also return the state here by using index_select with the lengths so we can use
+        # it as a Seq2VecEncoder.
         output = output.transpose(0, 1)
         output = pack_padded_sequence(output, lengths, batch_first=True)
-        return output, final_states
+        return output, None
