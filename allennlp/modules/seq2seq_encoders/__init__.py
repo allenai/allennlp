@@ -20,10 +20,11 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
-from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
-from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 from allennlp.modules.augmented_lstm import AugmentedLstm
+from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
+from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
+from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 
 class _Seq2SeqWrapper:
     """
