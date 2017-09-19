@@ -129,7 +129,7 @@ class AlternatingHighwayLSTM(torch.nn.Module):
         The dimension of the outputs of the LSTM.
     num_layers : int, required
         The number of stacked LSTMs to use.
-    recurrent_dropout_prob: float, optional (default = 0.0)
+    recurrent_dropout_probability: float, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
@@ -146,12 +146,12 @@ class AlternatingHighwayLSTM(torch.nn.Module):
                  input_size: int,
                  hidden_size: int,
                  num_layers: int = 1,
-                 recurrent_dropout_prob: float = 0) -> None:
+                 recurrent_dropout_probability: float = 0) -> None:
         super(AlternatingHighwayLSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.recurrent_dropout_prob = recurrent_dropout_prob
+        self.recurrent_dropout_probability = recurrent_dropout_probability
         self.training = True
 
         # Input dimensions consider the fact that we do
@@ -238,7 +238,8 @@ class AlternatingHighwayLSTM(torch.nn.Module):
         dropout_weights = inputs.data.new().resize_(self.num_layers, batch_size, self.hidden_size).fill_(1.0)
         if self.training:
             # Normalize by 1 - dropout_prob to preserve the output statistics of the layer.
-            dropout_weights.bernoulli_(1 - self.recurrent_dropout_prob).div_((1 - self.recurrent_dropout_prob))
+            dropout_weights.bernoulli_(1 - self.recurrent_dropout_probability)\
+                .div_((1 - self.recurrent_dropout_probability))
 
         dropout_weights = Variable(dropout_weights, requires_grad=False)
         gates = Variable(inputs.data.new().resize_(self.num_layers,
