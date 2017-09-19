@@ -6,7 +6,7 @@ from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
 from allennlp.nn import Activation
 
 

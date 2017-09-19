@@ -12,7 +12,7 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.common.testing import AllenNlpTestCase
