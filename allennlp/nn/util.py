@@ -436,13 +436,11 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     This function also accepts ``x`` and ``y`` in place of ``1`` and ``2`` in the combination
     string.
     """
+    if len(tensors) > 9:
+        raise ConfigurationError("Double-digit tensor lists not currently supported")
     combination = combination.replace('x', '1').replace('y', '2')
-    combinations = combination.split(',')
-    combined_tensor = _get_combination(combinations[0], tensors)
-    for piece in combinations[1:]:
-        to_concatenate = _get_combination(piece, tensors)
-        combined_tensor = torch.cat([combined_tensor, to_concatenate], dim=-1)
-    return combined_tensor
+    to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(',')]
+    return torch.cat(to_concatenate, dim=-1)
 
 def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
     if combination.isdigit():
@@ -482,6 +480,8 @@ def get_combined_dim(combination: str, tensor_dims: List[int]) -> int:
         A list of tensor dimensions, where each dimension is from the `last axis` of the tensors
         that will be input to :func:`combine_tensors`.
     """
+    if len(tensor_dims) > 9:
+        raise ConfigurationError("Double-digit tensor lists not currently supported")
     combination = combination.replace('x', '1').replace('y', '2')
     return sum([_get_combination_dim(piece, tensor_dims) for piece in combination.split(',')])
 
