@@ -40,7 +40,7 @@ class SemanticRoleLabelerTest(ModelTestCase):
         decode_output_dict = self.model.decode(output_dict)
         lengths = get_lengths_from_binary_sequence_mask(decode_output_dict["mask"]).data.tolist()
         # Hard to check anything concrete which we haven't checked in the above
-        # test, so we'll just check that the tags are equal # to the lengths
+        # test, so we'll just check that the tags are equal to the lengths
         # of the individual instances, rather than the max length.
         for prediction, length in zip(decode_output_dict["tags"], lengths):
             assert len(prediction) == length
