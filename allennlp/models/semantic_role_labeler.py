@@ -152,8 +152,6 @@ class SemanticRoleLabeler(Model):
         all_predictions = output_dict['class_probabilities']
         sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
 
-        if isinstance(all_predictions, numpy.ndarray):
-            all_predictions = torch.from_numpy(all_predictions)
         if all_predictions.dim() == 3:
             predictions_list = [all_predictions[i].data.cpu() for i in range(all_predictions.size(0))]
         else:
