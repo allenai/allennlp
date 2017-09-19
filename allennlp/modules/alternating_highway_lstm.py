@@ -251,7 +251,7 @@ class AlternatingHighwayLSTM(torch.nn.Module):
                                                          num_layers=self.num_layers,
                                                          train=self.training)
         output, _ = implementation(inputs, self.weight, self.bias, state_accumulator,
-                                              memory_accumulator, dropout_weights, lengths_variable, gates)
+                                   memory_accumulator, dropout_weights, lengths_variable, gates)
 
         # TODO(Mark): Also return the state here by using index_select with the lengths so we can use
         # it as a Seq2VecEncoder.
