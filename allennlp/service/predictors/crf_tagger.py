@@ -24,6 +24,5 @@ class CrfTaggerPredictor(Predictor):
         ``{"tags": [...], "class_probabilities": [[...], ..., [...]]}``
         """
         sentence = json["sentence"]
-        print("sentence", sentence)
         tokens = self._tokenizer.tokenize(sentence)
         return self._dataset_reader.text_to_instance(tokens)

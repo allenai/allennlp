@@ -98,7 +98,6 @@ class Model(torch.nn.Module, Registrable):
         # complicated models, or machines with multiple GPUs, this will not work.  I couldn't find
         # a way to actually query what device a tensor / parameter is on.
         cuda_device = 0 if next(self.parameters()).is_cuda else -1
-        print("instance", instance.fields['tokens'].tokens)
         instance.index_fields(self.vocab)
         model_input = arrays_to_variables(instance.as_array_dict(),
                                           add_batch_dimension=True,

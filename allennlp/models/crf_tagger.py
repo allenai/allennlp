@@ -31,6 +31,9 @@ class CrfTagger(Model):
     stacked_encoder : ``Seq2SeqEncoder``
         The encoder (with its own internal stacking) that we will use in between embedding tokens
         and predicting output tags.
+    label_namespace: ``str``, optional (default=``"labels"``)
+        We'll need to add special START and END tags to whatever namespace holds our labels.
+        Unless you did something unusual, the default value should be what you want.
     """
 
     def __init__(self, vocab: Vocabulary,
@@ -61,6 +64,8 @@ class CrfTagger(Model):
 
         self.metrics = {
                 "accuracy": CategoricalAccuracy(),
+                # TODO(joelgrus): get rid of these. They are helpful for training the NER model,
+                # which has really unbalanced classes, but they're not applicable in general.
                 'f1-u-org': F1Measure(self.vocab.get_token_index('U-ORG', 'labels')),
                 'f1-u-misc': F1Measure(self.vocab.get_token_index('U-MISC', 'labels')),
                 'f1-u-loc': F1Measure(self.vocab.get_token_index('U-LOC', 'labels')),
@@ -103,6 +108,8 @@ class CrfTagger(Model):
         encoded_text = self.stacked_encoder(embedded_text_input, mask)
 
         logits = self.tag_projection_layer(encoded_text)
+        # The CRF layer only produces a ``loss`` output, so we need to include these
+        # in case we want to decode the outputs.
         output = {"logits": logits, "mask": mask}
 
         if tags is not None:
@@ -111,9 +118,6 @@ class CrfTagger(Model):
 
             for metric in self.metrics.values():
                 metric(logits, tags, mask.float())
-
-        #print("labels", self.vocab._index_to_token["labels"])
-        #print("transitions", self.crf.transitions.data)
 
         return output
 
@@ -144,9 +148,6 @@ class CrfTagger(Model):
             tags = [self.vocab.get_token_from_index(ix, "labels") for ix in viterbi_path]
             all_tags.append(tags)
         output_dict["tags"] = all_tags
-
-        print("tags", self.vocab._index_to_token["labels"])
-        print("transitions", self.crf.transitions.data)
 
         return output_dict
 

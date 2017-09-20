@@ -11,18 +11,17 @@ def log_sum_exp(x: torch.autograd.Variable) -> torch.autograd.Variable:  # pylin
     """
     batch_size, num_tags = x.data.shape
 
-    # (batch_size, sequence_length)
     maxes, _ = torch.max(x, -1)
     broadcast = maxes.view(batch_size, 1).expand(batch_size, num_tags)
     exps = torch.exp(x - broadcast)
 
-    # (batch_size,)
     return maxes + torch.log(torch.sum(exps, -1))
 
 
 class ConditionalRandomField(torch.nn.Module):
     """
-    CRF
+    Computes the conditional random field loss,
+    which is the negative log likelihood.
 
     Parameters
     ----------
@@ -32,10 +31,6 @@ class ConditionalRandomField(torch.nn.Module):
         The id of the special "start" sentinel tag.
     stop_tag: int, required
         The id of the special "stop" sentinel tag.
-
-    Returns
-    -------
-    output: torch.Tensor
     """
     def __init__(self,
                  num_tags: int,
@@ -55,10 +50,18 @@ class ConditionalRandomField(torch.nn.Module):
         self.transitions.data[:, stop_tag] = -10000
 
 
-
-
     def _log_likelihood_denominator(self, inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the denominator term for the log-likelihood calculation,
+        which is
+
+        log(sum(exp(score(inputs, state_sequence)))
+
+        where the sum is over all possible state_sequences.
+        """
         batch_size, sequence_length, num_tags = inputs.data.shape
+        mask = mask.float()
+        masks = [mask[:, i].contiguous() for i in range(sequence_length)]
 
         # at step 0, start_tag has all of the score
         #init_alphas = torch.Tensor(batch_size, num_tags).fill_(-10000.)
@@ -69,53 +72,55 @@ class ConditionalRandomField(torch.nn.Module):
 
         # Iterate through the sentence
         for i in range(sequence_length):
-            # (batch_size,)
-            mask_i = mask[:, i].float()
-
             alphas_t = []
 
-            # TODO(joelgrus): vectorize this once it works
+            # TODO(joelgrus): this could probably be vectorized
             for next_tag in range(num_tags):
-                # (batch_size,) -> (batch_size, num_tags)
+                # Include emit score if masks[i] is 1
                 emit_score = inputs[:, i, next_tag].contiguous()
-                emit_score = emit_score * mask_i
+                emit_score = emit_score * masks[i]
                 emit_score = emit_score.view(batch_size, 1).expand(batch_size, num_tags)
 
-                # (num_tags,) -> (batch_size, num_tags)
-                trans_score = self.transitions[next_tag].view(1, num_tags).expand(batch_size, num_tags)
-                trans_score = trans_score * mask_i.view(batch_size, 1).expand(batch_size, num_tags)
+                # Include transition_score if masks[i+1] is 1, but skip last timestep
+                transition_score = self.transitions[next_tag].view(1, num_tags).expand(batch_size, num_tags)
+                if i == sequence_length - 1:
+                    transition_score = transition_score * 0
+                else:
+                    transition_score = transition_score * masks[i+1].view(batch_size, 1).expand(batch_size, num_tags)
 
-                # (batch_size, num_tags)
-                next_tag_var = forward_var + trans_score + emit_score
+                # Resulting score is (batch_size, num_tags)
+                next_tag_var = forward_var + transition_score + emit_score
 
-                # for this tag we log_sum_exp over all the next_tags
+                # For this tag we log_sum_exp over all the next_tags and append as a new column in alphas_t
                 alphas_t.append(log_sum_exp(next_tag_var).view(batch_size, 1))
 
             # At this point alphas_t is a list of num_tags (batch_size, 1) tensors
             # Concatenate to get (batch_size, num_tags)
             forward_var = torch.cat(alphas_t, 1)
 
-        # (num_tags,) -> (batch_size, num_tags)
+        # score for stopping from each tag
         stops = self.transitions[self.stop_tag].view(1, num_tags).expand(batch_size, num_tags)
-
-        # (batch_size, num_tags)
         terminal_var = forward_var + stops
 
-        # again log_sum_exp over the tags
-        # (batch_size,)
+        # again log_sum_exp over the tags to get a (batch_size,) output
         return log_sum_exp(terminal_var)
 
     def _log_likelihood_numerator(self,
                                   inputs: torch.Tensor,
                                   tags: torch.Tensor,
                                   mask: torch.ByteTensor) -> torch.Tensor:
+        """
+        Computes the numerator term for the log-likelihood, which is just score(inputs, tags)
+        """
         batch_size, sequence_length, num_tags = inputs.data.shape
+        mask = mask.float()
+        masks = [mask[:, i] for i in range(sequence_length)]
 
-        # Variable to hold the numerators
-        # This nastiness is needed to get it on the same device as the inputs (CPU or GPU)
+        # Variable to hold the numerators, shape (batch_size,), initialized to all zeros
+        # This nastiness is needed to get it on the same device as the inputs (CPU or GPU).
         score = torch.autograd.Variable(inputs.data[:, 0, 0].new().resize_(batch_size).fill_(0.))
 
-        # Transitions from start_tag to the first tag in each input
+        # Add the transition scores from start_tag to the first tag in each input
         score = score + self.transitions.index_select(0, tags[:, 0])[:, self.start_tag]
 
         # Broadcast the transition scores to one per batch element
@@ -123,10 +128,10 @@ class ConditionalRandomField(torch.nn.Module):
 
         # Add up the scores for the observed transitions and all the inputs but the last
         for i in range(sequence_length - 1):
-            #mask_i = mask[:, i].float()           # The mask for the i-th sequence element
             prev_tag = tags[:, i].contiguous()    # The i-th tag for each input
             next_tag = tags[:, i+1].contiguous()  # The (i+1)-th tag for each input
 
+            # The scores for transitioning from prev_tag to next_tag
             transition_score = (
                     broadcast_transitions
                     # Choose the next_tag-th row for each input
@@ -137,11 +142,14 @@ class ConditionalRandomField(torch.nn.Module):
                     .squeeze()
             )
 
+            # The score for using prev_tag
             input_score = inputs[:, i].contiguous().gather(1, prev_tag.view(-1, 1)).squeeze()
-            # include transition score if next element is unmasked, input_score if this element is unmasked
-            score = score + transition_score * mask[:, i+1].float() + input_score * mask[:, i].float()
 
-        # Last input and transition to stop
+            # Include transition score if next element is unmasked,
+            # input_score if this element is unmasked.
+            score = score + transition_score * masks[i+1] + input_score * masks[i]
+
+        # Transition from last state to "stop" state.
         last_transition_score = self.transitions[self.stop_tag].index_select(0, tags[:, -1])
 
         last_inputs = inputs[:, -1].contiguous()                         # (batch_size, num_tags)
