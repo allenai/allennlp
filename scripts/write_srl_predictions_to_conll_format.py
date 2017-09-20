@@ -9,13 +9,11 @@ from allennlp.data.iterators import BasicIterator
 from allennlp.data import DatasetReader
 from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
-from allennlp.nn.util import arrays_to_variables, viterbi_decode
+from allennlp.nn.util import arrays_to_variables
 
 
 def main(serialization_directory, device):
     """
-    config_file : str, required.
-        A config file containing a model specification.
     serialization_directory : str, required.
         The directory containing the serialized weights.
     device: int, default = -1
