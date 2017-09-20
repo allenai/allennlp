@@ -61,7 +61,8 @@ class ConditionalRandomField(torch.nn.Module):
         batch_size, sequence_length, num_tags = inputs.data.shape
 
         # at step 0, start_tag has all of the score
-        init_alphas = torch.Tensor(batch_size, num_tags).fill_(-10000.)
+        #init_alphas = torch.Tensor(batch_size, num_tags).fill_(-10000.)
+        init_alphas = inputs.data[0].new().resize_(batch_size, num_tags).fill_(-10000.)
         init_alphas[:, self.start_tag] = 0.
 
         forward_var = torch.autograd.Variable(init_alphas)
@@ -111,7 +112,8 @@ class ConditionalRandomField(torch.nn.Module):
         batch_size, sequence_length, num_tags = inputs.data.shape
 
         # Variable to hold the numerators
-        score = torch.autograd.Variable(torch.Tensor(batch_size).fill_(0.))
+        #score = torch.autograd.Variable(torch.Tensor(batch_size).fill_(0.))
+        score = torch.autograd.Variable(inputs.data[:, 0, 0].new().resize_(batch_size).fill_(0.))
 
         # Transitions from start_tag
         score = score + self.transitions.index_select(0, tags[:, 0])[:, self.start_tag]
