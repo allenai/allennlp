@@ -63,8 +63,7 @@ class ConditionalRandomField(torch.nn.Module):
         mask = mask.float()
         masks = [mask[:, i].contiguous() for i in range(sequence_length)]
 
-        # at step 0, start_tag has all of the score
-        #init_alphas = torch.Tensor(batch_size, num_tags).fill_(-10000.)
+        # At step 0, start_tag has all of the score. This ugliness gets the right device.
         init_alphas = inputs.data[0].new().resize_(batch_size, num_tags).fill_(-10000.)
         init_alphas[:, self.start_tag] = 0.
 
@@ -149,13 +148,13 @@ class ConditionalRandomField(torch.nn.Module):
         # Transition from last state to "stop" state.
         last_transition_score = self.transitions[self.stop_tag].index_select(0, tags[:, -1])
 
+        # Finally, add the last input if it's not masked.
         last_inputs = inputs[:, -1].contiguous()                         # (batch_size, num_tags)
         last_tags = tags[:, -1].contiguous()                             # (batch_size, num_tags)
         last_input_score = last_inputs.gather(1, last_tags.view(-1, 1))  # (batch_size, 1)
         last_input_score = last_input_score.squeeze()                    # (batch_size,)
-        last_mask = mask[:, -1].float()
 
-        score = score + last_transition_score + last_input_score * last_mask
+        score = score + last_transition_score + last_input_score * masks[-1]
 
         return score
 
