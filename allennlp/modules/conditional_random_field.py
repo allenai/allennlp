@@ -113,30 +113,39 @@ class ConditionalRandomField(torch.nn.Module):
         # Variable to hold the numerators
         score = torch.autograd.Variable(torch.Tensor(batch_size).fill_(0.))
 
-        # Initial transitions:
-        # TODO(joelgrus) vectorize
-        for j in range(batch_size):
-            prev_tag, next_tag = self.start_tag, tags[j, 0]
-            score[j] = score[j] + self.transitions.index_select(0, next_tag)[0, prev_tag]
+        # Transitions from start_tag
+        score = score + self.transitions.index_select(0, tags[:, 0])[:, self.start_tag]
 
+        # Broadcast transitions
+        broadcast_transitions = self.transitions.view(1, num_tags, num_tags).expand(batch_size, num_tags, num_tags)
+
+        # Actual transitions
         for i in range(sequence_length - 1):
-            # TODO(joelgrus) vectorize
-            for j in range(batch_size):
-                if mask is None or mask[j, i].data[0]:
-                    prev_tag, next_tag = tags[j, i], tags[j, i+1]
-                    trans = self.transitions.index_select(0, next_tag).index_select(1, prev_tag)
-                    inp = inputs[j, i].index_select(0, next_tag)
-                    score[j] = score[j] + trans + inp
+            mask_i = mask[:, i].float()
+            prev_tag = tags[:, i].contiguous()
+            next_tag = tags[:, i+1].contiguous()
 
-        # and add the last input
-        # and add the last transition too
-        # TODO(joelgrus) vectorize
-        for j in range(batch_size):
-            if mask is None or mask[j, -1].data[0]:
-                prev_tag, next_tag = tags[j, -1], self.stop_tag
-                trans = self.transitions[next_tag].index_select(0, prev_tag)
-                inp = inputs[j, -1, next_tag]
-                score[j] = score[j] + trans + inp
+            transition_score = (
+                    broadcast_transitions
+                    .gather(1, next_tag.view(-1, 1, 1).expand(batch_size, 1, num_tags))
+                    .squeeze()
+                    .gather(1, prev_tag.view(-1, 1))
+                    .squeeze()
+            )
+
+            input_score = inputs[:, i].contiguous().gather(1, prev_tag.view(-1, 1)).squeeze()
+            score = score + transition_score * mask_i + input_score * mask_i
+
+        # Last input and transition to stop
+        last_transition_score = self.transitions[self.stop_tag].index_select(0, tags[:, -1])
+
+        last_inputs = inputs[:, -1].contiguous()                         # (batch_size, num_tags)
+        last_tags = tags[:, -1].contiguous()                             # (batch_size, num_tags)
+        last_input_score = last_inputs.gather(1, last_tags.view(-1, 1))  # (batch_size, 1)
+        last_input_score = last_input_score.squeeze()                    # (batch_size,)
+        last_mask = mask[:, -1].float()
+
+        score = score + last_transition_score + last_input_score * last_mask
 
         return score
 
