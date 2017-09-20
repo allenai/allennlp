@@ -70,10 +70,10 @@ class AugmentedLstm(torch.nn.Module):
         # using highway layers, we need some extra projections, which is
         # why the sizes of the Linear layers change here depending on this flag.
         if use_highway:
-            self.input_linearity = torch.nn.Linear(input_size, 6 * hidden_size, bias=True)
+            self.input_linearity = torch.nn.Linear(input_size, 6 * hidden_size, bias=False)
             self.state_linearity = torch.nn.Linear(hidden_size, 5 * hidden_size, bias=True)
         else:
-            self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=True)
+            self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=False)
             self.state_linearity = torch.nn.Linear(hidden_size, 4 * hidden_size, bias=True)
         self.reset_parameters()
 
@@ -82,11 +82,9 @@ class AugmentedLstm(torch.nn.Module):
         block_orthogonal(self.input_linearity.weight.data, [self.hidden_size, self.input_size])
         block_orthogonal(self.state_linearity.weight.data, [self.hidden_size, self.hidden_size])
 
-        self.input_linearity.bias.data.fill_(0.0)
         self.state_linearity.bias.data.fill_(0.0)
         # Initialize forget gate biases to 1.0 as per An Empirical
         # Exploration of Recurrent Network Architectures, (Jozefowicz, 2015).
-        self.input_linearity.bias.data[self.hidden_size:2 * self.hidden_size].fill_(1.0)
         self.state_linearity.bias.data[self.hidden_size:2 * self.hidden_size].fill_(1.0)
 
     def forward(self,  # pylint: disable=arguments-differ
