@@ -3,6 +3,7 @@ import sys
 import json
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
+import argparse
 import torch
 import tqdm
 from allennlp.common import Params
@@ -76,3 +77,15 @@ def main(serialization_directory: str, device: int):
 
     with open("validation_stats.json", "w") as out_file:
         json.dump(all_results, out_file, indent=4)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="Generate per instance statistics NLL on the validation"
+                                                 "set for a SRL model.")
+
+    parser.add_argument('--path', type=str, help='The serialization directory.')
+    parser.add_argument('--device', type=int, default=-1, help='The device to load the model onto.')
+
+    args = parser.parse_args()
+    main(args.path, args.device)
