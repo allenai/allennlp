@@ -112,31 +112,34 @@ class ConditionalRandomField(torch.nn.Module):
         batch_size, sequence_length, num_tags = inputs.data.shape
 
         # Variable to hold the numerators
-        #score = torch.autograd.Variable(torch.Tensor(batch_size).fill_(0.))
+        # This nastiness is needed to get it on the same device as the inputs (CPU or GPU)
         score = torch.autograd.Variable(inputs.data[:, 0, 0].new().resize_(batch_size).fill_(0.))
 
-        # Transitions from start_tag
+        # Transitions from start_tag to the first tag in each input
         score = score + self.transitions.index_select(0, tags[:, 0])[:, self.start_tag]
 
-        # Broadcast transitions
+        # Broadcast the transition scores to one per batch element
         broadcast_transitions = self.transitions.view(1, num_tags, num_tags).expand(batch_size, num_tags, num_tags)
 
-        # Actual transitions
+        # Add up the scores for the observed transitions and all the inputs but the last
         for i in range(sequence_length - 1):
-            mask_i = mask[:, i].float()
-            prev_tag = tags[:, i].contiguous()
-            next_tag = tags[:, i+1].contiguous()
+            #mask_i = mask[:, i].float()           # The mask for the i-th sequence element
+            prev_tag = tags[:, i].contiguous()    # The i-th tag for each input
+            next_tag = tags[:, i+1].contiguous()  # The (i+1)-th tag for each input
 
             transition_score = (
                     broadcast_transitions
+                    # Choose the next_tag-th row for each input
                     .gather(1, next_tag.view(-1, 1, 1).expand(batch_size, 1, num_tags))
                     .squeeze()
+                    # And then choose the prev_tag-th column for each of those
                     .gather(1, prev_tag.view(-1, 1))
                     .squeeze()
             )
 
             input_score = inputs[:, i].contiguous().gather(1, prev_tag.view(-1, 1)).squeeze()
-            score = score + transition_score * mask_i + input_score * mask_i
+            # include transition score if next element is unmasked, input_score if this element is unmasked
+            score = score + transition_score * mask[:, i+1].float() + input_score * mask[:, i].float()
 
         # Last input and transition to stop
         last_transition_score = self.transitions[self.stop_tag].index_select(0, tags[:, -1])
