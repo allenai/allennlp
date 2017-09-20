@@ -76,17 +76,14 @@ class ConditionalRandomField(torch.nn.Module):
 
             # TODO(joelgrus): this could probably be vectorized
             for next_tag in range(num_tags):
-                # Include emit score if masks[i] is 1
+                # Include emit score for the i-th tag if masks[i] is 1
                 emit_score = inputs[:, i, next_tag].contiguous()
                 emit_score = emit_score * masks[i]
                 emit_score = emit_score.view(batch_size, 1).expand(batch_size, num_tags)
 
-                # Include transition_score if masks[i+1] is 1, but skip last timestep
+                # Include transition_score to the i-th tag if masks[i] is 1
                 transition_score = self.transitions[next_tag].view(1, num_tags).expand(batch_size, num_tags)
-                if i == sequence_length - 1:
-                    transition_score = transition_score * 0
-                else:
-                    transition_score = transition_score * masks[i+1].view(batch_size, 1).expand(batch_size, num_tags)
+                transition_score = transition_score * masks[i].view(batch_size, 1).expand(batch_size, num_tags)
 
                 # Resulting score is (batch_size, num_tags)
                 next_tag_var = forward_var + transition_score + emit_score
