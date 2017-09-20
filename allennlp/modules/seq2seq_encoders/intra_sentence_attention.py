@@ -18,9 +18,10 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     :class:`Seq2SeqEncoder`, the input to this module is of shape ``(batch_size, num_tokens,
     input_dim)``, and the output is of shape ``(batch_size, num_tokens, output_dim)``.
 
-    We compute the attention using a configurable :class:`SimilarityFunction`, and if the result of
-    the concatenation mentioned above is not equal to the given ``output_dim``, we will do a
-    projection at the end.
+    We compute the attention using a configurable :class:`SimilarityFunction`, which could have
+    multiple attention heads.  The operation for merging the original representations with the
+    attended representations is also configurable (e.g., you can concatenate them, add them,
+    multiply them, etc.).
 
     Parameters
     ----------

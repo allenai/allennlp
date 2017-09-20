@@ -4,6 +4,7 @@ import pytest
 import torch
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import IntraSentenceAttentionEncoder
@@ -18,6 +19,14 @@ class TestIntraSentenceAttentionEncoder(AllenNlpTestCase):
         encoder = IntraSentenceAttentionEncoder(input_dim=5, combination='1+2')
         assert encoder.get_input_dim() == 5
         assert encoder.get_output_dim() == 5
+        params = Params({'input_dim': 7,
+                         'projection_dim': 12,
+                         'num_attention_heads': 4,
+                         'similarity_function': {'type': 'multiheaded'},
+                         'combination': '1,2,1*2'})
+        encoder = IntraSentenceAttentionEncoder.from_params(params)
+        assert encoder.get_input_dim() == 7
+        assert encoder.get_output_dim() == 36
 
     def test_constructor_asserts_multi_head_consistency(self):
         with pytest.raises(ConfigurationError) as exception_info:
