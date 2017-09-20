@@ -98,6 +98,7 @@ class Model(torch.nn.Module, Registrable):
         # complicated models, or machines with multiple GPUs, this will not work.  I couldn't find
         # a way to actually query what device a tensor / parameter is on.
         cuda_device = 0 if next(self.parameters()).is_cuda else -1
+        print("instance", instance.fields['tokens'].tokens)
         instance.index_fields(self.vocab)
         model_input = arrays_to_variables(instance.as_array_dict(),
                                           add_batch_dimension=True,
@@ -197,6 +198,7 @@ class Model(torch.nn.Module, Registrable):
         _remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab, model_params)
         model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
+        print("model state", list(model_state.keys()))
         model.load_state_dict(model_state)
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are

@@ -7,10 +7,10 @@ from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 
 
-@Predictor.register('hierarchical-tagger')
-class HierarchicalTaggerPredictor(Predictor):
+@Predictor.register('crf-tagger')
+class CrfTaggerPredictor(Predictor):
     """
-    Wrapper for the :class:`~allennlp.models.hierarchical_tagger.HierarchicalTagger` model.
+    Wrapper for the :class:`~allennlp.models.crf_tagger.CrfTagger` model.
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)

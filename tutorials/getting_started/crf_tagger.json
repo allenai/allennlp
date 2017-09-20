@@ -1,6 +1,6 @@
 {
     "dataset_reader": {
-      "type": "conll2003",
+      "type": "conll2003_json",
       "token_indexers": {
         "tokens": {
           "type": "single_id",
@@ -11,14 +11,15 @@
         }
       }
     },
-    "train_data_path": "/Users/joelg/src/github/other/torch-ner-nlp-from-scratch/data/conll2003/eng.demo",
-    "validation_data_path": "/Users/joelg/src/github/other/torch-ner-nlp-from-scratch/data/conll2003/eng.demo2",
+    "train_data_path": "/Users/joelg/data/ner/eng.train.json",
+    "validation_data_path": "/Users/joelg/data/ner/eng.testa.json",
     "model": {
-      "type": "hierarchical_tagger",
+      "type": "crf_tagger",
       "text_field_embedder": {
               "tokens": {
                       "type": "embedding",
-                      "embedding_dim": 50
+                      "embedding_dim": 50,
+                      "pretrained_file": "glove.6B.50d.txt.gz"
               },
               "token_characters": {
                 "type": "character_encoding",

@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Sequence
 import itertools
 import logging
 
@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def _is_divider(line: str) -> bool:
     line = line.strip()
     return not line or line == """-DOCSTART- -X- -X- O"""
+
+_VALID_LABELS = {'ner', 'pos', 'chunk'}
 
 
 @DatasetReader.register("conll2003")
@@ -43,10 +45,29 @@ class Conll2003DatasetReader(DatasetReader):
 
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
+    tag_label: ``str``, optional (default=``None``)
+        Specify `ner`, `pos`, or `chunk` to have that tag loaded into the instance field `tag`.
+        If you are building a model to predict one of the labels, it should be specified here.
+    feature_labels: ``Sequence[str]``, optional (default=``()``)
+        These labels will be loaded as features into the corresponding instance fields:
+        ``pos`` -> ``pos_tags``, ``chunk`` -> ``chunk_tags``, ``ner`` -> ``ner_tags``
+        Each will have its own namespace: ``pos_labels``, ``chunk_labels``, ``ner_labels``.
+        If you want to use one of the labels as a _feature_ in your model, it should be
+        specified here.
     """
     def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 tag_label: str = None,
+                 feature_labels: Sequence[str] = ()) -> None:
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        if tag_label is not None and tag_label not in _VALID_LABELS:
+            raise ConfigurationError("unknown tag label type: {}".format(tag_label))
+        for label in feature_labels:
+            if label not in _VALID_LABELS:
+                raise ConfigurationError("unknown feature label type: {}".format(label))
+
+        self.tag_label = tag_label
+        self.feature_labels = set(feature_labels)
 
     @overrides
     def read(self, file_path):
@@ -69,15 +90,26 @@ class Conll2003DatasetReader(DatasetReader):
                     # TextField requires ``Token`` objects
                     tokens = [Token(token) for token in tokens]
                     sequence = TextField(tokens, self._token_indexers)
-                    # Put each tag in a different namespace, so that models can use
-                    # Vocabulary.get_vocab_size(namespace) to get the right number of classes
-                    instances.append(Instance({
-                            'tokens': sequence,
-                            #'pos_tags': SequenceLabelField(pos_tags, sequence, "pos_labels"),
-                            #'chunk_tags': SequenceLabelField(chunk_tags, sequence, "chunk_labels"),
-                            #'ner_tags': SequenceLabelField(ner_tags, sequence, "ner_labels")
-                            'tags': SequenceLabelField(ner_tags, sequence)
-                    }))
+
+                    instance_fields = {'tokens': sequence}
+
+                    # Add "feature labels" to instance
+                    if 'pos' in self.feature_labels:
+                        instance_fields['pos_tags'] = SequenceLabelField(pos_tags, sequence, "pos_labels")
+                    if 'chunk' in self.feature_labels:
+                        instance_fields['chunk_tags'] = SequenceLabelField(chunk_tags, sequence, "chunk_labels")
+                    if 'ner' in self.feature_labels:
+                        instance_fields['ner_tags'] = SequenceLabelField(ner_tags, sequence, "ner_labels")
+
+                    # Add "tag label" to instance
+                    if self.tag_label == 'ner':
+                        instance_fields['tags'] = SequenceLabelField(ner_tags, sequence)
+                    elif self.tag_label == 'pos':
+                        instance_fields['tags'] = SequenceLabelField(pos_tags, sequence)
+                    elif self.tag_label == 'chunk':
+                        instance_fields['tags'] = SequenceLabelField(chunk_tags, sequence)
+
+                    instances.append(Instance(instance_fields))
 
         return Dataset(instances)
 
@@ -91,5 +123,9 @@ class Conll2003DatasetReader(DatasetReader):
     @classmethod
     def from_params(cls, params: Params) -> 'Conll2003DatasetReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        tag_label = params.pop('tag_label', None)
+        feature_labels = params.pop('feature_labels', ())
         params.assert_empty(cls.__name__)
-        return Conll2003DatasetReader(token_indexers=token_indexers)
+        return Conll2003DatasetReader(token_indexers=token_indexers,
+                                      tag_label=tag_label,
+                                      feature_labels=feature_labels)

@@ -4,7 +4,6 @@ import numpy
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
-import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -12,15 +11,15 @@ from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, ConditionalRandomField
 from allennlp.models.model import Model
 from allennlp.nn.util import get_text_field_mask, viterbi_decode
-from allennlp.training.metrics import CategoricalAccuracy
+from allennlp.training.metrics import CategoricalAccuracy, F1Measure
 
 START_TAG = "@@START@@"
 END_TAG = "@@END@@"
 
-@Model.register("hierarchical_tagger")
-class HierarchicalTagger(Model):
+@Model.register("crf_tagger")
+class CrfTagger(Model):
     """
-    The ``HierarchicalTagger`` encodes a sequence of text with a stacked ``Seq2SeqEncoder``,
+    The ``CrfTagger`` encodes a sequence of text with a stacked ``Seq2SeqEncoder``,
     then uses a Conditional Random Field model to predict a tag for each token in the sequence.
 
     Parameters
@@ -60,7 +59,12 @@ class HierarchicalTagger(Model):
                                      "respectively.".format(text_field_embedder.get_output_dim(),
                                                             stacked_encoder.get_input_dim()))
 
-        self.metrics = {"accuracy": CategoricalAccuracy()}
+        self.metrics = {
+                "accuracy": CategoricalAccuracy(),
+                'f1-u-org': F1Measure(self.vocab.get_token_index('U-ORG', 'labels')),
+                'f1-u-misc': F1Measure(self.vocab.get_token_index('U-MISC', 'labels')),
+                'f1-u-loc': F1Measure(self.vocab.get_token_index('U-LOC', 'labels')),
+        }
 
     @overrides
     def forward(self,  # type: ignore
@@ -86,18 +90,20 @@ class HierarchicalTagger(Model):
         Returns
         -------
         An output dictionary consisting of:
-        loss : torch.FloatTensor, optional
-            A scalar loss to be optimised.
 
+        logits: torch.FloatTensor
+            The logits that are the output of the ``tag_projection_layer``
+        mask: torch.ByteTensor
+            The text field mask for the input tokens
+        loss : torch.FloatTensor, optional
+            A scalar loss to be optimised. Only computed if gold label ``tags`` are provided.
         """
         embedded_text_input = self.text_field_embedder(tokens)
-        batch_size, sequence_length, _ = embedded_text_input.size()
         mask = get_text_field_mask(tokens)
         encoded_text = self.stacked_encoder(embedded_text_input, mask)
 
-        # (batch_size, sequence_length, num_)
         logits = self.tag_projection_layer(encoded_text)
-        output = {"logits": logits}
+        output = {"logits": logits, "mask": mask}
 
         if tags is not None:
             log_likelihood = self.crf.forward(logits, tags, mask)
@@ -106,6 +112,9 @@ class HierarchicalTagger(Model):
             for metric in self.metrics.values():
                 metric(logits, tags, mask.float())
 
+        #print("labels", self.vocab._index_to_token["labels"])
+        #print("transitions", self.crf.transitions.data)
+
         return output
 
     @overrides
@@ -113,25 +122,49 @@ class HierarchicalTagger(Model):
         """
         Uses viterbi algorithm to find most likely tags
         """
-        logits = torch.Tensor(output_dict["logits"])
+        logits, mask = output_dict["logits"], output_dict["mask"]
+
+        # TODO(joelgrus): Get rid of this after markn makes changes to ``Predictor``
+        if isinstance(logits, numpy.ndarray):
+            logits, mask = torch.from_numpy(logits), torch.from_numpy(mask)
+        elif isinstance(logits, torch.autograd.Variable):
+            logits, mask = logits.data, mask.data
+
         if logits.ndimension() == 3:
             predictions_list = [logits[i] for i in range(logits.shape[0])]
+            mask_list = [mask[i] for i in range(mask.shape[0])]
         else:
             predictions_list = [logits]
+            mask_list = [mask]
         all_tags = []
-        for prediction in predictions_list:
+        for prediction, mask in zip(predictions_list, mask_list):
+            # The CRF transitions are (next_state, prev_state),
+            # but ``viterbi_decode`` expects (prev_state, next_state)
             viterbi_path, _ = viterbi_decode(prediction, self.crf.transitions.data.transpose(1, 0))
             tags = [self.vocab.get_token_from_index(ix, "labels") for ix in viterbi_path]
             all_tags.append(tags)
         output_dict["tags"] = all_tags
+
+        print("tags", self.vocab._index_to_token["labels"])
+        print("transitions", self.crf.transitions.data)
+
         return output_dict
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+        result = {}
+
+        for metric_name, metric in self.metrics.items():
+            metric_value = metric.get_metric(reset)
+            if isinstance(metric_value, tuple):
+                result[metric_name] = metric_value[-1]
+            else:
+                result[metric_name] = metric_value
+
+        return result
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'HierarchicalTagger':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'CrfTagger':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))

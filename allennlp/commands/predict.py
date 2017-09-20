@@ -28,6 +28,7 @@ import sys
 from typing import Optional, IO, Dict
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import prepare_environment
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
@@ -49,6 +50,7 @@ def add_subparser(parser: argparse._SubParsersAction,
 
 def get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Predictor:
     archive = load_archive(args.archive_file)
+    prepare_environment(archive.config)
     model_type = archive.config.get("model").get("type")
     if model_type not in predictors:
         raise ConfigurationError("no known predictor for model type {}".format(model_type))

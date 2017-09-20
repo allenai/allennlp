@@ -13,3 +13,4 @@ from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.data.dataset_readers.squad import SquadReader, SquadSentenceSelectionReader
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
+from allennlp.data.dataset_readers.conll2003_json import Conll2003JsonDatasetReader
