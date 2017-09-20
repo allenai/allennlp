@@ -1,6 +1,5 @@
-from typing import Dict, List, TextIO
+from typing import Dict, List, TextIO, Optional
 
-import numpy
 from overrides import overrides
 import torch
 from torch.nn.modules import Linear, Dropout
@@ -13,7 +12,8 @@ from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, viterbi_decode
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics import SpanBasedF1Measure
 
 
@@ -135,6 +135,10 @@ class SemanticRoleLabeler(Model):
             self.span_metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
+        # We need to retain the mask in the output dictionary
+        # so that we can crop the sequences to remove padding
+        # when we do viterbi inference in self.decode.
+        output_dict["mask"] = mask
         return output_dict
 
     @overrides
@@ -145,16 +149,16 @@ class SemanticRoleLabeler(Model):
         ``"tags"`` key to the dictionary with the result.
         """
         all_predictions = output_dict['class_probabilities']
-        if isinstance(all_predictions, numpy.ndarray):
-            all_predictions = torch.from_numpy(all_predictions)
+        sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
+
         if all_predictions.dim() == 3:
-            predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
+            predictions_list = [all_predictions[i].data.cpu() for i in range(all_predictions.size(0))]
         else:
             predictions_list = [all_predictions]
         all_tags = []
         transition_matrix = self.get_viterbi_pairwise_potentials()
-        for predictions in predictions_list:
-            max_likelihood_sequence, _ = viterbi_decode(predictions, transition_matrix)
+        for predictions, length in zip(predictions_list, sequence_lengths):
+            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix)
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
             all_tags.append(tags)
@@ -215,7 +219,7 @@ class SemanticRoleLabeler(Model):
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,
-                             verb_index: int,
+                             verb_index: Optional[int],
                              sentence: List[str],
                              prediction: List[str],
                              gold_labels: List[str]):
@@ -229,9 +233,10 @@ def write_to_conll_eval_file(prediction_file: TextIO,
         A file reference to print predictions to.
     gold_file : TextIO, required.
         A file reference to print gold labels to.
-    verb_index : int, required.
+    verb_index : Optional[int], required.
         The index of the verbal predicate in the sentence which
-        the gold labels are the arguments for.
+        the gold labels are the arguments for, or None if the sentence
+        contains no verbal predicate.
     sentence : List[str], required.
         The word tokens.
     prediction : List[str], required.
@@ -240,7 +245,8 @@ def write_to_conll_eval_file(prediction_file: TextIO,
         The gold BIO labels.
     """
     verb_only_sentence = ["-"] * len(sentence)
-    verb_only_sentence[verb_index] = sentence[verb_index]
+    if verb_index:
+        verb_only_sentence[verb_index] = sentence[verb_index]
 
     conll_format_predictions = convert_bio_tags_to_conll_format(prediction)
     conll_format_gold_labels = convert_bio_tags_to_conll_format(gold_labels)

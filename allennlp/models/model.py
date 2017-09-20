@@ -90,9 +90,9 @@ class Model(torch.nn.Module, Registrable):
         """
         Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
         converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
-        through :func:`self.forward()`, and returns the result.  Before returning the result, we
-        convert any ``torch.autograd.Variables`` or ``torch.Tensors`` into numpy arrays and remove
-        the batch dimension.
+        through :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
+        and returns the result.  Before returning the result, we convert any ``torch.autograd.Variables``
+        or ``torch.Tensors`` into numpy arrays and remove the batch dimension.
         """
         # Hack to see what cuda device the model is on, so we know where to put these inputs.  For
         # complicated models, or machines with multiple GPUs, this will not work.  I couldn't find
@@ -103,7 +103,7 @@ class Model(torch.nn.Module, Registrable):
                                           add_batch_dimension=True,
                                           cuda_device=cuda_device,
                                           for_training=False)
-        outputs = self.forward(**model_input)
+        outputs = self.decode(self.forward(**model_input))
 
         for name, output in list(outputs.items()):
             output = output[0]
