@@ -54,7 +54,7 @@ class MultiHeadedSimilarity(SimilarityFunction):
                  tensor_2_projected_dim: int = None,
                  internal_similarity: SimilarityFunction = DotProductSimilarity()) -> None:
         super(MultiHeadedSimilarity, self).__init__()
-        self._num_heads = num_heads
+        self.num_heads = num_heads
         self._internal_similarity = internal_similarity
         tensor_1_projected_dim = tensor_1_projected_dim or tensor_1_dim
         tensor_2_dim = tensor_2_dim or tensor_1_dim
@@ -80,11 +80,11 @@ class MultiHeadedSimilarity(SimilarityFunction):
 
         # Here we split the last dimension of the tensors from (..., projected_dim) to
         # (..., num_heads, projected_dim / num_heads), using tensor.view().
-        last_dim_size = projected_tensor_1.size(-1) // self._num_heads
-        new_shape = list(projected_tensor_1.size())[:-1] + [self._num_heads, last_dim_size]
+        last_dim_size = projected_tensor_1.size(-1) // self.num_heads
+        new_shape = list(projected_tensor_1.size())[:-1] + [self.num_heads, last_dim_size]
         split_tensor_1 = projected_tensor_1.view(*new_shape)
-        last_dim_size = projected_tensor_2.size(-1) // self._num_heads
-        new_shape = list(projected_tensor_2.size())[:-1] + [self._num_heads, last_dim_size]
+        last_dim_size = projected_tensor_2.size(-1) // self.num_heads
+        new_shape = list(projected_tensor_2.size())[:-1] + [self.num_heads, last_dim_size]
         split_tensor_2 = projected_tensor_2.view(*new_shape)
 
         # And then we pass this off to our internal similarity function.  Because the similarity
