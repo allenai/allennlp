@@ -19,14 +19,16 @@ class TestIntraSentenceAttentionEncoder(AllenNlpTestCase):
         encoder = IntraSentenceAttentionEncoder(input_dim=5, combination='1+2')
         assert encoder.get_input_dim() == 5
         assert encoder.get_output_dim() == 5
-        params = Params({'input_dim': 7,
-                         'projection_dim': 12,
+        params = Params({'input_dim': 8,
+                         'projection_dim': 8,
                          'num_attention_heads': 4,
-                         'similarity_function': {'type': 'multiheaded'},
+                         'similarity_function': {'type': 'multiheaded',
+                                                 'num_heads': 4,
+                                                 'tensor_1_dim': 8},
                          'combination': '1,2,1*2'})
         encoder = IntraSentenceAttentionEncoder.from_params(params)
-        assert encoder.get_input_dim() == 7
-        assert encoder.get_output_dim() == 36
+        assert encoder.get_input_dim() == 8
+        assert encoder.get_output_dim() == 24
 
     def test_constructor_asserts_multi_head_consistency(self):
         with pytest.raises(ConfigurationError) as exception_info:
