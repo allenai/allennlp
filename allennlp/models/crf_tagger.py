@@ -66,9 +66,9 @@ class CrfTagger(Model):
                 "accuracy": CategoricalAccuracy(),
                 # TODO(joelgrus): get rid of these. They are helpful for training the NER model,
                 # which has really unbalanced classes, but they're not applicable in general.
-                'f1-u-org': F1Measure(self.vocab.get_token_index('U-ORG', 'labels')),
-                'f1-u-misc': F1Measure(self.vocab.get_token_index('U-MISC', 'labels')),
-                'f1-u-loc': F1Measure(self.vocab.get_token_index('U-LOC', 'labels')),
+                'f1-B-ORG': F1Measure(self.vocab.get_token_index('B-ORG', 'labels')),
+                'f1-U-MISC': F1Measure(self.vocab.get_token_index('U-MISC', 'labels')),
+                'f1-L-LOC': F1Measure(self.vocab.get_token_index('L-LOC', 'labels')),
         }
 
     @overrides
