@@ -321,7 +321,8 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
-                                       batch_average: bool = True) -> torch.FloatTensor:
+                                       batch_average: bool = True,
+                                       return_sequences: bool = False) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
@@ -342,6 +343,9 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     batch_average : bool, optional, (default = True).
         A bool indicating whether the loss should be averaged across the batch,
         or returned as a vector of losses per batch element.
+    return_sequences: bool, optional (default = False).
+        If True, returns a tensor of shape (batch_size, sequence_length), i.e. it
+        does not average over the sequence dimension.
 
     Returns
     -------
@@ -366,6 +370,10 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood * weights.float()
+
+    if return_sequences:
+        return negative_log_likelihood
+
     # shape : (batch_size,)
     per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
 

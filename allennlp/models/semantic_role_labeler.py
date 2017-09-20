@@ -132,6 +132,11 @@ class SemanticRoleLabeler(Model):
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
         if tags is not None:
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
+            per_sequence_loss = sequence_cross_entropy_with_logits(logits, tags, mask, batch_average=False)
+            per_element_loss = sequence_cross_entropy_with_logits(logits, tags, mask, return_sequences=True)
+
+            output_dict["per_element_loss"] = per_element_loss
+            output_dict["per_sequence_loss"] = per_sequence_loss
             self.span_metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
@@ -156,15 +161,18 @@ class SemanticRoleLabeler(Model):
         else:
             predictions_list = [all_predictions]
         all_tags = []
+        all_scores = []
         transition_matrix = self.get_viterbi_pairwise_potentials()
         for predictions, length in zip(predictions_list, sequence_lengths):
-            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix)
+            max_likelihood_sequence, score = viterbi_decode(predictions[:length], transition_matrix)
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
             all_tags.append(tags)
+            all_scores.append(score)
         if len(all_tags) == 1:
             all_tags = all_tags[0]  # type: ignore
         output_dict['tags'] = all_tags
+        output_dict["tag_scores"] = all_scores
         return output_dict
 
     def get_metrics(self, reset: bool = False):
