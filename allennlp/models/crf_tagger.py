@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 import numpy
 from overrides import overrides
@@ -65,15 +65,6 @@ class CrfTagger(Model):
                                      "respectively.".format(text_field_embedder.get_output_dim(),
                                                             stacked_encoder.get_input_dim()))
 
-        # self.metrics = {
-        #         "accuracy": CategoricalAccuracy(),
-        #         # TODO(joelgrus): get rid of these. They are helpful for training the NER model,
-        #         # which has really unbalanced classes, but they're not applicable in general.
-        #         'f1-B-ORG': F1Measure(self.vocab.get_token_index('B-ORG', 'labels')),
-        #         'f1-U-MISC': F1Measure(self.vocab.get_token_index('U-MISC', 'labels')),
-        #         'f1-L-LOC': F1Measure(self.vocab.get_token_index('L-LOC', 'labels')),
-        # }
-
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
@@ -111,24 +102,31 @@ class CrfTagger(Model):
         encoded_text = self.stacked_encoder(embedded_text_input, mask)
 
         logits = self.tag_projection_layer(encoded_text)
-        batch_size, sequence_length, num_tags = logits.data.shape
-        reshaped_log_probs = logits.view(-1, num_tags)
-        class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, sequence_length, num_tags])
 
         # The CRF layer only produces a ``loss`` output, so we need to include these
         # in case we want to decode the outputs.
         output = {"logits": logits, "mask": mask}
 
+        # Use Viterbi to find most likely tags
+        predicted_tags = self._viterbi_tags(output)
+
         if tags is not None:
             log_likelihood = self.crf.forward(logits, tags, mask)
             output["loss"] = -log_likelihood
+
+            # Represent viterbi tags as "class probabilities" that we can
+            # feed into the `span_metric`
+            class_probabilities = logits * 0.
+            for i, instance_tags in enumerate(predicted_tags):
+                for j, tag in enumerate(instance_tags):
+                    k = self.vocab.get_token_index(tag, "labels")
+                    class_probabilities[i, j, k] = 1
 
             self.span_metric(class_probabilities, tags, mask)
 
         return output
 
-    @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _viterbi_tags(self, output_dict: Dict[str, torch.Tensor]) -> List[List[str]]:
         """
         Uses viterbi algorithm to find most likely tags
         """
@@ -155,7 +153,7 @@ class CrfTagger(Model):
             all_tags.append(tags)
         output_dict["tags"] = all_tags
 
-        return output_dict
+        return all_tags
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
