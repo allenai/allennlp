@@ -25,7 +25,8 @@ class SpanBasedF1Measure(Metric):
     def __init__(self,
                  vocabulary: Vocabulary,
                  tag_namespace: str = "tags",
-                 ignore_classes: List[str] = None) -> None:
+                 ignore_classes: List[str] = None,
+                 bio_spans_only = False) -> None:
         """
         Parameters
         ----------
@@ -50,6 +51,7 @@ class SpanBasedF1Measure(Metric):
         """
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(tag_namespace)
         self._ignore_classes = ignore_classes or []
+        self._bio_spans_only = bio_spans_only
 
         # These will hold per label span counts.
         self._true_positives: Dict[str, int] = defaultdict(int)
@@ -137,7 +139,12 @@ class SpanBasedF1Measure(Metric):
             # Actual BIO tag.
             string_tag = self._label_vocabulary[integer_tag]
             bio_tag = string_tag[0]
-            conll_tag = string_tag[2:]
+
+            if self._bio_spans_only:
+                conll_tag = "NULL"
+            else:
+                conll_tag = string_tag[2:]
+
             if bio_tag == "O" or conll_tag in self._ignore_classes:
                 # The span has ended.
                 if active_conll_tag:
