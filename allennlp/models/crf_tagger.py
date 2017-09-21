@@ -4,6 +4,7 @@ import numpy
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
+import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -11,7 +12,7 @@ from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, ConditionalRandomField
 from allennlp.models.model import Model
 from allennlp.nn.util import get_text_field_mask, viterbi_decode
-from allennlp.training.metrics import CategoricalAccuracy, F1Measure
+from allennlp.training.metrics import SpanBasedF1Measure
 
 START_TAG = "@@START@@"
 END_TAG = "@@END@@"
@@ -56,20 +57,22 @@ class CrfTagger(Model):
 
         self.crf = ConditionalRandomField(self.num_tags, start_tag, end_tag)
 
+        self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="labels")
+
         if text_field_embedder.get_output_dim() != stacked_encoder.get_input_dim():
             raise ConfigurationError("The output dimension of the text_field_embedder must match the "
                                      "input dimension of the phrase_encoder. Found {} and {}, "
                                      "respectively.".format(text_field_embedder.get_output_dim(),
                                                             stacked_encoder.get_input_dim()))
 
-        self.metrics = {
-                "accuracy": CategoricalAccuracy(),
-                # TODO(joelgrus): get rid of these. They are helpful for training the NER model,
-                # which has really unbalanced classes, but they're not applicable in general.
-                'f1-B-ORG': F1Measure(self.vocab.get_token_index('B-ORG', 'labels')),
-                'f1-U-MISC': F1Measure(self.vocab.get_token_index('U-MISC', 'labels')),
-                'f1-L-LOC': F1Measure(self.vocab.get_token_index('L-LOC', 'labels')),
-        }
+        # self.metrics = {
+        #         "accuracy": CategoricalAccuracy(),
+        #         # TODO(joelgrus): get rid of these. They are helpful for training the NER model,
+        #         # which has really unbalanced classes, but they're not applicable in general.
+        #         'f1-B-ORG': F1Measure(self.vocab.get_token_index('B-ORG', 'labels')),
+        #         'f1-U-MISC': F1Measure(self.vocab.get_token_index('U-MISC', 'labels')),
+        #         'f1-L-LOC': F1Measure(self.vocab.get_token_index('L-LOC', 'labels')),
+        # }
 
     @overrides
     def forward(self,  # type: ignore
@@ -108,6 +111,10 @@ class CrfTagger(Model):
         encoded_text = self.stacked_encoder(embedded_text_input, mask)
 
         logits = self.tag_projection_layer(encoded_text)
+        batch_size, sequence_length, num_tags = logits.data.shape
+        reshaped_log_probs = logits.view(-1, num_tags)
+        class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, sequence_length, num_tags])
+
         # The CRF layer only produces a ``loss`` output, so we need to include these
         # in case we want to decode the outputs.
         output = {"logits": logits, "mask": mask}
@@ -116,8 +123,7 @@ class CrfTagger(Model):
             log_likelihood = self.crf.forward(logits, tags, mask)
             output["loss"] = -log_likelihood
 
-            for metric in self.metrics.values():
-                metric(logits, tags, mask.float())
+            self.span_metric(class_probabilities, tags, mask)
 
         return output
 
@@ -153,16 +159,8 @@ class CrfTagger(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        result = {}
-
-        for metric_name, metric in self.metrics.items():
-            metric_value = metric.get_metric(reset)
-            if isinstance(metric_value, tuple):
-                result[metric_name] = metric_value[-1]
-            else:
-                result[metric_name] = metric_value
-
-        return result
+        metric_dict = self.span_metric.get_metric(reset=reset)
+        return {x: y for x, y in metric_dict.items() if "overall" in x}
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'CrfTagger':
