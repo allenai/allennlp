@@ -126,8 +126,11 @@ class SrlReader(DatasetReader):
     A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
 
     """
-    def __init__(self, token_indexers: Dict[str, TokenIndexer] = None) -> None:
+    def __init__(self,
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 ignore_labels = False) -> None:
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._ignore_labels = ignore_labels
 
     def _process_sentence(self,
                           sentence_tokens: List[str],
@@ -225,7 +228,11 @@ class SrlReader(DatasetReader):
                         # Iterate over all verb annotations for the current sentence.
                         for annotation_index in range(num_annotations):
                             annotation = conll_components[11 + annotation_index]
-                            label = annotation.strip("()*")
+
+                            if self._ignore_labels:
+                                label = "NULL"
+                            else:
+                                label = annotation.strip("()*")
 
                             if "(" in annotation:
                                 # Entering into a span for a particular semantic role label.
