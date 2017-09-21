@@ -40,7 +40,7 @@ class BidafPlusSelfAttention(Model):
 
         self._residual_encoder = residual_encoder
         self._self_atten = TriLinearAttention(200)
-        self._merge_self_atten = torch.nn.Linear(200 * 3, 200)
+        self._merge_self_atten = TimeDistributed(torch.nn.Linear(200 * 3, 200))
 
         self._span_start_encoder = span_start_encoder
         self._span_end_encoder = span_end_encoder
