@@ -168,7 +168,7 @@ class SemanticRoleLabeler(Model):
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
             all_tags.append(tags)
-            all_scores.append(score)
+            all_scores.append(score.cpu().tolist()[0])
         if len(all_tags) == 1:
             all_tags = all_tags[0]  # type: ignore
         output_dict['tags'] = all_tags

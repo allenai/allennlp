@@ -70,10 +70,10 @@ class AugmentedLstm(torch.nn.Module):
         # using highway layers, we need some extra projections, which is
         # why the sizes of the Linear layers change here depending on this flag.
         if use_highway:
-            self.input_linearity = torch.nn.Linear(input_size, 6 * hidden_size, bias=False)
+            self.input_linearity = torch.nn.Linear(input_size, 6 * hidden_size, bias=True)
             self.state_linearity = torch.nn.Linear(hidden_size, 5 * hidden_size, bias=True)
         else:
-            self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=False)
+            self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=True)
             self.state_linearity = torch.nn.Linear(hidden_size, 4 * hidden_size, bias=True)
         self.reset_parameters()
 

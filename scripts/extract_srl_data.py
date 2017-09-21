@@ -17,14 +17,13 @@ def map_output_to_instances(output_dict, instances):
     output_list = []
     for i, instance in enumerate(instances):
         instance_dict = {
-                "tokens": instance.fields["tokens"].tokens,
+                "tokens": [x.text for x in instance.fields["tokens"].tokens],
                 "gold_tags": instance.fields["tags"].labels
         }
-
         instance_dict["per_element_loss"] = output_dict["per_element_loss"][i]
-        instance_dict["sequence_loss"] = output_dict["sequence_loss"][i]
+        instance_dict["sequence_loss"] = output_dict["per_sequence_loss"][i]
         instance_dict["tags"] = output_dict["tags"][i]
-        instance_dict["viterbi_score"] = output_dict["scores"][i]
+        instance_dict["viterbi_score"] = output_dict["tag_scores"][i]
 
         output_list.append(instance_dict)
 
@@ -33,8 +32,7 @@ def map_output_to_instances(output_dict, instances):
 
 def sanitise_outputs(output_dict):
     for name, output in list(output_dict.items()):
-        output = output[0]
-        if isinstance(output, torch.autograd.Variable):
+        if isinstance(output, torch.autograd.Variable) or isinstance(output, torch.Tensor):
             output = output.data.cpu().numpy().tolist()
         output_dict[name] = output
     return output_dict
@@ -53,10 +51,10 @@ def main(serialization_directory: str, device: int):
     evaluation_data_path = config['validation_data_path']
 
     model = Model.load(config, serialization_dir=serialization_directory, cuda_device=device)
-
+    model.eval()
     print("Reading evaluation data from {}".format(evaluation_data_path))
     dataset = dataset_reader.read(evaluation_data_path)
-    dataset.index_instances(model._vocab)
+    dataset.index_instances(model.vocab)
     iterator = BasicIterator(batch_size=32)
 
     all_results = []
