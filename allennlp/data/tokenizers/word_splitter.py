@@ -176,7 +176,7 @@ class SpacyWordSplitter(WordSplitter):
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
-        return self.spacy(sentence)  # type: ignore
+        return [t for t in self.spacy(sentence) if not t.is_space]
 
     def _get_spacy_model(self, language: str, pos_tags: bool, parse: bool, ner: bool) -> Any:
         options = (language, pos_tags, parse, ner)
