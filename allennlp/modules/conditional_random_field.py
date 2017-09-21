@@ -4,34 +4,20 @@ Conditional random field
 
 import torch
 
-def log_sum_exp(x: torch.autograd.Variable) -> torch.autograd.Variable:  # pylint: disable=invalid-name
+def log_sum_exp(x: torch.Tensor) -> torch.Tensor:  # pylint: disable=invalid-name
     """
-    numerically stable log(sum(exp(x))) over only the last dimension.
-    assumes x is 2-dimensional
+    numerical stable log(sum(exp(x)))
+    where the sum is only over the last dimension
     """
-    batch_size, num_tags = x.size()
+    maxes, _ = torch.max(x, -1, keepdim=True)
+    exps = torch.exp(x - maxes)
 
-    maxes, _ = torch.max(x, -1)
-    broadcast = maxes.view(batch_size, 1)
-    exps = torch.exp(x - broadcast)
-
-    return maxes + torch.log(torch.sum(exps, -1))
-
-
-def log_sum_exp3(x: torch.autograd.Variable) -> torch.autograd.Variable:  # pylint: disable=invalid-name
-    batch_size, num_tags, _ = x.size()
-
-    maxes, _ = x.max(-1)
-    broadcast = maxes.view(batch_size, num_tags, 1)
-    exps = torch.exp(x - broadcast)
-    return maxes + torch.log(torch.sum(exps, -1))
-
+    return maxes.squeeze(-1) + torch.log(torch.sum(exps, -1))
 
 
 class ConditionalRandomField(torch.nn.Module):
     """
-    Computes the conditional random field loss,
-    which is the negative log likelihood.
+    Computes the conditional random field loss, which is the negative log likelihood.
 
     Parameters
     ----------
@@ -79,7 +65,7 @@ class ConditionalRandomField(torch.nn.Module):
             inner = (emit_scores + transition_scores) * masks[i].view(batch_size, 1, 1) + alpha
 
             # need to LSE over all the prev_tags
-            alpha = log_sum_exp3(inner)
+            alpha = log_sum_exp(inner)
 
         # stopping
         stops = alpha + self.transitions[self.stop_tag].view(1, num_tags)
