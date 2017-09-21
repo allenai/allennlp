@@ -4,7 +4,6 @@ import numpy
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
-import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError

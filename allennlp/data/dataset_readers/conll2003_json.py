@@ -41,7 +41,7 @@ class Conll2003JsonDatasetReader(DatasetReader):
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
 
-            for line in data_file:
+            for line in tqdm.tqdm(data_file):
                 data = json.loads(line)
                 tokens = [Token(token['token']) for token in data]
                 labels = [token['labels']['conll2003'] for token in data]

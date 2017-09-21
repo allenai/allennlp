@@ -161,7 +161,7 @@ class ConditionalRandomField(torch.nn.Module):
     def forward(self,
                 inputs: torch.Tensor,
                 tags: torch.Tensor,
-                mask: torch.ByteTensor=None) -> torch.Tensor:
+                mask: torch.ByteTensor = None) -> torch.Tensor:
         """
         ``forward`` only computes the loss
         """
