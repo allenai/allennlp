@@ -366,10 +366,12 @@ class Trainer:
 
         return False  # should not stop
 
-    def _next_epoch(self, epoch: int, metrics: dict,
-                    validation_metric_per_epoch: List[float]) -> bool:
+    def _should_stop(self, epoch: int, metrics: dict,
+                     validation_metric_per_epoch: List[float]) -> bool:
         """
-        Called at the end of each epoch. Different code paths if there's a validation set or not
+        Called at the end of each epoch.
+        Handles all end-of-epoch logic, and returns True if we should stop early.
+        Different code paths if there's a validation set or not.
         """
         if self._validation_dataset is not None:
             return self._next_epoch_validation(epoch, metrics, validation_metric_per_epoch)
@@ -388,16 +390,13 @@ class Trainer:
 
         logger.info("Beginning training.")
         validation_metric_per_epoch: List[float] = []
-        should_stop = False
 
         for epoch in range(epoch_counter, self._num_epochs):
             # Train one epoch and compute metrics.
             metrics = self._train_epoch(epoch)
 
             # Validate and move on to the next epoch
-            should_stop = self._next_epoch(epoch, metrics, validation_metric_per_epoch)
-
-            if should_stop:
+            if self._should_stop(epoch, metrics, validation_metric_per_epoch):
                 break
 
     def _forward(self, batch: dict, for_training: bool) -> dict:
