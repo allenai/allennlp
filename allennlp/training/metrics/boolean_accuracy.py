@@ -2,7 +2,6 @@ from typing import Optional
 
 from overrides import overrides
 import torch
-from torch.autograd import Variable
 
 from allennlp.training.metrics.metric import Metric
 
@@ -38,12 +37,7 @@ class BooleanAccuracy(Metric):
         # If you actually passed in Variables here instead of Tensors, this will be a huge memory
         # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
         # that we're using tensors here first.
-        if isinstance(predictions, Variable):
-            predictions = predictions.data
-        if isinstance(gold_labels, Variable):
-            gold_labels = gold_labels.data
-        if isinstance(mask, Variable):
-            mask = mask.data
+        predictions, gold_labels, mask = self.unwrap_variables(predictions, gold_labels, mask)
 
         if mask is not None:
             # We can multiply by the mask up front, because we're just checking equality below, and
