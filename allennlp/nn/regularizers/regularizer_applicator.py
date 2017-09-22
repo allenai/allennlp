@@ -43,12 +43,12 @@ class RegularizerApplicator:
     @classmethod
     def from_params(cls, params: List[Tuple[str, Params]]) -> 'RegularizerApplicator':
         """
-        Converts a Params object into an RegularizerApplicator. The json should
-        be formatted as follows::
+        Converts a List of pairs (regex, params) into an RegularizerApplicator.
+        This list should look like
 
-
-            [["regex1": {"type": "l2", "alpha": 0.01}],
-             ["regex2": "l1"]
+            [
+                ["regex1": {"type": "l2", "alpha": 0.01}],
+                ["regex2": "l1"]
             ]
 
         where each parameter receives the penalty corresponding to the first regex
