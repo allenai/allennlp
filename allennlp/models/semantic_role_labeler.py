@@ -14,7 +14,7 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
-from allennlp.training.metrics import SpanBasedF1Measure
+from allennlp.training.metrics import SpanBasedF1Measure, Entropy
 
 
 @Model.register("srl")
@@ -58,6 +58,7 @@ class SemanticRoleLabeler(Model):
         # For the span based evaluation, we don't want to consider labels
         # for verb, because the verb index is provided to the model.
         self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="labels", ignore_classes=["V"])
+        self.entropy_metric = Entropy()
 
         self.stacked_encoder = stacked_encoder
         # There are exactly 2 binary features for the verb predicate embedding.
@@ -138,6 +139,7 @@ class SemanticRoleLabeler(Model):
             output_dict["per_element_loss"] = per_element_loss
             output_dict["per_sequence_loss"] = per_sequence_loss
             self.span_metric(class_probabilities, tags, mask)
+            self.entropy_metric(logits, mask)
             output_dict["loss"] = loss
 
         # We need to retain the mask in the output dictionary
@@ -177,14 +179,11 @@ class SemanticRoleLabeler(Model):
 
     def get_metrics(self, reset: bool = False):
         metric_dict = self.span_metric.get_metric(reset=reset)
-        if self.training:
-            # This can be a lot of metrics, as there are 3 per class.
-            # During training, we only really care about the overall
-            # metrics, so we filter for them here.
-            # TODO(Mark): This is fragile and should be replaced with some verbosity level in Trainer.
-            return {x: y for x, y in metric_dict.items() if "overall" in x}
+        entropy = self.entropy_metric.get_metric(reset=reset)
+        return_dict = {x: y for x, y in metric_dict.items() if "overall" in x or "span-only" in x}
 
-        return metric_dict
+        return_dict["per-word-entropy"] = entropy
+        return return_dict
 
     def get_viterbi_pairwise_potentials(self):
         """

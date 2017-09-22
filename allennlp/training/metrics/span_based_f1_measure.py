@@ -24,8 +24,7 @@ class SpanBasedF1Measure(Metric):
     def __init__(self,
                  vocabulary: Vocabulary,
                  tag_namespace: str = "tags",
-                 ignore_classes: List[str] = None,
-                 bio_spans_only = False) -> None:
+                 ignore_classes: List[str] = None) -> None:
         """
         Parameters
         ----------
@@ -50,7 +49,6 @@ class SpanBasedF1Measure(Metric):
         """
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(tag_namespace)
         self._ignore_classes = ignore_classes or []
-        self._bio_spans_only = bio_spans_only
 
         # These will hold per label span counts.
         self._true_positives: Dict[str, int] = defaultdict(int)
@@ -93,17 +91,30 @@ class SpanBasedF1Measure(Metric):
             sequence_prediction = argmax_predictions[i, :]
             sequence_gold_label = gold_labels[i, :]
             length = sequence_lengths[i]
-            prediction_spans = self._extract_spans(sequence_prediction[:length].tolist())
-            gold_spans = self._extract_spans(sequence_gold_label[:length].tolist())
+            prediction_tag_spans = self._extract_spans(sequence_prediction[:length].tolist())
+            gold_tag_spans = self._extract_spans(sequence_gold_label[:length].tolist())
 
-            for span in prediction_spans:
-                if span in gold_spans:
+            # Calculate metrics for spans, not considering the labels.
+            span_only_predictions = [x[0] for x in prediction_tag_spans]
+            span_only_gold = [x[0] for x in gold_tag_spans]
+            for span in span_only_predictions:
+                if span in span_only_gold:
+                    self._true_positives["span-only"] += 1
+                    span_only_gold.remove(span)
+                else:
+                    self._false_positives["span-only"] += 1
+            # These spans weren't predicted.
+            for _ in span_only_gold:
+                self._false_negatives["span-only"] += 1
+
+            for span in prediction_tag_spans:
+                if span in gold_tag_spans:
                     self._true_positives[span[1]] += 1
-                    gold_spans.remove(span)
+                    gold_tag_spans.remove(span)
                 else:
                     self._false_positives[span[1]] += 1
             # These spans weren't predicted.
-            for span in gold_spans:
+            for span in gold_tag_spans:
                 self._false_negatives[span[1]] += 1
 
     def _extract_spans(self, tag_sequence: List[int]) -> Set[Tuple[Tuple[int, int], str]]:
@@ -134,10 +145,7 @@ class SpanBasedF1Measure(Metric):
             string_tag = self._label_vocabulary[integer_tag]
             bio_tag = string_tag[0]
 
-            if self._bio_spans_only:
-                conll_tag = "NULL"
-            else:
-                conll_tag = string_tag[2:]
+            conll_tag = string_tag[2:]
 
             if bio_tag == "O" or conll_tag in self._ignore_classes:
                 # The span has ended.
