@@ -14,7 +14,7 @@ class Entropy(Metric):
         self._count = 0
 
     @overrides
-    def __call__(self,
+    def __call__(self,  # type: ignore
                  logits: torch.Tensor,
                  mask: Optional[torch.Tensor] = None):
         """
