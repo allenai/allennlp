@@ -3,7 +3,7 @@
 an AllenNLP model.
 """
 
-from typing import Dict
+from typing import Dict, Optional
 import os
 import logging
 
@@ -11,6 +11,8 @@ from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
 from allennlp.nn.util import arrays_to_variables, device_mapping
+from allennlp.nn.initializers import InitializerApplicator
+from allennlp.nn.regularizers import RegularizerApplicator
 
 import numpy
 import torch
@@ -44,6 +46,39 @@ class Model(torch.nn.Module, Registrable):
     def __init__(self, vocab: Vocabulary) -> None:
         super().__init__()
         self.vocab = vocab
+        self._regularizer: RegularizerApplicator = None
+        self._initializer: InitializerApplicator = None
+
+    def add_regularizer(self, regularizer: RegularizerApplicator) -> None:
+        """
+        Adds the provided regularizer to the model
+        """
+        self._regularizer = regularizer
+
+    def add_initializer(self, initializer: InitializerApplicator) -> None:
+        """
+        Adds the provided initializer to the model
+        """
+        self._initializer = initializer
+
+    def get_regularization_penalty(self) -> Optional[torch.Tensor]:
+        """
+        Get the regularization penalty for the model. Will be ``None``
+        if there's no regularizer.
+        """
+        if self._regularizer is None:
+            return None
+        else:
+            return self._regularizer(self)
+
+    def initialize(self) -> None:
+        """
+        Applies the initializer to all model parameters. Will be called automatically
+        if you instantiate your model ``from_params``.
+        """
+        if self._initializer is not None:
+            self._initializer(self)
+
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
@@ -147,7 +182,14 @@ class Model(torch.nn.Module, Registrable):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
-        return cls.by_name(choice).from_params(vocab, params)
+        regularizer = RegularizerApplicator.from_params(params.pop("regularizer", []))
+        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
+
+        model = cls.by_name(choice).from_params(vocab, params)
+        model.add_regularizer(regularizer)
+        model.add_initializer(initializer)
+
+        return model
 
     @classmethod
     def load(cls,

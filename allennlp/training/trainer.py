@@ -170,6 +170,9 @@ class Trainer:
                 output_dict = self._forward(batch, for_training=True)
                 try:
                     loss = output_dict["loss"]
+                    penalty = self._model.get_regularization_penalty()
+                    if penalty is not None:
+                        loss += penalty
                     loss.backward()
                     # Make sure Variable is on the cpu before converting to numpy.
                     # .cpu() is a no-op if you aren't using GPUs.
