@@ -9,8 +9,8 @@ allennlp.models
 .. toctree::
 
   allennlp.models.model
-  allennlp.models.bidaf
   allennlp.models.decomposable_attention
+  allennlp.models.reading_comprehension
   allennlp.models.semantic_role_labeler
   allennlp.models.simple_tagger
 
