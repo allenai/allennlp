@@ -50,3 +50,9 @@ editdistance
 
 # Tutorial notebooks
 jupyter
+
+# Running tests
+pytest
+flaky
+responses
+aiohttp
