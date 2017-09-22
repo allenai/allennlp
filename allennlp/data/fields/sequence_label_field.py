@@ -15,10 +15,12 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class SequenceLabelField(Field[numpy.ndarray]):
     """
-    A ``SequenceLabelField`` assigns a categorical label to each element in a
-    :class:`~allennlp.data.fields.sequence_field.SequenceField`.
-    Because it's a labeling of some other field, we take that field as input here, and we use it to
+    A ``SequenceLabelField`` is a sequence of categorical labels assigned either to elements in a
+    :class:`~allennlp.data.fields.sequence_field.SequenceField`, or a new sequence (say by the decoder
+    in an encoder-decoder model).
+    If it's a labeling of some other field, we take that field as input here, and we use it to
     determine our padding and other things.
+    Otherwise, padding is determined based on the label sequence length.
 
     This field will get converted into a list of integer class ids, representing the correct class
     for each element in the sequence.
@@ -27,11 +29,11 @@ class SequenceLabelField(Field[numpy.ndarray]):
     ----------
     labels : ``Union[List[str], List[int]]``
         A sequence of categorical labels, encoded as strings or integers.  These could be POS tags like [NN,
-        JJ, ...], BIO tags like [B-PERS, I-PERS, O, O, ...], or any other categorical tag sequence. If the
-        labels are encoded as integers, they will not be indexed using a vocab.
-    sequence_field : ``SequenceField``
-        A field containing the sequence that this ``SequenceLabelField`` is labeling.  Most often, this is a
-        ``TextField``, for tagging individual tokens in a sentence.
+        JJ, ...], BIO tags like [B-PERS, I-PERS, O, O, ...], or any other categorical sequence of either
+        tags or other sequences. If the labels are encoded as integers, they will not be indexed using a vocab.
+    sequence_field : ``SequenceField``, optional (default=None)
+        If this ``SequenceLabelField`` is a tagging of some other field, this is that field.  Most often,
+        this is a ``TextField``, for tagging individual tokens in a sentence.
     label_namespace : ``str``, optional (default='labels')
         The namespace to use for converting tag strings into integers.  We convert tag strings to
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
@@ -46,15 +48,17 @@ class SequenceLabelField(Field[numpy.ndarray]):
         self._label_namespace = label_namespace
         self._indexed_labels = None
 
-        if not (self._label_namespace.endswith("tags") or self._label_namespace.endswith("labels")):
-            logger.warning("Your sequence label namespace was '%s'. We recommend you use a namespace "
-                           "ending with 'tags' or 'labels', so we don't add UNK and PAD tokens by "
-                           "default to your vocabulary.  See documentation for "
-                           "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
-
-        if len(labels) != sequence_field.sequence_length():
-            raise ConfigurationError("Label length and sequence length "
-                                     "don't match: %d and %d" % (len(labels), sequence_field.sequence_length()))
+        if sequence_field is not None:
+            # This field is a tagging of some other sequence.
+            if not (self._label_namespace.endswith("tags") or self._label_namespace.endswith("labels")):
+                logger.warning("Your sequence label namespace was '%s'. We recommend you use a namespace "
+                               "ending with 'tags' or 'labels', so we don't add UNK and PAD tokens by "
+                               "default to your vocabulary.  See documentation for "
+                               "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
+            if len(labels) != sequence_field.sequence_length():
+                raise ConfigurationError("Label length and sequence length "
+                                         "don't match: %d and %d" % (len(labels),
+                                                                     sequence_field.sequence_length()))
 
         if all([isinstance(x, int) for x in labels]):
             self._indexed_labels = labels
@@ -78,7 +82,7 @@ class SequenceLabelField(Field[numpy.ndarray]):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        return {'num_tokens': self.sequence_field.sequence_length()}
+        return {'num_tokens': len(self.labels)}
 
     @overrides
     def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:
