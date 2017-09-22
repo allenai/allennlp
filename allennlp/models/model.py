@@ -182,13 +182,16 @@ class Model(torch.nn.Module, Registrable):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
-        regularizer = RegularizerApplicator.from_params(params.pop("regularizer", []))
-        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
+        regularizer_params = params.pop("regularizer", None)
+        initializer_params = params.pop("initializer", None)
 
         model = cls.by_name(choice).from_params(vocab, params)
-        model.add_regularizer(regularizer)
-        model.add_initializer(initializer)
-        model.initialize()
+
+        if regularizer_params is not None:
+            model.add_regularizer(RegularizerApplicator.from_params(regularizer_params))
+        if initializer_params is not None:
+            model.add_initializer(InitializerApplicator.from_params(initializer_params))
+            model.initialize()
 
         return model
 
