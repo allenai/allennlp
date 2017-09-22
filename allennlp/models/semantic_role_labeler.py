@@ -7,7 +7,6 @@ import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.nn.initializers import InitializerApplicator
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
@@ -41,14 +40,11 @@ class SemanticRoleLabeler(Model):
         and predicting output tags.
     binary_feature_dim : int, required.
         The dimensionality of the embedding of the binary verb predicate features.
-    initializer : ``InitializerApplicator``
-        We will use this to initialize the parameters in the model, calling ``initializer(self)``.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
                  binary_feature_dim: int,
-                 initializer: InitializerApplicator,
                  embedding_dropout: float = 0.0) -> None:
         super(SemanticRoleLabeler, self).__init__(vocab)
 
@@ -65,7 +61,6 @@ class SemanticRoleLabeler(Model):
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
         self.embedding_dropout = Dropout(p=embedding_dropout)
-        initializer(self)
 
         if text_field_embedder.get_output_dim() + binary_feature_dim != stacked_encoder.get_input_dim():
             raise ConfigurationError("The SRL Model uses a binary verb indicator feature, meaning "
@@ -209,13 +204,11 @@ class SemanticRoleLabeler(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
         binary_feature_dim = params.pop("binary_feature_dim")
-        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder,
-                   binary_feature_dim=binary_feature_dim,
-                   initializer=initializer)
+                   binary_feature_dim=binary_feature_dim)
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,

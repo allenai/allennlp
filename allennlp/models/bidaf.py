@@ -11,7 +11,7 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
-from allennlp.nn import InitializerApplicator, util
+from allennlp.nn import util
 from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -50,8 +50,6 @@ class BidirectionalAttentionFlow(Model):
     span_end_encoder : ``Seq2SeqEncoder``
         The encoder that we will use to incorporate span start predictions into the passage state
         before predicting span end.
-    initializer : ``InitializerApplicator``
-        We will use this to initialize the parameters in the model, calling ``initializer(self)``.
     dropout : ``float``, optional (default=0.2)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
@@ -73,7 +71,6 @@ class BidirectionalAttentionFlow(Model):
                  attention_similarity_function: SimilarityFunction,
                  modeling_layer: Seq2SeqEncoder,
                  span_end_encoder: Seq2SeqEncoder,
-                 initializer: InitializerApplicator,
                  dropout: float = 0.2,
                  mask_lstms: bool = True) -> None:
         super(BidirectionalAttentionFlow, self).__init__(vocab)
@@ -94,7 +91,6 @@ class BidirectionalAttentionFlow(Model):
         span_end_encoding_dim = span_end_encoder.get_output_dim()
         span_end_input_dim = encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
-        initializer(self)
 
         # Bidaf has lots of layer dimensions which need to match up - these
         # aren't necessarily obvious from the configuration files, so we check
@@ -334,7 +330,6 @@ class BidirectionalAttentionFlow(Model):
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
         modeling_layer = Seq2SeqEncoder.from_params(params.pop("modeling_layer"))
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
-        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
         dropout = params.pop('dropout', 0.2)
 
         # TODO: Remove the following when fully deprecated
@@ -351,6 +346,5 @@ class BidirectionalAttentionFlow(Model):
                    attention_similarity_function=similarity_function,
                    modeling_layer=modeling_layer,
                    span_end_encoder=span_end_encoder,
-                   initializer=initializer,
                    dropout=dropout,
                    mask_lstms=mask_lstms)
