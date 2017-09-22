@@ -2,7 +2,6 @@ from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
 
 import torch
-from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, ones_like
@@ -78,12 +77,7 @@ class SpanBasedF1Measure(Metric):
         # If you actually passed in Variables here instead of Tensors, this will be a huge memory
         # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
         # that we're using tensors here first.
-        if isinstance(predictions, Variable):
-            predictions = predictions.data.cpu()
-        if isinstance(gold_labels, Variable):
-            gold_labels = gold_labels.data.cpu()
-        if isinstance(mask, Variable):
-            mask = mask.data.cpu()
+        predictions, gold_labels, mask = self.unwrap_variables(predictions, gold_labels, mask)
 
         num_classes = predictions.size(-1)
         if (gold_labels >= num_classes).any():

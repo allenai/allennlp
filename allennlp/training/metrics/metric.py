@@ -46,3 +46,13 @@ class Metric(Registrable):
         if vocab:
             params["vocabulary"] = vocab
         return cls.by_name(metric_type)(**params.as_dict())  # type: ignore
+
+    @staticmethod
+    def unwrap_variables(*tensors):
+        """
+        If you actually passed in Variables to a Metric instead of Tensors, there will be
+        a huge memory leak, because it will prevent garbage collection for the computation
+        graph. This method ensures that you're using tensors directly and that they are on
+        the CPU.
+        """
+        return (x.data.cpu() if isinstance(x, torch.autograd.Variable) else x for x in tensors)
