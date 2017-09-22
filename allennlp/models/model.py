@@ -188,6 +188,7 @@ class Model(torch.nn.Module, Registrable):
         model = cls.by_name(choice).from_params(vocab, params)
         model.add_regularizer(regularizer)
         model.add_initializer(initializer)
+        model.initialize()
 
         return model
 
