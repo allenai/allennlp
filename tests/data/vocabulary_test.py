@@ -104,6 +104,7 @@ class TestVocabulary(AllenNlpTestCase):
             vocab_file.write('</S>\n')
             vocab_file.write('<UNK>\n')
             vocab_file.write('a\n')
+            vocab_file.write('tricky\x0bchar\n')
             vocab_file.write('word\n')
             vocab_file.write('another\n')
 
@@ -116,15 +117,17 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab.get_token_index("</S>") == 2
         assert vocab.get_token_index(DEFAULT_OOV_TOKEN) == 3
         assert vocab.get_token_index("a") == 4
-        assert vocab.get_token_index("word") == 5
-        assert vocab.get_token_index("another") == 6
+        assert vocab.get_token_index("tricky\x0bchar") == 5
+        assert vocab.get_token_index("word") == 6
+        assert vocab.get_token_index("another") == 7
         assert vocab.get_token_from_index(0) == vocab._padding_token
         assert vocab.get_token_from_index(1) == "<S>"
         assert vocab.get_token_from_index(2) == "</S>"
         assert vocab.get_token_from_index(3) == DEFAULT_OOV_TOKEN
         assert vocab.get_token_from_index(4) == "a"
-        assert vocab.get_token_from_index(5) == "word"
-        assert vocab.get_token_from_index(6) == "another"
+        assert vocab.get_token_from_index(5) == "tricky\x0bchar"
+        assert vocab.get_token_from_index(6) == "word"
+        assert vocab.get_token_from_index(7) == "another"
 
     def test_set_from_file_reads_non_padded_files(self):
         # pylint: disable=protected-access

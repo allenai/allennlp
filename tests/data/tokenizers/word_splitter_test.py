@@ -110,6 +110,12 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
+    def test_tokenize_removes_whitespace_tokens(self):
+        sentence = "the\n jones'   house  \x0b  55"
+        expected_tokens = ["the", "jones", "'", "house", "55"]
+        tokens = [t.text for t in self.word_splitter.split_words(sentence)]
+        assert tokens == expected_tokens
+
     def test_tokenize_handles_special_cases(self):
         # note that the etc. doesn't quite work --- we can special case this if we want.
         sentence = "Mr. and Mrs. Jones, etc., went to, e.g., the store"
