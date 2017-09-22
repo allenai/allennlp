@@ -161,9 +161,9 @@ class Trainer:
                 if parameter.requires_grad:
                     parameter.register_hook(clip_function)
 
-    def _clip_gradients(self) -> None:
+    def _rescale_gradients(self) -> None:
         """
-        Performs gradient clipping. Is a no-op if gradient clipping is not enabled.
+        Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
         """
         if self._grad_norm:
             clip_grad_norm(self._model.parameters(), self._grad_norm)
@@ -229,8 +229,8 @@ class Trainer:
             # .cpu() is a no-op if you aren't using GPUs.
             train_loss += loss.data.cpu().numpy()
 
-            # Clip gradients (if enabled)
-            self._clip_gradients()
+            # Rescale gradients
+            self._rescale_gradients()
 
             # Advance the optimizer
             self._optimizer.step()
