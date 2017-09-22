@@ -13,6 +13,7 @@ class Entropy(Metric):
         self._entropy = 0.0
         self._count = 0
 
+    @overrides
     def __call__(self,
                  logits: torch.Tensor,
                  mask: Optional[torch.Tensor] = None):
@@ -56,4 +57,3 @@ class Entropy(Metric):
     def reset(self):
         self._entropy = 0.0
         self._count = 0
-
