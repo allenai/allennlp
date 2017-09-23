@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy
 from overrides import overrides
@@ -11,6 +11,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import CategoricalAccuracy
 
@@ -30,12 +31,18 @@ class SimpleTagger(Model):
     stacked_encoder : ``Seq2SeqEncoder``
         The encoder (with its own internal stacking) that we will use in between embedding tokens
         and predicting output tags.
+    initializer : ``InitializerApplicator``, optional (default=``None``)
+        If provided, will be used to initialize the model parameters.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 stacked_encoder: Seq2SeqEncoder) -> None:
-        super(SimpleTagger, self).__init__(vocab)
+                 stacked_encoder: Seq2SeqEncoder,
+                 initializer: Optional[InitializerApplicator] = None,
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+        super(SimpleTagger, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
@@ -52,6 +59,9 @@ class SimpleTagger(Model):
                 "accuracy": CategoricalAccuracy(),
                 "accuracy3": CategoricalAccuracy(top_k=3)
         }
+
+        if initializer is not None:
+            initializer(self)
 
     @overrides
     def forward(self,  # type: ignore
@@ -140,6 +150,13 @@ class SimpleTagger(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
 
+        init_params = params.pop('initializer', None)
+        reg_params = params.pop('regularizer', None)
+        initializer = InitializerApplicator.from_params(init_params) if init_params is not None else None
+        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
+
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
-                   stacked_encoder=stacked_encoder)
+                   stacked_encoder=stacked_encoder,
+                   initializer=initializer,
+                   regularizer=regularizer)

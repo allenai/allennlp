@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import torch
 from torch.autograd import Variable
@@ -11,7 +11,7 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
-from allennlp.nn import util
+from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -63,6 +63,10 @@ class BidirectionalAttentionFlow(Model):
         If given, we will load this JSON into memory and use it to compute official metrics
         against.  We need this separately from the validation dataset, because the official metrics
         use all of the annotations, while our dataset reader picks the most frequent one.
+    initializer : ``InitializerApplicator``, optional (default=``None``)
+        If provided, will be used to initialize the model parameters.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -72,8 +76,10 @@ class BidirectionalAttentionFlow(Model):
                  modeling_layer: Seq2SeqEncoder,
                  span_end_encoder: Seq2SeqEncoder,
                  dropout: float = 0.2,
-                 mask_lstms: bool = True) -> None:
-        super(BidirectionalAttentionFlow, self).__init__(vocab)
+                 mask_lstms: bool = True,
+                 initializer: Optional[InitializerApplicator] = None,
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+        super(BidirectionalAttentionFlow, self).__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
         self._highway_layer = TimeDistributed(Highway(text_field_embedder.get_output_dim(),
@@ -123,6 +129,9 @@ class BidirectionalAttentionFlow(Model):
         else:
             self._dropout = lambda x: x
         self._mask_lstms = mask_lstms
+
+        if initializer is not None:
+            initializer(self)
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -337,6 +346,11 @@ class BidirectionalAttentionFlow(Model):
         if evaluation_json_file is not None:
             logger.warning("the 'evaluation_json_file' model parameter is deprecated, please remove")
 
+        init_params = params.pop('initializer', None)
+        reg_params = params.pop('regularizer', None)
+        initializer = InitializerApplicator.from_params(init_params) if init_params is not None else None
+        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
+
         mask_lstms = params.pop('mask_lstms', True)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
@@ -347,4 +361,6 @@ class BidirectionalAttentionFlow(Model):
                    modeling_layer=modeling_layer,
                    span_end_encoder=span_end_encoder,
                    dropout=dropout,
-                   mask_lstms=mask_lstms)
+                   mask_lstms=mask_lstms,
+                   initializer=initializer,
+                   regularizer=regularizer)

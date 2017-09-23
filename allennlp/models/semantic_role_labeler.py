@@ -11,6 +11,7 @@ from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics import SpanBasedF1Measure
@@ -40,13 +41,19 @@ class SemanticRoleLabeler(Model):
         and predicting output tags.
     binary_feature_dim : int, required.
         The dimensionality of the embedding of the binary verb predicate features.
+    initializer : ``InitializerApplicator``, optional (default=``None``)
+        If provided, will be used to initialize the model parameters.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
                  binary_feature_dim: int,
-                 embedding_dropout: float = 0.0) -> None:
-        super(SemanticRoleLabeler, self).__init__(vocab)
+                 embedding_dropout: float = 0.0,
+                 initializer: Optional[InitializerApplicator] = None,
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+        super(SemanticRoleLabeler, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
@@ -66,6 +73,9 @@ class SemanticRoleLabeler(Model):
             raise ConfigurationError("The SRL Model uses a binary verb indicator feature, meaning "
                                      "the input dimension of the stacked_encoder must be equal to "
                                      "the output dimension of the text_field_embedder + 1.")
+
+        if initializer is not None:
+            initializer(self)
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
@@ -205,10 +215,17 @@ class SemanticRoleLabeler(Model):
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
         binary_feature_dim = params.pop("binary_feature_dim")
 
+        init_params = params.pop('initializer', None)
+        reg_params = params.pop('regularizer', None)
+        initializer = InitializerApplicator.from_params(init_params) if init_params is not None else None
+        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
+
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder,
-                   binary_feature_dim=binary_feature_dim)
+                   binary_feature_dim=binary_feature_dim,
+                   initializer=initializer,
+                   regularizer=regularizer)
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,
