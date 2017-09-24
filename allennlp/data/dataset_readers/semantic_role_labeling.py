@@ -289,5 +289,6 @@ class SrlReader(DatasetReader):
     @classmethod
     def from_params(cls, params: Params) -> 'SrlReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        ignore_labels = params.pop("ignore_labels", False)
         params.assert_empty(cls.__name__)
-        return SrlReader(token_indexers=token_indexers)
+        return SrlReader(token_indexers=token_indexers, ignore_labels=ignore_labels)
