@@ -40,11 +40,11 @@ class TensorboardWriter:
         self._train_log = train_log
         self._validation_log = validation_log
 
-    def add_train_scalar(self, name: str, value: float, global_step=None) -> None:
+    def add_train_scalar(self, name: str, value: float, global_step: int) -> None:
         if self._train_log is not None:
             self._train_log.add_scalar(name, value, global_step)
 
-    def add_validation_scalar(self, name: str, value: float, global_step=None) -> None:
+    def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
         if self._validation_log is not None:
             self._validation_log.add_scalar(name, value, global_step)
 
