@@ -45,8 +45,8 @@ class CrfTagger(Model):
         self.text_field_embedder = text_field_embedder
 
         # Make sure we have START and END tags
-        start_tag = vocab.add_token_to_namespace(START_TAG, label_namespace)
-        end_tag = vocab.add_token_to_namespace(END_TAG, label_namespace)
+        self.start_tag = vocab.add_token_to_namespace(START_TAG, label_namespace)
+        self.end_tag = vocab.add_token_to_namespace(END_TAG, label_namespace)
         self.num_tags = self.vocab.get_vocab_size(label_namespace)
 
         self.stacked_encoder = stacked_encoder
@@ -54,7 +54,7 @@ class CrfTagger(Model):
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_tags))
 
-        self.crf = ConditionalRandomField(self.num_tags, start_tag, end_tag)
+        self.crf = ConditionalRandomField(self.num_tags, self.start_tag, self.end_tag)
 
         self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="labels")
 
@@ -131,6 +131,10 @@ class CrfTagger(Model):
         """
         logits, mask = output_dict["logits"], output_dict["mask"]
 
+        # The CRF transitions are (next_state, prev_state),
+        # but ``viterbi_decode`` expects (prev_state, next_state)
+        transitions = self.crf.transitions.data.transpose(1, 0)
+
         # TODO(joelgrus): Get rid of this after markn makes changes to ``Predictor``
         if isinstance(logits, numpy.ndarray):
             logits, mask = torch.from_numpy(logits), torch.from_numpy(mask)
@@ -145,11 +149,17 @@ class CrfTagger(Model):
             mask_list = [mask]
         all_tags = []
         for prediction, mask in zip(predictions_list, mask_list):
-            # The CRF transitions are (next_state, prev_state),
-            # but ``viterbi_decode`` expects (prev_state, next_state)
-            viterbi_path, _ = viterbi_decode(prediction, self.crf.transitions.data.transpose(1, 0))
+            sequence_length = torch.sum(mask)
+
+            padded = torch.Tensor(sequence_length + 2, self.num_tags).fill_(-10000.)
+            padded[0, self.start_tag] = 0.
+            padded[1:-1] = prediction[:sequence_length]
+            padded[-1, self.end_tag] = 0.
+
+            viterbi_path, _ = viterbi_decode(padded, transitions)
             tags = [self.vocab.get_token_from_index(ix, "labels") for ix in viterbi_path]
-            all_tags.append(tags)
+            # Get rid of start and end tags
+            all_tags.append(tags[1:-1])
         output_dict["tags"] = all_tags
 
         return all_tags

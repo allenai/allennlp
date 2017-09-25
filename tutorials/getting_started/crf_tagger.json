@@ -47,7 +47,7 @@
     "iterator": {"type": "basic", "batch_size": 32},
     "trainer": {
       "optimizer": "adam",
-      "num_epochs": 50,
+      "num_epochs": 10,
       "patience": 10,
       "cuda_device": -1
     }

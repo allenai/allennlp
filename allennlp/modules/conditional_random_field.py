@@ -23,10 +23,6 @@ class ConditionalRandomField(torch.nn.Module):
     ----------
     num_tags: int, required
         The number of tags.
-    start_tag: int, requred
-        The id of the special "start" sentinel tag.
-    stop_tag: int, required
-        The id of the special "stop" sentinel tag.
     """
     def __init__(self,
                  num_tags: int,
