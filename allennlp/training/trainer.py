@@ -154,7 +154,7 @@ class Trainer:
 
     def _enable_gradient_clipping(self) -> None:
         if self._grad_clipping is not None:
-            # Pylint is unable to tell that we're in the case that _glar_clipping is not None...
+            # Pylint is unable to tell that we're in the case that _grad_clipping is not None...
             # pylint: disable=invalid-unary-operand-type
             clip_function = lambda grad: grad.clamp(-self._grad_clipping, self._grad_clipping)
             for parameter in self._model.parameters():
