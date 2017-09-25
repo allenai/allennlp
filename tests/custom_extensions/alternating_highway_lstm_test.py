@@ -90,7 +90,8 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         # Import is here because the layer requires a GPU.
         from allennlp.modules.alternating_highway_lstm import AlternatingHighwayLSTM
 
-        baseline = StackedAlternatingLstm(input_size, output_size, num_layers, dropout_prob).cuda()
+        baseline = StackedAlternatingLstm(input_size, output_size, num_layers,
+                                          dropout_prob, use_input_projection_bias=False).cuda()
         kernel_version = AlternatingHighwayLSTM(input_size, output_size, num_layers, dropout_prob).cuda()
 
         # Copy weights from non-cuda version into cuda version,
