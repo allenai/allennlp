@@ -64,7 +64,7 @@ class BidirectionalAttentionFlow(Model):
         against.  We need this separately from the validation dataset, because the official metrics
         use all of the annotations, while our dataset reader picks the most frequent one.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
-        If provided, will be used to initialize the model parameters.
+        Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """

@@ -56,7 +56,7 @@ class DecomposableAttention(Model):
         we will use the ``premise_encoder`` for the encoding (doing nothing if ``premise_encoder``
         is also ``None``).
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
-        If provided, will be used to initialize the model parameters.
+        Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """

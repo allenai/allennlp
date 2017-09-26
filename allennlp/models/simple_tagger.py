@@ -32,7 +32,7 @@ class SimpleTagger(Model):
         The encoder (with its own internal stacking) that we will use in between embedding tokens
         and predicting output tags.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
-        If provided, will be used to initialize the model parameters.
+        Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
