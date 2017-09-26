@@ -3,7 +3,7 @@
 an AllenNLP model.
 """
 
-from typing import Dict
+from typing import Dict, Union
 import os
 import logging
 
@@ -49,13 +49,13 @@ class Model(torch.nn.Module, Registrable):
         self.vocab = vocab
         self._regularizer = regularizer
 
-    def get_regularization_penalty(self) -> torch.autograd.Variable:
+    def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
         """
         Computes the regularization penalty for the model.
-        Returns a zero tensor if the model was not configured to use regularization.
+        Returns 0 if the model was not configured to use regularization.
         """
         if self._regularizer is None:
-            return torch.autograd.Variable(torch.Tensor([0.]))
+            return 0.0
         else:
             return self._regularizer(self)
 
