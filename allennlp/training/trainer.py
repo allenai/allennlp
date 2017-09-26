@@ -285,7 +285,7 @@ class Trainer:
             if val_metrics:
                 self._tensorboard.add_validation_scalar(name, val_metrics[name], epoch)
 
-    def _metrics_to_console(self,
+    def _metrics_to_console(self,                               # pylint: disable=no-self-use
                             train_metrics: dict,
                             val_metrics: dict = None) -> None:
         """
