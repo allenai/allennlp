@@ -34,10 +34,7 @@ class BooleanAccuracy(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A tensor of the same shape as ``predictions``.
         """
-        # If you actually passed in Variables here instead of Tensors, this will be a huge memory
-        # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
-        # that we're using tensors here first.
-        predictions, gold_labels, mask = self.unwrap_variables(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
         if mask is not None:
             # We can multiply by the mask up front, because we're just checking equality below, and

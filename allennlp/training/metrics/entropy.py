@@ -25,10 +25,8 @@ class Entropy(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor of shape (batch_size, ...).
         """
-        # If you actually passed in Variables here instead of Tensors, this will be a huge memory
-        # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
-        # that we're using tensors here first.
-        logits, mask = self.unwrap_variables(logits, mask)
+        # Get the data from the Variables.
+        logits, mask = self.unwrap_to_tensors(logits, mask)
 
         if mask is None:
             mask = torch.ones(logits.size()[:-1])
