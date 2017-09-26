@@ -171,12 +171,14 @@ class Trainer:
     def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
         """
         Does a forward pass on the given batch and returns the ``loss`` value in the result.
+        If ``for_training`` is `True` also applies regularization penalty.
         """
         output_dict = self._forward(batch, for_training=for_training)
 
         try:
             loss = output_dict["loss"]
-            # TODO(joelgrus): add in regularization
+            if for_training:
+                loss += self._model.get_regularization_penalty()
         except KeyError:
             raise ConfigurationError("The model you are trying to optimize does not contain a"
                                      " 'loss' key in the output of model.forward(inputs).")

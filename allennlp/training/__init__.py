@@ -1,3 +1,1 @@
-from allennlp.training.regularizers.regularizer import Regularizer
-from allennlp.training.regularizers.regularizer_applicator import RegularizerApplicator
 from allennlp.training.trainer import Trainer

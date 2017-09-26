@@ -3,7 +3,7 @@
 an AllenNLP model.
 """
 
-from typing import Dict
+from typing import Dict, Union
 import os
 import logging
 
@@ -11,6 +11,7 @@ from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
 from allennlp.nn.util import arrays_to_variables, device_mapping
+from allennlp.nn.regularizers import RegularizerApplicator
 
 import numpy
 import torch
@@ -41,9 +42,22 @@ class Model(torch.nn.Module, Registrable):
     of early stopping and best-model serialization based on a validation metric in
     :class:`~allennlp.training.Trainer`.
     """
-    def __init__(self, vocab: Vocabulary) -> None:
+    def __init__(self,
+                 vocab: Vocabulary,
+                 regularizer: RegularizerApplicator = None) -> None:
         super().__init__()
         self.vocab = vocab
+        self._regularizer = regularizer
+
+    def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
+        """
+        Computes the regularization penalty for the model.
+        Returns 0 if the model was not configured to use regularization.
+        """
+        if self._regularizer is None:
+            return 0.0
+        else:
+            return self._regularizer(self)
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
@@ -147,7 +161,8 @@ class Model(torch.nn.Module, Registrable):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
-        return cls.by_name(choice).from_params(vocab, params)
+        model = cls.by_name(choice).from_params(vocab, params)
+        return model
 
     @classmethod
     def load(cls,
