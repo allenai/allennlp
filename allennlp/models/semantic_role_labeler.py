@@ -41,7 +41,7 @@ class SemanticRoleLabeler(Model):
         and predicting output tags.
     binary_feature_dim : int, required.
         The dimensionality of the embedding of the binary verb predicate features.
-    initializer : ``InitializerApplicator``, optional (default=``None``)
+    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         If provided, will be used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.

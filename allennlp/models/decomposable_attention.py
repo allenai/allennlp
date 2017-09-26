@@ -55,7 +55,7 @@ class DecomposableAttention(Model):
         After embedding the hypothesis, we can optionally apply an encoder.  If this is ``None``,
         we will use the ``premise_encoder`` for the encoding (doing nothing if ``premise_encoder``
         is also ``None``).
-    initializer : ``InitializerApplicator``, optional (default=``None``)
+    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         If provided, will be used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
