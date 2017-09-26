@@ -277,16 +277,28 @@ class Trainer:
                                 epoch: int,
                                 train_metrics: dict,
                                 val_metrics: dict = None) -> None:
+        """
+        Sends all of the train metrics (and validation metrics, if provided) to tensorboard.
+        """
+        for name, value in train_metrics.items():
+            self._tensorboard.add_train_scalar(name, value, epoch)
+            if val_metrics:
+                self._tensorboard.add_validation_scalar(name, val_metrics[name], epoch)
+
+    def _metrics_to_console(self,  # pylint: disable=no-self-use
+                            train_metrics: dict,
+                            val_metrics: dict = None) -> None:
+        """
+        Logs all of the train metrics (and validation metrics, if provided) to the console.
+        """
         if val_metrics:
             message_template = "Training %s : %3f    Validation %s : %3f "
         else:
             message_template = "Training %s : %3f "
 
         for name, value in train_metrics.items():
-            self._tensorboard.add_train_scalar(name, value, epoch)
             if val_metrics:
                 logger.info(message_template, name, value, name, val_metrics[name])
-                self._tensorboard.add_validation_scalar(name, val_metrics[name], epoch)
             else:
                 logger.info(message_template, name, value)
 
@@ -379,6 +391,7 @@ class Trainer:
 
             self._save_checkpoint(epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
+            self._metrics_to_console(train_metrics, val_metrics)
             self._update_learning_rate(epoch, val_metric=this_epoch_val_metric)
 
     def _forward(self, batch: dict, for_training: bool) -> dict:
