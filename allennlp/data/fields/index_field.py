@@ -33,6 +33,7 @@ class IndexField(Field[numpy.ndarray]):
         if not isinstance(index, int):
             raise ConfigurationError("IndexFields must be passed integer indices. "
                                      "Found index: {} with type: {}.".format(index, type(index)))
+
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {'num_options': self.sequence_field.sequence_length()}
