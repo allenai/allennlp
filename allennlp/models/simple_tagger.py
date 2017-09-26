@@ -40,7 +40,7 @@ class SimpleTagger(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
-                 initializer: Optional[InitializerApplicator] = None,
+                 initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(SimpleTagger, self).__init__(vocab, regularizer)
 
@@ -60,8 +60,7 @@ class SimpleTagger(Model):
                 "accuracy3": CategoricalAccuracy(top_k=3)
         }
 
-        if initializer is not None:
-            initializer(self)
+        initializer(self)
 
     @overrides
     def forward(self,  # type: ignore
@@ -152,7 +151,9 @@ class SimpleTagger(Model):
 
         init_params = params.pop('initializer', None)
         reg_params = params.pop('regularizer', None)
-        initializer = InitializerApplicator.from_params(init_params) if init_params is not None else None
+        initializer = (InitializerApplicator.from_params(init_params)
+                       if init_params is not None
+                       else InitializerApplicator())
         regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
 
         return cls(vocab=vocab,

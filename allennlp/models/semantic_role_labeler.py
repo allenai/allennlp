@@ -51,7 +51,7 @@ class SemanticRoleLabeler(Model):
                  stacked_encoder: Seq2SeqEncoder,
                  binary_feature_dim: int,
                  embedding_dropout: float = 0.0,
-                 initializer: Optional[InitializerApplicator] = None,
+                 initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(SemanticRoleLabeler, self).__init__(vocab, regularizer)
 
@@ -74,8 +74,7 @@ class SemanticRoleLabeler(Model):
                                      "the input dimension of the stacked_encoder must be equal to "
                                      "the output dimension of the text_field_embedder + 1.")
 
-        if initializer is not None:
-            initializer(self)
+        initializer(self)
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
@@ -217,7 +216,9 @@ class SemanticRoleLabeler(Model):
 
         init_params = params.pop('initializer', None)
         reg_params = params.pop('regularizer', None)
-        initializer = InitializerApplicator.from_params(init_params) if init_params is not None else None
+        initializer = (InitializerApplicator.from_params(init_params)
+                       if init_params is not None
+                       else InitializerApplicator())
         regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
 
         return cls(vocab=vocab,

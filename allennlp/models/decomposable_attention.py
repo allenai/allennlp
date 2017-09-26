@@ -68,7 +68,7 @@ class DecomposableAttention(Model):
                  aggregate_feedforward: FeedForward,
                  premise_encoder: Optional[Seq2SeqEncoder] = None,
                  hypothesis_encoder: Optional[Seq2SeqEncoder] = None,
-                 initializer: Optional[InitializerApplicator] = None,
+                 initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(DecomposableAttention, self).__init__(vocab, regularizer)
 
@@ -94,8 +94,7 @@ class DecomposableAttention(Model):
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
 
-        if initializer is not None:
-            initializer(self)
+        initializer(self)
 
     def forward(self,  # type: ignore
                 premise: Dict[str, torch.LongTensor],
@@ -205,7 +204,9 @@ class DecomposableAttention(Model):
 
         init_params = params.pop('initializer', None)
         reg_params = params.pop('regularizer', None)
-        initializer = InitializerApplicator.from_params(init_params) if init_params is not None else None
+        initializer = (InitializerApplicator.from_params(init_params)
+                       if init_params is not None
+                       else InitializerApplicator())
         regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
 
         return cls(vocab=vocab,

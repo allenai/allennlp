@@ -77,7 +77,7 @@ class BidirectionalAttentionFlow(Model):
                  span_end_encoder: Seq2SeqEncoder,
                  dropout: float = 0.2,
                  mask_lstms: bool = True,
-                 initializer: Optional[InitializerApplicator] = None,
+                 initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BidirectionalAttentionFlow, self).__init__(vocab, regularizer)
 
@@ -130,8 +130,7 @@ class BidirectionalAttentionFlow(Model):
             self._dropout = lambda x: x
         self._mask_lstms = mask_lstms
 
-        if initializer is not None:
-            initializer(self)
+        initializer(self)
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -348,7 +347,9 @@ class BidirectionalAttentionFlow(Model):
 
         init_params = params.pop('initializer', None)
         reg_params = params.pop('regularizer', None)
-        initializer = InitializerApplicator.from_params(init_params) if init_params is not None else None
+        initializer = (InitializerApplicator.from_params(init_params)
+                       if init_params is not None
+                       else InitializerApplicator())
         regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
 
         mask_lstms = params.pop('mask_lstms', True)
