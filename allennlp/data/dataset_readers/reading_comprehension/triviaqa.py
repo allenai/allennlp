@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import tarfile
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from overrides import overrides
 from tqdm import tqdm
@@ -98,9 +98,19 @@ class TriviaQaReader(DatasetReader):
             answer_json = question_json['Answer']
             answer_texts = answer_json['NormalizedAliases'] + answer_json.get('HumanAnswers', [])
             for paragraph in self.pick_paragraphs(evidence_files, question_text, answer_texts):
-                instance = self.text_to_instance(question_text, paragraph, answer_texts, question_tokens)
-                if instance:
-                    instances.append(instance)
+                paragraph_tokens = self._tokenizer.tokenize(passage_text)
+                token_spans = util.find_valid_answer_spans(paragraph_tokens, answer_texts)
+                if not token_spans:
+                    # For now, we'll just ignore instances that we can't find answer spans for.
+                    # Maybe we can do something smarter here later, but this will do for now.
+                    continue
+                instance = self.text_to_instance(question_text,
+                                                 paragraph,
+                                                 token_spans,
+                                                 answer_texts,
+                                                 question_tokens,
+                                                 paragraph_tokens)
+                instances.append(instance)
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
@@ -132,16 +142,15 @@ class TriviaQaReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          question_text: str,
                          passage_text: str,
+                         token_spans: List[Tuple[int, int]] = None,
                          answer_texts: List[str] = None,
-                         question_tokens: List[Token] = None) -> Instance:
+                         question_tokens: List[Token] = None,
+                         passage_tokens: List[Token] = None) -> Instance:
         # pylint: disable=arguments-differ
         if not question_tokens:
             question_tokens = self._tokenizer.tokenize(question_text)
-        passage_tokens = self._tokenizer.tokenize(passage_text)
-        token_spans = util.find_valid_answer_spans(passage_tokens, answer_texts)
-        if not token_spans:
-            # For now, we'll just filter out instances if we can't find a valid answer span.
-            return None
+        if not passage_tokens:
+            passage_tokens = self._tokenizer.tokenize(passage_text)
         return util.make_reading_comprehension_instance(question_tokens,
                                                         passage_tokens,
                                                         self._token_indexers,
