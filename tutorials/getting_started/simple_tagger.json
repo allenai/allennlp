@@ -42,10 +42,7 @@
             "num_layers": 2,
             "dropout": 0.5,
             "bidirectional": true
-    },
-    "regularizer": [
-      [".*", {"type": "l2", "alpha": 0.01}]
-    ]
+    }
   },
   "iterator": {"type": "basic", "batch_size": 32},
   "trainer": {
