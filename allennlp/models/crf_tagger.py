@@ -5,6 +5,10 @@ from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
 
+import torch.nn.functional as F
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+
+
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
@@ -102,6 +106,16 @@ class CrfTagger(Model):
 
         logits = self.tag_projection_layer(encoded_text)
 
+        # reshaped_log_probs = logits.view(-1, self.num_tags)
+        # batch_size, sequence_length, _ = embedded_text_input.size()
+        # class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, sequence_length, self.num_tags])
+        # output = {"logits": logits, "class_probabilities": class_probabilities}
+        # if tags is not None:
+        #     loss = sequence_cross_entropy_with_logits(logits, tags, mask)
+        #     self.span_metric(class_probabilities, tags, mask)
+        #     output["loss"] = loss
+
+
         # The CRF layer only produces a ``loss`` output, so we need to include these
         # in case we want to decode the outputs.
         output = {"logits": logits, "mask": mask}
@@ -130,6 +144,7 @@ class CrfTagger(Model):
         Uses viterbi algorithm to find most likely tags
         """
         logits, mask = output_dict["logits"], output_dict["mask"]
+        _batch_size, max_seq_length, num_tags = logits.size()
 
         # The CRF transitions are (next_state, prev_state),
         # but ``viterbi_decode`` expects (prev_state, next_state)
@@ -147,16 +162,18 @@ class CrfTagger(Model):
         else:
             predictions_list = [logits]
             mask_list = [mask]
+
         all_tags = []
+        padded = torch.Tensor(max_seq_length + 2, num_tags).fill_(-10000.)
+
         for prediction, mask in zip(predictions_list, mask_list):
             sequence_length = torch.sum(mask)
 
-            padded = torch.Tensor(sequence_length + 2, self.num_tags).fill_(-10000.)
             padded[0, self.start_tag] = 0.
-            padded[1:-1] = prediction[:sequence_length]
-            padded[-1, self.end_tag] = 0.
+            padded[1:sequence_length+1] = prediction[:sequence_length]
+            padded[sequence_length+1, self.end_tag] = 0.
 
-            viterbi_path, _ = viterbi_decode(padded, transitions)
+            viterbi_path, _ = viterbi_decode(padded[:sequence_length+2], transitions)
             tags = [self.vocab.get_token_from_index(ix, "labels") for ix in viterbi_path]
             # Get rid of start and end tags
             all_tags.append(tags[1:-1])

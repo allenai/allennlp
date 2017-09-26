@@ -14,6 +14,14 @@ to capture dependencies between the _tags_. This can be a problem
 for tasks like [named-entity recognition](https://en.wikipedia.org/wiki/Named-entity_recognition)
 where you'd never want to (for example) have a "start of a place" tag followed by a "inside a person" tag.
 
+We'll try to build a NER model that can outperform our simple tagger
+on the [CoNLL 2003 dataset](https://www.clips.uantwerpen.be/conll2003/ner/),
+which (unfortunately) you'll have to source for yourself.
+
+The simple tagger gets about 92%
+[span-based F1](https://allenai.github.io/allennlp-docs/api/allennlp.training.metrics.html#span-based-f1-measure)
+on the validation dataset. We'd like to do better.
+
 One way to approach this is to add a [Conditional Random Field](https://en.wikipedia.org/wiki/Conditional_random_field)
 layer at the end of our tagging model.
 (If you're not familiar with conditional random fields, [this overview paper](https://arxiv.org/abs/1011.4088)
