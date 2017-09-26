@@ -178,9 +178,7 @@ class Trainer:
         try:
             loss = output_dict["loss"]
             if for_training:
-                penalty = self._model.get_regularization_penalty()
-                if penalty is not None:
-                    loss += penalty
+                loss += self._model.get_regularization_penalty()
         except KeyError:
             raise ConfigurationError("The model you are trying to optimize does not contain a"
                                      " 'loss' key in the output of model.forward(inputs).")
