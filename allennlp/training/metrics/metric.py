@@ -48,7 +48,7 @@ class Metric(Registrable):
         return cls.by_name(metric_type)(**params.as_dict())  # type: ignore
 
     @staticmethod
-    def unwrap_variables(*tensors):
+    def unwrap_to_tensors(*tensors):
         """
         If you actually passed in Variables to a Metric instead of Tensors, there will be
         a huge memory leak, because it will prevent garbage collection for the computation

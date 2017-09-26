@@ -37,10 +37,8 @@ class F1Measure(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         """
-        # If you actually passed in Variables here instead of Tensors, this will be a huge memory
-        # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
-        # that we're using tensors here first.
-        predictions, gold_labels, mask = self.unwrap_variables(predictions, gold_labels, mask)
+        # Get the data from the Variables.
+        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
         num_classes = predictions.size(-1)
         if (gold_labels >= num_classes).any():
