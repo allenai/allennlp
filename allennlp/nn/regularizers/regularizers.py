@@ -1,6 +1,6 @@
 import torch
 
-from allennlp.training.regularizers.regularizer import Regularizer
+from allennlp.nn.regularizers.regularizer import Regularizer
 
 
 @Regularizer.register("l1")

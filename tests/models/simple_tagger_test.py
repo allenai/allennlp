@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,protected-access
 from flaky import flaky
 import pytest
 import numpy
@@ -6,9 +6,13 @@ import numpy
 from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
+from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.iterators import DataIterator, BasicIterator
 from allennlp.models import Model
 from allennlp.nn.util import arrays_to_variables
+from allennlp.training import Trainer
 
+import torch
 
 class SimpleTaggerTest(ModelTestCase):
     def setUp(self):
@@ -36,3 +40,80 @@ class SimpleTaggerTest(ModelTestCase):
         params["model"]["stacked_encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
             Model.from_params(self.vocab, params.pop("model"))
+
+    def test_regularization(self):
+        penalty = self.model.get_regularization_penalty()
+        assert penalty == 0
+
+        iterator = BasicIterator(batch_size=32)
+        trainer = Trainer(self.model,
+                          None,  # optimizer,
+                          iterator,
+                          self.dataset)
+
+        # You get a RuntimeError if you call `model.forward` twice on the same inputs.
+        # The data and config are such that the whole dataset is one batch.
+        training_batch = next(iterator(self.dataset, num_epochs=1))
+        validation_batch = next(iterator(self.dataset, num_epochs=1))
+
+        training_loss = trainer._batch_loss(training_batch, for_training=True).data
+        validation_loss = trainer._batch_loss(validation_batch, for_training=False).data
+
+        # Training loss should have the regularization penalty, but validation loss should not.
+        assert (training_loss == validation_loss).all()
+
+
+class SimpleTaggerRegularizationTest(ModelTestCase):
+    def setUp(self):
+        super().setUp()
+        param_file = 'tests/fixtures/simple_tagger/experiment_with_regularization.json'
+        self.set_up_model(param_file,
+                          'tests/fixtures/data/sequence_tagging.tsv')
+        params = Params.from_file(param_file)
+        self.reader = DatasetReader.from_params(params['dataset_reader'])
+        self.iterator = DataIterator.from_params(params['iterator'])
+        self.trainer = Trainer.from_params(
+                self.model,
+                self.TEST_DIR,
+                self.iterator,
+                self.dataset,
+                None,
+                params.get('trainer')
+        )
+
+
+    def test_regularization(self):
+        penalty = self.model.get_regularization_penalty().data
+        assert (penalty > 0).all()
+
+        penalty2 = 0
+
+        # Config specifies penalty as
+        #   "regularizer": [
+        #     ["weight$", {"type": "l2", "alpha": 10}],
+        #     ["bias$", {"type": "l1", "alpha": 5}]
+        #   ]
+        for name, parameter in self.model.named_parameters():
+            if name.endswith("weight"):
+                weight_penalty = 10 * torch.sum(torch.pow(parameter, 2))
+                penalty2 += weight_penalty
+            elif name.endswith("bias"):
+                bias_penalty = 5 * torch.sum(torch.abs(parameter))
+                penalty2 += bias_penalty
+
+        assert (penalty == penalty2.data).all()
+
+        # You get a RuntimeError if you call `model.forward` twice on the same inputs.
+        # The data and config are such that the whole dataset is one batch.
+        training_batch = next(self.iterator(self.dataset, num_epochs=1))
+        validation_batch = next(self.iterator(self.dataset, num_epochs=1))
+
+        training_loss = self.trainer._batch_loss(training_batch, for_training=True).data
+        validation_loss = self.trainer._batch_loss(validation_batch, for_training=False).data
+
+        # Training loss should have the regularization penalty, but validation loss should not.
+        assert (training_loss != validation_loss).all()
+
+        # Training loss should equal the validation loss plus the penalty.
+        penalized = validation_loss + penalty
+        assert (training_loss == penalized).all()
