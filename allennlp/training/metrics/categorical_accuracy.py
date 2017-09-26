@@ -2,7 +2,6 @@ from typing import Optional
 
 from overrides import overrides
 import torch
-from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
@@ -34,15 +33,8 @@ class CategoricalAccuracy(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         """
-        # If you actually passed in Variables here instead of Tensors, this will be a huge memory
-        # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
-        # that we're using tensors here first.
-        if isinstance(predictions, Variable):
-            predictions = predictions.data
-        if isinstance(gold_labels, Variable):
-            gold_labels = gold_labels.data
-        if isinstance(mask, Variable):
-            mask = mask.data
+        # Get the data from the Variables.
+        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
         # Some sanity checks.
         num_classes = predictions.size(-1)
