@@ -38,6 +38,8 @@ class CrfTagger(Model):
     label_namespace: ``str``, optional (default=``"labels"``)
         We'll need to add special START and END tags to whatever namespace holds our labels.
         Unless you did something unusual, the default value should be what you want.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(self, vocab: Vocabulary,

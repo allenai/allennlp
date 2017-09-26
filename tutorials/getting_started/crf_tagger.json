@@ -44,13 +44,13 @@
               "bidirectional": true
       },
       "regularizer": [
-        ["transitions$", {"type": "l2", "alpha": 0.01}]
+        ["transitions$", {"type": "l2", "alpha": 10.01}]
       ]
     },
     "iterator": {"type": "basic", "batch_size": 32},
     "trainer": {
       "optimizer": "adam",
-      "num_epochs": 10,
+      "num_epochs": 25,
       "patience": 10,
       "cuda_device": -1
     }
