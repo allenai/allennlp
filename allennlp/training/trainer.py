@@ -250,7 +250,8 @@ class Trainer:
                                                            param.grad.data.std(),
                                                            batch_num_total)
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
-                self._metrics_to_tensorboard(batch_num_total, {"epoch_metrics/" + k: v for k, v in metrics.items()})
+                self._metrics_to_tensorboard(batch_num_total,
+                                             {"epoch_metrics/" + k: v for k, v in metrics.items()})
 
             # Log progress in no-tqdm case
             if self._no_tqdm and time.time() - self._last_log > self._log_interval:
