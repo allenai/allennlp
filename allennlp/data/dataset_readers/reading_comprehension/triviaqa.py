@@ -96,9 +96,10 @@ class TriviaQaReader(DatasetReader):
                     evidence_files.append([line.decode('utf-8') for line in evidence_file.readlines()])
 
             answer_json = question_json['Answer']
-            answer_texts = answer_json['NormalizedAliases'] + answer_json.get('HumanAnswers', [])
+            human_answers = [util.normalize_text(answer) for answer in answer_json.get('HumanAnswers', [])]
+            answer_texts = answer_json['NormalizedAliases'] + human_answers
             for paragraph in self.pick_paragraphs(evidence_files, question_text, answer_texts):
-                paragraph_tokens = self._tokenizer.tokenize(passage_text)
+                paragraph_tokens = self._tokenizer.tokenize(paragraph)
                 token_spans = util.find_valid_answer_spans(paragraph_tokens, answer_texts)
                 if not token_spans:
                     # For now, we'll just ignore instances that we can't find answer spans for.

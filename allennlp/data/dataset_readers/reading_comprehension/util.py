@@ -15,6 +15,17 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 IGNORED_TOKENS = {'a', 'an', 'the'}
 STRIPPED_CHARACTERS = string.punctuation + ''.join([u"‘", u"’", u"´", u"`", "_"])
 
+def normalize_text(text: str) -> str:
+    """
+    Performs a normalization that is very similar to that done by the normalization functions in
+    SQuAD and TriviaQA.
+
+    This involves splitting and rejoining the text, and could be a somewhat expensive operation.
+    """
+    return ' '.join([token
+                     for token in text.lower().strip(STRIPPED_CHARACTERS).split()
+                     if token not in IGNORED_TOKENS])
+
 
 def char_span_to_token_span(token_offsets: List[Tuple[int, int]],
                             character_span: Tuple[int, int]) -> Tuple[Tuple[int, int], bool]:
@@ -83,6 +94,9 @@ def find_valid_answer_spans(passage_tokens: List[Token],
     Finds a list of token spans in ``passage_tokens`` that match the given ``answer_texts``.  This
     tries to find all spans that would evaluate to correct given the SQuAD and TriviaQA official
     evaluation scripts, which do some normalization of the input text.
+
+    Note that this could return duplicate spans!  The caller is expected to be able to handle
+    possible duplicates (as already happens in the SQuAD dev set, for instance).
     """
     normalized_tokens = [token.text.lower().strip(STRIPPED_CHARACTERS) for token in passage_tokens]
     # Because there could be many `answer_texts`, we'll do the most expensive pre-processing
