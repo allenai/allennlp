@@ -1,7 +1,6 @@
 import json
 import logging
-from collections import Counter
-from typing import List, Dict
+from typing import Dict, List, Tuple
 
 from overrides import overrides
 from tqdm import tqdm
@@ -11,7 +10,6 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, IndexField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
@@ -65,27 +63,14 @@ class SquadReader(DatasetReader):
 
                 for question_answer in paragraph_json['qas']:
                     question_text = question_answer["question"].strip().replace("\n", "")
-                    question_id = question_answer['id'].strip()
-
-                    # There may be multiple answer annotations, so we pick the one that occurs the
-                    # most.  This only matters on the SQuAD dev set, and it means our computed
-                    # metrics ("start_acc", "end_acc", and "span_acc") aren't quite the same as the
-                    # official metrics, which look at all of the annotations.  This is why we have
-                    # a separate official SQuAD metric calculation (the "em" and "f1" metrics use
-                    # the official script).
-                    candidate_answers: Counter = Counter()
-                    for answer in question_answer["answers"]:
-                        candidate_answers[(answer["answer_start"], answer["text"])] += 1
                     answer_texts = [answer['text'] for answer in question_answer['answers']]
-                    char_span_start, answer_text = candidate_answers.most_common(1)[0][0]
-
+                    span_starts = [answer['answer_start'] for answer in question_answer['answers']]
+                    span_ends = [start + len(answer) for start, answer in zip(span_starts, answer_texts)]
                     instance = self.text_to_instance(question_text,
                                                      paragraph,
-                                                     question_id,
-                                                     answer_text,
-                                                     char_span_start,
-                                                     tokenized_paragraph,
-                                                     answer_texts)
+                                                     zip(span_starts, span_ends),
+                                                     answer_texts,
+                                                     tokenized_paragraph)
                     instances.append(instance)
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
@@ -96,50 +81,37 @@ class SquadReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          question_text: str,
                          passage_text: str,
-                         question_id: str = None,
-                         answer_text: str = None,
-                         char_span_start: int = None,
-                         passage_tokens: List[Token] = None,
-                         answer_texts: List[str] = None) -> Instance:
+                         char_spans: List[Tuple[int, int]] = None,
+                         answer_texts: List[str] = None,
+                         passage_tokens: List[Token] = None) -> Instance:
         # pylint: disable=arguments-differ
-        fields: Dict[str, Field] = {}
         if not passage_tokens:
             passage_tokens = self._tokenizer.tokenize(passage_text)
-        passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
-        question_tokens = self._tokenizer.tokenize(question_text)
-        # Separate so we can reference it later with a known type.
-        passage_field = TextField(passage_tokens, self._token_indexers)
-        fields['passage'] = passage_field
-        fields['question'] = TextField(question_tokens, self._token_indexers)
+        char_spans = char_spans or []
 
-        if answer_text:
-            # SQuAD gives answer annotations as a character index into the paragraph, but we need a
-            # token index for our models.  We convert them here.
-            char_span_end = char_span_start + len(answer_text)
+        # We need to convert character indices in `passage_text` to token indices in
+        # `passage_tokens`, as the latter is what we'll actually use for supervision.
+        token_spans: List[Tuple[int, int]] = []
+        passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
+        for char_span_start, char_span_end in char_spans:
             (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
-                                                                         (char_span_start,
-                                                                          char_span_end))
+                                                                         (char_span_start, char_span_end))
             if error:
                 logger.debug("Passage: %s", passage_text)
                 logger.debug("Passage tokens: %s", passage_tokens)
-                logger.debug("Question: %s", question_text)
+                logger.debug("Question text: %s", question_text)
                 logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
                 logger.debug("Token span: (%d, %d)", span_start, span_end)
                 logger.debug("Tokens in answer: %s", passage_tokens[span_start:span_end + 1])
-                logger.debug("Answer: %s", answer_text)
+                logger.debug("Answer: %s", passage_text[char_span_start:char_span_end])
+            token_spans.append((span_start, span_end))
 
-            fields['span_start'] = IndexField(span_start, passage_field)
-            fields['span_end'] = IndexField(span_end, passage_field)
-        metadata = {
-                'original_passage': passage_text,
-                'token_offsets': passage_offsets
-                }
-        if question_id:
-            metadata['question_id'] = question_id
-        if answer_texts:
-            metadata['answer_texts'] = answer_texts
-        fields['metadata'] = MetadataField(metadata)
-        return Instance(fields)
+        return util.make_reading_comprehension_instance(self._tokenizer.tokenize(question_text),
+                                                        passage_tokens,
+                                                        self._token_indexers,
+                                                        passage_text,
+                                                        token_spans,
+                                                        answer_texts)
 
     @classmethod
     def from_params(cls, params: Params) -> 'SquadReader':
