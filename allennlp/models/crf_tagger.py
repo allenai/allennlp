@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy
 from overrides import overrides
@@ -14,6 +14,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, ConditionalRandomField
 from allennlp.models.model import Model
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, viterbi_decode
 from allennlp.training.metrics import SpanBasedF1Measure
 
@@ -38,6 +39,8 @@ class CrfTagger(Model):
     label_namespace: ``str``, optional (default=``"labels"``)
         We'll need to add special START and END tags to whatever namespace holds our labels.
         Unless you did something unusual, the default value should be what you want.
+    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+        Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
@@ -45,8 +48,10 @@ class CrfTagger(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
-                 label_namespace: str = "labels") -> None:
-        super().__init__(vocab)
+                 label_namespace: str = "labels",
+                 initializer: InitializerApplicator = InitializerApplicator(),
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
 
@@ -69,6 +74,7 @@ class CrfTagger(Model):
                                      "input dimension of the phrase_encoder. Found {} and {}, "
                                      "respectively.".format(text_field_embedder.get_output_dim(),
                                                             stacked_encoder.get_input_dim()))
+        initializer(self)
 
     @overrides
     def forward(self,  # type: ignore
@@ -194,6 +200,17 @@ class CrfTagger(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
 
+        init_params = params.pop('initializer', None)
+        reg_params = params.pop('regularizer', None)
+        initializer = (InitializerApplicator.from_params(init_params)
+                       if init_params is not None
+                       else InitializerApplicator())
+        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
+
+        params.assert_empty(__class__)
+
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
-                   stacked_encoder=stacked_encoder)
+                   stacked_encoder=stacked_encoder,
+                   initializer=initializer,
+                   regularizer=regularizer)
