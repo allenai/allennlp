@@ -118,7 +118,6 @@ class Model(torch.nn.Module, Registrable):
                                           cuda_device=cuda_device,
                                           for_training=False)
         outputs = self.decode(self.forward(**model_input))
-        print(outputs)
         for name, output in outputs.items():
             if isinstance(output, torch.autograd.Variable):
                 output = output.data.cpu().numpy()
