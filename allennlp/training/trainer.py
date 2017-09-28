@@ -250,7 +250,8 @@ class Trainer:
                                                            param.grad.data.std(),
                                                            batch_num_total)
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
-                self._metrics_to_tensorboard(epoch, metrics)
+                self._metrics_to_tensorboard(batch_num_total,
+                                             {"epoch_metrics/" + k: v for k, v in metrics.items()})
 
             # Log progress in no-tqdm case
             if self._no_tqdm and time.time() - self._last_log > self._log_interval:
@@ -358,11 +359,10 @@ class Trainer:
         """
         Trains the supplied model with the supplied parameters.
         """
-        epoch_counter = self._restore_checkpoint()
+        epoch_counter, validation_metric_per_epoch = self._restore_checkpoint()
         self._enable_gradient_clipping()
 
         logger.info("Beginning training.")
-        validation_metric_per_epoch: List[float] = []
 
         for epoch in range(epoch_counter, self._num_epochs):
             train_metrics = self._train_epoch(epoch)
@@ -389,7 +389,7 @@ class Trainer:
                 is_best_so_far = True
                 val_metrics = this_epoch_val_metric = None
 
-            self._save_checkpoint(epoch, is_best=is_best_so_far)
+            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
             self._update_learning_rate(epoch, val_metric=this_epoch_val_metric)
@@ -404,6 +404,7 @@ class Trainer:
 
     def _save_checkpoint(self,
                          epoch: int,
+                         val_metric_per_epoch: List[float],
                          is_best: Optional[bool] = None) -> None:
         """
         Saves a checkpoint of the model to self._serialization_dir.
@@ -423,7 +424,9 @@ class Trainer:
             model_state = self._model.state_dict()
             torch.save(model_state, model_path)
 
-            training_state = {'epoch': epoch, 'optimizer': self._optimizer.state_dict()}
+            training_state = {'epoch': epoch,
+                              'val_metric_per_epoch': val_metric_per_epoch,
+                              'optimizer': self._optimizer.state_dict()}
             torch.save(training_state, os.path.join(self._serialization_dir,
                                                     "training_state_epoch_{}.th".format(epoch)))
             if is_best:
@@ -431,7 +434,7 @@ class Trainer:
                             "Copying weights to %s/best.th'.", self._serialization_dir)
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
 
-    def _restore_checkpoint(self) -> int:
+    def _restore_checkpoint(self) -> Tuple[int, List[float]]:
         """
         Restores a model from a serialization_dir to the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
@@ -454,7 +457,7 @@ class Trainer:
 
         if not have_checkpoint:
             # No checkpoint to restore, start at 0
-            return 0
+            return 0, []
 
         serialization_files = os.listdir(self._serialization_dir)
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
@@ -469,7 +472,17 @@ class Trainer:
         training_state = torch.load(training_state_path)
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
-        return training_state["epoch"] + 1
+
+        # We didn't used to save `validation_metric_per_epoch`, so we can't assume
+        # that it's part of the trainer state. If it's not there, an empty list is all
+        # we can do.
+        if "val_metric_per_epoch" not in training_state:
+            logger.warning("trainer state `val_metric_per_epoch` not found, using empty list")
+            val_metric_per_epoch: List[float] = []
+        else:
+            val_metric_per_epoch = training_state["val_metric_per_epoch"]
+
+        return training_state["epoch"] + 1, val_metric_per_epoch
 
     @classmethod
     def from_params(cls,
