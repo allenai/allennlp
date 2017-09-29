@@ -24,21 +24,22 @@
               "token_characters": {
                 "type": "character_encoding",
                 "embedding": {
-                  "embedding_dim": 8
+                  "embedding_dim": 25
                 },
                 "encoder": {
-                  "type": "cnn",
-                  "embedding_dim": 8,
-                  "num_filters": 50,
-                  "ngram_filter_sizes": [5]
-                },
-                "dropout": 0.2
+                  "type": "gru",
+                  "input_size": 25,
+                  "hidden_size": 80,
+                  "num_layers": 2,
+                  "dropout": 0.25,
+                  "bidirectional": true
+                }
               }
       },
       "stacked_encoder": {
-              "type": "lstm",
-              "input_size": 100,
-              "hidden_size": 100,
+              "type": "gru",
+              "input_size": 210,
+              "hidden_size": 300,
               "num_layers": 2,
               "dropout": 0.5,
               "bidirectional": true
@@ -50,7 +51,7 @@
     "iterator": {"type": "basic", "batch_size": 32},
     "trainer": {
       "optimizer": "adam",
-      "num_epochs": 25,
+      "num_epochs": 50,
       "patience": 10,
       "cuda_device": -1
     }
