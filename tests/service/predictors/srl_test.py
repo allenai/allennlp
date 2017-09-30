@@ -16,11 +16,22 @@ class TestSrlPredictor(TestCase):
 
         result = predictor.predict_json(inputs)
 
-        # TODO(joelgrus): update this when you figure out the result format
-        verbs = result.get("verbs")
+        words = result.get("words")
+        assert words == ["The", "squirrel", "wrote", "a", "unit", "test",
+                         "to", "make", "sure", "its", "nuts", "worked", "as", "designed", "."]
+        num_words = len(words)
 
+        verbs = result.get("verbs")
         assert verbs is not None
+        assert isinstance(verbs, list)
 
         assert any(v["verb"] == "wrote" for v in verbs)
         assert any(v["verb"] == "make" for v in verbs)
         assert any(v["verb"] == "worked" for v in verbs)
+
+        for verb in verbs:
+            tags = verb.get("tags")
+            assert tags is not None
+            assert isinstance(tags, list)
+            assert all(isinstance(tag, str) for tag in tags)
+            assert len(tags) == num_words
