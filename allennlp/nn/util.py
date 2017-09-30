@@ -499,3 +499,47 @@ def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
         if first_tensor_dim != second_tensor_dim:
             raise ConfigurationError("Tensor dims must match for operation \"{}\"".format(operation))
         return first_tensor_dim
+
+def flatten_batched_indices(indices, sequence_length):
+    # indices: [batch_size, d1, ..., dn]
+    offsets = get_indices(indices.size(0), indices.is_cuda) * sequence_length # [batch_size]
+    for _ in range(len(indices.size()) - 1):
+        offsets = offsets.unsqueeze(1) # [batch_size, 1, ..., 1]
+    offset_indices = indices + offsets # [batch_size, d1, ..., dn]
+    return offset_indices.view(-1) # [batch_size * d1 * ... * dn]
+
+def batched_index_select(target, indices, flattened_indices=None):
+    # target: [batch_size, sequence_length, emb]
+    # indices: [batch_size, d1, ..., dn]
+    if flattened_indices is None:
+        flattened_indices = flatten_batched_indices(indices, target.size(1)) # [batch_size * d1 * ... * dn]
+    flattened_target = target.view(-1, target.size(-1)) # [batch_size * sequence_length, emb]
+    flattened_selected = flattened_target.index_select(0, flattened_indices) # [batch_size * d1 * ... * dn, emb]
+    selected_shape = list(indices.size()) + [target.size(-1)] # [n + 2]
+    return flattened_selected.view(*selected_shape) # [batch_size, d1, ..., dn, emb]
+
+def flattened_index_select(target, indices):
+    flattened_selected = target.index_select(1, indices.view(-1)) # [batch_size, k * c, emb]
+    return flattened_selected.view(target.size(0), indices.size(0), indices.size(1), -1) # [batch_size, k, c, emb]
+
+def logsumexp(vec, dim, keepdim=False):
+    max_score, _ = vec.max(dim, keepdim=keepdim)
+    if keepdim:
+        stable_vec = vec - max_score
+    else:
+        stable_vec = vec - max_score.unsqueeze(dim)
+    return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
+
+def get_zeros(shape, is_cuda):
+    if is_cuda:
+        zeros = torch.cuda.FloatTensor(*shape).fill_(0)
+    else:
+        zeros = torch.zeros(*shape).float()
+    return Variable(zeros, requires_grad=False)
+
+def get_indices(size, is_cuda):
+    if is_cuda:
+        indices = torch.cuda.LongTensor(size).fill_(1).cumsum(0) - 1
+    else:
+        indices = torch.arange(0, size).long()
+    return Variable(indices, requires_grad=False)

@@ -1,0 +1,1442 @@
+#begin document (bc/cctv/00/cctv_0000); part 000
+bc/cctv/00/cctv_0000   0    0           In    IN    (TOP(S(PP*         -    -   -   Speaker#1        *      *      *             *   (ARGM-TMP*            *     -
+bc/cctv/00/cctv_0000   0    1          the    DT       (NP(NP*         -    -   -   Speaker#1   (DATE*      *      *             *            *            *     -
+bc/cctv/00/cctv_0000   0    2       summer    NN             *)    summer   -   -   Speaker#1        *      *      *             *            *            *     -
+bc/cctv/00/cctv_0000   0    3           of    IN          (PP*         -    -   -   Speaker#1        *      *      *             *            *            *     -
+bc/cctv/00/cctv_0000   0    4        2005     CD       (NP*))))        -    -   -   Speaker#1        *)     *      *             *            *)           *     -
+bc/cctv/00/cctv_0000   0    5            ,     ,             *         -    -   -   Speaker#1        *      *      *             *            *            *     -
+bc/cctv/00/cctv_0000   0    6            a    DT       (NP(NP*         -    -   -   Speaker#1        *      *      *             *       (ARG1*       (ARG0*     -
+bc/cctv/00/cctv_0000   0    7      picture    NN             *)   picture   -   -   Speaker#1        *      *      *             *            *            *     -
+bc/cctv/00/cctv_0000   0    8         that   WDT   (SBAR(WHNP*)        -    -   -   Speaker#1        *      *      *             *            *            *     -
+bc/cctv/00/cctv_0000   0    9       people   NNS        (S(NP*)    people   -   -   Speaker#1        *      *      *        (ARG0*)           *            *     -
+bc/cctv/00/cctv_0000   0   10         have   VBP          (VP*       have  01   -   Speaker#1        *    (V*)     *             *            *            *     -
+bc/cctv/00/cctv_0000   0   11         long    RB        (ADVP*)        -    -   -   Speaker#1        *      *      *    (ARGM-TMP*)           *            *     -
+bc/cctv/00/cctv_0000   0   12         been   VBN          (VP*         be  03   -   Speaker#1        *      *    (V*)            *            *            *     -
+bc/cctv/00/cctv_0000   0   13      looking   VBG          (VP*       look  01   5   Speaker#1        *      *      *           (V*)           *            *     -
+bc/cctv/00/cctv_0000   0   14      forward    RB        (ADVP*         -    -   -   Speaker#1        *      *      *        (ARG1*            *            *     -
+bc/cctv/00/cctv_0000   0   15           to    IN   (PP*))))))))        -    -   -   Speaker#1        *      *      *             *)           *)           *)    -
+bc/cctv/00/cctv_0000   0   16      started   VBD          (VP*      start  01   2   Speaker#1        *      *      *             *          (V*)           *     -
+bc/cctv/00/cctv_0000   0   17     emerging   VBG        (S(VP*     emerge  01   2   Speaker#1        *      *      *             *       (ARG1*          (V*)    -
+bc/cctv/00/cctv_0000   0   18         with    IN          (PP*         -    -   -   Speaker#1        *      *      *             *            *   (ARGM-MNR*     -
+bc/cctv/00/cctv_0000   0   19    frequency    NN         (NP*))        -    -   -   Speaker#1        *      *      *             *            *            *)    -
+bc/cctv/00/cctv_0000   0   20           in    IN          (PP*         -    -   -   Speaker#1        *      *      *             *            *   (ARGM-LOC*     -
+bc/cctv/00/cctv_0000   0   21      various    JJ          (NP*         -    -   -   Speaker#1        *      *      *             *            *            *     -
+bc/cctv/00/cctv_0000   0   22        major    JJ             *         -    -   -   Speaker#1        *      *      *             *            *            *     -
+bc/cctv/00/cctv_0000   0   23         Hong   NNP         (NML*         -    -   -   Speaker#1    (GPE*      *      *             *            *            *   (23
+bc/cctv/00/cctv_0000   0   24         Kong   NNP             *)        -    -   -   Speaker#1        *)     *      *             *            *            *    23)
+bc/cctv/00/cctv_0000   0   25        media   NNS         *)))))        -    -   -   Speaker#1        *      *      *             *            *)           *)    -
+bc/cctv/00/cctv_0000   0   26            .     .            *))        -    -   -   Speaker#1        *      *      *             *            *            *     -
+
+bc/cctv/00/cctv_0000   0    0         With     IN  (TOP(S(PP*       -    -   -   Speaker#1       *             *   (ARGM-MNR*        *      -
+bc/cctv/00/cctv_0000   0    1        their   PRP$        (NP*       -    -   -   Speaker#1       *             *            *        *    (18)
+bc/cctv/00/cctv_0000   0    2       unique     JJ           *       -    -   -   Speaker#1       *             *            *        *      -
+bc/cctv/00/cctv_0000   0    3        charm     NN          *))   charm   -   -   Speaker#1       *             *            *)       *      -
+bc/cctv/00/cctv_0000   0    4            ,      ,           *       -    -   -   Speaker#1       *             *            *        *      -
+bc/cctv/00/cctv_0000   0    5        these     DT        (NP*       -    -   -   Speaker#1       *             *       (ARG0*        *    (18
+bc/cctv/00/cctv_0000   0    6         well     RB      (ADJP*       -    -   -   Speaker#1       *    (ARGM-EXT*)           *        *      -
+bc/cctv/00/cctv_0000   0    7           -    HYPH           *       -    -   -   Speaker#1       *             *            *        *      -
+bc/cctv/00/cctv_0000   0    8        known    VBN           *)    know  01   -   Speaker#1       *           (V*)           *        *      -
+bc/cctv/00/cctv_0000   0    9      cartoon     NN           *       -    -   -   Speaker#1       *        (ARG1*)           *        *      -
+bc/cctv/00/cctv_0000   0   10       images    NNS           *)   image   -   -   Speaker#1       *      (C-ARG1*)           *)       *     18)
+bc/cctv/00/cctv_0000   0   11         once     RB      (ADVP*       -    -   -   Speaker#1       *             *   (ARGM-TMP*        *      -
+bc/cctv/00/cctv_0000   0   12        again     RB           *)      -    -   -   Speaker#1       *             *            *)       *      -
+bc/cctv/00/cctv_0000   0   13       caused    VBD        (VP*    cause  01   1   Speaker#1       *             *          (V*)       *      -
+bc/cctv/00/cctv_0000   0   14         Hong    NNP      (S(NP*       -    -   -   Speaker#1   (GPE*             *       (ARG1*   (ARG1*    (23
+bc/cctv/00/cctv_0000   0   15         Kong    NNP           *)      -    -   -   Speaker#1       *)            *            *        *)    23)
+bc/cctv/00/cctv_0000   0   16           to     TO        (VP*       -    -   -   Speaker#1       *             *            *        *      -
+bc/cctv/00/cctv_0000   0   17           be     VB        (VP*       be  01   1   Speaker#1       *             *            *      (V*)     -
+bc/cctv/00/cctv_0000   0   18            a     DT     (NP(NP*       -    -   -   Speaker#1       *             *            *   (ARG2*      -
+bc/cctv/00/cctv_0000   0   19        focus     NN           *)   focus   -   -   Speaker#1       *             *            *        *      -
+bc/cctv/00/cctv_0000   0   20           of     IN        (PP*       -    -   -   Speaker#1       *             *            *        *      -
+bc/cctv/00/cctv_0000   0   21    worldwide     JJ        (NP*       -    -   -   Speaker#1       *             *            *        *      -
+bc/cctv/00/cctv_0000   0   22    attention     NN     *)))))))      -    -   -   Speaker#1       *             *            *)       *)     -
+bc/cctv/00/cctv_0000   0   23            .      .          *))      -    -   -   Speaker#1       *             *            *        *      -
+
+bc/cctv/00/cctv_0000   0    0       The    DT  (TOP(S(NP(NP*      -    -   -   Speaker#1           *        (ARG1*    (12
+bc/cctv/00/cctv_0000   0    1     world    NN              *      -    -   -   Speaker#1           *             *      -
+bc/cctv/00/cctv_0000   0    2        's   POS              *)     -    -   -   Speaker#1           *             *      -
+bc/cctv/00/cctv_0000   0    3     fifth    JJ              *      -    -   -   Speaker#1    (ORDINAL)            *      -
+bc/cctv/00/cctv_0000   0    4    Disney   NNP              *      -    -   -   Speaker#1        (ORG)            *    (50)
+bc/cctv/00/cctv_0000   0    5      park    NN              *)   park   -   -   Speaker#1           *             *)    12)
+bc/cctv/00/cctv_0000   0    6      will    MD           (VP*      -    -   -   Speaker#1           *    (ARGM-MOD*)     -
+bc/cctv/00/cctv_0000   0    7      soon    RB         (ADVP*)     -    -   -   Speaker#1           *    (ARGM-TMP*)     -
+bc/cctv/00/cctv_0000   0    8      open    VB           (VP*    open  01   2   Speaker#1           *           (V*)     -
+bc/cctv/00/cctv_0000   0    9        to    IN           (PP*      -    -   -   Speaker#1           *        (ARG1*      -
+bc/cctv/00/cctv_0000   0   10       the    DT           (NP*      -    -   -   Speaker#1           *             *      -
+bc/cctv/00/cctv_0000   0   11    public    NN             *))     -    -   -   Speaker#1           *             *)     -
+bc/cctv/00/cctv_0000   0   12      here    RB       (ADVP*)))     -    -   -   Speaker#1           *    (ARGM-LOC*)     -
+bc/cctv/00/cctv_0000   0   13         .     .             *))     -    -   -   Speaker#1           *             *      -
+
+bc/cctv/00/cctv_0000   0    0          The    DT  (TOP(S(NP(NP*       -    -   -    Zhou_liangshuyi      *   (ARG1*         *      -
+bc/cctv/00/cctv_0000   0    1         most   RBS         (ADJP*       -    -   -    Zhou_liangshuyi      *        *         *      -
+bc/cctv/00/cctv_0000   0    2    important    JJ              *)      -    -   -    Zhou_liangshuyi      *        *         *      -
+bc/cctv/00/cctv_0000   0    3        thing    NN              *)      -    -   -    Zhou_liangshuyi      *        *         *      -
+bc/cctv/00/cctv_0000   0    4        about    IN           (PP*       -    -   -    Zhou_liangshuyi      *        *         *      -
+bc/cctv/00/cctv_0000   0    5       Disney   NNP         (NP*)))      -    -   -    Zhou_liangshuyi   (ORG)       *)        *    (50)
+bc/cctv/00/cctv_0000   0    6           is   VBZ           (VP*       be  01   2    Zhou_liangshuyi      *      (V*)        *      -
+bc/cctv/00/cctv_0000   0    7         that    IN         (SBAR*       -    -   -    Zhou_liangshuyi      *   (ARG2*         *      -
+bc/cctv/00/cctv_0000   0    8           it   PRP         (S(NP*)      -    -   -    Zhou_liangshuyi      *        *    (ARG1*)   (50)
+bc/cctv/00/cctv_0000   0    9           is   VBZ           (VP*       be  01   1    Zhou_liangshuyi      *        *       (V*)     -
+bc/cctv/00/cctv_0000   0   10            a    DT           (NP*       -    -   -    Zhou_liangshuyi      *        *    (ARG2*      -
+bc/cctv/00/cctv_0000   0   11       global    JJ              *       -    -   -    Zhou_liangshuyi      *        *         *      -
+bc/cctv/00/cctv_0000   0   12        brand    NN          *)))))   brand   -   -    Zhou_liangshuyi      *        *)        *)     -
+bc/cctv/00/cctv_0000   0   13            .     .             *))      -    -   -    Zhou_liangshuyi      *        *         *      -
+
+bc/cctv/00/cctv_0000   0    0            Well    UH   (TOP(S(INTJ*)        -    -   -    Zhou_liangshuyi       *             *      *    (ARGM-DIS*)     *            *      -
+bc/cctv/00/cctv_0000   0    1               ,     ,              *         -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0    2             for    IN           (PP*         -    -   -    Zhou_liangshuyi       *             *      *    (ARGM-TMP*      *            *      -
+bc/cctv/00/cctv_0000   0    3         several    JJ           (NP*         -    -   -    Zhou_liangshuyi  (DATE*             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0    4           years   NNS             *))        -    -   -    Zhou_liangshuyi       *)            *      *             *)     *            *      -
+bc/cctv/00/cctv_0000   0    5               ,     ,              *         -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0    6        although    IN         (SBAR*         -    -   -    Zhou_liangshuyi       *             *      *    (ARGM-ADV*      *            *      -
+bc/cctv/00/cctv_0000   0    7              it   PRP         (S(NP*)        -    -   -    Zhou_liangshuyi       *        (ARG1*)     *             *      *            *    (12)
+bc/cctv/00/cctv_0000   0    8             was   VBD           (VP*         be  01   1    Zhou_liangshuyi       *           (V*)     *             *      *            *      -
+bc/cctv/00/cctv_0000   0    9           still    RB         (ADVP*)        -    -   -    Zhou_liangshuyi       *    (ARGM-TMP*)     *             *      *            *      -
+bc/cctv/00/cctv_0000   0   10           under    IN       (UCP(PP*         -    -   -    Zhou_liangshuyi       *        (ARG2*      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   11    construction    NN          (NP*))        -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   12             and    CC              *         -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   13               ,     ,              *         -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   14              er    UH         (INTJ*)        -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   15               ,     ,              *         -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   16             not    RB    (ADJP(ADVP*         -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   17             yet    RB              *)        -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   18            open    JJ          *)))))        -    -   -    Zhou_liangshuyi       *             *)     *             *)     *            *      -
+bc/cctv/00/cctv_0000   0   19               ,     ,              *         -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   20              it   PRP       (NP(NP*))        -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   21             can    MD           (VP*         -    -   -    Zhou_liangshuyi       *             *      *    (ARGM-MOD*)     *            *      -
+bc/cctv/00/cctv_0000   0   22              be    VB           (VP*         be  03   -    Zhou_liangshuyi       *             *    (V*)            *      *            *      -
+bc/cctv/00/cctv_0000   0   23            said   VBN           (VP*        say  01   -    Zhou_liangshuyi       *             *      *           (V*)     *            *      -
+bc/cctv/00/cctv_0000   0   24            that    IN         (SBAR*         -    -   -    Zhou_liangshuyi       *             *      *        (ARG1*      *            *      -
+bc/cctv/00/cctv_0000   0   25            many    JJ         (S(NP*         -    -   -    Zhou_liangshuyi       *             *      *             *      *       (ARG0*      -
+bc/cctv/00/cctv_0000   0   26          people   NNS              *)    people   -   -    Zhou_liangshuyi       *             *      *             *      *            *)     -
+bc/cctv/00/cctv_0000   0   27            have   VBP           (VP*       have  01   -    Zhou_liangshuyi       *             *      *             *    (V*)           *      -
+bc/cctv/00/cctv_0000   0   28          viewed   VBN           (VP*       view  02   1    Zhou_liangshuyi       *             *      *             *      *          (V*)     -
+bc/cctv/00/cctv_0000   0   29            Hong   NNP           (NP*         -    -   -    Zhou_liangshuyi   (GPE*             *      *             *      *       (ARG1*    (23
+bc/cctv/00/cctv_0000   0   30            Kong   NNP              *)        -    -   -    Zhou_liangshuyi       *)            *      *             *      *            *)    23)
+bc/cctv/00/cctv_0000   0   31            with    IN           (PP*         -    -   -    Zhou_liangshuyi       *             *      *             *      *   (ARGM-MNR*      -
+bc/cctv/00/cctv_0000   0   32             new    JJ           (NP*         -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+bc/cctv/00/cctv_0000   0   33         respect    NN      *)))))))))   respect   -   -    Zhou_liangshuyi       *             *      *             *)     *            *)     -
+bc/cctv/00/cctv_0000   0   34               .     .             *))        -    -   -    Zhou_liangshuyi       *             *      *             *      *            *      -
+
+bc/cctv/00/cctv_0000   0    0          Then    RB   (TOP(S(ADVP*)        -    -   -    Zhou_liangshuyi      *    (ARGM-DIS*)        -
+bc/cctv/00/cctv_0000   0    1       welcome   VBP           (VP*    welcome  01   2    Zhou_liangshuyi      *           (V*)        -
+bc/cctv/00/cctv_0000   0    2            to    IN           (PP*         -    -   -    Zhou_liangshuyi      *        (ARG2*         -
+bc/cctv/00/cctv_0000   0    3           the    DT        (NP(NP*         -    -   -    Zhou_liangshuyi      *             *         -
+bc/cctv/00/cctv_0000   0    4      official    JJ              *         -    -   -    Zhou_liangshuyi      *             *         -
+bc/cctv/00/cctv_0000   0    5       writing    NN              *      write   -   -    Zhou_liangshuyi      *             *         -
+bc/cctv/00/cctv_0000   0    6      ceremony    NN              *)        -    -   -    Zhou_liangshuyi      *             *         -
+bc/cctv/00/cctv_0000   0    7            of    IN           (PP*         -    -   -    Zhou_liangshuyi      *             *         -
+bc/cctv/00/cctv_0000   0    8          Hong   NNP       (NP(NML*         -    -   -    Zhou_liangshuyi  (FAC*             *   (12|(23
+bc/cctv/00/cctv_0000   0    9          Kong   NNP              *)        -    -   -    Zhou_liangshuyi      *             *        23)
+bc/cctv/00/cctv_0000   0   10    Disneyland   NNP          *)))))        -    -   -    Zhou_liangshuyi      *)            *)       12)
+bc/cctv/00/cctv_0000   0   11             .     .             *))        -    -   -    Zhou_liangshuyi      *             *         -
+
+bc/cctv/00/cctv_0000   0    0             The    DT  (TOP(S(NP(NP*       -    -   -   Speaker#1        *       (ARG1*         -
+bc/cctv/00/cctv_0000   0    1    construction    NN              *)      -    -   -   Speaker#1        *            *         -
+bc/cctv/00/cctv_0000   0    2              of    IN           (PP*       -    -   -   Speaker#1        *            *         -
+bc/cctv/00/cctv_0000   0    3            Hong   NNP       (NP(NML*       -    -   -   Speaker#1    (FAC*            *   (12|(23
+bc/cctv/00/cctv_0000   0    4            Kong   NNP              *)      -    -   -   Speaker#1        *            *        23)
+bc/cctv/00/cctv_0000   0    5      Disneyland   NNP            *)))      -    -   -   Speaker#1        *)           *)       12)
+bc/cctv/00/cctv_0000   0    6           began   VBD           (VP*    begin  01   1   Speaker#1        *          (V*)        -
+bc/cctv/00/cctv_0000   0    7             two    CD      (ADVP(NP*       -    -   -   Speaker#1   (DATE*   (ARGM-TMP*         -
+bc/cctv/00/cctv_0000   0    8           years   NNS              *)      -    -   -   Speaker#1        *            *         -
+bc/cctv/00/cctv_0000   0    9             ago    RB              *)      -    -   -   Speaker#1        *)           *)        -
+bc/cctv/00/cctv_0000   0   10               ,     ,              *       -    -   -   Speaker#1        *            *         -
+bc/cctv/00/cctv_0000   0   11              in    IN           (PP*       -    -   -   Speaker#1        *   (ARGM-TMP*         -
+bc/cctv/00/cctv_0000   0   12           2003     CD         (NP*)))      -    -   -   Speaker#1    (DATE)           *)      (13)
+bc/cctv/00/cctv_0000   0   13               .     .             *))      -    -   -   Speaker#1        *            *         -
+
+bc/cctv/00/cctv_0000   0    0             In    IN    (TOP(S(PP*         -    -    -   Speaker#1            *   (ARGM-TMP*      *            *        *     -
+bc/cctv/00/cctv_0000   0    1        January   NNP       (NP(NP*)        -    -    -   Speaker#1       (DATE*            *      *            *        *     -
+bc/cctv/00/cctv_0000   0    2             of    IN          (PP*         -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0    3           that    DT          (NP*         -    -    -   Speaker#1            *            *      *            *        *   (13
+bc/cctv/00/cctv_0000   0    4           year    NN          *))))        -    -    -   Speaker#1            *)           *)     *            *        *    13)
+bc/cctv/00/cctv_0000   0    5              ,     ,             *         -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0    6            the    DT          (NP*         -    -    -   Speaker#1            *       (ARG0*      *            *        *     -
+bc/cctv/00/cctv_0000   0    7           Hong   NNP         (NML*         -    -    -   Speaker#1        (GPE*            *      *            *        *   (23
+bc/cctv/00/cctv_0000   0    8           Kong   NNP             *)        -    -    -   Speaker#1            *)           *      *            *        *    23)
+bc/cctv/00/cctv_0000   0    9     government    NN             *)        -    -    -   Speaker#1            *            *)     *            *        *     -
+bc/cctv/00/cctv_0000   0   10         turned   VBD          (VP*       turn  12   11   Speaker#1            *          (V*)     *            *        *     -
+bc/cctv/00/cctv_0000   0   11           over    RP         (PRT*)        -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   12             to    IN          (PP*         -    -    -   Speaker#1            *       (ARG2*      *            *        *     -
+bc/cctv/00/cctv_0000   0   13         Disney   NNP          (NP*         -    -    -   Speaker#1        (ORG*            *      *            *        *   (50
+bc/cctv/00/cctv_0000   0   14    Corporation   NNP            *))        -    -    -   Speaker#1            *)           *)     *            *        *    50)
+bc/cctv/00/cctv_0000   0   15           200     CD    (NP(NP(NP*         -    -    -   Speaker#1   (QUANTITY*       (ARG1*      *       (ARG1*        *   (14
+bc/cctv/00/cctv_0000   0   16       hectares   NNS             *)        -    -    -   Speaker#1            *)           *      *            *        *     -
+bc/cctv/00/cctv_0000   0   17             of    IN          (PP*         -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   18           land    NN         (NP*))      land   -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   19             at    IN          (PP*         -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   20            the    DT       (NP(NP*         -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   21           foot    NN             *)      foot   -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   22             of    IN          (PP*         -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   23         Lantau   NNP          (NP*         -    -    -   Speaker#1        (LOC*            *      *            *        *    (8
+bc/cctv/00/cctv_0000   0   24         Island   NNP         *)))))        -    -    -   Speaker#1            *)           *      *            *)       *     8)
+bc/cctv/00/cctv_0000   0   25           that   WDT   (SBAR(WHNP*)        -    -    -   Speaker#1            *            *      *     (R-ARG1*)       *     -
+bc/cctv/00/cctv_0000   0   26            was   VBD        (S(VP*         be  03    -   Speaker#1            *            *    (V*)           *        *     -
+bc/cctv/00/cctv_0000   0   27       obtained   VBN          (VP*     obtain  01    -   Speaker#1            *            *      *          (V*)       *     -
+bc/cctv/00/cctv_0000   0   28      following   VBG          (VP*     follow  01    2   Speaker#1            *            *      *   (ARGM-TMP*      (V*)    -
+bc/cctv/00/cctv_0000   0   29            the    DT       (NP(NP*         -    -    -   Speaker#1            *            *      *            *   (ARG2*     -
+bc/cctv/00/cctv_0000   0   30        largest   JJS             *         -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   31           land    NN         (NML*       land   -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   32    reclamation    NN             *)        -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   33        project    NN             *)   project   -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   34             in    IN          (PP*         -    -    -   Speaker#1            *            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   35         recent    JJ          (NP*         -    -    -   Speaker#1       (DATE*            *      *            *        *     -
+bc/cctv/00/cctv_0000   0   36          years   NNS    *))))))))))        -    -    -   Speaker#1            *)           *)     *            *)       *)   14)
+bc/cctv/00/cctv_0000   0   37              .     .            *))        -    -    -   Speaker#1            *            *      *            *        *     -
+
+bc/cctv/00/cctv_0000   0   0    One   CD  (TOP(NP*   -   -   -   Speaker#1    (CARDINAL)  -
+bc/cctv/00/cctv_0000   0   1      .    .        *))  -   -   -   Speaker#1            *   -
+
+bc/cctv/00/cctv_0000   0    0         Since    IN  (TOP(S(PP*          -    -   -   Speaker#1       *      *   (ARGM-TMP*         *     -
+bc/cctv/00/cctv_0000   0    1          then    RB     (ADVP*))         -    -   -   Speaker#1       *      *            *)        *     -
+bc/cctv/00/cctv_0000   0    2             ,     ,           *          -    -   -   Speaker#1       *      *            *         *     -
+bc/cctv/00/cctv_0000   0    3          this    DT        (NP*          -    -   -   Speaker#1       *      *       (ARG1*         *   (14
+bc/cctv/00/cctv_0000   0    4          area    NN           *)         -    -   -   Speaker#1       *      *            *)        *    14)
+bc/cctv/00/cctv_0000   0    5           has   VBZ        (VP*        have  01   -   Speaker#1       *    (V*)           *         *     -
+bc/cctv/00/cctv_0000   0    6        become   VBN        (VP*      become  01   1   Speaker#1       *      *          (V*)        *     -
+bc/cctv/00/cctv_0000   0    7             a    DT     (NP(NP*          -    -   -   Speaker#1       *      *       (ARG2*         *     -
+bc/cctv/00/cctv_0000   0    8    prohibited   VBN           *    prohibit  01   -   Speaker#1       *      *            *       (V*)    -
+bc/cctv/00/cctv_0000   0    9          zone    NN           *)       zone   -   -   Speaker#1       *      *            *    (ARG1*)    -
+bc/cctv/00/cctv_0000   0   10            in    IN        (PP*          -    -   -   Speaker#1       *      *            *         *     -
+bc/cctv/00/cctv_0000   0   11          Hong   NNP        (NP*          -    -   -   Speaker#1   (GPE*      *            *         *   (23
+bc/cctv/00/cctv_0000   0   12          Kong   NNP       *)))))         -    -   -   Speaker#1       *)     *            *)        *    23)
+bc/cctv/00/cctv_0000   0   13             .     .          *))         -    -   -   Speaker#1       *      *            *         *     -
+
+bc/cctv/00/cctv_0000   0    0               As     IN  (TOP(S(PP*           -    -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0    1              its   PRP$     (NP(NP*           -    -    -   Speaker#1       *      *            *        *    (14)
+bc/cctv/00/cctv_0000   0    2         neighbor     NN           *)   neighbour   -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0    3               on     IN        (PP*           -    -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0    4           Lantau    NNP        (NP*           -    -    -   Speaker#1   (LOC*      *            *        *     (8
+bc/cctv/00/cctv_0000   0    5           Island    NNP        *))))          -    -    -   Speaker#1       *)     *            *        *      8)
+bc/cctv/00/cctv_0000   0    6                ,      ,           *           -    -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0    7             Hong    NNP    (NP(NML*           -    -    -   Speaker#1   (ORG*      *       (ARG0*   (ARG0*    (29
+bc/cctv/00/cctv_0000   0    8             Kong    NNP           *)          -    -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0    9    International    NNP           *           -    -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0   10          Airport    NNP           *)          -    -    -   Speaker#1       *)     *            *)       *)    29)
+bc/cctv/00/cctv_0000   0   11              had    VBD        (VP*         have  02   12   Speaker#1       *    (V*)           *        *      -
+bc/cctv/00/cctv_0000   0   12               to     TO      (S(VP*           -    -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0   13           change     VB        (VP*       change  01    1   Speaker#1       *      *          (V*)       *      -
+bc/cctv/00/cctv_0000   0   14              its   PRP$        (NP*           -    -    -   Speaker#1       *      *       (ARG1*        *    (29)
+bc/cctv/00/cctv_0000   0   15           flight     NN           *       flight   -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0   16           routes    NNS           *)       route   -    -   Speaker#1       *      *            *)       *      -
+bc/cctv/00/cctv_0000   0   17               to     TO      (S(VP*           -    -    -   Speaker#1       *      *   (ARGM-PRP*        *      -
+bc/cctv/00/cctv_0000   0   18             make     VB        (VP*         make  02    3   Speaker#1       *      *            *      (V*)     -
+bc/cctv/00/cctv_0000   0   19             this     DT      (S(NP*           -    -    -   Speaker#1       *      *            *   (ARG1*    (14
+bc/cctv/00/cctv_0000   0   20             area     NN           *)          -    -    -   Speaker#1       *      *            *        *     14)
+bc/cctv/00/cctv_0000   0   21                a     DT        (NP*           -    -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0   22               no     DT       (NML*           -    -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0   23               -    HYPH           *           -    -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0   24              fly     NN           *)         fly   -    -   Speaker#1       *      *            *        *      -
+bc/cctv/00/cctv_0000   0   25             zone     NN   *)))))))))        zone   -    -   Speaker#1       *      *            *)       *)     -
+bc/cctv/00/cctv_0000   0   26                .      .          *))          -    -    -   Speaker#1       *      *            *        *      -
+
+bc/cctv/00/cctv_0000   0    0       Mickey   NNP  (TOP(S(NP(NP*         -    -   -   Speaker#1           *       (ARG0*      *       (ARG0*   (12
+bc/cctv/00/cctv_0000   0    1        Mouse   NNP              *         -    -   -   Speaker#1           *            *      *            *     -
+bc/cctv/00/cctv_0000   0    2           's   POS              *)        -    -   -   Speaker#1           *            *      *            *     -
+bc/cctv/00/cctv_0000   0    3          new    JJ              *         -    -   -   Speaker#1           *            *      *            *     -
+bc/cctv/00/cctv_0000   0    4         home    NN              *)      home   -   -   Speaker#1           *            *)     *            *)   12)
+bc/cctv/00/cctv_0000   0    5            ,     ,              *         -    -   -   Speaker#1           *            *      *            *     -
+bc/cctv/00/cctv_0000   0    6     settling   VBG         (S(VP*     settle  03   -   Speaker#1           *          (V*)     *   (ARGM-PRD*     -
+bc/cctv/00/cctv_0000   0    7           on    IN           (PP*         -    -   -   Speaker#1           *       (ARG4*      *            *     -
+bc/cctv/00/cctv_0000   0    8      Chinese    JJ           (NP*         -    -   -   Speaker#1       (NORP)           *      *            *     -
+bc/cctv/00/cctv_0000   0    9         land    NN             *))      land   -   -   Speaker#1           *            *)     *            *     -
+bc/cctv/00/cctv_0000   0   10          for    IN           (PP*         -    -   -   Speaker#1           *   (ARGM-TMP*      *            *     -
+bc/cctv/00/cctv_0000   0   11          the    DT           (NP*         -    -   -   Speaker#1           *            *      *            *     -
+bc/cctv/00/cctv_0000   0   12        first    JJ              *         -    -   -   Speaker#1    (ORDINAL)           *      *            *     -
+bc/cctv/00/cctv_0000   0   13         time    NN           *))))      time   -   -   Speaker#1           *            *)     *            *)    -
+bc/cctv/00/cctv_0000   0   14            ,     ,              *         -    -   -   Speaker#1           *            *      *            *     -
+bc/cctv/00/cctv_0000   0   15          has   VBZ           (VP*       have  01   -   Speaker#1           *            *    (V*)           *     -
+bc/cctv/00/cctv_0000   0   16     captured   VBN           (VP*    capture  01   2   Speaker#1           *            *      *          (V*)    -
+bc/cctv/00/cctv_0000   0   17    worldwide    JJ           (NP*         -    -   -   Speaker#1           *            *      *       (ARG1*     -
+bc/cctv/00/cctv_0000   0   18    attention    NN            *)))        -    -   -   Speaker#1           *            *      *            *)    -
+bc/cctv/00/cctv_0000   0   19            .     .             *))        -    -   -   Speaker#1           *            *      *            *     -
+
+bc/cctv/00/cctv_0000   0    0         There    EX   (TOP(S(NP*)      -    -   -   Speaker#1        *        *            *         -
+bc/cctv/00/cctv_0000   0    1            's   VBZ         (VP*       be  02   3   Speaker#1        *      (V*)           *         -
+bc/cctv/00/cctv_0000   0    2          only    RB   (NP(NP(QP*       -    -   -   Speaker#1        *   (ARG1*       (ARG1*         -
+bc/cctv/00/cctv_0000   0    3           one    CD            *)      -    -   -   Speaker#1   (DATE*        *            *         -
+bc/cctv/00/cctv_0000   0    4         month    NN            *)      -    -   -   Speaker#1        *)       *            *)        -
+bc/cctv/00/cctv_0000   0    5          left   VBN         (VP*    leave  06   -   Speaker#1        *        *          (V*)        -
+bc/cctv/00/cctv_0000   0    6        before    IN         (PP*       -    -   -   Speaker#1        *        *   (ARGM-TMP*         -
+bc/cctv/00/cctv_0000   0    7           the    DT      (NP(NP*       -    -   -   Speaker#1        *        *            *         -
+bc/cctv/00/cctv_0000   0    8       opening    NN            *)    open   -   -   Speaker#1        *        *            *         -
+bc/cctv/00/cctv_0000   0    9            of    IN         (PP*       -    -   -   Speaker#1        *        *            *         -
+bc/cctv/00/cctv_0000   0   10          Hong   NNP     (NP(NML*       -    -   -   Speaker#1    (FAC*        *            *   (12|(23
+bc/cctv/00/cctv_0000   0   11          Kong   NNP            *)      -    -   -   Speaker#1        *        *            *        23)
+bc/cctv/00/cctv_0000   0   12    Disneyland   NNP           *))      -    -   -   Speaker#1        *)       *            *        12)
+bc/cctv/00/cctv_0000   0   13            on    IN         (PP*       -    -   -   Speaker#1        *        *            *         -
+bc/cctv/00/cctv_0000   0   14     September   NNP         (NP*       -    -   -   Speaker#1   (DATE*        *            *        (4
+bc/cctv/00/cctv_0000   0   15           12     CD      *)))))))      -    -   -   Speaker#1        *)       *)           *)        4)
+bc/cctv/00/cctv_0000   0   16             .     .           *))      -    -   -   Speaker#1        *        *            *         -
+
+bc/cctv/00/cctv_0000   0   0            The    DT  (TOP(S(NP(NP*           -    -   -   Speaker#1       *      *      *        (ARG1*      -
+bc/cctv/00/cctv_0000   0   1         subway    NN              *)          -    -   -   Speaker#1       *      *      *             *      -
+bc/cctv/00/cctv_0000   0   2             to    IN           (PP*           -    -   -   Speaker#1       *      *      *             *      -
+bc/cctv/00/cctv_0000   0   3         Disney   NNP         (NP*)))          -    -   -   Speaker#1    (FAC)     *      *             *)   (12)
+bc/cctv/00/cctv_0000   0   4            has   VBZ           (VP*         have  01   -   Speaker#1       *    (V*)     *             *      -
+bc/cctv/00/cctv_0000   0   5        already    RB         (ADVP*)          -    -   -   Speaker#1       *      *      *    (ARGM-TMP*)     -
+bc/cctv/00/cctv_0000   0   6           been   VBN           (VP*           be  03   -   Speaker#1       *      *    (V*)            *      -
+bc/cctv/00/cctv_0000   0   7    constructed   VBN         (VP*)))   construct  01   1   Speaker#1       *      *      *           (V*)     -
+bc/cctv/00/cctv_0000   0   8              .     .             *))          -    -   -   Speaker#1       *      *      *             *      -
+
+bc/cctv/00/cctv_0000   0    0            At    IN         (TOP(S(PP*          -    -   -   Speaker#1           *    (ARGM-LOC*         *            *            *             *      -
+bc/cctv/00/cctv_0000   0    1        subway    JJ               (NP*          -    -   -   Speaker#1           *             *         *            *            *             *      -
+bc/cctv/00/cctv_0000   0    2      stations   NNS                 *))    station   -   -   Speaker#1           *             *)        *            *            *             *      -
+bc/cctv/00/cctv_0000   0    3             ,     ,                  *          -    -   -   Speaker#1           *             *         *            *            *             *      -
+bc/cctv/00/cctv_0000   0    4    passengers   NNS               (NP*)         -    -   -   Speaker#1           *        (ARG0*)   (ARG0*)      (ARG0*)      (ARG0*)            *      -
+bc/cctv/00/cctv_0000   0    5          will    MD               (VP*          -    -   -   Speaker#1           *    (ARGM-MOD*)        *            *            *             *      -
+bc/cctv/00/cctv_0000   0    6    frequently    RB             (ADVP*)         -    -   -   Speaker#1           *    (ARGM-MNR*)        *            *            *             *      -
+bc/cctv/00/cctv_0000   0    7         press    VB               (VP*       press  01   1   Speaker#1           *           (V*)        *            *            *             *      -
+bc/cctv/00/cctv_0000   0    8           the    DT            (NP(NP*          -    -   -   Speaker#1           *        (ARG1*         *            *            *             *      -
+bc/cctv/00/cctv_0000   0    9       station    NN                  *)    station   -   -   Speaker#1           *             *         *            *            *             *      -
+bc/cctv/00/cctv_0000   0   10           for    IN               (PP*          -    -   -   Speaker#1           *             *         *            *            *             *      -
+bc/cctv/00/cctv_0000   0   11        Disney   NNP             (NP*)))         -    -   -   Speaker#1        (FAC)            *)        *            *            *             *    (12)
+bc/cctv/00/cctv_0000   0   12            on    IN               (PP*          -    -   -   Speaker#1           *    (ARGM-LOC*         *            *            *             *      -
+bc/cctv/00/cctv_0000   0   13        ticket    NN               (NP*      ticket   -   -   Speaker#1           *             *         *            *            *             *      -
+bc/cctv/00/cctv_0000   0   14      machines   NNS                 *))    machine   -   -   Speaker#1           *             *)        *            *            *             *      -
+bc/cctv/00/cctv_0000   0   15             ,     ,                  *          -    -   -   Speaker#1           *             *         *            *            *             *      -
+bc/cctv/00/cctv_0000   0   16        trying   VBG             (S(VP*         try  01   1   Speaker#1           *        (ARG2*       (V*)           *            *             *      -
+bc/cctv/00/cctv_0000   0   17            to    TO             (S(VP*          -    -   -   Speaker#1           *             *    (ARG1*            *            *             *      -
+bc/cctv/00/cctv_0000   0   18      purchase    VB               (VP*    purchase  01   1   Speaker#1           *             *         *          (V*)           *             *      -
+bc/cctv/00/cctv_0000   0   19       tickets   NNS               (NP*)     ticket   -   -   Speaker#1           *             *         *       (ARG1*)           *             *      -
+bc/cctv/00/cctv_0000   0   20            to    TO             (S(VP*          -    -   -   Speaker#1           *             *         *   (ARGM-PRP*            *             *      -
+bc/cctv/00/cctv_0000   0   21         enjoy    VB               (VP*       enjoy  01   1   Speaker#1           *             *         *            *          (V*)            *      -
+bc/cctv/00/cctv_0000   0   22           the    DT               (NP*          -    -   -   Speaker#1           *             *         *            *       (ARG1*             *    (12
+bc/cctv/00/cctv_0000   0   23          park    NN                  *)       park   -   -   Speaker#1           *             *         *            *            *)            *     12)
+bc/cctv/00/cctv_0000   0   24          when   WRB      (SBAR(WHADVP*)         -    -   -   Speaker#1           *             *         *            *   (ARGM-TMP*    (ARGM-TMP*)     -
+bc/cctv/00/cctv_0000   0   25            it   PRP             (S(NP*)         -    -   -   Speaker#1           *             *         *            *            *        (ARG1*)   (12)
+bc/cctv/00/cctv_0000   0   26         first    RB             (ADVP*)         -    -   -   Speaker#1    (ORDINAL)            *         *            *            *    (ARGM-TMP*)     -
+bc/cctv/00/cctv_0000   0   27         opens   VBZ   (VP*)))))))))))))       open  01   2   Speaker#1           *             *)        *)           *)           *)          (V*)     -
+bc/cctv/00/cctv_0000   0   28             .     .                 *))         -    -   -   Speaker#1           *             *         *            *            *             *      -
+
+bc/cctv/00/cctv_0000   0    0    Meanwhile    RB   (TOP(S(ADVP*)         -    -   -   Speaker#1        *      *    (ARGM-TMP*)           *        -
+bc/cctv/00/cctv_0000   0    1            ,     ,              *          -    -   -   Speaker#1        *      *             *            *        -
+bc/cctv/00/cctv_0000   0    2          the    DT           (NP*          -    -   -   Speaker#1        *      *        (ARG1*       (ARG1*        -
+bc/cctv/00/cctv_0000   0    3       Disney   NNP              *          -    -   -   Speaker#1     (FAC)     *             *            *      (12)
+bc/cctv/00/cctv_0000   0    4       subway    NN              *          -    -   -   Speaker#1        *      *             *            *        -
+bc/cctv/00/cctv_0000   0    5      station    NN              *)    station   -   -   Speaker#1        *      *             *)           *)       -
+bc/cctv/00/cctv_0000   0    6           is   VBZ           (VP*          be  03   -   Speaker#1        *    (V*)            *            *        -
+bc/cctv/00/cctv_0000   0    7    scheduled   VBN           (VP*    schedule  01   -   Speaker#1        *      *           (V*)           *        -
+bc/cctv/00/cctv_0000   0    8           to    TO         (S(VP*          -    -   -   Speaker#1        *      *        (ARG2*            *        -
+bc/cctv/00/cctv_0000   0    9         open    VB           (VP*        open  01   2   Speaker#1        *      *             *          (V*)       -
+bc/cctv/00/cctv_0000   0   10           on    IN           (PP*          -    -   -   Speaker#1        *      *             *   (ARGM-TMP*        -
+bc/cctv/00/cctv_0000   0   11          the    DT        (NP(NP*          -    -   -   Speaker#1   (DATE*      *             *            *       (4
+bc/cctv/00/cctv_0000   0   12         same    JJ              *          -    -   -   Speaker#1        *      *             *            *        -
+bc/cctv/00/cctv_0000   0   13          day    NN              *)         -    -   -   Speaker#1        *)     *             *            *        -
+bc/cctv/00/cctv_0000   0   14           as    IN           (PP*          -    -   -   Speaker#1        *      *             *            *        -
+bc/cctv/00/cctv_0000   0   15          the    DT           (NP*          -    -   -   Speaker#1        *      *             *            *      (12
+bc/cctv/00/cctv_0000   0   16         park    NN      *)))))))))       park   -   -   Speaker#1        *      *             *)           *)   12)|4)
+bc/cctv/00/cctv_0000   0   17            .     .             *))         -    -   -   Speaker#1        *      *             *            *        -
+
+bc/cctv/00/cctv_0000   0    0           For     IN  (TOP(S(PP*          -    -   -   Speaker#1        *      *    (ARGM-TMP*      -
+bc/cctv/00/cctv_0000   0    1           two     CD        (NP*          -    -   -   Speaker#1   (DATE*      *             *      -
+bc/cctv/00/cctv_0000   0    2         years    NNS          *))         -    -   -   Speaker#1        *)     *             *)     -
+bc/cctv/00/cctv_0000   0    3             ,      ,           *          -    -   -   Speaker#1        *      *             *      -
+bc/cctv/00/cctv_0000   0    4        Disney    NNP        (NP*)         -    -   -   Speaker#1     (ORG)     *        (ARG0*)   (12)
+bc/cctv/00/cctv_0000   0    5           has    VBZ        (VP*        have  01   -   Speaker#1        *    (V*)            *      -
+bc/cctv/00/cctv_0000   0    6    constantly     RB      (ADVP*)         -    -   -   Speaker#1        *      *    (ARGM-MNR*)     -
+bc/cctv/00/cctv_0000   0    7    maintained    VBN        (VP*    maintain  01   1   Speaker#1        *      *           (V*)     -
+bc/cctv/00/cctv_0000   0    8           its   PRP$        (NP*          -    -   -   Speaker#1        *      *        (ARG1*    (12)
+bc/cctv/00/cctv_0000   0    9       mystery     NN         *)))         -    -   -   Speaker#1        *      *             *)     -
+bc/cctv/00/cctv_0000   0   10             .      .          *))         -    -   -   Speaker#1        *      *             *      -
+
+bc/cctv/00/cctv_0000   0   0         No    DT    (TOP(S(NP*       -    -   -   Speaker#1   *      *      *        *       (ARG0*   -
+bc/cctv/00/cctv_0000   0   1      media   NNS             *)      -    -   -   Speaker#1   *      *      *        *            *)  -
+bc/cctv/00/cctv_0000   0   2       have   VBP          (VP*     have  01   -   Speaker#1   *    (V*)     *        *            *   -
+bc/cctv/00/cctv_0000   0   3       been   VBN          (VP*       be  03   -   Speaker#1   *      *    (V*)       *            *   -
+bc/cctv/00/cctv_0000   0   4    allowed   VBN          (VP*    allow  01   -   Speaker#1   *      *      *      (V*)           *   -
+bc/cctv/00/cctv_0000   0   5         to    TO        (S(VP*       -    -   -   Speaker#1   *      *      *   (ARG1*            *   -
+bc/cctv/00/cctv_0000   0   6      enter    VB          (VP*    enter  01   1   Speaker#1   *      *      *        *          (V*)  -
+bc/cctv/00/cctv_0000   0   7        for    IN          (PP*       -    -   -   Speaker#1   *      *      *        *   (ARGM-PRP*   -
+bc/cctv/00/cctv_0000   0   8     photos   NNS   (NP*))))))))      -    -   -   Speaker#1   *      *      *        *)           *)  -
+bc/cctv/00/cctv_0000   0   9          .     .            *))      -    -   -   Speaker#1   *      *      *        *            *   -
+
+bc/cctv/00/cctv_0000   0    0            We   PRP     (TOP(S(NP*)           -    -   -   Speaker#1       *       (ARG0*)          *    (ARG0*)      (ARG0*)   (40)
+bc/cctv/00/cctv_0000   0    1          took   VBD           (VP*          take  01   8   Speaker#1       *          (V*)          *         *            *      -
+bc/cctv/00/cctv_0000   0    2             a    DT           (NP*            -    -   -   Speaker#1       *       (ARG1*           *         *            *    (21
+bc/cctv/00/cctv_0000   0    3          taxi    NN              *)         taxi   -   -   Speaker#1       *            *)          *         *            *     21)
+bc/cctv/00/cctv_0000   0    4         along    IN           (PP*            -    -   -   Speaker#1       *   (ARGM-DIR*           *         *            *      -
+bc/cctv/00/cctv_0000   0    5           the    DT        (NP(NP*            -    -   -   Speaker#1       *            *           *         *            *      -
+bc/cctv/00/cctv_0000   0    6          path    NN              *)           -    -   -   Speaker#1       *            *           *         *            *      -
+bc/cctv/00/cctv_0000   0    7            of    IN           (PP*            -    -   -   Speaker#1       *            *           *         *            *      -
+bc/cctv/00/cctv_0000   0    8           the    DT        (NP(NP*            -    -   -   Speaker#1       *            *      (ARG0*         *            *      -
+bc/cctv/00/cctv_0000   0    9       highway    NN              *)           -    -   -   Speaker#1       *            *           *)        *            *      -
+bc/cctv/00/cctv_0000   0   10          that   WDT    (SBAR(WHNP*)           -    -   -   Speaker#1       *            *    (R-ARG0*)        *            *      -
+bc/cctv/00/cctv_0000   0   11         heads   VBZ         (S(VP*          head  02   1   Speaker#1       *            *         (V*)        *            *      -
+bc/cctv/00/cctv_0000   0   12        toward    IN           (PP*            -    -   -   Speaker#1       *            *      (ARG1*         *            *      -
+bc/cctv/00/cctv_0000   0   13        Disney   NNP   (NP*)))))))))           -    -   -   Speaker#1    (FAC)           *)          *)        *            *    (12)
+bc/cctv/00/cctv_0000   0   14             ,     ,              *            -    -   -   Speaker#1       *            *           *         *            *      -
+bc/cctv/00/cctv_0000   0   15        trying   VBG         (S(VP*           try  01   1   Speaker#1       *   (ARGM-PRD*           *       (V*)           *      -
+bc/cctv/00/cctv_0000   0   16            to    TO         (S(VP*            -    -   -   Speaker#1       *            *           *    (ARG1*            *      -
+bc/cctv/00/cctv_0000   0   17    experience    VB           (VP*    experience  01   1   Speaker#1       *            *           *         *          (V*)     -
+bc/cctv/00/cctv_0000   0   18          this    DT           (NP*            -    -   -   Speaker#1       *            *           *         *       (ARG1*    (12
+bc/cctv/00/cctv_0000   0   19    mysterious    JJ              *            -    -   -   Speaker#1       *            *           *         *            *      -
+bc/cctv/00/cctv_0000   0   20          park    NN              *)         park   -   -   Speaker#1       *            *           *         *            *)    12)
+bc/cctv/00/cctv_0000   0   21          from    IN           (PP*            -    -   -   Speaker#1       *            *           *         *   (ARGM-DIR*      -
+bc/cctv/00/cctv_0000   0   22         close    RB         (ADVP*            -    -   -   Speaker#1       *            *           *         *            *      -
+bc/cctv/00/cctv_0000   0   23            by    RB       *))))))))           -    -   -   Speaker#1       *            *)          *         *)           *)     -
+bc/cctv/00/cctv_0000   0   24             .     .             *))           -    -   -   Speaker#1       *            *           *         *            *      -
+
+bc/cctv/00/cctv_0000   0    0         However    RB   (TOP(S(ADVP*)       -    -   -   Speaker#1       *        *      *    (ARGM-DIS*)     -
+bc/cctv/00/cctv_0000   0    1               ,     ,              *        -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0    2          before    IN         (SBAR*        -    -   -   Speaker#1       *        *      *    (ARGM-TMP*      -
+bc/cctv/00/cctv_0000   0    3             any    DT      (S(NP(NP*)       -    -   -   Speaker#1       *   (ARG1*      *             *      -
+bc/cctv/00/cctv_0000   0    4              of    IN           (PP*        -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0    5             the    DT           (NP*        -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0    6          Disney   NNP              *        -    -   -   Speaker#1    (ORG)       *      *             *    (50)
+bc/cctv/00/cctv_0000   0    7         symbols   NNS            *)))   symbol   -   -   Speaker#1       *        *)     *             *      -
+bc/cctv/00/cctv_0000   0    8            were   VBD           (VP*        be  01   1   Speaker#1       *      (V*)     *             *      -
+bc/cctv/00/cctv_0000   0    9              in    IN           (PP*        -    -   -   Speaker#1       *   (ARG2*      *             *      -
+bc/cctv/00/cctv_0000   0   10           sight    NN       (NP*)))))    sight   -   3   Speaker#1       *        *)     *             *)     -
+bc/cctv/00/cctv_0000   0   11               ,     ,              *        -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0   12             the    DT           (NP*        -    -   -   Speaker#1       *        *      *        (ARG1*    (21
+bc/cctv/00/cctv_0000   0   13             car    NN              *)       -    -   -   Speaker#1       *        *      *             *)    21)
+bc/cctv/00/cctv_0000   0   14             was   VBD           (VP*        be  03   -   Speaker#1       *        *    (V*)            *      -
+bc/cctv/00/cctv_0000   0   15         stopped   VBN           (VP*      stop  01   1   Speaker#1       *        *      *           (V*)     -
+bc/cctv/00/cctv_0000   0   16              by    IN           (PP*        -    -   -   Speaker#1       *        *      *        (ARG0*      -
+bc/cctv/00/cctv_0000   0   17               a    DT           (NP*        -    -   -   Speaker#1       *        *      *             *    (31
+bc/cctv/00/cctv_0000   0   18        security    NN              *        -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0   19           guard    NN             *))    guard   -   -   Speaker#1       *        *      *             *)    31)
+bc/cctv/00/cctv_0000   0   20              at    IN           (PP*        -    -   -   Speaker#1       *        *      *    (ARGM-LOC*      -
+bc/cctv/00/cctv_0000   0   21             the    DT        (NP(NP*        -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0   22    intersection    NN              *)       -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0   23              of    IN           (PP*        -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0   24             the    DT        (NP(NP*        -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0   25            road    NN              *)       -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0   26         towards    IN           (PP*        -    -   -   Speaker#1       *        *      *             *      -
+bc/cctv/00/cctv_0000   0   27          Disney   NNP    (NP*))))))))       -    -   -   Speaker#1    (ORG)       *      *             *)   (12)
+bc/cctv/00/cctv_0000   0   28               .     .             *))       -    -   -   Speaker#1       *        *      *             *      -
+
+bc/cctv/00/cctv_0000   0    0               On     IN  (TOP(S(PP*            -    -   -   Speaker#1   *   (ARGM-TMP*        *      -
+bc/cctv/00/cctv_0000   0    1              our   PRP$     (NP(NP*            -    -   -   Speaker#1   *            *        *    (40)
+bc/cctv/00/cctv_0000   0    2              way     NN           *)           -    -   -   Speaker#1   *            *        *      -
+bc/cctv/00/cctv_0000   0    3             back     RB    (ADVP*)))           -    -   -   Speaker#1   *            *)       *      -
+bc/cctv/00/cctv_0000   0    4                ,      ,           *            -    -   -   Speaker#1   *            *        *      -
+bc/cctv/00/cctv_0000   0    5              the     DT        (NP*            -    -   -   Speaker#1   *       (ARG0*   (ARG0*      -
+bc/cctv/00/cctv_0000   0    6             taxi     NN           *          taxi   -   -   Speaker#1   *            *        *      -
+bc/cctv/00/cctv_0000   0    7           driver     NN           *)           -    -   -   Speaker#1   *            *)       *)     -
+bc/cctv/00/cctv_0000   0    8             gave    VBD        (VP*          give  01   2   Speaker#1   *          (V*)       *      -
+bc/cctv/00/cctv_0000   0    9               us    PRP        (NP*)           -    -   -   Speaker#1   *       (ARG2*)       *    (40)
+bc/cctv/00/cctv_0000   0   10               an     DT        (NP*            -    -   -   Speaker#1   *       (ARG1*        *      -
+bc/cctv/00/cctv_0000   0   11      explanation     NN           *)           -    -   -   Speaker#1   *            *)       *      -
+bc/cctv/00/cctv_0000   0   12            after     IN        (PP*            -    -   -   Speaker#1   *   (ARGM-TMP*        *      -
+bc/cctv/00/cctv_0000   0   13    understanding    VBG      (S(VP*    understand  01   1   Speaker#1   *            *      (V*)     -
+bc/cctv/00/cctv_0000   0   14              our   PRP$        (NP*            -    -   -   Speaker#1   *            *   (ARG1*    (40)
+bc/cctv/00/cctv_0000   0   15       intentions    NNS       *)))))           -    -   -   Speaker#1   *            *)       *)     -
+bc/cctv/00/cctv_0000   0   16                .      .          *))           -    -   -   Speaker#1   *            *        *      -
+
+bc/cctv/00/cctv_0000   0    0            Er    UH   (TOP(S(INTJ*)           -    -   -   Speaker#2   *         *      *             *    (ARGM-DIS*)        *             *     -
+bc/cctv/00/cctv_0000   0    1             ,     ,              *            -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0    2     according   VBG           (PP*     according   -   -   Speaker#2   *         *      *             *    (ARGM-ADV*         *             *     -
+bc/cctv/00/cctv_0000   0    3            to    IN           (PP*            -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0    4          what    WP    (SBAR(WHNP*)           -    -   -   Speaker#2   *    (ARG1*)     *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0    5           the    DT         (S(NP*            -    -   -   Speaker#2   *    (ARG0*      *             *             *         *             *   (31
+bc/cctv/00/cctv_0000   0    6      security    NN              *            -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0    7         guard    NN              *)        guard   -   -   Speaker#2   *         *)     *             *             *         *             *    31)
+bc/cctv/00/cctv_0000   0    8          said   VBD       (VP*)))))          say  01   1   Speaker#2   *       (V*)     *             *             *)        *             *     -
+bc/cctv/00/cctv_0000   0    9             ,     ,              *            -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0   10           for    IN           (PP*            -    -   -   Speaker#2   *         *      *             *    (ARGM-TMP*         *             *     -
+bc/cctv/00/cctv_0000   0   11           the    DT        (NP(NP*            -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0   12          time    NN              *)         time   -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0   13        before    IN         (SBAR*            -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0   14    everything    NN         (S(NP*)           -    -   -   Speaker#2   *         *      *        (ARG1*)            *         *             *     -
+bc/cctv/00/cctv_0000   0   15            is   VBZ           (VP*            be  03   -   Speaker#2   *         *    (V*)            *             *         *             *     -
+bc/cctv/00/cctv_0000   0   16    officially    RB         (ADVP*)           -    -   -   Speaker#2   *         *      *    (ARGM-MNR*)            *         *             *     -
+bc/cctv/00/cctv_0000   0   17             ,     ,              *            -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0   18        opened   VBN      (VP*))))))         open  01   2   Speaker#2   *         *      *           (V*)            *)        *             *     -
+bc/cctv/00/cctv_0000   0   19             ,     ,              *            -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0   20             ,     ,              *            -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+bc/cctv/00/cctv_0000   0   21            no    DT           (NP*            -    -   -   Speaker#2   *         *      *             *        (ARG0*         *             *     -
+bc/cctv/00/cctv_0000   0   22          cars   NNS              *)           -    -   -   Speaker#2   *         *      *             *             *)        *             *     -
+bc/cctv/00/cctv_0000   0   23           can    MD           (VP*            -    -   -   Speaker#2   *         *      *             *    (ARGM-MOD*)        *             *     -
+bc/cctv/00/cctv_0000   0   24         enter    VB           (VP*         enter  01   1   Speaker#2   *         *      *             *           (V*)        *             *     -
+bc/cctv/00/cctv_0000   0   25        unless    IN         (SBAR*            -    -   -   Speaker#2   *         *      *             *    (ARGM-ADV*         *             *     -
+bc/cctv/00/cctv_0000   0   26          they   PRP         (S(NP*)           -    -   -   Speaker#2   *         *      *             *             *    (ARG0*)            *     -
+bc/cctv/00/cctv_0000   0   27          have   VBP           (VP*          have  03   2   Speaker#2   *         *      *             *             *       (V*)            *     -
+bc/cctv/00/cctv_0000   0   28       special    JJ           (NP*            -    -   -   Speaker#2   *         *      *             *             *    (ARG1*    (ARGM-MNR*)    -
+bc/cctv/00/cctv_0000   0   29    permission    NN         *))))))   permission  01   1   Speaker#2   *         *      *             *             *)        *)          (V*)    -
+bc/cctv/00/cctv_0000   0   30             .     .             *))           -    -   -   Speaker#2   *         *      *             *             *         *             *     -
+
+bc/cctv/00/cctv_0000   0   0           No   DT  (TOP(S(NP*       -    -   -   Speaker#2   *        (ARG0*   -
+bc/cctv/00/cctv_0000   0   1          one   NN           *)      -    -   -   Speaker#2   *             *)  -
+bc/cctv/00/cctv_0000   0   2          can   MD        (VP*       -    -   -   Speaker#2   *    (ARGM-MOD*)  -
+bc/cctv/00/cctv_0000   0   3        enter   VB        (VP*    enter  01   1   Speaker#2   *           (V*)  -
+bc/cctv/00/cctv_0000   0   4    otherwise   RB    (ADVP*)))      -    -   -   Speaker#2   *    (ARGM-ADV*)  -
+bc/cctv/00/cctv_0000   0   5            .    .          *))      -    -   -   Speaker#2   *             *   -
+
+bc/cctv/00/cctv_0000   0   0         Video   NNP  (TOP(S(NP*           -    -   -   Speaker#2   *    (ARGM-MNR*)     *        (ARG1*   -
+bc/cctv/00/cctv_0000   0   1     recording    NN           *)   recording  01   2   Speaker#2   *           (V*)     *             *)  -
+bc/cctv/00/cctv_0000   0   2            is   VBZ        (VP*           be  03   -   Speaker#2   *             *    (V*)            *   -
+bc/cctv/00/cctv_0000   0   3    especially    RB      (ADVP*)          -    -   -   Speaker#2   *             *      *    (ARGM-ADV*)  -
+bc/cctv/00/cctv_0000   0   4     forbidden   VBN       (VP*))      forbid  01   -   Speaker#2   *             *      *           (V*)  -
+bc/cctv/00/cctv_0000   0   5             .     .          *))          -    -   -   Speaker#2   *             *      *             *   -
+
+bc/cctv/00/cctv_0000   0   0            Ah    UH   (TOP(S(INTJ*)   -    -   -   Speaker#2   *    (ARGM-DIS*)  -
+bc/cctv/00/cctv_0000   0   1             ,     ,              *    -    -   -   Speaker#2   *             *   -
+bc/cctv/00/cctv_0000   0   2    everything    NN           (NP*)   -    -   -   Speaker#2   *        (ARG1*)  -
+bc/cctv/00/cctv_0000   0   3            is   VBZ           (VP*    be  01   1   Speaker#2   *           (V*)  -
+bc/cctv/00/cctv_0000   0   4           top    JJ         (ADJP*    -    -   -   Speaker#2   *        (ARG2*   -
+bc/cctv/00/cctv_0000   0   5        secret    JJ             *))   -    -   -   Speaker#2   *             *)  -
+bc/cctv/00/cctv_0000   0   6             .     .             *))   -    -   -   Speaker#2   *             *   -
+
+bc/cctv/00/cctv_0000   0    0            If    IN  (TOP(S(SBAR*            -    -   -   Speaker#2   *      *            *      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0    1      pictures   NNS        (S(NP*)      picture   -   -   Speaker#2   *      *       (ARG1*)     *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0    2           are   VBP          (VP*            be  03   -   Speaker#2   *    (V*)           *      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0    3         taken   VBN          (VP*          take  01   -   Speaker#2   *      *          (V*)     *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0    4       without    IN          (PP*            -    -   -   Speaker#2   *      *   (ARGM-MNR*      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0    5    permission    NN     (NP*))))))   permission  01   1   Speaker#2   *      *            *)   (V*)        *        *      *             *   -
+bc/cctv/00/cctv_0000   0    6             ,     ,             *            -    -   -   Speaker#2   *      *            *      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0    7           %pw    XX             *            -    -   -   Speaker#2   *      *            *      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0    8          that    DT          (NP*)           -    -   -   Speaker#2   *      *            *      *    (ARG1*)       *      *             *   -
+bc/cctv/00/cctv_0000   0    9            is   VBZ          (VP*            be  01   9   Speaker#2   *      *            *      *       (V*)       *      *             *   -
+bc/cctv/00/cctv_0000   0   10            to    TO        (S(VP*            -    -   -   Speaker#2   *      *            *      *    (ARG2*        *      *             *   -
+bc/cctv/00/cctv_0000   0   11           say    VB          (VP*           say  01   1   Speaker#2   *      *            *      *         *      (V*)     *             *   -
+bc/cctv/00/cctv_0000   0   12             ,     ,             *            -    -   -   Speaker#2   *      *            *      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0   13            it   PRP   (SBAR(S(NP*)           -    -   -   Speaker#2   *      *            *      *         *   (ARG1*      *        (ARG1*)  -
+bc/cctv/00/cctv_0000   0   14          will    MD          (VP*            -    -   -   Speaker#2   *      *            *      *         *        *      *    (ARGM-MOD*)  -
+bc/cctv/00/cctv_0000   0   15            at    IN          (PP*            -    -   -   Speaker#2   *      *            *      *         *        *      *    (ARGM-TMP*   -
+bc/cctv/00/cctv_0000   0   16           all    DT          (NP*            -    -   -   Speaker#2   *      *            *      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0   17         times   NNS            *))         time   -   -   Speaker#2   *      *            *      *         *        *      *             *)  -
+bc/cctv/00/cctv_0000   0   18            be    VB          (VP*            be  03   -   Speaker#2   *      *            *      *         *        *    (V*)            *   -
+bc/cctv/00/cctv_0000   0   19       pursued   VBN          (VP*        pursue  01   1   Speaker#2   *      *            *      *         *        *      *           (V*)  -
+bc/cctv/00/cctv_0000   0   20            by    IN          (PP*            -    -   -   Speaker#2   *      *            *      *         *        *      *        (ARG0*   -
+bc/cctv/00/cctv_0000   0   21         legal    JJ          (NP*            -    -   -   Speaker#2   *      *            *      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0   22        action    NN            *))           -    -   -   Speaker#2   *      *            *      *         *        *      *             *)  -
+bc/cctv/00/cctv_0000   0   23             ,     ,             *            -    -   -   Speaker#2   *      *            *      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0   24             a    DT          (NP*            -    -   -   Speaker#2   *      *            *      *         *        *      *    (ARGM-PRD*   -
+bc/cctv/00/cctv_0000   0   25           big    JJ             *            -    -   -   Speaker#2   *      *            *      *         *        *      *             *   -
+bc/cctv/00/cctv_0000   0   26        hassle    NN    *))))))))))       hassle   -   -   Speaker#2   *      *            *      *         *)       *)     *             *)  -
+bc/cctv/00/cctv_0000   0   27             .     .            *))           -    -   -   Speaker#2   *      *            *      *         *        *      *             *   -
+
+bc/cctv/00/cctv_0000   0    0       Although    IN  (TOP(S(SBAR*        -    -   -   Speaker#1        *        *             *   (ARGM-ADV*      -
+bc/cctv/00/cctv_0000   0    1         Disney   NNP        (S(NP*        -    -   -   Speaker#1    (ORG*   (ARG0*             *            *    (50
+bc/cctv/00/cctv_0000   0    2    Corporation   NNP             *)       -    -   -   Speaker#1        *)       *)            *            *     50)
+bc/cctv/00/cctv_0000   0    3          chose   VBD          (VP*    choose  01   1   Speaker#1        *      (V*)            *            *      -
+bc/cctv/00/cctv_0000   0    4           Hong   NNP          (NP*        -    -   -   Speaker#1    (GPE*   (ARG1*             *            *    (23
+bc/cctv/00/cctv_0000   0    5           Kong   NNP             *)       -    -   -   Speaker#1        *)       *)            *            *     23)
+bc/cctv/00/cctv_0000   0    6             as    IN          (PP*        -    -   -   Speaker#1        *   (ARG4*             *            *      -
+bc/cctv/00/cctv_0000   0    7            the    DT       (NP(NP*        -    -   -   Speaker#1        *        *             *            *      -
+bc/cctv/00/cctv_0000   0    8          venue    NN             *)       -    -   -   Speaker#1        *        *             *            *      -
+bc/cctv/00/cctv_0000   0    9            for    IN          (PP*        -    -   -   Speaker#1        *        *             *            *      -
+bc/cctv/00/cctv_0000   0   10            the    DT          (NP*        -    -   -   Speaker#1        *        *             *            *    (12
+bc/cctv/00/cctv_0000   0   11        Chinese    JJ             *        -    -   -   Speaker#1    (NORP)       *             *            *      -
+bc/cctv/00/cctv_0000   0   12         Disney   NNP             *        -    -   -   Speaker#1     (FAC)       *             *            *      -
+bc/cctv/00/cctv_0000   0   13           park    NN       *)))))))     park   -   -   Speaker#1        *        *)            *            *)    12)
+bc/cctv/00/cctv_0000   0   14              ,     ,             *        -    -   -   Speaker#1        *        *             *            *      -
+bc/cctv/00/cctv_0000   0   15           what    WP   (SBAR(WHNP*)       -    -   -   Speaker#1        *        *             *       (ARG1*      -
+bc/cctv/00/cctv_0000   0   16           they   PRP        (S(NP*)       -    -   -   Speaker#1        *        *        (ARG1*)           *    (50)
+bc/cctv/00/cctv_0000   0   17            are   VBP          (VP*        be  01   1   Speaker#1        *        *           (V*)           *      -
+bc/cctv/00/cctv_0000   0   18       actually    RB        (ADVP*)       -    -   -   Speaker#1        *        *    (ARGM-ADV*)           *      -
+bc/cctv/00/cctv_0000   0   19           most   RBS        (ADJP*        -    -   -   Speaker#1        *        *        (ARG2*            *      -
+bc/cctv/00/cctv_0000   0   20        excited    JJ             *        -    -   -   Speaker#1        *        *             *            *      -
+bc/cctv/00/cctv_0000   0   21          about    IN      (PP*)))))       -    -   -   Speaker#1        *        *             *)           *)     -
+bc/cctv/00/cctv_0000   0   22             is   VBZ          (VP*        be  01   2   Speaker#1        *        *             *          (V*)     -
+bc/cctv/00/cctv_0000   0   23            the    DT          (NP*        -    -   -   Speaker#1        *        *             *       (ARG2*      -
+bc/cctv/00/cctv_0000   0   24       mainland    JJ         (NML*        -    -   -   Speaker#1        *        *             *            *      -
+bc/cctv/00/cctv_0000   0   25          China   NNP             *)       -    -   -   Speaker#1     (GPE)       *             *            *      -
+bc/cctv/00/cctv_0000   0   26        tourist    NN             *        -    -   -   Speaker#1        *        *             *            *      -
+bc/cctv/00/cctv_0000   0   27         market    NN            *))   market   -   -   Speaker#1        *        *             *            *)     -
+bc/cctv/00/cctv_0000   0   28              .     .            *))       -    -   -   Speaker#1        *        *             *            *      -
+
+#end document
+#begin document (bc/cctv/00/cctv_0000); part 001
+bc/cctv/00/cctv_0000   1    0             Since    IN  (TOP(S(PP*                -    -   -   Speaker#1       *            *      *   (ARGM-TMP*        *     -
+bc/cctv/00/cctv_0000   1    1               the    DT     (NP(NP*                -    -   -   Speaker#1       *            *      *            *        *     -
+bc/cctv/00/cctv_0000   1    2    implementation    NN           *)   implementation  01   1   Speaker#1       *          (V*)     *            *        *     -
+bc/cctv/00/cctv_0000   1    3                of    IN        (PP*                -    -   -   Speaker#1       *       (ARG1*      *            *        *     -
+bc/cctv/00/cctv_0000   1    4               the    DT        (NP*                -    -   -   Speaker#1   (LAW*            *      *            *        *     -
+bc/cctv/00/cctv_0000   1    5        Individual   NNP           *                -    -   -   Speaker#1       *            *      *            *        *     -
+bc/cctv/00/cctv_0000   1    6             Visit   NNP           *                -    -   -   Speaker#1       *            *      *            *        *     -
+bc/cctv/00/cctv_0000   1    7            Scheme   NNP          *))               -    -   -   Speaker#1       *)           *)     *            *        *     -
+bc/cctv/00/cctv_0000   1    8           between    IN        (PP*                -    -   -   Speaker#1       *   (ARGM-LOC*      *            *        *     -
+bc/cctv/00/cctv_0000   1    9              Hong   NNP     (NP(NP*                -    -   -   Speaker#1   (GPE*            *      *            *        *   (19
+bc/cctv/00/cctv_0000   1   10              Kong   NNP           *)               -    -   -   Speaker#1       *)           *      *            *        *    19)
+bc/cctv/00/cctv_0000   1   11               and    CC           *                -    -   -   Speaker#1       *            *      *            *        *     -
+bc/cctv/00/cctv_0000   1   12               the    DT        (NP*                -    -   -   Speaker#1       *            *      *            *        *     -
+bc/cctv/00/cctv_0000   1   13          mainland    NN       *)))))               -    -   -   Speaker#1       *            *)     *            *)       *     -
+bc/cctv/00/cctv_0000   1   14                 ,     ,           *                -    -   -   Speaker#1       *            *      *            *        *     -
+bc/cctv/00/cctv_0000   1   15              more   JJR   (NP(ADJP*                -    -   -   Speaker#1       *            *      *       (ARG1*   (ARG0*     -
+bc/cctv/00/cctv_0000   1   16               and    CC           *                -    -   -   Speaker#1       *            *      *            *        *     -
+bc/cctv/00/cctv_0000   1   17              more   JJR           *)               -    -   -   Speaker#1       *            *      *            *        *     -
+bc/cctv/00/cctv_0000   1   18          mainland    NN           *                -    -   -   Speaker#1       *            *      *            *        *     -
+bc/cctv/00/cctv_0000   1   19          tourists   NNS           *)               -    -   -   Speaker#1       *            *      *            *)       *)    -
+bc/cctv/00/cctv_0000   1   20               are   VBP        (VP*                be  03   -   Speaker#1       *            *    (V*)           *        *     -
+bc/cctv/00/cctv_0000   1   21            coming   VBG        (VP*              come  01   1   Speaker#1       *            *      *          (V*)       *     -
+bc/cctv/00/cctv_0000   1   22                to    TO      (S(VP*                -    -   -   Speaker#1       *            *      *   (ARGM-PRP*        *     -
+bc/cctv/00/cctv_0000   1   23             visit    VB        (VP*             visit  01   1   Speaker#1       *            *      *            *      (V*)    -
+bc/cctv/00/cctv_0000   1   24              Hong   NNP        (NP*                -    -   -   Speaker#1   (GPE*            *      *            *   (ARG1*   (19
+bc/cctv/00/cctv_0000   1   25              Kong   NNP      *))))))               -    -   -   Speaker#1       *)           *      *            *)       *)   19)
+bc/cctv/00/cctv_0000   1   26                 .     .          *))               -    -   -   Speaker#1       *            *      *            *        *     -
+
+bc/cctv/00/cctv_0000   1    0          From    IN  (TOP(S(PP(PP*       -    -   -    Zhou_liangshuyi           *      *   (ARGM-TMP*     -
+bc/cctv/00/cctv_0000   1    1           the    DT           (NP*       -    -   -    Zhou_liangshuyi           *      *            *     -
+bc/cctv/00/cctv_0000   1    2     beginning    NN             *))   begin   -   -    Zhou_liangshuyi           *      *            *     -
+bc/cctv/00/cctv_0000   1    3            up    RB      (PP(ADVP*)      -    -   -    Zhou_liangshuyi           *      *            *     -
+bc/cctv/00/cctv_0000   1    4          till    IN              *       -    -   -    Zhou_liangshuyi           *      *            *     -
+bc/cctv/00/cctv_0000   1    5           now    RB       (ADVP*)))      -    -   -    Zhou_liangshuyi           *      *            *)    -
+bc/cctv/00/cctv_0000   1    6             ,     ,              *       -    -   -    Zhou_liangshuyi           *      *            *     -
+bc/cctv/00/cctv_0000   1    7          more   JJR        (NP(QP*       -    -   -    Zhou_liangshuyi  (CARDINAL*      *       (ARG1*     -
+bc/cctv/00/cctv_0000   1    8          than    IN              *       -    -   -    Zhou_liangshuyi           *      *            *     -
+bc/cctv/00/cctv_0000   1    9         seven    CD              *       -    -   -    Zhou_liangshuyi           *      *            *     -
+bc/cctv/00/cctv_0000   1   10       million    CD              *)      -    -   -    Zhou_liangshuyi           *)     *            *     -
+bc/cctv/00/cctv_0000   1   11    individual    JJ              *       -    -   -    Zhou_liangshuyi           *      *            *     -
+bc/cctv/00/cctv_0000   1   12      tourists   NNS              *)      -    -   -    Zhou_liangshuyi           *      *            *)    -
+bc/cctv/00/cctv_0000   1   13             ,     ,              *       -    -   -    Zhou_liangshuyi           *      *            *     -
+bc/cctv/00/cctv_0000   1   14          have   VBP           (VP*     have  01   -    Zhou_liangshuyi           *    (V*)           *     -
+bc/cctv/00/cctv_0000   1   15          come   VBN           (VP*     come  01   1    Zhou_liangshuyi           *      *          (V*)    -
+bc/cctv/00/cctv_0000   1   16            to    IN           (PP*       -    -   -    Zhou_liangshuyi           *      *       (ARG4*     -
+bc/cctv/00/cctv_0000   1   17          Hong   NNP           (NP*       -    -   -    Zhou_liangshuyi       (GPE*      *            *   (19
+bc/cctv/00/cctv_0000   1   18          Kong   NNP           *))))      -    -   -    Zhou_liangshuyi           *)     *            *)   19)
+bc/cctv/00/cctv_0000   1   19             .     .             *))      -    -   -    Zhou_liangshuyi           *      *            *     -
+
+bc/cctv/00/cctv_0000   1    0       Well    UH   (TOP(S(INTJ*)        -    -   -    Zhou_liangshuyi  *    (ARGM-DIS*)     *             *   -
+bc/cctv/00/cctv_0000   1    1          ,     ,              *         -    -   -    Zhou_liangshuyi  *             *      *             *   -
+bc/cctv/00/cctv_0000   1    2         we   PRP           (NP*)        -    -   -    Zhou_liangshuyi  *        (ARG0*)     *             *   -
+bc/cctv/00/cctv_0000   1    3        now    RB         (ADVP*)        -    -   -    Zhou_liangshuyi  *    (ARGM-TMP*)     *             *   -
+bc/cctv/00/cctv_0000   1    4          ,     ,              *         -    -   -    Zhou_liangshuyi  *             *      *             *   -
+bc/cctv/00/cctv_0000   1    5         er    UH         (INTJ*)        -    -   -    Zhou_liangshuyi  *    (ARGM-DIS*)     *             *   -
+bc/cctv/00/cctv_0000   1    6          ,     ,              *         -    -   -    Zhou_liangshuyi  *             *      *             *   -
+bc/cctv/00/cctv_0000   1    7    believe   VBP           (VP*    believe  01   1    Zhou_liangshuyi  *           (V*)     *             *   -
+bc/cctv/00/cctv_0000   1    8       more   JJR    (SBAR(S(NP*)        -    -   -    Zhou_liangshuyi  *        (ARG1*      *        (ARG1*)  -
+bc/cctv/00/cctv_0000   1    9       will    MD           (VP*         -    -   -    Zhou_liangshuyi  *             *      *    (ARGM-MOD*)  -
+bc/cctv/00/cctv_0000   1   10         be    VB           (VP*         be  03   -    Zhou_liangshuyi  *             *    (V*)            *   -
+bc/cctv/00/cctv_0000   1   11     coming   VBG      (VP*))))))      come  01   1    Zhou_liangshuyi  *             *)     *           (V*)  -
+bc/cctv/00/cctv_0000   1   12          .     .             *))        -    -   -    Zhou_liangshuyi  *             *      *             *   -
+
+bc/cctv/00/cctv_0000   1    0       At    IN  (TOP(S(PP*       -    -   -    Zhou_liangshuyi       *      *   (ARGM-TMP*   -
+bc/cctv/00/cctv_0000   1    1     this    DT        (NP*       -    -   -    Zhou_liangshuyi       *      *            *   -
+bc/cctv/00/cctv_0000   1    2    point    NN          *))   point   -   -    Zhou_liangshuyi       *      *            *)  -
+bc/cctv/00/cctv_0000   1    3        ,     ,           *       -    -   -    Zhou_liangshuyi       *      *            *   -
+bc/cctv/00/cctv_0000   1    4       it   PRP        (NP*)      -    -   -    Zhou_liangshuyi       *      *       (ARG1*)  -
+bc/cctv/00/cctv_0000   1    5      has   VBZ        (VP*     have  01   -    Zhou_liangshuyi       *    (V*)           *   -
+bc/cctv/00/cctv_0000   1    6     been   VBN        (VP*       be  01   6    Zhou_liangshuyi       *      *          (V*)  -
+bc/cctv/00/cctv_0000   1    7    about    RB     (NP(QP*       -    -   -    Zhou_liangshuyi  (DATE*      *       (ARG2*   -
+bc/cctv/00/cctv_0000   1    8      two    CD           *)      -    -   -    Zhou_liangshuyi       *      *            *   -
+bc/cctv/00/cctv_0000   1    9    years   NNS         *)))      -    -   -    Zhou_liangshuyi       *)     *            *)  -
+bc/cctv/00/cctv_0000   1   10        .     .          *))      -    -   -    Zhou_liangshuyi       *      *            *   -
+
+bc/cctv/00/cctv_0000   1    0         Also    RB   (TOP(S(ADVP*)         -    -   -    Zhou_liangshuyi           *      *    (ARGM-DIS*)  -
+bc/cctv/00/cctv_0000   1    1            ,     ,              *          -    -   -    Zhou_liangshuyi           *      *             *   -
+bc/cctv/00/cctv_0000   1    2          the    DT        (NP(NP*          -    -   -    Zhou_liangshuyi           *      *        (ARG1*   -
+bc/cctv/00/cctv_0000   1    3      current    JJ              *          -    -   -    Zhou_liangshuyi           *      *             *   -
+bc/cctv/00/cctv_0000   1    4       number    NN              *)     number   -   -    Zhou_liangshuyi           *      *             *   -
+bc/cctv/00/cctv_0000   1    5           of    IN           (PP*          -    -   -    Zhou_liangshuyi           *      *             *   -
+bc/cctv/00/cctv_0000   1    6          34     CD           (NP*          -    -   -    Zhou_liangshuyi   (CARDINAL)     *             *   -
+bc/cctv/00/cctv_0000   1    7       cities   NNS            *)))         -    -   -    Zhou_liangshuyi           *      *             *)  -
+bc/cctv/00/cctv_0000   1    8         will    MD           (VP*          -    -   -    Zhou_liangshuyi           *      *    (ARGM-MOD*)  -
+bc/cctv/00/cctv_0000   1    9           be    VB           (VP*          be  03   -    Zhou_liangshuyi           *    (V*)            *   -
+bc/cctv/00/cctv_0000   1   10    increased   VBN         (VP*)))   increase  01   1    Zhou_liangshuyi           *      *           (V*)  -
+bc/cctv/00/cctv_0000   1   11            .     .             *))         -    -   -    Zhou_liangshuyi           *      *             *   -
+
+bc/cctv/00/cctv_0000   1    0             Hong   NNP    (TOP(S(NP*         -    -   -   Speaker#1    (GPE*      *       (ARG1*   (ARG1*   (19
+bc/cctv/00/cctv_0000   1    1             Kong   NNP             *)        -    -   -   Speaker#1        *)     *            *)       *)   19)
+bc/cctv/00/cctv_0000   1    2              was   VBD          (VP*         be  03   -   Speaker#1        *    (V*)           *        *     -
+bc/cctv/00/cctv_0000   1    3        developed   VBN          (VP*    develop  02   -   Speaker#1        *      *          (V*)       *     -
+bc/cctv/00/cctv_0000   1    4             from    IN          (PP*         -    -   -   Speaker#1        *      *       (ARG2*        *     -
+bc/cctv/00/cctv_0000   1    5                a    DT          (NP*         -    -   -   Speaker#1        *      *            *        *     -
+bc/cctv/00/cctv_0000   1    6          fishing    NN             *       fish   -   -   Speaker#1        *      *            *        *     -
+bc/cctv/00/cctv_0000   1    7           harbor    NN            *))   harbour   -   -   Speaker#1        *      *            *)       *     -
+bc/cctv/00/cctv_0000   1    8              one    CD  (ADVP(NP(QP*         -    -   -   Speaker#1   (DATE*      *   (ARGM-TMP*        *     -
+bc/cctv/00/cctv_0000   1    9          hundred    CD             *)        -    -   -   Speaker#1        *      *            *        *     -
+bc/cctv/00/cctv_0000   1   10            years   NNS             *)        -    -   -   Speaker#1        *      *            *        *     -
+bc/cctv/00/cctv_0000   1   11              ago    RB             *)        -    -   -   Speaker#1        *)     *            *)       *     -
+bc/cctv/00/cctv_0000   1   12               to    TO        (S(VP*         -    -   -   Speaker#1        *      *   (ARGM-PRP*        *     -
+bc/cctv/00/cctv_0000   1   13           become    VB          (VP*     become  01   1   Speaker#1        *      *            *      (V*)    -
+bc/cctv/00/cctv_0000   1   14            today    NN       (NP(NP*         -    -   -   Speaker#1    (DATE)     *            *   (ARG2*     -
+bc/cctv/00/cctv_0000   1   15               's   POS             *)        -    -   -   Speaker#1        *      *            *        *     -
+bc/cctv/00/cctv_0000   1   16    international    JJ             *         -    -   -   Speaker#1        *      *            *        *     -
+bc/cctv/00/cctv_0000   1   17       metropolis   NNS        *))))))        -    -   -   Speaker#1        *      *            *)       *)    -
+bc/cctv/00/cctv_0000   1   18                .     .            *))        -    -   -   Speaker#1        *      *            *        *     -
+
+bc/cctv/00/cctv_0000   1    0        Here    RB   (TOP(S(ADVP*)         -    -   -   Speaker#1   *      *        *        *   -
+bc/cctv/00/cctv_0000   1    1           ,     ,              *          -    -   -   Speaker#1   *      *        *        *   -
+bc/cctv/00/cctv_0000   1    2     eastern    JJ    (S(NP(ADJP*          -    -   -   Speaker#1   *      *   (ARG1*        *   -
+bc/cctv/00/cctv_0000   1    3         and    CC              *          -    -   -   Speaker#1   *      *        *        *   -
+bc/cctv/00/cctv_0000   1    4     western    JJ              *)         -    -   -   Speaker#1   *      *        *        *   -
+bc/cctv/00/cctv_0000   1    5    cultures   NNS              *)    culture   -   -   Speaker#1   *      *        *)       *   -
+bc/cctv/00/cctv_0000   1    6        have   VBP           (VP*        have  01   -   Speaker#1   *    (V*)       *        *   -
+bc/cctv/00/cctv_0000   1    7    gathered   VBN         (VP*)))     gather  01   3   Speaker#1   *      *      (V*)       *   -
+bc/cctv/00/cctv_0000   1    8           ,     ,              *          -    -   -   Speaker#1   *      *        *        *   -
+bc/cctv/00/cctv_0000   1    9         and    CC              *          -    -   -   Speaker#1   *      *        *        *   -
+bc/cctv/00/cctv_0000   1   10         the    DT      (S(NP(NP*          -    -   -   Speaker#1   *      *        *   (ARG1*   -
+bc/cctv/00/cctv_0000   1   11         new    JJ              *)         -    -   -   Speaker#1   *      *        *        *   -
+bc/cctv/00/cctv_0000   1   12         and    CC              *          -    -   -   Speaker#1   *      *        *        *   -
+bc/cctv/00/cctv_0000   1   13         the    DT           (NP*          -    -   -   Speaker#1   *      *        *        *   -
+bc/cctv/00/cctv_0000   1   14         old    JJ             *))         -    -   -   Speaker#1   *      *        *        *)  -
+bc/cctv/00/cctv_0000   1   15     coexist   VBP          (VP*))   co-exist  01   -   Speaker#1   *      *        *      (V*)  -
+bc/cctv/00/cctv_0000   1   16           .     .             *))         -    -   -   Speaker#1   *      *        *        *   -
+
+bc/cctv/00/cctv_0000   1    0           When    WRB   (TOP(S(SBAR(WHADVP*)       -    -   -   Speaker#1       *    (ARGM-TMP*    (ARGM-TMP*             *    (ARGM-TMP*     -
+bc/cctv/00/cctv_0000   1    1             in     IN             (FRAG(PP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1    2           Hong    NNP                  (NP*        -    -   -   Speaker#1   (GPE*             *             *             *             *   (19
+bc/cctv/00/cctv_0000   1    3           Kong    NNP                  *))))       -    -   -   Speaker#1       *)            *)            *)            *             *)   19)
+bc/cctv/00/cctv_0000   1    4              ,      ,                     *        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1    5            you    PRP                  (NP*)       -    -   -   Speaker#1       *        (ARG0*)       (ARG0*)            *        (ARG0*)    -
+bc/cctv/00/cctv_0000   1    6            can     MD                  (VP*        -    -   -   Speaker#1       *    (ARGM-MOD*)   (ARGM-MOD*)            *    (ARGM-MOD*)    -
+bc/cctv/00/cctv_0000   1    7         wander     VB               (VP(VP*    wander  01   1   Speaker#1       *           (V*)            *             *             *     -
+bc/cctv/00/cctv_0000   1    8          among     IN                  (PP*        -    -   -   Speaker#1       *    (ARGM-LOC*             *             *             *     -
+bc/cctv/00/cctv_0000   1    9    skyscrapers    NNS                (NP*)))       -    -   -   Speaker#1       *             *)            *             *             *     -
+bc/cctv/00/cctv_0000   1   10              ,      ,                     *        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   11       heartily     RB                (ADVP*)       -    -   -   Speaker#1       *             *    (ARGM-MNR*)            *             *     -
+bc/cctv/00/cctv_0000   1   12          enjoy    VBP                  (VP*     enjoy  01   1   Speaker#1       *             *           (V*)            *             *     -
+bc/cctv/00/cctv_0000   1   13       shopping     NN                  (NP*      shop   -   -   Speaker#1       *             *        (ARG1*             *             *     -
+bc/cctv/00/cctv_0000   1   14         sprees    NNS                     *)       -    -   -   Speaker#1       *             *             *)            *             *     -
+bc/cctv/00/cctv_0000   1   15             in     IN                  (PP*        -    -   -   Speaker#1       *             *    (ARGM-LOC*             *             *     -
+bc/cctv/00/cctv_0000   1   16           well     RB          (NP(NP(ADJP*        -    -   -   Speaker#1       *             *             *    (ARGM-EXT*)            *     -
+bc/cctv/00/cctv_0000   1   17             -    HYPH                     *        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   18          known    VBN                     *)     know  01   -   Speaker#1       *             *             *           (V*)            *     -
+bc/cctv/00/cctv_0000   1   19         stores    NNS                     *)    store   -   -   Speaker#1       *             *             *        (ARG1*)            *     -
+bc/cctv/00/cctv_0000   1   20            and     CC                     *        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   21          malls    NNS               (NP(NP*)       -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   22            for     IN                  (PP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   23          goods    NNS               (NP(NP*)       -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   24           from     IN                  (PP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   25        various     JJ                  (NP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   26      countries    NNS              *))))))))       -    -   -   Speaker#1       *             *             *)            *             *     -
+bc/cctv/00/cctv_0000   1   27              ,      ,                     *        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   28            and     CC                     *        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   29          taste     VB                  (VP*     taste  01   2   Speaker#1       *             *             *             *           (V*)    -
+bc/cctv/00/cctv_0000   1   30      delicious     JJ               (NP(NP*        -    -   -   Speaker#1       *             *             *             *        (ARG1*     -
+bc/cctv/00/cctv_0000   1   31         snacks    NNS                     *)    snack   -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   32           from     IN                  (PP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   33            all     RB             (PP(ADVP*)       -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   34           over     IN                     *        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   35            the     DT                  (NP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   36          world     NN                  *))))       -    -   -   Speaker#1       *             *             *             *             *)    -
+bc/cctv/00/cctv_0000   1   37             at     IN               (PP(PP*        -    -   -   Speaker#1       *             *             *             *    (ARGM-LOC*     -
+bc/cctv/00/cctv_0000   1   38            tea     NN                  (NP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   39          shops    NNS                    *))     shop   -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   40             or     CC                     *        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   41             at     IN                  (PP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   42         street     NN               (NP(NP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   43         stands    NNS                     *)    stand   -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   44             in     IN                  (PP*        -    -   -   Speaker#1       *             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   45           Mong    NNP                  (NP*        -    -   -   Speaker#1   (LOC*             *             *             *             *     -
+bc/cctv/00/cctv_0000   1   46            Kok    NNP              *))))))))       -    -   -   Speaker#1       *)            *             *             *             *)    -
+bc/cctv/00/cctv_0000   1   47              .      .                    *))       -    -   -   Speaker#1       *             *             *             *             *     -
+
+bc/cctv/00/cctv_0000   1    0        You   PRP      (TOP(S(NP*)        -    -   -   Speaker#1       *        (ARG0*)   (ARG0*)       (ARG0*)            *   -
+bc/cctv/00/cctv_0000   1    1        can    MD            (VP*         -    -   -   Speaker#1       *    (ARGM-MOD*)        *    (ARGM-MOD*)            *   -
+bc/cctv/00/cctv_0000   1    2         go    VB         (VP(VP*         go  05   1   Speaker#1       *           (V*)        *             *             *   -
+bc/cctv/00/cctv_0000   1    3         to    TO          (S(VP*         -    -   -   Speaker#1       *        (ARG1*         *             *             *   -
+bc/cctv/00/cctv_0000   1    4       burn    VB            (VP*       burn  01   1   Speaker#1       *             *       (V*)            *             *   -
+bc/cctv/00/cctv_0000   1    5    incense    NN        (NP*)))))   incense   -   -   Speaker#1       *             *)   (ARG1*)            *             *   -
+bc/cctv/00/cctv_0000   1    6        and    CC               *         -    -   -   Speaker#1       *             *         *             *             *   -
+bc/cctv/00/cctv_0000   1    7       make    VB            (VP*       make  01   1   Speaker#1       *             *         *           (V*)            *   -
+bc/cctv/00/cctv_0000   1    8          a    DT            (NP*         -    -   -   Speaker#1       *             *         *        (ARG1*             *   -
+bc/cctv/00/cctv_0000   1    9        vow    NN               *)       vow   -   -   Speaker#1       *             *         *             *)            *   -
+bc/cctv/00/cctv_0000   1   10         at    IN            (PP*         -    -   -   Speaker#1       *             *         *    (ARGM-LOC*             *   -
+bc/cctv/00/cctv_0000   1   11        the    DT         (NP(NP*         -    -   -   Speaker#1   (LOC*             *         *             *             *   -
+bc/cctv/00/cctv_0000   1   12    Repulse   NNP               *         -    -   -   Speaker#1       *             *         *             *             *   -
+bc/cctv/00/cctv_0000   1   13        Bay   NNP               *)        -    -   -   Speaker#1       *)            *         *             *             *   -
+bc/cctv/00/cctv_0000   1   14          ,     ,               *         -    -   -   Speaker#1       *             *         *             *             *   -
+bc/cctv/00/cctv_0000   1   15      where   WRB   (SBAR(WHADVP*)        -    -   -   Speaker#1       *             *         *             *    (ARGM-LOC*)  -
+bc/cctv/00/cctv_0000   1   16        all    DT          (S(NP*         -    -   -   Speaker#1       *             *         *             *        (ARG1*   -
+bc/cctv/00/cctv_0000   1   17    deities   NNS               *)        -    -   -   Speaker#1       *             *         *             *             *)  -
+bc/cctv/00/cctv_0000   1   18     gather   VBP     (VP*))))))))    gather  01   2   Speaker#1       *             *         *             *)          (V*)  -
+bc/cctv/00/cctv_0000   1   19          .     .              *))        -    -   -   Speaker#1       *             *         *             *             *   -
+
+bc/cctv/00/cctv_0000   1    0         You    PRP   (TOP(S(NP*)      -    -   -   Speaker#1       *        (ARG0*)          *     -
+bc/cctv/00/cctv_0000   1    1         can     MD         (VP*       -    -   -   Speaker#1       *    (ARGM-MOD*)          *     -
+bc/cctv/00/cctv_0000   1    2       enjoy     VB         (VP*    enjoy  01   1   Speaker#1       *           (V*)          *     -
+bc/cctv/00/cctv_0000   1    3         the     DT      (NP(NP*       -    -   -   Speaker#1       *        (ARG1*           *     -
+bc/cctv/00/cctv_0000   1    4        most    RBS       (ADJP*       -    -   -   Speaker#1       *             *           *     -
+bc/cctv/00/cctv_0000   1    5    charming     JJ            *)      -    -   -   Speaker#1       *             *           *     -
+bc/cctv/00/cctv_0000   1    6         sun     NN       (ADJP*      sun   -   -   Speaker#1       *             *      (ARG2*)    -
+bc/cctv/00/cctv_0000   1    7          -    HYPH            *       -    -   -   Speaker#1       *             *           *     -
+bc/cctv/00/cctv_0000   1    8      filled    VBN            *)    fill  01   -   Speaker#1       *             *         (V*)    -
+bc/cctv/00/cctv_0000   1    9       sandy     JJ            *       -    -   -   Speaker#1       *             *      (ARG1*)    -
+bc/cctv/00/cctv_0000   1   10     beaches    NNS            *)   beach   -   -   Speaker#1       *             *    (C-ARG1*)    -
+bc/cctv/00/cctv_0000   1   11          in     IN         (PP*       -    -   -   Speaker#1       *             *           *     -
+bc/cctv/00/cctv_0000   1   12        Hong    NNP         (NP*       -    -   -   Speaker#1   (GPE*             *           *   (19
+bc/cctv/00/cctv_0000   1   13        Kong    NNP        *)))))      -    -   -   Speaker#1       *)            *)          *    19)
+bc/cctv/00/cctv_0000   1   14           .      .           *))      -    -   -   Speaker#1       *             *           *     -
+
+bc/cctv/00/cctv_0000   1    0          You   PRP   (TOP(S(NP*)       -    -   -   Speaker#1       *        (ARG0*)   (ARG0*)  -
+bc/cctv/00/cctv_0000   1    1          can    MD         (VP*        -    -   -   Speaker#1       *    (ARGM-MOD*)        *   -
+bc/cctv/00/cctv_0000   1    2       ascend    VB         (VP*    ascend  01   1   Speaker#1       *           (V*)        *   -
+bc/cctv/00/cctv_0000   1    3     Victoria   NNP         (NP*        -    -   -   Speaker#1   (LOC*        (ARG1*         *   -
+bc/cctv/00/cctv_0000   1    4         Peak   NNP            *)       -    -   -   Speaker#1       *)            *)        *   -
+bc/cctv/00/cctv_0000   1    5           to    TO       (S(VP*        -    -   -   Speaker#1       *    (ARGM-PRP*         *   -
+bc/cctv/00/cctv_0000   1    6          get    VB         (VP*       get  01   1   Speaker#1       *             *       (V*)  -
+bc/cctv/00/cctv_0000   1    7            a    DT      (NP(NP*        -    -   -   Speaker#1       *             *    (ARG1*   -
+bc/cctv/00/cctv_0000   1    8    panoramic    JJ            *        -    -   -   Speaker#1       *             *         *   -
+bc/cctv/00/cctv_0000   1    9         view    NN            *)     view   -   -   Speaker#1       *             *         *   -
+bc/cctv/00/cctv_0000   1   10           of    IN         (PP*        -    -   -   Speaker#1       *             *         *   -
+bc/cctv/00/cctv_0000   1   11     Victoria   NNP      (NP(NP*        -    -   -   Speaker#1   (LOC*             *         *   -
+bc/cctv/00/cctv_0000   1   12       Harbor   NNP            *        -    -   -   Speaker#1       *             *         *   -
+bc/cctv/00/cctv_0000   1   13           's   POS            *)       -    -   -   Speaker#1       *)            *         *   -
+bc/cctv/00/cctv_0000   1   14    beautiful    JJ            *        -    -   -   Speaker#1       *             *         *   -
+bc/cctv/00/cctv_0000   1   15      scenery    NN     *))))))))       -    -   -   Speaker#1       *             *)        *)  -
+bc/cctv/00/cctv_0000   1   16            .     .           *))       -    -   -   Speaker#1       *             *         *   -
+
+bc/cctv/00/cctv_0000   1    0         Or    CC      (TOP(S*        -    -   -   Speaker#1        *    (ARGM-DIS*)   (ARGM-DIS*)    -
+bc/cctv/00/cctv_0000   1    1        hop    VB      (VP(VP*       hop  01   1   Speaker#1        *           (V*)            *     -
+bc/cctv/00/cctv_0000   1    2       onto    IN         (PP*        -    -   -   Speaker#1        *    (ARGM-DIR*             *     -
+bc/cctv/00/cctv_0000   1    3          a    DT      (NP(NP*        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1    4    trolley    NN            *)       -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1    5       with    IN         (PP*        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1    6       over    RB   (NP(NP(QP*        -    -   -   Speaker#1   (DATE*             *             *     -
+bc/cctv/00/cctv_0000   1    7          a    DT            *)       -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1    8    century    NN            *)       -    -   -   Speaker#1        *)            *             *     -
+bc/cctv/00/cctv_0000   1    9         of    IN         (PP*        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   10    history    NN   (NP*)))))))       -    -   -   Speaker#1        *             *)            *     -
+bc/cctv/00/cctv_0000   1   11          ,     ,            *        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   12        and    CC            *        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   13       feel    VB         (VP*      feel  03   1   Speaker#1        *             *           (V*)    -
+bc/cctv/00/cctv_0000   1   14        the    DT   (NP(NP(NP*        -    -   -   Speaker#1        *             *        (ARG1*   (19
+bc/cctv/00/cctv_0000   1   15       city    NN            *        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   16         's   POS            *)       -    -   -   Speaker#1        *             *             *    19)
+bc/cctv/00/cctv_0000   1   17      blend    NN            *)    blend   -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   18         of    IN         (PP*        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   19        the    DT      (NP(NP*        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   20        old    JJ            *)       -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   21        and    CC            *        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   22        the    DT         (NP*        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   23     modern    JJ         *))))       -    -   -   Speaker#1        *             *             *)    -
+bc/cctv/00/cctv_0000   1   24         in    IN         (PP*        -    -   -   Speaker#1        *             *    (ARGM-MNR*     -
+bc/cctv/00/cctv_0000   1   25       slow    JJ         (NP*        -    -   -   Speaker#1        *             *             *     -
+bc/cctv/00/cctv_0000   1   26     motion    NN         *))))   motion   -   -   Speaker#1        *             *             *)    -
+bc/cctv/00/cctv_0000   1   27          .     .           *))       -    -   -   Speaker#1        *             *             *     -
+
+#end document
+#begin document (bc/cctv/00/cctv_0000); part 002
+bc/cctv/00/cctv_0000   2    0         After    IN  (TOP(S(PP*         -    -   -   Speaker#1       *   (ARGM-TMP*        *           *   -
+bc/cctv/00/cctv_0000   2    1          dark    NN       (NP*))      dark   -   -   Speaker#1       *            *)       *           *   -
+bc/cctv/00/cctv_0000   2    2             ,     ,           *         -    -   -   Speaker#1       *            *        *           *   -
+bc/cctv/00/cctv_0000   2    3        cruise    VB        (VP*     cruise  01   2   Speaker#1       *          (V*)       *           *   -
+bc/cctv/00/cctv_0000   2    4      Victoria   NNP        (NP*         -    -   -   Speaker#1   (LOC*   (ARGM-LOC*        *           *   -
+bc/cctv/00/cctv_0000   2    5        Harbor   NNP           *)        -    -   -   Speaker#1       *)           *)       *           *   -
+bc/cctv/00/cctv_0000   2    6            at    IN        (PP*         -    -   -   Speaker#1       *   (ARGM-TMP*        *           *   -
+bc/cctv/00/cctv_0000   2    7         night    NN       (NP*))        -    -   -   Speaker#1       *            *)       *           *   -
+bc/cctv/00/cctv_0000   2    8            to    TO      (S(VP*         -    -   -   Speaker#1       *   (ARGM-PRP*        *           *   -
+bc/cctv/00/cctv_0000   2    9         enjoy    VB        (VP*      enjoy  01   1   Speaker#1       *            *      (V*)          *   -
+bc/cctv/00/cctv_0000   2   10           the    DT        (NP*         -    -   -   Speaker#1       *            *   (ARG1*           *   -
+bc/cctv/00/cctv_0000   2   11    enchanting   VBG           *    enchant  01   1   Speaker#1       *            *        *         (V*)  -
+bc/cctv/00/cctv_0000   2   12       evening    NN           *       even   -   -   Speaker#1       *            *        *      (ARG0*)  -
+bc/cctv/00/cctv_0000   2   13          view    NN       *)))))      view   -   -   Speaker#1       *            *)       *)   (C-ARG0*)  -
+bc/cctv/00/cctv_0000   2   14             .     .          *))        -    -   -   Speaker#1       *            *        *           *   -
+
+bc/cctv/00/cctv_0000   2   0     Every    DT  (TOP(S(NP(NP*        -    -   -   Speaker#1       *      *   (ARG1*     -
+bc/cctv/00/cctv_0000   2   1    corner    NN              *)   corner   -   -   Speaker#1       *      *        *     -
+bc/cctv/00/cctv_0000   2   2        of    IN           (PP*        -    -   -   Speaker#1       *      *        *     -
+bc/cctv/00/cctv_0000   2   3      Hong   NNP           (NP*        -    -   -   Speaker#1   (GPE*      *        *   (19
+bc/cctv/00/cctv_0000   2   4      Kong   NNP            *)))       -    -   -   Speaker#1       *)     *        *)   19)
+bc/cctv/00/cctv_0000   2   5        is   VBZ           (VP*        be  03   -   Speaker#1       *    (V*)       *     -
+bc/cctv/00/cctv_0000   2   6    filled   VBN           (VP*      fill  01   -   Speaker#1       *      *      (V*)    -
+bc/cctv/00/cctv_0000   2   7      with    IN           (PP*        -    -   -   Speaker#1       *      *   (ARG2*     -
+bc/cctv/00/cctv_0000   2   8       fun    NN        (NP*))))      fun   -   -   Speaker#1       *      *        *)    -
+bc/cctv/00/cctv_0000   2   9         .     .             *))       -    -   -   Speaker#1       *      *        *     -
+
+bc/cctv/00/cctv_0000   2    0     Meanwhile    RB   (TOP(SBARQ(ADVP*)         -    -   -   Speaker#1       *      *      *             *    (ARGM-TMP*)    -
+bc/cctv/00/cctv_0000   2    1             ,     ,                  *          -    -   -   Speaker#1       *      *      *             *             *     -
+bc/cctv/00/cctv_0000   2    2            as    IN             (SBAR*          -    -   -   Speaker#1       *      *      *             *    (ARGM-ADV*     -
+bc/cctv/00/cctv_0000   2    3       various    JJ             (S(NP*          -    -   -   Speaker#1       *      *      *        (ARG1*             *     -
+bc/cctv/00/cctv_0000   2    4           new    JJ                  *          -    -   -   Speaker#1       *      *      *             *             *     -
+bc/cctv/00/cctv_0000   2    5         items   NNS                  *)       item   -   -   Speaker#1       *      *      *             *)            *     -
+bc/cctv/00/cctv_0000   2    6           are   VBP               (VP*          be  03   -   Speaker#1       *    (V*)     *             *             *     -
+bc/cctv/00/cctv_0000   2    7    constantly    RB             (ADVP*)         -    -   -   Speaker#1       *      *      *    (ARGM-MNR*)            *     -
+bc/cctv/00/cctv_0000   2    8         being   VBG               (VP*          be  03   -   Speaker#1       *      *    (V*)            *             *     -
+bc/cctv/00/cctv_0000   2    9         added   VBN           (VP*)))))        add  02   1   Speaker#1       *      *      *           (V*)            *)    -
+bc/cctv/00/cctv_0000   2   10             ,     ,                  *          -    -   -   Speaker#1       *      *      *             *             *     -
+bc/cctv/00/cctv_0000   2   11          what   WDT        (WHNP(WHNP*          -    -   -   Speaker#1       *      *      *             *        (ARG1*     -
+bc/cctv/00/cctv_0000   2   12         other    JJ                  *          -    -   -   Speaker#1       *      *      *             *             *     -
+bc/cctv/00/cctv_0000   2   13         kinds   NNS                  *)         -    -   -   Speaker#1       *      *      *             *             *     -
+bc/cctv/00/cctv_0000   2   14            of    IN               (PP*          -    -   -   Speaker#1       *      *      *             *             *     -
+bc/cctv/00/cctv_0000   2   15      pleasant    JJ               (NP*          -    -   -   Speaker#1       *      *      *             *             *     -
+bc/cctv/00/cctv_0000   2   16     surprises   NNS                *)))   surprise   -   -   Speaker#1       *      *      *             *             *)    -
+bc/cctv/00/cctv_0000   2   17          will    MD               (SQ*          -    -   -   Speaker#1       *      *      *             *    (ARGM-MOD*)    -
+bc/cctv/00/cctv_0000   2   18           the    DT               (NP*          -    -   -   Speaker#1       *      *      *             *        (ARG0*     -
+bc/cctv/00/cctv_0000   2   19          Hong   NNP              (NML*          -    -   -   Speaker#1   (GPE*      *      *             *             *   (19
+bc/cctv/00/cctv_0000   2   20          Kong   NNP                  *)         -    -   -   Speaker#1       *)     *      *             *             *    19)
+bc/cctv/00/cctv_0000   2   21       tourism    NN                  *          -    -   -   Speaker#1       *      *      *             *             *     -
+bc/cctv/00/cctv_0000   2   22      industry    NN                  *)         -    -   -   Speaker#1       *      *      *             *             *)    -
+bc/cctv/00/cctv_0000   2   23         bring    VB               (VP*       bring  01   2   Speaker#1       *      *      *             *           (V*)    -
+bc/cctv/00/cctv_0000   2   24            us   PRP             (NP*)))         -    -   -   Speaker#1       *      *      *             *        (ARG2*)    -
+bc/cctv/00/cctv_0000   2   25             ?     .                 *))         -    -   -   Speaker#1       *      *      *             *             *     -
+
+bc/cctv/00/cctv_0000   2    0           Over     IN  (TOP(S(PP*      -    -   -   Speaker#1        *      *    (ARGM-TMP*         *     -
+bc/cctv/00/cctv_0000   2    1            the     DT        (NP*      -    -   -   Speaker#1   (DATE*      *             *         *     -
+bc/cctv/00/cctv_0000   2    2           past     JJ           *      -    -   -   Speaker#1        *      *             *         *     -
+bc/cctv/00/cctv_0000   2    3            28      CD           *      -    -   -   Speaker#1        *      *             *         *     -
+bc/cctv/00/cctv_0000   2    4          years    NNS          *))     -    -   -   Speaker#1        *)     *             *)        *     -
+bc/cctv/00/cctv_0000   2    5              ,      ,           *      -    -   -   Speaker#1        *      *             *         *     -
+bc/cctv/00/cctv_0000   2    6            the     DT        (NP*      -    -   -   Speaker#1    (FAC*      *        (ARG1*         *   (41
+bc/cctv/00/cctv_0000   2    7          Ocean    NNP           *      -    -   -   Speaker#1        *      *             *         *     -
+bc/cctv/00/cctv_0000   2    8           Park    NNP           *)     -    -   -   Speaker#1        *)     *             *)        *    41)
+bc/cctv/00/cctv_0000   2    9            has    VBZ        (VP*    have  01   -   Speaker#1        *    (V*)            *         *     -
+bc/cctv/00/cctv_0000   2   10      basically     RB      (ADVP*)     -    -   -   Speaker#1        *      *    (ARGM-ADV*)        *     -
+bc/cctv/00/cctv_0000   2   11           been    VBN        (VP*      be  01   1   Speaker#1        *      *           (V*)        *     -
+bc/cctv/00/cctv_0000   2   12              a     DT     (NP(NP*      -    -   -   Speaker#1        *      *        (ARG2*         *     -
+bc/cctv/00/cctv_0000   2   13           must     MD  (NML(S(VP*      -    -   -   Speaker#1        *      *             *         *     -
+bc/cctv/00/cctv_0000   2   14             -    HYPH           *      -    -   -   Speaker#1        *      *             *         *     -
+bc/cctv/00/cctv_0000   2   15            see     VB     (VP*))))    see   -   -   Speaker#1        *      *             *         *     -
+bc/cctv/00/cctv_0000   2   16    destination     NN           *)     -    -   -   Speaker#1        *      *             *         *     -
+bc/cctv/00/cctv_0000   2   17            for     IN        (PP*      -    -   -   Speaker#1        *      *             *         *     -
+bc/cctv/00/cctv_0000   2   18       tourists    NNS     (NP(NP*)     -    -   -   Speaker#1        *      *             *    (ARG1*)    -
+bc/cctv/00/cctv_0000   2   19         coming    VBG        (VP*    come  01   1   Speaker#1        *      *             *       (V*)    -
+bc/cctv/00/cctv_0000   2   20             to     IN        (PP*      -    -   -   Speaker#1        *      *             *    (ARG4*     -
+bc/cctv/00/cctv_0000   2   21           Hong    NNP        (NP*      -    -   -   Speaker#1    (GPE*      *             *         *   (19
+bc/cctv/00/cctv_0000   2   22           Kong    NNP    *))))))))     -    -   -   Speaker#1        *)     *             *)        *)   19)
+bc/cctv/00/cctv_0000   2   23              .      .          *))     -    -   -   Speaker#1        *      *             *         *     -
+
+bc/cctv/00/cctv_0000   2    0           Watch     VB  (TOP(S(VP(VP*         watch  01   1   Speaker#1       *          (V*)           *           *   -
+bc/cctv/00/cctv_0000   2    1     spectacular     JJ        (NP(NP*            -    -   -   Speaker#1       *       (ARG1*            *           *   -
+bc/cctv/00/cctv_0000   2    2    performances    NNS              *)           -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2    3              by     IN           (PP*            -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2    4        dolphins    NNS        (NP(NP*)           -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2    5             and     CC              *            -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2    6             sea     NN           (NP*            -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2    7           lions    NNS           *))))           -    -   -   Speaker#1       *            *)           *           *   -
+bc/cctv/00/cctv_0000   2    8              at     IN           (PP*            -    -   -   Speaker#1       *   (ARGM-LOC*            *           *   -
+bc/cctv/00/cctv_0000   2    9             the     DT           (NP*            -    -   -   Speaker#1   (FAC*            *            *           *   -
+bc/cctv/00/cctv_0000   2   10           Ocean    NNP              *            -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2   11         Theater    NNP            *)))           -    -   -   Speaker#1       *)           *)           *           *   -
+bc/cctv/00/cctv_0000   2   12               ,      ,              *            -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2   13             and     CC              *            -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2   14      experience     VB           (VP*    experience  01   1   Speaker#1       *            *          (V*)          *   -
+bc/cctv/00/cctv_0000   2   15      passionate     JJ        (NP(NP*            -    -   -   Speaker#1       *            *       (ARG1*           *   -
+bc/cctv/00/cctv_0000   2   16       screaming     NN              *)       scream   -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2   17             and     CC              *            -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2   18    accelerating    VBG       (NP(NML*    accelerate  01   1   Speaker#1       *            *            *         (V*)  -
+bc/cctv/00/cctv_0000   2   19           heart     NN              *         heart   -   -   Speaker#1       *            *            *      (ARG1*)  -
+bc/cctv/00/cctv_0000   2   20              -    HYPH              *            -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2   21            beat     NN              *)         beat   -   -   Speaker#1       *            *            *    (C-ARG1*)  -
+bc/cctv/00/cctv_0000   2   22      adventures    NNS             *))    adventure   -   -   Speaker#1       *            *            *)          *   -
+bc/cctv/00/cctv_0000   2   23              on     IN           (PP*            -    -   -   Speaker#1       *            *   (ARGM-LOC*           *   -
+bc/cctv/00/cctv_0000   2   24       amusement     NN           (NP*            -    -   -   Speaker#1       *            *            *           *   -
+bc/cctv/00/cctv_0000   2   25           rides    NNS           *))))         ride   -   -   Speaker#1       *            *            *)          *   -
+bc/cctv/00/cctv_0000   2   26               .      .             *))           -    -   -   Speaker#1       *            *            *           *   -
+
+bc/cctv/00/cctv_0000   2    0             Or    CC        (TOP(S*       -    -   -   Speaker#1       *    (ARGM-DIS*)       *     -
+bc/cctv/00/cctv_0000   2    1           ride    VB           (VP*     ride  01   1   Speaker#1       *           (V*)       *     -
+bc/cctv/00/cctv_0000   2    2            the    DT           (NP*       -    -   -   Speaker#1       *        (ARG1*        *     -
+bc/cctv/00/cctv_0000   2    3          giant    JJ              *       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2    4         Ferris    NN              *       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2    5          wheel    NN              *)   wheel   -   -   Speaker#1       *             *)       *     -
+bc/cctv/00/cctv_0000   2    6             to    TO         (S(VP*       -    -   -   Speaker#1       *    (ARGM-PRP*        *     -
+bc/cctv/00/cctv_0000   2    7            get    VB           (VP*      get  01   1   Speaker#1       *             *      (V*)    -
+bc/cctv/00/cctv_0000   2    8              a    DT        (NP(NP*       -    -   -   Speaker#1       *             *   (ARG1*     -
+bc/cctv/00/cctv_0000   2    9           bird    NN       (NML(NP*       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   10             's   POS              *)      -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   11            eye    NN              *)     eye   -   1   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   12           view    NN              *)    view   -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   13           from    IN           (PP*       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   14           high    RB      (PP(ADVP*)      -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   15          above    IN              *       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   16             of    IN           (PP*       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   17            the    DT        (NP(NP*       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   18    magnificent    JJ              *       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   19       panorama    NN              *)      -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   20             of    IN           (PP*       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   21           Hong   NNP    (NP(NP(NML*       -    -   -   Speaker#1   (LOC*             *        *   (19
+bc/cctv/00/cctv_0000   2   22           Kong   NNP              *)      -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   23         Island   NNP              *)      -    -   -   Speaker#1       *)            *        *    19)
+bc/cctv/00/cctv_0000   2   24            and    CC              *       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   25            the    DT           (NP*       -    -   -   Speaker#1   (LOC*             *        *     -
+bc/cctv/00/cctv_0000   2   26          South   NNP          (NML*       -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   27          China   NNP              *)      -    -   -   Speaker#1       *             *        *     -
+bc/cctv/00/cctv_0000   2   28            Sea   NNP   *))))))))))))      -    -   -   Speaker#1       *)            *)       *)    -
+bc/cctv/00/cctv_0000   2   29              .     .             *))      -    -   -   Speaker#1       *             *        *     -
+
+bc/cctv/00/cctv_0000   2    0         These    DT  (TOP(S(NP(NP*       -    -   -   Speaker#1       *      (ARG1*      *       (ARG0*     -
+bc/cctv/00/cctv_0000   2    1         items   NNS              *)    item   -   -   Speaker#1       *           *)     *            *     -
+bc/cctv/00/cctv_0000   2    2             ,     ,              *       -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2    3         which   WDT    (SBAR(WHNP*)      -    -   -   Speaker#1       *    (R-ARG1*)     *            *     -
+bc/cctv/00/cctv_0000   2    4          were   VBD         (S(VP*       be  01   2   Speaker#1       *         (V*)     *            *     -
+bc/cctv/00/cctv_0000   2    5           the    DT        (NP(NP*       -    -   -   Speaker#1       *      (ARG2*      *            *     -
+bc/cctv/00/cctv_0000   2    6         pride    NN              *)   pride   -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2    7            of    IN           (PP*       -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2    8           the    DT           (NP*       -    -   -   Speaker#1   (LOC*           *      *            *   (41
+bc/cctv/00/cctv_0000   2    9         Ocean   NNP              *       -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2   10          Park   NNP        *)))))))      -    -   -   Speaker#1       *)          *)     *            *)   41)
+bc/cctv/00/cctv_0000   2   11             ,     ,              *       -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2   12          have   VBP           (VP*     have  01   -   Speaker#1       *           *    (V*)           *     -
+bc/cctv/00/cctv_0000   2   13          made   VBN           (VP*     make  02   3   Speaker#1       *           *      *          (V*)    -
+bc/cctv/00/cctv_0000   2   14          this    DT         (S(NP*       -    -   -   Speaker#1       *           *      *       (ARG1*   (41
+bc/cctv/00/cctv_0000   2   15         place    NN              *)   place   -   -   Speaker#1       *           *      *            *    41)
+bc/cctv/00/cctv_0000   2   16           the    DT        (NP(NP*       -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2   17          most   RBS         (ADJP*       -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2   18       popular    JJ              *)      -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2   19       tourist    NN              *       -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2   20    attraction    NN              *)      -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2   21            in    IN           (PP*       -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2   22          Hong   NNP           (NP*       -    -   -   Speaker#1   (GPE*           *      *            *   (19
+bc/cctv/00/cctv_0000   2   23          Kong   NNP           *))))      -    -   -   Speaker#1       *)          *      *            *)   19)
+bc/cctv/00/cctv_0000   2   24           for    IN           (PP*       -    -   -   Speaker#1       *           *      *   (ARGM-TMP*     -
+bc/cctv/00/cctv_0000   2   25          some    DT           (NP*       -    -   -   Speaker#1       *           *      *            *     -
+bc/cctv/00/cctv_0000   2   26          time    NN           *))))    time   -   -   Speaker#1       *           *      *            *)    -
+bc/cctv/00/cctv_0000   2   27             .     .             *))      -    -   -   Speaker#1       *           *      *            *     -
+
+bc/cctv/00/cctv_0000   2    0        However    RB   (TOP(S(ADVP*)         -    -   -   Speaker#1       *         *        *      *    (ARGM-DIS*)     -
+bc/cctv/00/cctv_0000   2    1              ,     ,              *          -    -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2    2          since    IN         (SBAR*          -    -   -   Speaker#1       *         *        *      *    (ARGM-TMP*      -
+bc/cctv/00/cctv_0000   2    3         Disney   NNP         (S(NP*)         -    -   -   Speaker#1    (ORG)   (ARG0*)       *      *             *    (20)
+bc/cctv/00/cctv_0000   2    4        entered   VBD           (VP*       enter  01   1   Speaker#1       *       (V*)       *      *             *      -
+bc/cctv/00/cctv_0000   2    5           Hong   NNP           (NP*          -    -   -   Speaker#1   (GPE*    (ARG1*        *      *             *    (19
+bc/cctv/00/cctv_0000   2    6           Kong   NNP           *))))         -    -   -   Speaker#1       *)        *)       *      *             *)    19)
+bc/cctv/00/cctv_0000   2    7              ,     ,              *          -    -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2    8            the    DT           (NP*          -    -   -   Speaker#1   (ORG*         *   (ARG0*      *        (ARG0*    (41
+bc/cctv/00/cctv_0000   2    9          Ocean   NNP              *          -    -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2   10           Park   NNP              *)         -    -   -   Speaker#1       *)        *        *)     *             *)    41)
+bc/cctv/00/cctv_0000   2   11              ,     ,              *          -    -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2   12        sharing   VBG         (S(VP*       share  01   -   Speaker#1       *         *      (V*)     *    (ARGM-PRD*      -
+bc/cctv/00/cctv_0000   2   13            the    DT        (NP(NP*          -    -   -   Speaker#1       *         *   (ARG1*      *             *      -
+bc/cctv/00/cctv_0000   2   14           same    JJ              *          -    -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2   15           city    NN              *)         -    -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2   16             as    IN           (PP*          -    -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2   17         Disney   NNP       (NP*)))))         -    -   -   Speaker#1    (ORG)        *        *)     *             *)   (20)
+bc/cctv/00/cctv_0000   2   18              ,     ,              *          -    -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2   19            has   VBZ           (VP*        have  01   -   Speaker#1       *         *        *    (V*)            *      -
+bc/cctv/00/cctv_0000   2   20           felt   VBD           (VP*        feel  01   1   Speaker#1       *         *        *      *           (V*)     -
+bc/cctv/00/cctv_0000   2   21            the    DT        (NP(NP*          -    -   -   Speaker#1       *         *        *      *        (ARG1*      -
+bc/cctv/00/cctv_0000   2   22       pressure    NN              *)   pressure   -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2   23             of    IN           (PP*          -    -   -   Speaker#1       *         *        *      *             *      -
+bc/cctv/00/cctv_0000   2   24    competition    NN       (NP*)))))         -    -   -   Speaker#1       *         *        *      *             *)     -
+bc/cctv/00/cctv_0000   2   25              .     .             *))         -    -   -   Speaker#1       *         *        *      *             *      -
+
+bc/cctv/00/cctv_0000   2    0            To    TO    (TOP(S(S(VP*         -    -   -   Speaker#1         *        *      *   (ARGM-PRP*         *            *      -
+bc/cctv/00/cctv_0000   2    1       improve    VB            (VP*    improve  01   1   Speaker#1         *      (V*)     *            *         *            *      -
+bc/cctv/00/cctv_0000   2    2           the    DT         (NP(NP*         -    -   -   Speaker#1         *   (ARG1*      *            *         *            *    (41
+bc/cctv/00/cctv_0000   2    3          park    NN               *       park   -   -   Speaker#1         *        *      *            *         *            *      -
+bc/cctv/00/cctv_0000   2    4            's   POS               *)        -    -   -   Speaker#1         *        *      *            *         *            *     41)
+bc/cctv/00/cctv_0000   2    5         brand    NN            *))))     brand   -   -   Speaker#1         *        *)     *            *)        *            *      -
+bc/cctv/00/cctv_0000   2    6             ,     ,               *         -    -   -   Speaker#1         *        *      *            *         *            *      -
+bc/cctv/00/cctv_0000   2    7          they   PRP            (NP*)        -    -   -   Speaker#1         *        *      *       (ARG0*)   (ARG0*)           *    (41)
+bc/cctv/00/cctv_0000   2    8           are   VBP            (VP*         be  03   -   Speaker#1         *        *    (V*)           *         *            *      -
+bc/cctv/00/cctv_0000   2    9      planning   VBG            (VP*       plan  01   1   Speaker#1         *        *      *          (V*)        *            *      -
+bc/cctv/00/cctv_0000   2   10            to    TO          (S(VP*         -    -   -   Speaker#1         *        *      *       (ARG1*         *            *      -
+bc/cctv/00/cctv_0000   2   11        invest    VB            (VP*     invest  01   1   Speaker#1         *        *      *            *       (V*)           *      -
+bc/cctv/00/cctv_0000   2   12          5.5     CD         (NP(QP*         -    -   -   Speaker#1   (MONEY*        *      *            *    (ARG1*            *      -
+bc/cctv/00/cctv_0000   2   13       billion    CD              *))        -    -   -   Speaker#1         *)       *      *            *         *)           *      -
+bc/cctv/00/cctv_0000   2   14            in    IN            (PP*         -    -   -   Speaker#1         *        *      *            *    (ARG2*            *      -
+bc/cctv/00/cctv_0000   2   15             a    DT         (NP(NP*         -    -   -   Speaker#1         *        *      *            *         *       (ARG1*      -
+bc/cctv/00/cctv_0000   2   16    renovation    NN               *         -    -   -   Speaker#1         *        *      *            *         *            *      -
+bc/cctv/00/cctv_0000   2   17       project    NN               *)   project   -   -   Speaker#1         *        *      *            *         *            *)     -
+bc/cctv/00/cctv_0000   2   18      starting   VBG            (VP*      start  01   1   Speaker#1         *        *      *            *         *          (V*)     -
+bc/cctv/00/cctv_0000   2   19            in    IN            (PP*         -    -   -   Speaker#1         *        *      *            *         *   (ARGM-TMP*      -
+bc/cctv/00/cctv_0000   2   20         2006     CD   (NP*))))))))))        -    -   -   Speaker#1     (DATE)       *      *            *)        *)           *)     -
+bc/cctv/00/cctv_0000   2   21             .     .              *))        -    -   -   Speaker#1         *        *      *            *         *            *      -
+
+bc/cctv/00/cctv_0000   2    0            It   PRP   (TOP(S(NP*)       -    -   -    Li_lingfeng  *        *            *      -
+bc/cctv/00/cctv_0000   2    1         seems   VBZ         (VP*      seem  01   1    Li_lingfeng  *      (V*)           *      -
+bc/cctv/00/cctv_0000   2    2          that    IN       (SBAR*        -    -   -    Li_lingfeng  *   (ARG1*            *      -
+bc/cctv/00/cctv_0000   2    3           for    IN       (S(PP*        -    -   -    Li_lingfeng  *        *   (ARGM-TMP*      -
+bc/cctv/00/cctv_0000   2    4           the    DT         (NP*        -    -   -    Li_lingfeng  *        *            *      -
+bc/cctv/00/cctv_0000   2    5        future    NN           *))       -    -   -    Li_lingfeng  *        *            *)     -
+bc/cctv/00/cctv_0000   2    6             ,     ,            *        -    -   -    Li_lingfeng  *        *            *      -
+bc/cctv/00/cctv_0000   2    7            we   PRP         (NP*)       -    -   -    Li_lingfeng  *        *       (ARG0*)   (41)
+bc/cctv/00/cctv_0000   2    8          have   VBP         (VP*      have  03   2    Li_lingfeng  *        *          (V*)     -
+bc/cctv/00/cctv_0000   2    9             a    DT      (NP(NP*        -    -   -    Li_lingfeng  *        *       (ARG1*     (1
+bc/cctv/00/cctv_0000   2   10        scheme    NN            *)   scheme   -   -    Li_lingfeng  *        *            *      -
+bc/cctv/00/cctv_0000   2   11             ,     ,            *        -    -   -    Li_lingfeng  *        *            *      -
+bc/cctv/00/cctv_0000   2   12             a    DT         (NP*        -    -   -    Li_lingfeng  *        *            *      -
+bc/cctv/00/cctv_0000   2   13         major    JJ            *        -    -   -    Li_lingfeng  *        *            *      -
+bc/cctv/00/cctv_0000   2   14    renovation    NN            *        -    -   -    Li_lingfeng  *        *            *      -
+bc/cctv/00/cctv_0000   2   15          plan    NN       *))))))     plan   -   -    Li_lingfeng  *        *)           *)     1)
+bc/cctv/00/cctv_0000   2   16             .     .           *))       -    -   -    Li_lingfeng  *        *            *      -
+
+bc/cctv/00/cctv_0000   2    0          That    RB  (TOP(FRAG(ADVP*         -    -   -    Li_lingfeng  *      *             *     -
+bc/cctv/00/cctv_0000   2    1            is    RB                *)        -    -   -    Li_lingfeng  *      *             *     -
+bc/cctv/00/cctv_0000   2    2             ,     ,                *         -    -   -    Li_lingfeng  *      *             *     -
+bc/cctv/00/cctv_0000   2    3           the    DT           (S(NP*         -    -   -    Li_lingfeng  *      *        (ARG1*   (41
+bc/cctv/00/cctv_0000   2    4        entire    JJ                *         -    -   -    Li_lingfeng  *      *             *     -
+bc/cctv/00/cctv_0000   2    5          park    NN                *)      park   -   -    Li_lingfeng  *      *             *)   41)
+bc/cctv/00/cctv_0000   2    6          will    MD             (VP*         -    -   -    Li_lingfeng  *      *    (ARGM-MOD*)    -
+bc/cctv/00/cctv_0000   2    7            be    VB             (VP*         be  03   -    Li_lingfeng  *    (V*)            *     -
+bc/cctv/00/cctv_0000   2    8       divided   VBN             (VP*     divide  02   -    Li_lingfeng  *      *           (V*)    -
+bc/cctv/00/cctv_0000   2    9          into    IN             (PP*         -    -   -    Li_lingfeng  *      *        (ARG2*     -
+bc/cctv/00/cctv_0000   2   10         seven    CD             (NP*         -    -   -    Li_lingfeng  *      *             *     -
+bc/cctv/00/cctv_0000   2   11      sections   NNS               *))   section   -   -    Li_lingfeng  *      *             *)    -
+bc/cctv/00/cctv_0000   2   12           for    IN             (PP*         -    -   -    Li_lingfeng  *      *    (ARGM-PRP*     -
+bc/cctv/00/cctv_0000   2   13    renovation    NN        (NP*))))))        -    -   -    Li_lingfeng  *      *             *)    -
+bc/cctv/00/cctv_0000   2   14             .     .               *))        -    -   -    Li_lingfeng  *      *             *     -
+
+bc/cctv/00/cctv_0000   2    0             Ah    UH   (TOP(S(INTJ*)   -    -   -    Li_lingfeng  *    (ARGM-DIS*)  -
+bc/cctv/00/cctv_0000   2    1              ,     ,              *    -    -   -    Li_lingfeng  *             *   -
+bc/cctv/00/cctv_0000   2    2     additional    JJ           (NP*    -    -   -    Li_lingfeng  *        (ARG1*   -
+bc/cctv/00/cctv_0000   2    3              ,     ,              *    -    -   -    Li_lingfeng  *             *   -
+bc/cctv/00/cctv_0000   2    4          newer   JJR              *    -    -   -    Li_lingfeng  *             *   -
+bc/cctv/00/cctv_0000   2    5              ,     ,              *    -    -   -    Li_lingfeng  *             *   -
+bc/cctv/00/cctv_0000   2    6             ah    UH              *    -    -   -    Li_lingfeng  *             *   -
+bc/cctv/00/cctv_0000   2    7              ,     ,              *    -    -   -    Li_lingfeng  *             *   -
+bc/cctv/00/cctv_0000   2    8    attractions   NNS              *)   -    -   -    Li_lingfeng  *             *)  -
+bc/cctv/00/cctv_0000   2    9           will    MD           (VP*    -    -   -    Li_lingfeng  *    (ARGM-MOD*)  -
+bc/cctv/00/cctv_0000   2   10             be    VB           (VP*    be  01   1    Li_lingfeng  *           (V*)  -
+bc/cctv/00/cctv_0000   2   11      available    JJ         (ADJP*    -    -   -    Li_lingfeng  *        (ARG2*   -
+bc/cctv/00/cctv_0000   2   12            for    IN           (PP*    -    -   -    Li_lingfeng  *             *   -
+bc/cctv/00/cctv_0000   2   13       tourists   NNS       (NP*)))))   -    -   -    Li_lingfeng  *             *)  -
+bc/cctv/00/cctv_0000   2   14              .     .             *))   -    -   -    Li_lingfeng  *             *   -
+
+bc/cctv/00/cctv_0000   2    0             It   PRP   (TOP(S(NP*)         -    -   -    Li_lingfeng       *        *      *             *     -
+bc/cctv/00/cctv_0000   2    1          seems   VBZ         (VP*        seem  01   1    Li_lingfeng       *      (V*)     *             *     -
+bc/cctv/00/cctv_0000   2    2           that    IN       (SBAR*          -    -   -    Li_lingfeng       *   (ARG1*      *             *     -
+bc/cctv/00/cctv_0000   2    3          those    DT    (S(NP(NP*          -    -   -    Li_lingfeng       *        *      *        (ARG1*   (47
+bc/cctv/00/cctv_0000   2    4    attractions   NNS            *)         -    -   -    Li_lingfeng       *        *      *             *     -
+bc/cctv/00/cctv_0000   2    5           like    IN         (PP*          -    -   -    Li_lingfeng       *        *      *             *     -
+bc/cctv/00/cctv_0000   2    6            the    DT      (NP(NP*          -    -   -    Li_lingfeng   (FAC*        *      *             *     -
+bc/cctv/00/cctv_0000   2    7          North   NNP            *          -    -   -    Li_lingfeng       *        *      *             *     -
+bc/cctv/00/cctv_0000   2    8           Pole   NNP            *)         -    -   -    Li_lingfeng       *)       *      *             *     -
+bc/cctv/00/cctv_0000   2    9            and    CC            *          -    -   -    Li_lingfeng       *        *      *             *     -
+bc/cctv/00/cctv_0000   2   10            the    DT         (NP*          -    -   -    Li_lingfeng   (FAC*        *      *             *     -
+bc/cctv/00/cctv_0000   2   11         Marine   NNP        (NML*          -    -   -    Li_lingfeng       *        *      *             *     -
+bc/cctv/00/cctv_0000   2   12           Life   NNP            *)         -    -   -    Li_lingfeng       *        *      *             *     -
+bc/cctv/00/cctv_0000   2   13         Center   NNP         *))))         -    -   -    Li_lingfeng       *)       *      *             *)   47)
+bc/cctv/00/cctv_0000   2   14           will    MD         (VP*          -    -   -    Li_lingfeng       *        *      *    (ARGM-MOD*)    -
+bc/cctv/00/cctv_0000   2   15           also    RB       (ADVP*)         -    -   -    Li_lingfeng       *        *      *    (ARGM-ADV*)    -
+bc/cctv/00/cctv_0000   2   16             be    VB         (VP*          be  03   -    Li_lingfeng       *        *    (V*)            *     -
+bc/cctv/00/cctv_0000   2   17      renovated   VBN         (VP*    renovate  01   1    Li_lingfeng       *        *      *           (V*)    -
+bc/cctv/00/cctv_0000   2   18          after    IN         (PP*          -    -   -    Li_lingfeng       *        *      *    (ARGM-TMP*     -
+bc/cctv/00/cctv_0000   2   19        several    JJ         (NP*          -    -   -    Li_lingfeng  (DATE*        *      *             *     -
+bc/cctv/00/cctv_0000   2   20          years   NNS     *))))))))         -    -   -    Li_lingfeng       *)       *)     *             *)    -
+bc/cctv/00/cctv_0000   2   21              .     .           *))         -    -   -    Li_lingfeng       *        *      *             *     -
+
+bc/cctv/00/cctv_0000   2    0          Are   VBP          (TOP(SQ*    be  03   1   Speaker#3   *    (V*)     *         *             *      -
+bc/cctv/00/cctv_0000   2    1         they   PRP              (NP*)   -    -   -   Speaker#3   *      *      *    (ARG1*)            *    (47)
+bc/cctv/00/cctv_0000   2    2        going   VBG              (VP*    go  04   -   Speaker#3   *      *    (V*)        *             *      -
+bc/cctv/00/cctv_0000   2    3           to    TO            (S(VP*    -    -   -   Speaker#3   *      *      *         *             *      -
+bc/cctv/00/cctv_0000   2    4           be    VB              (VP*    be  01   1   Speaker#3   *      *      *       (V*)            *      -
+bc/cctv/00/cctv_0000   2    5    different    JJ            (ADJP*    -    -   -   Speaker#3   *      *      *    (ARG2*             *      -
+bc/cctv/00/cctv_0000   2    6         from    IN              (PP*    -    -   -   Speaker#3   *      *      *         *             *      -
+bc/cctv/00/cctv_0000   2    7         what    WP       (SBAR(WHNP*)   -    -   -   Speaker#3   *      *      *         *        (ARG2*)     -
+bc/cctv/00/cctv_0000   2    8         they   PRP            (S(NP*)   -    -   -   Speaker#3   *      *      *         *        (ARG1*)   (47)
+bc/cctv/00/cctv_0000   2    9          are   VBP              (VP*    be  01   1   Speaker#3   *      *      *         *           (V*)     -
+bc/cctv/00/cctv_0000   2   10          now    RB   (ADVP*))))))))))   -    -   -   Speaker#3   *      *      *         *)   (ARGM-TMP*)     -
+bc/cctv/00/cctv_0000   2   11            ?     .                *))   -    -   -   Speaker#3   *      *      *         *             *      -
+
+bc/cctv/00/cctv_0000   2   0     They   PRP   (TOP(S(NP*)   -    -   -   Speaker#3        *        (ARG1*)   (47)
+bc/cctv/00/cctv_0000   2   1     will    MD         (VP*    -    -   -   Speaker#3        *    (ARGM-MOD*)     -
+bc/cctv/00/cctv_0000   2   2       be    VB         (VP*    be  01   1   Speaker#3        *           (V*)     -
+bc/cctv/00/cctv_0000   2   3        ,     ,            *    -    -   -   Speaker#3        *             *      -
+bc/cctv/00/cctv_0000   2   4       in    IN         (PP*    -    -   -   Speaker#3        *    (ARGM-TMP*      -
+bc/cctv/00/cctv_0000   2   5      ten    CD         (NP*    -    -   -   Speaker#3   (DATE*             *      -
+bc/cctv/00/cctv_0000   2   6    years   NNS         *))))   -    -   -   Speaker#3        *)            *)     -
+bc/cctv/00/cctv_0000   2   7        .     .           *))   -    -   -   Speaker#3        *             *      -
+
+bc/cctv/00/cctv_0000   2    0           Ah    UH      (TOP(S(INTJ*)   -    -   -    Li_lingfeng  *    (ARGM-DIS*)            *   -
+bc/cctv/00/cctv_0000   2    1            ,     ,                 *    -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2    2        there    EX              (NP*)   -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2    3         will    MD              (VP*    -    -   -    Li_lingfeng  *    (ARGM-MOD*)            *   -
+bc/cctv/00/cctv_0000   2    4           be    VB              (VP*    be  02   3    Li_lingfeng  *           (V*)            *   -
+bc/cctv/00/cctv_0000   2    5         more   JJR           (NP(NP*    -    -   -    Li_lingfeng  *        (ARG1*             *   -
+bc/cctv/00/cctv_0000   2    6      animals   NNS                 *)   -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2    7            ,     ,                 *    -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2    8          and    CC                 *    -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2    9         more   JJR           (NP(NP*    -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2   10       animal    NN                 *    -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2   11      species   NNS                 *)   -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2   12            ,     ,                 *    -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2   13    different    JJ            (ADJP*    -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2   14         from    IN              (PP*    -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2   15         what    WP       (SBAR(WHNP*)   -    -   -    Li_lingfeng  *             *        (ARG1*)  -
+bc/cctv/00/cctv_0000   2   16        there    EX            (S(NP*)   -    -   -    Li_lingfeng  *             *             *   -
+bc/cctv/00/cctv_0000   2   17           is   VBZ              (VP*    be  02   1    Li_lingfeng  *             *           (V*)  -
+bc/cctv/00/cctv_0000   2   18          now    RB   (ADVP*))))))))))   -    -   -    Li_lingfeng  *             *)   (ARGM-TMP*)  -
+bc/cctv/00/cctv_0000   2   19            .     .                *))   -    -   -    Li_lingfeng  *             *             *   -
+
+bc/cctv/00/cctv_0000   2   0        It   PRP   (TOP(S(NP*)      -    -   -    Li_lingfeng  *    (ARG0*)            *      -
+bc/cctv/00/cctv_0000   2   1     looks   VBZ         (VP*     look  02   2    Li_lingfeng  *       (V*)            *      -
+bc/cctv/00/cctv_0000   2   2      like    IN       (SBAR*       -    -   -    Li_lingfeng  *    (ARG1*             *      -
+bc/cctv/00/cctv_0000   2   3        we   PRP       (S(NP*)      -    -   -    Li_lingfeng  *         *        (ARG0*)   (41)
+bc/cctv/00/cctv_0000   2   4      will    MD         (VP*       -    -   -    Li_lingfeng  *         *    (ARGM-MOD*)     -
+bc/cctv/00/cctv_0000   2   5      also    RB       (ADVP*)      -    -   -    Li_lingfeng  *         *    (ARGM-ADV*)     -
+bc/cctv/00/cctv_0000   2   6     bring    VB         (VP*    bring  01   1    Li_lingfeng  *         *           (V*)     -
+bc/cctv/00/cctv_0000   2   7        in    RB       (ADVP*)      -    -   -    Li_lingfeng  *         *    (ARGM-DIR*)     -
+bc/cctv/00/cctv_0000   2   8    whales   NNS    (NP*))))))   whale   -   -    Li_lingfeng  *         *)       (ARG1*)     -
+bc/cctv/00/cctv_0000   2   9         .     .           *))      -    -   -    Li_lingfeng  *         *             *      -
+
+bc/cctv/00/cctv_0000   2    0            Er    UH   (TOP(S(INTJ*)          -    -   -    Li_lingfeng  *    (ARGM-DIS*)     *         *      -
+bc/cctv/00/cctv_0000   2    1             ,     ,              *           -    -   -    Li_lingfeng  *             *      *         *      -
+bc/cctv/00/cctv_0000   2    2            we   PRP           (NP*)          -    -   -    Li_lingfeng  *        (ARG0*)     *         *    (41)
+bc/cctv/00/cctv_0000   2    3          will    MD           (VP*           -    -   -    Li_lingfeng  *    (ARGM-MOD*)     *         *      -
+bc/cctv/00/cctv_0000   2    4     implement    VB           (VP*    implement  01   1    Li_lingfeng  *           (V*)     *         *      -
+bc/cctv/00/cctv_0000   2    5          this    DT           (NP*           -    -   -    Li_lingfeng  *        (ARG1*      *         *     (1
+bc/cctv/00/cctv_0000   2    6          plan    NN              *)        plan   -   -    Li_lingfeng  *             *)     *         *      1)
+bc/cctv/00/cctv_0000   2    7            as    RB    (ADVP(ADVP*           -    -   -    Li_lingfeng  *    (ARGM-TMP*      *         *      -
+bc/cctv/00/cctv_0000   2    8          soon    RB              *)          -    -   -    Li_lingfeng  *             *      *         *      -
+bc/cctv/00/cctv_0000   2    9            as    IN         (SBAR*           -    -   -    Li_lingfeng  *             *      *         *      -
+bc/cctv/00/cctv_0000   2   10            it   PRP         (S(NP*)          -    -   -    Li_lingfeng  *             *      *    (ARG1*)    (1)
+bc/cctv/00/cctv_0000   2   11            is   VBZ           (VP*           be  03   -    Li_lingfeng  *             *    (V*)        *      -
+bc/cctv/00/cctv_0000   2   12      approved   VBN           (VP*      approve  01   1    Li_lingfeng  *             *      *       (V*)     -
+bc/cctv/00/cctv_0000   2   13            by    IN           (PP*           -    -   -    Li_lingfeng  *             *      *    (ARG0*      -
+bc/cctv/00/cctv_0000   2   14           the    DT           (NP*           -    -   -    Li_lingfeng  *             *      *         *      -
+bc/cctv/00/cctv_0000   2   15    government    NN      *)))))))))          -    -   -    Li_lingfeng  *             *)     *         *)     -
+bc/cctv/00/cctv_0000   2   16             .     .             *))          -    -   -    Li_lingfeng  *             *      *         *      -
+
+bc/cctv/00/cctv_0000   2   0    Groundbreaking    NN   (TOP(S(NP*)       -    -   -    Li_lingfeng       *      *        *       (ARG0*)  -
+bc/cctv/00/cctv_0000   2   1                is   VBZ         (VP*        be  03   -    Li_lingfeng       *    (V*)       *            *   -
+bc/cctv/00/cctv_0000   2   2          expected   VBN         (VP*    expect  01   1    Li_lingfeng       *      *      (V*)           *   -
+bc/cctv/00/cctv_0000   2   3                to    TO       (S(VP*        -    -   -    Li_lingfeng       *      *   (ARG1*            *   -
+bc/cctv/00/cctv_0000   2   4             start    VB         (VP*     start  01   1    Li_lingfeng       *      *        *          (V*)  -
+bc/cctv/00/cctv_0000   2   5              next    JJ         (NP*        -    -   -    Li_lingfeng  (DATE*      *        *   (ARGM-TMP*   -
+bc/cctv/00/cctv_0000   2   6              year    NN       *))))))       -    -   -    Li_lingfeng       *)     *        *)           *)  -
+bc/cctv/00/cctv_0000   2   7                 .     .           *))       -    -   -    Li_lingfeng       *      *        *            *   -
+
+bc/cctv/00/cctv_0000   2   0    Yes   UH  (TOP(INTJ*   -   -   -   Speaker#3   *   -
+bc/cctv/00/cctv_0000   2   1      .    .          *))  -   -   -   Speaker#3   *   -
+
+#end document
+#begin document (bc/cctv/00/cctv_0000); part 003
+bc/cctv/00/cctv_0000   3    0           The     DT  (TOP(S(NP(NP*    -    -   -   Speaker#1            *   (ARG1*    -
+bc/cctv/00/cctv_0000   3    1          area     NN              *)   -    -   -   Speaker#1            *        *    -
+bc/cctv/00/cctv_0000   3    2            of     IN           (PP*    -    -   -   Speaker#1            *        *    -
+bc/cctv/00/cctv_0000   3    3          Hong    NNP           (NP*    -    -   -   Speaker#1        (GPE*        *   (6
+bc/cctv/00/cctv_0000   3    4          Kong    NNP            *)))   -    -   -   Speaker#1            *)       *)   6)
+bc/cctv/00/cctv_0000   3    5            is    VBZ           (VP*    be  01   1   Speaker#1            *      (V*)   -
+bc/cctv/00/cctv_0000   3    6          only     RB        (NP(QP*    -    -   -   Speaker#1            *   (ARG2*    -
+bc/cctv/00/cctv_0000   3    7           one     CD              *    -    -   -   Speaker#1   (QUANTITY*        *    -
+bc/cctv/00/cctv_0000   3    8      thousand     CD              *    -    -   -   Speaker#1            *        *    -
+bc/cctv/00/cctv_0000   3    9            -    HYPH              *    -    -   -   Speaker#1            *        *    -
+bc/cctv/00/cctv_0000   3   10          plus     CC              *)   -    -   -   Speaker#1            *        *    -
+bc/cctv/00/cctv_0000   3   11        square     JJ              *    -    -   -   Speaker#1            *        *    -
+bc/cctv/00/cctv_0000   3   12    kilometers    NNS             *))   -    -   -   Speaker#1            *)       *)   -
+bc/cctv/00/cctv_0000   3   13             .      .             *))   -    -   -   Speaker#1            *        *    -
+
+bc/cctv/00/cctv_0000   3   0           The    DT  (TOP(S(NP*    -    -   -   Speaker#1   *    (ARG1*   -
+bc/cctv/00/cctv_0000   3   1    population    NN           *)   -    -   -   Speaker#1   *         *)  -
+bc/cctv/00/cctv_0000   3   2            is   VBZ        (VP*    be  01   1   Speaker#1   *       (V*)  -
+bc/cctv/00/cctv_0000   3   3         dense    JJ     (ADJP*))   -    -   -   Speaker#1   *    (ARG2*)  -
+bc/cctv/00/cctv_0000   3   4             .     .          *))   -    -   -   Speaker#1   *         *   -
+
+bc/cctv/00/cctv_0000   3   0       Natural    JJ  (TOP(S(NP*    -    -   -   Speaker#1   *   (ARG1*   -
+bc/cctv/00/cctv_0000   3   1     resources   NNS           *)   -    -   -   Speaker#1   *        *)  -
+bc/cctv/00/cctv_0000   3   2           are   VBP        (VP*    be  01   1   Speaker#1   *      (V*)  -
+bc/cctv/00/cctv_0000   3   3    relatively    RB      (ADJP*    -    -   -   Speaker#1   *   (ARG2*   -
+bc/cctv/00/cctv_0000   3   4        scarce    JJ          *))   -    -   -   Speaker#1   *        *)  -
+bc/cctv/00/cctv_0000   3   5             .     .          *))   -    -   -   Speaker#1   *        *   -
+
+bc/cctv/00/cctv_0000   3    0       However    RB   (TOP(S(ADVP*)        -    -   -   Speaker#1       *    (ARGM-DIS*)     *         *        *      -
+bc/cctv/00/cctv_0000   3    1             ,     ,              *         -    -   -   Speaker#1       *             *      *         *        *      -
+bc/cctv/00/cctv_0000   3    2           the    DT           (NP*         -    -   -   Speaker#1       *        (ARG0*      *         *   (ARG0*    (44
+bc/cctv/00/cctv_0000   3    3        clever    JJ              *         -    -   -   Speaker#1       *             *      *         *        *      -
+bc/cctv/00/cctv_0000   3    4          Hong   NNP          (NML*         -    -   -   Speaker#1   (GPE*             *      *         *        *     (6
+bc/cctv/00/cctv_0000   3    5          Kong   NNP              *)        -    -   -   Speaker#1       *)            *      *         *        *      6)
+bc/cctv/00/cctv_0000   3    6        people   NNS              *)    people   -   -   Speaker#1       *             *)     *         *        *)    44)
+bc/cctv/00/cctv_0000   3    7          will    MD           (VP*         -    -   -   Speaker#1       *    (ARGM-MOD*)     *         *        *      -
+bc/cctv/00/cctv_0000   3    8       utilize    VB           (VP*    utilize  01   1   Speaker#1       *           (V*)     *         *        *      -
+bc/cctv/00/cctv_0000   3    9           all    DT        (NP(NP*         -    -   -   Speaker#1       *        (ARG1*      *    (ARG1*        *    (11
+bc/cctv/00/cctv_0000   3   10     resources   NNS              *)        -    -   -   Speaker#1       *             *      *         *)       *      -
+bc/cctv/00/cctv_0000   3   11          they   PRP    (SBAR(S(NP*)        -    -   -   Speaker#1       *             *      *    (ARG0*)       *    (44)
+bc/cctv/00/cctv_0000   3   12          have   VBP           (VP*       have  01   -   Speaker#1       *             *    (V*)        *        *      -
+bc/cctv/00/cctv_0000   3   13       created   VBN       (VP*)))))    create  01   1   Speaker#1       *             *)     *       (V*)       *     11)
+bc/cctv/00/cctv_0000   3   14           for    IN           (PP*         -    -   -   Speaker#1       *    (ARGM-PRP*      *         *        *      -
+bc/cctv/00/cctv_0000   3   15    developing   VBG         (S(VP*    develop  02   -   Speaker#1       *             *      *         *      (V*)     -
+bc/cctv/00/cctv_0000   3   16           the    DT           (NP*         -    -   -   Speaker#1       *             *      *         *   (ARG1*      -
+bc/cctv/00/cctv_0000   3   17          Hong   NNP          (NML*         -    -   -   Speaker#1   (GPE*             *      *         *        *     (6
+bc/cctv/00/cctv_0000   3   18          Kong   NNP              *)        -    -   -   Speaker#1       *)            *      *         *        *      6)
+bc/cctv/00/cctv_0000   3   19       tourism    NN              *         -    -   -   Speaker#1       *             *      *         *        *      -
+bc/cctv/00/cctv_0000   3   20      industry    NN         *))))))        -    -   -   Speaker#1       *             *)     *         *        *)     -
+bc/cctv/00/cctv_0000   3   21             .     .             *))        -    -   -   Speaker#1       *             *      *         *        *      -
+
+bc/cctv/00/cctv_0000   3   0     Among     IN  (TOP(SINV(PP*    -    -   -   Speaker#1       *   (ARG2*      -
+bc/cctv/00/cctv_0000   3   1     these     DT          (NP*))   -    -   -   Speaker#1       *        *)   (11)
+bc/cctv/00/cctv_0000   3   2        is    VBZ           (VP*)   be  01   1   Speaker#1       *      (V*)     -
+bc/cctv/00/cctv_0000   3   3       the     DT        (NP(NP*    -    -   -   Speaker#1   (FAC*   (ARG1*     (7
+bc/cctv/00/cctv_0000   3   4    Avenue    NNP              *)   -    -   -   Speaker#1       *        *      -
+bc/cctv/00/cctv_0000   3   5        of     IN           (PP*    -    -   -   Speaker#1       *        *      -
+bc/cctv/00/cctv_0000   3   6     Stars   NNPS         (NP*)))   -    -   -   Speaker#1       *)       *)     7)
+bc/cctv/00/cctv_0000   3   7         .      .             *))   -    -   -   Speaker#1       *        *      -
+
+bc/cctv/00/cctv_0000   3   0     Entering   VBG  (TOP(S(VP*    enter  01   1   Speaker#1       *      (V*)   -
+bc/cctv/00/cctv_0000   3   1    Hollywood   NNP     (NP(NP*)      -    -   -   Speaker#1    (GPE)  (ARG1*   (6
+bc/cctv/00/cctv_0000   3   2           of    IN        (PP*       -    -   -   Speaker#1       *        *    -
+bc/cctv/00/cctv_0000   3   3          the    DT        (NP*       -    -   -   Speaker#1       *        *    -
+bc/cctv/00/cctv_0000   3   4         East   NNP        *))))      -    -   -   Speaker#1    (LOC)       *)   6)
+bc/cctv/00/cctv_0000   3   5            ,     ,          *))      -    -   -   Speaker#1       *        *    -
+
+bc/cctv/00/cctv_0000   3    0     here     RB   (TOP(S(ADVP*)     -    -   -   Speaker#1   *    (ARGM-LOC*)  -
+bc/cctv/00/cctv_0000   3    1        ,      ,              *      -    -   -   Speaker#1   *             *   -
+bc/cctv/00/cctv_0000   3    2      you    PRP           (NP*)     -    -   -   Speaker#1   *        (ARG1*)  -
+bc/cctv/00/cctv_0000   3    3      can     MD           (VP*      -    -   -   Speaker#1   *    (ARGM-MOD*)  -
+bc/cctv/00/cctv_0000   3    4     come     VB           (VP*    come  01   1   Speaker#1   *           (V*)  -
+bc/cctv/00/cctv_0000   3    5       up     RP         (ADVP*      -    -   -   Speaker#1   *        (ARG4*   -
+bc/cctv/00/cctv_0000   3    6    close     RB              *)     -    -   -   Speaker#1   *             *)  -
+bc/cctv/00/cctv_0000   3    7     with     IN           (PP*      -    -   -   Speaker#1   *    (ARGM-MNR*   -
+bc/cctv/00/cctv_0000   3    8      the     DT           (NP*      -    -   -   Speaker#1   *             *   -
+bc/cctv/00/cctv_0000   3    9    stars    NNS             *))   star   -   -   Speaker#1   *             *)  -
+bc/cctv/00/cctv_0000   3   10       in     IN           (PP*      -    -   -   Speaker#1   *    (ARGM-LOC*   -
+bc/cctv/00/cctv_0000   3   11     your   PRP$           (NP*      -    -   -   Speaker#1   *             *   -
+bc/cctv/00/cctv_0000   3   12     mind     NN           *))))   mind   -   -   Speaker#1   *             *)  -
+bc/cctv/00/cctv_0000   3   13        .      .             *))     -    -   -   Speaker#1   *             *   -
+
+bc/cctv/00/cctv_0000   3   0    He    PRP   (TOP(S(NP*)   -    -   -   Speaker#4   *    (ARG1*)  -
+bc/cctv/00/cctv_0000   3   1    is    VBZ         (VP*    be  01   2   Speaker#4   *       (V*)  -
+bc/cctv/00/cctv_0000   3   2    my   PRP$        (NP*))   -    -   -   Speaker#4   *    (ARG2*)  -
+bc/cctv/00/cctv_0000   3   3     .      .           *))   -    -   -   Speaker#4   *         *   -
+
+bc/cctv/00/cctv_0000   3   0        She    PRP   (TOP(S(NP*)   -    -   -   Speaker#4   *        (ARG1*)  -
+bc/cctv/00/cctv_0000   3   1         is    VBZ         (VP*    be  01   2   Speaker#4   *           (V*)  -
+bc/cctv/00/cctv_0000   3   2         my   PRP$         (NP*    -    -   -   Speaker#4   *        (ARG2*   -
+bc/cctv/00/cctv_0000   3   3    Goddess    NNP            *)   -    -   -   Speaker#4   *             *)  -
+bc/cctv/00/cctv_0000   3   4          ,      ,            *    -    -   -   Speaker#4   *             *   -
+bc/cctv/00/cctv_0000   3   5         ah     UH      (INTJ*))   -    -   -   Speaker#4   *    (ARGM-DIS*)  -
+bc/cctv/00/cctv_0000   3   6          .      .           *))   -    -   -   Speaker#4   *             *   -
+
+bc/cctv/00/cctv_0000   3   0    Please    UH   (TOP(S(INTJ*)     -    -   -   Speaker#1       *    (ARGM-DIS*)  -
+bc/cctv/00/cctv_0000   3   1      stay    VB           (VP*    stay  01   1   Speaker#1       *           (V*)  -
+bc/cctv/00/cctv_0000   3   2      with    IN           (PP*      -    -   -   Speaker#1       *        (ARG3*   -
+bc/cctv/00/cctv_0000   3   3        us   PRP          (NP*))     -    -   -   Speaker#1       *             *)  -
+bc/cctv/00/cctv_0000   3   4        on    IN           (PP*      -    -   -   Speaker#1       *    (ARGM-LOC*   -
+bc/cctv/00/cctv_0000   3   5       New   NNP       (NP(NML*      -    -   -   Speaker#1   (ORG*             *   -
+bc/cctv/00/cctv_0000   3   6     World   NNP              *)     -    -   -   Speaker#1       *             *   -
+bc/cctv/00/cctv_0000   3   7    Travel   NNP            *)))     -    -   -   Speaker#1       *)            *)  -
+bc/cctv/00/cctv_0000   3   8         .     .             *))     -    -   -   Speaker#1       *             *   -
+
+bc/cctv/00/cctv_0000   3    0         Hong   NNP  (TOP(S(NP*       -    -   -   Speaker#1   (GPE*      *        (ARG0*   (6
+bc/cctv/00/cctv_0000   3    1         Kong   NNP           *)      -    -   -   Speaker#1       *)     *             *)   6)
+bc/cctv/00/cctv_0000   3    2          has   VBZ        (VP*     have  01   -   Speaker#1       *    (V*)            *    -
+bc/cctv/00/cctv_0000   3    3       always    RB      (ADVP*)      -    -   -   Speaker#1       *      *    (ARGM-TMP*)   -
+bc/cctv/00/cctv_0000   3    4         worn   VBN        (VP*     wear  01   1   Speaker#1       *      *           (V*)   -
+bc/cctv/00/cctv_0000   3    5          the    DT     (NP(NP*       -    -   -   Speaker#1       *      *        (ARG1*    -
+bc/cctv/00/cctv_0000   3    6        crown    NN           *)   crown   -   -   Speaker#1       *      *             *    -
+bc/cctv/00/cctv_0000   3    7           of    IN        (PP*       -    -   -   Speaker#1       *      *             *    -
+bc/cctv/00/cctv_0000   3    8    Hollywood   NNP        (NP*       -    -   -   Speaker#1    (GPE)     *             *    -
+bc/cctv/00/cctv_0000   3    9           of    IN        (PP*       -    -   -   Speaker#1       *      *             *    -
+bc/cctv/00/cctv_0000   3   10          the    DT        (NP*       -    -   -   Speaker#1       *      *             *    -
+bc/cctv/00/cctv_0000   3   11         East   NNP     *)))))))      -    -   -   Speaker#1    (LOC)     *             *)   -
+bc/cctv/00/cctv_0000   3   12            .     .          *))      -    -   -   Speaker#1       *      *             *    -
+
+bc/cctv/00/cctv_0000   3    0               Over    IN  (TOP(S(PP*         -    -   -   Speaker#1        *      *   (ARGM-TMP*        -
+bc/cctv/00/cctv_0000   3    1                the    DT     (NP(NP*         -    -   -   Speaker#1   (DATE*      *            *        -
+bc/cctv/00/cctv_0000   3    2               past    JJ           *         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3    3               100     CD           *         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3    4              years   NNS           *)        -    -   -   Speaker#1        *)     *            *        -
+bc/cctv/00/cctv_0000   3    5                 of    IN        (PP*         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3    6               film    NN        (NP*       film   -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3    7            history    NN        *))))        -    -   -   Speaker#1        *      *            *)       -
+bc/cctv/00/cctv_0000   3    8                  ,     ,           *         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3    9               Hong   NNP    (NP(NML*         -    -   -   Speaker#1    (GPE*      *       (ARG0*   (6|(46
+bc/cctv/00/cctv_0000   3   10               Kong   NNP           *)        -    -   -   Speaker#1        *)     *            *        6)
+bc/cctv/00/cctv_0000   3   11             cinema   NNP           *)        -    -   -   Speaker#1        *      *            *)      46)
+bc/cctv/00/cctv_0000   3   12                has   VBZ        (VP*       have  01   -   Speaker#1        *    (V*)           *        -
+bc/cctv/00/cctv_0000   3   13           nurtured   VBN        (VP*    nurture  01   1   Speaker#1        *      *          (V*)       -
+bc/cctv/00/cctv_0000   3   14               many    JJ        (NP*         -    -   -   Speaker#1        *      *       (ARG1*        -
+bc/cctv/00/cctv_0000   3   15    internationally    RB      (ADJP*         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3   16           renowned    JJ           *)        -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3   17          directors   NNS           *         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3   18                  ,     ,           *         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3   19             actors   NNS           *         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3   20                  ,     ,           *         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3   21                and    CC           *         -    -   -   Speaker#1        *      *            *        -
+bc/cctv/00/cctv_0000   3   22      screenwriters   NNS         *)))        -    -   -   Speaker#1        *      *            *)       -
+bc/cctv/00/cctv_0000   3   23                  .     .          *))        -    -   -   Speaker#1        *      *            *        -
+
+bc/cctv/00/cctv_0000   3    0         They   PRP   (TOP(S(NP*)         -    -   -   Speaker#1       *      *    (ARG0*)   (46)
+bc/cctv/00/cctv_0000   3    1         have   VBP         (VP*        have  01   -   Speaker#1       *    (V*)        *      -
+bc/cctv/00/cctv_0000   3    2    shortened   VBN         (VP*     shorten  01   2   Speaker#1       *      *       (V*)     -
+bc/cctv/00/cctv_0000   3    3          the    DT      (NP(NP*          -    -   -   Speaker#1       *      *    (ARG1*      -
+bc/cctv/00/cctv_0000   3    4     distance    NN            *)   distance   -   -   Speaker#1       *      *         *      -
+bc/cctv/00/cctv_0000   3    5      between    IN         (PP*          -    -   -   Speaker#1       *      *         *      -
+bc/cctv/00/cctv_0000   3    6         Hong   NNP      (NP(NP*          -    -   -   Speaker#1   (GPE*      *         *     (6
+bc/cctv/00/cctv_0000   3    7         Kong   NNP            *)         -    -   -   Speaker#1       *)     *         *      6)
+bc/cctv/00/cctv_0000   3    8          and    CC            *          -    -   -   Speaker#1       *      *         *      -
+bc/cctv/00/cctv_0000   3    9          the    DT         (NP*          -    -   -   Speaker#1       *      *         *      -
+bc/cctv/00/cctv_0000   3   10        world    NN       *))))))         -    -   -   Speaker#1       *      *         *)     -
+bc/cctv/00/cctv_0000   3   11            .     .           *))         -    -   -   Speaker#1       *      *         *      -
+
+bc/cctv/00/cctv_0000   3    0               Hong   NNP  (TOP(S(NP(NML*        -    -   -   Speaker#1   (GPE*      *               (ARG1*        *      *           *   (6
+bc/cctv/00/cctv_0000   3    1               Kong   NNP               *)       -    -   -   Speaker#1       *)     *                    *        *      *           *    6)
+bc/cctv/00/cctv_0000   3    2             movies   NNS               *)       -    -   -   Speaker#1       *      *                    *)       *      *           *    -
+bc/cctv/00/cctv_0000   3    3               have   VBP            (VP*      have  01   -   Speaker#1       *    (V*)                   *        *      *           *    -
+bc/cctv/00/cctv_0000   3    4               even    RB          (ADVP*)       -    -   -   Speaker#1       *      *           (ARGM-ADV*)       *      *           *    -
+bc/cctv/00/cctv_0000   3    5             become   VBN            (VP*    become  01   1   Speaker#1       *      *                  (V*)       *      *           *    -
+bc/cctv/00/cctv_0000   3    6                  a    DT         (NP(NP*        -    -   -   Speaker#1       *      *               (ARG2*        *      *      (ARG0*    -
+bc/cctv/00/cctv_0000   3    7             window    NN               *)   window   -   -   Speaker#1       *      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3    8                for    IN          (SBAR*        -    -   -   Speaker#1       *      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3    9                the    DT          (S(NP*        -    -   -   Speaker#1       *      *                    *   (ARG0*      *           *    -
+bc/cctv/00/cctv_0000   3   10              world    NN               *)       -    -   -   Speaker#1       *      *                    *        *)     *           *    -
+bc/cctv/00/cctv_0000   3   11                 to    TO            (VP*        -    -   -   Speaker#1       *      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3   12                see    VB            (VP*       see  01   3   Speaker#1       *      *                    *      (V*)     *           *    -
+bc/cctv/00/cctv_0000   3   13               Hong   NNP            (NP*        -    -   -   Speaker#1   (GPE*      *                    *   (ARG1*      *           *   (6
+bc/cctv/00/cctv_0000   3   14               Kong   NNP          *))))))       -    -   -   Speaker#1       *)     *                    *)       *)     *           *)   6)
+bc/cctv/00/cctv_0000   3   15                  ,     ,               *        -    -   -   Speaker#1       *      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3   16              which   WDT     (SBAR(WHNP*)       -    -   -   Speaker#1       *      *    (ARGM-PRD(R-ARG2*)       *      *    (R-ARG0*)   -
+bc/cctv/00/cctv_0000   3   17               have   VBP          (S(VP*      have  01   -   Speaker#1       *      *                    *        *    (V*)          *    -
+bc/cctv/00/cctv_0000   3   18               made   VBN            (VP*      make  02   3   Speaker#1       *      *                    *        *      *         (V*)   -
+bc/cctv/00/cctv_0000   3   19                the    DT       (S(NP(NP*        -    -   -   Speaker#1       *      *                    *        *      *      (ARG1*    -
+bc/cctv/00/cctv_0000   3   20              image    NN               *)    image   -   -   Speaker#1       *      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3   21                 of    IN            (PP*        -    -   -   Speaker#1       *      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3   22       metropolitan    JJ            (NP*        -    -   -   Speaker#1       *      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3   23               Hong   NNP               *        -    -   -   Speaker#1   (GPE*      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3   24               Kong   NNP             *)))       -    -   -   Speaker#1       *)     *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3   25               more   RBR          (ADJP*        -    -   -   Speaker#1       *      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3   26          prominent    JJ               *)       -    -   -   Speaker#1       *      *                    *        *      *           *    -
+bc/cctv/00/cctv_0000   3   27    internationally    RB   (ADVP*))))))))       -    -   -   Speaker#1       *      *                    *)       *      *           *)   -
+bc/cctv/00/cctv_0000   3   28                  .     .              *))       -    -   -   Speaker#1       *      *                    *        *      *           *    -
+
+bc/cctv/00/cctv_0000   3    0              For     IN   (TOP(S(PP*             -    -   -   Speaker#1        *             *        *    (ARGM-CAU*        *        -
+bc/cctv/00/cctv_0000   3    1             this     DT         (NP*             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3    2           reason     NN           *))        reason   -   -   Speaker#1        *             *        *             *)       *        -
+bc/cctv/00/cctv_0000   3    3                ,      ,            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3    4               in     IN         (PP*             -    -   -   Speaker#1        *             *        *    (ARGM-TMP*        *        -
+bc/cctv/00/cctv_0000   3    5            2004      CD        (NP*))            -    -   -   Speaker#1    (DATE)            *        *             *)       *        -
+bc/cctv/00/cctv_0000   3    6                ,      ,            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3    7               on     IN         (PP*             -    -   -   Speaker#1        *             *        *    (ARGM-LOC*        *        -
+bc/cctv/00/cctv_0000   3    8              the     DT      (NP(NP*             -    -   -   Speaker#1    (FAC*        (ARG1*        *             *        *        -
+bc/cctv/00/cctv_0000   3    9       Waterfront    NNP            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   10        Promenade    NNP            *)            -    -   -   Speaker#1        *)            *)       *             *        *        -
+bc/cctv/00/cctv_0000   3   11       originally     RB    (VP(ADVP*)            -    -   -   Speaker#1        *    (ARGM-TMP*)       *             *        *        -
+bc/cctv/00/cctv_0000   3   12      constructed    VBN            *      construct  01   1   Speaker#1        *           (V*)       *             *        *        -
+bc/cctv/00/cctv_0000   3   13              for     IN         (PP*             -    -   -   Speaker#1        *    (ARGM-PRP*        *             *        *        -
+bc/cctv/00/cctv_0000   3   14          viewing    VBG       (S(VP*           view  01   -   Speaker#1        *             *      (V*)            *        *        -
+bc/cctv/00/cctv_0000   3   15             only     RB      (NP(NP*             -    -   -   Speaker#1        *             *   (ARG1*             *        *        -
+bc/cctv/00/cctv_0000   3   16              the     DT            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   17          scenery     NN            *)            -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   18               of     IN         (PP*             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   19             Hong    NNP  (NP(NP(NML*             -    -   -   Speaker#1    (LOC*             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   20             Kong    NNP            *)            -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   21           Island    NNP            *)            -    -   -   Speaker#1        *)            *        *             *        *        -
+bc/cctv/00/cctv_0000   3   22              and     CC            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   23         Victoria    NNP         (NP*             -    -   -   Speaker#1    (LOC*             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   24           Harbor    NNP   *))))))))))            -    -   -   Speaker#1        *)            *)       *)            *)       *        -
+bc/cctv/00/cctv_0000   3   25                ,      ,            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   26              the     DT         (NP*             -    -   -   Speaker#1    (ORG*             *        *        (ARG0*        *        -
+bc/cctv/00/cctv_0000   3   27             Hong    NNP        (NML*             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   28             Kong    NNP            *)            -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   29          Tourism    NNP            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   30            Board    NNP            *)            -    -   -   Speaker#1        *)            *        *             *)       *        -
+bc/cctv/00/cctv_0000   3   31             also     RB       (ADVP*)            -    -   -   Speaker#1        *             *        *    (ARGM-ADV*)       *        -
+bc/cctv/00/cctv_0000   3   32      constructed    VBN         (VP*      construct  01   1   Speaker#1        *             *        *           (V*)       *        -
+bc/cctv/00/cctv_0000   3   33              the     DT   (NP(NP(NP*             -    -   -   Speaker#1    (FAC*             *        *        (ARG1*   (ARG0*       (7
+bc/cctv/00/cctv_0000   3   34           Avenue    NNP            *)            -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   35               of     IN         (PP*             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   36            Stars   NNPS       (NP*)))            -    -   -   Speaker#1        *)            *        *             *        *)       7)
+bc/cctv/00/cctv_0000   3   37                ,      ,            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   38    memorializing    VBG         (VP*    memorialize  01   -   Speaker#1        *             *        *             *      (V*)       -
+bc/cctv/00/cctv_0000   3   39             Hong    NNP      (NP(NP*             -    -   -   Speaker#1    (GPE*             *        *             *   (ARG1*   (6|(43
+bc/cctv/00/cctv_0000   3   40             Kong    NNP            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   41               's    POS            *)            -    -   -   Speaker#1        *)            *        *             *        *        6)
+bc/cctv/00/cctv_0000   3   42             100      CD        (NML*             -    -   -   Speaker#1   (DATE*             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   43               -    HYPH            *             -    -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   44             year     NN            *)            -    -   -   Speaker#1        *)            *        *             *        *        -
+bc/cctv/00/cctv_0000   3   45             film     NN            *           film   -   -   Speaker#1        *             *        *             *        *        -
+bc/cctv/00/cctv_0000   3   46          history     NN         *))))            -    -   -   Speaker#1        *             *        *             *)       *)      43)
+bc/cctv/00/cctv_0000   3   47                .      .           *))            -    -   -   Speaker#1        *             *        *             *        *        -
+
+bc/cctv/00/cctv_0000   3    0        Here     RB   (TOP(S(ADVP*)      -    -   -   Speaker#1       *    (ARGM-LOC*)   (ARGM-LOC*)       -
+bc/cctv/00/cctv_0000   3    1           ,      ,              *       -    -   -   Speaker#1       *             *             *        -
+bc/cctv/00/cctv_0000   3    2    tourists    NNS           (NP*)      -    -   -   Speaker#1       *        (ARG0*)       (ARG1*)     (16)
+bc/cctv/00/cctv_0000   3    3         can     MD        (VP(VP*       -    -   -   Speaker#1       *    (ARGM-MOD*)            *        -
+bc/cctv/00/cctv_0000   3    4       learn     VB           (VP*    learn  01   2   Speaker#1       *           (V*)            *        -
+bc/cctv/00/cctv_0000   3    5       about     IN           (PP*       -    -   -   Speaker#1       *        (ARG1*             *        -
+bc/cctv/00/cctv_0000   3    6        Hong    NNP        (NP(NP*       -    -   -   Speaker#1   (GPE*             *             *   (6|(43
+bc/cctv/00/cctv_0000   3    7        Kong    NNP              *       -    -   -   Speaker#1       *             *             *        -
+bc/cctv/00/cctv_0000   3    8          's    POS              *)      -    -   -   Speaker#1       *)            *             *        6)
+bc/cctv/00/cctv_0000   3    9        film     NN              *     film   -   -   Speaker#1       *             *             *        -
+bc/cctv/00/cctv_0000   3   10     history     NN           *))))      -    -   -   Speaker#1       *             *)            *       43)
+bc/cctv/00/cctv_0000   3   11           ,      ,              *       -    -   -   Speaker#1       *             *             *        -
+bc/cctv/00/cctv_0000   3   12         and     CC              *       -    -   -   Speaker#1       *             *             *        -
+bc/cctv/00/cctv_0000   3   13         can     MD           (VP*       -    -   -   Speaker#1       *             *    (ARGM-MOD*)       -
+bc/cctv/00/cctv_0000   3   14        come     VB           (VP*     come  01   1   Speaker#1       *             *           (V*)       -
+bc/cctv/00/cctv_0000   3   15          up     RB         (ADVP*       -    -   -   Speaker#1       *             *        (ARG4*        -
+bc/cctv/00/cctv_0000   3   16       close     RB              *)      -    -   -   Speaker#1       *             *             *)       -
+bc/cctv/00/cctv_0000   3   17        with     IN           (PP*       -    -   -   Speaker#1       *             *    (ARGM-MNR*        -
+bc/cctv/00/cctv_0000   3   18         the     DT           (NP*       -    -   -   Speaker#1       *             *             *        -
+bc/cctv/00/cctv_0000   3   19       stars    NNS             *))    star   -   -   Speaker#1       *             *             *)       -
+bc/cctv/00/cctv_0000   3   20          in     IN           (PP*       -    -   -   Speaker#1       *             *    (ARGM-LOC*        -
+bc/cctv/00/cctv_0000   3   21       their   PRP$           (NP*       -    -   -   Speaker#1       *             *             *      (16)
+bc/cctv/00/cctv_0000   3   22        mind     NN          *)))))    mind   -   -   Speaker#1       *             *             *)       -
+bc/cctv/00/cctv_0000   3   23           .      .             *))      -    -   -   Speaker#1       *             *             *        -
+
+#end document

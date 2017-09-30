@@ -25,6 +25,10 @@ spacy
 # Used by span prediction models.
 numpy
 
+# Used in coreference resolution evaluation metrics.
+scipy
+scikit-learn
+
 # Training visualisation using tensorboard.
 pillow # A dependency of tensorboard-pytorch which is not recorded.
 tensorboard-pytorch
