@@ -67,7 +67,7 @@ class EncoderDecoderDatasetReader(DatasetReader):
         return Dataset(instances)
 
     @overrides
-    def text_to_instance(self, input_string: str) -> Instance:
+    def text_to_instance(self, input_string: str) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
         tokenized_string = self._tokenizer.tokenize(input_string)
         input_field = TextField(tokenized_string, self._input_token_indexers)

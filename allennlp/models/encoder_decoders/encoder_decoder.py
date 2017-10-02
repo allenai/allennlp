@@ -75,7 +75,8 @@ class EncoderDecoder(Model):
         # as a way of letting decoder choose to stop decoding.
 
     @overrides
-    def forward(self, input_tokens: Dict[str, torch.LongTensor],
+    def forward(self,  # type: ignore
+                input_tokens: Dict[str, torch.LongTensor],
                 output_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -234,7 +235,7 @@ class EncoderDecoder(Model):
                                 for x in indices]
             all_predicted_tokens.append(predicted_tokens)
         if len(all_predicted_tokens) == 1:
-            all_predicted_tokens = all_predicted_tokens[0]
+            all_predicted_tokens = all_predicted_tokens[0]  # type: ignore
         output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict
 
