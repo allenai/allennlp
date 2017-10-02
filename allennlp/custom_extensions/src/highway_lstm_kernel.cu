@@ -368,6 +368,7 @@ void highway_lstm_backward_ongpu(int inputSize, int hiddenSize, int miniBatch,
    cudaErrCheck(cudaStreamDestroy(stream_wh));
    cudaErrCheck(cudaStreamDestroy(stream_wb));
 
+   cudaErrCheck(cudaFree(ones));
    free(ones_host);
 
    cudaErrCheck(cudaDeviceSynchronize());
