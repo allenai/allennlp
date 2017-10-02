@@ -394,7 +394,7 @@ class TestNnUtil(AllenNlpTestCase):
         for i in range(5):
             transition_matrix[i, i] = float("-inf")
         indices, _ = viterbi_decode(sequence_predictions, transition_matrix)
-        # assert indices == [4, 3, 4, 3, 4, 3]
+        assert indices == [4, 3, 4, 3, 4, 3]
 
         # Test that unbalanced pairwise potentials break ties
         # between paths with equal unary potentials.
