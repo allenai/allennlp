@@ -45,7 +45,8 @@
               "bidirectional": true
       },
       "regularizer": [
-        //["transitions$", {"type": "l2", "alpha": 0.0000005}]
+        ["transitions$", {"type": "l2", "alpha": 0.01}]
+        //[".*", {"type": "l2", "alpha": 0.01}]
       ]
     },
     "iterator": {"type": "basic", "batch_size": 32},

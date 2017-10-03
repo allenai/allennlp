@@ -84,9 +84,11 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         batch_size, _ = mask.size()
         num_valid = torch.sum(mask[:, 0]).data[0]
 
-        # Force every sequence to be length at least one.
-        mask = mask.clone()
-        mask[:, 0] = 1
+        # Force every sequence to be length at least one. Need to `.clone()` the mask
+        # to avoid a RuntimeError from shared storage.
+        if num_valid < batch_size:
+            mask = mask.clone()
+            mask[:, 0] = 1
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
