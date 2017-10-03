@@ -76,9 +76,9 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         # in which case all the rows corresponding to word padding will be
         # "empty character sequences".
         #
-        # PyTorch chokes if you feed empty sequences into a RNN, so here we adjust the ``mask``
-        # so that every sequence has length at least 1. Then after running the RNN we zero out
-        # the corresponding rows in the result.
+        # ``pack_padded_sequence`` requires all sequence lengths to be > 0, so here we
+        # adjust the ``mask`` so that every sequence has length at least 1. Then after
+        # running the RNN we zero out the corresponding rows in the result.
 
         # First count how many sequences are empty.
         batch_size = mask.size()[0]
