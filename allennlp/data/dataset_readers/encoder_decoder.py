@@ -40,6 +40,7 @@ class EncoderDecoderDatasetReader(DatasetReader):
         self._tokenizer = tokenizer or WordTokenizer()
         self._input_token_indexers = input_token_indexers or {"tokens": SingleIdTokenIndexer("input_tokens")}
         self._output_token_indexers = output_token_indexers or {"tokens": SingleIdTokenIndexer("output_tokens")}
+        self._token_indexers = {"source": self._input_token_indexers, "target": self._output_token_indexers}
 
     @overrides
     def read(self, file_path):
