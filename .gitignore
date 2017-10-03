@@ -2,6 +2,3 @@
 .cache/
 .coverage
 doc/_build/
-*~
-*.swp
-*.swo
