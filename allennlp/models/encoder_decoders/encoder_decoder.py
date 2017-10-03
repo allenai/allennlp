@@ -51,9 +51,9 @@ class EncoderDecoder(Model):
         self.encoder = encoder
         self.max_decoding_steps = max_decoding_steps
         self.use_attention = use_attention
-        self.start_index = self.vocab.get_token_index(START_SYMBOL, "output_tokens")
-        self.end_index = self.vocab.get_token_index(END_SYMBOL, "output_tokens")
-        self.num_classes = self.vocab.get_vocab_size("output_tokens")
+        self.start_index = self.vocab.get_token_index(START_SYMBOL, "target_tokens")
+        self.end_index = self.vocab.get_token_index(END_SYMBOL, "target_tokens")
+        self.num_classes = self.vocab.get_vocab_size("target_tokens")
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the hidden
         # state of the decoder with that of the final hidden states of the encoder. Also, if we're using
         # attention with ``DotProductSimilarity``, this is needed.
@@ -76,26 +76,26 @@ class EncoderDecoder(Model):
 
     @overrides
     def forward(self,  # type: ignore
-                input_tokens: Dict[str, torch.LongTensor],
-                output_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+                source_tokens: Dict[str, torch.LongTensor],
+                target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Decoder logic for producing the entire target sequence.
 
         Parameters
         ----------
-        input_tokens : Dict[str, torch.LongTensor]
+        source_tokens : Dict[str, torch.LongTensor]
            The output of ``TextField.as_array()`` applied on the input ``TextField``. This will be passed
            through a ``TextFieldEmbedder`` and then through an encoder.
-        output_tokens : Dict[str, torch.LongTensor], optional (default = None)
+        target_tokens : Dict[str, torch.LongTensor], optional (default = None)
             Dict with indices of target side tokens, of shape ``(batch_size, target_sequence_length)``
             in ``tokens`` field.
         """
         # (batch_size, input_seq_length, enc_output_dim)
-        encoder_outputs = self._get_encoder_outputs(input_tokens)
+        encoder_outputs = self._get_encoder_outputs(source_tokens)
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, enc_output_dim)
-        if output_tokens:
-            targets = output_tokens["tokens"]
+        if target_tokens:
+            targets = target_tokens["tokens"]
             target_sequence_length = targets.size()[1]
             num_decoding_steps = target_sequence_length
         else:
@@ -131,25 +131,39 @@ class EncoderDecoder(Model):
             # (batch_size, 1)
             step_predictions.append(last_predictions.view(-1, 1))
         # step_logits is a list containing tensors of shape (batch_size, 1, num_classes)
-        # This is (batch_size, max_decoding_steps, num_classes)
+        # This is (batch_size, num_decoding_steps, num_classes)
         logits = torch.cat(step_logits, 1)
         class_probabilities = torch.cat(step_probabilities, 1)
         all_predictions = torch.cat(step_predictions, 1)
         output_dict = {"logits": logits,
                        "class_probabilities": class_probabilities,
                        "predictions": all_predictions}
-        if output_tokens:
-            output_mask = get_text_field_mask(output_tokens)
-            print(logits.size(), targets.size(), output_mask.size())
-            loss = sequence_cross_entropy_with_logits(logits, targets, output_mask)
+        if target_tokens:
+            target_mask = get_text_field_mask(target_tokens)
+            # `targets` currently contains START + target_sequence + END, and logits correspond to the outputs
+            # from these timesteps. During training, we want the output from timestep i to be similar to the
+            # input token from timestep i + 1. That is, the comparison between logits and targets should be
+            # one-off.
+            # Consider a single example where the target has 3 words, and padding is to 7 tokens. The complete
+            #   sequence would correspond to <S> w1 w2 w3 <E> <P> <P>
+            #   and the mask would be         1  1  1  1   1   0   0
+            #   and let the logits be         l1 l2 l3 l4  l5  l6  l7
+            # We actually need to compare:
+            #   the sequence w1 w2 w3 <E> <P> <P>
+            #   with masks   1  1  1   1   0   0
+            #   against      l1 l2 l3  l4  l5  l6
+            relevant_logits = logits[:, :-1].contiguous()  # (batch_size, num_decoding_steps - 1, num_classes)
+            relevant_targets = targets[:, 1:].contiguous()  # (batch_size, num_decoding_steps - 1)
+            relevant_mask = target_mask[:, 1:].contiguous()  # (batch_size, num_decoding_steps - 1)
+            loss = sequence_cross_entropy_with_logits(relevant_logits, relevant_targets, relevant_mask)
             output_dict["loss"] = loss
             # TODO: Define metrics
         return output_dict
 
-    def _get_encoder_outputs(self, input_tokens: Dict[str, torch.LongTensor]) -> torch.LongTensor:
-        embedded_input = self.source_embedder(input_tokens)
-        input_mask = get_text_field_mask(input_tokens)
-        encoded_text = self.encoder(embedded_input, input_mask)
+    def _get_encoder_outputs(self, source_tokens: Dict[str, torch.LongTensor]) -> torch.LongTensor:
+        embedded_input = self.source_embedder(source_tokens)
+        source_mask = get_text_field_mask(source_tokens)
+        encoded_text = self.encoder(embedded_input, source_mask)
         return encoded_text
 
     def _prepare_decode_step_input(self, input_indices: torch.LongTensor,

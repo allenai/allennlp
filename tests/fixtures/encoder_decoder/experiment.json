@@ -7,7 +7,7 @@
     "source_embedder": {
       "tokens": {
 	"type": "embedding",
-	"vocab_namespace": "input_tokens",
+	"vocab_namespace": "source_tokens",
         "embedding_dim": 10,
         "trainable": true
       }
@@ -17,7 +17,7 @@
       "input_size": 10,
       "hidden_size": 4,
       "num_layers": 1
-    }
+    },
     "max_decoding_steps": 20,
     "use_attention": false
   },

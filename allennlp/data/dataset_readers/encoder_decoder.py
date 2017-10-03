@@ -8,7 +8,7 @@ import tqdm
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset import Dataset
-from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
@@ -26,21 +26,27 @@ class EncoderDecoderDatasetReader(DatasetReader):
 
     Parameters
     ----------
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
-        Tokenizer to use to split the words in the input and output sequences.
-    input_token_indexers : ``Dict[str, TokenIndexer]``, optional
+    source_tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+        Tokenizer to use to split the input sequences into words or other kinds of tokens.
+    target_tokenizer : ``Tokenizer``, optional (default=``WordTokenizer(start_tokens=[START_SYMBOL],
+                                                                        end_tokens=[END_SYMBOL])``)
+        Tokenizer to use to split the output sequences (during training) into words or other kinds of tokens.
+    source_token_indexers : ``Dict[str, TokenIndexer]``, optional
                              (default=``{"tokens": SingleIdTokenizer("input_tokens")}``)
         Indexers used to define input (source side) token representations.
-    output_token_indexers : ``Dict[str, TokenIndexer]``, optional
+    target_token_indexers : ``Dict[str, TokenIndexer]``, optional
                             (default=``{"tokens": SingleIdTokenizer("output_tokens")}``)
         Indexers used to define output (target side) token representations.
     """
-    def __init__(self, tokenizer: Tokenizer = None, input_token_indexers: Dict[str, TokenIndexer] = None,
-                 output_token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        self._tokenizer = tokenizer or WordTokenizer()
-        self._input_token_indexers = input_token_indexers or {"tokens": SingleIdTokenIndexer("input_tokens")}
-        self._output_token_indexers = output_token_indexers or {"tokens": SingleIdTokenIndexer("output_tokens")}
-        self._token_indexers = {"source": self._input_token_indexers, "target": self._output_token_indexers}
+    def __init__(self, source_tokenizer: Tokenizer = None, target_tokenizer: Tokenizer = None,
+                 source_token_indexers: Dict[str, TokenIndexer] = None,
+                 target_token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        self._source_tokenizer = source_tokenizer or WordTokenizer()
+        self._target_tokenizer = target_tokenizer or WordTokenizer(start_tokens=[START_SYMBOL],
+                                                                   end_tokens=[END_SYMBOL])
+        self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer("source_tokens")}
+        self._target_token_indexers = target_token_indexers or {"tokens": SingleIdTokenIndexer("target_tokens")}
+        self._token_indexers = {"source": self._source_token_indexers, "target": self._target_token_indexers}
 
     @overrides
     def read(self, file_path):
@@ -57,12 +63,11 @@ class EncoderDecoderDatasetReader(DatasetReader):
                 if len(line_parts) != 2:
                     raise ConfigurationError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
                 source_sequence, target_sequence = line_parts
-                target_sequence = "%s %s %s" % (START_SYMBOL, target_sequence, END_SYMBOL)
-                source_field = TextField(self._tokenizer.tokenize(source_sequence),
-                                         self._input_token_indexers)
-                target_field = TextField(self._tokenizer.tokenize(target_sequence),
-                                         self._output_token_indexers)
-                instances.append(Instance({'input_tokens': source_field, 'output_tokens': target_field}))
+                source_field = TextField(self._source_tokenizer.tokenize(source_sequence),
+                                         self._source_token_indexers)
+                target_field = TextField(self._target_tokenizer.tokenize(target_sequence),
+                                         self._target_token_indexers)
+                instances.append(Instance({'source_tokens': source_field, 'target_tokens': target_field}))
         if not instances:
             raise ConfigurationError("No instances read!")
         return Dataset(instances)
@@ -70,14 +75,16 @@ class EncoderDecoderDatasetReader(DatasetReader):
     @overrides
     def text_to_instance(self, input_string: str) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
-        tokenized_string = self._tokenizer.tokenize(input_string)
-        input_field = TextField(tokenized_string, self._input_token_indexers)
-        return Instance({'input_tokens': input_field})
+        tokenized_string = self._source_tokenizer.tokenize(input_string)
+        input_field = TextField(tokenized_string, self._source_token_indexers)
+        return Instance({'source_tokens': input_field})
 
     @classmethod
     def from_params(cls, params: Params) -> 'EncoderDecoderDatasetReader':
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        input_token_indexers = TokenIndexer.dict_from_params(params.pop('input_token_indexers', {}))
-        output_token_indexers = TokenIndexer.dict_from_params(params.pop('output_token_indexers', {}))
+        source_tokenizer = Tokenizer.from_params(params.pop('source_tokenizer', {}))
+        target_tokenizer = Tokenizer.from_params(params.pop('target_tokenizer', {}))
+        source_token_indexers = TokenIndexer.dict_from_params(params.pop('source_token_indexers', {}))
+        target_token_indexers = TokenIndexer.dict_from_params(params.pop('target_token_indexers', {}))
         params.assert_empty(cls.__name__)
-        return EncoderDecoderDatasetReader(tokenizer, input_token_indexers, output_token_indexers)
+        return EncoderDecoderDatasetReader(source_tokenizer, target_tokenizer,
+                                           source_token_indexers, target_token_indexers)
