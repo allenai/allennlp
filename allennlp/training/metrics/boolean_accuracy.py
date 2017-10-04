@@ -2,6 +2,7 @@ from typing import Optional
 
 from overrides import overrides
 import torch
+from torch.autograd import Variable
 
 from allennlp.training.metrics.metric import Metric
 
@@ -21,35 +22,35 @@ class BooleanAccuracy(Metric):
         self._total_count = 0.
 
     def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+                 predictions: Variable,
+                 gold_labels: Variable,
+                 mask: Optional[Variable] = None):
         """
         Parameters
         ----------
-        predictions : ``torch.Tensor``, required.
+        predictions : ``Variable``, required.
             A tensor of predictions of shape (batch_size, ...).
-        gold_labels : ``torch.Tensor``, required.
+        gold_labels : ``Variable``, required.
             A tensor of the same shape as ``predictions``.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask: ``Variable``, optional (default = None).
             A tensor of the same shape as ``predictions``.
         """
         # Get the data from the Variables.
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions_, gold_labels_, mask_ = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
-        if mask is not None:
+        if mask_ is not None:
             # We can multiply by the mask up front, because we're just checking equality below, and
             # this way everything that's masked will be equal.
-            predictions = predictions * mask
-            gold_labels = gold_labels * mask
+            predictions_ = predictions_ * mask_
+            gold_labels_ = gold_labels_ * mask_
 
-        batch_size = predictions.size(0)
-        predictions = predictions.view(batch_size, -1)
-        gold_labels = gold_labels.view(batch_size, -1)
+        batch_size = predictions_.size(0)
+        predictions_ = predictions_.view(batch_size, -1)
+        gold_labels_ = gold_labels_.view(batch_size, -1)
 
         # The .prod() here is functioning as a logical and.
-        correct = predictions.eq(gold_labels).prod(dim=1).float()
-        count = torch.ones(gold_labels.size(0))
+        correct = predictions_.eq(gold_labels_).prod(dim=1).float()
+        count = torch.ones(gold_labels_.size(0))
         self._correct_count += correct.sum()
         self._total_count += count.sum()
 

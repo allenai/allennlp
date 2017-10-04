@@ -2,6 +2,7 @@ from typing import Optional
 
 from overrides import overrides
 import torch
+from torch.autograd import Variable
 
 from allennlp.training.metrics.metric import Metric
 
@@ -15,28 +16,28 @@ class Entropy(Metric):
 
     @overrides
     def __call__(self,  # type: ignore
-                 logits: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+                 logits: Variable,
+                 mask: Optional[Variable] = None):
         """
         Parameters
         ----------
-        logits : ``torch.Tensor``, required.
+        logits : ``Variable``, required.
             A tensor of unnormalized log probabilities of shape (batch_size, ..., num_classes).
-        mask: ``torch.Tensor``, optional (default = None).
+        mask: ``Variable``, optional (default = None).
             A masking tensor of shape (batch_size, ...).
         """
         # Get the data from the Variables.
-        logits, mask = self.unwrap_to_tensors(logits, mask)
+        logits_, mask_ = self.unwrap_to_tensors(logits, mask)
 
-        if mask is None:
-            mask = torch.ones(logits.size()[:-1])
+        if mask_ is None:
+            mask_ = torch.ones(*logits_.size()[:-1])
 
-        log_probs = torch.nn.functional.log_softmax(logits).data
-        probabilities = torch.exp(log_probs) * mask.unsqueeze(-1)
+        log_probs = torch.nn.functional.log_softmax(logits_).data
+        probabilities = torch.exp(log_probs) * mask_.unsqueeze(-1)
         weighted_negative_likelihood = - log_probs * probabilities
         entropy = weighted_negative_likelihood.sum(-1)
 
-        self._entropy += entropy.sum() / mask.sum()
+        self._entropy += entropy.sum() / mask_.sum()
         self._count += 1
 
     @overrides

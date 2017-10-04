@@ -1,5 +1,6 @@
 from typing import Dict, Optional, Tuple, Union
 import torch
+from torch.autograd import Variable
 
 from allennlp.common.registrable import Registrable
 from allennlp.common.params import Params
@@ -12,17 +13,17 @@ class Metric(Registrable):
     accumulated.
     """
     def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor]):
+                 predictions: Variable,
+                 gold_labels: Variable,
+                 mask: Optional[Variable]):
         """
         Parameters
         ----------
-        predictions : ``torch.Tensor``, required.
+        predictions : ``Variable``, required.
             A tensor of predictions.
-        gold_labels : ``torch.Tensor``, required.
+        gold_labels : ``Variable``, required.
             A tensor corresponding to some gold label to evaluate against.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask: ``Variable``, optional (default = None).
             A mask can be passed, in order to deal with metrics which are
             computed over potentially padded elements, such as sequence labels.
         """
@@ -48,7 +49,7 @@ class Metric(Registrable):
         return cls.by_name(metric_type)(**params.as_dict())  # type: ignore
 
     @staticmethod
-    def unwrap_to_tensors(*tensors):
+    def unwrap_to_tensors(*tensors: Union[torch.Tensor, Variable]):
         """
         If you actually passed in Variables to a Metric instead of Tensors, there will be
         a huge memory leak, because it will prevent garbage collection for the computation
