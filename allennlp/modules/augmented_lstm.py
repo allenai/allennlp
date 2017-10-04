@@ -12,8 +12,9 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, Packed
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
+from allennlp.modules.rnn_base import RNNBase
 
-class AugmentedLstm(torch.nn.Module):
+class AugmentedLstm(RNNBase):
     """
     An LSTM with Recurrent Dropout and the option to use highway
     connections between layers. Note: this implementation is slower
@@ -62,10 +63,7 @@ class AugmentedLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  use_highway: bool = True,
                  use_input_projection_bias: bool = True) -> None:
-        super(AugmentedLstm, self).__init__()
-        # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
-        self.input_size = input_size
-        self.hidden_size = hidden_size
+        super(AugmentedLstm, self).__init__(input_size, hidden_size)
 
         self.go_forward = go_forward
         self.use_highway = use_highway

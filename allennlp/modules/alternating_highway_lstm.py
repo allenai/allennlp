@@ -8,6 +8,7 @@ from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_padded_
 
 from allennlp.nn.initializers import block_orthogonal
 from allennlp.custom_extensions._ext import highway_lstm_layer
+from allennlp.modules.rnn_base import RNNBase
 
 
 class _AlternatingHighwayLSTMFunction(Function):
@@ -19,7 +20,7 @@ class _AlternatingHighwayLSTMFunction(Function):
         self.train = train
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,  # type: ignore
                 inputs: torch.Tensor,
                 weight: torch.Tensor,
                 bias: torch.Tensor,
@@ -27,7 +28,8 @@ class _AlternatingHighwayLSTMFunction(Function):
                 memory_accumulator: torch.Tensor,
                 dropout_mask: torch.Tensor,
                 lengths: torch.Tensor,
-                gates: torch.Tensor) -> Tuple[torch.Tensor, None]:
+                gates: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        # pylint: disable=arguments-differ
         sequence_length, batch_size, input_size = inputs.size()
         tmp_i = inputs.new(batch_size, 6 * self.hidden_size)
         tmp_h = inputs.new(batch_size, 5 * self.hidden_size)
@@ -113,7 +115,7 @@ class _AlternatingHighwayLSTMFunction(Function):
                 grad_memory_accumulator, grad_dropout, grad_lengths, grad_gates)
 
 
-class AlternatingHighwayLSTM(torch.nn.Module):
+class AlternatingHighwayLSTM(RNNBase):
     """
     A stacked LSTM with LSTM layers which alternate between going forwards over
     the sequence and going backwards, with highway connections between each of
@@ -147,9 +149,7 @@ class AlternatingHighwayLSTM(torch.nn.Module):
                  hidden_size: int,
                  num_layers: int = 1,
                  recurrent_dropout_probability: float = 0) -> None:
-        super(AlternatingHighwayLSTM, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
+        super(AlternatingHighwayLSTM, self).__init__(input_size, hidden_size)
         self.num_layers = num_layers
         self.recurrent_dropout_probability = recurrent_dropout_probability
         self.training = True

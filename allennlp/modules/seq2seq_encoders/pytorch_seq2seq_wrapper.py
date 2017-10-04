@@ -1,5 +1,8 @@
+from typing import Optional
+
 import torch
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
@@ -50,9 +53,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         return self._module.hidden_size * (2 if is_bidirectional else 1)
 
     def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor,
-                mask: torch.Tensor,
-                hidden_state: torch.Tensor = None) -> torch.Tensor:
+                inputs: Variable,
+                mask: Variable,
+                hidden_state: Optional[Variable] = None) -> Variable:
 
         if mask is None:
             return self._module(inputs, hidden_state)[0]
