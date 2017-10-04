@@ -1,4 +1,5 @@
 import torch
+from torch.autograd import Variable
 
 from allennlp.nn.regularizers.regularizer import Regularizer
 
@@ -10,7 +11,7 @@ class L1Regularizer(Regularizer):
     def __init__(self, alpha: float = 0.01) -> None:
         self.alpha = alpha
 
-    def __call__(self, parameter: torch.Tensor) -> torch.Tensor:
+    def __call__(self, parameter: Variable) -> Variable:
         return self.alpha * torch.sum(torch.abs(parameter))
 
 
@@ -21,5 +22,5 @@ class L2Regularizer(Regularizer):
     def __init__(self, alpha: float = 0.01) -> None:
         self.alpha = alpha
 
-    def __call__(self, parameter: torch.Tensor) -> torch.Tensor:
+    def __call__(self, parameter: Variable) -> Variable:
         return self.alpha * torch.sum(torch.pow(parameter, 2))

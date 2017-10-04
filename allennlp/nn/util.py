@@ -2,7 +2,7 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Tuple, cast
 
 import numpy
 import torch
@@ -11,26 +11,26 @@ from torch.autograd import Variable
 from allennlp.common.checks import ConfigurationError
 
 
-def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
+def get_lengths_from_binary_sequence_mask(mask: Variable) -> Variable:
     """
     Compute sequence lengths for each batch element in a tensor using a
     binary mask.
 
     Parameters
     ----------
-    mask : torch.Tensor, required.
+    mask : Variable, required.
         A 2D binary mask of shape (batch_size, sequence_length) to
         calculate the per-batch sequence lengths from.
 
     Returns
     -------
-    A torch.LongTensor of shape (batch_size,) representing the lengths
+    A Variable of shape (batch_size,) representing the lengths
     of the sequences in the batch.
     """
     return mask.long().sum(-1)
 
 
-def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torch.autograd.Variable):
+def sort_batch_by_length(tensor: Variable, sequence_lengths: Variable) -> Tuple[Variable, Variable, Variable]:
     """
     Sort a batch first tensor by some specified lengths.
 
@@ -71,7 +71,7 @@ def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torc
     return sorted_tensor, sorted_sequence_lengths, restoration_indices
 
 
-def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autograd.Variable):
+def get_dropout_mask(dropout_probability: float, tensor_for_masking: Variable) -> Variable:
     """
     Computes and returns an element-wise dropout mask for a given tensor, where
     each element in the mask is dropped out with probability dropout_probability.
@@ -82,12 +82,12 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autog
     ----------
     dropout_probability : float, required.
         Probability of dropping a dimension of the input.
-    tensor_for_masking : torch.Variable, required.
+    tensor_for_masking : Variable, required.
 
 
     Returns
     -------
-    A torch.FloatTensor consisting of the binary mask scaled by 1/ (1 - dropout_probability).
+    A Variable consisting of the binary mask scaled by 1/ (1 - dropout_probability).
     This scaling ensures expected values and variances of the output of applying this mask
      and the original tensor are the same.
     """
@@ -217,9 +217,9 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     viterbi_score : float
         The score of the viterbi path.
     """
-    sequence_length, _ = list(tag_sequence.size())
-    path_scores = []
-    path_indices = []
+    sequence_length, _ = tag_sequence.size()
+    path_scores: List[torch.Tensor] = []
+    path_indices: List[torch.Tensor] = []
     path_scores.append(tag_sequence[0, :])
 
     # Evaluate the scores for all possible paths.
@@ -232,9 +232,9 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
 
     # Construct the most likely sequence backwards.
     viterbi_score, best_path = torch.max(path_scores[-1], 0)
-    viterbi_path = [int(best_path.numpy())]
+    viterbi_path: List[int] = [int(best_path.numpy())]  # type: ignore
     for backward_timestep in reversed(path_indices):
-        viterbi_path.append(int(backward_timestep[viterbi_path[-1]]))
+        viterbi_path.append(int(backward_timestep[viterbi_path[-1]]))  # type: ignore
     # Reverse the backward path.
     viterbi_path.reverse()
     return viterbi_path, viterbi_score
@@ -266,7 +266,7 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Lo
     return (token_tensor != 0).long()
 
 
-def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+def last_dim_softmax(tensor: Variable, mask: Optional[Variable] = None) -> Variable:
     """
     Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
     assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
@@ -285,7 +285,7 @@ def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) 
     return reshaped_result.view(*tensor_shape)
 
 
-def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
+def weighted_sum(matrix: Variable, attention: Variable) -> Variable:
     """
     Takes a matrix of vectors and a set of weights over the rows in the matrix (which we call an
     "attention" vector), and returns a weighted sum of the rows in the matrix.  This is the typical
@@ -318,10 +318,10 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     return intermediate.sum(dim=-2)
 
 
-def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
-                                       targets: torch.LongTensor,
-                                       weights: torch.FloatTensor,
-                                       batch_average: bool = True) -> torch.FloatTensor:
+def sequence_cross_entropy_with_logits(logits: Variable,
+                                       targets: Variable,
+                                       weights: Variable,
+                                       batch_average: bool = True) -> Variable:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
@@ -331,13 +331,13 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
 
     Parameters
     ----------
-    logits : ``torch.FloatTensor``, required.
+    logits : ``Variable``, required.
         A ``torch.FloatTensor`` of size (batch_size, sequence_length, num_classes)
         which contains the unnormalized probability for each class.
-    targets : ``torch.LongTensor``, required.
+    targets : ``Variable``, required.
         A ``torch.LongTensor`` of size (batch, sequence_length) which contains the
         index of the true class for each corresponding step.
-    weights : ``torch.FloatTensor``, required.
+    weights : ``Variable``, required.
         A ``torch.FloatTensor`` of size (batch, sequence_length)
     batch_average : bool, optional, (default = True).
         A bool indicating whether the loss should be averaged across the batch,
@@ -345,7 +345,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
 
     Returns
     -------
-    A torch.FloatTensor representing the cross entropy loss.
+    A Variable representing the cross entropy loss.
     If ``batch_average == True``, the returned loss is a scalar.
     If ``batch_average == False``, the returned loss is a vector of shape (batch_size,).
 
@@ -412,7 +412,7 @@ def ones_like(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.clone().fill_(1)
 
 
-def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
+def combine_tensors(combination: str, tensors: List[Variable]) -> Variable:
     """
     Combines a list of tensors using element-wise operations and concatenation, specified by a
     ``combination`` string.  The string refers to (1-indexed) positions in the input tensor list,
@@ -442,7 +442,7 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(',')]
     return torch.cat(to_concatenate, dim=-1)
 
-def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
+def _get_combination(combination: str, tensors: List[Variable]) -> Variable:
     if combination.isdigit():
         index = int(combination) - 1
         return tensors[index]
