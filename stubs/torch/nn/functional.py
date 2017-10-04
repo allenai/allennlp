@@ -1,4 +1,4 @@
-from typing import Union, Generic, TypeVar, Optional
+from typing import Union, Generic, TypeVar, Optional, overload
 
 from torch.tensor import _TensorBase
 from torch.autograd import Variable
@@ -22,4 +22,4 @@ def embedding(input: T,
               scale_grad_by_freq: bool = False,
               sparse: bool = False) -> T: ...
 
-def relu(inputs: T, inplace: bool = False) -> T: ...
+def relu(inputs: Variable) -> Variable: ...

@@ -1,4 +1,6 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Iterator, Tuple
+
+from .parameter import Parameter
 
 class Module:
     def eval(self) -> 'Module': ...
@@ -11,3 +13,9 @@ class Module:
                    destination: Optional[dict] = None,
                    prefix: str = '',
                    keep_vars: bool = False) -> Dict[str, Any]: ...
+
+    def named_parameters(self,
+                         memo: Optional[set] = None,
+                         prefix: str = '') -> Iterator[Tuple[str, Parameter]]: ...
+
+    def add_module(self, name: str, module: 'Module') -> None: ...
