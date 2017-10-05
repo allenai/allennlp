@@ -34,7 +34,7 @@ from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-Tensor = TypeVar('Tensor', bound=torch._TensorBase)  # pylint: disable=protected-access
+Tensor = TypeVar('Tensor', bound=torch._TensorBase)  # pylint: disable=protected-access,invalid-name
 
 class Initializer(Registrable):
     """

@@ -1,5 +1,4 @@
 from overrides import overrides
-import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params

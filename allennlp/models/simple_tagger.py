@@ -1,8 +1,9 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Any, cast
 
 import numpy
 from overrides import overrides
-import torch
+
+from torch.autograd import Variable
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
@@ -64,8 +65,8 @@ class SimpleTagger(Model):
 
     @overrides
     def forward(self,  # type: ignore
-                tokens: Dict[str, torch.LongTensor],
-                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                tokens: Dict[str, Variable],
+                tags: Variable = None) -> Dict[str, Variable]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -116,7 +117,7 @@ class SimpleTagger(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def decode(self, output_dict: Dict[str, Variable]) -> Dict[str, Any]:
         """
         Does a simple position-wise argmax over each token, converts indices to string labels, and
         adds a ``"tags"`` key to the dictionary with the result.
@@ -125,7 +126,7 @@ class SimpleTagger(Model):
         if not isinstance(all_predictions, numpy.ndarray):
             all_predictions = all_predictions.cpu().numpy()
         if all_predictions.ndim == 3:
-            predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
+            predictions_list = [all_predictions[i] for i in range(all_predictions.size()[0])]
         else:
             predictions_list = [all_predictions]
         all_tags = []
@@ -136,8 +137,9 @@ class SimpleTagger(Model):
             all_tags.append(tags)
         if len(all_tags) == 1:
             all_tags = all_tags[0]  # type: ignore
-        output_dict['tags'] = all_tags
-        return output_dict
+        final_output = cast(Dict[str, Any], output_dict)
+        final_output['tags'] = all_tags
+        return final_output
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

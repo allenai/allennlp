@@ -11,12 +11,14 @@ import logging
 import os
 import shutil
 import time
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, cast
 
 import torch
+from torch.autograd import Variable
 import torch.optim.lr_scheduler
 from torch.nn.utils.clip_grad import clip_grad_norm
 from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import tqdm
 from tensorboard import SummaryWriter
 
@@ -168,7 +170,7 @@ class Trainer:
         if self._grad_norm:
             clip_grad_norm(self._model.parameters(), self._grad_norm)
 
-    def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
+    def _batch_loss(self, batch: dict, for_training: bool) -> Variable:
         """
         Does a forward pass on the given batch and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
@@ -318,7 +320,7 @@ class Trainer:
                                      "a validation metric to compute the schedule and therefore "
                                      "must be used with a validation dataset.")
         elif reduce_on_plateau:
-            self._learning_rate_scheduler.step(val_metric, epoch)
+            cast(ReduceLROnPlateau, self._learning_rate_scheduler).step(val_metric, epoch)
         else:
             self._learning_rate_scheduler.step(epoch)
 
@@ -396,7 +398,8 @@ class Trainer:
 
     def _forward(self, batch: dict, for_training: bool) -> dict:
         tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=for_training)
-        return self._model.forward(**tensor_batch)
+        # TODO(joelgrus): get rid of this cast
+        return self._model.forward(**cast(dict, tensor_batch))
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use

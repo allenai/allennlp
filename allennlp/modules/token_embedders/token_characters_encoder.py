@@ -1,4 +1,7 @@
+from typing import cast, Callable
+
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
@@ -24,14 +27,14 @@ class TokenCharactersEncoder(TokenEmbedder):
         self._embedding = TimeDistributed(embedding)
         self._encoder = TimeDistributed(encoder)
         if dropout > 0:
-            self._dropout = torch.nn.Dropout(p=dropout)
+            self._dropout = cast(Callable[[Variable], Variable], torch.nn.Dropout(p=dropout))
         else:
             self._dropout = lambda x: x
 
     def get_output_dim(self) -> int:
         return self._encoder._module.get_output_dim()  # pylint: disable=protected-access
 
-    def forward(self, token_characters: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
+    def forward(self, token_characters: Variable) -> Variable:  # pylint: disable=arguments-differ
         mask = (token_characters != 0).long()
         return self._dropout(self._encoder(self._embedding(token_characters), mask))
 

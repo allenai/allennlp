@@ -1,6 +1,5 @@
 from typing import Optional
 
-import torch
 from torch.autograd import Variable
 
 from allennlp.training.metrics.metric import Metric

@@ -1,6 +1,7 @@
 from typing import Dict
 
 import torch
+from torch.autograd import Variable
 from overrides import overrides
 
 from allennlp.common import Params
@@ -34,7 +35,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             output_dim += embedder.get_output_dim()
         return output_dim
 
-    def forward(self, text_field_input: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, text_field_input: Dict[str, Variable]) -> Variable:
         if self._token_embedders.keys() != text_field_input.keys():
             message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
                                                             str(text_field_input.keys()))

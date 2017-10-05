@@ -1,6 +1,7 @@
 from typing import Dict, Optional
 
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -97,9 +98,9 @@ class DecomposableAttention(Model):
         initializer(self)
 
     def forward(self,  # type: ignore
-                premise: Dict[str, torch.LongTensor],
-                hypothesis: Dict[str, torch.LongTensor],
-                label: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
+                premise: Dict[str, Variable],
+                hypothesis: Dict[str, Variable],
+                label: Variable = None) -> Dict[str, Variable]:
         # pylint: disable=arguments-differ
         """
         Parameters

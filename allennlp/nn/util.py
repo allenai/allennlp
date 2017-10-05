@@ -2,7 +2,7 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
-from typing import Dict, List, Optional, Union, Tuple, cast
+from typing import Dict, List, Optional, Union, Tuple
 
 import numpy
 import torch
@@ -101,7 +101,7 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: Variable) -
 def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
                         cuda_device: int = -1,
                         add_batch_dimension: bool = False,
-                        for_training: bool = True):
+                        for_training: bool = True) -> Union[dict, Variable]:
     """
     Convert an (optionally) nested dictionary of arrays to Pytorch ``Variables``,
     suitable for use in a computation graph.
@@ -240,7 +240,7 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     return viterbi_path, viterbi_score
 
 
-def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.LongTensor:
+def get_text_field_mask(text_field_tensors: Dict[str, Variable]) -> Variable:
     """
     Takes the dictionary of tensors produced by a ``TextField`` and returns a mask of shape
     ``(batch_size, num_tokens)``.  This mask will be 0 where the tokens are padding, and 1

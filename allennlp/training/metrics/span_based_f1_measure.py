@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional, Set, Tuple, cast, Sequence
 from collections import defaultdict
 
-import torch
 from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError

@@ -1,3 +1,4 @@
+# pylint: disable=abstract-method
 import torch
 
 class RNNBase(torch.nn.Module):

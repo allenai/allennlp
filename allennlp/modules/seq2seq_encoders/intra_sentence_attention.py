@@ -1,5 +1,8 @@
+from typing import Callable, cast
+
 from overrides import overrides
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -53,7 +56,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         super(IntraSentenceAttentionEncoder, self).__init__()
         self._input_dim = input_dim
         if projection_dim:
-            self._projection = torch.nn.Linear(input_dim, projection_dim)
+            self._projection = cast(Callable[[Variable], Variable], torch.nn.Linear(input_dim, projection_dim))
         else:
             self._projection = lambda x: x
             projection_dim = input_dim
@@ -79,7 +82,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):  # pylint: disable=arguments-differ
+    def forward(self, tokens: Variable, mask: Variable):  # pylint: disable=arguments-differ
         batch_size, sequence_length, _ = tokens.size()
         # Shape: (batch_size, sequence_length, sequence_length)
         similarity_matrix = self._matrix_attention(tokens, tokens)
