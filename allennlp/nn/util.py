@@ -501,29 +501,66 @@ def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
             raise ConfigurationError("Tensor dims must match for operation \"{}\"".format(operation))
         return first_tensor_dim
 
-def flatten_batched_indices(indices, sequence_length):
-    # indices: [batch_size, d1, ..., dn]
-    offsets = get_range_vector(indices.size(0), indices.is_cuda) * sequence_length # [batch_size]
+def flatten_batched_indices(indices: torch.Tensor, sequence_length: int) -> torch.Tensor:
+    """
+    This is a cacheable subroutine for `batched_index_select`. The given `indices` of size
+    `(batch_size, d_1, ..., d_n)` indexes into dimension 2 of a target tensor, which has size
+    `(batch_size, sequence_length, embedding_size)`. This function returns a vector that correctly indexes into
+    the flattened target. The sequence length of the target must be provided to compute the appropriate offsets.
+    """
+    # Shape: (batch_size)
+    offsets = get_range_vector(indices.size(0), indices.is_cuda) * sequence_length
     for _ in range(len(indices.size()) - 1):
-        offsets = offsets.unsqueeze(1) # [batch_size, 1, ..., 1]
-    offset_indices = indices + offsets # [batch_size, d1, ..., dn]
-    return offset_indices.view(-1) # [batch_size * d1 * ... * dn]
+        offsets = offsets.unsqueeze(1)
 
-def batched_index_select(target, indices, flattened_indices=None):
-    # target: [batch_size, sequence_length, emb]
-    # indices: [batch_size, d1, ..., dn]
+    # Shape: (batch_size, d_1, ..., d_n)
+    offset_indices = indices + offsets
+
+    # Shape: (batch_size * d_1 * ... * d_n)
+    offset_indices = offset_indices.view(-1)
+    return offset_indices
+
+def batched_index_select(target: torch.Tensor,
+                         indices: torch.Tensor,
+                         flattened_indices: Optional[torch.Tensor] = None) -> torch.Tensor:
+    """
+    The given `indices` of size `(batch_size, d_1, ..., d_n)` indexes into dimension 2 of the target, which has
+    size `(batch_size, sequence_length, embedding_size)`. This function returns the selected values in the target
+    with respected to those indices, which has size `(batch_size, d_1, ..., d_n, embedding_size)`. This can use
+    the optionally precomputed `flattened_indices` with size (batch_size * d_1 * ... * d_n) if given.
+    """
     if flattened_indices is None:
-        flattened_indices = flatten_batched_indices(indices, target.size(1)) # [batch_size * d1 * ... * dn]
-    flattened_target = target.view(-1, target.size(-1)) # [batch_size * sequence_length, emb]
-    flattened_selected = flattened_target.index_select(0, flattened_indices) # [batch_size * d1 * ... * dn, emb]
-    selected_shape = list(indices.size()) + [target.size(-1)] # [n + 2]
-    return flattened_selected.view(*selected_shape) # [batch_size, d1, ..., dn, emb]
+        # Shape: (batch_size * d_1 * ... * d_n)
+        flattened_indices = flatten_batched_indices(indices, target.size(1))
 
-def flattened_index_select(target, indices):
-    flattened_selected = target.index_select(1, indices.view(-1)) # [batch_size, k * c, emb]
-    return flattened_selected.view(target.size(0), indices.size(0), indices.size(1), -1) # [batch_size, k, c, emb]
+    # Shape: (batch_size * sequence_length, embedding_size)
+    flattened_target = target.view(-1, target.size(-1))
 
-def logsumexp(vec, dim, keepdim=False):
+    # Shape: (batch_size * d_1 * ... * d_n, embedding_size)
+    flattened_selected = flattened_target.index_select(0, flattened_indices)
+    selected_shape = list(indices.size()) + [target.size(-1)]
+    # Shape: (batch_size, d_1, ..., d_n, embedding_size)
+    selected_target = flattened_selected.view(*selected_shape)
+    return selected_target
+
+def flattened_index_select(target: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
+    """
+    The given `indices` of size `(k, c)` specifies subsets of the `target` that each of the k rows should select.
+    The `target` has size `(batch_size, k, embedding_size)`, and the resulting selected tensor has size
+    `(batch_size, k, c, embedding_size)`.
+    """
+    # Shape: (batch_size, k * c, embedding_size)
+    flattened_selected = target.index_select(1, indices.view(-1))
+
+    # Shape: (batch_size, k, c, embedding_size)
+    selected = flattened_selected.view(target.size(0), indices.size(0), indices.size(1), -1)
+    return selected
+
+def logsumexp(vec: torch.Tensor, dim: int, keepdim=False) -> torch.Tensor:
+    """
+    A numerically stable computation of logsumexp. This is mathematically equivalent to
+    `vec.exp().sum(dim, keep=keepdim).log()`. `vec` can be a tensor of any size.
+    """
     max_score, _ = vec.max(dim, keepdim=keepdim)
     if keepdim:
         stable_vec = vec - max_score
@@ -531,22 +568,33 @@ def logsumexp(vec, dim, keepdim=False):
         stable_vec = vec - max_score.unsqueeze(dim)
     return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
 
-def get_zeros(shape, is_cuda):
+def get_zeros(shape: List[int], is_cuda: bool) -> torch.Tensor:
+    """
+    Returns a tensor of zeros with the desired shape. The CUDA implementation
+    is meant to avoid copy data from CPU to GPU.
+    """
     if is_cuda:
         zeros = torch.cuda.FloatTensor(*shape).fill_(0)
     else:
         zeros = torch.zeros(*shape).float()
     return Variable(zeros, requires_grad=False)
 
-def get_range_vector(size, is_cuda):
+def get_range_vector(size: int, is_cuda: bool) -> torch.Tensor:
+    """
+    Returns a range vector with the desired size, starting at 0. The CUDA implementation
+    is meant to avoid copy data from CPU to GPU.
+    """
     if is_cuda:
         indices = torch.cuda.LongTensor(size).fill_(1).cumsum(0) - 1
     else:
         indices = torch.arange(0, size).long()
     return Variable(indices, requires_grad=False)
 
-def bucket_distance(distances):
-    # Buckets: [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32-63, 64+].
+def bucket_distance(distances: torch.Tensor) -> torch.Tensor:
+    """
+    Places the given values (designed for distances) into 10 semi-logscale buckets:
+    [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32-63, 64+]. `distances` can be of any size.
+    """
     logspace_idx = (distances.float().log()/math.log(2)).floor().long() + 3
     use_identity = (distances <= 4).long()
     combined_idx = use_identity * distances + (1 + (-1 * use_identity)) * logspace_idx
