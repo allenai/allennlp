@@ -58,7 +58,8 @@ class SpanBasedF1Measure(Metric):
     def __call__(self,
                  predictions: torch.Tensor,
                  gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+                 mask: Optional[torch.Tensor] = None,
+                 prediction_map: Optional[torch.Tensor] = None):
         """
         Parameters
         ----------
@@ -69,11 +70,15 @@ class SpanBasedF1Measure(Metric):
             shape as the ``predictions`` tensor without the ``num_classes`` dimension.
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
+        prediction_map: ``torch.Tensor``, optional (default = None).
+            If provided, this provides a mapping from the indexes of ``predictions`` to the indexes of
+            the labels in the vocabulary. This is useful if each Instance is choosing from a different
+            set of labels.
         """
         if mask is None:
             mask = ones_like(gold_labels)
         # Get the data from the Variables.
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(predictions, gold_labels, mask, prediction_map)
 
         num_classes = predictions.size(-1)
         if (gold_labels >= num_classes).any():
@@ -81,7 +86,13 @@ class SpanBasedF1Measure(Metric):
                                      "id >= {}, the number of classes.".format(num_classes))
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        argmax_predictions = predictions.max(-1)[1].float()
+        argmax_predictions = predictions.max(-1)[1]
+
+        if prediction_map is not None:
+            argmax_predictions = torch.gather(prediction_map, 1, argmax_predictions)
+            gold_labels = torch.gather(prediction_map, 1, gold_labels)
+        
+        argmax_predictions = argmax_predictions.float()
 
         # Iterate over timesteps in batch.
         batch_size = gold_labels.size(0)
