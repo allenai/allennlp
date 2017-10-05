@@ -1,7 +1,7 @@
 import logging
 import re
 import collections
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from overrides import overrides
 
@@ -23,7 +23,7 @@ class ConllCorefReader(DatasetReader):
                  max_span_width: int,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._max_span_width = max_span_width
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._begin_doc_regex = re.compile(r"#begin document \((.*)\); part (\d+)")
 
     @overrides
@@ -38,9 +38,7 @@ class ConllCorefReader(DatasetReader):
             for line in dataset_file.readlines():
                 if self.handle_line(line, document_state):
                     clusters = document_state.finalize()
-                    instance = self.text_to_instance(document_state.doc_key,
-                                                     document_state.sentences,
-                                                     clusters)
+                    instance = self.text_to_instance(document_state.sentences, clusters)
                     instances.append(instance)
                     document_state = DocumentState()
         if not instances:
@@ -50,32 +48,39 @@ class ConllCorefReader(DatasetReader):
 
     @overrides
     def text_to_instance(self,  # type: ignore
-                         doc_key: str,
                          sentences: List[List[str]],
-                         clusters: List[List[Tuple[int, int]]]) -> Instance:
+                         clusters: List[List[Tuple[int, int]]] = None) -> Instance:
         # pylint: disable=arguments-differ
         flattened_sentences = [t for s in sentences for t in s]
+
+        metadata: Dict[str, Any] = {"original_text": flattened_sentences}
+        if clusters is not None:
+            metadata["clusters"] = clusters
+
         text_field = TextField([Token(t) for t in flattened_sentences], self._token_indexers)
 
         cluster_dict = {}
-        for cluster_id, cluster in enumerate(clusters):
-            assert len(cluster) > 1
-            for mention in cluster:
-                cluster_dict[tuple(mention)] = cluster_id
+        if clusters is not None:
+            for cluster_id, cluster in enumerate(clusters):
+                assert len(cluster) > 1
+                for mention in cluster:
+                    cluster_dict[tuple(mention)] = cluster_id
 
-        span_labels = []
         span_starts = []
         span_ends = []
+        span_labels: Optional[List[int]] = [] if clusters is not None else None
+
         sentence_offset = 0
         for sentence in sentences:
             for i in range(len(sentence)):
                 for j in range(i, min(i + self._max_span_width, len(sentence))):
                     start = sentence_offset + i
                     end = sentence_offset + j
-                    if (start, end) in cluster_dict:
-                        span_labels.append(cluster_dict[(start, end)])
-                    else:
-                        span_labels.append(-1)
+                    if span_labels is not None:
+                        if (start, end) in cluster_dict:
+                            span_labels.append(cluster_dict[(start, end)])
+                        else:
+                            span_labels.append(-1)
                     start_field: Field = IndexField(start, text_field)
                     end_field: Field = IndexField(end, text_field)
                     span_starts.append(start_field)
@@ -84,29 +89,23 @@ class ConllCorefReader(DatasetReader):
 
         span_starts_field = ListField(span_starts)
         span_ends_field = ListField(span_ends)
-        span_labels_field = SequenceLabelField(span_labels, span_starts_field)
+        metadata_field = MetadataField(metadata)
 
-        metadata_field = MetadataField({"doc_key" : doc_key,
-                                        "clusters": clusters,
-                                        "text": flattened_sentences})
+        fields: Dict[str, Field] = {"text": text_field,
+                                    "span_starts": span_starts_field,
+                                    "span_ends": span_ends_field,
+                                    "metadata": metadata_field}
+        if span_labels is not None:
+            fields["span_labels"] = SequenceLabelField(span_labels, span_starts_field)
 
-        fields: Dict[str, Field] = {'text': text_field,
-                                    'span_starts': span_starts_field,
-                                    'span_ends': span_ends_field,
-                                    'span_labels': span_labels_field,
-                                    'metadata': metadata_field}
         return Instance(fields)
 
     @classmethod
-    def from_params(cls, params: Params) -> 'ConllCorefReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        max_span_width = params.pop('max_span_width')
+    def from_params(cls, params: Params) -> "ConllCorefReader":
+        token_indexers = TokenIndexer.dict_from_params(params.pop("token_indexers", {}))
+        max_span_width = params.pop("max_span_width")
         params.assert_empty(cls.__name__)
         return cls(token_indexers=token_indexers, max_span_width=max_span_width)
-
-    @staticmethod
-    def get_doc_key(doc_id, part):
-        return "{}_{}".format(doc_id, int(part))
 
     @staticmethod
     def normalize_word(word):
@@ -119,7 +118,6 @@ class ConllCorefReader(DatasetReader):
         begin_document_match = self._begin_doc_regex.match(line)
         if begin_document_match:
             document_state.assert_empty()
-            document_state.doc_key = self.get_doc_key(begin_document_match.group(1), begin_document_match.group(2))
             return False
         elif line.startswith("#end document"):
             document_state.assert_finalizable()
@@ -127,16 +125,15 @@ class ConllCorefReader(DatasetReader):
         else:
             row = line.split()
             if not row:
-                document_state.sentences.append(tuple(document_state.text))
-                del document_state.text[:]
+                document_state.complete_sentence()
                 return False
             assert len(row) >= 12
 
             word = self.normalize_word(row[3])
             coref = row[-1]
 
-            word_index = len(document_state.text) + sum(len(s) for s in document_state.sentences)
-            document_state.text.append(word)
+            word_index = document_state.num_total_words
+            document_state.add_word(word)
 
             if coref != "-":
                 for segment in coref.split("|"):
@@ -155,24 +152,32 @@ class ConllCorefReader(DatasetReader):
 
 class DocumentState(object):
     def __init__(self):
-        self.doc_key = None
-        self.text = []
+        self.sentence_buffer = []
         self.sentences = []
+        self.num_total_words = 0
         self.clusters = collections.defaultdict(list)
         self.coref_stacks = collections.defaultdict(list)
 
     def assert_empty(self):
-        assert self.doc_key is None
-        assert not self.text
+        assert not self.sentence_buffer
         assert not self.sentences
+        assert self.num_total_words == 0
         assert not self.coref_stacks
         assert not self.clusters
 
     def assert_finalizable(self):
-        assert self.doc_key is not None
-        assert not self.text
+        assert not self.sentence_buffer
         assert self.sentences
+        assert self.num_total_words > 0
         assert all(not s for s in self.coref_stacks.values())
+
+    def complete_sentence(self):
+        self.sentences.append(self.sentence_buffer)
+        self.sentence_buffer = []
+
+    def add_word(self, word):
+        self.sentence_buffer.append(word)
+        self.num_total_words += 1
 
     def finalize(self):
         merged_clusters = []
