@@ -1,3 +1,4 @@
+from typing import Set, Tuple
 from overrides import overrides
 
 from allennlp.training.metrics.metric import Metric
@@ -12,8 +13,8 @@ class MentionRecall(Metric):
     @overrides
     def __call__(self, batched_top_spans, batched_metadata):
         for top_spans, metadata in zip(batched_top_spans.data.tolist(), batched_metadata):
-            gold_mentions = set(m for c in metadata["clusters"] for m in c)
-            top_spans = set(tuple(s) for s in top_spans)
+            gold_mentions: Set[Tuple[int, int]] = set(m for c in metadata["clusters"] for m in c)
+            top_spans: Set[Tuple[int, int]] = set(tuple(s) for s in top_spans)
             self._num_gold_mentions += len(gold_mentions)
             self._num_recalled_mentions += len(gold_mentions & top_spans)
 
