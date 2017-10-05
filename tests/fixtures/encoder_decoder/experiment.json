@@ -8,18 +8,18 @@
       "tokens": {
 	"type": "embedding",
 	"vocab_namespace": "source_tokens",
-        "embedding_dim": 10,
+        "embedding_dim": 25,
         "trainable": true
       }
     },
     "encoder": {
       "type": "lstm",
-      "input_size": 10,
-      "hidden_size": 4,
+      "input_size": 25,
+      "hidden_size": 10,
       "num_layers": 1
     },
     "max_decoding_steps": 20,
-    "use_attention": false
+    "use_attention": true
   },
   "iterator": {
     "type": "bucket",
@@ -27,14 +27,12 @@
     "batch_size" : 80
   },
   "trainer": {
-    "num_epochs": 1,
-    "grad_norm": 1.0,
-    "patience": 500,
+    "num_epochs": 100,
+    "patience": 10,
     "cuda_device": -1,
     "optimizer": {
-      "type": "adadelta",
-      "lr": 0.000001,
-      "rho": 0.95
+      "type": "adam",
+      "lr": 0.01
     }
   }
 }
