@@ -9,7 +9,6 @@ for training AllenNLP models.
    allennlp.training.learning_rate_schedulers
    allennlp.training.metrics
    allennlp.training.optimizers
-   allennlp.training.regularizers
    allennlp.training.trainer
 
 .. automodule:: allennlp.training

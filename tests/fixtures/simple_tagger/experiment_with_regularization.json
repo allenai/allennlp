@@ -1,0 +1,44 @@
+{
+    "dataset_reader":{"type":"sequence_tagging"},
+    "train_data_path": "tests/fixtures/data/sequence_tagging.tsv",
+    "validation_data_path": "tests/fixtures/data/sequence_tagging.tsv",
+    "model": {
+      "type": "simple_tagger",
+      "text_field_embedder": {
+        "tokens": {
+          "type": "embedding",
+          "projection_dim": 2,
+          "pretrained_file": "tests/fixtures/glove.6B.100d.sample.txt.gz",
+          "embedding_dim": 100,
+          "trainable": true
+        }
+      },
+      "stacked_encoder": {
+        "type": "lstm",
+        "input_size": 2,
+        "hidden_size": 4,
+        "num_layers": 1
+      },
+      "regularizer": [
+        ["weight$", {"type": "l2", "alpha": 10}],
+        ["bias$", {"type": "l1", "alpha": 5}]
+      ]
+    },
+    "iterator": {
+      "type": "bucket",
+      "sorting_keys": [["tokens", "num_tokens"]],
+      "padding_noise": 0.0,
+      "batch_size" : 80
+    },
+    "trainer": {
+      "num_epochs": 1,
+      "grad_norm": 1.0,
+      "patience": 500,
+      "cuda_device": -1,
+      "optimizer": {
+        "type": "adadelta",
+        "lr": 0.000001,
+        "rho": 0.95
+      }
+    }
+  }

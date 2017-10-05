@@ -3,7 +3,7 @@
 an AllenNLP model.
 """
 
-from typing import Dict
+from typing import Dict, Union
 import os
 import logging
 
@@ -11,6 +11,7 @@ from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
 from allennlp.nn.util import arrays_to_variables, device_mapping
+from allennlp.nn.regularizers import RegularizerApplicator
 
 import numpy
 import torch
@@ -41,9 +42,22 @@ class Model(torch.nn.Module, Registrable):
     of early stopping and best-model serialization based on a validation metric in
     :class:`~allennlp.training.Trainer`.
     """
-    def __init__(self, vocab: Vocabulary) -> None:
+    def __init__(self,
+                 vocab: Vocabulary,
+                 regularizer: RegularizerApplicator = None) -> None:
         super().__init__()
         self.vocab = vocab
+        self._regularizer = regularizer
+
+    def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
+        """
+        Computes the regularization penalty for the model.
+        Returns 0 if the model was not configured to use regularization.
+        """
+        if self._regularizer is None:
+            return 0.0
+        else:
+            return self._regularizer(self)
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
@@ -90,9 +104,9 @@ class Model(torch.nn.Module, Registrable):
         """
         Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
         converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
-        through :func:`self.forward()`, and returns the result.  Before returning the result, we
-        convert any ``torch.autograd.Variables`` or ``torch.Tensors`` into numpy arrays and remove
-        the batch dimension.
+        through :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
+        and returns the result.  Before returning the result, we convert any ``torch.autograd.Variables``
+        or ``torch.Tensors`` into numpy arrays and remove the batch dimension.
         """
         # Hack to see what cuda device the model is on, so we know where to put these inputs.  For
         # complicated models, or machines with multiple GPUs, this will not work.  I couldn't find
@@ -103,7 +117,7 @@ class Model(torch.nn.Module, Registrable):
                                           add_batch_dimension=True,
                                           cuda_device=cuda_device,
                                           for_training=False)
-        outputs = self.forward(**model_input)
+        outputs = self.decode(self.forward(**model_input))
 
         for name, output in list(outputs.items()):
             output = output[0]
@@ -147,7 +161,8 @@ class Model(torch.nn.Module, Registrable):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
-        return cls.by_name(choice).from_params(vocab, params)
+        model = cls.by_name(choice).from_params(vocab, params)
+        return model
 
     @classmethod
     def load(cls,

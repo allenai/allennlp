@@ -73,7 +73,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                 verb_labels = [0 for _ in words]
                 verb_labels[i] = 1
                 instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
-                output = self._model.decode(self._model.forward_on_instance(instance))
+                output = self._model.forward_on_instance(instance)
                 tags = output['tags']
 
                 description = SemanticRoleLabelerPredictor.make_srl_string(words, tags)

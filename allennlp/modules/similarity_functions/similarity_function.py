@@ -31,5 +31,5 @@ class SimilarityFunction(torch.nn.Module, Registrable):
 
     @classmethod
     def from_params(cls, params: Params) -> 'SimilarityFunction':
-        choice = params.pop_choice('type', cls.list_available())
+        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
         return cls.by_name(choice).from_params(params)
