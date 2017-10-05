@@ -2,6 +2,7 @@ from typing import Optional, List, Iterator, Iterable, TypeVar, Generic, Union, 
 
 import torch
 
+from ..autograd.variable import Variable
 from .module import Module
 from .modules import RNNBase
 from .parameter import Parameter
@@ -22,6 +23,17 @@ class Linear(Module):
 
 class Dropout(Module):
     def __init__(self, p: float = 0.5, inplace: bool = False) -> None: ...
+
+
+class Embedding(Module):
+    def __init__(self,
+                 num_embeddings: int,
+                 embedding_dim: int,
+                 padding_idx: Optional[int] = None,
+                 max_norm: Optional[float] = None,
+                 norm_type: float = 2,
+                 scale_grad_by_freq: bool = False,
+                 sparse: bool = False) -> None: ...
 
 class CrossEntropyLoss(Module):
     def __init__(self,

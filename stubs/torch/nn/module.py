@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, Iterator, Tuple, TypeVar
+from typing import Optional, Dict, Any, Iterator, Tuple, TypeVar, Callable, overload
 
 from .parameter import Parameter
 

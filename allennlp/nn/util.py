@@ -97,11 +97,23 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: Variable) -
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask
 
+def array_to_variable(array: numpy.ndarray,
+                      cuda_device: int = -1,
+                      add_batch_dimension: bool = False,
+                      volatile: bool = False) -> Variable:
+    tensor = torch.from_numpy(array)
+    if add_batch_dimension:
+        tensor.unsqueeze_(0)
+    torch_variable = Variable(tensor, volatile=volatile)
+    if cuda_device == -1:
+        return torch_variable
+    else:
+        return torch_variable.cuda(cuda_device)
 
 def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
                         cuda_device: int = -1,
                         add_batch_dimension: bool = False,
-                        for_training: bool = True) -> Union[dict, Variable]:
+                        for_training: bool = True) -> Dict[str, Union[dict, Variable]]:
     """
     Convert an (optionally) nested dictionary of arrays to Pytorch ``Variables``,
     suitable for use in a computation graph.
@@ -127,25 +139,20 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
     -------
     The original data structure or tensor converted to a Pytorch ``Variable``.
     """
-    if isinstance(data_structure, dict):
-        for key, value in data_structure.items():
-            # This check is a bit hacky, but I'm not sure how else to handle this.  By this point,
-            # we've lost all reference to the original `Field` object.
-            if 'metadata' in key:
-                if add_batch_dimension:
-                    data_structure[key] = [value]
-            else:
-                data_structure[key] = arrays_to_variables(value, cuda_device, add_batch_dimension)
-        return data_structure
-    else:
-        tensor = torch.from_numpy(data_structure)
-        if add_batch_dimension:
-            tensor.unsqueeze_(0)
-        torch_variable = Variable(tensor, volatile=not for_training)
-        if cuda_device == -1:
-            return torch_variable
+    for key, value in data_structure.items():
+        # This check is a bit hacky, but I'm not sure how else to handle this.  By this point,
+        # we've lost all reference to the original `Field` object.
+        if 'metadata' in key:
+            if add_batch_dimension:
+                data_structure[key] = [value]
+        elif isinstance(value, dict):
+            data_structure[key] = arrays_to_variables(value, cuda_device, add_batch_dimension, for_training)
         else:
-            return torch_variable.cuda(cuda_device)
+            data_structure[key] = array_to_variable(value,
+                                                    cuda_device,
+                                                    add_batch_dimension,
+                                                    volatile=not for_training)
+    return data_structure
 
 
 def _get_normalized_masked_log_probablities(vector, mask):

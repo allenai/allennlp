@@ -3,7 +3,7 @@
 an AllenNLP model.
 """
 
-from typing import Dict, Union, cast
+from typing import Dict, Union
 import os
 import logging
 
@@ -119,7 +119,7 @@ class Model(torch.nn.Module, Registrable):
                                           cuda_device=cuda_device,
                                           for_training=False)
         # TODO(joelgrus) get rid of this cast
-        outputs = self.decode(self.forward(**cast(dict, model_input)))
+        outputs = self.decode(self.forward(**model_input))
 
         for name, output in list(outputs.items()):
             output = output[0]

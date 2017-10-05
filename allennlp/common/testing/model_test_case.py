@@ -1,4 +1,3 @@
-from typing import cast
 import os
 
 from numpy.testing import assert_allclose
@@ -54,11 +53,11 @@ class ModelTestCase(AllenNlpTestCase):
         model_dataset = reader.read(params['validation_data_path'])
         model_dataset.index_instances(model.vocab)
         model_batch_arrays = next(iterator(model_dataset, shuffle=False))
-        model_batch = cast(dict, arrays_to_variables(model_batch_arrays, for_training=False))
+        model_batch = arrays_to_variables(model_batch_arrays, for_training=False)
         loaded_dataset = reader.read(params['validation_data_path'])
         loaded_dataset.index_instances(loaded_model.vocab)
         loaded_batch_arrays = next(iterator(loaded_dataset, shuffle=False))
-        loaded_batch = cast(dict, arrays_to_variables(loaded_batch_arrays, for_training=False))
+        loaded_batch = arrays_to_variables(loaded_batch_arrays, for_training=True)
 
         # The datasets themselves should be identical.
         for key in model_batch.keys():

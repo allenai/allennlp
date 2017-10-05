@@ -398,8 +398,7 @@ class Trainer:
 
     def _forward(self, batch: dict, for_training: bool) -> dict:
         tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=for_training)
-        # TODO(joelgrus): get rid of this cast
-        return self._model.forward(**cast(dict, tensor_batch))
+        return self._model.forward(**tensor_batch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
