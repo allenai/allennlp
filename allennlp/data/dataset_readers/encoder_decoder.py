@@ -82,7 +82,8 @@ class EncoderDecoderDatasetReader(DatasetReader):
     @classmethod
     def from_params(cls, params: Params) -> 'EncoderDecoderDatasetReader':
         source_tokenizer = Tokenizer.from_params(params.pop('source_tokenizer', {}))
-        target_tokenizer = Tokenizer.from_params(params.pop('target_tokenizer', {}))
+        target_tokenizer = Tokenizer.from_params(params.pop('target_tokenizer', {"start_tokens": [START_SYMBOL],
+                                                                                 "end_tokens": [END_SYMBOL]}))
         source_token_indexers = TokenIndexer.dict_from_params(params.pop('source_token_indexers', {}))
         target_token_indexers = TokenIndexer.dict_from_params(params.pop('target_token_indexers', {}))
         params.assert_empty(cls.__name__)
