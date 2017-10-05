@@ -18,6 +18,40 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 @Model.register("coref")
 class CoreferenceResolver(Model):
+    """
+    This ``Model`` implements the coreference resolution model described "End-to-end Neural
+    Coreference Resolution"
+    <https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83>
+    by Lee et al., 2017.
+    The basic outline of this model is to get an embedded representation of each span in the
+    document. These span representation are scored and use to prune away spans that are unlikely
+    to occur in a coreference cluster. For the remaining spans, the model decides which antecedent
+    span (if any) they are coreference with. The resulting coreference links, after applying,
+    transitivity imply a clustering of the spans in the document.
+    Parameters
+    ----------
+    vocab : ``Vocabulary``
+    text_field_embedder : ``TextFieldEmbedder``
+        Used to embed the ``text`` ``TextField`` we get as input to the model.
+    context_layer : ``Seq2SeqEncoder``
+        This layer incorporates contextual information for each word in the document.
+    mention_feedforward : ``FeedForward``
+        This feedforward network is applied to the span representations which is then scored
+        by a linear layer.
+    antecedent_feedforward: ``FeedForward``
+        This feedforward network is applied to pairs of span representation, along with any
+        pairwise features, which is then scored by a linear layer.
+    feature_size: ``int``
+        The embedding size for all the embedded features, such as distances or span widths.
+    max_span_width: ``int``
+        The maximum width of candidate spans.
+    lexical_dropout: ``int``
+        The probability of dropping out dimensions of the embedded text.
+    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+        Used to initialize the model parameters.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
+    """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  context_layer: Seq2SeqEncoder,
@@ -209,6 +243,32 @@ class CoreferenceResolver(Model):
                 span_labels: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
+        """
+        Parameters
+        ----------
+        text : Dict[str, torch.LongTensor]
+            From a ``TextField``
+        span_starts : torch.IntTensor
+            From a ``ListField[IndexField]``
+        span_ends : torch.IntTensor
+            From a ``ListField[IndexField]``
+        span_labels : torch.IntTensor, optional (default = None)
+            From a ``SequenceLabelField``
+        Returns
+        -------
+        An output dictionary consisting of:
+        top_spans : torch.IntTensor
+            A tensor of shape ``(batch_size, k, 2)`` representing the start and end word indices of the top spans
+            that survived the pruning stage.
+        antecedent_indices : torch.IntTensor
+            A tensor of shape ``(k, max_ant)`` representing for each top span the index (with respect to top_spans)
+            of the possible antecedents the model considered.
+        predicted_antecedents: torch.IntTensor
+            A tensor of shape ``(batch_size, k)`` representing for each top span the index (with respect to
+            antecedent_indices) of the most likely antecedent. -1 means there was no predicted link.
+        loss : torch.FloatTensor, optional
+            A scalar loss to be optimised.
+        """
         # Shape: (batch_size, text_len, embedding_size)
         text_emb = self._lexical_dropout(self._text_field_embedder(text))
 
