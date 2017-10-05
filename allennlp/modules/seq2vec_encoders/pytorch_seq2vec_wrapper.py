@@ -108,7 +108,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         # they will be at the end. Note that at this point batch_size is the second
         # dimension of state.
         if num_valid < batch_size:
-            state[:, num_valid:] = 0.
+            state[:, num_valid:, :] = 0.
 
         # Restore the original indices and return the final state of the
         # top layer. Pytorch's recurrent layers return state in the form
