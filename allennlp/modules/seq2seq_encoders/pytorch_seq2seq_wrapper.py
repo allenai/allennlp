@@ -83,6 +83,8 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         packed_sequence_output, _ = self._module(packed_sequence_input, hidden_state)
         unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
 
+        # We sorted by length, so if there are invalid rows that need to be zeroed out
+        # they will be at the end.
         if num_valid < batch_size:
             unpacked_sequence_tensor[num_valid:, :, :] = 0.
 
