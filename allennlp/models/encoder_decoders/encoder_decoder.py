@@ -43,34 +43,42 @@ class EncoderDecoder(Model):
         Length of decoded sequences
     use_attention: bool
         Should the decoder use attention to get a dynamic summary of the encoder outputs at each step of decoding?
+    scheduled_sampling_ratio: float, optional (default = 0.0)
+        At each timestep during training, we sample a random number between 0 and 1, and if it is not less than
+        this value, we use the ground truth labels. Else, we use the predictions from the previous time step.
+        If this value is 0.0 (default), this corresponds to teacher forcing, and if it is 1.0, it corresponds
+        to not using target side ground truth labels. See the following paper for more information:
+        Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al., 2015.
     """
     def __init__(self, vocab: Vocabulary, source_embedder: TextFieldEmbedder,
-                 encoder: Seq2SeqEncoder, max_decoding_steps: int, use_attention: bool = False) -> None:
+                 encoder: Seq2SeqEncoder, max_decoding_steps: int, use_attention: bool = False,
+                 scheduled_sampling_ratio: float = 0.0) -> None:
         super(EncoderDecoder, self).__init__(vocab)
-        self.source_embedder = source_embedder
-        self.encoder = encoder
-        self.max_decoding_steps = max_decoding_steps
-        self.use_attention = use_attention
-        self.start_index = self.vocab.get_token_index(START_SYMBOL, "target_tokens")
-        self.end_index = self.vocab.get_token_index(END_SYMBOL, "target_tokens")
-        self.num_classes = self.vocab.get_vocab_size("target_tokens")
+        self._source_embedder = source_embedder
+        self._encoder = encoder
+        self._max_decoding_steps = max_decoding_steps
+        self._use_attention = use_attention
+        self._scheduled_sampling_ratio = scheduled_sampling_ratio
+        self._start_index = self.vocab.get_token_index(START_SYMBOL, "target_tokens")
+        self._end_index = self.vocab.get_token_index(END_SYMBOL, "target_tokens")
+        self._num_classes = self.vocab.get_vocab_size("target_tokens")
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the hidden
         # state of the decoder with that of the final hidden states of the encoder. Also, if we're using
         # attention with ``DotProductSimilarity``, this is needed.
-        self.decoder_output_dim = self.encoder.get_output_dim()
+        self._decoder_output_dim = self._encoder.get_output_dim()
         # TODO (pradeep): target_embedding_dim need not be the same as the source embedding dim.
-        target_embedding_dim = self.source_embedder.get_output_dim()
-        self.target_embedder = Embedding(self.num_classes, target_embedding_dim)
-        if self.use_attention:
-            self.decoder_attention = Attention()
+        target_embedding_dim = self._source_embedder.get_output_dim()
+        self._target_embedder = Embedding(self._num_classes, target_embedding_dim)
+        if self._use_attention:
+            self._decoder_attention = Attention()
             # The output of attention will be concatenated to the input vector of the decoder at
             # each time step.
-            self.decoder_input_dim = self.encoder.get_output_dim() + target_embedding_dim
+            self._decoder_input_dim = self._encoder.get_output_dim() + target_embedding_dim
         else:
-            self.decoder_input_dim = target_embedding_dim
+            self._decoder_input_dim = target_embedding_dim
         # TODO (pradeep): Do not hardcode decoder cell type.
-        self.decoder_cell = LSTMCell(self.decoder_input_dim, self.decoder_output_dim)
-        self.output_projection_layer = Linear(self.decoder_output_dim, self.num_classes)
+        self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
+        self._output_projection_layer = Linear(self._decoder_output_dim, self._num_classes)
         # We need the start symbol to provide as the input at the first timestep of decoding, and end symbol
         # as a way of letting decoder choose to stop decoding.
 
@@ -99,34 +107,36 @@ class EncoderDecoder(Model):
             target_sequence_length = targets.size()[1]
             num_decoding_steps = target_sequence_length
         else:
-            num_decoding_steps = self.max_decoding_steps
+            num_decoding_steps = self._max_decoding_steps
         # TODO (pradeep): Define a DecoderState class?
         decoder_hidden = final_encoder_output
-        decoder_context = Variable(torch.zeros(1, self.decoder_output_dim))
+        with torch.cuda.device_of(decoder_hidden):
+            decoder_context = Variable(torch.zeros(1, self._decoder_output_dim))
         last_predictions = None
         step_logits = []
         step_probabilities = []
         step_predictions = []
         for timestep in range(num_decoding_steps):
-            if self.training:
+            if self.training and all(torch.rand(1) >= self._scheduled_sampling_ratio):
                 input_choices = targets[:, timestep]
             else:
                 if timestep == 0:
                     # For the first timestep, when we do not have targets, we input start symbols.
                     # (batch_size,)
-                    input_choices = Variable(torch.LongTensor([self.start_index]).expand_as(
-                            final_encoder_output[:, 0]))
+                    with torch.cuda.device_of(final_encoder_output):
+                        input_choices = Variable(torch.LongTensor([self._start_index]).expand_as(
+                                final_encoder_output[:, 0]))
                 else:
                     input_choices = last_predictions
             decoder_input = self._prepare_decode_step_input(input_choices, decoder_hidden, encoder_outputs)
-            decoder_hidden, decoder_context = self.decoder_cell(decoder_input,
-                                                                (decoder_hidden, decoder_context))
+            decoder_hidden, decoder_context = self._decoder_cell(decoder_input,
+                                                                 (decoder_hidden, decoder_context))
             # (batch_size, num_classes)
-            output_projections = self.output_projection_layer(decoder_hidden)
+            output_projections = self._output_projection_layer(decoder_hidden)
             # (batch_size, 1, num_classes)
-            step_logits.append(output_projections.view(-1, 1, self.num_classes))
-            decoder_predictions = self.predict_step(output_projections)
-            step_probabilities.append(decoder_predictions["class_probabilities"].view(-1, 1, self.num_classes))
+            step_logits.append(output_projections.unsqueeze(1))
+            decoder_predictions = self._predict_step(output_projections)
+            step_probabilities.append(decoder_predictions["class_probabilities"].unsqueeze(1))
             last_predictions = decoder_predictions["predicted_classes"]
             # (batch_size, 1)
             step_predictions.append(last_predictions.view(-1, 1))
@@ -161,9 +171,9 @@ class EncoderDecoder(Model):
         return output_dict
 
     def _get_encoder_outputs(self, source_tokens: Dict[str, torch.LongTensor]) -> torch.LongTensor:
-        embedded_input = self.source_embedder(source_tokens)
+        embedded_input = self._source_embedder(source_tokens)
         source_mask = get_text_field_mask(source_tokens)
-        encoded_text = self.encoder(embedded_input, source_mask)
+        encoded_text = self._encoder(embedded_input, source_mask)
         return encoded_text
 
     def _prepare_decode_step_input(self, input_indices: torch.LongTensor,
@@ -190,14 +200,14 @@ class EncoderDecoder(Model):
         """
         # input_indices : (batch_size,)  since we are processing these one timestep at a time.
         # (batch_size, enc_embedding_dim)
-        embedded_input = self.target_embedder(input_indices)
-        if self.use_attention:
+        embedded_input = self._target_embedder(input_indices)
+        if self._use_attention:
             if last_decoder_output is None or encoder_outputs is None:
                 raise ConfigurationError("Last decoder output and all encoder outputs are needed to compute "
                                          "attention weights.")
             # encoder_outputs : (batch_size, input_sequence_length, enc_output_dim)
             # (batch_size, input_sequence_length)
-            input_weights = self.decoder_attention(last_decoder_output, encoder_outputs)
+            input_weights = self._decoder_attention(last_decoder_output, encoder_outputs)
             # (batch_size, enc_output_dim)
             attended_input = weighted_sum(encoder_outputs, input_weights)
             # (batch_size, enc_output_dim + enc_embedding_dim)
@@ -205,8 +215,8 @@ class EncoderDecoder(Model):
         else:
             return embedded_input
 
-    def predict_step(self, # pylint: disable=no-self-use
-                     target_scores: torch.LongTensor) -> Dict[str, torch.LongTensor]:
+    def _predict_step(self, # pylint: disable=no-self-use
+                      target_scores: torch.LongTensor) -> Dict[str, torch.LongTensor]:
         """
         Take the projected scores for all output classes and predict the output for a single timestep.
         Here we simply normalize the scores and output the class with the highest probability as the
@@ -244,7 +254,7 @@ class EncoderDecoder(Model):
         for indices in predicted_indices:
             indices = list(indices)
             # Collect indices till the first end_symbol
-            indices = indices[:indices.index(self.end_index)]
+            indices = indices[:indices.index(self._end_index)]
             predicted_tokens = [self.vocab.get_token_from_index(x, namespace="output_tokens")
                                 for x in indices]
             all_predicted_tokens.append(predicted_tokens)
@@ -259,5 +269,6 @@ class EncoderDecoder(Model):
         source_embedder = TextFieldEmbedder.from_params(vocab, source_embedder_params)
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         max_decoding_steps = params.pop("max_decoding_steps")
-        use_attention = params.pop("use_attention")
-        return cls(vocab, source_embedder, encoder, max_decoding_steps, use_attention)
+        use_attention = params.pop("use_attention", False)
+        scheduled_sampling_ratio = params.pop("scheduled_sampling_ratio", 0.0)
+        return cls(vocab, source_embedder, encoder, max_decoding_steps, use_attention, scheduled_sampling_ratio)
