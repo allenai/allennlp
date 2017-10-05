@@ -140,7 +140,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     else:
         test_data = None
 
-    logger.info("Creating a vocabulary using {} data.".format(", ".join(datasets_in_vocab)))
+    logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_in_vocab))
     vocab = Vocabulary.from_params(params.pop("vocabulary", {}), Dataset(all_instances))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
