@@ -32,7 +32,7 @@ class Entropy(Metric):
             mask = torch.ones(logits.size()[:-1])
 
         log_probs = torch.nn.functional.log_softmax(logits).data
-        probabilities = torch.exp(log_probs) * mask.unsqueeze(-1)
+        probabilities = torch.exp(log_probs) * mask.float().unsqueeze(-1)
         weighted_negative_likelihood = - log_probs * probabilities
         entropy = weighted_negative_likelihood.sum(-1)
 
