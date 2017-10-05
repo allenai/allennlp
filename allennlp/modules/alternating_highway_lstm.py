@@ -196,8 +196,8 @@ class AlternatingHighwayLSTM(torch.nn.Module):
             weight_index += init_tensor.nelement()
 
             # Same for the recurrent connection weight.
-            init_tensor = self.weight.data.new(input_size, self.hidden_size * 5).zero_()
-            block_orthogonal(init_tensor, [input_size, self.hidden_size])
+            init_tensor = self.weight.data.new(self.hidden_size, self.hidden_size * 5).zero_()
+            block_orthogonal(init_tensor, [self.hidden_size, self.hidden_size])
             self.weight.data[weight_index: weight_index + init_tensor.nelement()]\
                 .view_as(init_tensor).copy_(init_tensor)
             weight_index += init_tensor.nelement()

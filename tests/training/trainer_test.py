@@ -46,14 +46,19 @@ class TestTrainer(AllenNlpTestCase):
     def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.dataset,
+                          validation_dataset=self.dataset,
                           num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
         new_trainer = Trainer(self.model, self.optimizer,
                               self.iterator, self.dataset,
+                              validation_dataset=self.dataset,
                               num_epochs=3, serialization_dir=self.TEST_DIR)
 
-        epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        epoch, val_metrics_per_epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 1
+        assert len(val_metrics_per_epoch) == 1
+        assert isinstance(val_metrics_per_epoch[0], float)
+        assert val_metrics_per_epoch[0] != 0.
         new_trainer.train()
 
     def test_train_driver_raises_on_model_with_no_loss_key(self):
