@@ -499,7 +499,7 @@ def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
 
 def flatten_batched_indices(indices, sequence_length):
     # indices: [batch_size, d1, ..., dn]
-    offsets = get_indices(indices.size(0), indices.is_cuda) * sequence_length # [batch_size]
+    offsets = get_range_vector(indices.size(0), indices.is_cuda) * sequence_length # [batch_size]
     for _ in range(len(indices.size()) - 1):
         offsets = offsets.unsqueeze(1) # [batch_size, 1, ..., 1]
     offset_indices = indices + offsets # [batch_size, d1, ..., dn]
@@ -534,7 +534,7 @@ def get_zeros(shape, is_cuda):
         zeros = torch.zeros(*shape).float()
     return Variable(zeros, requires_grad=False)
 
-def get_indices(size, is_cuda):
+def get_range_vector(size, is_cuda):
     if is_cuda:
         indices = torch.cuda.LongTensor(size).fill_(1).cumsum(0) - 1
     else:

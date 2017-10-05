@@ -7,10 +7,10 @@ from overrides import overrides
 
 from allennlp.training.metrics.metric import Metric
 
-@Metric.register("conll_scores")
-class ConllScores(Metric):
+@Metric.register("conll_coref_scores")
+class ConllCorefScores(Metric):
     def __init__(self) -> None:
-        self.reset()
+        self.scorers = [Scorer(m) for m in (Scorer.muc, Scorer.b_cubed, Scorer.ceafe)]
 
     @overrides
     def __call__(self, top_spans, antecedent_indices, predicted_antecedents, metadata_list):

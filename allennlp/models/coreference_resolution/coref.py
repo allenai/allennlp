@@ -12,7 +12,7 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.modules import FeedForward
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
-from allennlp.training.metrics import MentionRecall, ConllScores
+from allennlp.training.metrics import MentionRecall, ConllCorefScores
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -44,7 +44,7 @@ class CoreferenceResolver(Model):
         self._spans_per_word = spans_per_word
         self._max_antecedents = max_antecedents
         self._mention_recall = MentionRecall()
-        self._conll_scores = ConllScores()
+        self._conll_coref_scores = ConllCorefScores()
         if lexical_dropout > 0:
             self._lexical_dropout = torch.nn.Dropout(p=lexical_dropout)
         else:
@@ -53,7 +53,7 @@ class CoreferenceResolver(Model):
 
     def _compute_head_attention(self, head_scores, text_emb, span_ends, span_size):
         # Shape: (1, 1, max_span_width)
-        head_offsets = util.get_indices(self._max_span_width, text_emb.is_cuda).view(1, 1, -1)
+        head_offsets = util.get_range_vector(self._max_span_width, text_emb.is_cuda).view(1, 1, -1)
 
         # Shape: (batch_size, num_spans, max_span_width)
         head_mask = (head_offsets <= span_size).float()
@@ -123,10 +123,10 @@ class CoreferenceResolver(Model):
     @staticmethod
     def _generate_antecedents(k, max_ant, is_cuda):
         # Shape: (k, 1)
-        target_idx = util.get_indices(k, is_cuda).unsqueeze(1)
+        target_idx = util.get_range_vector(k, is_cuda).unsqueeze(1)
 
         # Shape: (1, max_ant)
-        ant_offsets = (util.get_indices(max_ant, is_cuda) + 1).unsqueeze(0)
+        ant_offsets = (util.get_range_vector(max_ant, is_cuda) + 1).unsqueeze(0)
 
         # Shape: (k, max_ant)
         raw_ant_idx = target_idx - ant_offsets
@@ -303,14 +303,14 @@ class CoreferenceResolver(Model):
                                                                  top_span_mask)
 
             self._mention_recall(top_spans, metadata)
-            self._conll_scores(top_spans, ant_idx, predicted_ants, metadata)
+            self._conll_coref_scores(top_spans, ant_idx, predicted_ants, metadata)
 
             output_dict["loss"] = loss
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         mention_recall = self._mention_recall.get_metric(reset)
-        coref_precision, coref_recall, coref_f1 = self._conll_scores.get_metric(reset)
+        coref_precision, coref_recall, coref_f1 = self._conll_coref_scores.get_metric(reset)
         return {"coref_precision" : coref_precision,
                 "coref_recall" : coref_recall,
                 "coref_f1" : coref_f1,
