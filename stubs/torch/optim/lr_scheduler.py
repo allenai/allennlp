@@ -1,4 +1,4 @@
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Any, Optional
 
 from torch.optim import Optimizer
 
@@ -44,3 +44,5 @@ class ReduceLROnPlateau(_LRScheduler):
                  cooldown: int = 0,
                  min_lr: Union[float, List[float]] = 0,
                  eps: float = 1e-8) -> None: ...
+
+    def step(self, metrics: Any, epoch: Optional[int] = None) -> None: ...  # type: ignore

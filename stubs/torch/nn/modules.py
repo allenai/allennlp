@@ -19,3 +19,9 @@ class RNNBase(Module):
     batch_first: bool
     dropout: float
     bidirectional: bool
+
+class Linear(Module):
+    pass
+
+class Dropout(Module):
+    pass
