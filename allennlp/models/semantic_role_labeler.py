@@ -1,7 +1,8 @@
-from typing import Dict, List, TextIO, Optional
+from typing import Dict, List, TextIO, Optional, Any, cast
 
 from overrides import overrides
 import torch
+from torch.autograd import Variable
 from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
 
@@ -77,9 +78,9 @@ class SemanticRoleLabeler(Model):
         initializer(self)
 
     def forward(self,  # type: ignore
-                tokens: Dict[str, torch.LongTensor],
-                verb_indicator: torch.LongTensor,
-                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                tokens: Dict[str, Variable],
+                verb_indicator: Variable,
+                tags: Variable = None) -> Dict[str, Variable]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -146,7 +147,7 @@ class SemanticRoleLabeler(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def decode(self, output_dict: Dict[str, Variable]) -> Dict[str, Any]:
         """
         Does constrained viterbi decoding on class probabilities output in :func:`forward`.  The
         constraint simply specifies that the output tags must be a valid BIO sequence.  We add a
@@ -166,8 +167,9 @@ class SemanticRoleLabeler(Model):
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
             all_tags.append(tags)
-        output_dict['tags'] = all_tags
-        return output_dict
+        final_output = cast(Dict[str, Any], output_dict)
+        final_output['tags'] = all_tags
+        return final_output
 
     def get_metrics(self, reset: bool = False):
         metric_dict = self.span_metric.get_metric(reset=reset)

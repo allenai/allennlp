@@ -1,7 +1,11 @@
+from typing import Optional, Union
+
 import torch
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.rnn_base import RNNBase
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
 
@@ -30,7 +34,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     bugs around masking.  If you already have a ``PackedSequence`` you can pass ``None`` as the
     second parameter.
     """
-    def __init__(self, module: torch.nn.modules.RNNBase) -> None:
+    def __init__(self, module: Union[RNNBase, torch.nn.modules.RNNBase]) -> None:
         super(PytorchSeq2SeqWrapper, self).__init__()
         self._module = module
         try:
@@ -50,9 +54,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         return self._module.hidden_size * (2 if is_bidirectional else 1)
 
     def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor,
-                mask: torch.Tensor,
-                hidden_state: torch.Tensor = None) -> torch.Tensor:
+                inputs: Variable,
+                mask: Variable,
+                hidden_state: Optional[Variable] = None) -> Variable:
 
         if mask is None:
             return self._module(inputs, hidden_state)[0]

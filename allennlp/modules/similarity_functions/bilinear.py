@@ -1,5 +1,6 @@
 from overrides import overrides
 import torch
+from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
@@ -43,7 +44,7 @@ class BilinearSimilarity(SimilarityFunction):
         self._bias.data.fill_(0)
 
     @overrides
-    def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
+    def forward(self, tensor_1: Variable, tensor_2: Variable) -> Variable:
         intermediate = torch.matmul(tensor_1, self._weight_matrix)
         result = (intermediate * tensor_2).sum(dim=-1)
         return self._activation(result + self._bias)

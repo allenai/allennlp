@@ -1,4 +1,5 @@
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params, Registrable
 
@@ -20,7 +21,7 @@ class SimilarityFunction(torch.nn.Module, Registrable):
     """
     default_implementation = 'dot_product'
 
-    def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
+    def forward(self, tensor_1: Variable, tensor_2: Variable) -> Variable:
         # pylint: disable=arguments-differ
         """
         Takes two tensors of the same shape, such as ``(batch_size, length_1, length_2,

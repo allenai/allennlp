@@ -2,6 +2,7 @@ import re
 from typing import Sequence, Tuple, List
 
 import torch
+from torch.autograd import Variable
 
 from allennlp.common.params import Params
 from allennlp.nn.regularizers.regularizer import Regularizer
@@ -22,14 +23,14 @@ class RegularizerApplicator:
         """
         self._regularizers = regularizers
 
-    def __call__(self, module: torch.nn.Module) -> torch.Tensor:
+    def __call__(self, module: torch.nn.Module) -> Variable:
         """
         Parameters
         ----------
         module : torch.nn.Module, required
             The module to regularize.
         """
-        accumulator = 0.0
+        accumulator = Variable(torch.Tensor(1).fill_(0.0))
         # For each parameter find the first matching regex.
         for name, parameter in module.named_parameters():
             for regex, regularizer in self._regularizers:

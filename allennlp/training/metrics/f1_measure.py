@@ -1,6 +1,6 @@
 from typing import Optional
 
-import torch
+from torch.autograd import Variable
 
 from allennlp.training.metrics.metric import Metric
 from allennlp.nn.util import ones_like
@@ -23,55 +23,55 @@ class F1Measure(Metric):
         self._false_negatives = 0.0
 
     def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+                 predictions: Variable,
+                 gold_labels: Variable,
+                 mask: Optional[Variable] = None):
         """
         Parameters
         ----------
-        predictions : ``torch.Tensor``, required.
+        predictions : ``Variable``, required.
             A tensor of predictions of shape (batch_size, ..., num_classes).
-        gold_labels : ``torch.Tensor``, required.
+        gold_labels : ``Variable``, required.
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the ``predictions`` tensor without the ``num_classes`` dimension.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask: ``Variable``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         """
         # Get the data from the Variables.
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions_, gold_labels_, mask_ = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
-        num_classes = predictions.size(-1)
-        if (gold_labels >= num_classes).any():
+        num_classes = predictions_.size(-1)
+        if (gold_labels_ >= num_classes).any():
             raise ConfigurationError("A gold label passed to F1Measure contains an id >= {}, "
                                      "the number of classes.".format(num_classes))
-        if mask is None:
-            mask = ones_like(gold_labels)
-        mask = mask.float()
-        gold_labels = gold_labels.float()
-        positive_label_mask = gold_labels.eq(self._positive_label).float()
+        if mask_ is None:
+            mask_ = ones_like(gold_labels_)
+        mask_ = mask_.float()
+        gold_labels_ = gold_labels_.float()
+        positive_label_mask = gold_labels_.eq(self._positive_label).float()
         negative_label_mask = 1.0 - positive_label_mask
 
-        argmax_predictions = predictions.topk(1, -1)[1].float().squeeze(-1)
+        argmax_predictions = predictions_.topk(1, -1)[1].float().squeeze(-1)
 
         # True Negatives: correct non-positive predictions.
         correct_null_predictions = (argmax_predictions !=
                                     self._positive_label).float() * negative_label_mask
-        self._true_negatives += (correct_null_predictions.float() * mask).sum()
+        self._true_negatives += (correct_null_predictions.float() * mask_).sum()
 
         # True Positives: correct positively labeled predictions.
         correct_non_null_predictions = (argmax_predictions ==
                                         self._positive_label).float() * positive_label_mask
-        self._true_positives += (correct_non_null_predictions * mask).sum()
+        self._true_positives += (correct_non_null_predictions * mask_).sum()
 
         # False Negatives: incorrect negatively labeled predictions.
         incorrect_null_predictions = (argmax_predictions !=
                                       self._positive_label).float() * positive_label_mask
-        self._false_negatives += (incorrect_null_predictions * mask).sum()
+        self._false_negatives += (incorrect_null_predictions * mask_).sum()
 
         # False Positives: incorrect positively labeled predictions
         incorrect_non_null_predictions = (argmax_predictions ==
                                           self._positive_label).float() * negative_label_mask
-        self._false_positives += (incorrect_non_null_predictions * mask).sum()
+        self._false_positives += (incorrect_non_null_predictions * mask_).sum()
 
     def get_metric(self, reset: bool = False):
         """

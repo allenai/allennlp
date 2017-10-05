@@ -22,7 +22,7 @@ The available initialization functions are
 """
 import logging
 import re
-from typing import Callable, List, Tuple, Type
+from typing import Callable, List, Tuple, Type, TypeVar, Union
 import itertools
 
 import torch
@@ -34,11 +34,12 @@ from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+Tensor = TypeVar('Tensor', bound=torch._TensorBase)  # pylint: disable=protected-access,invalid-name
 
 class Initializer(Registrable):
     """
     An initializer is really just a bare pytorch function. This class
-    is a proxy that allows us to implement ``Registerable`` for those functions.
+    is a proxy that allows us to implement ``Registrable`` for those functions.
     """
     default_implementation = 'normal'
 
@@ -61,7 +62,7 @@ class Initializer(Registrable):
             return cls.by_name(choice).from_params(params)
 
 
-def block_orthogonal(tensor: torch.Tensor,
+def block_orthogonal(variable_or_tensor: Union[Tensor, Variable],
                      split_sizes: List[int],
                      gain: float = 1.0) -> None:
     """
@@ -72,7 +73,7 @@ def block_orthogonal(tensor: torch.Tensor,
 
     Parameters
     ----------
-    tensor : ``torch.Tensor``, required.
+    tensor : ``Variable``, required.
         A tensor to initialize.
     split_sizes : List[int], required.
         A list of length ``tensor.ndim()`` specifying the size of the
@@ -83,9 +84,10 @@ def block_orthogonal(tensor: torch.Tensor,
         The gain (scaling) applied to the orthogonal initialization.
     """
 
-    if isinstance(tensor, Variable):
-        block_orthogonal(tensor.data, split_sizes, gain)
-        return tensor
+    if isinstance(variable_or_tensor, Variable):
+        tensor = variable_or_tensor.data
+    else:
+        tensor = variable_or_tensor
 
     sizes = list(tensor.size())
     if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):
@@ -108,7 +110,7 @@ def block_orthogonal(tensor: torch.Tensor,
         tensor[block_slice] = torch.nn.init.orthogonal(tensor[block_slice].contiguous(), gain=gain)
 
 
-def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
+def _initializer_wrapper(init_function: Callable) -> Type[Initializer]:
     class Init(Initializer):
         def __init__(self, **kwargs):
             self._init_function = init_function

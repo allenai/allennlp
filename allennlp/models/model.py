@@ -15,6 +15,7 @@ from allennlp.nn.regularizers import RegularizerApplicator
 
 import numpy
 import torch
+from torch.autograd import Variable
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -59,7 +60,7 @@ class Model(torch.nn.Module, Registrable):
         else:
             return self._regularizer(self)
 
-    def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
+    def forward(self, *inputs) -> Dict[str, Variable]:  # pylint: disable=arguments-differ
         """
         Defines the forward pass of the model. In addition, to facilitate easy training,
         this method is designed to compute a loss function defined by a user.
@@ -117,6 +118,7 @@ class Model(torch.nn.Module, Registrable):
                                           add_batch_dimension=True,
                                           cuda_device=cuda_device,
                                           for_training=False)
+        # TODO(joelgrus) get rid of this cast
         outputs = self.decode(self.forward(**model_input))
 
         for name, output in list(outputs.items()):
@@ -126,7 +128,7 @@ class Model(torch.nn.Module, Registrable):
             outputs[name] = output
         return outputs
 
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def decode(self, output_dict: Dict[str, Variable]) -> Dict[str, Variable]:
         """
         Takes the result of :func:`forward` and runs inference / decoding / whatever
         post-processing you need to do your model.  The intent is that ``model.forward()`` should

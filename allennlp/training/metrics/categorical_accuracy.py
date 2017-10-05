@@ -1,7 +1,7 @@
 from typing import Optional
 
 from overrides import overrides
-import torch
+from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
@@ -19,43 +19,43 @@ class CategoricalAccuracy(Metric):
         self.total_count = 0.
 
     def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+                 predictions: Variable,
+                 gold_labels: Variable,
+                 mask: Optional[Variable] = None):
         """
         Parameters
         ----------
-        predictions : ``torch.Tensor``, required.
+        predictions : ``Variable``, required.
             A tensor of predictions of shape (batch_size, ..., num_classes).
-        gold_labels : ``torch.Tensor``, required.
+        gold_labels : ``Variable``, required.
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the ``predictions`` tensor without the ``num_classes`` dimension.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask: ``Variable``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         """
         # Get the data from the Variables.
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions_, gold_labels_, mask_ = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
         # Some sanity checks.
-        num_classes = predictions.size(-1)
-        if gold_labels.dim() != predictions.dim() - 1:
+        num_classes = predictions_.size(-1)
+        if gold_labels_.dim() != predictions_.dim() - 1:
             raise ConfigurationError("gold_labels must have dimension == predictions.size() - 1 but "
-                                     "found tensor of shape: {}".format(predictions.size()))
-        if (gold_labels >= num_classes).any():
+                                     "found tensor of shape: {}".format(predictions_.size()))
+        if (gold_labels_ >= num_classes).any():
             raise ConfigurationError("A gold label passed to Categorical Accuracy contains an id >= {}, "
                                      "the number of classes.".format(num_classes))
 
         # Top K indexes of the predictions (or fewer, if there aren't K of them)
-        top_k = predictions.topk(min(self._top_k, predictions.shape[-1]), -1)[1]
+        top_k = predictions_.topk(min(self._top_k, predictions_.shape[-1]), -1)[1]
 
         # This is of shape (batch_size, ..., top_k).
-        correct = top_k.eq(gold_labels.long().unsqueeze(-1)).float()
+        correct = top_k.eq(gold_labels_.long().unsqueeze(-1)).float()
 
-        if mask is not None:
-            correct *= mask.unsqueeze(-1)
-            self.total_count += mask.sum()
+        if mask_ is not None:
+            correct *= mask_.unsqueeze(-1)
+            self.total_count += mask_.sum()
         else:
-            self.total_count += gold_labels.numel()
+            self.total_count += gold_labels_.numel()
         self.correct_count += correct.sum()
 
     def get_metric(self, reset: bool = False):

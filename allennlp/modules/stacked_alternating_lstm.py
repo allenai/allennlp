@@ -6,11 +6,12 @@ the sequence and going backwards.
 from typing import Optional, Tuple
 import torch
 from torch.nn.utils.rnn import PackedSequence
+from allennlp.modules.rnn_base import RNNBase
 from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.common.checks import ConfigurationError
 
 
-class StackedAlternatingLstm(torch.nn.Module):
+class StackedAlternatingLstm(RNNBase):
     """
     A stacked LSTM with LSTM layers which alternate between going forwards over
     the sequence and going backwards. This implementation is based on the
@@ -49,11 +50,9 @@ class StackedAlternatingLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  use_highway: bool = True,
                  use_input_projection_bias: bool = True) -> None:
-        super(StackedAlternatingLstm, self).__init__()
+        super(StackedAlternatingLstm, self).__init__(input_size, hidden_size)
 
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
-        self.input_size = input_size
-        self.hidden_size = hidden_size
         self.num_layers = num_layers
 
         layers = []

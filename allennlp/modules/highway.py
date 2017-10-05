@@ -3,9 +3,10 @@ A `Highway layer <https://arxiv.org/abs/1505.00387>`_ that does a gated combinat
 transformation and a non-linear transformation of its input.
 """
 
-from typing import Callable
+from typing import Callable, cast
 
 import torch
+from torch.autograd import Variable
 from overrides import overrides
 
 
@@ -32,7 +33,7 @@ class Highway(torch.nn.Module):
     def __init__(self,
                  input_dim: int,
                  num_layers: int = 1,
-                 activation: Callable[[torch.Tensor], torch.Tensor] = torch.nn.functional.relu) -> None:
+                 activation: Callable[[Variable], Variable] = torch.nn.functional.relu) -> None:
         super(Highway, self).__init__()
         self._input_dim = input_dim
         self._layers = torch.nn.ModuleList([torch.nn.Linear(input_dim, input_dim * 2)
@@ -43,10 +44,10 @@ class Highway(torch.nn.Module):
             # setting the bias on `B(x)` to be positive, because that means `g` will be biased to
             # be high, to we will carry the input forward.  The bias on `B(x)` is the second half
             # of the bias vector in each Linear layer.
-            layer.bias[input_dim:].data.fill_(1)
+            cast(torch.nn.Linear, layer).bias[input_dim:].data.fill_(1)
 
     @overrides
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
+    def forward(self, inputs: Variable) -> Variable:  # pylint: disable=arguments-differ
         current_input = inputs
         for layer in self._layers:
             projected_input = layer(current_input)

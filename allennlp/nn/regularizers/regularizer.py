@@ -1,4 +1,4 @@
-import torch
+from torch.autograd import Variable
 
 from allennlp.common import Registrable
 
@@ -9,5 +9,5 @@ class Regularizer(Registrable):
     """
     default_implementation = 'l2'
 
-    def __call__(self, parameter: torch.Tensor) -> torch.Tensor:
+    def __call__(self, parameter: Variable) -> Variable:
         raise NotImplementedError

@@ -4,6 +4,7 @@ A feed-forward neural network.
 from typing import Sequence, Union
 
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -72,7 +73,7 @@ class FeedForward(torch.nn.Module):
     def get_input_dim(self):
         return self.input_dim
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: Variable) -> Variable:
         # pylint: disable=arguments-differ
         output = inputs
         for layer, activation, dropout in zip(self._linear_layers, self._activations, self._dropout):

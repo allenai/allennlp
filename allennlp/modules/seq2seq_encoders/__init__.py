@@ -14,13 +14,14 @@ The available Seq2Seq encoders are
 * :class:`"alternating_highway_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm> (GPU only)`
 """
 
-from typing import Type
+from typing import Type, Union
 
 import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.augmented_lstm import AugmentedLstm
+from allennlp.modules.rnn_base import RNNBase
 from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
@@ -54,7 +55,7 @@ class _Seq2SeqWrapper:
     """
     PYTORCH_MODELS = [torch.nn.GRU, torch.nn.LSTM, torch.nn.RNN]
 
-    def __init__(self, module_class: Type[torch.nn.modules.RNNBase]) -> None:
+    def __init__(self, module_class: Union[Type[RNNBase], Type[torch.nn.modules.RNNBase]]) -> None:
         self._module_class = module_class
 
     def __call__(self, **kwargs) -> PytorchSeq2SeqWrapper:

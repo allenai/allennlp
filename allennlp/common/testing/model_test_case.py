@@ -57,7 +57,7 @@ class ModelTestCase(AllenNlpTestCase):
         loaded_dataset = reader.read(params['validation_data_path'])
         loaded_dataset.index_instances(loaded_model.vocab)
         loaded_batch_arrays = next(iterator(loaded_dataset, shuffle=False))
-        loaded_batch = arrays_to_variables(loaded_batch_arrays, for_training=False)
+        loaded_batch = arrays_to_variables(loaded_batch_arrays, for_training=True)
 
         # The datasets themselves should be identical.
         for key in model_batch.keys():

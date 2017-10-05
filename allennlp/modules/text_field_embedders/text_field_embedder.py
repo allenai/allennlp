@@ -1,6 +1,7 @@
 from typing import Dict
 
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params, Registrable
 from allennlp.data import Vocabulary
@@ -25,7 +26,7 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
     default_implementation = 'basic'
 
     def forward(self,  # pylint: disable=arguments-differ
-                text_field_input: Dict[str, torch.Tensor]) -> torch.Tensor:
+                text_field_input: Dict[str, Variable]) -> Variable:
         raise NotImplementedError
 
     def get_output_dim(self) -> int:

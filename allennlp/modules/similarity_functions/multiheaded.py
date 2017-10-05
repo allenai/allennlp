@@ -1,5 +1,6 @@
 from overrides import overrides
 import torch
+from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
@@ -74,7 +75,7 @@ class MultiHeadedSimilarity(SimilarityFunction):
         torch.nn.init.xavier_uniform(self._tensor_2_projection)
 
     @overrides
-    def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
+    def forward(self, tensor_1: Variable, tensor_2: Variable) -> Variable:
         projected_tensor_1 = torch.matmul(tensor_1, self._tensor_1_projection)
         projected_tensor_2 = torch.matmul(tensor_2, self._tensor_2_projection)
 

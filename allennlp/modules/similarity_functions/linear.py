@@ -2,6 +2,7 @@ import math
 
 from overrides import overrides
 import torch
+from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
@@ -62,7 +63,7 @@ class LinearSimilarity(SimilarityFunction):
         self._bias.data.fill_(0)
 
     @overrides
-    def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
+    def forward(self, tensor_1: Variable, tensor_2: Variable) -> Variable:
         combined_tensors = util.combine_tensors(self._combination, [tensor_1, tensor_2])
         dot_product = torch.matmul(combined_tensors, self._weight_vector)
         return self._activation(dot_product + self._bias)

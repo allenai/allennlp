@@ -1,5 +1,5 @@
 from overrides import overrides
-import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
@@ -12,7 +12,7 @@ class CosineSimilarity(SimilarityFunction):
     no parameters.
     """
     @overrides
-    def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
+    def forward(self, tensor_1: Variable, tensor_2: Variable) -> Variable:
         normalized_tensor_1 = tensor_1 / tensor_1.norm(dim=-1, keepdim=True)
         normalized_tensor_2 = tensor_2 / tensor_2.norm(dim=-1, keepdim=True)
         return (normalized_tensor_1 * normalized_tensor_2).sum(dim=-1)

@@ -3,5 +3,5 @@
 
 set -e
 echo 'Starting mypy checks'
-mypy allennlp --ignore-missing-imports
+MYPYPATH=stubs mypy allennlp --ignore-missing-imports
 echo -e "mypy checks passed\n"

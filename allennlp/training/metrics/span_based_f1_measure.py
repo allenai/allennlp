@@ -1,7 +1,7 @@
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, cast, Sequence
 from collections import defaultdict
 
-import torch
+from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, ones_like
@@ -56,38 +56,39 @@ class SpanBasedF1Measure(Metric):
         self._false_negatives: Dict[str, int] = defaultdict(int)
 
     def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+                 predictions: Variable,
+                 gold_labels: Variable,
+                 mask: Optional[Variable] = None):
         """
         Parameters
         ----------
-        predictions : ``torch.Tensor``, required.
+        predictions : ``Variable``, required.
             A tensor of predictions of shape (batch_size, sequence_length, num_classes).
-        gold_labels : ``torch.Tensor``, required.
+        gold_labels : ``Variable``, required.
             A tensor of integer class label of shape (batch_size, sequence_length). It must be the same
             shape as the ``predictions`` tensor without the ``num_classes`` dimension.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask: ``Variable``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         """
-        if mask is None:
-            mask = ones_like(gold_labels)
         # Get the data from the Variables.
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions_, gold_labels_, mask_ = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        if mask_ is None:
+            mask_ = ones_like(gold_labels_)
 
-        num_classes = predictions.size(-1)
-        if (gold_labels >= num_classes).any():
+        num_classes = predictions_.size(-1)
+        if (gold_labels_ >= num_classes).any():
             raise ConfigurationError("A gold label passed to SpanBasedF1Measure contains an "
                                      "id >= {}, the number of classes.".format(num_classes))
 
-        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        argmax_predictions = predictions.max(-1)[1].float()
+        # Sequence_lengths is a 1-D tensor, we'd like to index into it and get ints back.
+        sequence_lengths = cast(Sequence[int], get_lengths_from_binary_sequence_mask(mask_))
+        argmax_predictions = predictions_.max(-1)[1].float()
 
         # Iterate over timesteps in batch.
-        batch_size = gold_labels.size(0)
+        batch_size = gold_labels_.size(0)
         for i in range(batch_size):
             sequence_prediction = argmax_predictions[i, :]
-            sequence_gold_label = gold_labels[i, :]
+            sequence_gold_label = gold_labels_[i, :]
             length = sequence_lengths[i]
             prediction_spans = self._extract_spans(sequence_prediction[:length].tolist())
             gold_spans = self._extract_spans(sequence_gold_label[:length].tolist())

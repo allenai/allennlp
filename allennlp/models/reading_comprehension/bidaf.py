@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable, cast
 
 import torch
 from torch.autograd import Variable
@@ -125,7 +125,7 @@ class BidirectionalAttentionFlow(Model):
         self._span_accuracy = BooleanAccuracy()
         self._squad_metrics = SquadEmAndF1()
         if dropout > 0:
-            self._dropout = torch.nn.Dropout(p=dropout)
+            self._dropout = cast(Callable[[Variable], Variable], torch.nn.Dropout(p=dropout))
         else:
             self._dropout = lambda x: x
         self._mask_lstms = mask_lstms
@@ -133,11 +133,11 @@ class BidirectionalAttentionFlow(Model):
         initializer(self)
 
     def forward(self,  # type: ignore
-                question: Dict[str, torch.LongTensor],
-                passage: Dict[str, torch.LongTensor],
-                span_start: torch.IntTensor = None,
-                span_end: torch.IntTensor = None,
-                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+                question: Dict[str, Variable],
+                passage: Dict[str, Variable],
+                span_start: Variable = None,
+                span_end: Variable = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, Variable]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -311,17 +311,17 @@ class BidirectionalAttentionFlow(Model):
         best_word_span = Variable(span_start_logits.data.new()
                                   .resize_(batch_size, 2).fill_(0)).long()
 
-        span_start_logits = span_start_logits.data.cpu().numpy()
-        span_end_logits = span_end_logits.data.cpu().numpy()
+        span_start_logits_ = span_start_logits.data.cpu().numpy()
+        span_end_logits_ = span_end_logits.data.cpu().numpy()
 
         for b in range(batch_size):  # pylint: disable=invalid-name
             for j in range(passage_length):
-                val1 = span_start_logits[b, span_start_argmax[b]]
-                if val1 < span_start_logits[b, j]:
+                val1 = span_start_logits_[b, span_start_argmax[b]]
+                if val1 < span_start_logits_[b, j]:
                     span_start_argmax[b] = j
-                    val1 = span_start_logits[b, j]
+                    val1 = span_start_logits_[b, j]
 
-                val2 = span_end_logits[b, j]
+                val2 = span_end_logits_[b, j]
 
                 if val1 + val2 > max_span_log_prob[b]:
                     best_word_span[b, 0] = span_start_argmax[b]

@@ -2,6 +2,7 @@ from typing import Optional, Tuple
 
 from overrides import overrides
 import torch
+from torch.autograd import Variable
 from torch.nn import Conv1d, Linear
 
 from allennlp.common import Params
@@ -83,7 +84,7 @@ class CnnEncoder(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):  # pylint: disable=arguments-differ
+    def forward(self, tokens: Variable, mask: Variable):  # pylint: disable=arguments-differ
         if mask is not None:
             tokens = tokens * mask.unsqueeze(-1).float()
 
