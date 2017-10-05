@@ -4,6 +4,7 @@ Assorted utilities for working with neural networks in AllenNLP.
 
 from typing import Dict, List, Optional, Union
 
+import math
 import numpy
 import torch
 from torch.autograd import Variable
@@ -543,3 +544,10 @@ def get_indices(size, is_cuda):
     else:
         indices = torch.arange(0, size).long()
     return Variable(indices, requires_grad=False)
+
+def bucket_distance(distances):
+    # Buckets: [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32-63, 64+].
+    logspace_idx = (distances.float().log()/math.log(2)).floor().long() + 3
+    use_identity = (distances <= 4).long()
+    combined_idx = use_identity * distances + (1 + (-1 * use_identity)) * logspace_idx
+    return combined_idx.clamp(0, 9)
