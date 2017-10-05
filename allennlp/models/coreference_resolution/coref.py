@@ -52,101 +52,154 @@ class CoreferenceResolver(Model):
         initializer(self)
 
     def _compute_head_attention(self, head_scores, text_emb, span_ends, span_size):
-        head_offsets = util.get_indices(self._max_span_width,
-                                        text_emb.is_cuda).view(1, 1, -1) # [1, 1, max_span_width]
-        head_mask = (head_offsets <= span_size).float() # [b, num_spans, max_span_width]
-        raw_head_idx = span_ends - head_offsets # [b, num_spans, max_span_width]
-        head_mask = head_mask * (raw_head_idx >= 0).float() # [b, num_spans, max_span_width]
-        head_idx = F.relu(raw_head_idx.float()).long() # [b, num_spans, max_span_width]
-        flat_head_idx = util.flatten_batched_indices(head_idx,
-                                                     text_emb.size(1)) # [b * num_spans * max_span_width]
-        span_text_emb = util.batched_index_select(text_emb,
-                                                  head_idx,
-                                                  flat_head_idx) # [b, num_spans, max_span_width, emb]
-        span_head_scores = util.batched_index_select(head_scores,
-                                                     head_idx,
-                                                     flat_head_idx).squeeze(-1) # [b, num_spans, max_span_width]
-        span_head_scores += head_mask.float().log() # [b, num_spans, max_span_width]
-        flat_span_head_scores = span_head_scores.view(-1, self._max_span_width) # [b * num_spans, max_span_width]
-        flat_span_head_weights = F.softmax(flat_span_head_scores) # [b * num_spans, max_span_width]
-        flat_span_head_weights = flat_span_head_weights.unsqueeze(1) # [b * num_spans, 1, max_span_width]
-        flat_span_text_emb = span_text_emb.view(-1,
-                                                self._max_span_width,
-                                                span_text_emb.size(-1)) # [b * num_spans, max_span_width, emb]
-        flat_attended_text_emb = flat_span_head_weights.bmm(flat_span_text_emb) # [b * num_spans, 1, emb]
-        attended_text_emb = flat_attended_text_emb.view(text_emb.size(0),
-                                                        span_ends.size(1), -1) # [b, num_spans, emb]
+        # Shape: (1, 1, max_span_width)
+        head_offsets = util.get_indices(self._max_span_width, text_emb.is_cuda).view(1, 1, -1)
+
+        # Shape: (batch_size, num_spans, max_span_width)
+        head_mask = (head_offsets <= span_size).float()
+        raw_head_idx = span_ends - head_offsets
+        head_mask = head_mask * (raw_head_idx >= 0).float()
+        head_idx = F.relu(raw_head_idx.float()).long()
+
+        # Shape: (batch_size * num_spans * max_span_width)
+        flat_head_idx = util.flatten_batched_indices(head_idx, text_emb.size(1))
+
+        # Shape: (batch_size, num_spans, max_span_width, embedding_size)
+        span_text_emb = util.batched_index_select(text_emb, head_idx, flat_head_idx)
+
+        # Shape: (batch_size, num_spans, max_span_width)
+        span_head_scores = util.batched_index_select(head_scores, head_idx, flat_head_idx).squeeze(-1)
+        span_head_scores += head_mask.float().log()
+
+        # Shape: (batch_size * num_spans, max_span_width)
+        flat_span_head_scores = span_head_scores.view(-1, self._max_span_width)
+        flat_span_head_weights = F.softmax(flat_span_head_scores)
+
+        # Shape: (batch_size * num_spans, 1, max_span_width)
+        flat_span_head_weights = flat_span_head_weights.unsqueeze(1)
+
+        # Shape: (batch_size * num_spans, max_span_width, embedding_size)
+        flat_span_text_emb = span_text_emb.view(-1, self._max_span_width, span_text_emb.size(-1))
+
+        # Shape: (batch_size * num_spans, 1, embedding_size)
+        flat_attended_text_emb = flat_span_head_weights.bmm(flat_span_text_emb)
+
+        # Shape: (batch_size, num_spans, emb)
+        attended_text_emb = flat_attended_text_emb.view(text_emb.size(0), span_ends.size(1), -1)
         return attended_text_emb
 
     def _compute_span_representations(self, text_emb, text_mask, span_starts, span_ends):
-        contextualized_emb = self._context_layer(text_emb, text_mask) # [b, text_len, emb]
-        start_emb = util.batched_index_select(contextualized_emb,
-                                              span_starts.squeeze(-1)) # [b, num_spans, emb]
-        end_emb = util.batched_index_select(contextualized_emb,
-                                            span_ends.squeeze(-1)) # [b, num_spans, emb]
-        span_size = span_ends - span_starts # [b, num_spans, 1] (really span size minus one)
-        span_size_emb = self._span_width_embedding(span_size.squeeze(-1)) # [b, num_spans, emb]
-        head_scores = self._head_scorer(contextualized_emb) # [b, text_len, 1]
+        # Shape: (batch_size, text_len, embedding_size)
+        contextualized_emb = self._context_layer(text_emb, text_mask)
+
+        # Shape: (batch_size, num_spans, embedding_size)
+        start_emb = util.batched_index_select(contextualized_emb, span_starts.squeeze(-1))
+        end_emb = util.batched_index_select(contextualized_emb, span_ends.squeeze(-1))
+
+        # Shape: (batch_size, num_spans, 1)
+        span_size = span_ends - span_starts # Strictly speaking span size minus one.
+
+        # Shape: (batch_size, num_spans, embedding_size)
+        span_size_emb = self._span_width_embedding(span_size.squeeze(-1))
+
+        # Shape: (batch_size, text_len, 1)
+        head_scores = self._head_scorer(contextualized_emb)
+
+        # Shape: (batch_size, num_spans, embedding_size)
         attended_text_emb = self._compute_head_attention(head_scores, text_emb, span_ends, span_size)
-        span_emb = torch.cat([start_emb, end_emb, span_size_emb, attended_text_emb], -1) # [b, num_spans, emb]
+        span_emb = torch.cat([start_emb, end_emb, span_size_emb, attended_text_emb], -1)
         return span_emb
 
     @staticmethod
     def _prune_and_sort_spans(mention_scores, k):
-        _, top_span_idx = mention_scores.topk(k, 1) # [b, k, 1]
-        top_span_idx, _ = torch.sort(top_span_idx, 1) # [b, k, 1]
-        top_span_idx = top_span_idx.squeeze(-1) # [b, k]
+        # Shape: (batch_size, k, 1)
+        _, top_span_idx = mention_scores.topk(k, 1)
+        top_span_idx, _ = torch.sort(top_span_idx, 1)
+
+        # Shape: (batch_size, k)
+        top_span_idx = top_span_idx.squeeze(-1)
         return top_span_idx
 
     @staticmethod
     def _generate_antecedents(k, max_ant, is_cuda):
-        target_idx = util.get_indices(k, is_cuda).unsqueeze(1) # [k, 1]
-        ant_offsets = (util.get_indices(max_ant, is_cuda) + 1).unsqueeze(0) # [1, max_ant]
-        raw_ant_idx = target_idx - ant_offsets # [k, max_ant]
-        ant_log_mask = (raw_ant_idx >= 0).float().unsqueeze(0).log() # [1, k, max_ant]
-        ant_idx = F.relu(raw_ant_idx.float()).long() # [k, max_ant]
+        # Shape: (k, 1)
+        target_idx = util.get_indices(k, is_cuda).unsqueeze(1)
+
+        # Shape: (1, max_ant)
+        ant_offsets = (util.get_indices(max_ant, is_cuda) + 1).unsqueeze(0)
+
+        # Shape: (k, max_ant)
+        raw_ant_idx = target_idx - ant_offsets
+
+        # Shape: (1, k, max_ant)
+        ant_log_mask = (raw_ant_idx >= 0).float().unsqueeze(0).log()
+
+        # Shape: (k, max_ant)
+        ant_idx = F.relu(raw_ant_idx.float()).long()
         return ant_idx, ant_offsets, ant_log_mask
 
     def _compute_pairwise_inputs(self, top_span_emb, ant_emb, ant_offsets):
-        target_emb = top_span_emb.unsqueeze(2).expand(*ant_emb.size()) # [b, k, max_ant, emb]
-        similarity_emb = ant_emb * target_emb # [b, k, max_ant, emb]
-        ant_distance_emb = self._distance_embedding(util.bucket_distance(ant_offsets)) # [1, max_ant, emb]
-        ant_distance_emb = ant_distance_emb.unsqueeze(0) # [1, 1, max_ant, emb]
+        # Shape: (batch_size, k max_ant, embedding_size)
+        target_emb = top_span_emb.unsqueeze(2).expand_as(ant_emb)
+        similarity_emb = ant_emb * target_emb
+
+        # Shape: (1, max_ant, embedding_size)
+        ant_distance_emb = self._distance_embedding(util.bucket_distance(ant_offsets))
+
+        # Shape: (1, 1, max_ant, embedding_size)
+        ant_distance_emb = ant_distance_emb.unsqueeze(0)
+
+        # Shape: (batch_size, k, max_ant, embedding_size)
         ant_distance_emb = ant_distance_emb.expand(ant_emb.size(0),
                                                    ant_emb.size(1),
                                                    ant_emb.size(2),
-                                                   ant_distance_emb.size(-1)) # [b, k, max_ant, emb]
+                                                   ant_distance_emb.size(-1))
+
+        # Shape: (batch_size, k, max_ant, embedding_size)
         pairwise_emb = torch.cat([target_emb,
                                   ant_emb,
                                   similarity_emb,
-                                  ant_distance_emb], -1) # [b, k, max_ant, emb]
+                                  ant_distance_emb], -1)
         return pairwise_emb
 
     @staticmethod
-    def _compute_antecedent_labels(target_labels, ant_labels):
-        same_cluster_indicator = (target_labels == ant_labels).float() # [b, k, max_ant]
-        non_dummy_indicator = (target_labels >= 0).float() # [b, k, max_ant]
-        pairwise_labels = same_cluster_indicator * non_dummy_indicator # [b, k, max_ant]
-        dummy_labels = (1 - pairwise_labels).prod(-1, keepdim=True) # [b, k, 1]
+    def _compute_antecedent_labels(top_span_labels, ant_labels):
+        # Shape: (batch_size, k, max_ant)
+        target_labels = top_span_labels.expand_as(ant_labels)
+        same_cluster_indicator = (target_labels == ant_labels).float()
+        non_dummy_indicator = (target_labels >= 0).float()
+        pairwise_labels = same_cluster_indicator * non_dummy_indicator
+
+        # Shape: (batch_size, k, 1)
+        dummy_labels = (1 - pairwise_labels).prod(-1, keepdim=True)
+
+        # Shape: (batch_size, k, max_ant + 1)
         augmented_labels = torch.cat([dummy_labels, pairwise_labels], -1) # [b, k, max_ant + 1]
         return augmented_labels
 
     @staticmethod
     def _compute_negative_marginal_loglikelihood(augmented_ant_scores, augmented_labels, top_span_mask):
-        gold_scores = augmented_ant_scores + augmented_labels.log() # [b, k, max_ant + 1]
-        marginalized_gold_scores = util.logsumexp(gold_scores, 2) # [b, k]
-        log_norm = util.logsumexp(augmented_ant_scores, 2) # [b, k]
-        nmll = log_norm - marginalized_gold_scores # [b, k]
-        nmll = nmll * top_span_mask.squeeze(-1) # [b, k]
+        # Shape: (batch_size, k, max_ant + 1)
+        gold_scores = augmented_ant_scores + augmented_labels.log()
+
+        # Shape: (batch_size, k)
+        marginalized_gold_scores = util.logsumexp(gold_scores, 2)
+        log_norm = util.logsumexp(augmented_ant_scores, 2)
+        nmll = log_norm - marginalized_gold_scores
+        nmll = nmll * top_span_mask.squeeze(-1)
         return nmll.sum()
 
     def _compute_antecedent_scores(self, pairwise_emb, top_span_mention_scores, ant_mention_scores, ant_log_mask):
-        ant_scores = self._antecedent_scorer(self._antecedent_feedforward(pairwise_emb)) # [b, k, max_ant, 1]
-        ant_scores = ant_scores.squeeze(-1) # [b, k, max_ant]
+        # Shape: (batch_size, k, max_ant)
+        ant_scores = self._antecedent_scorer(self._antecedent_feedforward(pairwise_emb)).squeeze(-1)
         ant_scores += top_span_mention_scores + ant_mention_scores # [b, k, max_ant]
         ant_scores += ant_log_mask # [b, k, max_ant]
+
+        # Shape: (batch_size, k, 1)
         dummy_scores = util.get_zeros((ant_scores.size(0), ant_scores.size(1), 1), ant_scores.is_cuda) # [b, k, 1]
-        augmented_ant_scores = torch.cat([dummy_scores, ant_scores], -1) # [b, k, max_ant + 1]
+
+        # Shape: (batch_size, k, max_ant + 1)
+        augmented_ant_scores = torch.cat([dummy_scores, ant_scores], -1)
         return augmented_ant_scores
 
     def forward(self,  # type: ignore
@@ -156,69 +209,84 @@ class CoreferenceResolver(Model):
                 span_labels: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
-        text_emb = self._lexical_dropout(self._text_field_embedder(text)) # [b, text_len, emb]
-        text_mask = util.get_text_field_mask(text).float() # [b, text_len]
-        text_len = text_emb.size(1)
-        batch_size = span_starts.size(0)
-        num_spans = span_starts.size(1)
-        span_mask = (span_starts >= 0).float() # [b, num_spans, 1]
-        span_starts = F.relu(span_starts.float()).long() # [b, num_spans, 1]
-        span_ends = F.relu(span_ends.float()).long() # [b, num_spans, 1]
+        # Shape: (batch_size, text_len, embedding_size)
+        text_emb = self._lexical_dropout(self._text_field_embedder(text))
 
-        # Compute span representations.
+        # Shape: (batch_size, text_len)
+        text_mask = util.get_text_field_mask(text).float()
+
+        # Shape: (batch_size, num_spans, 1)
+        span_mask = (span_starts >= 0).float()
+        span_starts = F.relu(span_starts.float()).long()
+        span_ends = F.relu(span_ends.float()).long()
+
+        # Shape: (batch_size, num_spans, embedding_size)
         span_emb = self._compute_span_representations(text_emb,
                                                       text_mask,
                                                       span_starts,
                                                       span_ends)
 
         # Compute mention scores.
-        mention_scores = self._mention_scorer(self._mention_feedforward(span_emb)) # [b, num_spans, 1]
-        mention_scores += span_mask.log() # [b, num_spans, 1]
+        # Shape: (batch_size, num_spans, 1)
+        mention_scores = self._mention_scorer(self._mention_feedforward(span_emb))
+        mention_scores += span_mask.log()
 
         # Prune based on mention scores.
-        k = int(math.floor(self._spans_per_word * text_len)) # []
+        k = int(math.floor(self._spans_per_word * text_emb.size(1)))
+
+        # Shape: (batch_size, k)
         top_span_idx = self._prune_and_sort_spans(mention_scores, k)
-        flat_top_span_idx = util.flatten_batched_indices(top_span_idx, num_spans) # [b * k]
+
+        # Shape: (batch_size * k)
+        flat_top_span_idx = util.flatten_batched_indices(top_span_idx, span_starts.size(1))
 
         # Select tensors relating to the top spans.
-        top_span_mask = util.batched_index_select(span_mask, top_span_idx, flat_top_span_idx) # [b, k, 1]
-        top_span_mention_scores = util.batched_index_select(mention_scores,
-                                                            top_span_idx,
-                                                            flat_top_span_idx) # [b, k, 1]
-        top_span_starts = util.batched_index_select(span_starts, top_span_idx, flat_top_span_idx) # [b, k, 1]
-        top_span_ends = util.batched_index_select(span_ends, top_span_idx, flat_top_span_idx) # [b, k, 1]
-        top_span_emb = util.batched_index_select(span_emb, top_span_idx, flat_top_span_idx) # [b, k, emb]
+        # Shape: (batch_size, k, embedding_size)
+        top_span_emb = util.batched_index_select(span_emb, top_span_idx, flat_top_span_idx)
+
+        # Shape: (batch_size, k, 1)
+        top_span_mask = util.batched_index_select(span_mask, top_span_idx, flat_top_span_idx)
+        top_span_mention_scores = util.batched_index_select(mention_scores, top_span_idx, flat_top_span_idx)
+        top_span_starts = util.batched_index_select(span_starts, top_span_idx, flat_top_span_idx)
+        top_span_ends = util.batched_index_select(span_ends, top_span_idx, flat_top_span_idx)
         if span_labels is not None:
             top_span_labels = util.batched_index_select(span_labels.unsqueeze(-1),
                                                         top_span_idx,
-                                                        flat_top_span_idx) # [b, k, 1]
+                                                        flat_top_span_idx)
 
         # Compute indices for antecedent spans to consider.
-        max_ant = min(self._max_antecedents, k) # []
+        max_ant = min(self._max_antecedents, k)
+
+        # Shapes: (k, max_ant), (1, max_ant), (1, k, max_ant)
         ant_idx, ant_offsets, ant_log_mask = self._generate_antecedents(k, max_ant, text_emb.is_cuda)
 
         # Select tensors relating to the antecedent spans.
-        ant_mention_scores = util.flattened_index_select(top_span_mention_scores,
-                                                         ant_idx).squeeze(-1) # [b, k, max_ant]
+        # Shape: (batch_size, k, embedding_size)
         ant_emb = util.flattened_index_select(top_span_emb, ant_idx) # [b, k, max_ant, emb]
-        if span_labels is not None:
-            ant_labels = util.flattened_index_select(top_span_labels, ant_idx).squeeze(-1) # [b, k, max_ant]
-            ant_labels += ant_log_mask.long() # [b, k, max_ant]
 
+        # Shape: (batch_size, k, max_ant)
+        ant_mention_scores = util.flattened_index_select(top_span_mention_scores, ant_idx).squeeze(-1)
         if span_labels is not None:
-            target_labels = top_span_labels.expand(batch_size, k, max_ant) # [b, k, max_ant]
+            ant_labels = util.flattened_index_select(top_span_labels, ant_idx).squeeze(-1)
+            ant_labels += ant_log_mask.long()
 
         # Compute antecedent scores.
+        # Shape: (batch_size, k, max_ant, embedding_size)
         pairwise_emb = self._compute_pairwise_inputs(top_span_emb, ant_emb, ant_offsets)
+
+        # Shape: (batch_size, k, max_ant + 1)
         augmented_ant_scores = self._compute_antecedent_scores(pairwise_emb,
                                                                top_span_mention_scores,
                                                                ant_mention_scores,
                                                                ant_log_mask)
 
         # Compute final predictions.
-        top_spans = torch.cat([top_span_starts, top_span_ends], -1) # [b, k, 2]
-        _, predicted_ants = augmented_ant_scores.max(2) # [b, k]
-        predicted_ants -= 1 # [b, k]
+        # Shape: (batch_size, k, 2)
+        top_spans = torch.cat([top_span_starts, top_span_ends], -1)
+
+        # Shape: (batch_size, k)
+        _, predicted_ants = augmented_ant_scores.max(2)
+        predicted_ants -= 1
 
         output_dict = {"top_spans": top_spans,
                        "antecedent_indices": ant_idx,
@@ -226,7 +294,8 @@ class CoreferenceResolver(Model):
 
         if span_labels is not None:
             # Compute labels.
-            augmented_labels = self._compute_antecedent_labels(target_labels, ant_labels)
+            # Shape: (batch_size, k, max_ant + 1)
+            augmented_labels = self._compute_antecedent_labels(top_span_labels, ant_labels)
 
             # Compute loss using the negative marginal log-likelihood.
             loss = self._compute_negative_marginal_loglikelihood(augmented_ant_scores,
