@@ -71,9 +71,10 @@ class SpanBasedF1Measure(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         prediction_map: ``torch.Tensor``, optional (default = None).
-            If provided, this provides a mapping from the indexes of ``predictions`` to the indexes of
-            the labels in the vocabulary. This is useful if each Instance is choosing from a different
-            set of labels.
+            A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
+            to the indexes of the label vocabulary. If provided, the output label at each timestep will be
+            ``vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))``,
+            rather than simply ``vocabulary.get_index_to_token_vocabulary(argmax(predictions[batch, t]))``.
         """
         if mask is None:
             mask = ones_like(gold_labels)
@@ -90,7 +91,7 @@ class SpanBasedF1Measure(Metric):
 
         if prediction_map is not None:
             argmax_predictions = torch.gather(prediction_map, 1, argmax_predictions)
-            gold_labels = torch.gather(prediction_map, 1, gold_labels)
+            gold_labels = torch.gather(prediction_map, 1, gold_labels.long())
         
         argmax_predictions = argmax_predictions.float()
 
