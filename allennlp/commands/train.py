@@ -158,14 +158,20 @@ def train_model(params: Params, serialization_dir: str) -> Model:
                                   train_data,
                                   validation_data,
                                   trainer_params)
+
+    evaluate_on_test = params.pop("evaluate_on_test", False)
     params.assert_empty('base train command')
     trainer.train()
 
     # Now tar up results
     archive_model(serialization_dir)
 
-    if test_data:
+    if test_data and evaluate_on_test:
         test_data = test_data.index_instances(vocab)
         evaluate(model, test_data, iterator, cuda_device=trainer._cuda_device)  # pylint: disable=protected-access
+
+    elif test_data:
+        logger.info("To evaluate on the test set after training, pass the "
+                    "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
 
     return model
