@@ -249,13 +249,14 @@ class EncoderDecoder(Model):
         """
         predicted_indices = output_dict["predictions"]
         if not isinstance(predicted_indices, numpy.ndarray):
-            predicted_indices = predicted_indices.cpu().numpy()
+            predicted_indices = predicted_indices.data.cpu().numpy()
         all_predicted_tokens = []
         for indices in predicted_indices:
             indices = list(indices)
             # Collect indices till the first end_symbol
-            indices = indices[:indices.index(self._end_index)]
-            predicted_tokens = [self.vocab.get_token_from_index(x, namespace="output_tokens")
+            if self._end_index in indices:
+                indices = indices[:indices.index(self._end_index)]
+            predicted_tokens = [self.vocab.get_token_from_index(x, namespace="target_tokens")
                                 for x in indices]
             all_predicted_tokens.append(predicted_tokens)
         if len(all_predicted_tokens) == 1:
