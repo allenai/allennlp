@@ -72,9 +72,12 @@ class SpanBasedF1Measure(Metric):
             A masking tensor the same size as ``gold_labels``.
         prediction_map: ``torch.Tensor``, optional (default = None).
             A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
-            to the indexes of the label vocabulary. If provided, the output label at each timestep will be
+            to the indices of the label vocabulary. If provided, the output label at each timestep will be
             ``vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))``,
             rather than simply ``vocabulary.get_index_to_token_vocabulary(argmax(predictions[batch, t]))``.
+            This is useful in cases where each Instance in the dataset is associated with a different possible
+            subset of labels from a large label-space (IE FrameNet, where each frame has a different set of
+            possible roles associated with it).
         """
         if mask is None:
             mask = ones_like(gold_labels)
