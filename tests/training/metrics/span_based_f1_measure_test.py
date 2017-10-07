@@ -49,8 +49,8 @@ class SpanBasedF1Test(AllenNlpTestCase):
         # In this example, datapoint1 only has access to ARG1 and V labels,
         # whereas datapoint2 only has access to ARG2 and V labels.
 
-        gold_labels = [["O", "B-ARG1", "I-ARG1", "O", "B-V", "O"],
-                       ["B-ARG2", "I-ARG2", "O", "B-V", "I-V", "O"]]
+        # gold_labels = [["O", "B-ARG1", "I-ARG1", "O", "B-V", "O"],
+        #               ["B-ARG2", "I-ARG2", "O", "B-V", "I-V", "O"]]
         gold_indices = [[0, 1, 2, 0, 3, 0],
                         [1, 2, 0, 3, 4, 0]]
         prediction_map_indices = [[0, 1, 2, 5, 6],
@@ -74,7 +74,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
         prediction_tensor[1, 5, 1] = 1 # (False Positive - ARG2)
 
         metric = SpanBasedF1Measure(self.vocab, "tags")
-        metric(prediction_tensor, gold_tensor, prediction_map = prediction_map_tensor)
+        metric(prediction_tensor, gold_tensor, prediction_map=prediction_map_tensor)
 
         assert metric._true_positives["ARG1"] == 1
         assert metric._true_positives["ARG2"] == 0
@@ -90,7 +90,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
         assert "O" not in metric._false_positives.keys()
 
         # Check things are accumulating correctly.
-        metric(prediction_tensor, gold_tensor, prediction_map = prediction_map_tensor)
+        metric(prediction_tensor, gold_tensor, prediction_map=prediction_map_tensor)
         assert metric._true_positives["ARG1"] == 2
         assert metric._true_positives["ARG2"] == 0
         assert metric._true_positives["V"] == 4

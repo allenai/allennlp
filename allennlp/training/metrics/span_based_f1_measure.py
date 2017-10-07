@@ -79,7 +79,9 @@ class SpanBasedF1Measure(Metric):
         if mask is None:
             mask = ones_like(gold_labels)
         # Get the data from the Variables.
-        predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(predictions, gold_labels, mask, prediction_map)
+        predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(predictions,
+                                                                                gold_labels,
+                                                                                mask, prediction_map)
 
         num_classes = predictions.size(-1)
         if (gold_labels >= num_classes).any():
@@ -92,7 +94,7 @@ class SpanBasedF1Measure(Metric):
         if prediction_map is not None:
             argmax_predictions = torch.gather(prediction_map, 1, argmax_predictions)
             gold_labels = torch.gather(prediction_map, 1, gold_labels.long())
-        
+
         argmax_predictions = argmax_predictions.float()
 
         # Iterate over timesteps in batch.
