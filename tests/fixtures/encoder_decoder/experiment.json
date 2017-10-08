@@ -1,5 +1,9 @@
 {
-  "dataset_reader":{"type":"encoder_decoder"},
+  "dataset_reader":{
+    "type":"encoder_decoder",
+    "source_token_indexers":{"tokens": {"namespace": "source_tokens"}},
+    "target_token_indexers":{"tokens": {"namespace": "target_tokens"}}
+  },
   "train_data_path": "tests/fixtures/data/encoder_decoder.tsv",
   "validation_data_path": "tests/fixtures/data/encoder_decoder.tsv",
   "model": {
@@ -19,7 +23,8 @@
       "num_layers": 1
     },
     "max_decoding_steps": 20,
-    "use_attention": true
+    "target_namespace": "target_tokens",
+    //"attention_function": {"type": "dot_product"}
   },
   "iterator": {
     "type": "bucket",
