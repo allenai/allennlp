@@ -1,12 +1,12 @@
-FROM nvidia/cuda:8.0-cudnn5-runtime
+FROM ubuntu:16.04
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
-ENV PATH /opt/conda/bin:$PATH
+# Add nvidia and conda binaries to path.
+ENV PATH /usr/local/nvidia/bin/:/opt/conda/bin:$PATH
 ENV PYTHONHASHSEED 2157
 
-# Override Nvidia's default LD paths, since they're misconfigured in the base image.
-ENV LD_LIBRARY_PATH /usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64:$LD_LIBRARY_PATH
 
 WORKDIR /stage
 
@@ -56,6 +56,7 @@ COPY tests/ tests/
 COPY pytest.ini pytest.ini
 COPY scripts/ scripts/
 COPY tutorials/ tutorials/
+COPY experiment_config experiment_config/
 
 # Run tests to verify the Docker build
 RUN PYTHONDONTWRITEBYTECODE=1 pytest
