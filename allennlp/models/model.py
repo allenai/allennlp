@@ -108,9 +108,6 @@ class Model(torch.nn.Module, Registrable):
         and returns the result.  Before returning the result, we convert any ``torch.autograd.Variables``
         or ``torch.Tensors`` into numpy arrays and remove the batch dimension.
         """
-        # Hack to see what cuda device the model is on, so we know where to put these inputs.  For
-        # complicated models, or machines with multiple GPUs, this will not work.  I couldn't find
-        # a way to actually query what device a tensor / parameter is on.
         instance.index_fields(self.vocab)
         model_input = arrays_to_variables(instance.as_array_dict(),
                                           add_batch_dimension=True,
