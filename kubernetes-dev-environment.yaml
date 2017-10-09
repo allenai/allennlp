@@ -2,10 +2,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: allennlp-dev-env # TODO: make this unique by appending your username
+  name: allennlp-michaels-env # TODO: make this unique by appending your username
   namespace: allennlp
   labels:
-    contact: # TODO: enter your username
+    contact: michaels # TODO: enter your username
 spec:
   template:
     metadata:

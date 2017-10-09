@@ -100,7 +100,7 @@ class Model(torch.nn.Module, Registrable):
         """
         raise NotImplementedError
 
-    def forward_on_instance(self, instance: Instance) -> Dict[str, numpy.ndarray]:
+    def forward_on_instance(self, instance: Instance, cuda_device: int) -> Dict[str, numpy.ndarray]:
         """
         Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
         converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
@@ -111,7 +111,6 @@ class Model(torch.nn.Module, Registrable):
         # Hack to see what cuda device the model is on, so we know where to put these inputs.  For
         # complicated models, or machines with multiple GPUs, this will not work.  I couldn't find
         # a way to actually query what device a tensor / parameter is on.
-        cuda_device = 0 if next(self.parameters()).is_cuda else -1
         instance.index_fields(self.vocab)
         model_input = arrays_to_variables(instance.as_array_dict(),
                                           add_batch_dimension=True,
