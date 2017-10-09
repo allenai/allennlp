@@ -35,4 +35,5 @@ class TestLabelField(AllenNlpTestCase):
 
     def test_label_field_empty_field_works(self):
         label = LabelField("test")
-        label.empty_field()
+        empty_label = label.empty_field()
+        assert empty_label.label == -1
