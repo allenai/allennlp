@@ -19,6 +19,22 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 @DatasetReader.register("coref")
 class ConllCorefReader(DatasetReader):
+    """
+    Reads a single CoNLL-formatted file and returns a ``Dataset`` where the ``Instances`` have four
+    fields: ``text``, a ``TextField``, ``span_starts``, a ``ListField[IndexField]`` of inclusive start
+    indices for span candidates, ``span_ends``, a ``ListField[IndexField]`` of inclusive end indices
+    for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's original text.
+    For data with gold cluster labels, we also include the original ``clusters`` (a list of list of
+    index pairs) and a ``SequenceLabelField`` of cluster ids for every span candidate.
+
+    Parameters
+    ----------
+    max_span_width: ``int``
+        The maximum width of candidate spans to consider.
+    token_indexers : ``Dict[str, TokenIndexer]``, optional
+        We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
+        Default is ``{"tokens": SingleIdTokenIndexer()}``.
+    """
     def __init__(self,
                  max_span_width: int,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
