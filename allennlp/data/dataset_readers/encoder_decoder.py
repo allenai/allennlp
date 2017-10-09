@@ -29,14 +29,13 @@ class EncoderDecoderDatasetReader(DatasetReader):
     ----------
     source_tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         Tokenizer to use to split the input sequences into words or other kinds of tokens.
-    target_tokenizer : ``Tokenizer``, optional (default = source_tokenizer)
+    target_tokenizer : ``Tokenizer``, optional (default = self.source_tokenizer)
         Tokenizer to use to split the output sequences (during training) into words or other kinds
         of tokens.
     source_token_indexers : ``Dict[str, TokenIndexer]``, optional
                              (default=``{"tokens": SingleIdTokenizer()}``)
         Indexers used to define input (source side) token representations.
-    target_token_indexers : ``Dict[str, TokenIndexer]``, optional
-                            (default=``{"tokens": SingleIdTokenizer()}``)
+    target_token_indexers : ``Dict[str, TokenIndexer]``, optional (default = self.source_token_indexers)
         Indexers used to define output (target side) token representations.
     """
     def __init__(self,

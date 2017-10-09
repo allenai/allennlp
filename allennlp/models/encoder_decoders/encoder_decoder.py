@@ -196,11 +196,11 @@ class EncoderDecoder(Model):
         ----------
         input_indices : torch.LongTensor
             Indices of either the gold inputs to the decoder or the predicted labels from the previous timestep.
-        decoder_hidden_state : torch.LongTensor, optional
+        decoder_hidden_state : torch.LongTensor, optional (not needed if no attention)
             Output of from the decoder at the last time step. Needed only if using attention.
-        encoder_outputs : torch.LongTensor
+        encoder_outputs : torch.LongTensor, optional (not needed if no attention)
             Encoder outputs from all time steps. Needed only if using attention.
-        encoder_outputs_mask : torch.LongTensor
+        encoder_outputs_mask : torch.LongTensor, optional (not needed if no attention)
             Masks on encoder outputs. Needed only if using attention.
         """
         # input_indices : (batch_size,)  since we are processing these one timestep at a time.
