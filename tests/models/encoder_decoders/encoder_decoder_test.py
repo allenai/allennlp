@@ -4,7 +4,7 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common.testing import ModelTestCase
-from allennlp.nn.util import sequence_cross_entropy_with_logits
+from allennlp.nn.util import arrays_to_variables, sequence_cross_entropy_with_logits
 
 
 class EncoderDecoderWithoutAttentionTest(ModelTestCase):
@@ -31,6 +31,13 @@ class EncoderDecoderWithoutAttentionTest(ModelTestCase):
         # pylint: disable=protected-access
         actual_loss = self.model._get_loss(sample_logits, sample_targets, sample_mask)
         assert numpy.equal(expected_loss.data.numpy(), actual_loss.data.numpy())
+
+    def test_decode_runs_correctly(self):
+        training_arrays = arrays_to_variables(self.dataset.as_array_dict())
+        output_dict = self.model.forward(**training_arrays)
+        decode_output_dict = self.model.decode(output_dict)
+        # ``decode`` should have added a ``predicted_tokens`` field to ``output_dict``. Checking if it's there.
+        assert "predicted_tokens" in decode_output_dict
 
 class EncoderDecoderWithAttentionTest(ModelTestCase):
     def setUp(self):
