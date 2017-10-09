@@ -6,7 +6,7 @@ ENV LANG=C.UTF-8
 ENV PATH /usr/local/nvidia/bin/:/opt/conda/bin:$PATH
 ENV PYTHONHASHSEED 2157
 
-ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64
 
 WORKDIR /stage
 
