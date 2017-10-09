@@ -9,7 +9,7 @@ from allennlp.common.checks import ensure_pythonhashseed_set
 
 # a mapping from predictor `type` to the location of the trained model of that type
 DEFAULT_MODELS = {
-        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15.tar.gz', # pylint: disable=line-too-long
+        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz', # pylint: disable=line-too-long
         'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
         'textual-entailment': 'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-2017.09.04.tar.gz' # pylint: disable=line-too-long
 }
