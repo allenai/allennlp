@@ -49,7 +49,7 @@ def add_subparser(parser: argparse._SubParsersAction,
     return subparser
 
 def get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Predictor:
-    archive = load_archive(args.archive_file)
+    archive = load_archive(args.archive_file, cuda_device=args.cuda_device)
     model_type = archive.config.get("model").get("type")
     if model_type not in predictors:
         raise ConfigurationError("no known predictor for model type {}".format(model_type))
