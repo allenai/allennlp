@@ -172,23 +172,7 @@ class EncoderDecoder(Model):
                        "predictions": all_predictions}
         if target_tokens:
             target_mask = get_text_field_mask(target_tokens)
-            # `targets` currently contains START + target_sequence + END, and logits correspond to the outputs
-            # from these timesteps till the second from last.
-            # During training, we want the output from timestep i to be similar to the
-            # input token from timestep i + 1. That is, the targets should be shifted by one timestep for
-            # appropriate comparison.
-            # Consider a single example where the target has 3 words, and padding is to 7 tokens. The complete
-            #   sequence would correspond to <S> w1 w2 w3 <E> <P> <P>
-            #   and the mask would be         1  1  1  1   1   0   0
-            #   and let the logits be         l1 l2 l3 l4  l5  l6
-            # We actually need to compare:
-            #   the sequence w1 w2 w3 <E> <P> <P>
-            #   with masks   1  1  1   1   0   0
-            #   against      l1 l2 l3  l4  l5  l6
-            # TODO (pradeep): Write a test for this.
-            relevant_targets = targets[:, 1:].contiguous()  # (batch_size, num_decoding_steps - 1)
-            relevant_mask = target_mask[:, 1:].contiguous()  # (batch_size, num_decoding_steps - 1)
-            loss = sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
+            loss = self._get_loss(logits, targets, target_mask)
             output_dict["loss"] = loss
             # TODO: Define metrics
         return output_dict
@@ -260,6 +244,37 @@ class EncoderDecoder(Model):
         _, predicted_classes = torch.max(class_probabilities, 1)
         prediction_dict = {"class_probabilities": class_probabilities, "predicted_classes": predicted_classes}
         return prediction_dict
+
+    @staticmethod
+    def _get_loss(logits: torch.LongTensor,
+                  targets: torch.LongTensor,
+                  target_mask: torch.LongTensor) -> torch.LongTensor:
+        """
+        Takes logits (unnormalized outputs from the decoder) of size (batch_size, num_decoding_steps - 1,
+        num_classes), target indices of size (batch_size, num_decoding_steps) and corresponding masks of size
+        (batch_size, num_decoding) steps and computes cross entropy loss while taking the mask into account.
+
+        The length of ``targets`` is expected to be greater than that of ``logits`` because the decoder does
+        not need to compute the output corresponding to the last timestep of ``targets``. This method aligns
+        the inputs appropriately to compute the loss.
+        """
+        # `targets` currently contains START + target_sequence + END, and logits correspond to the outputs
+        # from these timesteps till the second from last.
+        # During training, we want the output from timestep i to be similar to the
+        # input token from timestep i + 1. That is, the targets should be shifted by one timestep for
+        # appropriate comparison.
+        # Consider a single example where the target has 3 words, and padding is to 7 tokens. The complete
+        #   sequence would correspond to <S> w1 w2 w3 <E> <P> <P>
+        #   and the mask would be         1  1  1  1   1   0   0
+        #   and let the logits be         l1 l2 l3 l4  l5  l6
+        # We actually need to compare:
+        #   the sequence w1 w2 w3 <E> <P> <P>
+        #   with masks   1  1  1   1   0   0
+        #   against      l1 l2 l3  l4  l5  l6
+        relevant_targets = targets[:, 1:].contiguous()  # (batch_size, num_decoding_steps - 1)
+        relevant_mask = target_mask[:, 1:].contiguous()  # (batch_size, num_decoding_steps - 1)
+        loss = sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
+        return loss
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

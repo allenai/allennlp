@@ -23,7 +23,8 @@
       "num_layers": 1
     },
     "max_decoding_steps": 20,
-    "target_namespace": "target_tokens"
+    "target_namespace": "target_tokens",
+    "attention_function": {"type": "dot_product"}
   },
   "iterator": {
     "type": "bucket",
