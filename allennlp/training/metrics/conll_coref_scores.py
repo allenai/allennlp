@@ -72,7 +72,7 @@ class ConllCorefScores(Metric):
 
 class Scorer(object):
     """
-    Mostly borrowed from https://github.com/clarkkev/deep-coref/blob/master/evaluation.py
+    Mostly borrowed from <https://github.com/clarkkev/deep-coref/blob/master/evaluation.py>
     """
     def __init__(self, metric):
         self.p_num = 0
@@ -108,6 +108,9 @@ class Scorer(object):
 
     @staticmethod
     def b_cubed(clusters, mention_to_gold):
+        """
+        <https://pdfs.semanticscholar.org/cfe3/c24695f1c14b78a5b8e95bcbd1c666140fd1.pdf>
+        """
         num, dem = 0, 0
         for cluster in clusters:
             if len(cluster) == 1:
@@ -126,6 +129,9 @@ class Scorer(object):
 
     @staticmethod
     def muc(clusters, mention_to_gold):
+        """
+        <http://aclweb.org/anthology/M/M95/M95-1005.pdf>
+        """
         true_p, all_p = 0, 0
         for cluster in clusters:
             all_p += len(cluster) - 1
@@ -141,10 +147,16 @@ class Scorer(object):
 
     @staticmethod
     def phi4(clusters1, clusters2):
+        """
+        Subroutine for ceafe.
+        """
         return 2 * len([m for m in clusters1 if m in clusters2]) / float(len(clusters1) + len(clusters2))
 
     @staticmethod
     def ceafe(clusters, gold_clusters):
+        """
+        <https://www.semanticscholar.org/paper/On-Coreference-Resolution-Performance-Metrics-Luo/de133c1f22d0dfe12539e25dda70f28672459b99>
+        """
         clusters = [c for c in clusters if len(c) != 1]
         scores = np.zeros((len(gold_clusters), len(clusters)))
         for i, gold_cluster in enumerate(gold_clusters):
