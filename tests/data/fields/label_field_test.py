@@ -32,3 +32,8 @@ class TestLabelField(AllenNlpTestCase):
     def test_label_field_raises_with_incorrect_label_type(self):
         with pytest.raises(ConfigurationError):
             _ = LabelField([], skip_indexing=False)
+
+    def test_label_field_empty_field_works(self):
+        label = LabelField("test")
+        empty_label = label.empty_field()
+        assert empty_label.label == -1
