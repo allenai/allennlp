@@ -61,6 +61,10 @@ COPY experiment_config experiment_config/
 # Run tests to verify the Docker build
 RUN PYTHONDONTWRITEBYTECODE=1 pytest
 
+# Add model caching
+ARG CACHE_MODELS=false
+RUN ./scripts/docker_cache.sh
+
 LABEL maintainer="allennlp-contact@allenai.org"
 
 EXPOSE 8000
