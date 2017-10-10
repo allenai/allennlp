@@ -37,6 +37,7 @@ from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.archival import archive_model
 from allennlp.models.model import Model
 from allennlp.training.trainer import Trainer
+from allennlp.commands.evaluate import evaluate
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -127,7 +128,11 @@ def train_model(params: Params, serialization_dir: str) -> Model:
         logger.info("Reading validation data from %s", validation_data_path)
         validation_data = dataset_reader.read(validation_data_path)
         all_instances.extend(validation_data.instances)
+<<<<<<< HEAD
         datasets_in_vocab += ["validation"]
+=======
+        datasets_in_vocab.append("validation")
+>>>>>>> master
     else:
         validation_data = None
 
@@ -173,6 +178,5 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     elif test_data:
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
-
 
     return model
