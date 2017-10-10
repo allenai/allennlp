@@ -8,8 +8,6 @@ from allennlp.common import Params
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.common.testing import AllenNlpTestCase
 
-SMALL = 1e-5
-
 class TestBagOfEmbeddingsEncoder(AllenNlpTestCase):
     def test_get_dimension_is_correct(self):
         encoder = BagOfEmbeddingsEncoder(embedding_dim=5)
@@ -46,9 +44,21 @@ class TestBagOfEmbeddingsEncoder(AllenNlpTestCase):
     def test_forward_does_correct_computation_with_average(self):
         encoder = BagOfEmbeddingsEncoder(embedding_dim=2, averaged=True)
         input_tensor = Variable(
-                torch.FloatTensor([[[.7, .8], [.1, 1.5], [.3, .6]], [[.5, .3], [1.4, 1.1], [.3, .9]]]))
-        mask = Variable(torch.ByteTensor([[1, 1, 1], [1, 1, 0]]))
+                torch.FloatTensor([[[.7, .8], [.1, 1.5], [.3, .6]],
+                                   [[.5, .3], [1.4, 1.1], [.3, .9]],
+                                   [[.4, .3], [.4, .3], [1.4, 1.7]]]))
+        mask = Variable(torch.ByteTensor([[1, 1, 1], [1, 1, 0], [0, 0, 0]]))
         encoder_output = encoder(input_tensor, mask)
         assert_almost_equal(encoder_output.data.numpy(),
-                            numpy.asarray([[(.7 + .1 + .3)/(3+SMALL), (.8 + 1.5 + .6)/(3+SMALL)],
-                                           [(.5 + 1.4)/(2+SMALL), (.3 + 1.1)/(2+SMALL)]]))
+                            numpy.asarray([[(.7 + .1 + .3)/3, (.8 + 1.5 + .6)/3],
+                                           [(.5 + 1.4)/2, (.3 + 1.1)/2],
+                                           [0., 0.]]))
+
+    def test_forward_does_correct_computation_with_average_no_mask(self):
+        encoder = BagOfEmbeddingsEncoder(embedding_dim=2, averaged=True)
+        input_tensor = Variable(
+                torch.FloatTensor([[[.7, .8], [.1, 1.5], [.3, .6]], [[.5, .3], [1.4, 1.1], [.3, .9]]]))
+        encoder_output = encoder(input_tensor)
+        assert_almost_equal(encoder_output.data.numpy(),
+                            numpy.asarray([[(.7 + .1 + .3)/3, (.8 + 1.5 + .6)/3],
+                                           [(.5 + 1.4 + .3)/3, (.3 + 1.1 + .9)/3]]))
