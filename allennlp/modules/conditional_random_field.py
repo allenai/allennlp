@@ -23,6 +23,10 @@ class ConditionalRandomField(torch.nn.Module):
     ----------
     num_tags: int, required
         The number of tags.
+    start_tag: int, required
+        The id of the sentinel <START> tag.
+    stop_tag: int, required
+        The id of the sentinel <STOP> tag.
     """
     def __init__(self,
                  num_tags: int,
@@ -42,6 +46,9 @@ class ConditionalRandomField(torch.nn.Module):
         self.transitions.data[:, stop_tag] = -10000
 
     def _input_likelihood(self, inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the denominator term for the log-likelihood
+        """
         batch_size, sequence_length, num_tags = inputs.size()
         mask = mask.float()
         masks = [mask[:, i].contiguous() for i in range(sequence_length)]
@@ -50,11 +57,11 @@ class ConditionalRandomField(torch.nn.Module):
         alpha = self.transitions[:, self.start_tag].contiguous().view(1, num_tags) + inputs[:, 0, :]
 
         for i in range(sequence_length - 1):
-            # want to broadcast emit scores along prev_tag
+            # Broadcast emit scores along prev_tag
             emit_scores = inputs[:, i+1].contiguous().view(batch_size, num_tags, 1)
-            # want to broadcast transition scores along batch
+            # Broadcast transition scores along batch
             transition_scores = self.transitions.view(1, num_tags, num_tags)
-            # want to broadcast alpha along next_tag
+            # Broadcast alpha along next_tag
             alpha = alpha.view(batch_size, 1, num_tags)
 
             # (batch_size, next_tag, prev_tag)

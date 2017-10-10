@@ -12,7 +12,9 @@
       }
     },
     "train_data_path": "/Users/joelg/data/ner/eng.train.json",
-    "validation_data_path": "/Users/joelg/data/ner/eng.testa.json",
+    //"validation_data_path": "/Users/joelg/data/ner/eng.testa.json",
+    //test_data_path": "/Users/joelg/data/ner/eng.testb.json",
+    //"evaluate_on_test": true,
     "model": {
       "type": "crf_tagger",
       "text_field_embedder": {
@@ -52,7 +54,7 @@
     "iterator": {"type": "basic", "batch_size": 32},
     "trainer": {
       "optimizer": "adam",
-      "num_epochs": 50,
+      "num_epochs": 10,
       "patience": 10,
       "cuda_device": -1
     }

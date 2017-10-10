@@ -152,7 +152,7 @@ class CrfTagger(Model):
         Uses viterbi algorithm to find most likely tags
         """
         logits, mask = output_dict["logits"], output_dict["mask"]
-        _batch_size, max_seq_length, num_tags = logits.size()
+        _, max_seq_length, num_tags = logits.size()
 
         # The CRF transitions are (next_state, prev_state),
         # but ``viterbi_decode`` expects (prev_state, next_state)
