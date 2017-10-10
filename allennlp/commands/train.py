@@ -127,7 +127,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
         validation_data = dataset_reader.read(validation_data_path)
-        all_datasets.append(validation_data.instances)
+        all_datasets.append(validation_data)
         datasets_in_vocab.append("validation")
     else:
         validation_data = None
@@ -136,7 +136,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     if test_data_path is not None:
         logger.info("Reading test data from %s", test_data_path)
         test_data = dataset_reader.read(test_data_path)
-        all_datasets.append(test_data.instances)
+        all_datasets.append(test_data)
         datasets_in_vocab.append("test")
     else:
         test_data = None
