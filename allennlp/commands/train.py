@@ -167,7 +167,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     archive_model(serialization_dir)
 
     if test_data and evaluate_on_test:
-        test_data = test_data.index_instances(vocab)
+        test_data.index_instances(vocab)
         evaluate(model, test_data, iterator, cuda_device=trainer._cuda_device)  # pylint: disable=protected-access
 
     elif test_data:
