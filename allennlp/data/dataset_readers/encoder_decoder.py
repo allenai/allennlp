@@ -23,20 +23,23 @@ END_SYMBOL = "@@END@@"
 class EncoderDecoderDatasetReader(DatasetReader):
     """
     Read a tsv file containing paired sequences, and create a dataset for an ``EncoderDecoder`` model.
-    Expected format for each line: <source_sequence_string>\t<target_sequence_string>
+    Expected format for each input line: <source_sequence_string>\t<target_sequence_string>
+    The output of ``read`` is a list of ``Instance``s with the fields:
+        source_tokens: ``TextField`` and
+        target_tokens: ``TextField`` (optional)
 
     Parameters
     ----------
-    source_tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
-        Tokenizer to use to split the input sequences into words or other kinds of tokens.
-    target_tokenizer : ``Tokenizer``, optional (default = self.source_tokenizer)
+    source_tokenizer : ``Tokenizer``, optional
+        Tokenizer to use to split the input sequences into words or other kinds of tokens. Defaults to
+        ``WordTokenizer()``.
+    target_tokenizer : ``Tokenizer``, optional
         Tokenizer to use to split the output sequences (during training) into words or other kinds
-        of tokens.
+        of tokens. Defaults to ``source_tokenizer``.
     source_token_indexers : ``Dict[str, TokenIndexer]``, optional
-                             (default=``{"tokens": SingleIdTokenizer()}``)
-        Indexers used to define input (source side) token representations.
-    target_token_indexers : ``Dict[str, TokenIndexer]``, optional (default = self.source_token_indexers)
-        Indexers used to define output (target side) token representations.
+        Indexers used to define input (source side) token representations. Defaults to ``SingleIdTokenIndexer()``.
+    target_token_indexers : ``Dict[str, TokenIndexer]``, optional
+        Indexers used to define output (target side) token representations. Defaults to ``source_token_indexers``.
     """
     def __init__(self,
                  source_tokenizer: Tokenizer = None,

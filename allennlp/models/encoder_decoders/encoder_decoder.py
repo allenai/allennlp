@@ -26,10 +26,9 @@ class EncoderDecoder(Model):
     representations to decode another sequence. It takes an encoder (:class:`Seq2SeqEncoder`) as an
     input. This class implements the functionality of the decoder.
 
-    There are several things the decoder can take from the encoder. The hidden state of the decoder can be
-    intialized with the output from the final time-step of the encoder, and the decoder may also choose to use
-    attention, in which case a weighted average of the outputs from the encoder are concatenated to the inputs
-    of the decoder at every timestep.
+    In this implementation, the decoder uses the encoder's outputs in two ways. The hidden state of the decoder
+    is intialized with the output from the final time-step of the encoder, and when using attention, a weighted
+    average of the outputs from the encoder is concatenated to the inputs of the decoder at every timestep.
 
     Parameters
     ----------
@@ -81,23 +80,23 @@ class EncoderDecoder(Model):
         # as a way to indicate the end of the decoded sequence.
         self._start_index = self.vocab.get_token_index(START_SYMBOL, self._target_namespace)
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
-        self._num_classes = self.vocab.get_vocab_size(self._target_namespace)
+        num_classes = self.vocab.get_vocab_size(self._target_namespace)
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the hidden
         # state of the decoder with that of the final hidden states of the encoder. Also, if we're using
         # attention with ``DotProductSimilarity``, this is needed.
         self._decoder_output_dim = self._encoder.get_output_dim()
         target_embedding_dim = target_embedding_dim or self._source_embedder.get_output_dim()
-        self._target_embedder = Embedding(self._num_classes, target_embedding_dim)
+        self._target_embedder = Embedding(num_classes, target_embedding_dim)
         if self._attention_function:
             self._decoder_attention = Attention(self._attention_function)
-            # The output of attention will be concatenated to the input vector of the decoder at
-            # each time step.
+            # The output of attention, a weighted average over encoder outputs, will be concatenated to the input
+            # vector of the decoder at each time step.
             self._decoder_input_dim = self._encoder.get_output_dim() + target_embedding_dim
         else:
             self._decoder_input_dim = target_embedding_dim
         # TODO (pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
-        self._output_projection_layer = Linear(self._decoder_output_dim, self._num_classes)
+        self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
 
     @overrides
     def forward(self,  # type: ignore
@@ -113,7 +112,7 @@ class EncoderDecoder(Model):
            The output of ``TextField.as_array()`` applied on the source ``TextField``. This will be passed
            through a ``TextFieldEmbedder`` and then through an encoder.
         target_tokens : Dict[str, torch.LongTensor], optional (default = None)
-           Output of ``Textfield.as_array()`` applied on target ``TextField``. We assume that the arget tokens
+           Output of ``Textfield.as_array()`` applied on target ``TextField``. We assume that the target tokens
            are also represented as a ``TextField``.
         """
         # (batch_size, input_sequence_length, encoder_output_dim)
@@ -163,7 +162,7 @@ class EncoderDecoder(Model):
             # (batch_size, 1)
             step_predictions.append(last_predictions.unsqueeze(1))
         # step_logits is a list containing tensors of shape (batch_size, 1, num_classes)
-        # This is (batch_size, num_decoding_steps-1, num_classes)
+        # This is (batch_size, num_decoding_steps, num_classes)
         logits = torch.cat(step_logits, 1)
         class_probabilities = torch.cat(step_probabilities, 1)
         all_predictions = torch.cat(step_predictions, 1)
@@ -250,37 +249,40 @@ class EncoderDecoder(Model):
                   targets: torch.LongTensor,
                   target_mask: torch.LongTensor) -> torch.LongTensor:
         """
-        Takes logits (unnormalized outputs from the decoder) of size (batch_size, num_decoding_steps - 1,
-        num_classes), target indices of size (batch_size, num_decoding_steps) and corresponding masks of size
-        (batch_size, num_decoding) steps and computes cross entropy loss while taking the mask into account.
+        Takes logits (unnormalized outputs from the decoder) of size (batch_size, num_decoding_steps,
+        num_classes), target indices of size (batch_size, num_decoding_steps+1) and corresponding masks of size
+        (batch_size, num_decoding_steps+1) steps and computes cross entropy loss while taking the mask into
+        account.
 
         The length of ``targets`` is expected to be greater than that of ``logits`` because the decoder does
         not need to compute the output corresponding to the last timestep of ``targets``. This method aligns
         the inputs appropriately to compute the loss.
+
+        During training, we want the logit corresponding to timestep i to be similar to the target token from
+        timestep i + 1. That is, the targets should be shifted by one timestep for appropriate comparison.
+        Consider a single example where the target has 3 words, and padding is to 7 tokens. The complete
+           sequence would correspond to <S> w1 w2 w3 <E> <P> <P>
+           and the mask would be         1  1  1  1   1   0   0
+           and let the logits be         l1 l2 l3 l4  l5  l6
+        We actually need to compare:
+           the sequence w1 w2 w3 <E> <P> <P>
+           with masks   1  1  1   1   0   0
+           against      l1 l2 l3  l4  l5  l6
         """
-        # `targets` currently contains START + target_sequence + END, and logits correspond to the outputs
-        # from these timesteps till the second from last.
-        # During training, we want the output from timestep i to be similar to the
-        # input token from timestep i + 1. That is, the targets should be shifted by one timestep for
-        # appropriate comparison.
-        # Consider a single example where the target has 3 words, and padding is to 7 tokens. The complete
-        #   sequence would correspond to <S> w1 w2 w3 <E> <P> <P>
-        #   and the mask would be         1  1  1  1   1   0   0
-        #   and let the logits be         l1 l2 l3 l4  l5  l6
-        # We actually need to compare:
-        #   the sequence w1 w2 w3 <E> <P> <P>
-        #   with masks   1  1  1   1   0   0
-        #   against      l1 l2 l3  l4  l5  l6
-        relevant_targets = targets[:, 1:].contiguous()  # (batch_size, num_decoding_steps - 1)
-        relevant_mask = target_mask[:, 1:].contiguous()  # (batch_size, num_decoding_steps - 1)
+        relevant_targets = targets[:, 1:].contiguous()  # (batch_size, num_decoding_steps)
+        relevant_mask = target_mask[:, 1:].contiguous()  # (batch_size, num_decoding_steps)
         loss = sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
         return loss
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Trims the output predictions to the first end symbol, replaces indics with corresponding tokens,
-        and adds a field called ``predicted_tokens`` to the ``output_dict``.
+        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test time, to
+        finalize predictions. The logic for the decoder part of the encoder-decoder lives within the ``forward``
+        method.
+
+        This method trims the output predictions to the first end symbol, replaces indices with corresponding
+        tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
         predicted_indices = output_dict["predictions"]
         if not isinstance(predicted_indices, numpy.ndarray):
@@ -314,7 +316,10 @@ class EncoderDecoder(Model):
         else:
             attention_function = None
         scheduled_sampling_ratio = params.pop("scheduled_sampling_ratio", 0.0)
-        return cls(vocab, source_embedder=source_embedder,
-                   encoder=encoder, max_decoding_steps=max_decoding_steps,
-                   target_namespace=target_namespace, attention_function=attention_function,
+        return cls(vocab,
+                   source_embedder=source_embedder,
+                   encoder=encoder,
+                   max_decoding_steps=max_decoding_steps,
+                   target_namespace=target_namespace,
+                   attention_function=attention_function,
                    scheduled_sampling_ratio=scheduled_sampling_ratio)
