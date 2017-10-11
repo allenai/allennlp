@@ -27,8 +27,6 @@ class ModelTestCase(AllenNlpTestCase):
         self.vocab = vocab
         dataset.index_instances(vocab)
         self.dataset = dataset
-        self.token_indexers = reader._token_indexers  # pylint: disable=protected-access
-
         self.model = Model.from_params(self.vocab, params['model'])
 
     def ensure_model_can_train_save_and_load(self, param_file: str):

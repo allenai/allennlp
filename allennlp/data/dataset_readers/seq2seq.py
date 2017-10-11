@@ -19,27 +19,32 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 START_SYMBOL = "@@START@@"
 END_SYMBOL = "@@END@@"
 
-@DatasetReader.register("encoder_decoder")
-class EncoderDecoderDatasetReader(DatasetReader):
+@DatasetReader.register("seq2seq")
+class Seq2SeqDatasetReader(DatasetReader):
     """
-    Read a tsv file containing paired sequences, and create a dataset for an ``EncoderDecoder`` model.
+    Read a tsv file containing paired sequences, and create a dataset suitable for a
+    ``SimpleSeq2Seq`` model, or any model with a matching API.
+
     Expected format for each input line: <source_sequence_string>\t<target_sequence_string>
+
     The output of ``read`` is a list of ``Instance``s with the fields:
         source_tokens: ``TextField`` and
-        target_tokens: ``TextField`` (optional)
+        target_tokens: ``TextField``
 
     Parameters
     ----------
     source_tokenizer : ``Tokenizer``, optional
-        Tokenizer to use to split the input sequences into words or other kinds of tokens. Defaults to
-        ``WordTokenizer()``.
+        Tokenizer to use to split the input sequences into words or other kinds of tokens. Defaults
+        to ``WordTokenizer()``.
     target_tokenizer : ``Tokenizer``, optional
         Tokenizer to use to split the output sequences (during training) into words or other kinds
         of tokens. Defaults to ``source_tokenizer``.
     source_token_indexers : ``Dict[str, TokenIndexer]``, optional
-        Indexers used to define input (source side) token representations. Defaults to ``SingleIdTokenIndexer()``.
+        Indexers used to define input (source side) token representations. Defaults to
+        ``{"tokens": SingleIdTokenIndexer()}``.
     target_token_indexers : ``Dict[str, TokenIndexer]``, optional
-        Indexers used to define output (target side) token representations. Defaults to ``source_token_indexers``.
+        Indexers used to define output (target side) token representations. Defaults to
+        ``source_token_indexers``.
     """
     def __init__(self,
                  source_tokenizer: Tokenizer = None,
@@ -50,8 +55,6 @@ class EncoderDecoderDatasetReader(DatasetReader):
         self._target_tokenizer = target_tokenizer or self._source_tokenizer
         self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._target_token_indexers = target_token_indexers or self._source_token_indexers
-        self._token_indexers = {"source": self._source_token_indexers,
-                                "target": self._target_token_indexers}
 
     @overrides
     def read(self, file_path):
@@ -88,7 +91,7 @@ class EncoderDecoderDatasetReader(DatasetReader):
             return Instance({'source_tokens': source_field})
 
     @classmethod
-    def from_params(cls, params: Params) -> 'EncoderDecoderDatasetReader':
+    def from_params(cls, params: Params) -> 'Seq2SeqDatasetReader':
         source_tokenizer_type = params.pop('source_tokenizer', None)
         source_tokenizer = None if source_tokenizer_type is None else Tokenizer.from_params(source_tokenizer_type)
         target_tokenizer_type = params.pop('target_tokenizer', None)
@@ -104,5 +107,5 @@ class EncoderDecoderDatasetReader(DatasetReader):
         else:
             target_token_indexers = TokenIndexer.dict_from_params(target_indexers_type)
         params.assert_empty(cls.__name__)
-        return EncoderDecoderDatasetReader(source_tokenizer, target_tokenizer,
-                                           source_token_indexers, target_token_indexers)
+        return Seq2SeqDatasetReader(source_tokenizer, target_tokenizer,
+                                    source_token_indexers, target_token_indexers)
