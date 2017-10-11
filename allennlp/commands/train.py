@@ -18,7 +18,7 @@ which to write the results.
     -s SERIALIZATION_DIR, --serialization_dir SERIALIZATION_DIR
                             directory in which to save the model and its logs
 """
-
+from typing import List
 import argparse
 import json
 import logging
@@ -119,14 +119,15 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     train_data_path = params.pop('train_data_path')
     logger.info("Reading training data from %s", train_data_path)
     train_data = dataset_reader.read(train_data_path)
-    all_instances = train_data.instances
+
+    all_datasets: List[Dataset] = [train_data]
     datasets_in_vocab = ["train"]
 
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
         validation_data = dataset_reader.read(validation_data_path)
-        all_instances.extend(validation_data.instances)
+        all_datasets.append(validation_data)
         datasets_in_vocab.append("validation")
     else:
         validation_data = None
@@ -135,13 +136,15 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     if test_data_path is not None:
         logger.info("Reading test data from %s", test_data_path)
         test_data = dataset_reader.read(test_data_path)
-        all_instances.extend(test_data.instances)
+        all_datasets.append(test_data)
         datasets_in_vocab.append("test")
     else:
         test_data = None
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_in_vocab))
-    vocab = Vocabulary.from_params(params.pop("vocabulary", {}), Dataset(all_instances))
+    vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
+                                   Dataset([instance for dataset in all_datasets
+                                            for instance in dataset.instances]))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))
@@ -167,7 +170,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     archive_model(serialization_dir)
 
     if test_data and evaluate_on_test:
-        test_data = test_data.index_instances(vocab)
+        test_data.index_instances(vocab)
         evaluate(model, test_data, iterator, cuda_device=trainer._cuda_device)  # pylint: disable=protected-access
 
     elif test_data:
