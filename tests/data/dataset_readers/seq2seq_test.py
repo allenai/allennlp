@@ -1,12 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
-from allennlp.data.dataset_readers import EncoderDecoderDatasetReader
+from allennlp.data.dataset_readers import Seq2SeqDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestEncoderDecoderDatasetReader(AllenNlpTestCase):
+class TestSeq2SeqDatasetReader(AllenNlpTestCase):
     def test_default_format(self):
-        reader = EncoderDecoderDatasetReader()
-        dataset = reader.read('tests/fixtures/data/encoder_decoder.tsv')
+        reader = Seq2SeqDatasetReader()
+        dataset = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
 
         assert len(dataset.instances) == 3
         fields = dataset.instances[0].fields
