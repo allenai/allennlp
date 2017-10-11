@@ -1,34 +1,43 @@
 allennlp.service.predictors
 =================================
 
-A ``Predictor`` is a wrapper for an AllenNLP ``Model``
-that makes JSON predictions using JSON inputs. If you
-want to serve up a model through the web service
-(or using ``allennlp.commands.predict``), you'll need
-a ``Predictor`` that wraps it.
-
 .. automodule:: allennlp.service.predictors
    :members:
    :undoc-members:
    :show-inheritance:
 
+* :ref:`Predictor<predictor>`
+* :ref:`BidafPredictor<bidaf>`
+* :ref:`DecomposableAttentionPredictor<decomposable-attention>`
+* :ref:`SemanticRoleLabelerPredictor<semantic-role-labeler>`
+* :ref:`SimpleTaggerPredictor<simple-tagger>`
+
+.. _predictor:
 .. automodule:: allennlp.service.predictors.predictor
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. _bidaf:
 .. automodule:: allennlp.service.predictors.bidaf
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. _decomposable-attention:
 .. automodule:: allennlp.service.predictors.decomposable_attention
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. _semantic-role-labeler:
 .. automodule:: allennlp.service.predictors.semantic_role_labeler
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. _simple-tagger:
+.. automodule:: allennlp.service.predictors.simple_tagger
+   :members:
+   :undoc-members:
+   :show-inheritance:

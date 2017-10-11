@@ -5,9 +5,8 @@ import torch
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
-from allennlp.modules.similarity_function import SimilarityFunction
-from allennlp.nn import Activation
+from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
+from allennlp.nn import Activation, util
 
 
 @SimilarityFunction.register("linear")
@@ -50,8 +49,8 @@ class LinearSimilarity(SimilarityFunction):
                  combination: str = 'x,y',
                  activation: Activation = Activation.by_name('linear')()) -> None:
         super(LinearSimilarity, self).__init__()
-        self._combinations = combination.split(',')
-        combined_dim = self._get_combined_dim(tensor_1_dim, tensor_2_dim)
+        self._combination = combination
+        combined_dim = util.get_combined_dim(combination, [tensor_1_dim, tensor_2_dim])
         self._weight_vector = Parameter(torch.Tensor(combined_dim))
         self._bias = Parameter(torch.Tensor(1))
         self._activation = activation
@@ -64,58 +63,9 @@ class LinearSimilarity(SimilarityFunction):
 
     @overrides
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
-        combined_tensors = self._combine_tensors(tensor_1, tensor_2)
+        combined_tensors = util.combine_tensors(self._combination, [tensor_1, tensor_2])
         dot_product = torch.matmul(combined_tensors, self._weight_vector)
         return self._activation(dot_product + self._bias)
-
-    def _combine_tensors(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
-        combined_tensor = self._get_combination(self._combinations[0], tensor_1, tensor_2)
-        for combination in self._combinations[1:]:
-            to_concatenate = self._get_combination(combination, tensor_1, tensor_2)
-            combined_tensor = torch.cat([combined_tensor, to_concatenate], dim=-1)
-        return combined_tensor
-
-    def _get_combination(self, combination: str, tensor_1, tensor_2):
-        if combination == 'x':
-            return tensor_1
-        elif combination == 'y':
-            return tensor_2
-        else:
-            if len(combination) != 3:
-                raise ConfigurationError("Invalid combination: " + combination)
-            first_tensor = self._get_combination(combination[0], tensor_1, tensor_2)
-            second_tensor = self._get_combination(combination[2], tensor_1, tensor_2)
-            operation = combination[1]
-            if operation == '*':
-                return first_tensor * second_tensor
-            elif operation == '/':
-                return first_tensor / second_tensor
-            elif operation == '+':
-                return first_tensor + second_tensor
-            elif operation == '-':
-                return first_tensor - second_tensor
-            else:
-                raise ConfigurationError("Invalid operation: " + operation)
-
-    def _get_combined_dim(self, tensor_1_dim: int, tensor_2_dim: int) -> int:
-        combination_dims = [self._get_combination_dim(combination, tensor_1_dim, tensor_2_dim)
-                            for combination in self._combinations]
-        return sum(combination_dims)
-
-    def _get_combination_dim(self, combination: str, tensor_1_dim: int, tensor_2_dim: int) -> int:
-        if combination == 'x':
-            return tensor_1_dim
-        elif combination == 'y':
-            return tensor_2_dim
-        else:
-            if len(combination) != 3:
-                raise ConfigurationError("Invalid combination: " + combination)
-            first_tensor_dim = self._get_combination_dim(combination[0], tensor_1_dim, tensor_2_dim)
-            second_tensor_dim = self._get_combination_dim(combination[2], tensor_1_dim, tensor_2_dim)
-            operation = combination[1]
-            if first_tensor_dim != second_tensor_dim:
-                raise ConfigurationError("Tensor dims must match for operation \"{}\"".format(operation))
-            return first_tensor_dim
 
     @classmethod
     def from_params(cls, params: Params) -> 'LinearSimilarity':

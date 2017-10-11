@@ -1,4 +1,8 @@
-from typing import Dict, Optional, Union
+"""
+Assorted utilities for working with neural networks in AllenNLP.
+"""
+
+from typing import Dict, List, Optional, Union
 
 import numpy
 import torch
@@ -125,9 +129,13 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
     """
     if isinstance(data_structure, dict):
         for key, value in data_structure.items():
-            if key == 'metadata':
-                continue
-            data_structure[key] = arrays_to_variables(value, cuda_device, add_batch_dimension)
+            # This check is a bit hacky, but I'm not sure how else to handle this.  By this point,
+            # we've lost all reference to the original `Field` object.
+            if 'metadata' in key:
+                if add_batch_dimension:
+                    data_structure[key] = [value]
+            else:
+                data_structure[key] = arrays_to_variables(value, cuda_device, add_batch_dimension)
         return data_structure
     else:
         tensor = torch.from_numpy(data_structure)
@@ -216,9 +224,8 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
 
     # Evaluate the scores for all possible paths.
     for timestep in range(1, sequence_length):
-        # TODO(Mark): Use broadcasting here once Pytorch 0.2 is released.
-        tiled_path_scores = path_scores[timestep - 1].expand_as(transition_matrix).transpose(0, 1)
-        summed_potentials = tiled_path_scores + transition_matrix
+        # Add pairwise potentials to current scores.
+        summed_potentials = path_scores[timestep - 1].unsqueeze(-1) + transition_matrix
         scores, paths = torch.max(summed_potentials, 0)
         path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
         path_indices.append(paths.squeeze())
@@ -382,6 +389,7 @@ def replace_masked_values(tensor: Variable, mask: Variable, replace_with: float)
     values_to_add = replace_with * one_minus_mask
     return tensor * mask + values_to_add
 
+
 def device_mapping(cuda_device: int):
     """
     In order to `torch.load()` a GPU-trained model onto a CPU (or specific GPU),
@@ -395,9 +403,99 @@ def device_mapping(cuda_device: int):
             return storage
     return inner_device_mapping
 
+
 def ones_like(tensor: torch.Tensor) -> torch.Tensor:
     """
     Use clone() + fill_() to make sure that a ones tensor ends up on the right
     device at runtime.
     """
     return tensor.clone().fill_(1)
+
+
+def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
+    """
+    Combines a list of tensors using element-wise operations and concatenation, specified by a
+    ``combination`` string.  The string refers to (1-indexed) positions in the input tensor list,
+    and looks like ``"1,2,1+2,3-1"``.
+
+    We allow the following kinds of combinations: ``x``, ``x*y``, ``x+y``, ``x-y``, and ``x/y``,
+    where ``x`` and ``y`` are positive integers less than or equal to ``len(tensors)``.  Each of
+    the binary operations is performed elementwise.  You can give as many combinations as you want
+    in the ``combination`` string.  For example, for the input string ``"1,2,1*2"``, the result
+    would be ``[1;2;1*2]``, as you would expect, where ``[;]`` is concatenation along the last
+    dimension.
+
+    If you have a fixed, known way to combine tensors that you use in a model, you should probably
+    just use something like ``torch.cat([x_tensor, y_tensor, x_tensor * y_tensor])``.  This
+    function adds some complexity that is only necessary if you want the specific combination used
+    to be `configurable`.
+
+    If you want to do any element-wise operations, the tensors involved in each element-wise
+    operation must have the same shape.
+
+    This function also accepts ``x`` and ``y`` in place of ``1`` and ``2`` in the combination
+    string.
+    """
+    if len(tensors) > 9:
+        raise ConfigurationError("Double-digit tensor lists not currently supported")
+    combination = combination.replace('x', '1').replace('y', '2')
+    to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(',')]
+    return torch.cat(to_concatenate, dim=-1)
+
+def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
+    if combination.isdigit():
+        index = int(combination) - 1
+        return tensors[index]
+    else:
+        if len(combination) != 3:
+            raise ConfigurationError("Invalid combination: " + combination)
+        first_tensor = _get_combination(combination[0], tensors)
+        second_tensor = _get_combination(combination[2], tensors)
+        operation = combination[1]
+        if operation == '*':
+            return first_tensor * second_tensor
+        elif operation == '/':
+            return first_tensor / second_tensor
+        elif operation == '+':
+            return first_tensor + second_tensor
+        elif operation == '-':
+            return first_tensor - second_tensor
+        else:
+            raise ConfigurationError("Invalid operation: " + operation)
+
+
+def get_combined_dim(combination: str, tensor_dims: List[int]) -> int:
+    """
+    For use with :func:`combine_tensors`.  This function computes the resultant dimension when
+    calling ``combine_tensors(combination, tensors)``, when the tensor dimension is known.  This is
+    necessary for knowing the sizes of weight matrices when building models that use
+    ``combine_tensors``.
+
+    Parameters
+    ----------
+    combination : ``str``
+        A comma-separated list of combination pieces, like ``"1,2,1*2"``, specified identically to
+        ``combination`` in :func:`combine_tensors`.
+    tensor_dims : ``List[int]``
+        A list of tensor dimensions, where each dimension is from the `last axis` of the tensors
+        that will be input to :func:`combine_tensors`.
+    """
+    if len(tensor_dims) > 9:
+        raise ConfigurationError("Double-digit tensor lists not currently supported")
+    combination = combination.replace('x', '1').replace('y', '2')
+    return sum([_get_combination_dim(piece, tensor_dims) for piece in combination.split(',')])
+
+
+def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
+    if combination.isdigit():
+        index = int(combination) - 1
+        return tensor_dims[index]
+    else:
+        if len(combination) != 3:
+            raise ConfigurationError("Invalid combination: " + combination)
+        first_tensor_dim = _get_combination_dim(combination[0], tensor_dims)
+        second_tensor_dim = _get_combination_dim(combination[2], tensor_dims)
+        operation = combination[1]
+        if first_tensor_dim != second_tensor_dim:
+            raise ConfigurationError("Tensor dims must match for operation \"{}\"".format(operation))
+        return first_tensor_dim

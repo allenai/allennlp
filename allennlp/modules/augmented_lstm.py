@@ -1,3 +1,8 @@
+"""
+An LSTM with Recurrent Dropout and the option to use highway
+connections between layers.
+"""
+
 from typing import Optional, Tuple
 
 import torch
@@ -37,6 +42,10 @@ class AugmentedLstm(torch.nn.Module):
 
             gate = sigmoid(W_x1 * x_t + W_h * h_t)
             output = gate * h_t  + (1 - gate) * (W_x2 * x_t)
+    use_input_projection_bias : bool, optional (default = True)
+        Whether or not to use a bias on the input projection layer. This is mainly here
+        for backwards compatibility reasons and will be removed (and set to False)
+        in future releases.
 
     Returns
     -------
@@ -51,7 +60,8 @@ class AugmentedLstm(torch.nn.Module):
                  hidden_size: int,
                  go_forward: bool = True,
                  recurrent_dropout_probability: float = 0.0,
-                 use_highway: bool = True) -> None:
+                 use_highway: bool = True,
+                 use_input_projection_bias: bool = True) -> None:
         super(AugmentedLstm, self).__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
@@ -65,10 +75,10 @@ class AugmentedLstm(torch.nn.Module):
         # using highway layers, we need some extra projections, which is
         # why the sizes of the Linear layers change here depending on this flag.
         if use_highway:
-            self.input_linearity = torch.nn.Linear(input_size, 6 * hidden_size, bias=True)
+            self.input_linearity = torch.nn.Linear(input_size, 6 * hidden_size, bias=use_input_projection_bias)
             self.state_linearity = torch.nn.Linear(hidden_size, 5 * hidden_size, bias=True)
         else:
-            self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=True)
+            self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=use_input_projection_bias)
             self.state_linearity = torch.nn.Linear(hidden_size, 4 * hidden_size, bias=True)
         self.reset_parameters()
 
@@ -77,11 +87,9 @@ class AugmentedLstm(torch.nn.Module):
         block_orthogonal(self.input_linearity.weight.data, [self.hidden_size, self.input_size])
         block_orthogonal(self.state_linearity.weight.data, [self.hidden_size, self.hidden_size])
 
-        self.input_linearity.bias.data.fill_(0.0)
         self.state_linearity.bias.data.fill_(0.0)
         # Initialize forget gate biases to 1.0 as per An Empirical
         # Exploration of Recurrent Network Architectures, (Jozefowicz, 2015).
-        self.input_linearity.bias.data[self.hidden_size:2 * self.hidden_size].fill_(1.0)
         self.state_linearity.bias.data[self.hidden_size:2 * self.hidden_size].fill_(1.0)
 
     def forward(self,  # pylint: disable=arguments-differ

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union  # pylint: disable=unused-import
+from typing import Dict, List, Union
 import logging
 
 from overrides import overrides
@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class SequenceLabelField(Field[numpy.ndarray]):
     """
-    A ``SequenceLabelField`` assigns a categorical label to each element in a :class:`SequenceField`.
+    A ``SequenceLabelField`` assigns a categorical label to each element in a
+    :class:`~allennlp.data.fields.sequence_field.SequenceField`.
     Because it's a labeling of some other field, we take that field as input here, and we use it to
     determine our padding and other things.
 

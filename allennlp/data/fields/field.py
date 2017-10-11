@@ -1,4 +1,5 @@
-from typing import Dict, Generic, TypeVar
+from collections import defaultdict
+from typing import Dict, Generic, List, TypeVar
 
 import numpy
 
@@ -89,3 +90,24 @@ class Field(Generic[DataArray]):
         in the Field, we can copy it over (e.g., the token indexers in ``TextField``).
         """
         raise NotImplementedError
+
+    @classmethod
+    def batch_arrays(cls, array_list: List[DataArray]) -> DataArray:  # type: ignore
+        """
+        Takes the output of ``Field.as_array()`` from a list of ``Instances`` and merges it into
+        one batched array for this ``Field``.  The default implementation here in the base class
+        handles cases where ``as_array`` returns a single numpy array per instance, or a dictionary
+        of single arrays.  If your subclass returns something other than this, you need to
+        override this method.
+        """
+        if isinstance(array_list[0], dict):
+            # This is creating a dict of {token_indexer_key: batch_array} for each
+            # token indexer used to index this field. This is mostly utilised by TextFields.
+            token_indexer_key_to_batch_dict: Dict[str, List[numpy.ndarray]] = defaultdict(list)
+            for encoding_name_dict in array_list:
+                for indexer_name, array in encoding_name_dict.items():
+                    token_indexer_key_to_batch_dict[indexer_name].append(array)
+            return {indexer_name: numpy.asarray(array_list)
+                    for indexer_name, array_list in token_indexer_key_to_batch_dict.items()}
+        else:
+            return numpy.asarray(array_list)

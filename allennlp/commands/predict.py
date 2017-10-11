@@ -1,6 +1,6 @@
 """
 The ``predict`` subcommand allows you to make bulk JSON-to-JSON
-predictions using a trained model and its ``Predictor`` wrapper.
+predictions using a trained model and its :class:`~allennlp.service.predictors.predictor.Predictor` wrapper.
 
 .. code-block:: bash
 
@@ -25,12 +25,15 @@ import argparse
 from contextlib import ExitStack
 import json
 import sys
-from typing import Optional, IO
+from typing import Optional, IO, Dict
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
-def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
+def add_subparser(parser: argparse._SubParsersAction,
+                  predictors: Dict[str, str]) -> argparse.ArgumentParser:
+    # pylint: disable=protected-access
     description = '''Run the specified model against a JSON-lines input file.'''
     subparser = parser.add_parser(
             'predict', description=description, help='Use a trained model to make predictions.')
@@ -39,40 +42,52 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
                            help='path to input file')
     subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
     subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
+    subparser.add_argument('--cuda_device', type=int, default=-1, help='id of GPU to use (if any)')
 
-    subparser.set_defaults(func=predict)
+    subparser.set_defaults(func=predict(predictors))
 
     return subparser
 
-def get_predictor(args: argparse.Namespace) -> Predictor:
-    archive = load_archive(args.archive_file)
-    predictor = Predictor.from_archive(archive)
+def get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Predictor:
+    archive = load_archive(args.archive_file, cuda_device=args.cuda_device)
+    model_type = archive.config.get("model").get("type")
+    if model_type not in predictors:
+        raise ConfigurationError("no known predictor for model type {}".format(model_type))
+    predictor = Predictor.from_archive(archive, predictors[model_type])
     return predictor
 
-def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_to_console: bool) -> None:
+def run(predictor: Predictor,
+        input_file: IO,
+        output_file: Optional[IO],
+        print_to_console: bool,
+        cuda_device: int) -> None:
     for line in input_file:
-        data = json.loads(line)
-        result = predictor.predict_json(data)
-        output = json.dumps(result)
+        if not line.isspace():
+            data = json.loads(line)
+            result = predictor.predict_json(data, cuda_device)
+            output = json.dumps(result)
 
-        if print_to_console:
-            print(output)
-        if output_file:
-            output_file.write(output + "\n")
+            if print_to_console:
+                print(output)
+            if output_file:
+                output_file.write(output + "\n")
 
-def predict(args: argparse.Namespace) -> None:
-    predictor = get_predictor(args)
-    output_file = None
+def predict(predictors: Dict[str, str]):
+    def predict_inner(args: argparse.Namespace) -> None:
+        predictor = get_predictor(args, predictors)
+        output_file = None
 
-    if args.silent and not args.output_file:
-        print("--silent specified without --output-file.")
-        print("Exiting early because no output will be created.")
-        sys.exit(0)
+        if args.silent and not args.output_file:
+            print("--silent specified without --output-file.")
+            print("Exiting early because no output will be created.")
+            sys.exit(0)
 
-    # ExitStack allows us to conditionally context-manage `output_file`, which may or may not exist
-    with ExitStack() as stack:
-        input_file = stack.enter_context(args.input_file)  # type: ignore
-        if args.output_file:
-            output_file = stack.enter_context(args.output_file)  # type: ignore
+        # ExitStack allows us to conditionally context-manage `output_file`, which may or may not exist
+        with ExitStack() as stack:
+            input_file = stack.enter_context(args.input_file)  # type: ignore
+            if args.output_file:
+                output_file = stack.enter_context(args.output_file)  # type: ignore
 
-        run(predictor, input_file, output_file, not args.silent)
+            run(predictor, input_file, output_file, not args.silent, args.cuda_device)
+
+    return predict_inner

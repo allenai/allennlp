@@ -2,11 +2,11 @@
 from typing import List
 
 from allennlp.common import Params
-from allennlp.data import Dataset, Instance, Vocabulary
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Dataset, Instance, Token, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.common.testing import AllenNlpTestCase
 
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):
@@ -30,7 +30,8 @@ class IteratorTest(AllenNlpTestCase):
                 ]
         self.dataset = Dataset(self.instances)
 
-    def create_instance(self, tokens: List[str]):
+    def create_instance(self, str_tokens: List[str]):
+        tokens = [Token(t) for t in str_tokens]
         instance = Instance({'text': TextField(tokens, self.token_indexers)})
         instance.index_fields(self.vocab)
         return instance

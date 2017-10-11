@@ -1,16 +1,18 @@
-from typing import Dict, Any
+from typing import Dict, Optional
 
+import numpy
+from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common import Params
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields.text_field import TextField
+from allennlp.common.checks import ConfigurationError
+from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
-from allennlp.nn.util import arrays_to_variables, sequence_cross_entropy_with_logits
-from allennlp.nn.util import get_text_field_mask
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -29,23 +31,38 @@ class SimpleTagger(Model):
     stacked_encoder : ``Seq2SeqEncoder``
         The encoder (with its own internal stacking) that we will use in between embedding tokens
         and predicting output tags.
+    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+        Used to initialize the model parameters.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 stacked_encoder: Seq2SeqEncoder) -> None:
-        super(SimpleTagger, self).__init__(vocab)
+                 stacked_encoder: Seq2SeqEncoder,
+                 initializer: InitializerApplicator = InitializerApplicator(),
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+        super(SimpleTagger, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.stacked_encoder = stacked_encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
+
+        if text_field_embedder.get_output_dim() != stacked_encoder.get_input_dim():
+            raise ConfigurationError("The output dimension of the text_field_embedder must match the "
+                                     "input dimension of the phrase_encoder. Found {} and {}, "
+                                     "respectively.".format(text_field_embedder.get_output_dim(),
+                                                            stacked_encoder.get_input_dim()))
         self.metrics = {
                 "accuracy": CategoricalAccuracy(),
                 "accuracy3": CategoricalAccuracy(top_k=3)
         }
 
+        initializer(self)
+
+    @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
@@ -98,42 +115,31 @@ class SimpleTagger(Model):
 
         return output_dict
 
-    def tag(self, text_field: TextField) -> Dict[str, Any]:
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Perform inference on a TextField to produce predicted tags and class probabilities
-        over the possible tags.
-
-        Parameters
-        ----------
-        text_field : ``TextField``, required.
-            A ``TextField`` containing the text to be tagged.
-
-        Returns
-        -------
-        A Dict containing:
-
-        tags : List[str]
-            A list the length of the text input, containing the predicted (argmax) tag
-            from the model per token.
-        class_probabilities : numpy.Array
-            An array of shape (text_input_length, num_classes), where each row is a
-            distribution over classes for a given token in the sentence.
+        Does a simple position-wise argmax over each token, converts indices to string labels, and
+        adds a ``"tags"`` key to the dictionary with the result.
         """
-        instance = Instance({'tokens': text_field})
-        instance.index_fields(self.vocab)
-        model_input = arrays_to_variables(instance.as_array_dict(),
-                                          add_batch_dimension=True,
-                                          for_training=False)
-        output_dict = self.forward(**model_input)
+        all_predictions = output_dict['class_probabilities']
+        if not isinstance(all_predictions, numpy.ndarray):
+            all_predictions = all_predictions.cpu().numpy()
+        if all_predictions.ndim == 3:
+            predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
+        else:
+            predictions_list = [all_predictions]
+        all_tags = []
+        for predictions in predictions_list:
+            argmax_indices = numpy.argmax(predictions, axis=-1)
+            tags = [self.vocab.get_token_from_index(x, namespace="labels")
+                    for x in argmax_indices]
+            all_tags.append(tags)
+        if len(all_tags) == 1:
+            all_tags = all_tags[0]  # type: ignore
+        output_dict['tags'] = all_tags
+        return output_dict
 
-        # Remove batch dimension, as we only had one input.
-        predictions = output_dict["class_probabilities"].data.squeeze(0)
-        _, argmax = predictions.max(-1)
-        indices = argmax.numpy()
-        tags = [self.vocab.get_token_from_index(x, namespace="labels") for x in indices]
-
-        return {"tags": tags, "class_probabilities": predictions.numpy()}
-
+    @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
 
@@ -143,6 +149,15 @@ class SimpleTagger(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
 
+        init_params = params.pop('initializer', None)
+        reg_params = params.pop('regularizer', None)
+        initializer = (InitializerApplicator.from_params(init_params)
+                       if init_params is not None
+                       else InitializerApplicator())
+        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
+
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
-                   stacked_encoder=stacked_encoder)
+                   stacked_encoder=stacked_encoder,
+                   initializer=initializer,
+                   regularizer=regularizer)

@@ -1,12 +1,19 @@
-from typing import Dict
+"""
+:py:class:`Model` is an abstract class representing
+an AllenNLP model.
+"""
+
+from typing import Dict, Union
 import os
 import logging
 
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
-from allennlp.data import Vocabulary
-from allennlp.nn.util import device_mapping
+from allennlp.data import Instance, Vocabulary
+from allennlp.nn.util import arrays_to_variables, device_mapping
+from allennlp.nn.regularizers import RegularizerApplicator
 
+import numpy
 import torch
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -35,9 +42,22 @@ class Model(torch.nn.Module, Registrable):
     of early stopping and best-model serialization based on a validation metric in
     :class:`~allennlp.training.Trainer`.
     """
-    def __init__(self, vocab: Vocabulary) -> None:
+    def __init__(self,
+                 vocab: Vocabulary,
+                 regularizer: RegularizerApplicator = None) -> None:
         super().__init__()
         self.vocab = vocab
+        self._regularizer = regularizer
+
+    def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
+        """
+        Computes the regularization penalty for the model.
+        Returns 0 if the model was not configured to use regularization.
+        """
+        if self._regularizer is None:
+            return 0.0
+        else:
+            return self._regularizer(self)
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
@@ -80,6 +100,45 @@ class Model(torch.nn.Module, Registrable):
         """
         raise NotImplementedError
 
+    def forward_on_instance(self, instance: Instance, cuda_device: int) -> Dict[str, numpy.ndarray]:
+        """
+        Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
+        converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
+        through :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
+        and returns the result.  Before returning the result, we convert any ``torch.autograd.Variables``
+        or ``torch.Tensors`` into numpy arrays and remove the batch dimension.
+        """
+        instance.index_fields(self.vocab)
+        model_input = arrays_to_variables(instance.as_array_dict(),
+                                          add_batch_dimension=True,
+                                          cuda_device=cuda_device,
+                                          for_training=False)
+        outputs = self.decode(self.forward(**model_input))
+
+        for name, output in list(outputs.items()):
+            output = output[0]
+            if isinstance(output, torch.autograd.Variable):
+                output = output.data.cpu().numpy()
+            outputs[name] = output
+        return outputs
+
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Takes the result of :func:`forward` and runs inference / decoding / whatever
+        post-processing you need to do your model.  The intent is that ``model.forward()`` should
+        produce potentials or probabilities, and then ``model.decode()`` can take those results and
+        run some kind of beam search or constrained inference or whatever is necessary.  This does
+        not handle all possible decoding use cases, but it at least handles simple kinds of
+        decoding.
+
+        This method `modifies` the input dictionary, and also `returns` the same dictionary.
+
+        By default in the base class we do nothing.  If your model has some special decoding step,
+        override this method.
+        """
+        # pylint: disable=no-self-use
+        return output_dict
+
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         """
         Returns a dictionary of metrics. This method will be called by
@@ -98,7 +157,8 @@ class Model(torch.nn.Module, Registrable):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
-        return cls.by_name(choice).from_params(vocab, params)
+        model = cls.by_name(choice).from_params(vocab, params)
+        return model
 
     @classmethod
     def load(cls,

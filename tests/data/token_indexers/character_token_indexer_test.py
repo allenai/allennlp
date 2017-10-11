@@ -1,25 +1,24 @@
 # pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
 
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import TokenCharactersIndexer
 from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.common.testing import AllenNlpTestCase
 
 
 class CharacterTokenIndexerTest(AllenNlpTestCase):
-
     def test_count_vocab_items_respects_casing(self):
         indexer = TokenCharactersIndexer("characters")
         counter = defaultdict(lambda: defaultdict(int))
-        indexer.count_vocab_items("Hello", counter)
-        indexer.count_vocab_items("hello", counter)
+        indexer.count_vocab_items(Token("Hello"), counter)
+        indexer.count_vocab_items(Token("hello"), counter)
         assert counter["characters"] == {"h": 1, "H": 1, "e": 2, "l": 4, "o": 2}
 
         indexer = TokenCharactersIndexer("characters", CharacterTokenizer(lowercase_characters=True))
         counter = defaultdict(lambda: defaultdict(int))
-        indexer.count_vocab_items("Hello", counter)
-        indexer.count_vocab_items("hello", counter)
+        indexer.count_vocab_items(Token("Hello"), counter)
+        indexer.count_vocab_items(Token("hello"), counter)
         assert counter["characters"] == {"h": 2, "e": 2, "l": 4, "o": 2}
 
     def test_as_array_produces_token_sequence(self):
@@ -42,5 +41,5 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         vocab.add_token_to_namespace("c", namespace='characters')
 
         indexer = TokenCharactersIndexer("characters")
-        indices = indexer.token_to_indices("sentential", vocab)
+        indices = indexer.token_to_indices(Token("sentential"), vocab)
         assert indices == [3, 4, 5, 6, 4, 5, 6, 1, 1, 1]

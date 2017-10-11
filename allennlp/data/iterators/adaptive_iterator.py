@@ -113,12 +113,15 @@ class AdaptiveIterator(BucketIterator):
         grouped_instances = self._adaptive_grouping(dataset)
         if shuffle:
             random.shuffle(grouped_instances)
+        else:
+            logger.warning("shuffle parameter is set to False,"
+                           " while adaptive iterators by definition change the order of your data.")
         return grouped_instances
 
     def _adaptive_grouping(self, dataset: Dataset):
         batches = []
         current_batch = []
-        current_lengths = defaultdict(dict)  # type: Dict[str, Dict[str, int]]
+        current_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
         logger.debug("Creating adaptive groups")
         for instance in dataset.instances:
             current_batch.append(instance)

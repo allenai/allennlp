@@ -1,20 +1,20 @@
-from allennlp.common.util import JsonDict, sanitize
-from allennlp.data.dataset_readers.squad import SquadReader
-from allennlp.data.fields import TextField
+from overrides import overrides
+
+from allennlp.common.util import JsonDict
+from allennlp.data import Instance
 from allennlp.service.predictors.predictor import Predictor
 
 
 @Predictor.register('machine-comprehension')
 class BidafPredictor(Predictor):
-    def predict_json(self, inputs: JsonDict) -> JsonDict:
-        question_text = inputs["question"]
-        passage_text = inputs["passage"]
-
-        question_tokens, _ = self.tokenizer.tokenize(question_text)
-        passage_tokens, _ = self.tokenizer.tokenize(passage_text)
-        passage_tokens.append(SquadReader.STOP_TOKEN)
-
-        question = TextField(question_tokens, token_indexers=self.token_indexers)
-        passage = TextField(passage_tokens, token_indexers=self.token_indexers)
-
-        return sanitize(self.model.predict_span(question, passage))
+    """
+    Wrapper for the :class:`~allennlp.models.bidaf.BidirectionalAttentionFlow` model.
+    """
+    @overrides
+    def _json_to_instance(self, json: JsonDict) -> Instance:
+        """
+        Expects JSON that looks like ``{"question": "...", "passage": "..."}``.
+        """
+        question_text = json["question"]
+        passage_text = json["passage"]
+        return self._dataset_reader.text_to_instance(question_text, passage_text)

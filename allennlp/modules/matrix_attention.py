@@ -1,9 +1,12 @@
+"""
+A ``Module`` that takes two matrices as input and returns a matrix of attentions.
+"""
+
 import torch
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.modules.similarity_function import SimilarityFunction
-from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
+from allennlp.modules.similarity_functions import DotProductSimilarity, SimilarityFunction
 
 
 class MatrixAttention(torch.nn.Module):

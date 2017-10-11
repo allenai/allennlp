@@ -6,7 +6,7 @@ metadata:
   labels:
     contact: allennlp
 spec:
-  replicas: 2
+  replicas: 4
   template:
     metadata:
       labels:
@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: allennlp-webdemo
-          image: "allennlp/allennlp:latest"
+          image: "allennlp/webdemo:2017-09-12-2"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
           # for documentation on the resources section.
@@ -30,7 +30,6 @@ spec:
             - /bin/bash
             - -c
             - "source activate allennlp && allennlp/run serve"
-          imagePullPolicy: Always
 ---
 apiVersion: v1
 kind: Service

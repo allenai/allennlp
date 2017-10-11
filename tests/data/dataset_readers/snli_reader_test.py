@@ -6,36 +6,35 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestSnliReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
-        reader = SnliReader(append_null=True)
+        reader = SnliReader()
         dataset = reader.read('tests/fixtures/data/snli.jsonl')
 
         instance1 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
-                                 "down", "airplane", ".", reader.null_token],
+                                 "down", "airplane", "."],
                      "hypothesis": ["A", "person", "is", "training", "his", "horse", "for", "a",
-                                    "competition", ".", reader.null_token],
+                                    "competition", "."],
                      "label": "neutral"}
 
         instance2 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
-                                 "down", "airplane", ".", reader.null_token],
+                                 "down", "airplane", "."],
                      "hypothesis": ["A", "person", "is", "at", "a", "diner", ",", "ordering", "an",
-                                    "omelette", ".", reader.null_token],
+                                    "omelette", "."],
                      "label": "contradiction"}
         instance3 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
-                                 "down", "airplane", ".", reader.null_token],
-                     "hypothesis": ["A", "person", "is", "outdoors", ",", "on", "a", "horse", ".",
-                                    reader.null_token],
+                                 "down", "airplane", "."],
+                     "hypothesis": ["A", "person", "is", "outdoors", ",", "on", "a", "horse", "."],
                      "label": "entailment"}
 
         assert len(dataset.instances) == 3
         fields = dataset.instances[0].fields
-        assert fields["premise"].tokens == instance1["premise"]
-        assert fields["hypothesis"].tokens == instance1["hypothesis"]
+        assert [t.text for t in fields["premise"].tokens] == instance1["premise"]
+        assert [t.text for t in fields["hypothesis"].tokens] == instance1["hypothesis"]
         assert fields["label"].label == instance1["label"]
         fields = dataset.instances[1].fields
-        assert fields["premise"].tokens == instance2["premise"]
-        assert fields["hypothesis"].tokens == instance2["hypothesis"]
+        assert [t.text for t in fields["premise"].tokens] == instance2["premise"]
+        assert [t.text for t in fields["hypothesis"].tokens] == instance2["hypothesis"]
         assert fields["label"].label == instance2["label"]
         fields = dataset.instances[2].fields
-        assert fields["premise"].tokens == instance3["premise"]
-        assert fields["hypothesis"].tokens == instance3["hypothesis"]
+        assert [t.text for t in fields["premise"].tokens] == instance3["premise"]
+        assert [t.text for t in fields["hypothesis"].tokens] == instance3["hypothesis"]
         assert fields["label"].label == instance3["label"]

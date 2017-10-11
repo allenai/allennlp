@@ -42,9 +42,9 @@ class LabelField(Field[numpy.ndarray]):
         self.label = label
         self._label_namespace = label_namespace
         self._label_id = None
-        if not self._label_namespace.endswith("labels"):
+        if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
             logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
-                           "ending with 'labels', so we don't add UNK and PAD tokens by "
+                           "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
                            "default to your vocabulary.  See documentation for "
                            "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
         if skip_indexing:
@@ -78,4 +78,4 @@ class LabelField(Field[numpy.ndarray]):
 
     @overrides
     def empty_field(self):
-        return LabelField(0, self._label_namespace)
+        return LabelField(-1, self._label_namespace, skip_indexing=True)

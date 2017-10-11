@@ -11,7 +11,8 @@ from allennlp.common.checks import ConfigurationError
 
 class IndexField(Field[numpy.ndarray]):
     """
-    An ``IndexField`` is an optional index into a :class:`SequenceField`, as might be used for
+    An ``IndexField`` is an optional index into a
+    :class:`~allennlp.data.fields.sequence_field.SequenceField`, as might be used for
     representing a correct answer option in a list, or a span begin and span end position in a
     passage, for example.  Because it's an index into a :class:`SequenceField`, we take one of
     those as input and use it to compute padding lengths.
@@ -32,6 +33,7 @@ class IndexField(Field[numpy.ndarray]):
         if not isinstance(index, int):
             raise ConfigurationError("IndexFields must be passed integer indices. "
                                      "Found index: {} with type: {}.".format(index, type(index)))
+
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {'num_options': self.sequence_field.sequence_length()}

@@ -4,15 +4,13 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields import TextField
+from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
-from allennlp.nn.util import arrays_to_variables
 from allennlp.training.metrics import CategoricalAccuracy
-from allennlp.nn.initializers import InitializerApplicator
 
 
 @Model.register("decomposable_attention")
@@ -50,8 +48,6 @@ class DecomposableAttention(Model):
     aggregate_feedforward : ``FeedForward``
         This final feedforward network is applied to the concatenated, summed result of the
         ``compare_feedforward`` network, and its output is used as the entailment class logits.
-    initializer : ``InitializerApplicator``
-        We will use this to initialize the parameters in the model, calling ``initializer(self)``.
     premise_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
         After embedding the premise, we can optionally apply an encoder.  If this is ``None``, we
         will do nothing.
@@ -59,6 +55,10 @@ class DecomposableAttention(Model):
         After embedding the hypothesis, we can optionally apply an encoder.  If this is ``None``,
         we will use the ``premise_encoder`` for the encoding (doing nothing if ``premise_encoder``
         is also ``None``).
+    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+        Used to initialize the model parameters.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -66,10 +66,11 @@ class DecomposableAttention(Model):
                  similarity_function: SimilarityFunction,
                  compare_feedforward: FeedForward,
                  aggregate_feedforward: FeedForward,
-                 initializer: InitializerApplicator,
                  premise_encoder: Optional[Seq2SeqEncoder] = None,
-                 hypothesis_encoder: Optional[Seq2SeqEncoder] = None) -> None:
-        super(DecomposableAttention, self).__init__(vocab)
+                 hypothesis_encoder: Optional[Seq2SeqEncoder] = None,
+                 initializer: InitializerApplicator = InitializerApplicator(),
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+        super(DecomposableAttention, self).__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
@@ -80,12 +81,19 @@ class DecomposableAttention(Model):
         self._hypothesis_encoder = hypothesis_encoder or premise_encoder
 
         self._num_labels = vocab.get_vocab_size(namespace="labels")
+
+        if text_field_embedder.get_output_dim() != attend_feedforward.get_input_dim():
+            raise ConfigurationError("Output dimension of the text_field_embedder (dim: {}), "
+                                     "must match the input_dim of the FeedForward layer "
+                                     "attend_feedforward, (dim: {}). ".format(text_field_embedder.get_output_dim(),
+                                                                              attend_feedforward.get_input_dim()))
         if aggregate_feedforward.get_output_dim() != self._num_labels:
             raise ConfigurationError("Final output dimension (%d) must equal num labels (%d)" %
                                      (aggregate_feedforward.get_output_dim(), self._num_labels))
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
+
         initializer(self)
 
     def forward(self,  # type: ignore
@@ -172,36 +180,6 @@ class DecomposableAttention(Model):
                 'accuracy': self._accuracy.get_metric(reset),
                 }
 
-    def predict_entailment(self, premise: TextField, hypothesis: TextField) -> Dict[str, torch.Tensor]:
-        """
-        Given a premise and a hypothesis sentence, predict the entailment relationship between
-        them.  Note that in the paper, a null token was appended to each sentence, to allow for
-        words to align to nothing in the other sentence.  If you've trained your model with a null
-        token, you probably want to include it here, too.
-
-        Parameters
-        ----------
-        premise : ``TextField``
-        hypothesis : ``TextField``
-
-        Returns
-        -------
-        A Dict containing:
-
-        label_probs : torch.FloatTensor
-            A tensor of shape ``(num_labels,)`` representing probabilities of the entailment label.
-        """
-        instance = Instance({"premise": premise, "hypothesis": hypothesis})
-        instance.index_fields(self.vocab)
-        model_input = arrays_to_variables(instance.as_array_dict(),
-                                          add_batch_dimension=True,
-                                          for_training=False)
-        output_dict = self.forward(**model_input)
-
-        # Remove batch dimension, as we only had one input.
-        label_probs = output_dict["label_probs"].data.squeeze(0)
-        return {'label_probs': label_probs.numpy()}
-
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'DecomposableAttention':
         embedder_params = params.pop("text_field_embedder")
@@ -223,7 +201,13 @@ class DecomposableAttention(Model):
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
         compare_feedforward = FeedForward.from_params(params.pop('compare_feedforward'))
         aggregate_feedforward = FeedForward.from_params(params.pop('aggregate_feedforward'))
-        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
+
+        init_params = params.pop('initializer', None)
+        reg_params = params.pop('regularizer', None)
+        initializer = (InitializerApplicator.from_params(init_params)
+                       if init_params is not None
+                       else InitializerApplicator())
+        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
@@ -231,6 +215,7 @@ class DecomposableAttention(Model):
                    similarity_function=similarity_function,
                    compare_feedforward=compare_feedforward,
                    aggregate_feedforward=aggregate_feedforward,
-                   initializer=initializer,
                    premise_encoder=premise_encoder,
-                   hypothesis_encoder=hypothesis_encoder)
+                   hypothesis_encoder=hypothesis_encoder,
+                   initializer=initializer,
+                   regularizer=regularizer)

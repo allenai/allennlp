@@ -1,8 +1,7 @@
-from typing import Dict, List, Optional, Set, Tuple  # pylint: disable=unused-import
+from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
 
 import torch
-from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, ones_like
@@ -52,14 +51,15 @@ class SpanBasedF1Measure(Metric):
         self._ignore_classes = ignore_classes or []
 
         # These will hold per label span counts.
-        self._true_positives = defaultdict(int)  # type: Dict[str, int]
-        self._false_positives = defaultdict(int)  # type: Dict[str, int]
-        self._false_negatives = defaultdict(int)  # type: Dict[str, int]
+        self._true_positives: Dict[str, int] = defaultdict(int)
+        self._false_positives: Dict[str, int] = defaultdict(int)
+        self._false_negatives: Dict[str, int] = defaultdict(int)
 
     def __call__(self,
                  predictions: torch.Tensor,
                  gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+                 mask: Optional[torch.Tensor] = None,
+                 prediction_map: Optional[torch.Tensor] = None):
         """
         Parameters
         ----------
@@ -70,18 +70,21 @@ class SpanBasedF1Measure(Metric):
             shape as the ``predictions`` tensor without the ``num_classes`` dimension.
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
+        prediction_map: ``torch.Tensor``, optional (default = None).
+            A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
+            to the indices of the label vocabulary. If provided, the output label at each timestep will be
+            ``vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))``,
+            rather than simply ``vocabulary.get_index_to_token_vocabulary(argmax(predictions[batch, t]))``.
+            This is useful in cases where each Instance in the dataset is associated with a different possible
+            subset of labels from a large label-space (IE FrameNet, where each frame has a different set of
+            possible roles associated with it).
         """
         if mask is None:
             mask = ones_like(gold_labels)
-        # If you actually passed in Variables here instead of Tensors, this will be a huge memory
-        # leak, because it will prevent garbage collection for the computation graph.  We'll ensure
-        # that we're using tensors here first.
-        if isinstance(predictions, Variable):
-            predictions = predictions.data.cpu()
-        if isinstance(gold_labels, Variable):
-            gold_labels = gold_labels.data.cpu()
-        if isinstance(mask, Variable):
-            mask = mask.data.cpu()
+        # Get the data from the Variables.
+        predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(predictions,
+                                                                                gold_labels,
+                                                                                mask, prediction_map)
 
         num_classes = predictions.size(-1)
         if (gold_labels >= num_classes).any():
@@ -89,7 +92,13 @@ class SpanBasedF1Measure(Metric):
                                      "id >= {}, the number of classes.".format(num_classes))
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        argmax_predictions = predictions.max(-1)[1].float()
+        argmax_predictions = predictions.max(-1)[1]
+
+        if prediction_map is not None:
+            argmax_predictions = torch.gather(prediction_map, 1, argmax_predictions)
+            gold_labels = torch.gather(prediction_map, 1, gold_labels.long())
+
+        argmax_predictions = argmax_predictions.float()
 
         # Iterate over timesteps in batch.
         batch_size = gold_labels.size(0)
@@ -187,7 +196,7 @@ class SpanBasedF1Measure(Metric):
         Additionally, an ``overall`` key is included, which provides the precision,
         recall and f1-measure for all spans.
         """
-        all_tags = set()  # type: Set[str]
+        all_tags: Set[str] = set()
         all_tags.update(self._true_positives.keys())
         all_tags.update(self._false_positives.keys())
         all_tags.update(self._false_negatives.keys())

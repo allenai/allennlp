@@ -1,3 +1,8 @@
+"""
+A Vocabulary maps strings to integers, allowing for strings to be mapped to an
+out-of-vocabulary token.
+"""
+
 from collections import defaultdict
 from typing import Any, Callable, Dict, Union, Sequence
 import codecs
@@ -7,7 +12,8 @@ import os
 import tqdm
 
 from allennlp.common.util import namespace_match
-
+from allennlp.common.params import Params
+from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
@@ -180,7 +186,7 @@ class Vocabulary:
                 num_tokens = len(mapping)
                 start_index = 1 if mapping[0] == self._padding_token else 0
                 for i in range(start_index, num_tokens):
-                    print(mapping[i], file=token_file)
+                    print(mapping[i].replace('\n', '@@NEWLINE@@'), file=token_file)
 
     @classmethod
     def from_files(cls, directory: str) -> 'Vocabulary':
@@ -192,6 +198,7 @@ class Vocabulary:
         directory : ``str``
             The directory containing the serialized vocabulary.
         """
+        logger.info("Loading token dictionary from %s.", directory)
         with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), 'r', 'utf-8') as namespace_file:
             non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
@@ -249,9 +256,13 @@ class Vocabulary:
             self._token_to_index[namespace] = {}
             self._index_to_token[namespace] = {}
         with codecs.open(filename, 'r', 'utf-8') as input_file:
-            for i, line in enumerate(input_file.readlines()):
+            lines = input_file.read().split('\n')
+            # Be flexible about having final newline or not
+            if lines and lines[-1] == '':
+                lines = lines[:-1]
+            for i, line in enumerate(lines):
                 index = i + 1 if is_padded else i
-                token = line[:-1]
+                token = line.replace('@@NEWLINE@@', '\n')
                 if token == oov_token:
                     token = self._oov_token
                 self._token_to_index[namespace][token] = index
@@ -270,8 +281,8 @@ class Vocabulary:
         vocabulary items in the dataset, then pass those counts, and the other parameters, to
         :func:`__init__`.  See that method for a description of what the other parameters do.
         """
-        logger.info("Fitting token dictionary")
-        namespace_token_counts = defaultdict(lambda: defaultdict(int))  # type: Dict[str, Dict[str, int]]
+        logger.info("Fitting token dictionary from dataset.")
+        namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for instance in tqdm.tqdm(dataset.instances):
             instance.count_vocab_items(namespace_token_counts)
 
@@ -279,6 +290,46 @@ class Vocabulary:
                           min_count=min_count,
                           max_vocab_size=max_vocab_size,
                           non_padded_namespaces=non_padded_namespaces)
+
+    @classmethod
+    def from_params(cls, params: Params, dataset=None):
+        """
+        There are two possible ways to build a vocabulary; from a
+        pre-existing dataset, using :func:`Vocabulary.from_dataset`, or
+        from a pre-saved vocabulary, using :func:`Vocabulary.from_files`.
+        This method wraps both of these options, allowing their specification
+        from a ``Params`` object, generated from a JSON configuration file.
+
+        Parameters
+        ----------
+        params: Params, required.
+        dataset: Dataset, optional.
+            If ``params`` doesn't contain a ``vocabulary_directory`` key,
+            the ``Vocabulary`` can be built directly from a ``Dataset``.
+
+        Returns
+        -------
+        A ``Vocabulary``.
+        """
+        vocabulary_directory = params.pop("directory_path", None)
+        if not vocabulary_directory and not dataset:
+            raise ConfigurationError("You must provide either a Params object containing a "
+                                     "vocab_directory key or a Dataset to build a vocabulary from.")
+        if vocabulary_directory and dataset:
+            logger.info("Loading Vocab from files instead of dataset.")
+
+        if vocabulary_directory:
+            params.assert_empty("Vocabulary - from files")
+            return Vocabulary.from_files(vocabulary_directory)
+
+        min_count = params.pop("min_count", 1)
+        max_vocab_size = params.pop("max_vocab_size", None)
+        non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
+        params.assert_empty("Vocabulary - from dataset")
+        return Vocabulary.from_dataset(dataset,
+                                       min_count,
+                                       max_vocab_size,
+                                       non_padded_namespaces)
 
     def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:
         """

@@ -1,14 +1,27 @@
+"""
+AllenNLP just uses
+`PyTorch optimizers <http://pytorch.org/docs/master/optim.html>`_ ,
+with a thin wrapper to allow registering them and instantiating them ``from_params``.
+
+The available optimizers are
+
+* `"adadelta" <http://pytorch.org/docs/master/optim.html#torch.optim.Adadelta>`_
+* `"adagrad" <http://pytorch.org/docs/master/optim.html#torch.optim.Adagrad>`_
+* `"adam" <http://pytorch.org/docs/master/optim.html#torch.optim.Adam>`_
+* `"sgd" <http://pytorch.org/docs/master/optim.html#torch.optim.SGD>`_
+* `"rmsprop <http://pytorch.org/docs/master/optim.html#torch.optim.RMSprop>`_
+"""
+
 from typing import List
 
 import torch
 
-from allennlp.common.params import Params  # pylint: disable=unused-import
-from allennlp.common.registrable import Registrable
+from allennlp.common import Params, Registrable
 
 
 class Optimizer(Registrable):
     """
-    This class just allows us to implement ``Registerable`` for Pytorch Optimizers.
+    This class just allows us to implement ``Registrable`` for Pytorch Optimizers.
     """
     default_implementation = "adam"
 

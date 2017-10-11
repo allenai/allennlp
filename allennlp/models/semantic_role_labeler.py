@@ -1,19 +1,19 @@
-from typing import Dict, Any, List, TextIO
+from typing import Dict, List, TextIO, Optional
 
+from overrides import overrides
 import torch
 from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.nn.initializers import InitializerApplicator
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.fields import SequenceLabelField, TextField
+from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
-from allennlp.nn.util import arrays_to_variables, viterbi_decode
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics import SpanBasedF1Measure
 
 
@@ -41,16 +41,19 @@ class SemanticRoleLabeler(Model):
         and predicting output tags.
     binary_feature_dim : int, required.
         The dimensionality of the embedding of the binary verb predicate features.
-    initializer : ``InitializerApplicator``
-        We will use this to initialize the parameters in the model, calling ``initializer(self)``.
+    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+        Used to initialize the model parameters.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  stacked_encoder: Seq2SeqEncoder,
                  binary_feature_dim: int,
-                 initializer: InitializerApplicator,
-                 embedding_dropout: float = 0.0) -> None:
-        super(SemanticRoleLabeler, self).__init__(vocab)
+                 embedding_dropout: float = 0.0,
+                 initializer: InitializerApplicator = InitializerApplicator(),
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+        super(SemanticRoleLabeler, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
@@ -65,12 +68,13 @@ class SemanticRoleLabeler(Model):
         self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
                                                            self.num_classes))
         self.embedding_dropout = Dropout(p=embedding_dropout)
-        initializer(self)
 
         if text_field_embedder.get_output_dim() + binary_feature_dim != stacked_encoder.get_input_dim():
             raise ConfigurationError("The SRL Model uses a binary verb indicator feature, meaning "
                                      "the input dimension of the stacked_encoder must be equal to "
                                      "the output dimension of the text_field_embedder + 1.")
+
+        initializer(self)
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
@@ -135,51 +139,35 @@ class SemanticRoleLabeler(Model):
             self.span_metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
+        # We need to retain the mask in the output dictionary
+        # so that we can crop the sequences to remove padding
+        # when we do viterbi inference in self.decode.
+        output_dict["mask"] = mask
         return output_dict
 
-    def tag(self, text_field: TextField, verb_indicator: SequenceLabelField) -> Dict[str, Any]:
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Perform inference on a ``Instance`` consisting of a single ``TextField`` representing
-        the sentence and a ``SequenceLabelField`` representing a binary per word feature
-        denoting the position of the verbal predicate.
-
-        Returned sequence is the maximum likelihood tag sequence under the constraint that
-        the sequence must be a valid BIO sequence.
-
-        Parameters
-        ----------
-        text_field : ``TextField``, required.
-            A ``TextField`` containing the text to be tagged.
-        verb_indicator: ``SequenceLabelField``, required.
-            The index of the verb whose arguments we are labeling.
-
-        Returns
-        -------
-        A Dict containing:
-
-        tags : List[str]
-            A list the length of the text input, containing the predicted (argmax) tag
-            from the model per token.
-        class_probabilities : numpy.Array
-            An array of shape (text_input_length, num_classes), where each row is a
-            distribution over classes for a given token in the sentence.
+        Does constrained viterbi decoding on class probabilities output in :func:`forward`.  The
+        constraint simply specifies that the output tags must be a valid BIO sequence.  We add a
+        ``"tags"`` key to the dictionary with the result.
         """
-        instance = Instance({"tokens": text_field, "verb_indicator": verb_indicator})
-        instance.index_fields(self.vocab)
-        model_input = arrays_to_variables(instance.as_array_dict(),
-                                          add_batch_dimension=True,
-                                          for_training=False)
-        output_dict = self.forward(**model_input)
+        all_predictions = output_dict['class_probabilities']
+        sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
 
-        # Remove batch dimension, as we only had one input.
-        predictions = output_dict["class_probabilities"].data.squeeze(0)
+        if all_predictions.dim() == 3:
+            predictions_list = [all_predictions[i].data.cpu() for i in range(all_predictions.size(0))]
+        else:
+            predictions_list = [all_predictions]
+        all_tags = []
         transition_matrix = self.get_viterbi_pairwise_potentials()
-
-        max_likelihood_sequence, _ = viterbi_decode(predictions, transition_matrix)
-        tags = [self.vocab.get_token_from_index(x, namespace="labels")
-                for x in max_likelihood_sequence]
-
-        return {"tags": tags, "class_probabilities": predictions.numpy()}
+        for predictions, length in zip(predictions_list, sequence_lengths):
+            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix)
+            tags = [self.vocab.get_token_from_index(x, namespace="labels")
+                    for x in max_likelihood_sequence]
+            all_tags.append(tags)
+        output_dict['tags'] = all_tags
+        return output_dict
 
     def get_metrics(self, reset: bool = False):
         metric_dict = self.span_metric.get_metric(reset=reset)
@@ -223,17 +211,24 @@ class SemanticRoleLabeler(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
         binary_feature_dim = params.pop("binary_feature_dim")
-        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
+
+        init_params = params.pop('initializer', None)
+        reg_params = params.pop('regularizer', None)
+        initializer = (InitializerApplicator.from_params(init_params)
+                       if init_params is not None
+                       else InitializerApplicator())
+        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    stacked_encoder=stacked_encoder,
                    binary_feature_dim=binary_feature_dim,
-                   initializer=initializer)
+                   initializer=initializer,
+                   regularizer=regularizer)
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,
-                             verb_index: int,
+                             verb_index: Optional[int],
                              sentence: List[str],
                              prediction: List[str],
                              gold_labels: List[str]):
@@ -247,9 +242,10 @@ def write_to_conll_eval_file(prediction_file: TextIO,
         A file reference to print predictions to.
     gold_file : TextIO, required.
         A file reference to print gold labels to.
-    verb_index : int, required.
+    verb_index : Optional[int], required.
         The index of the verbal predicate in the sentence which
-        the gold labels are the arguments for.
+        the gold labels are the arguments for, or None if the sentence
+        contains no verbal predicate.
     sentence : List[str], required.
         The word tokens.
     prediction : List[str], required.
@@ -258,7 +254,8 @@ def write_to_conll_eval_file(prediction_file: TextIO,
         The gold BIO labels.
     """
     verb_only_sentence = ["-"] * len(sentence)
-    verb_only_sentence[verb_index] = sentence[verb_index]
+    if verb_index:
+        verb_only_sentence[verb_index] = sentence[verb_index]
 
     conll_format_predictions = convert_bio_tags_to_conll_format(prediction)
     conll_format_gold_labels = convert_bio_tags_to_conll_format(gold_labels)

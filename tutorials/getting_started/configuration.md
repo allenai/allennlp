@@ -16,7 +16,7 @@ is just JSON.
 In this tutorial we'll go through
 each section of the configuration file in detail, explaining what all the parameters mean.
 
-## A preliminary: `Registrable` and `from_params`
+## A preliminary: Registrable and from_params
 
 Most AllenNLP classes inherit from the
 [`Registrable`](http://docs.allennlp.org/en/latest/api/allennlp.common.html#allennlp.common.registrable.Registrable)
@@ -167,8 +167,8 @@ The second, `"token_characters"`, is a
 that represents each token as a list of int-encoded characters.
 
 Notice that this gives us two different encodings for each token.
-Each encoding has a "namespace", in this case `"tokens"` and `"token_characters"`.
-The `SequenceLabelField` also has a namespace, `"labels"`.
+Each encoding has a name, in this case `"tokens"` and `"token_characters"`,
+and these names will be referenced later by the model.
 
 ## Training and Validation Data
 
@@ -231,19 +231,19 @@ Let's first look at the text field embedder configuration:
     },
 ```
 
-You can see that it has an entry for each of the namespaces in our `TextField`.
+You can see that it has an entry for each of the named encodings in our `TextField`.
 Each entry specifies a
 [`TokenEmbedder`](http://docs.allennlp.org/en/latest/api/allennlp.modules.token_embedders.html?highlight=embedding#allennlp.modules.token_embedders.token_embedder.TokenEmbedder)
 that indicates how to embed
-the tokens in that particular namespace. The `TextFieldEmbedder`'s output is the concatenation
+the tokens encoded with that name. The `TextFieldEmbedder`'s output is the concatenation
 of these embeddings.
 
-The `"tokens"` namespace (which consists of integer encodings of the lowercased words in the input)
+The `"tokens"` input (which consists of integer encodings of the lowercased words in the input)
 gets fed into an
 [`Embedding`](http://docs.allennlp.org/en/latest/api/allennlp.modules.token_embedders.html?highlight=embedding#allennlp.modules.token_embedders.embedding.Embedding)
 module that embeds the vocabulary words in a 50-dimensional space, as specified by the `embedding_dim` parameter.
 
-The `"token_characters"` namespace (which consists of integer-sequence encodings of the characters in each word)
+The `"token_characters"` input (which consists of integer-sequence encodings of the characters in each word)
 gets fed into a
 [`TokenCharactersEncoder`](http://docs.allennlp.org/en/latest/api/allennlp.modules.token_embedders.html?highlight=embedding#allennlp.modules.token_embedders.token_characters_encoder.TokenCharactersEncoder),
 which embeds the characters in an 8-dimensional space
@@ -255,9 +255,15 @@ The output of this `TextFieldEmbedder` is a 50-dimensional vector for `"tokens"`
 concatenated with a 50-dimensional vector for `"token_characters`";
 that is, a 100-dimensional vector.
 
+Because both the encoding of `TextFields` and the `TextFieldEmbedder` are configurable in this way,
+it is trivial to experiment with different word representations as input to your model, switching
+between simple word embeddings, word embeddings concatenated with a character-level CNN, or even
+using a pre-trained model to get word-in-context embeddings, without changing a single line of
+code.
+
 ### The Seq2SeqEncoder
 
-The output of that embedding is processed by the "stacked encoder",
+The output of the `TextFieldEmbedder` is processed by the "stacked encoder",
 which needs to be a
 [`Seq2SeqEncoder`](http://docs.allennlp.org/en/latest/api/allennlp.modules.seq2seq_encoders.html#allennlp.modules.seq2seq_encoders.seq2seq_encoder.Seq2SeqEncoder):
 
@@ -293,16 +299,10 @@ We'll iterate over our datasets using a
 [`BasicIterator`](http://docs.allennlp.org/en/latest/api/allennlp.data.iterators.html#allennlp.data.iterators.basic_iterator.BasicIterator)
 that pads our data and processes it in batches of size 32.
 
-```js
-  "optimizer": "adam",
-```
-
-We'll optimize using
-[`torch.optim.Adam`](http://pytorch.org/docs/master/optim.html#torch.optim.Adam)
-with its default parameters.
 
 ```js
   "trainer": {
+    "optimizer": "adam",
     "num_epochs": 40,
     "patience": 10,
     "cuda_device": -1
@@ -310,7 +310,10 @@ with its default parameters.
 }
 ```
 
-Finally, we'll run the training for 40 epochs;
+Finally, we'll optimize using
+[`torch.optim.Adam`](http://pytorch.org/docs/master/optim.html#torch.optim.Adam)
+with its default parameters;
+we'll run the training for 40 epochs;
 we'll stop prematurely if we get no improvement for 10 epochs;
 and we'll train on the CPU.  If you wanted to train on a GPU,
 you'd change `cuda_device` to its device id.

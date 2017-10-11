@@ -12,12 +12,12 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn import Initializer
-from allennlp.training.regularizers.regularizer import Regularizer
+from allennlp.nn.regularizers.regularizer import Regularizer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 
 
@@ -64,7 +64,7 @@ class TestRegistrable(AllenNlpTestCase):
         assert DatasetReader.by_name('snli').__name__ == 'SnliReader'
         assert DatasetReader.by_name('sequence_tagging').__name__ == 'SequenceTaggingDatasetReader'
         assert DatasetReader.by_name('language_modeling').__name__ == 'LanguageModelingReader'
-        assert DatasetReader.by_name('squad_sentence_selection').__name__ == 'SquadSentenceSelectionReader'
+        assert DatasetReader.by_name('squad').__name__ == 'SquadReader'
 
     def test_registry_has_builtin_iterators(self):
         assert DataIterator.by_name('adaptive').__name__ == 'AdaptiveIterator'

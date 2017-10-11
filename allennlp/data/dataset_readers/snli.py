@@ -10,11 +10,10 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.fields import Field, TextField, LabelField
 from allennlp.data.instance import Instance
-from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.fields import TextField, LabelField
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -33,21 +32,13 @@ class SnliReader(DatasetReader):
         We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
-    append_null : ``bool``, optional (default=False)
-        If you want a NULL token added to the end of each sentence (both the premise and the
-        hypothesis), you can do that here.  If you're trying to do a word-level alignment between
-        the premise and the hypothesis, for instance, this is an easy way to allow some words to
-        align to nothing.  It will also mess a little with RNN encoders.  The Decomposable
-        Attention model did this, but you might not want to do it with every model.
     """
-    null_token = "@@NULL@@"
 
     def __init__(self,
-                 tokenizer: Tokenizer = WordTokenizer(),
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 append_null: bool = False) -> None:
-        super().__init__(tokenizer=tokenizer, token_indexers=token_indexers)
-        self._append_null = append_null
+                 tokenizer: Tokenizer = None,
+                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        self._tokenizer = tokenizer or WordTokenizer()
+        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @overrides
     def read(self, file_path: str):
@@ -65,38 +56,34 @@ class SnliReader(DatasetReader):
                     # These were cases where the annotators disagreed; we'll just skip them.  It's
                     # like 800 out of 500k examples in the training data.
                     continue
-                label_field = LabelField(label)
 
                 premise = example["sentence1"]
-                premise_tokens, _ = self._tokenizer.tokenize(premise)
                 hypothesis = example["sentence2"]
-                hypothesis_tokens, _ = self._tokenizer.tokenize(hypothesis)
-                if self._append_null:
-                    premise_tokens.append(self.null_token)
-                    hypothesis_tokens.append(self.null_token)
-                premise_field = TextField(premise_tokens, self._token_indexers)
-                hypothesis_field = TextField(hypothesis_tokens, self._token_indexers)
-                instances.append(Instance({'label': label_field,
-                                           'premise': premise_field,
-                                           'hypothesis': hypothesis_field}))
+                instances.append(self.text_to_instance(premise, hypothesis, label))
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
         return Dataset(instances)
 
+    @overrides
+    def text_to_instance(self,  # type: ignore
+                         premise: str,
+                         hypothesis: str,
+                         label: str = None) -> Instance:
+        # pylint: disable=arguments-differ
+        fields: Dict[str, Field] = {}
+        premise_tokens = self._tokenizer.tokenize(premise)
+        hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
+        fields['premise'] = TextField(premise_tokens, self._token_indexers)
+        fields['hypothesis'] = TextField(hypothesis_tokens, self._token_indexers)
+        if label:
+            fields['label'] = LabelField(label)
+        return Instance(fields)
+
     @classmethod
     def from_params(cls, params: Params) -> 'SnliReader':
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = {}
-        token_indexer_params = params.pop('token_indexers', Params({}))
-        for name, indexer_params in token_indexer_params.items():
-            token_indexers[name] = TokenIndexer.from_params(indexer_params)
-        # The default parameters are contained within the class,
-        # so if no parameters are given we must pass None.
-        if token_indexers == {}:
-            token_indexers = None
-        append_null = params.pop('append_null', False)
+        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         params.assert_empty(cls.__name__)
         return SnliReader(tokenizer=tokenizer,
-                          token_indexers=token_indexers,
-                          append_null=append_null)
+                          token_indexers=token_indexers)

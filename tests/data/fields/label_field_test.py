@@ -2,14 +2,13 @@
 import numpy
 import pytest
 
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.fields import LabelField
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.fields import LabelField
+from allennlp.data.vocabulary import Vocabulary
 
 
 class TestLabelField(AllenNlpTestCase):
-
     def test_as_array_returns_integer_array(self):
         label = LabelField(5, skip_indexing=True)
         array = label.as_array(label.get_padding_lengths())
@@ -33,3 +32,8 @@ class TestLabelField(AllenNlpTestCase):
     def test_label_field_raises_with_incorrect_label_type(self):
         with pytest.raises(ConfigurationError):
             _ = LabelField([], skip_indexing=False)
+
+    def test_label_field_empty_field_works(self):
+        label = LabelField("test")
+        empty_label = label.empty_field()
+        assert empty_label.label == -1

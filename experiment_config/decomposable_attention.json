@@ -7,7 +7,9 @@
         "lowercase_tokens": true
       }
     },
-    "append_null": true
+    "tokenizer": {
+      "end_tokens": ["@@NULL@@"]
+    }
   },
   "train_data_path": "/snli/snli_1.0_train.jsonl",
   "validation_data_path": "/snli/snli_1.0_dev.jsonl",
@@ -43,21 +45,26 @@
       "hidden_dims": [200, 3],
       "activations": ["relu", "linear"],
       "dropout": [0.2, 0.0]
-    }
-  },
+    },
+     "initializer": [
+      [".*linear_layers.*weight", {"type": "xavier_normal"}],
+      [".*token_embedder_tokens\._projection.*weight", {"type": "xavier_normal"}]
+     ]
+   },
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["premise", "num_tokens"], ["hypothesis", "num_tokens"]],
     "batch_size": 32
   },
-  "optimizer": {
-    "type": "adam"
-  },
+
   "trainer": {
-    "num_epochs": 40,
-    "patience": 5,
+    "num_epochs": 140,
+    "patience": 20,
     "cuda_device": 0,
     "validation_metric": "+accuracy",
-    "no_tqdm": true
+    "no_tqdm": true,
+    "optimizer": {
+      "type": "adagrad"
+    }
   }
 }
