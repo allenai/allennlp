@@ -78,4 +78,4 @@ class LabelField(Field[numpy.ndarray]):
 
     @overrides
     def empty_field(self):
-        return LabelField(0, self._label_namespace)
+        return LabelField(-1, self._label_namespace, skip_indexing=True)

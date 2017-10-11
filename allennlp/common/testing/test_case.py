@@ -13,8 +13,6 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     more verbose AllenNLP logging and that creates and destroys a temp directory
     as a test fixture.
     """
-    TEST_DIR = './TMP_TEST/'
-
     def setUp(self):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                             level=logging.DEBUG)
@@ -24,6 +22,8 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         logging.getLogger('allennlp.nn.initializers').disabled = True
         logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
         log_pytorch_version_info()
+
+        self.TEST_DIR = "/tmp/allennlp_tests/"
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
     def tearDown(self):
