@@ -7,11 +7,11 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.nn.util import arrays_to_variables, sequence_cross_entropy_with_logits
 
 
-class EncoderDecoderWithoutAttentionTest(ModelTestCase):
+class SimpleSeq2SeqWithoutAttentionTest(ModelTestCase):
     def setUp(self):
-        super(EncoderDecoderWithoutAttentionTest, self).setUp()
-        self.set_up_model("tests/fixtures/encoder_decoder/experiment.json",
-                          "tests/fixtures/data/encoder_decoder.tsv")
+        super(SimpleSeq2SeqWithoutAttentionTest, self).setUp()
+        self.set_up_model("tests/fixtures/encoder_decoder/simple_seq2seq/experiment.json",
+                          "tests/fixtures/data/seq2seq_copy.tsv")
 
     def test_encoder_decoder_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -39,11 +39,11 @@ class EncoderDecoderWithoutAttentionTest(ModelTestCase):
         # ``decode`` should have added a ``predicted_tokens`` field to ``output_dict``. Checking if it's there.
         assert "predicted_tokens" in decode_output_dict
 
-class EncoderDecoderWithAttentionTest(ModelTestCase):
+class SimpleSeq2SeqWithAttentionTest(ModelTestCase):
     def setUp(self):
-        super(EncoderDecoderWithAttentionTest, self).setUp()
-        self.set_up_model("tests/fixtures/encoder_decoder/experiment_with_attention.json",
-                          "tests/fixtures/data/encoder_decoder.tsv")
+        super(SimpleSeq2SeqWithAttentionTest, self).setUp()
+        self.set_up_model("tests/fixtures/encoder_decoder/simple_seq2seq/experiment_with_attention.json",
+                          "tests/fixtures/data/seq2seq_copy.tsv")
 
     def test_encoder_decoder_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
