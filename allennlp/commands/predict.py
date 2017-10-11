@@ -42,24 +42,29 @@ def add_subparser(parser: argparse._SubParsersAction,
                            help='path to input file')
     subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
     subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
+    subparser.add_argument('--cuda_device', type=int, default=-1, help='id of GPU to use (if any)')
 
     subparser.set_defaults(func=predict(predictors))
 
     return subparser
 
 def get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Predictor:
-    archive = load_archive(args.archive_file)
+    archive = load_archive(args.archive_file, cuda_device=args.cuda_device)
     model_type = archive.config.get("model").get("type")
     if model_type not in predictors:
         raise ConfigurationError("no known predictor for model type {}".format(model_type))
     predictor = Predictor.from_archive(archive, predictors[model_type])
     return predictor
 
-def run(predictor: Predictor, input_file: IO, output_file: Optional[IO], print_to_console: bool) -> None:
+def run(predictor: Predictor,
+        input_file: IO,
+        output_file: Optional[IO],
+        print_to_console: bool,
+        cuda_device: int) -> None:
     for line in input_file:
         if not line.isspace():
             data = json.loads(line)
-            result = predictor.predict_json(data)
+            result = predictor.predict_json(data, cuda_device)
             output = json.dumps(result)
 
             if print_to_console:
@@ -83,6 +88,6 @@ def predict(predictors: Dict[str, str]):
             if args.output_file:
                 output_file = stack.enter_context(args.output_file)  # type: ignore
 
-            run(predictor, input_file, output_file, not args.silent)
+            run(predictor, input_file, output_file, not args.silent, args.cuda_device)
 
     return predict_inner
