@@ -469,7 +469,7 @@ class Trainer:
                                            "training_state_epoch_{}.th".format(epoch_to_load))
 
         model_state = torch.load(model_path, map_location=device_mapping(self._cuda_device))
-        training_state = torch.load(training_state_path)
+        training_state = torch.load(training_state_path, map_location=device_mapping(self._cuda_device))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
 
