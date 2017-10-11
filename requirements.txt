@@ -29,6 +29,9 @@ numpy
 pillow # A dependency of tensorboard-pytorch which is not recorded.
 tensorboard-pytorch
 
+# Required by torch.utils.ffi
+cffi==1.11.2
+
 # aws commandline tools for running on Docker remotely.
 awscli>=1.11.91
 

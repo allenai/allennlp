@@ -14,9 +14,9 @@ class Predictor(Registrable):
         self._model = model
         self._dataset_reader = dataset_reader
 
-    def predict_json(self, inputs: JsonDict) -> JsonDict:
+    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         instance = self._json_to_instance(inputs)
-        outputs = self._model.forward_on_instance(instance)
+        outputs = self._model.forward_on_instance(instance, cuda_device)
         return sanitize(outputs)
 
     def _json_to_instance(self, json: JsonDict) -> Instance:
