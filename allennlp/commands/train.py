@@ -18,7 +18,7 @@ which to write the results.
     -s SERIALIZATION_DIR, --serialization_dir SERIALIZATION_DIR
                             directory in which to save the model and its logs
 """
-
+from typing import List
 import argparse
 import json
 import logging
@@ -36,6 +36,7 @@ from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.archival import archive_model
 from allennlp.models.model import Model
 from allennlp.training.trainer import Trainer
+from allennlp.commands.evaluate import evaluate
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -119,16 +120,31 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     logger.info("Reading training data from %s", train_data_path)
     train_data = dataset_reader.read(train_data_path)
 
+    all_datasets: List[Dataset] = [train_data]
+    datasets_in_vocab = ["train"]
+
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
         validation_data = dataset_reader.read(validation_data_path)
-        combined_data = Dataset(train_data.instances + validation_data.instances)
+        all_datasets.append(validation_data)
+        datasets_in_vocab.append("validation")
     else:
         validation_data = None
-        combined_data = train_data
 
-    vocab = Vocabulary.from_params(params.pop("vocabulary", {}), combined_data)
+    test_data_path = params.pop("test_data_path", None)
+    if test_data_path is not None:
+        logger.info("Reading test data from %s", test_data_path)
+        test_data = dataset_reader.read(test_data_path)
+        all_datasets.append(test_data)
+        datasets_in_vocab.append("test")
+    else:
+        test_data = None
+
+    logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_in_vocab))
+    vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
+                                   Dataset([instance for dataset in all_datasets
+                                            for instance in dataset.instances]))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))
@@ -145,10 +161,20 @@ def train_model(params: Params, serialization_dir: str) -> Model:
                                   train_data,
                                   validation_data,
                                   trainer_params)
+
+    evaluate_on_test = params.pop("evaluate_on_test", False)
     params.assert_empty('base train command')
     trainer.train()
 
     # Now tar up results
     archive_model(serialization_dir)
+
+    if test_data and evaluate_on_test:
+        test_data.index_instances(vocab)
+        evaluate(model, test_data, iterator, cuda_device=trainer._cuda_device)  # pylint: disable=protected-access
+
+    elif test_data:
+        logger.info("To evaluate on the test set after training, pass the "
+                    "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
 
     return model
