@@ -53,7 +53,7 @@ RUN PYTHONDONTWRITEBYTECODE=1 pytest
 
 # Add model caching
 ARG CACHE_MODELS=false
-RUN ./scripts/docker_cache.sh
+RUN ./scripts/cache_models.sh
 
 LABEL maintainer="allennlp-contact@allenai.org"
 
