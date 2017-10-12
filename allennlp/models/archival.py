@@ -67,7 +67,7 @@ def _sanitize_config(config: Params) -> None:
         logger.warning("specified evaluation_json_file %s does not exist, removing key", evaluation_json_file)
         config.get("model", {}).pop('evaluation_json_file')
 
-def load_archive(archive_file: str, cuda_device: int = -1, overrides: List[str] = []) -> Archive:
+def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 

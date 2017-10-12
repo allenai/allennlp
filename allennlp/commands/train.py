@@ -53,7 +53,6 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
                            help='directory in which to save the model and its logs')
     subparser.add_argument('-o', '--overrides',
                            type=str,
-                           nargs='+',
                            help='a sequence of overrides to the training configuration')
     subparser.set_defaults(func=_train_model_from_args)
 
@@ -67,7 +66,7 @@ def _train_model_from_args(args: argparse.Namespace):
     train_model_from_file(args.param_path, args.serialization_dir, args.overrides)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: List[str] = []) -> Model:
+def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: str = "") -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
