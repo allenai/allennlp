@@ -6,8 +6,8 @@ import torch
 
 def log_sum_exp(x: torch.Tensor) -> torch.Tensor:  # pylint: disable=invalid-name
     """
-    numerical stable log(sum(exp(x)))
-    where the sum is only over the last dimension
+    Computes log(sum(exp(x))) in a numerically stable way,
+    where the sum is only over the last dimension.
     """
     maxes, _ = torch.max(x, -1, keepdim=True)
     exps = torch.exp(x - maxes)
@@ -18,6 +18,8 @@ def log_sum_exp(x: torch.Tensor) -> torch.Tensor:  # pylint: disable=invalid-nam
 class ConditionalRandomField(torch.nn.Module):
     """
     Computes the conditional random field loss, which is the negative log likelihood.
+    Expects an input of shape (batch_size, sequence_length, num_tags) and optionally a
+    mask of shape (batch_size, sequence_length).
 
     Parameters
     ----------
@@ -39,41 +41,51 @@ class ConditionalRandomField(torch.nn.Module):
         self.stop_tag = stop_tag
 
         # transitions[i, j] is the logit for transitioning to state i from state j
-        self.transitions = torch.nn.Parameter(1 * torch.randn(num_tags, num_tags))
+        self.transitions = torch.nn.Parameter(torch.randn(num_tags, num_tags))
 
-        # We never transition to the start tag and we never transition from the stop tag
+        # We never transition to the start tag and we never transition from the stop tag.
         self.transitions.data[start_tag, :] = -10000
         self.transitions.data[:, stop_tag] = -10000
 
     def _input_likelihood(self, inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
-        Computes the denominator term for the log-likelihood
+        Computes the (batch_size,) numerator term for the log-likelihood, which is the
+        sum of the likelihoods across all possible state sequences.
         """
         batch_size, sequence_length, num_tags = inputs.size()
         mask = mask.float()
+        # masks[i] is the (batch_size,) mask tensor for timestep i
         masks = [mask[:, i].contiguous() for i in range(sequence_length)]
 
-        # alpha_0 is the transitions to the initial states, given the first word
+        # We will step through time and accumulate the likelihood at each step.
+        # Note that we will accumulate a (batch_size, num_tags) tensor of likelihoods
+        # since the likelihood of each step is
+
+        # Initial alpha is the (batch_size, num_tags) tensor of likelihoods combining the
+        # transitions to the initial states and the logits for the first timestep.
         alpha = self.transitions[:, self.start_tag].contiguous().view(1, num_tags) + inputs[:, 0, :]
 
-        for i in range(sequence_length - 1):
-            # Broadcast emit scores along prev_tag
-            emit_scores = inputs[:, i+1].contiguous().view(batch_size, num_tags, 1)
-            # Broadcast transition scores along batch
+        # For each i we compute logits for the transitions from timestep i-1 to timestep i
+        # We do so in a (batch_size, num_tags, num_tags) tensor where the axes are
+        # (instance, next_tag, prev_tag)
+        for i in range(1, sequence_length):
+            # The emit scores are for time i ("next_tag") so we broadcast along the prev_tag axis.
+            emit_scores = inputs[:, i].contiguous().view(batch_size, num_tags, 1)
+            # Transition scores are (next_tag, prev_tag) so we broadcast along the instance axis.
             transition_scores = self.transitions.view(1, num_tags, num_tags)
-            # Broadcast alpha along next_tag
+            # Alpha is for the prev_tag, so we broadcast along the next_tag axis.
             alpha = alpha.view(batch_size, 1, num_tags)
 
-            # (batch_size, next_tag, prev_tag)
-            inner = (emit_scores + transition_scores) * masks[i].view(batch_size, 1, 1) + alpha
+            # We add the emit+transition scores only if timestep i-1 was included.
+            inner = alpha + (emit_scores + transition_scores) * masks[i-1].view(batch_size, 1, 1)
 
-            # need to LSE over all the prev_tags
+            # Now we log_sum_exp over the "prev_tag" axis.
             alpha = log_sum_exp(inner)
 
-        # stopping
+        # Every sequence needs to end with a transition to the stop_tag.
         stops = alpha + self.transitions[self.stop_tag].view(1, num_tags)
 
-        # LSE along num_tags dim, result is (batch_size,)
+        # Finally we log_sum_exp along the num_tags dim, result is (batch_size,)
         return log_sum_exp(stops)
 
     def _joint_likelihood(self,
@@ -97,7 +109,7 @@ class ConditionalRandomField(torch.nn.Module):
 
         # Add up the scores for the observed transitions and all the inputs but the last
         for i in range(sequence_length - 1):
-            # Each is shape (batch_size, num_tags)
+            # Each is shape (batch_size,)
             prev_tag, next_tag = ctags[i], ctags[i+1]
 
             # The scores for transitioning from prev_tag to next_tag
@@ -118,12 +130,19 @@ class ConditionalRandomField(torch.nn.Module):
             # input_score if this element is unmasked.
             score = score + transition_score * masks[i+1] + input_score * masks[i]
 
-        # Transition from last state to "stop" state.
-        last_transition_score = self.transitions[self.stop_tag].index_select(0, tags[:, -1])
+        # Transition from last state to "stop" state. To start with, we need to find the last tag
+        # for each instance.
+        last_tag_index = mask.sum(-1).long() - 1
+        last_tags = tags.gather(1, last_tag_index.view(batch_size, 1).expand(batch_size, sequence_length))
 
-        # Finally, add the last input if it's not masked.
+        # Is (batch_size, sequence_length), but all the columns are the same, so take the first.
+        last_tags = last_tags[:, 0].contiguous()
+
+        # Compute score of transitioning to `stop_tag` from each "last tag".
+        last_transition_score = self.transitions[self.stop_tag].index_select(0, last_tags)
+
+        # Add the last input if it's not masked.
         last_inputs = inputs[:, -1].contiguous()                         # (batch_size, num_tags)
-        last_tags = ctags[-1]                                            # (batch_size, num_tags)
         last_input_score = last_inputs.gather(1, last_tags.view(-1, 1))  # (batch_size, 1)
         last_input_score = last_input_score.squeeze()                    # (batch_size,)
 
@@ -139,6 +158,9 @@ class ConditionalRandomField(torch.nn.Module):
         ``forward`` only computes the loss
         """
         # pylint: disable=arguments-differ
+        if mask is None:
+            mask = torch.ones(*tags.size()).byte()
+
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)
 

@@ -12,16 +12,17 @@
       }
     },
     "train_data_path": "/Users/joelg/data/ner/eng.train.json",
-    //"validation_data_path": "/Users/joelg/data/ner/eng.testa.json",
-    //test_data_path": "/Users/joelg/data/ner/eng.testb.json",
-    //"evaluate_on_test": true,
+    "validation_data_path": "/Users/joelg/data/ner/eng.testa.json",
+    "test_data_path": "/Users/joelg/data/ner/eng.testb.json",
+    "evaluate_on_test": true,
     "model": {
       "type": "crf_tagger",
       "text_field_embedder": {
               "tokens": {
                       "type": "embedding",
                       "embedding_dim": 50,
-                      "pretrained_file": "glove.6B.50d.txt.gz"
+                      "pretrained_file": "glove.6B.50d.txt.gz",
+                      "trainable": true
               },
               "token_characters": {
                 "type": "character_encoding",
@@ -48,13 +49,12 @@
       },
       "regularizer": [
         ["transitions$", {"type": "l2", "alpha": 0.01}]
-        //[".*", {"type": "l2", "alpha": 0.01}]
       ]
     },
     "iterator": {"type": "basic", "batch_size": 32},
     "trainer": {
       "optimizer": "adam",
-      "num_epochs": 10,
+      "num_epochs": 50,
       "patience": 10,
       "cuda_device": -1
     }
