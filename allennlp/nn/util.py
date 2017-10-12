@@ -308,6 +308,12 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     ``(batch_size, num_queries, embedding_dim)`` and
     ``(batch_size, num_documents, num_queries, embedding_dim)`` respectively.
     """
+    # We'll special-case a few settings here, where there are efficient (but poorly-named)
+    # operations in pytorch that already do the computation we need.
+    if attention.dim() == 2 and matrix.dim() == 3:
+        return attention.unsqueeze(1).bmm(matrix).squeeze(1)
+    if attention.dim() == 3 and matrix.dim() == 3:
+        return attention.bmm(matrix)
     if matrix.dim() - 1 < attention.dim():
         expanded_size = list(matrix.size())
         for i in range(attention.dim() - matrix.dim() + 1):

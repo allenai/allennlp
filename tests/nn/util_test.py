@@ -373,6 +373,23 @@ class TestNnUtil(AllenNlpTestCase):
                 numpy.testing.assert_almost_equal(aggregated_array[0, i, j], expected_array,
                                                   decimal=5)
 
+    def test_weighted_sum_handles_3d_attention_with_3d_matrix(self):
+        batch_size = 1
+        length_1 = 5
+        length_2 = 2
+        embedding_dim = 4
+        sentence_array = numpy.random.rand(batch_size, length_2, embedding_dim)
+        attention_array = numpy.random.rand(batch_size, length_1, length_2)
+        sentence_tensor = Variable(torch.from_numpy(sentence_array).float())
+        attention_tensor = Variable(torch.from_numpy(attention_array).float())
+        aggregated_array = weighted_sum(sentence_tensor, attention_tensor).data.numpy()
+        assert aggregated_array.shape == (batch_size, length_1, embedding_dim)
+        for i in range(length_1):
+            expected_array = (attention_array[0, i, 0] * sentence_array[0, 0] +
+                              attention_array[0, i, 1] * sentence_array[0, 1])
+            numpy.testing.assert_almost_equal(aggregated_array[0, i], expected_array,
+                                              decimal=5)
+
     def test_viterbi_decode(self):
         # Test Viterbi decoding is equal to greedy decoding with no pairwise potentials.
         sequence_predictions = torch.nn.functional.softmax(Variable(torch.rand([5, 9])))
