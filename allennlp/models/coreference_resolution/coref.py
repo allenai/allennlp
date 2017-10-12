@@ -310,8 +310,8 @@ class CoreferenceResolver(Model):
         return pairwise_embeddings
 
     @staticmethod
-    def _compute_antecedent_labels(top_span_labels: torch.IntTensor,
-                                   antecedent_labels: torch.IntTensor):
+    def _compute_antecedent_gold_labels(top_span_labels: torch.IntTensor,
+                                        antecedent_labels: torch.IntTensor):
         """
         Parameters
         ----------
@@ -530,7 +530,7 @@ class CoreferenceResolver(Model):
 
             # Compute labels.
             # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
-            augmented_labels = self._compute_antecedent_labels(top_span_labels, antecedent_labels)
+            augmented_labels = self._compute_antecedent_gold_labels(top_span_labels, antecedent_labels)
 
             # Compute loss using the negative marginal log-likelihood.
             loss = self._compute_negative_marginal_log_likelihood(augmented_antecedent_scores,
@@ -560,6 +560,7 @@ class CoreferenceResolver(Model):
         context_layer = Seq2SeqEncoder.from_params(params.pop("context_layer"))
         mention_feedforward = FeedForward.from_params(params.pop("mention_feedforward"))
         antecedent_feedforward = FeedForward.from_params(params.pop("antecedent_feedforward"))
+
         feature_size = params.pop("feature_size")
         max_span_width = params.pop("max_span_width")
         spans_per_word = params.pop("spans_per_word")
