@@ -5,6 +5,8 @@ import tempfile
 import tarfile
 import shutil
 
+from typing import List
+
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
@@ -65,7 +67,7 @@ def _sanitize_config(config: Params) -> None:
         logger.warning("specified evaluation_json_file %s does not exist, removing key", evaluation_json_file)
         config.get("model", {}).pop('evaluation_json_file')
 
-def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
+def load_archive(archive_file: str, cuda_device: int = -1, overrides: List[str] = []) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
@@ -87,7 +89,7 @@ def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
         archive.extractall(tempdir)
 
     # Load config
-    config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME))
+    config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME), overrides)
     _sanitize_config(config)
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.

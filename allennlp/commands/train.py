@@ -51,6 +51,10 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
                            type=str,
                            required=True,
                            help='directory in which to save the model and its logs')
+    subparser.add_argument('-o', '--overrides',
+                           type=str,
+                           nargs='+',
+                           help='a sequence of overrides to the training configuration')
     subparser.set_defaults(func=_train_model_from_args)
 
     return subparser
@@ -60,10 +64,10 @@ def _train_model_from_args(args: argparse.Namespace):
     """
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
-    train_model_from_file(args.param_path, args.serialization_dir)
+    train_model_from_file(args.param_path, args.serialization_dir, args.overrides)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Model:
+def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: List[str] = []) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -74,11 +78,12 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Mo
     serialization_dir: str, required
         The directory in which to save results and logs.
     """
+
     # We need the python hashseed to be set if we're training a model
     ensure_pythonhashseed_set()
 
     # Load the experiment config from a file and pass it to ``train_model``.
-    params = Params.from_file(parameter_filename)
+    params = Params.from_file(parameter_filename, overrides)
     return train_model(params, serialization_dir)
 
 
