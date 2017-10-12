@@ -1,7 +1,7 @@
 import logging
 import re
 import collections
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, DefaultDict
 
 from overrides import overrides
 
@@ -16,6 +16,7 @@ from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 @DatasetReader.register("coref")
 class ConllCorefReader(DatasetReader):
@@ -40,7 +41,7 @@ class ConllCorefReader(DatasetReader):
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self._begin_doc_regex = re.compile(r"#begin document \((.*)\); part (\d+)")
+        self._begin_document_regex = re.compile(r"#begin document \((.*)\); part (\d+)")
 
     @overrides
     def read(self, file_path: str):
@@ -50,13 +51,24 @@ class ConllCorefReader(DatasetReader):
         logger.info("Reading file at %s", file_path)
         instances = []
         with open(file_path) as dataset_file:
-            document_state = DocumentState()
+            document_state = _DocumentState()
+
             for line in dataset_file.readlines():
-                if self.handle_line(line, document_state):
+
+                if self._begin_document_regex.match(line):
+                    # We're beginning a document. Refresh the state.
+                    document_state = _DocumentState()
+
+                elif line.startswith("#end document"):
+                    # We've finished a document.
+                    document_state.assert_finalizable()
                     clusters = document_state.finalize()
                     instance = self.text_to_instance(document_state.sentences, clusters)
                     instances.append(instance)
-                    document_state = DocumentState()
+                else:
+                    # Process a line.
+                    self.handle_line(line, document_state)
+
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
@@ -65,7 +77,7 @@ class ConllCorefReader(DatasetReader):
     @overrides
     def text_to_instance(self,  # type: ignore
                          sentences: List[List[str]],
-                         clusters: List[List[Tuple[int, int]]] = None) -> Instance:
+                         clusters: Optional[List[List[Tuple[int, int]]]] = None) -> Instance:
         # pylint: disable=arguments-differ
         flattened_sentences = [t for s in sentences for t in s]
 
@@ -130,21 +142,15 @@ class ConllCorefReader(DatasetReader):
         else:
             return word
 
-    def handle_line(self, line, document_state):
-        begin_document_match = self._begin_doc_regex.match(line)
-        if begin_document_match:
-            document_state.assert_empty()
-            return False
-        elif line.startswith("#end document"):
-            document_state.assert_finalizable()
-            return True
-        else:
-            row = line.split()
-            if not row:
-                document_state.complete_sentence()
-                return False
-            assert len(row) >= 12
+    def handle_line(self, line, document_state) -> None:
+        row = line.split()
+        if not row:
+            # End of a sentence. Clear the sentence buffer and
+            # add sentence to document sentences.
+            document_state.complete_sentence()
 
+        else:
+            assert len(row) >= 12
             word = self.normalize_word(row[3])
             coref = row[-1]
 
@@ -164,38 +170,31 @@ class ConllCorefReader(DatasetReader):
                         cluster_id = int(segment[:-1])
                         start = document_state.coref_stacks[cluster_id].pop()
                         document_state.clusters[cluster_id].append((start, word_index))
-            return False
 
-class DocumentState(object):
-    def __init__(self):
-        self.sentence_buffer = []
-        self.sentences = []
+
+class _DocumentState:
+    def __init__(self) -> None:
+        self.sentence_buffer: List[str] = []
+        self.sentences: List[List[str]] = []
         self.num_total_words = 0
-        self.clusters = collections.defaultdict(list)
+        self.clusters: DefaultDict[str, List[Tuple[int, int]]] = collections.defaultdict(list)
         self.coref_stacks = collections.defaultdict(list)
 
-    def assert_empty(self):
-        assert not self.sentence_buffer
-        assert not self.sentences
-        assert self.num_total_words == 0
-        assert not self.coref_stacks
-        assert not self.clusters
-
-    def assert_finalizable(self):
+    def assert_finalizable(self) -> None:
         assert not self.sentence_buffer
         assert self.sentences
         assert self.num_total_words > 0
         assert all(not s for s in self.coref_stacks.values())
 
-    def complete_sentence(self):
+    def complete_sentence(self) -> None:
         self.sentences.append(self.sentence_buffer)
         self.sentence_buffer = []
 
-    def add_word(self, word):
+    def add_word(self, word) -> None:
         self.sentence_buffer.append(word)
         self.num_total_words += 1
 
-    def finalize(self):
+    def finalize(self) -> List[Tuple]:
         merged_clusters = []
         for cluster1 in self.clusters.values():
             existing = None
