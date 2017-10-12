@@ -150,7 +150,11 @@ class ConllCorefReader(DatasetReader):
             document_state.complete_sentence()
 
         else:
-            assert len(row) >= 12
+
+            if len(row) < 12:
+                raise ConfigurationError("Encountered a non-empty line with fewer than 12 entries"
+                                         " - this does not match the CONLL format.: {}".format(row))
+
             word = self.normalize_word(row[3])
             coref = row[-1]
 
@@ -159,32 +163,68 @@ class ConllCorefReader(DatasetReader):
 
             if coref != "-":
                 for segment in coref.split("|"):
+                    # The conll representation of coref spans allows spans to
+                    # overlap. If spans end or begin at the same word, they are
+                    # separated by a "|".
                     if segment[0] == "(":
+                        # The span begins at this word.
                         if segment[-1] == ")":
+                            # The span begins and ends at this word (single word span).
                             cluster_id = int(segment[1:-1])
                             document_state.clusters[cluster_id].append((word_index, word_index))
                         else:
+                            # The span is starting, so we record the index of the word.
                             cluster_id = int(segment[1:])
                             document_state.coref_stacks[cluster_id].append(word_index)
                     else:
+                        # The span for this id is ending, but didn't start at this word.
+                        # Retrieve the start index from the document state and
+                        # add the span to the clusters for this id.
                         cluster_id = int(segment[:-1])
                         start = document_state.coref_stacks[cluster_id].pop()
                         document_state.clusters[cluster_id].append((start, word_index))
 
 
 class _DocumentState:
+
+    """
+    Represents the state of a document. Words are collected in
+    a sentence buffer, which are incrementally collected in a
+    list when sentences end, representing all tokens in the document.
+
+    Additionally, this class contains a per-id stacks to hold the start indices of
+    active spans (spans which we are inside of when processing a given word). Spans
+    with the same id can be nested, which is why we collect these opening spans
+    on a stack, e.g:
+
+     [Greg, the baker who referred to [himself]_ID1 as 'the bread man']_ID1
+
+    Once an active span is closed, the span is added to the cluster for the given id.
+    """
+
     def __init__(self) -> None:
         self.sentence_buffer: List[str] = []
         self.sentences: List[List[str]] = []
         self.num_total_words = 0
-        self.clusters: DefaultDict[str, List[Tuple[int, int]]] = collections.defaultdict(list)
-        self.coref_stacks = collections.defaultdict(list)
+        # Cluster id -> List of (start_index, end_index) spans.
+        self.clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
+        # Cluster id -> List of start_indices which are open for this id.
+        self.coref_stacks: DefaultDict[int, List[int]] = collections.defaultdict(list)
 
     def assert_finalizable(self) -> None:
-        assert not self.sentence_buffer
-        assert self.sentences
-        assert self.num_total_words > 0
-        assert all(not s for s in self.coref_stacks.values())
+
+        if self.sentence_buffer:
+            raise ConfigurationError("Processing was attempted on a document which had "
+                                     "incomplete sentences. Current sentence buffer "
+                                     "contains: {}".format(self.sentence_buffer))
+
+        if not self.sentences or self.num_total_words == 0:
+            raise ConfigurationError("Processing was attempted on a document with no sentences or words.")
+
+        if any(x for x in self.coref_stacks.values()):
+            raise ConfigurationError("Processing was attempted on a document which contains incomplete "
+                                     "(unclosed) spans within the scope of the document. Current ids "
+                                     "and start indices" " of unclosed spans: {}".format(self.coref_stacks))
 
     def complete_sentence(self) -> None:
         self.sentences.append(self.sentence_buffer)
@@ -196,17 +236,19 @@ class _DocumentState:
 
     def finalize(self) -> List[Tuple]:
         merged_clusters = []
-        for cluster1 in self.clusters.values():
+        for cluster in self.clusters.values():
             existing = None
-            for mention in cluster1:
+            for mention in cluster:
                 for cluster2 in merged_clusters:
                     if mention in cluster2:
+                        # first cluster in merged clusters
+                        # which contains this mention.
                         existing = cluster2
                         break
                 if existing is not None:
                     break
             if existing is not None:
-                existing.update(cluster1)
+                existing.update(cluster)
             else:
-                merged_clusters.append(set(cluster1))
+                merged_clusters.append(set(cluster))
         return [tuple(c) for c in merged_clusters]
