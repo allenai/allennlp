@@ -37,7 +37,6 @@ class TestCorefReader(AllenNlpTestCase):
 
         gold_span_labels = fields["span_labels"]
         gold_indices_with_ids = [(i, x) for i, x in enumerate(gold_span_labels.labels) if x != -1]
-        
         gold_mentions_with_ids: List[Tuple[List[str], int]] = [(candidate_mentions[i], x)
                                                                for i, x in gold_indices_with_ids]
 
@@ -50,11 +49,11 @@ class TestCorefReader(AllenNlpTestCase):
 
         fields = instances[1].fields
         text = [x.text for x in fields["text"].tokens]
-        assert text == ['The', 'area', 'of', 'Hong', 'Kong', 'is', 'only', 'one', 'thousand', '-', 'plus', 'square',
-                        'kilometers', '.', 'The', 'population', 'is', 'dense', '.', 'Natural', 'resources', 'are',
-                        'relatively', 'scarce', '.', 'However', ',', 'the', 'clever', 'Hong', 'Kong', 'people',
-                        'will', 'utilize', 'all', 'resources', 'they', 'have', 'created', 'for', 'developing',
-                        'the', 'Hong', 'Kong', 'tourism', 'industry', '.']
+        assert text == ['The', 'area', 'of', 'Hong', 'Kong', 'is', 'only', 'one', 'thousand', '-', 'plus',
+                        'square', 'kilometers', '.', 'The', 'population', 'is', 'dense', '.', 'Natural',
+                        'resources', 'are', 'relatively', 'scarce', '.', 'However', ',', 'the', 'clever',
+                        'Hong', 'Kong', 'people', 'will', 'utilize', 'all', 'resources', 'they', 'have',
+                        'created', 'for', 'developing', 'the', 'Hong', 'Kong', 'tourism', 'industry', '.']
 
         span_starts = fields["span_starts"].field_list
         span_ends = fields["span_ends"].field_list
@@ -80,5 +79,5 @@ class TestCorefReader(AllenNlpTestCase):
 
         # Check we aren't considering zero length spans and all
         # candidate spans are less than what we specified
-        assert all([self.span_width >= len(x) > 0 for x in candidate_mentions])
+        assert all([self.span_width >= len(x) > 0 for x in candidate_mentions])  # pylint: disable=len-as-condition
         return candidate_mentions

@@ -1,7 +1,7 @@
 import logging
 import re
 import collections
-from typing import Any, Dict, List, Optional, Tuple, DefaultDict
+from typing import Any, Dict, List, Optional, Tuple, DefaultDict, Set
 
 from overrides import overrides
 
@@ -121,8 +121,8 @@ class ConllCorefReader(DatasetReader):
                 for mention in cluster:
                     cluster_dict[tuple(mention)] = cluster_id
 
-        span_starts: List[IndexField] = []
-        span_ends: List[IndexField] = []
+        span_starts: List[Field] = []
+        span_ends: List[Field] = []
         span_labels: Optional[List[int]] = [] if gold_clusters is not None else None
 
         sentence_offset = 0
@@ -267,7 +267,7 @@ class _DocumentState:
         which are equal, and if it finds any, merges the two relevant
         clusters.
         """
-        merged_clusters = []
+        merged_clusters: List[Set[Tuple[int, int]]] = []
         for cluster in self.clusters.values():
             cluster_with_overlapping_mention = None
             for mention in cluster:

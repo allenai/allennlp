@@ -196,7 +196,10 @@ class CoreferenceResolver(Model):
         head_scores = self._head_scorer(contextualized_embeddings)
 
         # Shape: (batch_size, num_spans, embedding_size)
-        attended_text_embeddings = self._compute_head_attention(head_scores, text_embeddings, span_ends, span_width)
+        attended_text_embeddings = self._compute_head_attention(head_scores,
+                                                                text_embeddings,
+                                                                span_ends,
+                                                                span_width)
         # (batch_size, num_spans, context_layer.get_output_dim() * 2 + embedding_size + feature_size)
         span_embeddings = torch.cat([start_embeddings,
                                      end_embeddings,
@@ -485,7 +488,10 @@ class CoreferenceResolver(Model):
         # Compute indices for antecedent spans to consider.
         max_antecedents = min(self._max_antecedents, num_spans_to_keep)
 
-        # Shapes: (num_spans_to_keep, max_antecedents), (1, max_antecedents), (1, num_spans_to_keep, max_antecedents)
+        # Shapes:
+        # (num_spans_to_keep, max_antecedents),
+        # (1, max_antecedents),
+        # (1, num_spans_to_keep, max_antecedents)
         antecedent_indices, antecedent_offsets, antecedent_log_mask = self._generate_antecedents(num_spans_to_keep,
                                                                                                  max_antecedents,
                                                                                                  text_mask.is_cuda)
