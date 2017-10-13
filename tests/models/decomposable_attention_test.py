@@ -22,6 +22,7 @@ class TestDecomposableAttention(ModelTestCase):
         output_dict = self.model.forward(**training_arrays)
         assert_almost_equal(numpy.sum(output_dict["label_probs"][0].data.numpy(), -1), 1, decimal=6)
 
+    @flaky
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 

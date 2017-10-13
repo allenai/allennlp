@@ -48,7 +48,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         raise RuntimeError("this should never be called")
 
     @overrides
-    def predict_json(self, inputs: JsonDict) -> JsonDict:
+    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         """
         Expects JSON that looks like ``{"sentence": "..."}``
         and returns JSON that looks like
@@ -73,7 +73,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                 verb_labels = [0 for _ in words]
                 verb_labels[i] = 1
                 instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
-                output = self._model.forward_on_instance(instance)
+                output = self._model.forward_on_instance(instance, cuda_device)
                 tags = output['tags']
 
                 description = SemanticRoleLabelerPredictor.make_srl_string(words, tags)

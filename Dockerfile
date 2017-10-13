@@ -1,12 +1,11 @@
-FROM ubuntu:16.04
+FROM python:3.6.3-jessie
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
-# Add nvidia and conda binaries to path.
-ENV PATH /usr/local/nvidia/bin/:/opt/conda/bin:$PATH
+ENV PATH /usr/local/nvidia/bin/:$PATH
 ENV PYTHONHASHSEED 2157
 
-ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64
 
 WORKDIR /stage
 
@@ -26,15 +25,6 @@ RUN apt-get update --fix-missing && apt-get install -y \
     libevent-dev \
     build-essential && \
     rm -rf /var/lib/apt/lists/*
-
-# Install Anaconda.
-RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
-    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-    rm ~/miniconda.sh
-
-# Use python 3.6
-RUN conda install python=3.6
 
 # Install npm
 RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && apt-get install -y nodejs
@@ -60,6 +50,10 @@ COPY experiment_config experiment_config/
 
 # Run tests to verify the Docker build
 RUN PYTHONDONTWRITEBYTECODE=1 pytest
+
+# Add model caching
+ARG CACHE_MODELS=false
+RUN ./scripts/cache_models.sh
 
 LABEL maintainer="allennlp-contact@allenai.org"
 
