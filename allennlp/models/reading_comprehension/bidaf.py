@@ -59,10 +59,6 @@ class BidirectionalAttentionFlow(Model):
         yet, but have confirmed that we still get very similar performance with much faster
         training times.  We still use the mask for all softmaxes, but avoid the shuffling that's
         required when using masking with pytorch LSTMs.
-    evaluation_json_file : ``str``, optional
-        If given, we will load this JSON into memory and use it to compute official metrics
-        against.  We need this separately from the validation dataset, because the official metrics
-        use all of the annotations, while our dataset reader picks the most frequent one.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -339,11 +335,6 @@ class BidirectionalAttentionFlow(Model):
         modeling_layer = Seq2SeqEncoder.from_params(params.pop("modeling_layer"))
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
         dropout = params.pop('dropout', 0.2)
-
-        # TODO: Remove the following when fully deprecated
-        evaluation_json_file = params.pop('evaluation_json_file', None)
-        if evaluation_json_file is not None:
-            logger.warning("the 'evaluation_json_file' model parameter is deprecated, please remove")
 
         init_params = params.pop('initializer', None)
         reg_params = params.pop('regularizer', None)
