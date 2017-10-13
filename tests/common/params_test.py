@@ -14,3 +14,15 @@ class TestParams(AllenNlpTestCase):
 
         model_params = params.pop("model")
         assert model_params.pop("type") == "bidaf"
+
+    def test_overrides(self):
+        filename = 'tests/fixtures/bidaf/experiment.json'
+        params = Params.from_file(filename, '{ "train_data_path": "FOO", "model": { "type": "BAR" }, model.text_field_embedder.tokens.type: "BAZ" }')
+
+        assert "dataset_reader" in params
+        assert "trainer" in params
+        assert params["train_data_path"] == "FOO"
+
+        model_params = params.pop("model")
+        assert model_params.pop("type") == "BAR"
+        assert model_params["text_field_embedder.tokens.type"] == "BAZ"
