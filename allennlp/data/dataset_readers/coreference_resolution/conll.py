@@ -61,8 +61,8 @@ class ConllCorefReader(DatasetReader):
 
                 elif line.startswith("#end document"):
                     # We've finished a document.
-                    document_state.assert_finalizable()
-                    clusters = document_state.finalize()
+                    document_state.check_document_state()
+                    clusters = document_state.canonicalize_clusters()
                     instance = self.text_to_instance(document_state.sentences, clusters)
                     instances.append(instance)
                 else:
@@ -77,42 +77,69 @@ class ConllCorefReader(DatasetReader):
     @overrides
     def text_to_instance(self,  # type: ignore
                          sentences: List[List[str]],
-                         clusters: Optional[List[List[Tuple[int, int]]]] = None) -> Instance:
+                         gold_clusters: Optional[List[List[Tuple[int, int]]]] = None) -> Instance:
         # pylint: disable=arguments-differ
-        flattened_sentences = [t for s in sentences for t in s]
+        """
+        Parameters
+        ----------
+
+        sentences : ``List[List[str]]``, required.
+            A list of lists representing the tokenised words and sentences in the document.
+        gold_clusters : ``Optional[List[List[Tuple[int, int]]]]``, optional (default = None)
+            A list of all clusters in the document, represented as word spans. Each cluster
+            contains some number of spans, which can be nested and overlap, but will never
+            exactly match between clusters.
+
+        Returns
+        ------
+
+        An ``Instance`` containing the following ``Fields``:
+
+            text : ``TextField``
+                The text of the full document.
+            span_starts : ``ListField[IndexField]``
+                A ListField containing the span starts represented as ``IndexFields``
+                with respect to the document text.
+            span_ends : ``ListField[IndexField]``
+                A ListField containing the span ends represented as ``IndexFields``
+                with respect to the document text.
+            span_labels : ``SequenceLabelField``, optional
+                The ids of the spans.
+        """
+        flattened_sentences = [token for sentence in sentences for token in sentence]
 
         metadata: Dict[str, Any] = {"original_text": flattened_sentences}
-        if clusters is not None:
-            metadata["clusters"] = clusters
+        if gold_clusters is not None:
+            metadata["clusters"] = gold_clusters
 
-        text_field = TextField([Token(t) for t in flattened_sentences], self._token_indexers)
+        text_field = TextField([Token(word) for word in flattened_sentences], self._token_indexers)
 
         cluster_dict = {}
-        if clusters is not None:
-            for cluster_id, cluster in enumerate(clusters):
+        if gold_clusters is not None:
+            for cluster_id, cluster in enumerate(gold_clusters):
                 assert len(cluster) > 1
                 for mention in cluster:
                     cluster_dict[tuple(mention)] = cluster_id
 
-        span_starts = []
-        span_ends = []
-        span_labels: Optional[List[int]] = [] if clusters is not None else None
+        span_starts: List[IndexField] = []
+        span_ends: List[IndexField] = []
+        span_labels: Optional[List[int]] = [] if gold_clusters is not None else None
 
         sentence_offset = 0
         for sentence in sentences:
-            for i in range(len(sentence)):
-                for j in range(i, min(i + self._max_span_width, len(sentence))):
-                    start = sentence_offset + i
-                    end = sentence_offset + j
+            for start_index in range(len(sentence)):
+                for end_index in range(start_index, min(start_index + self._max_span_width, len(sentence))):
+                    start = sentence_offset + start_index
+                    end = sentence_offset + end_index
+
                     if span_labels is not None:
                         if (start, end) in cluster_dict:
                             span_labels.append(cluster_dict[(start, end)])
                         else:
                             span_labels.append(-1)
-                    start_field: Field = IndexField(start, text_field)
-                    end_field: Field = IndexField(end, text_field)
-                    span_starts.append(start_field)
-                    span_ends.append(end_field)
+
+                    span_starts.append(IndexField(start, text_field))
+                    span_ends.append(IndexField(end, text_field))
             sentence_offset += len(sentence)
 
         span_starts_field = ListField(span_starts)
@@ -150,7 +177,6 @@ class ConllCorefReader(DatasetReader):
             document_state.complete_sentence()
 
         else:
-
             if len(row) < 12:
                 raise ConfigurationError("Encountered a non-empty line with fewer than 12 entries"
                                          " - this does not match the CONLL format.: {}".format(row))
@@ -211,7 +237,7 @@ class _DocumentState:
         # Cluster id -> List of start_indices which are open for this id.
         self.coref_stacks: DefaultDict[int, List[int]] = collections.defaultdict(list)
 
-    def assert_finalizable(self) -> None:
+    def check_document_state(self) -> None:
 
         if self.sentence_buffer:
             raise ConfigurationError("Processing was attempted on a document which had "
@@ -234,21 +260,33 @@ class _DocumentState:
         self.sentence_buffer.append(word)
         self.num_total_words += 1
 
-    def finalize(self) -> List[Tuple]:
+    def canonicalize_clusters(self) -> List[List[Tuple[int, int]]]:
+        """
+        The CONLL 2012 data includes 2 annotations which have identical
+        spans, but different ids. This checks for spans in all clusters
+        which are equal, and if it finds any, merges the two relevant
+        clusters.
+        """
         merged_clusters = []
         for cluster in self.clusters.values():
-            existing = None
+            cluster_with_overlapping_mention = None
             for mention in cluster:
+                # Look at clusters we have already processed to
+                # see if they contain a mention in the current
+                # cluster for comparison.
                 for cluster2 in merged_clusters:
                     if mention in cluster2:
                         # first cluster in merged clusters
                         # which contains this mention.
-                        existing = cluster2
+                        cluster_with_overlapping_mention = cluster2
                         break
-                if existing is not None:
+                # Already encountered overlap - no need to keep looking.
+                if cluster_with_overlapping_mention is not None:
                     break
-            if existing is not None:
-                existing.update(cluster)
+            if cluster_with_overlapping_mention is not None:
+                # Merge cluster we are currently processing into
+                # the cluster in the processed list.
+                cluster_with_overlapping_mention.update(cluster)
             else:
                 merged_clusters.append(set(cluster))
-        return [tuple(c) for c in merged_clusters]
+        return [list(c) for c in merged_clusters]
