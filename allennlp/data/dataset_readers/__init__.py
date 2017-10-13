@@ -13,3 +13,4 @@ from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatase
 from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.dataset_readers.seq2seq import Seq2SeqDatasetReader
+from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReader

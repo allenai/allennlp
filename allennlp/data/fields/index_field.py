@@ -44,4 +44,4 @@ class IndexField(Field[numpy.ndarray]):
 
     @overrides
     def empty_field(self):
-        return IndexField(None, None)
+        return IndexField(-1, None)
