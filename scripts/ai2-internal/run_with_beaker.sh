@@ -8,7 +8,6 @@ DETACH_ARG="--detach"  # or ""
 # Paths in experiment configuration
 TRAIN_DATA_PATH="/squad/train-v1.1.json"
 VALIDATION_DATA_PATH="/squad/dev-v1.1.json"
-GLOVE_PATH="/glove/glove.6B.100d.txt.gz"
 
 ECR_REPOSITORY=896129387501.dkr.ecr.us-west-2.amazonaws.com
 
