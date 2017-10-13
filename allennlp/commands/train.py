@@ -53,7 +53,7 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
                            help='directory in which to save the model and its logs')
     subparser.add_argument('-o', '--overrides',
                            type=str,
-                           help='a sequence of overrides to the training configuration')
+                           help='a HOCON structure used to override the experiment configuration')
     subparser.set_defaults(func=_train_model_from_args)
 
     return subparser
