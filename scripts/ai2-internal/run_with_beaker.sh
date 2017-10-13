@@ -5,10 +5,6 @@ RESULT_ARG="--result-path /output"
 GPU_ARG="--gpu-count=1"
 DETACH_ARG="--detach"  # or ""
 
-# Paths in experiment configuration
-TRAIN_DATA_PATH="/squad/train-v1.1.json"
-VALIDATION_DATA_PATH="/squad/dev-v1.1.json"
-
 ECR_REPOSITORY=896129387501.dkr.ecr.us-west-2.amazonaws.com
 
 PARAM_FILE=$1
