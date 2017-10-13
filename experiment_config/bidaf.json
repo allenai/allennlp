@@ -23,7 +23,7 @@
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "${GLOVE_PATH}",
+        "pretrained_file": ${GLOVE_PATH},
         "embedding_dim": 100,
         "trainable": false
       },
