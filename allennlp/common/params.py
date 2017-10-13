@@ -197,7 +197,6 @@ class Params(MutableMapping):
 
         file_dict = pyhocon.ConfigFactory.parse_file(params_file)
 
-        print(overrides)
         if overrides != None:
             overrides_dict = pyhocon.ConfigFactory.parse_string(overrides)
             param_dict = overrides_dict.with_fallback(file_dict)
