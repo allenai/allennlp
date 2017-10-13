@@ -1,7 +1,6 @@
 # pylint: disable=invalid-name
 import os
 import copy
-import pathlib
 
 import torch
 
