@@ -66,7 +66,7 @@ def _train_model_from_args(args: argparse.Namespace):
     train_model_from_file(args.param_path, args.serialization_dir, args.overrides)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: str = "") -> Model:
+def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: str = None) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
