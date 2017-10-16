@@ -49,7 +49,7 @@ def archive_model(serialization_dir: str,
         archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
 
-def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = None) -> Archive:
+def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 

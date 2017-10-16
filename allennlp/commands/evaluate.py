@@ -56,6 +56,7 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
                            help='id of GPU to use (if any)')
     subparser.add_argument('-o', '--overrides',
                            type=str,
+                           default="",
                            help='a HOCON structure used to override the experiment configuration')
 
     subparser.set_defaults(func=evaluate_from_args)
