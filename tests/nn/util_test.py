@@ -515,9 +515,9 @@ class TestNnUtil(AllenNlpTestCase):
         indices = Variable(torch.LongTensor(indices))
         shifted_indices = flatten_batched_indices(indices, 10)
         numpy.testing.assert_array_equal(shifted_indices.data.numpy(),
-                                                numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9,
-                                                             9, 9, 9, 12, 11, 10, 17, 17,
-                                                             17, 12, 13, 10, 10, 14, 12]))
+                                         numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                                      9, 9, 9, 12, 11, 10, 17, 17,
+                                                      17, 12, 13, 10, 10, 14, 12]))
 
     def test_batched_index_select(self):
         indices = numpy.array([[[1, 2],
@@ -571,4 +571,3 @@ class TestNnUtil(AllenNlpTestCase):
         bucketed_distances = bucket_distance(indices)
         numpy.testing.assert_array_equal(bucketed_distances.numpy(),
                                          numpy.array([1, 2, 5, 1, 8, 9]))
-
