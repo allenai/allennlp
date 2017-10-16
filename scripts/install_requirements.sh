@@ -5,6 +5,7 @@ pip install -r requirements.txt
 python -m nltk.downloader -u https://pastebin.com/raw/D3TBY4Mj punkt
 # python -m nltk.downloader punkt
 python -m spacy.en.download all
+python -m spacy link en_core_web_sm en_default
 
 # only install test requirements if explicitly specified
 if [[ "$INSTALL_TEST_REQUIREMENTS" == "true" ]]; then
