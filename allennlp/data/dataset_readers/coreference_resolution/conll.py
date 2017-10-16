@@ -92,6 +92,7 @@ class ConllCorefReader(DatasetReader):
 
         Returns
         ------
+
         An ``Instance`` containing the following ``Fields``:
             text : ``TextField``
                 The text of the full document.

@@ -501,6 +501,12 @@ def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
 def flatten_batched_indices(indices: torch.Tensor,
                             sequence_length: int) -> torch.Tensor:
     """
+    This is a subroutine for :func:`~batched_index_select`. The given ``indices`` of size
+    ``(batch_size, d_1, ..., d_n)`` indexes into dimension 2 of a target tensor, which has size
+    ``(batch_size, sequence_length, embedding_size)``. This function returns a vector that
+    correctly indexes into the flattened target. The sequence length of the target must be
+    provided to compute the appropriate offsets.
+
     Parameters
     ----------
     indices : ``torch.LongTensor``, required.
@@ -512,11 +518,6 @@ def flatten_batched_indices(indices: torch.Tensor,
     Returns
     -------
     offset_indices : ``torch.LongTensor``
-
-    This is a cacheable subroutine for :func:`~batched_index_select`. The given `indices` of size
-    `(batch_size, d_1, ..., d_n)` indexes into dimension 2 of a target tensor, which has size
-    `(batch_size, sequence_length, embedding_size)`. This function returns a vector that correctly indexes into
-    the flattened target. The sequence length of the target must be provided to compute the appropriate offsets.
     """
     # Shape: (batch_size)
     offsets = get_range_vector(indices.size(0), indices.is_cuda) * sequence_length
@@ -535,18 +536,20 @@ def batched_index_select(target: torch.Tensor,
                          indices: torch.LongTensor,
                          flattened_indices: Optional[torch.LongTensor] = None) -> torch.Tensor:
     """
-    The given `indices` of size `(batch_size, d_1, ..., d_n)` indexes into the sequence dimension(dimension 2)
-    of the target, which has size `(batch_size, sequence_length, embedding_size)`.
+    The given `indices` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence dimension
+    (dimension 2) of the target, which has size ``(batch_size, sequence_length, embedding_size)``.
 
-    This function returns selected values in the target with respect to the provided indices, which have
-    size `(batch_size, d_1, ..., d_n, embedding_size)`. This can use the optionally precomputed
-    :func:`~flattened_indices` with size (batch_size * d_1 * ... * d_n) if given.
+    This function returns selected values in the target with respect to the provided indices, which
+    have size ``(batch_size, d_1, ..., d_n, embedding_size)``. This can use the optionally precomputed
+    :func:`~flattened_indices` with size ``(batch_size * d_1 * ... * d_n)`` if given.
 
-    An example use case of this function is looking up the start and end indices of spans into a sequence tensor.
-    This is used in the :class:`~allennlp.models.coreference_resolution.coref` Model to select contextual word
-    representations corresponding to the start and end indices of mentions. The key reason this can't be done
-    with basic torch functions is that we want to be able to use look-up tensors with an arbitrary number
-    of dimensions (for example, in the coref model, we don't know a-priori how many spans we are looking up).
+    An example use case of this function is looking up the start and end indices of spans in a
+    sequence tensor. This is used in the
+    :class:`~allennlp.models.coreference_resolution.CoreferenceResolver`. Model to select
+    contextual word representations corresponding to the start and end indices of mentions. The
+    key reason this can't be done with basic torch functions is that we want to be able to use
+    look-up tensors with an arbitrary number of dimensions (for example, in the coref model,
+    we don't know a-priori how many spans we are looking up).
 
     Parameters
     ----------
@@ -558,7 +561,7 @@ def batched_index_select(target: torch.Tensor,
         ``sequence_length`` dimension of the ``target`` tensor.
     flattened_indices : Optional[torch.Tensor], optional (default = None)
         An optional tensor representing the result of calling :func:~`flatten_batched_indices`
-        on `indices`. This is helpful in the case that the indices can be flattened once and
+        on ``indices``. This is helpful in the case that the indices can be flattened once and
         cached for many batch lookups.
 
     Returns
@@ -620,7 +623,7 @@ def logsumexp(tensor: torch.Tensor,
               keepdim: bool = False) -> torch.Tensor:
     """
     A numerically stable computation of logsumexp. This is mathematically equivalent to
-    `vec.exp().sum(dim, keep=keepdim).log()`.
+    `tensor.exp().sum(dim, keep=keepdim).log()`.
 
     Parameters
     ----------
@@ -652,15 +655,24 @@ def get_range_vector(size: int, is_cuda: bool) -> torch.Tensor:
     return Variable(indices, requires_grad=False)
 
 
-def bucket_distance(distances: torch.Tensor) -> torch.Tensor:
+def bucket_values(distances: torch.Tensor,
+                  num_identity_buckets: int = 4,
+                  num_total_buckets: int = 10) -> torch.Tensor:
     """
-    Places the given values (designed for distances) into 10 semi-logscale buckets:
+    Places the given values (designed for distances) into ``num_total_buckets``semi-logscale
+    buckets, with ``num_identity_buckets`` of these capturing single values.
+
+    The default settings will bucket values into the following buckets:
     [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32-63, 64+].
 
     Parameters
     ----------
-    distances : torch.Tensor, required.
+    distances : ``torch.Tensor``, required.
         A Tensor of any size, to be bucketed.
+    num_identity_buckets: int, optional (default = 4).
+        The number of identity buckets (those only holding a single value).
+    num_total_buckets : int, (default = 10)
+        The total number of buckets to bucket values into.
 
     Returns
     -------
@@ -668,6 +680,6 @@ def bucket_distance(distances: torch.Tensor) -> torch.Tensor:
     the values were placed in.
     """
     logspace_idx = (distances.float().log()/math.log(2)).floor().long() + 3
-    use_identity = (distances <= 4).long()
+    use_identity = (distances <= num_identity_buckets).long()
     combined_idx = use_identity * distances + (1 + (-1 * use_identity)) * logspace_idx
-    return combined_idx.clamp(0, 9)
+    return combined_idx.clamp(0, num_total_buckets - 1)

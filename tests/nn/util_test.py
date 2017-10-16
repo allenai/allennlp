@@ -21,7 +21,8 @@ from allennlp.nn.util import weighted_sum
 from allennlp.nn.util import flatten_batched_indices
 from allennlp.nn.util import batched_index_select
 from allennlp.nn.util import flattened_index_select
-from allennlp.nn.util import bucket_distance
+from allennlp.nn.util import bucket_values
+
 
 class TestNnUtil(AllenNlpTestCase):
     def test_arrays_to_variables_handles_recursion(self):
@@ -568,6 +569,6 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_bucket_distance(self):
         indices = torch.LongTensor([1, 2, 7, 1, 56, 900])
-        bucketed_distances = bucket_distance(indices)
+        bucketed_distances = bucket_values(indices)
         numpy.testing.assert_array_equal(bucketed_distances.numpy(),
                                          numpy.array([1, 2, 5, 1, 8, 9]))

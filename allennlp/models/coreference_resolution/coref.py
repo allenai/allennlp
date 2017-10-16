@@ -30,6 +30,7 @@ class CoreferenceResolver(Model):
     to occur in a coreference cluster. For the remaining spans, the model decides which antecedent
     span (if any) they are coreferent with. The resulting coreference links, after applying
     transitivity, imply a clustering of the spans in the document.
+
     Parameters
     ----------
     vocab : ``Vocabulary``
@@ -294,7 +295,7 @@ class CoreferenceResolver(Model):
         similarity_embeddings = antecedent_embeddings * target_embeddings
 
         # Shape: (1, max_antecedents, embedding_size)
-        antecedent_distance_embeddings = self._distance_embedding(util.bucket_distance(antecedent_offsets))
+        antecedent_distance_embeddings = self._distance_embedding(util.bucket_values(antecedent_offsets))
 
         # Shape: (1, 1, max_antecedents, embedding_size)
         antecedent_distance_embeddings = antecedent_distance_embeddings.unsqueeze(0)
@@ -498,7 +499,7 @@ class CoreferenceResolver(Model):
                                                                                                  max_antecedents,
                                                                                                  text_mask.is_cuda)
         # Select tensors relating to the antecedent spans.
-        # Shape: (batch_size, num_spans_to_keep, embedding_size)
+        # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         antecedent_embeddings = util.flattened_index_select(top_span_embeddings, antecedent_indices)
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents)
