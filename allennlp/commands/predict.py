@@ -28,7 +28,6 @@ import sys
 from typing import Optional, IO, Dict
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import prepare_environment
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
