@@ -48,14 +48,18 @@ class BagOfEmbeddingsEncoder(Seq2VecEncoder):
         if self._averaged:
             if mask is not None:
                 lengths = get_lengths_from_binary_sequence_mask(mask)
+                length_mask = (lengths > 0)
+
+                # Set any length 0 to 1, to avoid dividing by zero.
+                lengths = torch.max(lengths, Variable(lengths.data.new().resize_(1).fill_(1)))
             else:
                 lengths = Variable(tokens.data.new().resize_(1).fill_(tokens.size(1)), requires_grad=False)
-
-            # Set any length 0 to 1, to avoid dividing by zero.
-            lengths = torch.max(lengths, Variable(lengths.data.new().resize_(1).fill_(1)))
+                length_mask = None
 
             summed = summed / lengths.unsqueeze(-1).float()
-            summed = summed * (lengths > 0).float().unsqueeze(-1)
+
+            if length_mask is not None:
+                summed = summed * (length_mask > 0).float().unsqueeze(-1)
 
         return summed
 
