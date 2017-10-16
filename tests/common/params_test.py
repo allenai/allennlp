@@ -17,7 +17,7 @@ class TestParams(AllenNlpTestCase):
 
     def test_overrides(self):
         filename = 'tests/fixtures/bidaf/experiment.json'
-        params = Params.from_file(filename, '{ "train_data_path": "FOO", "model": { "type": "BAR" }, model.text_field_embedder.tokens.type: "BAZ" }')
+        params = Params.from_file(filename, '{ "train_data_path": "FOO", "model": { "type": "BAR" }, model.text_field_embedder.tokens.type: "BAZ" }') #pylint: disable=line-too-long
 
         assert "dataset_reader" in params
         assert "trainer" in params

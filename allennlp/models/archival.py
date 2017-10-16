@@ -5,8 +5,6 @@ import tempfile
 import tarfile
 import shutil
 
-from typing import List
-
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
