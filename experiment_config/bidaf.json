@@ -16,14 +16,14 @@
       }
     }
   },
-  "train_data_path": "/squad/train-v1.1.json",
-  "validation_data_path": "/squad/dev-v1.1.json",
+  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/mc/squad-train-v1.1.json",
+  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/mc/squad-dev-v1.1.json",
   "model": {
     "type": "bidaf",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "/glove/glove.6B.100d.txt.gz",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt",
         "embedding_dim": 100,
         "trainable": false
       },
@@ -92,7 +92,6 @@
       "factor": 0.5,
       "mode": "max",
       "patience": 2,
-
     },
     "no_tqdm": true,
     "optimizer": {
