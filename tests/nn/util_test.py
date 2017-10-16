@@ -18,7 +18,7 @@ from allennlp.nn.util import sequence_cross_entropy_with_logits
 from allennlp.nn.util import sort_batch_by_length
 from allennlp.nn.util import viterbi_decode
 from allennlp.nn.util import weighted_sum
-from allennlp.nn.util import flatten_batched_indices
+from allennlp.nn.util import flatten_and_batch_shift_indices
 from allennlp.nn.util import batched_index_select
 from allennlp.nn.util import flattened_index_select
 from allennlp.nn.util import bucket_values
@@ -506,7 +506,7 @@ class TestNnUtil(AllenNlpTestCase):
         replaced = replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
         assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])
 
-    def test_flatten_batched_indices(self):
+    def test_flatten_and_batch_shift_indices(self):
         indices = numpy.array([[[1, 2, 3, 4],
                                 [5, 6, 7, 8],
                                 [9, 9, 9, 9]],
@@ -514,7 +514,7 @@ class TestNnUtil(AllenNlpTestCase):
                                 [7, 7, 2, 3],
                                 [0, 0, 4, 2]]])
         indices = Variable(torch.LongTensor(indices))
-        shifted_indices = flatten_batched_indices(indices, 10)
+        shifted_indices = flatten_and_batch_shift_indices(indices, 10)
         numpy.testing.assert_array_equal(shifted_indices.data.numpy(),
                                          numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9,
                                                       9, 9, 9, 12, 11, 10, 17, 17,
@@ -567,7 +567,7 @@ class TestNnUtil(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             flattened_index_select(targets, torch.ones([3, 4, 5]))
 
-    def test_bucket_distance(self):
+    def test_bucket_values(self):
         indices = torch.LongTensor([1, 2, 7, 1, 56, 900])
         bucketed_distances = bucket_values(indices)
         numpy.testing.assert_array_equal(bucketed_distances.numpy(),

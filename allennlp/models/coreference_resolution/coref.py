@@ -126,7 +126,7 @@ class CoreferenceResolver(Model):
         head_indices = F.relu(raw_head_indices.float()).long()
 
         # Shape: (batch_size * num_spans * max_span_width)
-        flat_head_indices = util.flatten_batched_indices(head_indices, text_embeddings.size(1))
+        flat_head_indices = util.flatten_and_batch_shift_indices(head_indices, text_embeddings.size(1))
 
         # Shape: (batch_size, num_spans, max_span_width, embedding_size)
         span_text_embeddings = util.batched_index_select(text_embeddings, head_indices, flat_head_indices)
@@ -473,7 +473,7 @@ class CoreferenceResolver(Model):
         top_span_indices = self._prune_and_sort_spans(mention_scores, num_spans_to_keep)
 
         # Shape: (batch_size * num_spans_to_keep)
-        flat_top_span_indices = util.flatten_batched_indices(top_span_indices, span_starts.size(1))
+        flat_top_span_indices = util.flatten_and_batch_shift_indices(top_span_indices, span_starts.size(1))
 
         # Select the span embeddings corresponding to the
         # top spans based on the mention scorer.

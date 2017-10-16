@@ -498,8 +498,8 @@ def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
         return first_tensor_dim
 
 
-def flatten_batched_indices(indices: torch.Tensor,
-                            sequence_length: int) -> torch.Tensor:
+def flatten_and_batch_shift_indices(indices: torch.Tensor,
+                                    sequence_length: int) -> torch.Tensor:
     """
     This is a subroutine for :func:`~batched_index_select`. The given ``indices`` of size
     ``(batch_size, d_1, ..., d_n)`` indexes into dimension 2 of a target tensor, which has size
@@ -560,7 +560,7 @@ def batched_index_select(target: torch.Tensor,
         A tensor of shape (batch_size, ...), where each element is an index into the
         ``sequence_length`` dimension of the ``target`` tensor.
     flattened_indices : Optional[torch.Tensor], optional (default = None)
-        An optional tensor representing the result of calling :func:~`flatten_batched_indices`
+        An optional tensor representing the result of calling :func:~`flatten_and_batch_shift_indices`
         on ``indices``. This is helpful in the case that the indices can be flattened once and
         cached for many batch lookups.
 
@@ -572,7 +572,7 @@ def batched_index_select(target: torch.Tensor,
     """
     if flattened_indices is None:
         # Shape: (batch_size * d_1 * ... * d_n)
-        flattened_indices = flatten_batched_indices(indices, target.size(1))
+        flattened_indices = flatten_and_batch_shift_indices(indices, target.size(1))
 
     # Shape: (batch_size * sequence_length, embedding_size)
     flattened_target = target.view(-1, target.size(-1))
@@ -588,10 +588,10 @@ def batched_index_select(target: torch.Tensor,
 def flattened_index_select(target: torch.Tensor,
                            indices: torch.LongTensor) -> torch.Tensor:
     """
-    The given `indices` of size `(set_size, subset_size)` specifies subsets of the `target`
+    The given ``indices`` of size ``(set_size, subset_size)`` specifies subsets of the ``target``
     that each of the set_size rows should select. The `target` has size
-    `(batch_size, sequence_length, embedding_size)`, and the resulting selected tensor has size
-    `(batch_size, set_size, subset_size, embedding_size)`.
+    ``(batch_size, sequence_length, embedding_size)``, and the resulting selected tensor has size
+    ``(batch_size, set_size, subset_size, embedding_size)``.
 
     Parameters
     ----------
