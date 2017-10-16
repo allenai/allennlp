@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import torch
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -389,7 +390,7 @@ class CoreferenceResolver(Model):
         Returns
         -------
         augmented_antecedent_scores: torch.FloatTensor
-            Scores for every pair of spans. For the dummy label, the score is alway zero. For the true antecedent
+            Scores for every pair of spans. For the dummy label, the score is always zero. For the true antecedent
             spans, the score consists of the pairwise antecedent score and the unary mention scores for the span
             and its antecedent. The factoring allows the model to blame many of the absent links on bad spans,
             enabling the pruning strategy used in the forward pass.
@@ -400,8 +401,9 @@ class CoreferenceResolver(Model):
         antecedent_scores += antecedent_log_mask
 
         # Shape: (batch_size, num_spans_to_keep, 1)
-        dummy_scores = util.get_zeros([antecedent_scores.size(0), antecedent_scores.size(1), 1],
-                                      antecedent_scores.is_cuda)
+        shape = [antecedent_scores.size(0), antecedent_scores.size(1), 1]
+        dummy_scores = Variable(antecedent_scores.data.new().resize_(shape).fill_(0),
+                                requires_grad=False)
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
         augmented_antecedent_scores = torch.cat([dummy_scores, antecedent_scores], -1)

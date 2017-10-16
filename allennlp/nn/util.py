@@ -497,9 +497,23 @@ def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
             raise ConfigurationError("Tensor dims must match for operation \"{}\"".format(operation))
         return first_tensor_dim
 
-def flatten_batched_indices(indices: torch.Tensor, sequence_length: int) -> torch.Tensor:
+
+def flatten_batched_indices(indices: torch.Tensor,
+                            sequence_length: int) -> torch.Tensor:
     """
-    This is a cacheable subroutine for `batched_index_select`. The given `indices` of size
+    Parameters
+    ----------
+    indices : ``torch.LongTensor``, required.
+
+    sequence_length : ``int``, required.
+        The length of the sequence the indices index into.
+        This must be the second dimension of the tensor.
+
+    Returns
+    -------
+    offset_indices : ``torch.LongTensor``
+
+    This is a cacheable subroutine for :func:`~batched_index_select`. The given `indices` of size
     `(batch_size, d_1, ..., d_n)` indexes into dimension 2 of a target tensor, which has size
     `(batch_size, sequence_length, embedding_size)`. This function returns a vector that correctly indexes into
     the flattened target. The sequence length of the target must be provided to compute the appropriate offsets.
@@ -516,14 +530,42 @@ def flatten_batched_indices(indices: torch.Tensor, sequence_length: int) -> torc
     offset_indices = offset_indices.view(-1)
     return offset_indices
 
+
 def batched_index_select(target: torch.Tensor,
-                         indices: torch.Tensor,
-                         flattened_indices: Optional[torch.Tensor] = None) -> torch.Tensor:
+                         indices: torch.LongTensor,
+                         flattened_indices: Optional[torch.LongTensor] = None) -> torch.Tensor:
     """
-    The given `indices` of size `(batch_size, d_1, ..., d_n)` indexes into dimension 2 of the target, which has
-    size `(batch_size, sequence_length, embedding_size)`. This function returns the selected values in the target
-    with respected to those indices, which has size `(batch_size, d_1, ..., d_n, embedding_size)`. This can use
-    the optionally precomputed `flattened_indices` with size (batch_size * d_1 * ... * d_n) if given.
+    The given `indices` of size `(batch_size, d_1, ..., d_n)` indexes into the sequence dimension(dimension 2)
+    of the target, which has size `(batch_size, sequence_length, embedding_size)`.
+
+    This function returns selected values in the target with respect to the provided indices, which have
+    size `(batch_size, d_1, ..., d_n, embedding_size)`. This can use the optionally precomputed
+    :func:`~flattened_indices` with size (batch_size * d_1 * ... * d_n) if given.
+
+    An example use case of this function is looking up the start and end indices of spans into a sequence tensor.
+    This is used in the :class:`~allennlp.models.coreference_resolution.coref` Model to select contextual word
+    representations corresponding to the start and end indices of mentions. The key reason this can't be done
+    with basic torch functions is that we want to be able to use look-up tensors with an arbitrary number
+    of dimensions (for example, in the coref model, we don't know a-priori how many spans we are looking up).
+
+    Parameters
+    ----------
+    target : ``torch.Tensor``, required.
+        A 3 dimensional tensor of shape (batch_size, sequence_length, embedding_size).
+        This is the tensor to be indexed.
+    indices : ``torch.LongTensor``
+        A tensor of shape (batch_size, ...), where each element is an index into the
+        ``sequence_length`` dimension of the ``target`` tensor.
+    flattened_indices : Optional[torch.Tensor], optional (default = None)
+        An optional tensor representing the result of calling :func:~`flatten_batched_indices`
+        on `indices`. This is helpful in the case that the indices can be flattened once and
+        cached for many batch lookups.
+
+    Returns
+    -------
+    selected_targets : ``torch.Tensor``
+        A tensor with shape [indices.size(), target.size(-1)] representing the embedded indices
+        extracted from the batch flattened target tensor.
     """
     if flattened_indices is None:
         # Shape: (batch_size * d_1 * ... * d_n)
@@ -536,44 +578,67 @@ def batched_index_select(target: torch.Tensor,
     flattened_selected = flattened_target.index_select(0, flattened_indices)
     selected_shape = list(indices.size()) + [target.size(-1)]
     # Shape: (batch_size, d_1, ..., d_n, embedding_size)
-    selected_target = flattened_selected.view(*selected_shape)
-    return selected_target
+    selected_targets = flattened_selected.view(*selected_shape)
+    return selected_targets
 
-def flattened_index_select(target: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
+
+def flattened_index_select(target: torch.Tensor,
+                           indices: torch.LongTensor) -> torch.Tensor:
     """
-    The given `indices` of size `(k, c)` specifies subsets of the `target` that each of the k rows should select.
-    The `target` has size `(batch_size, k, embedding_size)`, and the resulting selected tensor has size
-    `(batch_size, k, c, embedding_size)`.
+    The given `indices` of size `(set_size, subset_size)` specifies subsets of the `target`
+    that each of the set_size rows should select. The `target` has size
+    `(batch_size, sequence_length, embedding_size)`, and the resulting selected tensor has size
+    `(batch_size, set_size, subset_size, embedding_size)`.
+
+    Parameters
+    ----------
+    target : ``torch.Tensor``, required.
+        A Tensor of shape (batch_size, sequence_length, embedding_size).
+
+    indices : ``torch.LongTensor``, required.
+        A LongTensor of shape (set_size, subset_size). All indices must be < sequence_length
+        as this tensor is an index into the sequence_length dimension of the target.
+
+    Returns
+    -------
+    selected : ``torch.Tensor``, required.
+        A Tensor of shape (batch_size, set_size, subset_size, embedding_size).
     """
-    # Shape: (batch_size, k * c, embedding_size)
+    if indices.dim() != 2:
+        raise ConfigurationError("Indices passed to flatten_index_select had shape {} but "
+                                 "only 2 dimensional inputs are supported.".format(indices.size()))
+    # Shape: (batch_size, set_size * subset_size, embedding_size)
     flattened_selected = target.index_select(1, indices.view(-1))
 
-    # Shape: (batch_size, k, c, embedding_size)
+    # Shape: (batch_size, set_size, subset_size, embedding_size)
     selected = flattened_selected.view(target.size(0), indices.size(0), indices.size(1), -1)
     return selected
 
-def logsumexp(vec: torch.Tensor, dim: int, keepdim=False) -> torch.Tensor:
+
+def logsumexp(tensor: torch.Tensor,
+              dim: int = -1,
+              keepdim: bool = False) -> torch.Tensor:
     """
     A numerically stable computation of logsumexp. This is mathematically equivalent to
-    `vec.exp().sum(dim, keep=keepdim).log()`. `vec` can be a tensor of any size.
+    `vec.exp().sum(dim, keep=keepdim).log()`.
+
+    Parameters
+    ----------
+    tensor : torch.FloatTensor, required.
+        A tensor of arbitrary size.
+    dim : int, optional (default = -1)
+        The dimension of the tensor to apply the logsumexp to.
+    keepdim: bool, optional (default = False)
+        Whether to retain a dimension of size one at the dimension
+        we reduce over.
     """
-    max_score, _ = vec.max(dim, keepdim=keepdim)
+    max_score, _ = tensor.max(dim, keepdim=keepdim)
     if keepdim:
-        stable_vec = vec - max_score
+        stable_vec = tensor - max_score
     else:
-        stable_vec = vec - max_score.unsqueeze(dim)
+        stable_vec = tensor - max_score.unsqueeze(dim)
     return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
 
-def get_zeros(shape: List[int], is_cuda: bool) -> torch.Tensor:
-    """
-    Returns a tensor of zeros with the desired shape. The CUDA implementation
-    is meant to avoid copy data from CPU to GPU.
-    """
-    if is_cuda:
-        zeros = torch.cuda.FloatTensor(*shape).fill_(0)
-    else:
-        zeros = torch.zeros(*shape).float()
-    return Variable(zeros, requires_grad=False)
 
 def get_range_vector(size: int, is_cuda: bool) -> torch.Tensor:
     """
@@ -586,10 +651,21 @@ def get_range_vector(size: int, is_cuda: bool) -> torch.Tensor:
         indices = torch.arange(0, size).long()
     return Variable(indices, requires_grad=False)
 
+
 def bucket_distance(distances: torch.Tensor) -> torch.Tensor:
     """
     Places the given values (designed for distances) into 10 semi-logscale buckets:
-    [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32-63, 64+]. `distances` can be of any size.
+    [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32-63, 64+].
+
+    Parameters
+    ----------
+    distances : torch.Tensor, required.
+        A Tensor of any size, to be bucketed.
+
+    Returns
+    -------
+    A tensor of the same shape as the input, containing the indices of the buckets
+    the values were placed in.
     """
     logspace_idx = (distances.float().log()/math.log(2)).floor().long() + 3
     use_identity = (distances <= 4).long()
