@@ -99,10 +99,12 @@ class CrfTagger(Model):
         -------
         An output dictionary consisting of:
 
-        logits: torch.FloatTensor
+        logits : torch.FloatTensor
             The logits that are the output of the ``tag_projection_layer``
-        mask: torch.ByteTensor
+        mask : torch.ByteTensor
             The text field mask for the input tokens
+        tags : List[List[str]]
+            The predicted tags using the Viterbi algorithm.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised. Only computed if gold label ``tags`` are provided.
         """
@@ -111,8 +113,9 @@ class CrfTagger(Model):
         encoded_text = self.stacked_encoder(embedded_text_input, mask)
 
         logits = self.tag_projection_layer(encoded_text)
+        predicted_tags = self._viterbi_tags(logits, mask)
 
-        output = {"logits": logits, "mask": mask}
+        output = {"logits": logits, "mask": mask, "tags": predicted_tags}
 
         if tags is not None:
             # Add negative log-likelihood as loss
@@ -121,7 +124,6 @@ class CrfTagger(Model):
 
             # Represent viterbi tags as "class probabilities" that we can
             # feed into the `span_metric`
-            predicted_tags = self._viterbi_tags(output)
             class_probabilities = logits * 0.
             for i, instance_tags in enumerate(predicted_tags):
                 for j, tag in enumerate(instance_tags):
@@ -132,11 +134,10 @@ class CrfTagger(Model):
 
         return output
 
-    def _viterbi_tags(self, output_dict: Dict[str, torch.Tensor]) -> List[List[str]]:
+    def _viterbi_tags(self, logits, mask) -> List[List[str]]:
         """
         Uses viterbi algorithm to find most likely tags
         """
-        logits, mask = output_dict["logits"], output_dict["mask"]
         _, max_seq_length, num_tags = logits.size()
 
         # The CRF transitions are (next_state, prev_state),
@@ -161,8 +162,8 @@ class CrfTagger(Model):
         # Pad the max sequence length by 2 to account for start_tag + end_tag.
         tag_sequence = torch.Tensor(max_seq_length + 2, num_tags)
 
-        for prediction, mask in zip(predictions_list, mask_list):
-            sequence_length = torch.sum(mask)
+        for prediction, prediction_mask in zip(predictions_list, mask_list):
+            sequence_length = torch.sum(prediction_mask)
 
             # Start with everything totally unlikely
             tag_sequence.fill_(-10000.)
@@ -179,8 +180,6 @@ class CrfTagger(Model):
             tags = [self.vocab.get_token_from_index(ix, self.label_namespace) for ix in viterbi_path]
             # Finally, get rid of start and end tags and add to the output.
             all_tags.append(tags[1:-1])
-
-        output_dict["tags"] = all_tags
 
         return all_tags
 
