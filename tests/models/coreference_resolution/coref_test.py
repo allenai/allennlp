@@ -17,6 +17,7 @@ class CorefTest(ModelTestCase):
 
     @pytest.mark.skip
     def test_batch_predictions_are_consistent(self):
+        # TODO(Mark): Make this pass by doing batch witchcraft in the model using .eval.
         self.ensure_batch_predictions_are_consistent()
 
     def test_decode(self):
