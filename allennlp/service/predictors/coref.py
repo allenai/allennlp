@@ -50,12 +50,12 @@ class CorefPredictor(Predictor):
         """
         document = inputs["document"]
         spacy_document = self._spacy(document)
-        sentences = [[token.word for token in sentence] for sentence in spacy_document.sents]
+        sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]
         flattened_sentences = [word for sentence in sentences for word in sentence]
 
         results: JsonDict = {"document": flattened_sentences}
         instance = self._dataset_reader.text_to_instance(sentences)
         output = self._model.forward_on_instance(instance, cuda_device)
 
-        results["clusters"] = output["all_clusters"][0]
+        results["clusters"] = output["clusters"][0]
         return sanitize(results)
