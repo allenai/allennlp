@@ -53,7 +53,7 @@ RUN PYTHONDONTWRITEBYTECODE=1 pytest
 
 # Add model caching
 ARG CACHE_MODELS=false
-RUN ./scripts/cache_models.sh
+RUN ./scripts/cache_models.py
 
 LABEL maintainer="allennlp-contact@allenai.org"
 
