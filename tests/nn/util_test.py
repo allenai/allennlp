@@ -527,6 +527,8 @@ class TestNnUtil(AllenNlpTestCase):
                                 [7, 8]]])
         # Each element is a vector of it's index.
         targets = torch.ones([2, 10, 3]).cumsum(1) - 1
+        # Make the second batch double it's index so they're different.
+        targets[1, :, :] *= 2
         indices = Variable(torch.LongTensor(indices))
         targets = Variable(targets)
         selected = batched_index_select(targets, indices)
@@ -537,15 +539,18 @@ class TestNnUtil(AllenNlpTestCase):
         numpy.testing.assert_array_equal(selected[0, 0, 1, :].data.numpy(), ones * 2)
         numpy.testing.assert_array_equal(selected[0, 1, 0, :].data.numpy(), ones * 3)
         numpy.testing.assert_array_equal(selected[0, 1, 1, :].data.numpy(), ones * 4)
-        numpy.testing.assert_array_equal(selected[1, 0, 0, :].data.numpy(), ones * 5)
-        numpy.testing.assert_array_equal(selected[1, 0, 1, :].data.numpy(), ones * 6)
-        numpy.testing.assert_array_equal(selected[1, 1, 0, :].data.numpy(), ones * 7)
-        numpy.testing.assert_array_equal(selected[1, 1, 1, :].data.numpy(), ones * 8)
+
+        numpy.testing.assert_array_equal(selected[1, 0, 0, :].data.numpy(), ones * 10)
+        numpy.testing.assert_array_equal(selected[1, 0, 1, :].data.numpy(), ones * 12)
+        numpy.testing.assert_array_equal(selected[1, 1, 0, :].data.numpy(), ones * 14)
+        numpy.testing.assert_array_equal(selected[1, 1, 1, :].data.numpy(), ones * 16)
 
     def test_flattened_index_select(self):
         indices = numpy.array([[1, 2],
                                [3, 4]])
         targets = torch.ones([2, 6, 3]).cumsum(1) - 1
+        # Make the second batch double it's index so they're different.
+        targets[1, :, :] *= 2
         indices = Variable(torch.LongTensor(indices))
         targets = Variable(targets)
 
@@ -558,10 +563,11 @@ class TestNnUtil(AllenNlpTestCase):
         numpy.testing.assert_array_equal(selected[0, 0, 1, :].data.numpy(), ones * 2)
         numpy.testing.assert_array_equal(selected[0, 1, 0, :].data.numpy(), ones * 3)
         numpy.testing.assert_array_equal(selected[0, 1, 1, :].data.numpy(), ones * 4)
-        numpy.testing.assert_array_equal(selected[1, 0, 0, :].data.numpy(), ones)
-        numpy.testing.assert_array_equal(selected[1, 0, 1, :].data.numpy(), ones * 2)
-        numpy.testing.assert_array_equal(selected[1, 1, 0, :].data.numpy(), ones * 3)
-        numpy.testing.assert_array_equal(selected[1, 1, 1, :].data.numpy(), ones * 4)
+
+        numpy.testing.assert_array_equal(selected[1, 0, 0, :].data.numpy(), ones * 2)
+        numpy.testing.assert_array_equal(selected[1, 0, 1, :].data.numpy(), ones * 4)
+        numpy.testing.assert_array_equal(selected[1, 1, 0, :].data.numpy(), ones * 6)
+        numpy.testing.assert_array_equal(selected[1, 1, 1, :].data.numpy(), ones * 8)
 
         # Check we only accept 2D indices.
         with pytest.raises(ConfigurationError):
