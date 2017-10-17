@@ -591,10 +591,10 @@ class CoreferenceResolver(Model):
 
         # Calling zip() on two tensors results in an iterator over their
         # first dimension. This is  iterating over instances in the batch.
-        for all_spans, spand_antecedents in zip(top_spans, predicted_antecedents):
+        for all_spans, span_antecedents in zip(top_spans, predicted_antecedents):
 
             clusters: Dict[int, List[Tuple[int, int]]] = {}
-            for span, antecedent_index in zip(all_spans, spand_antecedents):
+            for span, antecedent_index in zip(all_spans, span_antecedents):
                 if antecedent_index != -1:
                     # Find the right cluster to update with this span.
                     # We might have referred to a span which in turn
@@ -605,8 +605,8 @@ class CoreferenceResolver(Model):
                     # This while loop must halt because antecedents are
                     # strictly less than the current index, so the cluster
                     # we are referring to must decrease at each step.
-                    while spand_antecedents[cluster_index_to_update] != -1:
-                        cluster_index_to_update = spand_antecedents[cluster_index_to_update]
+                    while span_antecedents[cluster_index_to_update] != -1:
+                        cluster_index_to_update = span_antecedents[cluster_index_to_update]
 
                     # If we haven't observed this root index appearing in a cluster
                     # before, we need to add it to its own cluster.
