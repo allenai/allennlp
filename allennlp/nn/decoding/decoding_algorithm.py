@@ -6,6 +6,7 @@ from torch.autograd import Variable
 from allennlp.common import Params, Registrable
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
+from allennlp.nn.decoding.decode_step import DecodeStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 from allennlp.nn import util
 
@@ -24,19 +25,14 @@ class DecodingAlgorithm(Registrable):
 
     Parameters
     ----------
-    scheduled_sampling_ratio: float, optional (default = 0.0)
-        At each timestep during training, we sample a random number between 0 and 1, and if it is
-        not less than this value, we use the ground truth labels for the whole batch. Else, we use
-        the predictions from the previous time step for the whole batch. If this value is 0.0
-        (default), this corresponds to teacher forcing, and if it is 1.0, it corresponds to not
-        using target side ground truth labels.  See the following paper for more information:
-        Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al., 2015.
+    vocab : ``Vocabulary``
+        We need this so that we know the index of the start and end symbols for decoding.
+    vocab_namespace : ``str``
+        This tells us what namespace to look in to find the index of the start and end symbols.
     """
     def __init__(self,
                  vocab: Vocabulary,
-                 vocab_namespace: str,
-                 scheduled_sampling_ratio: float = 0.0) -> None:
-        self._scheduled_sampling_ratio = scheduled_sampling_ratio
+                 vocab_namespace: str) -> None:
         # We need the start symbol to provide as the input at the first timestep of decoding, and
         # end symbol as a way to indicate the end of the decoded sequence.
         self._start_index = vocab.get_token_index(START_SYMBOL, vocab_namespace)
@@ -45,9 +41,7 @@ class DecodingAlgorithm(Registrable):
     def decode(self,
                num_steps: int,
                initial_state: DecoderState,
-               decode_step: Callable[[DecoderState, torch.Tensor],
-                                     Tuple[torch.Tensor, List[int], Tuple[torch.Tensor, torch.Tensor]]],
-               training: bool,
+               decode_step: DecodeStep,
                targets: torch.Tensor = None,
                target_mask: torch.Tensor = None) -> Dict[str, torch.Tensor]:
         decoder_state = initial_state
@@ -124,5 +118,7 @@ class DecodingAlgorithm(Registrable):
                     vocab: Vocabulary,
                     vocab_namespace: str,
                     params: Params) -> 'DecodingAlgorithm':
+        choice = params.pop_choice('type', cls.list_available())
+        model = cls.by_name(choice).from_params(vocab, vocab_namespace, params)
         scheduled_sampling_ratio = params.pop('scheduled_sampling_ratio', 0.0)
         return DecodingAlgorithm(vocab, vocab_namespace, scheduled_sampling_ratio)

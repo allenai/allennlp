@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Type
+from typing import Dict, Generator, List, Tuple, Type
 
 import numpy
 from overrides import overrides
@@ -16,7 +16,7 @@ from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn import util
-from allennlp.nn.decoding import DecodingAlgorithm, DecoderState
+from allennlp.nn.decoding import DecodingAlgorithm, DecoderState, DecodeStep
 
 
 @Model.register("wikitables_parser")
@@ -73,24 +73,9 @@ class WikiTablesSemanticParser(Model):
         self._max_decoding_steps = max_decoding_steps
         self._target_namespace = target_namespace
         target_embedding_dim = target_embedding_dim or self._source_embedder.get_output_dim()
-        self._attention_function = attention_function
 
         num_classes = self.vocab.get_vocab_size(self._target_namespace)
-        # Decoder output dim needs to be the same as the encoder output dim since we initialize the
-        # hidden state of the decoder with that of the final hidden states of the encoder. Also, if
-        # we're using attention with ``DotProductSimilarity``, this is needed.
-        self._decoder_output_dim = self._encoder.get_output_dim()
-        self._target_embedder = Embedding(num_classes, target_embedding_dim)
-        if self._attention_function:
-            self._decoder_attention = Attention(self._attention_function)
-            # The output of attention, a weighted average over encoder outputs, will be
-            # concatenated to the input vector of the decoder at each time step.
-            self._decoder_input_dim = self._encoder.get_output_dim() + target_embedding_dim
-        else:
-            self._decoder_input_dim = target_embedding_dim
-        # TODO (pradeep): Do not hardcode decoder cell type.
-        self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
-        self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
+        self._decode_step = WikiTablesDecodeStep(attention_function, self._encoder.get_output_dim())
 
     @overrides
     def forward(self,  # type: ignore
@@ -138,31 +123,6 @@ class WikiTablesSemanticParser(Model):
                                     self.training,
                                     targets,
                                     target_mask)
-
-    def _decode_step(self,
-                     decoder_state: DecoderState,
-                     step_input: torch.Tensor) -> Tuple[torch.Tensor, List[int], Tuple[torch.Tensor, torch.Tensor]]:
-        embedded_input = self._target_embedder(step_input)
-        decoder_hidden, decoder_context = decoder_state.hidden_state
-        if self._attention_function:
-            # (batch_size, input_sequence_length)
-            input_weights = self._decoder_attention(decoder_hidden,
-                                                    decoder_state.encoder_outputs,
-                                                    decoder_state.encoder_output_mask)
-            # (batch_size, encoder_output_dim)
-            attended_input = util.weighted_sum(decoder_state.encoder_outputs, input_weights)
-            # (batch_size, encoder_output_dim + target_embedding_dim)
-            decoder_input = torch.cat((attended_input, embedded_input), -1)
-        else:
-            decoder_input = embedded_input
-        decoder_hidden, decoder_context = self._decoder_cell(decoder_input,
-                                                             (decoder_hidden, decoder_context))
-        # (batch_size, num_classes)
-        logits = self._output_projection_layer(decoder_hidden)
-        with torch.cuda.device_of(logits):
-            output_mask = decoder_state.get_output_mask()
-        normalized_logits = util.masked_log_softmax(logits, output_mask)
-        return normalized_logits, decoder_state.get_valid_actions(), (decoder_hidden, decoder_context)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -217,3 +177,53 @@ class WikiTablesSemanticParser(Model):
                    target_namespace=target_namespace,
                    target_embedding_dim=target_embedding_dim,
                    attention_function=attention_function)
+
+
+class WikiTablesDecodeStep(DecodeStep):
+    def __init__(self,
+                 encoder_output_dim: int,
+                 attention_function: SimilarityFunction = None) -> None:
+        self._attention_function = attention_function
+        # Decoder output dim needs to be the same as the encoder output dim since we initialize the
+        # hidden state of the decoder with that of the final hidden states of the encoder. Also, if
+        # we're using attention with ``DotProductSimilarity``, this is needed.
+        self._decoder_output_dim = encoder_output_dim
+        self._target_embedder = Embedding(num_classes, target_embedding_dim)
+        if self._attention_function:
+            self._decoder_attention = Attention(self._attention_function)
+            # The output of attention, a weighted average over encoder outputs, will be
+            # concatenated to the input vector of the decoder at each time step.
+            self._decoder_input_dim = encoder_output_dim + target_embedding_dim
+        else:
+            self._decoder_input_dim = target_embedding_dim
+        # TODO (pradeep): Do not hardcode decoder cell type.
+        self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
+        self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
+
+    @overrides
+    def take_step(self,
+                  state: DecoderState,
+                  decoder_input: torch.Tensor,
+                  allowed_actions: List[int] = None,
+                  max_next_states: int = None) -> Generator[DecoderState, None, None]:
+        embedded_input = self._target_embedder(step_input)
+        decoder_hidden, decoder_context = decoder_state.hidden_state
+        if self._attention_function:
+            # (batch_size, input_sequence_length)
+            input_weights = self._decoder_attention(decoder_hidden,
+                                                    decoder_state.encoder_outputs,
+                                                    decoder_state.encoder_output_mask)
+            # (batch_size, encoder_output_dim)
+            attended_input = util.weighted_sum(decoder_state.encoder_outputs, input_weights)
+            # (batch_size, encoder_output_dim + target_embedding_dim)
+            decoder_input = torch.cat((attended_input, embedded_input), -1)
+        else:
+            decoder_input = embedded_input
+        decoder_hidden, decoder_context = self._decoder_cell(decoder_input,
+                                                             (decoder_hidden, decoder_context))
+        # (batch_size, num_classes)
+        logits = self._output_projection_layer(decoder_hidden)
+        with torch.cuda.device_of(logits):
+            output_mask = decoder_state.get_output_mask()
+        normalized_logits = util.masked_log_softmax(logits, output_mask)
+        return normalized_logits, decoder_state.get_valid_actions(), (decoder_hidden, decoder_context)
