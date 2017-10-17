@@ -611,9 +611,12 @@ class CoreferenceResolver(Model):
                     # If we haven't observed this root index appearing in a cluster
                     # before, we need to add it to its own cluster.
                     if not clusters.get(cluster_index_to_update, False):
-                        root_span: Tuple[int, int] = tuple(all_spans[cluster_index_to_update])  # type: ignore
-                        clusters[cluster_index_to_update] = [root_span]
-                    clusters[cluster_index_to_update].append(tuple(span))  # type: ignore
+                        root_span_start, root_span_end = all_spans[cluster_index_to_update]
+                        clusters[cluster_index_to_update] = [(root_span_start, root_span_end)]
+
+                    # Now append the span we are currently considering.
+                    span_start, span_end = span
+                    clusters[cluster_index_to_update].append((span_start, span_end))
                 else:
                     # We don't care about spans which are not
                     # co-referent with anything.
