@@ -11,18 +11,19 @@ from allennlp.common.checks import ConfigurationError
 
 class IndexField(Field[numpy.ndarray]):
     """
-    An ``IndexField`` is an optional index into a
-    :class:`~allennlp.data.fields.sequence_field.SequenceField`, as might be used for
-    representing a correct answer option in a list, or a span begin and span end position in a
-    passage, for example.  Because it's an index into a :class:`SequenceField`, we take one of
-    those as input and use it to compute padding lengths.
+    An ``IndexField`` is an index into a
+    :class:`~allennlp.data.fields.sequence_field.SequenceField`, as might be used for representing
+    a correct answer option in a list, or a span begin and span end position in a passage, for
+    example.  Because it's an index into a :class:`SequenceField`, we take one of those as input
+    and use it to compute padding lengths.
 
     Parameters
     ----------
-    index : ``Optional[int]``
+    index : ``int``
         The index of the answer in the :class:`SequenceField`.  This is typically the "correct
         answer" in some classification decision over the sequence, like where an answer span starts
-        in SQuAD, or which answer option is correct in a multiple choice question.
+        in SQuAD, or which answer option is correct in a multiple choice question.  A value of
+        ``-1`` means there is no label, which can be used for padding or other purposes.
     sequence_field : ``SequenceField``
         A field containing the sequence that this ``IndexField`` is a pointer into.
     """
@@ -44,4 +45,4 @@ class IndexField(Field[numpy.ndarray]):
 
     @overrides
     def empty_field(self):
-        return IndexField(None, None)
+        return IndexField(-1, None)
