@@ -118,14 +118,16 @@ class ConditionalRandomField(torch.nn.Module):
                     broadcast_transitions
                     # Choose the next_tag-th row for each input
                     .gather(1, next_tag.view(-1, 1, 1).expand(batch_size, 1, num_tags))
-                    .squeeze()
-                    # And then choose the prev_tag-th column for each of those
+                    # Squeeze down to (batch_size, num_tags)
+                    .squeeze(1)
+                    # Then choose the prev_tag-th column for each of those
                     .gather(1, prev_tag.view(-1, 1))
-                    .squeeze()
+                    # And squeeze down to (batch_size,)
+                    .squeeze(1)
             )
 
             # The score for using prev_tag
-            input_score = inputs[:, i].contiguous().gather(1, prev_tag.view(-1, 1)).squeeze()
+            input_score = inputs[:, i].contiguous().gather(1, prev_tag.view(-1, 1)).squeeze(1)
 
             # Include transition score if next element is unmasked,
             # input_score if this element is unmasked.

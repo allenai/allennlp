@@ -1,13 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
-from numpy.testing import assert_almost_equal
-import pytest
 import torch
 from torch.autograd import Variable
 
-from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.modules import ConditionalRandomField
-from allennlp.nn import InitializerApplicator
 from allennlp.common.testing import AllenNlpTestCase
 
 
