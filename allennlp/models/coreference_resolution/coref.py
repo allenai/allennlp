@@ -590,12 +590,12 @@ class CoreferenceResolver(Model):
         predicted_antecedents = output_dict["predicted_antecedents"].data.cpu()
         all_clusters: List[List[List[Tuple[int, int]]]] = []
 
-        # Calling zip() on two tensors results in an iterator over
-        # their first dimension. This is iterating over batches.
-        for spans, antecedents in zip(top_spans, predicted_antecedents):
+        # Calling zip() on two tensors results in an iterator over their
+        # first dimension. This is  iterating over instances in the batch.
+        for all_spans, spand_antecedents in zip(top_spans, predicted_antecedents):
             clusters = defaultdict(list)
-            for span_index, (span, antecedent_index) in enumerate(zip(spans, antecedents)):
-
+            for span_index, (span, antecedent_index) in enumerate(zip(all_spans,
+                                                                      spand_antecedents)):
                 if antecedent_index != -1:
                     # Find the right cluster to update with this span.
                     # We might have referred to a span which in turn
@@ -606,13 +606,13 @@ class CoreferenceResolver(Model):
                     # This while loop must halt because antecedents are
                     # strictly less than the current index, so the cluster
                     # we are referring to must decrease at each step.
-                    while antecedents[cluster_index_to_update] != -1:
-                        cluster_index_to_update = antecedents[cluster_index_to_update]
+                    while spand_antecedents[cluster_index_to_update] != -1:
+                        cluster_index_to_update = spand_antecedents[cluster_index_to_update]
 
                     # If we haven't observed this root index appearing in a cluster
                     # before, we need to add it to its own cluster.
                     if not clusters[cluster_index_to_update]:
-                        clusters[cluster_index_to_update].append(tuple(spans[
+                        clusters[cluster_index_to_update].append(tuple(all_spans[
                                                                      cluster_index_to_update]))
                     clusters[cluster_index_to_update].append(tuple(span))
                 else:
