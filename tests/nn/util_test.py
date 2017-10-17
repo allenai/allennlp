@@ -18,6 +18,10 @@ from allennlp.nn.util import sequence_cross_entropy_with_logits
 from allennlp.nn.util import sort_batch_by_length
 from allennlp.nn.util import viterbi_decode
 from allennlp.nn.util import weighted_sum
+from allennlp.nn.util import flatten_and_batch_shift_indices
+from allennlp.nn.util import batched_index_select
+from allennlp.nn.util import flattened_index_select
+from allennlp.nn.util import bucket_values
 
 
 class TestNnUtil(AllenNlpTestCase):
@@ -501,3 +505,76 @@ class TestNnUtil(AllenNlpTestCase):
         mask = Variable(torch.FloatTensor([[1, 1, 0]]))
         replaced = replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
         assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])
+
+    def test_flatten_and_batch_shift_indices(self):
+        indices = numpy.array([[[1, 2, 3, 4],
+                                [5, 6, 7, 8],
+                                [9, 9, 9, 9]],
+                               [[2, 1, 0, 7],
+                                [7, 7, 2, 3],
+                                [0, 0, 4, 2]]])
+        indices = Variable(torch.LongTensor(indices))
+        shifted_indices = flatten_and_batch_shift_indices(indices, 10)
+        numpy.testing.assert_array_equal(shifted_indices.data.numpy(),
+                                         numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                                      9, 9, 9, 12, 11, 10, 17, 17,
+                                                      17, 12, 13, 10, 10, 14, 12]))
+
+    def test_batched_index_select(self):
+        indices = numpy.array([[[1, 2],
+                                [3, 4]],
+                               [[5, 6],
+                                [7, 8]]])
+        # Each element is a vector of it's index.
+        targets = torch.ones([2, 10, 3]).cumsum(1) - 1
+        # Make the second batch double it's index so they're different.
+        targets[1, :, :] *= 2
+        indices = Variable(torch.LongTensor(indices))
+        targets = Variable(targets)
+        selected = batched_index_select(targets, indices)
+
+        assert list(selected.size()) == [2, 2, 2, 3]
+        ones = numpy.ones([3])
+        numpy.testing.assert_array_equal(selected[0, 0, 0, :].data.numpy(), ones)
+        numpy.testing.assert_array_equal(selected[0, 0, 1, :].data.numpy(), ones * 2)
+        numpy.testing.assert_array_equal(selected[0, 1, 0, :].data.numpy(), ones * 3)
+        numpy.testing.assert_array_equal(selected[0, 1, 1, :].data.numpy(), ones * 4)
+
+        numpy.testing.assert_array_equal(selected[1, 0, 0, :].data.numpy(), ones * 10)
+        numpy.testing.assert_array_equal(selected[1, 0, 1, :].data.numpy(), ones * 12)
+        numpy.testing.assert_array_equal(selected[1, 1, 0, :].data.numpy(), ones * 14)
+        numpy.testing.assert_array_equal(selected[1, 1, 1, :].data.numpy(), ones * 16)
+
+    def test_flattened_index_select(self):
+        indices = numpy.array([[1, 2],
+                               [3, 4]])
+        targets = torch.ones([2, 6, 3]).cumsum(1) - 1
+        # Make the second batch double it's index so they're different.
+        targets[1, :, :] *= 2
+        indices = Variable(torch.LongTensor(indices))
+        targets = Variable(targets)
+
+        selected = flattened_index_select(targets, indices)
+
+        assert list(selected.size()) == [2, 2, 2, 3]
+
+        ones = numpy.ones([3])
+        numpy.testing.assert_array_equal(selected[0, 0, 0, :].data.numpy(), ones)
+        numpy.testing.assert_array_equal(selected[0, 0, 1, :].data.numpy(), ones * 2)
+        numpy.testing.assert_array_equal(selected[0, 1, 0, :].data.numpy(), ones * 3)
+        numpy.testing.assert_array_equal(selected[0, 1, 1, :].data.numpy(), ones * 4)
+
+        numpy.testing.assert_array_equal(selected[1, 0, 0, :].data.numpy(), ones * 2)
+        numpy.testing.assert_array_equal(selected[1, 0, 1, :].data.numpy(), ones * 4)
+        numpy.testing.assert_array_equal(selected[1, 1, 0, :].data.numpy(), ones * 6)
+        numpy.testing.assert_array_equal(selected[1, 1, 1, :].data.numpy(), ones * 8)
+
+        # Check we only accept 2D indices.
+        with pytest.raises(ConfigurationError):
+            flattened_index_select(targets, torch.ones([3, 4, 5]))
+
+    def test_bucket_values(self):
+        indices = torch.LongTensor([1, 2, 7, 1, 56, 900])
+        bucketed_distances = bucket_values(indices)
+        numpy.testing.assert_array_equal(bucketed_distances.numpy(),
+                                         numpy.array([1, 2, 5, 1, 8, 9]))

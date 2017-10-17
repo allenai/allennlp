@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import torch
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -29,6 +30,7 @@ class CoreferenceResolver(Model):
     to occur in a coreference cluster. For the remaining spans, the model decides which antecedent
     span (if any) they are coreferent with. The resulting coreference links, after applying
     transitivity, imply a clustering of the spans in the document.
+
     Parameters
     ----------
     vocab : ``Vocabulary``
@@ -124,7 +126,7 @@ class CoreferenceResolver(Model):
         head_indices = F.relu(raw_head_indices.float()).long()
 
         # Shape: (batch_size * num_spans * max_span_width)
-        flat_head_indices = util.flatten_batched_indices(head_indices, text_embeddings.size(1))
+        flat_head_indices = util.flatten_and_batch_shift_indices(head_indices, text_embeddings.size(1))
 
         # Shape: (batch_size, num_spans, max_span_width, embedding_size)
         span_text_embeddings = util.batched_index_select(text_embeddings, head_indices, flat_head_indices)
@@ -293,7 +295,7 @@ class CoreferenceResolver(Model):
         similarity_embeddings = antecedent_embeddings * target_embeddings
 
         # Shape: (1, max_antecedents, embedding_size)
-        antecedent_distance_embeddings = self._distance_embedding(util.bucket_distance(antecedent_offsets))
+        antecedent_distance_embeddings = self._distance_embedding(util.bucket_values(antecedent_offsets))
 
         # Shape: (1, 1, max_antecedents, embedding_size)
         antecedent_distance_embeddings = antecedent_distance_embeddings.unsqueeze(0)
@@ -389,7 +391,7 @@ class CoreferenceResolver(Model):
         Returns
         -------
         augmented_antecedent_scores: torch.FloatTensor
-            Scores for every pair of spans. For the dummy label, the score is alway zero. For the true antecedent
+            Scores for every pair of spans. For the dummy label, the score is always zero. For the true antecedent
             spans, the score consists of the pairwise antecedent score and the unary mention scores for the span
             and its antecedent. The factoring allows the model to blame many of the absent links on bad spans,
             enabling the pruning strategy used in the forward pass.
@@ -400,8 +402,9 @@ class CoreferenceResolver(Model):
         antecedent_scores += antecedent_log_mask
 
         # Shape: (batch_size, num_spans_to_keep, 1)
-        dummy_scores = util.get_zeros([antecedent_scores.size(0), antecedent_scores.size(1), 1],
-                                      antecedent_scores.is_cuda)
+        shape = [antecedent_scores.size(0), antecedent_scores.size(1), 1]
+        dummy_scores = Variable(antecedent_scores.data.new().resize_(shape).fill_(0),
+                                requires_grad=False)
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
         augmented_antecedent_scores = torch.cat([dummy_scores, antecedent_scores], -1)
@@ -470,7 +473,7 @@ class CoreferenceResolver(Model):
         top_span_indices = self._prune_and_sort_spans(mention_scores, num_spans_to_keep)
 
         # Shape: (batch_size * num_spans_to_keep)
-        flat_top_span_indices = util.flatten_batched_indices(top_span_indices, span_starts.size(1))
+        flat_top_span_indices = util.flatten_and_batch_shift_indices(top_span_indices, span_starts.size(1))
 
         # Select the span embeddings corresponding to the
         # top spans based on the mention scorer.
@@ -496,7 +499,7 @@ class CoreferenceResolver(Model):
                                                                                                  max_antecedents,
                                                                                                  text_mask.is_cuda)
         # Select tensors relating to the antecedent spans.
-        # Shape: (batch_size, num_spans_to_keep, embedding_size)
+        # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         antecedent_embeddings = util.flattened_index_select(top_span_embeddings, antecedent_indices)
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents)
