@@ -286,9 +286,10 @@ class CoreferenceResolver(Model):
         Returns
         -------
         pairwise_embeddings : torch.FloatTensor
-            Embedding representation of the pair of spans to consider. This includes both the original span
-            representations, the elementwise similarity of the span representations, and an embedding
-            representation of the distance between two spans. This is used as input to pairwise classification.
+            Embedding representation of the pair of spans to consider. This includes both the
+            original span representations, the elementwise similarity of the span
+            representations, and an embedding representation of the distance between two spans.
+            This is used as input to pairwise classification.
         """
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         target_embeddings = top_span_embeddings.unsqueeze(2).expand_as(antecedent_embeddings)

@@ -1,5 +1,3 @@
-from typing import List
-
 from overrides import overrides
 
 import spacy
@@ -29,11 +27,26 @@ class CorefPredictor(Predictor):
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         """
         Expects JSON that looks like ``{"document": "..."}``
-        and returns JSON that looks like
+        and returns JSON that looks like:
 
         .. code-block:: js
 
-            {"document": [...]}
+            {
+            "document": [...]
+            "clusters":
+              [
+                [
+                  [start_index, end_index],
+                  [start_index, end_index]
+                ],
+                [
+                  [start_index, end_index],
+                  [start_index, end_index],
+                  [start_index, end_index],
+                ],
+                ....
+              ]
+            }
         """
         document = inputs["document"]
         spacy_document = self._spacy(document)
