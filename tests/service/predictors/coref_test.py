@@ -12,7 +12,7 @@ class TestCorefPredictor(TestCase):
         inputs = {"document": "This is a single string document about a test. Sometimes it "
                               "contains coreferent parts."}
         archive = load_archive('tests/fixtures/coref/serialization/model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'coref')
+        predictor = Predictor.from_archive(archive, 'coreference-resolution')
         result = predictor.predict_json(inputs)
 
         document = result["document"]

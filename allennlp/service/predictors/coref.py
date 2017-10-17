@@ -8,7 +8,7 @@ from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 
 
-@Predictor.register("coref")
+@Predictor.register("coreference-resolution")
 class CorefPredictor(Predictor):
     """
     Wrapper for the :class:`~allennlp.models.coreference_resolution.CoreferenceResolver` model.

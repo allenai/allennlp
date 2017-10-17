@@ -1,7 +1,6 @@
 import logging
 import math
 from typing import Any, Dict, List, Optional, Tuple
-from collections import defaultdict
 
 import torch
 import torch.nn.functional as F
@@ -405,7 +404,7 @@ class CoreferenceResolver(Model):
         """
         # Shape: (batch_size, num_spans_to_keep, max_antecedents)
         antecedent_scores = self._antecedent_scorer(
-            self._antecedent_feedforward(pairwise_embeddings)).squeeze(-1)
+                self._antecedent_feedforward(pairwise_embeddings)).squeeze(-1)
         antecedent_scores += top_span_mention_scores + antecedent_mention_scores
         antecedent_scores += antecedent_log_mask
 
@@ -593,7 +592,8 @@ class CoreferenceResolver(Model):
         # Calling zip() on two tensors results in an iterator over their
         # first dimension. This is  iterating over instances in the batch.
         for all_spans, spand_antecedents in zip(top_spans, predicted_antecedents):
-            clusters = defaultdict(list)
+
+            clusters: Dict[int, List[Tuple[int, int]]] = {}
             for span, antecedent_index in zip(all_spans, spand_antecedents):
                 if antecedent_index != -1:
                     # Find the right cluster to update with this span.
@@ -610,10 +610,10 @@ class CoreferenceResolver(Model):
 
                     # If we haven't observed this root index appearing in a cluster
                     # before, we need to add it to its own cluster.
-                    if not clusters[cluster_index_to_update]:
-                        clusters[cluster_index_to_update].append(tuple(all_spans[
-                                                                     cluster_index_to_update]))
-                    clusters[cluster_index_to_update].append(tuple(span))
+                    if not clusters.get(cluster_index_to_update, False):
+                        root_span: Tuple[int, int] = tuple(all_spans[cluster_index_to_update])  # type: ignore
+                        clusters[cluster_index_to_update] = [root_span]
+                    clusters[cluster_index_to_update].append(tuple(span))  # type: ignore
                 else:
                     # We don't care about spans which are not
                     # co-referent with anything.

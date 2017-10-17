@@ -22,7 +22,7 @@ DEFAULT_PREDICTORS = {
         'decomposable_attention': 'textual-entailment',
         'bidaf': 'machine-comprehension',
         'simple_tagger': 'simple-tagger',
-        'coref': 'coref'
+        'coref': 'coreference-resolution'
 }
 
 def main(prog: str = None,
