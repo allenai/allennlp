@@ -1,6 +1,7 @@
 import logging
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from collections import defaultdict
 
 import torch
 import torch.nn.functional as F
@@ -542,7 +543,6 @@ class CoreferenceResolver(Model):
         output_dict = {"top_spans": top_spans,
                        "antecedent_indices": antecedent_indices,
                        "predicted_antecedents": predicted_antecedents}
-
         if span_labels is not None:
             # Find the gold labels for the spans which we kept.
             top_span_labels = util.batched_index_select(span_labels.unsqueeze(-1),
@@ -565,6 +565,63 @@ class CoreferenceResolver(Model):
             self._conll_coref_scores(top_spans, antecedent_indices, predicted_antecedents, metadata)
 
             output_dict["loss"] = loss
+        return output_dict
+
+    def decode(self, output_dict: Dict[str, torch.Tensor]):
+        """
+        Converts the list of spans and predicted antecedent indices into clusters
+        of spans for each element in the batch.
+
+        Parameters
+        ----------
+        output_dict : ``Dict[str, torch.Tensor]``, required.
+            The result of calling :func:`~forward` on an instance or batch of instances.
+
+        Returns
+        -------
+        The same output dictionary, but with an additional ``clusters`` key:
+
+        clusters : ``List[List[List[Tuple[int, int]]]]``
+            A nested list, representing, for each batch, the list of clusters, which are
+            in turn comprised of a list of (start, end) inclusive spans into the original
+            document.
+        """
+        top_spans = output_dict["top_spans"].data.cpu()
+        predicted_antecedents = output_dict["predicted_antecedents"].data.cpu()
+        all_clusters: List[List[List[Tuple[int, int]]]] = []
+
+        # Calling zip() on two tensors results in an iterator over
+        # their first dimension. This is iterating over batches.
+        for spans, antecedents in zip(top_spans, predicted_antecedents):
+            clusters = defaultdict(list)
+            for span_index, (span, antecedent_index) in enumerate(zip(spans, antecedents)):
+
+                if antecedent_index != -1:
+                    # Find the right cluster to update with this span.
+                    # We might have referred to a span which in turn
+                    # refers to some previous span, so here we trace back
+                    # through the list to find the "root" of the cluster,
+                    # and only update that set.
+                    cluster_index_to_update = antecedent_index
+                    # This while loop must halt because antecedents are
+                    # strictly less than the current index, so the cluster
+                    # we are referring to must decrease at each step.
+                    while antecedents[cluster_index_to_update] != -1:
+                        cluster_index_to_update = antecedents[cluster_index_to_update]
+
+                    # If we haven't observed this root index appearing in a cluster
+                    # before, we need to add it to its own cluster.
+                    if not clusters[cluster_index_to_update]:
+                        clusters[cluster_index_to_update].append(tuple(spans[
+                                                                     cluster_index_to_update]))
+                    clusters[cluster_index_to_update].append(tuple(span))
+                else:
+                    # We don't care about spans which are not
+                    # co-referent with anything.
+                    pass
+            all_clusters.append(list(clusters.values()))
+
+        output_dict["clusters"] = all_clusters
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

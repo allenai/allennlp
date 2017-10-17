@@ -56,6 +56,6 @@ class CorefPredictor(Predictor):
         results: JsonDict = {"document": flattened_sentences}
         instance = self._dataset_reader.text_to_instance(sentences)
         output = self._model.forward_on_instance(instance, cuda_device)
-        tags = output['tags']
 
+        results["clusters"] = output["all_clusters"][0]
         return sanitize(results)
