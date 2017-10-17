@@ -144,6 +144,7 @@ a couple of changes:
 
 * change the `model.type` to `"crf_tagger"`
 * change the `"dataset_reader.type"` to `"conll2003"`
+* add a `"dataset_reader.tag_label"` field with value "ner" (to indicate that the NER labels are what we're predicting)
 
 We don't *need* to, but we also make a few other changes
 

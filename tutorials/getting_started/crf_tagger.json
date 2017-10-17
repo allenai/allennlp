@@ -1,6 +1,7 @@
 {
     "dataset_reader": {
-      "type": "conll2003_json",
+      "type": "conll2003",
+      "tag_label": "ner",
       "token_indexers": {
         "tokens": {
           "type": "single_id",
