@@ -94,7 +94,6 @@ class ConllCorefReader(DatasetReader):
         ------
 
         An ``Instance`` containing the following ``Fields``:
-
             text : ``TextField``
                 The text of the full document.
             span_starts : ``ListField[IndexField]``
@@ -117,6 +116,9 @@ class ConllCorefReader(DatasetReader):
         cluster_dict = {}
         if gold_clusters is not None:
             for cluster_id, cluster in enumerate(gold_clusters):
+                # TODO(Mark): This doesn't take into account gold clusters which have spans
+                # longer than the max_span_width, which means we can get |1| clusters
+                # when we filter below. Check with Kenton.
                 assert len(cluster) > 1
                 for mention in cluster:
                     cluster_dict[tuple(mention)] = cluster_id
@@ -175,15 +177,12 @@ class ConllCorefReader(DatasetReader):
             # End of a sentence. Clear the sentence buffer and
             # add sentence to document sentences.
             document_state.complete_sentence()
-
         else:
             if len(row) < 12:
                 raise ConfigurationError("Encountered a non-empty line with fewer than 12 entries"
                                          " - this does not match the CONLL format.: {}".format(row))
-
             word = self.normalize_word(row[3])
             coref = row[-1]
-
             word_index = document_state.num_total_words
             document_state.add_word(word)
 
@@ -214,9 +213,9 @@ class ConllCorefReader(DatasetReader):
 class _DocumentState:
 
     """
-    Represents the state of a document. Words are collected in
-    a sentence buffer, which are incrementally collected in a
-    list when sentences end, representing all tokens in the document.
+    Represents the state of a document. Words are collected in a sentence buffer,
+    which are incrementally collected in a list when sentences end, representing
+    all tokens in the document.
 
     Additionally, this class contains a per-id stacks to hold the start indices of
     active spans (spans which we are inside of when processing a given word). Spans
