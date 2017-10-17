@@ -17,9 +17,10 @@ def log_sum_exp(x: torch.Tensor) -> torch.Tensor:  # pylint: disable=invalid-nam
 
 class ConditionalRandomField(torch.nn.Module):
     """
-    Computes the conditional random field loss, which is the negative log likelihood.
-    Expects an input of shape (batch_size, sequence_length, num_tags) and optionally a
-    mask of shape (batch_size, sequence_length).
+    This module uses the "forward-backward" algorithm to compute
+    the log-likelihood of its inputs assuming a conditional random field model.
+
+    See, e.g. http://www.cs.columbia.edu/~mcollins/fb.pdf
 
     Parameters
     ----------
@@ -155,11 +156,11 @@ class ConditionalRandomField(torch.nn.Module):
                 tags: torch.Tensor,
                 mask: torch.ByteTensor = None) -> torch.Tensor:
         """
-        ``forward`` only computes the loss
+        Computes the log likelihood.
         """
         # pylint: disable=arguments-differ
         if mask is None:
-            mask = torch.ones(*tags.size()).byte()
+            mask = torch.autograd.Variable(torch.ones(*tags.size()).byte())
 
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)

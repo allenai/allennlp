@@ -49,6 +49,8 @@ class CrfTagger(Model):
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
 
+        self.label_namespace = label_namespace
+
         self.text_field_embedder = text_field_embedder
 
         # Make sure we have START and END tags
@@ -63,7 +65,7 @@ class CrfTagger(Model):
 
         self.crf = ConditionalRandomField(self.num_tags, self.start_tag, self.end_tag)
 
-        self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="labels")
+        self.span_metric = SpanBasedF1Measure(vocab, tag_namespace=label_namespace)
 
         if text_field_embedder.get_output_dim() != stacked_encoder.get_input_dim():
             raise ConfigurationError("The output dimension of the text_field_embedder must match the "
@@ -110,23 +112,20 @@ class CrfTagger(Model):
 
         logits = self.tag_projection_layer(encoded_text)
 
-        # The CRF layer only produces a ``loss`` output, so we need to include these
-        # so that we can decode the outputs.
         output = {"logits": logits, "mask": mask}
 
-        # Use Viterbi to find most likely tags
-        predicted_tags = self._viterbi_tags(output)
-
         if tags is not None:
+            # Add negative log-likelihood as loss
             log_likelihood = self.crf.forward(logits, tags, mask)
             output["loss"] = -log_likelihood
 
             # Represent viterbi tags as "class probabilities" that we can
             # feed into the `span_metric`
+            predicted_tags = self._viterbi_tags(output)
             class_probabilities = logits * 0.
             for i, instance_tags in enumerate(predicted_tags):
                 for j, tag in enumerate(instance_tags):
-                    k = self.vocab.get_token_index(tag, "labels")
+                    k = self.vocab.get_token_index(tag, self.label_namespace)
                     class_probabilities[i, j, k] = 1
 
             self.span_metric(class_probabilities, tags, mask)
@@ -150,6 +149,7 @@ class CrfTagger(Model):
         elif isinstance(logits, torch.autograd.Variable):
             logits, mask = logits.data, mask.data
 
+        # "unbatch" logits and mask
         if logits.ndimension() == 3:
             predictions_list = [logits[i] for i in range(logits.shape[0])]
             mask_list = [mask[i] for i in range(mask.shape[0])]
@@ -158,19 +158,28 @@ class CrfTagger(Model):
             mask_list = [mask]
 
         all_tags = []
-        padded = torch.Tensor(max_seq_length + 2, num_tags).fill_(-10000.)
+        # Pad the max sequence length by 2 to account for start_tag + end_tag.
+        tag_sequence = torch.Tensor(max_seq_length + 2, num_tags)
 
         for prediction, mask in zip(predictions_list, mask_list):
             sequence_length = torch.sum(mask)
 
-            padded[0, self.start_tag] = 0.
-            padded[1:sequence_length+1] = prediction[:sequence_length]
-            padded[sequence_length+1, self.end_tag] = 0.
+            # Start with everything totally unlikely
+            tag_sequence.fill_(-10000.)
+            # At timestep 0 we must have the START_TAG
+            tag_sequence[0, self.start_tag] = 0.
+            # At steps 1, ..., sequence_length we just use the incoming prediction
+            tag_sequence[1:sequence_length+1] = prediction[:sequence_length]
+            # And at the last timestep we must have the END_TAG
+            tag_sequence[sequence_length+1, self.end_tag] = 0.
 
-            viterbi_path, _ = viterbi_decode(padded[:sequence_length+2], transitions)
-            tags = [self.vocab.get_token_from_index(ix, "labels") for ix in viterbi_path]
-            # Get rid of start and end tags
+            # We pass the tags and the transitions to ``viterbi_decode``.
+            viterbi_path, _ = viterbi_decode(tag_sequence[:sequence_length+2], transitions)
+            # And replace the indices with the actual tags.
+            tags = [self.vocab.get_token_from_index(ix, self.label_namespace) for ix in viterbi_path]
+            # Finally, get rid of start and end tags and add to the output.
             all_tags.append(tags[1:-1])
+
         output_dict["tags"] = all_tags
 
         return all_tags
