@@ -594,8 +594,7 @@ class CoreferenceResolver(Model):
         # first dimension. This is  iterating over instances in the batch.
         for all_spans, spand_antecedents in zip(top_spans, predicted_antecedents):
             clusters = defaultdict(list)
-            for span_index, (span, antecedent_index) in enumerate(zip(all_spans,
-                                                                      spand_antecedents)):
+            for span, antecedent_index in zip(all_spans, spand_antecedents):
                 if antecedent_index != -1:
                     # Find the right cluster to update with this span.
                     # We might have referred to a span which in turn
