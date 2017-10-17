@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-from typing import List
-
->>>>>>> 37700d52d0cddb0d766d948f0395fc6577f80c6d
 from overrides import overrides
 
 import spacy
