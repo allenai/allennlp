@@ -15,11 +15,6 @@ class CorefTest(ModelTestCase):
     def test_coref_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    @pytest.mark.skip
-    def test_batch_predictions_are_consistent(self):
-        # TODO(Mark): Make this pass by doing batch witchcraft in the model using .eval.
-        self.ensure_batch_predictions_are_consistent()
-
     def test_decode(self):
 
         spans = torch.LongTensor([[1, 2],
@@ -30,8 +25,8 @@ class CorefTest(ModelTestCase):
                                   [17, 80]])
         spans = Variable(spans.unsqueeze(0))
 
-        # Indices into ``spans`` indicating that the two mentions
-        # are co-referent.
+        # Indices into ``spans`` indicating that the
+        # two mentions are co-referent.
         antecedents = torch.LongTensor([-1, 0, -1, -1, 1, 3])
         antecedents = Variable(antecedents.unsqueeze(0))
         output_dict = {
@@ -43,8 +38,7 @@ class CorefTest(ModelTestCase):
         clusters = output["clusters"][0]
         gold1 = [(1, 2), (3, 4), (14, 56)]
         gold2 = [(5, 6), (17, 80)]
+
+        assert len(clusters) == 2
         assert gold1 in clusters
-        clusters.remove(gold1)
         assert gold2 in clusters
-        clusters.remove(gold2)
-        assert clusters == []

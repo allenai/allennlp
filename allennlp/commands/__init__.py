@@ -13,7 +13,7 @@ DEFAULT_MODELS = {
         'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
         'textual-entailment': 'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-2017.09.04.tar.gz', # pylint: disable=line-too-long
         # TODO(Mark): replace with the real model.
-        'coreference-resolution': 'tests/fixtures/coref/serialization/model.tar.gz'
+        'coreference-resolution': 'tests/fixtures/coref/serialization/model.tar.gz',
 }
 
 # a mapping from model `type` to the default Predictor for that type

@@ -15,6 +15,9 @@ class CorefPredictor(Predictor):
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
+
+        # We have to use spacy to tokenise our document here, because we need
+        # to also know sentence boundaries to propose valid mentions.
         self._spacy = spacy.load("en", ner=False, tagger=False, vectors=False)
 
     def _json_to_instance(self, json: JsonDict) -> Instance:
@@ -26,13 +29,13 @@ class CorefPredictor(Predictor):
     @overrides
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         """
-        Expects JSON that looks like ``{"document": "..."}``
+        Expects JSON that looks like ``{"document": "string of document text"}``
         and returns JSON that looks like:
 
         .. code-block:: js
 
             {
-            "document": [...]
+            "document": [tokenised document text]
             "clusters":
               [
                 [
@@ -57,5 +60,5 @@ class CorefPredictor(Predictor):
         instance = self._dataset_reader.text_to_instance(sentences)
         output = self._model.forward_on_instance(instance, cuda_device)
 
-        results["clusters"] = output["clusters"][0]
+        results["clusters"] = output["clusters"]
         return sanitize(results)

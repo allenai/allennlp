@@ -22,11 +22,12 @@ class TestCorefPredictor(TestCase):
 
         clusters = result["clusters"]
         assert isinstance(clusters, list)
-
         for cluster in clusters:
-            # Spans should be integer indices.
-            assert isinstance(cluster[0], int)
-            assert isinstance(cluster[1], int)
-            # Spans should be inside document.
-            assert 0 < cluster[0] <= len(document)
-            assert 0 < cluster[1] <= len(document)
+            assert isinstance(cluster, list)
+            for mention in cluster:
+                # Spans should be integer indices.
+                assert isinstance(mention[0], int)
+                assert isinstance(mention[1], int)
+                # Spans should be inside document.
+                assert 0 < mention[0] <= len(document)
+                assert 0 < mention[1] <= len(document)

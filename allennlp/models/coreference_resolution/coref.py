@@ -1,6 +1,7 @@
 import logging
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Set, DefaultDict
+from collections import defaultdict
 
 import torch
 import torch.nn.functional as F
@@ -574,27 +575,27 @@ class CoreferenceResolver(Model):
         Parameters
         ----------
         output_dict : ``Dict[str, torch.Tensor]``, required.
-            The result of calling :func:`~forward` on an instance or batch of instances.
+            The result of calling :func:`forward` on an instance or batch of instances.
 
         Returns
         -------
         The same output dictionary, but with an additional ``clusters`` key:
 
         clusters : ``List[List[List[Tuple[int, int]]]]``
-            A nested list, representing, for each batch, the list of clusters, which are
-            in turn comprised of a list of (start, end) inclusive spans into the original
-            document.
+            A nested list, representing, for each instance in the batch, the list of clusters,
+            which are in turn comprised of a list of (start, end) inclusive spans into the
+            original document.
         """
         top_spans = output_dict["top_spans"].data.cpu()
         predicted_antecedents = output_dict["predicted_antecedents"].data.cpu()
-        all_clusters: List[List[List[Tuple[int, int]]]] = []
+        batch_clusters: List[List[List[Tuple[int, int]]]] = []
 
         # Calling zip() on two tensors results in an iterator over their
-        # first dimension. This is  iterating over instances in the batch.
-        for all_spans, span_antecedents in zip(top_spans, predicted_antecedents):
+        # first dimension. This is iterating over instances in the batch.
+        for spans, span_antecedents in zip(top_spans, predicted_antecedents):
 
-            clusters: Dict[int, List[Tuple[int, int]]] = {}
-            for span, antecedent_index in zip(all_spans, span_antecedents):
+            clusters: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
+            for span, antecedent_index in zip(spans, span_antecedents):
                 if antecedent_index != -1:
                     # Find the right cluster to update with this span.
                     # We might have referred to a span which in turn
@@ -608,22 +609,19 @@ class CoreferenceResolver(Model):
                     while span_antecedents[cluster_index_to_update] != -1:
                         cluster_index_to_update = span_antecedents[cluster_index_to_update]
 
-                    # If we haven't observed this root index appearing in a cluster
-                    # before, we need to add it to its own cluster.
-                    if not clusters.get(cluster_index_to_update, False):
-                        root_span_start, root_span_end = all_spans[cluster_index_to_update]
-                        clusters[cluster_index_to_update] = [(root_span_start, root_span_end)]
-
-                    # Now append the span we are currently considering.
+                    # Add the root span to the set, as we might not have seen it before.
+                    root_span_start, root_span_end = spans[cluster_index_to_update]
+                    clusters[cluster_index_to_update].add((root_span_start, root_span_end))
+                    # Now add the span we are currently considering.
                     span_start, span_end = span
-                    clusters[cluster_index_to_update].append((span_start, span_end))
+                    clusters[cluster_index_to_update].add((span_start, span_end))
                 else:
                     # We don't care about spans which are not
                     # co-referent with anything.
                     pass
-            all_clusters.append(list(clusters.values()))
+            batch_clusters.append([list(x) for x in clusters.values()])
 
-        output_dict["clusters"] = all_clusters
+        output_dict["clusters"] = batch_clusters
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
