@@ -3,11 +3,13 @@ Various utilities that don't fit anwhere else.
 """
 
 from itertools import zip_longest
-from typing import Any, Callable, Dict, List, TypeVar, Union
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union
 import random
 
 import torch
 import numpy
+import spacy
+from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
@@ -153,3 +155,27 @@ def prepare_environment(params: Union[Params, Dict[str, Any]]):
             torch.cuda.manual_seed_all(torch_seed)
 
     log_pytorch_version_info()
+
+
+LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
+
+
+def get_spacy_model(language: str, pos_tags: bool, parse: bool, ner: bool) -> Any:
+    """
+    In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
+    keyed by the options we used to create the spacy model, so any particular configuration only
+    gets loaded once.
+
+    """
+    options = (language, pos_tags, parse, ner)
+    if options not in LOADED_SPACY_MODELS:
+        kwargs = {'vectors': False}
+        if not pos_tags:
+            kwargs['tagger'] = False
+        if not parse:
+            kwargs['parser'] = False
+        if not ner:
+            kwargs['entity'] = False
+        spacy_model = spacy.load(language, **kwargs)
+        LOADED_SPACY_MODELS[options] = spacy_model
+    return LOADED_SPACY_MODELS[options]
