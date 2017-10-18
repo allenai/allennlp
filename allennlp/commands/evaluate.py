@@ -54,6 +54,10 @@ def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser
                            type=int,
                            default=-1,
                            help='id of GPU to use (if any)')
+    subparser.add_argument('-o', '--overrides',
+                           type=str,
+                           default="",
+                           help='a HOCON structure used to override the experiment configuration')
 
     subparser.set_defaults(func=evaluate_from_args)
 
@@ -86,7 +90,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
 
     # Load from archive
-    archive = load_archive(args.archive_file, args.cuda_device)
+    archive = load_archive(args.archive_file, args.cuda_device, args.overrides)
     config = archive.config
     prepare_environment(config)
     model = archive.model

@@ -74,6 +74,7 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Mo
     serialization_dir: str, required
         The directory in which to save results and logs.
     """
+
     # We need the python hashseed to be set if we're training a model
     ensure_pythonhashseed_set()
 
