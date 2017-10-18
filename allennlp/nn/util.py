@@ -508,6 +508,7 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
     provided to compute the appropriate offsets.
 
     .. code-block:: python
+
         indices = torch.ones([2,3]).long()
         # Sequence length of the target tensor.
         sequence_length = 10
