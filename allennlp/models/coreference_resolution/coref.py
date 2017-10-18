@@ -1,6 +1,7 @@
 import logging
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Set, DefaultDict
+from collections import defaultdict
 
 import torch
 import torch.nn.functional as F
@@ -102,9 +103,9 @@ class CoreferenceResolver(Model):
         Parameters
         ----------
         head_scores : torch.FloatTensor
-            Unnormalized attention scores for every word. This score is shared for every candidate. The
-            only way in which the attention weights differ over different spans is in the set of words
-            over which they are normalized.
+            Unnormalized attention scores for every word. This score is shared for every
+            candidate. The only way in which the attention weights differ over different
+            spans is in the set of words over which they are normalized.
         text_embeddings: torch.FloatTensor
             The embeddings over which we are computing a weighted sum.
         span_ends: torch.IntTensor
@@ -286,9 +287,10 @@ class CoreferenceResolver(Model):
         Returns
         -------
         pairwise_embeddings : torch.FloatTensor
-            Embedding representation of the pair of spans to consider. This includes both the original span
-            representations, the elementwise similarity of the span representations, and an embedding
-            representation of the distance between two spans. This is used as input to pairwise classification.
+            Embedding representation of the pair of spans to consider. This includes both the
+            original span representations, the elementwise similarity of the span
+            representations, and an embedding representation of the distance between two spans.
+            This is used as input to pairwise classification.
         """
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         target_embeddings = top_span_embeddings.unsqueeze(2).expand_as(antecedent_embeddings)
@@ -327,9 +329,10 @@ class CoreferenceResolver(Model):
         Returns
         -------
         augmented_label: torch.FloatTensor
-            A binary indicator for every pair of spans. This label is one if and only if the pair of spans belong
-            to the same cluster. The labels are augmented with a dummy antecedent at the zeroth position, which
-            represents the prediction that a span does not have any antecedent.
+            A binary indicator for every pair of spans. This label is one if and only if ithe
+            pair of spans belong to the same cluster. The labels are augmented with a dummy
+            antecedent at the zeroth position, which represents the prediction that a span does
+            not have any antecedent.
         """
         # Shape: (batch_size, num_spans_to_keep, max_antecedents)
         target_labels = top_span_labels.expand_as(antecedent_labels)
@@ -354,13 +357,15 @@ class CoreferenceResolver(Model):
         augmented_antecedent_scores: torch.FloatTensor
             The pairwise between every span and its possible antecedents.
         augmented_labels: torch.IntTensor
-            A binary indicator for whether it is consistent with the data for a span to choose an antecedent.
+            A binary indicator for whether it is consistent with the data for a span to choose
+            an antecedent.
         Returns
         -------
         negative_marginal_log_likelihood: torch.FloatTensor
-            The negative marginal loglikelihood of the gold cluster labels. This computes the log of the sum of the
-            probabilities of all antecedent predictions that would be consistent with the data. The computation is
-            performed in log-space for numerical stability.
+            The negative marginal loglikelihood of the gold cluster labels. This computes the
+            log of the sum of the probabilities of all antecedent predictions that would be
+            consistent with the data. The computation is performed in log-space for numerical
+            stability.
         """
         # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
         gold_scores = augmented_antecedent_scores + augmented_labels.log()
@@ -369,7 +374,8 @@ class CoreferenceResolver(Model):
         marginalized_gold_scores = util.logsumexp(gold_scores, 2)
         log_norm = util.logsumexp(augmented_antecedent_scores, 2)
         negative_marginal_log_likelihood = log_norm - marginalized_gold_scores
-        negative_marginal_log_likelihood = (negative_marginal_log_likelihood * top_span_mask.squeeze(-1)).sum()
+        negative_marginal_log_likelihood = (negative_marginal_log_likelihood *
+                                            top_span_mask.squeeze(-1)).sum()
         return negative_marginal_log_likelihood
 
     def _compute_antecedent_scores(self,
@@ -391,13 +397,15 @@ class CoreferenceResolver(Model):
         Returns
         -------
         augmented_antecedent_scores: torch.FloatTensor
-            Scores for every pair of spans. For the dummy label, the score is always zero. For the true antecedent
-            spans, the score consists of the pairwise antecedent score and the unary mention scores for the span
-            and its antecedent. The factoring allows the model to blame many of the absent links on bad spans,
-            enabling the pruning strategy used in the forward pass.
+            Scores for every pair of spans. For the dummy label, the score is always zero. For
+            the true antecedent spans, the score consists of the pairwise antecedent score and
+            the unary mention scores for the span and its antecedent. The factoring allows the
+            model to blame many of the absent links on bad spans, enabling the pruning strategy
+            used in the forward pass.
         """
         # Shape: (batch_size, num_spans_to_keep, max_antecedents)
-        antecedent_scores = self._antecedent_scorer(self._antecedent_feedforward(pairwise_embeddings)).squeeze(-1)
+        antecedent_scores = self._antecedent_scorer(
+                self._antecedent_feedforward(pairwise_embeddings)).squeeze(-1)
         antecedent_scores += top_span_mention_scores + antecedent_mention_scores
         antecedent_scores += antecedent_log_mask
 
@@ -428,6 +436,7 @@ class CoreferenceResolver(Model):
             From a ``ListField[IndexField]``
         span_labels : torch.IntTensor, optional (default = None)
             From a ``SequenceLabelField``
+
         Returns
         -------
         An output dictionary consisting of:
@@ -478,15 +487,23 @@ class CoreferenceResolver(Model):
         # Select the span embeddings corresponding to the
         # top spans based on the mention scorer.
         # Shape: (batch_size, num_spans_to_keep, embedding_size)
-        top_span_embeddings = util.batched_index_select(span_embeddings, top_span_indices, flat_top_span_indices)
+        top_span_embeddings = util.batched_index_select(span_embeddings,
+                                                        top_span_indices,
+                                                        flat_top_span_indices)
 
         # Shape: (batch_size, num_spans_to_keep, 1)
-        top_span_mask = util.batched_index_select(span_mask, top_span_indices, flat_top_span_indices)
+        top_span_mask = util.batched_index_select(span_mask,
+                                                  top_span_indices,
+                                                  flat_top_span_indices)
         top_span_mention_scores = util.batched_index_select(mention_scores,
                                                             top_span_indices,
                                                             flat_top_span_indices)
-        top_span_starts = util.batched_index_select(span_starts, top_span_indices, flat_top_span_indices)
-        top_span_ends = util.batched_index_select(span_ends, top_span_indices, flat_top_span_indices)
+        top_span_starts = util.batched_index_select(span_starts,
+                                                    top_span_indices,
+                                                    flat_top_span_indices)
+        top_span_ends = util.batched_index_select(span_ends,
+                                                  top_span_indices,
+                                                  flat_top_span_indices)
 
         # Compute indices for antecedent spans to consider.
         max_antecedents = min(self._max_antecedents, num_spans_to_keep)
@@ -495,9 +512,8 @@ class CoreferenceResolver(Model):
         # (num_spans_to_keep, max_antecedents),
         # (1, max_antecedents),
         # (1, num_spans_to_keep, max_antecedents)
-        antecedent_indices, antecedent_offsets, antecedent_log_mask = self._generate_antecedents(num_spans_to_keep,
-                                                                                                 max_antecedents,
-                                                                                                 text_mask.is_cuda)
+        antecedent_indices, antecedent_offsets, antecedent_log_mask = \
+            self._generate_antecedents(num_spans_to_keep, max_antecedents, text_mask.is_cuda)
         # Select tensors relating to the antecedent spans.
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         antecedent_embeddings = util.flattened_index_select(top_span_embeddings, antecedent_indices)
@@ -527,7 +543,6 @@ class CoreferenceResolver(Model):
         output_dict = {"top_spans": top_spans,
                        "antecedent_indices": antecedent_indices,
                        "predicted_antecedents": predicted_antecedents}
-
         if span_labels is not None:
             # Find the gold labels for the spans which we kept.
             top_span_labels = util.batched_index_select(span_labels.unsqueeze(-1),
@@ -550,6 +565,63 @@ class CoreferenceResolver(Model):
             self._conll_coref_scores(top_spans, antecedent_indices, predicted_antecedents, metadata)
 
             output_dict["loss"] = loss
+        return output_dict
+
+    def decode(self, output_dict: Dict[str, torch.Tensor]):
+        """
+        Converts the list of spans and predicted antecedent indices into clusters
+        of spans for each element in the batch.
+
+        Parameters
+        ----------
+        output_dict : ``Dict[str, torch.Tensor]``, required.
+            The result of calling :func:`forward` on an instance or batch of instances.
+
+        Returns
+        -------
+        The same output dictionary, but with an additional ``clusters`` key:
+
+        clusters : ``List[List[List[Tuple[int, int]]]]``
+            A nested list, representing, for each instance in the batch, the list of clusters,
+            which are in turn comprised of a list of (start, end) inclusive spans into the
+            original document.
+        """
+        top_spans = output_dict["top_spans"].data.cpu()
+        predicted_antecedents = output_dict["predicted_antecedents"].data.cpu()
+        batch_clusters: List[List[List[Tuple[int, int]]]] = []
+
+        # Calling zip() on two tensors results in an iterator over their
+        # first dimension. This is iterating over instances in the batch.
+        for spans, span_antecedents in zip(top_spans, predicted_antecedents):
+
+            clusters: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
+            for span, antecedent_index in zip(spans, span_antecedents):
+                if antecedent_index != -1:
+                    # Find the right cluster to update with this span.
+                    # We might have referred to a span which in turn
+                    # refers to some previous span, so here we trace back
+                    # through the list to find the "root" of the cluster,
+                    # and only update that set.
+                    cluster_index_to_update = antecedent_index
+                    # This while loop must halt because antecedents are
+                    # strictly less than the current index, so the cluster
+                    # we are referring to must decrease at each step.
+                    while span_antecedents[cluster_index_to_update] != -1:
+                        cluster_index_to_update = span_antecedents[cluster_index_to_update]
+
+                    # Add the root span to the set, as we might not have seen it before.
+                    root_span_start, root_span_end = spans[cluster_index_to_update]
+                    clusters[cluster_index_to_update].add((root_span_start, root_span_end))
+                    # Now add the span we are currently considering.
+                    span_start, span_end = span
+                    clusters[cluster_index_to_update].add((span_start, span_end))
+                else:
+                    # We don't care about spans which are not
+                    # co-referent with anything.
+                    pass
+            batch_clusters.append([list(x) for x in clusters.values()])
+
+        output_dict["clusters"] = batch_clusters
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
