@@ -46,6 +46,9 @@ COPY tests/ tests/
 COPY pytest.ini pytest.ini
 COPY scripts/ scripts/
 COPY tutorials/ tutorials/
+COPY build_tools/ build_tools/
+COPY doc/ doc/
+COPY .pylintrc .pylintrc
 COPY experiment_config experiment_config/
 
 # Run tests to verify the Docker build
