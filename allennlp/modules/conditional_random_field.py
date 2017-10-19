@@ -38,37 +38,33 @@ class ConditionalRandomField(torch.nn.Module):
         self.transitions.data[start_tag, :] = -10000
         self.transitions.data[:, stop_tag] = -10000
 
-    def _input_likelihood(self, inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def _input_likelihood(self, logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
-        Computes the (batch_size,) numerator term for the log-likelihood, which is the
+        Computes the (batch_size,) denominator term for the log-likelihood, which is the
         sum of the likelihoods across all possible state sequences.
         """
-        batch_size, sequence_length, num_tags = inputs.size()
+        batch_size, sequence_length, num_tags = logits.size()
         mask = mask.float()
         # masks[i] is the (batch_size,) mask tensor for timestep i
         masks = [mask[:, i].contiguous() for i in range(sequence_length)]
 
-        # We will step through time and accumulate the likelihood at each step.
-        # Note that we will accumulate a (batch_size, num_tags) tensor of likelihoods
-        # since the likelihood of each step is
-
         # Initial alpha is the (batch_size, num_tags) tensor of likelihoods combining the
         # transitions to the initial states and the logits for the first timestep.
-        alpha = self.transitions[:, self.start_tag].contiguous().view(1, num_tags) + inputs[:, 0, :]
+        alpha = self.transitions[:, self.start_tag].contiguous().view(1, num_tags) + logits[:, 0, :]
 
-        # For each i we compute logits for the transitions from timestep i-1 to timestep i
+        # For each i we compute logits for the transitions from timestep i-1 to timestep i.
         # We do so in a (batch_size, num_tags, num_tags) tensor where the axes are
         # (instance, next_tag, prev_tag)
         for i in range(1, sequence_length):
             # The emit scores are for time i ("next_tag") so we broadcast along the prev_tag axis.
-            emit_scores = inputs[:, i].contiguous().view(batch_size, num_tags, 1)
+            emit_scores = logits[:, i].contiguous().view(batch_size, num_tags, 1)
             # Transition scores are (next_tag, prev_tag) so we broadcast along the instance axis.
             transition_scores = self.transitions.view(1, num_tags, num_tags)
             # Alpha is for the prev_tag, so we broadcast along the next_tag axis.
             alpha = alpha.view(batch_size, 1, num_tags)
 
-            # We add the emit+transition scores only if timestep i-1 was included.
-            inner = alpha + (emit_scores + transition_scores) * masks[i-1].view(batch_size, 1, 1)
+            # We add the emit + transition scores only if timestep i - 1 was included.
+            inner = alpha + (emit_scores + transition_scores) * masks[i - 1].view(batch_size, 1, 1)
 
             # Now we log_sum_exp over the "prev_tag" axis.
             alpha = log_sum_exp(inner)
@@ -80,13 +76,13 @@ class ConditionalRandomField(torch.nn.Module):
         return log_sum_exp(stops)
 
     def _joint_likelihood(self,
-                          inputs: torch.Tensor,
+                          logits: torch.Tensor,
                           tags: torch.Tensor,
-                          mask: torch.ByteTensor) -> torch.Tensor:
+                          mask: torch.LongTensor) -> torch.Tensor:
         """
         Computes the numerator term for the log-likelihood, which is just score(inputs, tags)
         """
-        batch_size, sequence_length, num_tags = inputs.data.shape
+        batch_size, sequence_length, num_tags = logits.data.shape
         mask = mask.float()
         masks = [mask[:, i] for i in range(sequence_length)]
         # contiguous tags
@@ -101,27 +97,27 @@ class ConditionalRandomField(torch.nn.Module):
         # Add up the scores for the observed transitions and all the inputs but the last
         for i in range(sequence_length - 1):
             # Each is shape (batch_size,)
-            prev_tag, next_tag = ctags[i], ctags[i+1]
+            current_tag, next_tag = ctags[i], ctags[i+1]
 
             # The scores for transitioning from prev_tag to next_tag
             transition_score = (
                     broadcast_transitions
                     # Choose the next_tag-th row for each input
-                    .gather(1, next_tag.view(-1, 1, 1).expand(batch_size, 1, num_tags))
+                    .gather(1, next_tag.view(batch_size, 1, 1).expand(batch_size, 1, num_tags))
                     # Squeeze down to (batch_size, num_tags)
                     .squeeze(1)
                     # Then choose the prev_tag-th column for each of those
-                    .gather(1, prev_tag.view(-1, 1))
+                    .gather(1, current_tag.view(batch_size, 1))
                     # And squeeze down to (batch_size,)
                     .squeeze(1)
             )
 
             # The score for using prev_tag
-            input_score = inputs[:, i].contiguous().gather(1, prev_tag.view(-1, 1)).squeeze(1)
+            emit_score = logits[:, i].contiguous().gather(1, current_tag.view(batch_size, 1)).squeeze(1)
 
             # Include transition score if next element is unmasked,
             # input_score if this element is unmasked.
-            score = score + transition_score * masks[i+1] + input_score * masks[i]
+            score = score + transition_score * masks[i + 1] + emit_score * masks[i]
 
         # Transition from last state to "stop" state. To start with, we need to find the last tag
         # for each instance.
@@ -135,7 +131,7 @@ class ConditionalRandomField(torch.nn.Module):
         last_transition_score = self.transitions[self.stop_tag].index_select(0, last_tags)
 
         # Add the last input if it's not masked.
-        last_inputs = inputs[:, -1].contiguous()                         # (batch_size, num_tags)
+        last_inputs = logits[:, -1].contiguous()                         # (batch_size, num_tags)
         last_input_score = last_inputs.gather(1, last_tags.view(-1, 1))  # (batch_size, 1)
         last_input_score = last_input_score.squeeze()                    # (batch_size,)
 
@@ -152,7 +148,7 @@ class ConditionalRandomField(torch.nn.Module):
         """
         # pylint: disable=arguments-differ
         if mask is None:
-            mask = torch.autograd.Variable(torch.ones(*tags.size()).byte())
+            mask = torch.autograd.Variable(torch.ones(*tags.size()).long())
 
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)
