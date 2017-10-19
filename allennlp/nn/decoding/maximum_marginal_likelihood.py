@@ -8,19 +8,19 @@ from allennlp.data import Vocabulary
 from allennlp.nn import util
 from allennlp.nn.decoding.decode_step import DecodeStep
 from allennlp.nn.decoding.decoder_state import DecoderState
-from allennlp.nn.decoding.decoding_algorithm import DecodingAlgorithm
+from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
 
 
-@DecodingAlgorithm.register('max_marginal_likelihood')
-class MaximumMarginalLikelihoodDecoder(DecodingAlgorithm):
+@DecoderTrainer.register('max_marginal_likelihood')
+class MaximumMarginalLikelihood(DecoderTrainer):
     """
-    This class implements maximum marginal likelihood decoding.  That is, during training, we are
-    given a `set` of acceptable or possible target sequences, and we optimize the `sum` of the
-    probability the model assigns to each item in the set.  This allows the model to distribute its
-    probability mass over the set however it chooses, without forcing `all` of the given target
-    sequences to have high probability.  This is helpful, for example, if you have good reason to
-    expect that the correct target sequence is in the set, but aren't sure `which` of the sequences
-    is actually correct.
+    This class trains a decoder by maximizing the marginal likelihood of the targets.  That is,
+    during training, we are given a `set` of acceptable or possible target sequences, and we
+    optimize the `sum` of the probability the model assigns to each item in the set.  This allows
+    the model to distribute its probability mass over the set however it chooses, without forcing
+    `all` of the given target sequences to have high probability.  This is helpful, for example, if
+    you have good reason to expect that the correct target sequence is in the set, but aren't sure
+    `which` of the sequences is actually correct.
 
     This implementation of maximum marginal likelihood requires the model you use to be `locally
     normalized`; that is, at each decoding timestep, we assume that the model creates a normalized
@@ -35,18 +35,14 @@ class MaximumMarginalLikelihoodDecoder(DecodingAlgorithm):
         We need this so that we know the index of the start and end symbols for decoding.
     vocab_namespace : ``str``
         This tells us what namespace to look in to find the index of the start and end symbols.
-    scheduled_sampling_ratio : ``float``, optional (default = 0.0)
-        At each timestep during training, we sample a random number between 0 and 1, and if it is
-        not less than this value, we use the ground truth labels for the whole batch. Else, we use
-        the predictions from the previous time step for the whole batch. If this value is 0.0
-        (default), this corresponds to teacher forcing, and if it is 1.0, it corresponds to not
-        using target side ground truth labels.  See the following paper for more information:
-        Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al., 2015.
     """
     def __init__(self,
                  vocab: Vocabulary,
                  vocab_namespace: str) -> None:
-        super(self, MaximumMarginalLikelihoodDecoder).__init__(vocab, vocab_namespace)
+        # We need the start symbol to provide as the input at the first timestep of decoding, and
+        # end symbol as a way to indicate the end of the decoded sequence.
+        self._start_index = vocab.get_token_index(START_SYMBOL, vocab_namespace)
+        self._end_index = vocab.get_token_index(END_SYMBOL, vocab_namespace)
 
     def decode(self,
                num_steps: int,
@@ -62,10 +58,10 @@ class MaximumMarginalLikelihoodDecoder(DecodingAlgorithm):
         while states:
             next_states = []
             for state in states:
-                decoder_input = state.action_history[-1] if state.action_history else self._start_index
+                decoder_input = state.action_history[-1] if state.action_history else state.initial_input()
                 allowed_actions = allowed_transitions[state.action_history]
                 for next_state in decode_step.take_step(state, decoder_input, allowed_actions):
-                    if next_state.action_history[-1] == self._end_index:
+                    if next_state.is_finished():
                         finished_states.append(next_state)
                     else:
                         next_states.append(next_state)

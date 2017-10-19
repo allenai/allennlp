@@ -117,12 +117,19 @@ class WikiTablesSemanticParser(Model):
         initial_state = DecoderState(encoder_outputs=encoder_outputs,
                                      encoder_output_mask=source_mask.float(),
                                      hidden_state=(final_encoder_output, decoder_context))
-        return self._decoder.decode(num_decoding_steps,
-                                    initial_state,
-                                    self._decode_step,
-                                    self.training,
-                                    targets,
-                                    target_mask)
+        if self.training:
+            return self._train_decoder.decode(num_decoding_steps,
+                                              initial_state,
+                                              self._decode_step,
+                                              targets,
+                                              target_mask)
+        else:
+            return self._test_decoder.decode(num_decoding_steps,
+                                             initial_state,
+                                             self._decode_step,
+                                             targets,
+                                             target_mask)
+
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -179,10 +186,38 @@ class WikiTablesSemanticParser(Model):
                    attention_function=attention_function)
 
 
+class WikiTablesDecoderState(DecoderState):
+    def __init__(self,
+                 encoder_outputs: torch.Tensor,
+                 encoder_output_mask: torch.Tensor,
+                 hidden_state: torch.Tensor,
+                 score: torch.Tensor,
+                 action_history: Tuple[int] = None) -> None:
+        self.encoder_outputs = encoder_outputs
+        self.encoder_output_mask = encoder_output_mask
+        self.hidden_state = hidden_state
+        self.score = score
+        self.action_history = action_history or ()
+
+    def get_output_mask(self) -> torch.Tensor:
+        return None
+
+    def get_valid_actions(self) -> List[int]:
+        return None
+
+    def transition(self, action_log_probs: torch.Tensor, hidden_state: torch.Tensor) -> 'DecoderState':
+        _, predicted_actions = torch.max(action_log_probs, 1)
+        self.hidden_state = hidden_state
+        self.outputs_so_far.append(predicted_actions)
+        self.log_probs.append(action_log_probs)
+        return self
+
+
 class WikiTablesDecodeStep(DecodeStep):
     def __init__(self,
                  encoder_output_dim: int,
                  attention_function: SimilarityFunction = None) -> None:
+        super(self, WikiTablesDecodeStep).__init__()
         self._attention_function = attention_function
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with that of the final hidden states of the encoder. Also, if

@@ -1,4 +1,4 @@
 from allennlp.nn.decoding.decode_step import DecodeStep
 from allennlp.nn.decoding.decoder_state import DecoderState
-from allennlp.nn.decoding.decoding_algorithm import DecodingAlgorithm
-from allennlp.nn.decoding.maximum_marginal_likelihood_decoder import MaximumMarginalLikelihoodDecoder
+from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
+from allennlp.nn.decoding.maximum_marginal_likelihood import MaximumMarginalLikelihood
