@@ -1,6 +1,5 @@
 from typing import Dict, List, Optional
 
-import numpy
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear

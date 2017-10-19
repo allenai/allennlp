@@ -1,5 +1,5 @@
 import re
-from typing import Sequence, Tuple, List, Optional
+from typing import Sequence, Tuple, List, Optional  # pylint: disable=unused-import
 
 import torch
 
