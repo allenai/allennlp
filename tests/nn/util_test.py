@@ -481,8 +481,7 @@ class TestNnUtil(AllenNlpTestCase):
         weights = Variable(weights)
         loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights)
 
-        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights,
-                                                         batch_average=False)
+        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, batch_average=False)
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.data.sum() / 4
 
