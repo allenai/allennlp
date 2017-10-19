@@ -402,8 +402,9 @@ class Trainer:
             if epoch < self._num_epochs - 1:
                 training_elapsed_time = time.time() - training_start_time
                 estimated_time_remaining = training_elapsed_time * \
-                                           ((self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
-                logger.info("Estimated training time remaining: " + time.strftime("%H:%M:%S", time.gmtime(estimated_time_remaining)))
+                    ((self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
+                formatted_time = time.strftime("%H:%M:%S", time.gmtime(estimated_time_remaining))
+                logger.info("Estimated training time remaining: " + formatted_time)
 
     def _forward(self, batch: dict, for_training: bool) -> dict:
         tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=for_training)
