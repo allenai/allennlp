@@ -188,14 +188,17 @@ class Params(MutableMapping):
         return value
 
     @staticmethod
-    def from_file(params_file: str) -> 'Params':
+    def from_file(params_file: str, params_overrides: str = "") -> 'Params':
         """
         Load a `Params` object from a configuration file.
         """
         # redirect to cache, if necessary
         params_file = cached_path(params_file)
 
-        param_dict = pyhocon.ConfigFactory.parse_file(params_file)
+        file_dict = pyhocon.ConfigFactory.parse_file(params_file)
+
+        overrides_dict = pyhocon.ConfigFactory.parse_string(params_overrides)
+        param_dict = overrides_dict.with_fallback(file_dict)
         return Params(param_dict)
 
 
