@@ -1,11 +1,13 @@
-from typing import Generator, Set
+from typing import Generator, Generic, Set, TypeVar
 
 import torch
 
 from allennlp.nn.decoding.decoder_state import DecoderState
 
+StateType = TypeVar('StateType', bound=DecoderState)  # pylint: disable=invalid-name
 
-class DecoderStep(torch.nn.Module):
+
+class DecoderStep(torch.nn.Module, Generic[StateType]):
     """
     A ``DecoderStep`` is a module that assigns scores to state transitions in a transition-based
     decoder.
@@ -19,8 +21,8 @@ class DecoderStep(torch.nn.Module):
     have its parameters trained.
     """
     def take_step(self,
-                  state: DecoderState,
-                  allowed_actions: Set = None) -> Generator[DecoderState, None, None]:
+                  state: StateType,
+                  allowed_actions: Set = None) -> Generator[StateType, None, None]:
         """
         The main method in the ``DecoderStep`` API.  This function defines the computation done at
         each step of decoding and yields a ranked list of next states.

@@ -1,5 +1,6 @@
 from typing import List
 
+from allennlp.common import Params
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 
@@ -7,8 +8,8 @@ from allennlp.nn.decoding.decoder_state import DecoderState
 class BeamSearch:
     """
     This class implements beam search over transition sequences given an initial ``DecoderState``
-    and a ``DecoderStep``, returning the highest scoring final states found by the beam (presumably
-    the states will keep track of the transition sequence themselves).
+    and a ``DecoderStep``, returning the highest scoring final states found by the beam (the states
+    will keep track of the transition sequence themselves).
     """
     def __init__(self, beam_size: int) -> None:
         self._beam_size = beam_size
@@ -37,3 +38,8 @@ class BeamSearch:
             states = next_states[:self._beam_size]
         finished_states.sort(key=lambda state: -state.score)
         return finished_states
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'BeamSearch':
+        beam_size = params.pop('beam_size')
+        return cls(beam_size=beam_size)

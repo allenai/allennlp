@@ -26,7 +26,7 @@ class DecoderState:
         self.action_history = action_history
         self.score = score
 
-    def is_finished(self):
+    def is_finished(self) -> bool:
         """
         Is this an end state?  Often this will correspond to having the last action be an end
         symbol.

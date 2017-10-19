@@ -1,4 +1,4 @@
-from typing import Dict, Generator, List, Tuple, Type
+from typing import Dict, Generator, List, Set
 
 import numpy
 from overrides import overrides
@@ -7,16 +7,16 @@ import torch
 from torch.autograd import Variable
 from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
-import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
+from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn import util
-from allennlp.nn.decoding import DecodingAlgorithm, DecoderState, DecoderStep
+from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
 
 
 @Model.register("wikitables_parser")
@@ -35,52 +35,61 @@ class WikiTablesSemanticParser(Model):
 
     Parameters
     ----------
-    vocab : ``Vocabulary``, required
-        Vocabulary containing source and target vocabularies. They may be under the same namespace
-        (``tokens``) or the target tokens can have a different namespace, in which case it needs to
-        be specified as ``target_namespace``.
-    source_embedder : ``TextFieldEmbedder``, required
-        Embedder for source side sequences
-    encoder : ``Seq2SeqEncoder``, required
-        The encoder to use for the input question
-    max_decoding_steps : int, required
-        Length of decoded sequences
-    target_namespace : str, optional (default = 'tokens')
-        If the target side vocabulary is different from the source side's, you need to specify the
-        target's namespace here. If not, we'll assume it is "tokens", which is also the default
-        choice for the source side, and this might cause them to share vocabularies.
-    target_embedding_dim : int, optional (default = source_embedding_dim)
-        You can specify an embedding dimensionality for the target side. If not, we'll use the same
-        value as the source embedder's.
-    attention_function: ``SimilarityFunction``, optional (default = None)
-        If you want to use attention to get a dynamic summary of the encoder outputs at each step
-        of decoding, this is the function used to compute similarity between the decoder hidden
-        state and encoder outputs.
+    vocab : ``Vocabulary``
+    question_embedder : ``TextFieldEmbedder``
+        Embedder for questions.
+    encoder : ``Seq2SeqEncoder``
+        The encoder to use for the input question.
+    decoder_trainer : ``DecoderTrainer``
+        The structured learning algorithm used to train the decoder (which also trains the encoder,
+        but it's applied to the decoder outputs).
+    decoder_beam_search : ``BeamSearch``
+        When we're not training, this is how we will do decoding.
+    max_decoding_steps : ``int``
+        When we're decoding with a beam search, what's the maximum number of steps we should take?
+        This only applies at evaluation time, not during training.
+    action_namespace : str
+        Parser actions are represented as strings in the data.  This is the namespace in the
+        vocabulary that was used to convert them into integers.
+    action_embedding_dim : int
+        Parser actions get embeddings in this model, so we can use action histories as decoder
+        inputs.  This specifies the dimensionality of action embeddings.
+    attention_function: ``SimilarityFunction``
+        We compute an attention over the input question at each step of the decoder, using the
+        decoder hidden state as the query.  This is the similarity function we use for that
+        attention.
     """
     def __init__(self,
                  vocab: Vocabulary,
-                 source_embedder: TextFieldEmbedder,
+                 question_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 decoder: DecodingAlgorithm,
+                 decoder_trainer: DecoderTrainer,
+                 decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
-                 target_namespace: str = "tokens",
-                 target_embedding_dim: int = None,
-                 attention_function: SimilarityFunction = None) -> None:
+                 action_namespace: str,
+                 action_embedding_dim: int,
+                 attention_function: SimilarityFunction) -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
-        self._source_embedder = source_embedder
+        self._source_embedder = question_embedder
         self._encoder = encoder
-        self._decoder = decoder
+        self._decoder_trainer = decoder_trainer
+        self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
-        self._target_namespace = target_namespace
-        target_embedding_dim = target_embedding_dim or self._source_embedder.get_output_dim()
+        self._action_namespace = action_namespace
 
-        num_classes = self.vocab.get_vocab_size(self._target_namespace)
-        self._decode_step = WikiTablesDecodeStep(attention_function, self._encoder.get_output_dim())
+        num_actions = self.vocab.get_vocab_size(self._action_namespace)
+        self._start_index = self.vocab.get_token_index(START_SYMBOL, self._action_namespace)
+        self._end_index = self.vocab.get_token_index(END_SYMBOL, self._action_namespace)
+        self._decoder_step = WikiTablesDecoderStep(self._encoder.get_output_dim(),
+                                                   action_embedding_dim,
+                                                   num_actions,
+                                                   attention_function,
+                                                   self._start_index)
 
     @overrides
     def forward(self,  # type: ignore
                 source_tokens: Dict[str, torch.LongTensor],
-                target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+                target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Decoder logic for producing the entire target sequence.
@@ -90,9 +99,9 @@ class WikiTablesSemanticParser(Model):
         source_tokens : Dict[str, torch.LongTensor]
            The output of ``TextField.as_array()`` applied on the source ``TextField``. This will be
            passed through a ``TextFieldEmbedder`` and then through an encoder.
-        target_tokens : Dict[str, torch.LongTensor], optional (default = None)
-           Output of ``Textfield.as_array()`` applied on target ``TextField``. We assume that the
-           target tokens are also represented as a ``TextField``.
+        target_action_sequences : torch.LongTensor, optional (default = None)
+           A list of possibly valid action sequences, with shape ``(batch_size, num_sequences,
+           sequence_length)``.
         """
         # (batch_size, input_sequence_length, encoder_output_dim)
         embedded_input = self._source_embedder(source_tokens)
@@ -103,39 +112,38 @@ class WikiTablesSemanticParser(Model):
         with torch.cuda.device_of(final_encoder_output):
             decoder_context = Variable(torch.zeros(1, self._decoder_output_dim))
 
-        if target_tokens:
-            targets = target_tokens["tokens"]
-            target_mask = util.get_text_field_mask(target_tokens)
-            target_sequence_length = targets.size()[1]
-            # The last input from the target is either padding or the end symbol. Either way, we
-            # don't have to process it.
-            num_decoding_steps = target_sequence_length - 1
+        if target_action_sequences:
+            target_mask = target_action_sequences > 0
         else:
-            targets = None
-            num_decoding_steps = self._max_decoding_steps
+            target_mask = None
 
-        initial_state = DecoderState(encoder_outputs=encoder_outputs,
-                                     encoder_output_mask=source_mask.float(),
-                                     hidden_state=(final_encoder_output, decoder_context))
+        initial_score = Variable(embedded_input.data.new().resize_(1).fill_(0))
+        initial_state = WikiTablesDecoderState([],
+                                               initial_score,
+                                               encoder_outputs=encoder_outputs,
+                                               encoder_output_mask=source_mask.float(),
+                                               hidden_state=(final_encoder_output, decoder_context),
+                                               end_index=self._end_index)
         if self.training:
-            return self._train_decoder.decode(num_decoding_steps,
-                                              initial_state,
-                                              self._decode_step,
-                                              targets,
+            return self._decoder_train.decode(initial_state,
+                                              self._decoder_step,
+                                              target_action_sequences,
                                               target_mask)
         else:
-            return self._test_decoder.decode(num_decoding_steps,
-                                             initial_state,
-                                             self._decode_step,
-                                             targets,
-                                             target_mask)
+            if target_action_sequences is not None:
+                num_steps = target_action_sequences.size(1) - 1
+            else:
+                num_steps = self._max_decoding_steps
+            best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)
+            # TODO(matt): compute accuracy here.
+            return {'best_action_sequence': best_final_states[0].action_history}
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
-        time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives
-        within the ``forward`` method.
+        time, to finalize predictions.  This is (confusingly) a separate notion from the "decoder"
+        in "encoder/decoder", where that decoder logic lives in ``WikiTablesDecoderStep``.
 
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
@@ -160,13 +168,14 @@ class WikiTablesSemanticParser(Model):
 
     @classmethod
     def from_params(cls, vocab, params: Params) -> 'WikiTablesSemanticParser':
-        source_embedder_params = params.pop("source_embedder")
-        source_embedder = TextFieldEmbedder.from_params(vocab, source_embedder_params)
+        source_embedder_params = params.pop("question_embedder")
+        question_embedder = TextFieldEmbedder.from_params(vocab, source_embedder_params)
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         max_decoding_steps = params.pop("max_decoding_steps")
-        target_namespace = params.pop("target_namespace", "tokens")
-        target_embedding_dim = params.pop("target_embedding_dim", None)
-        decoder = DecodingAlgorithm.from_params(vocab, target_namespace, params.pop("decoder"))
+        action_namespace = params.pop("action_namespace")
+        action_embedding_dim = params.pop("action_embedding_dim", None)
+        decoder_trainer = DecoderTrainer.from_params(params.pop("decoder_trainer"))
+        decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         # If no attention function is specified, we should not use attention, not attention with
         # default similarity function.
         attention_function_type = params.pop("attention_function", None)
@@ -174,14 +183,14 @@ class WikiTablesSemanticParser(Model):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
-        scheduled_sampling_ratio = params.pop("scheduled_sampling_ratio", 0.0)
         return cls(vocab,
-                   source_embedder=source_embedder,
+                   question_embedder=question_embedder,
                    encoder=encoder,
-                   decoder=decoder,
+                   decoder_trainer=decoder_trainer,
+                   decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
-                   target_namespace=target_namespace,
-                   target_embedding_dim=target_embedding_dim,
+                   action_namespace=action_namespace,
+                   action_embedding_dim=action_embedding_dim,
                    attention_function=attention_function)
 
 
@@ -198,78 +207,103 @@ class WikiTablesDecoderState(DecoderState):
         ``DecodeStep`` class.
     """
     def __init__(self,
+                 action_history: List[int],
+                 score: torch.Tensor,
                  encoder_outputs: torch.Tensor,
                  encoder_output_mask: torch.Tensor,
                  hidden_state: torch.Tensor,
-                 score: torch.Tensor,
-                 action_history: Tuple[int] = None) -> None:
+                 end_index: int) -> None:
+        super(WikiTablesDecoderState, self).__init__(action_history, score)
         self.encoder_outputs = encoder_outputs
         self.encoder_output_mask = encoder_output_mask
         self.hidden_state = hidden_state
-        self.score = score
-        self.action_history = action_history or ()
-        step_input = state.action_history[-1] if state.action_history else state.initial_input()
+        self.end_index = end_index
 
     def get_output_mask(self) -> torch.Tensor:
         return None
 
-    def get_valid_actions(self) -> List[int]:
+    def get_valid_actions(self) -> Set[int]:
         return None
 
-    def transition(self, action_log_probs: torch.Tensor, hidden_state: torch.Tensor) -> 'DecoderState':
-        _, predicted_actions = torch.max(action_log_probs, 1)
-        self.hidden_state = hidden_state
-        self.outputs_so_far.append(predicted_actions)
-        self.log_probs.append(action_log_probs)
-        return self
+    def is_finished(self) -> bool:
+        return len(self.action_history) > 0 and self.action_history[-1] == self.end_index
 
 
-class WikiTablesDecodeStep(DecoderStep):
+class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     def __init__(self,
                  encoder_output_dim: int,
-                 attention_function: SimilarityFunction = None) -> None:
-        super(self, WikiTablesDecodeStep).__init__()
-        self._attention_function = attention_function
+                 action_embedding_dim: int,
+                 num_actions: int,
+                 attention_function: SimilarityFunction,
+                 start_index: int) -> None:
+        super(WikiTablesDecoderStep, self).__init__()
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
-        # hidden state of the decoder with that of the final hidden states of the encoder. Also, if
-        # we're using attention with ``DotProductSimilarity``, this is needed.
-        self._decoder_output_dim = encoder_output_dim
-        self._target_embedder = Embedding(num_classes, target_embedding_dim)
-        if self._attention_function:
-            self._decoder_attention = Attention(self._attention_function)
-            # The output of attention, a weighted average over encoder outputs, will be
-            # concatenated to the input vector of the decoder at each time step.
-            self._decoder_input_dim = encoder_output_dim + target_embedding_dim
-        else:
-            self._decoder_input_dim = target_embedding_dim
-        # TODO (pradeep): Do not hardcode decoder cell type.
-        self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
-        self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
+        # hidden state of the decoder with that of the final hidden states of the encoder.
+        self._output_dim = encoder_output_dim
+        self._action_embedder = Embedding(num_actions, action_embedding_dim)
+        self._input_attention = Attention(attention_function)
+        self._start_index = start_index
+
+        # The output of attention, which is a weighted average over encoder outputs, will be
+        # concatenated to the input vector of the decoder at each time step.
+        self._decoder_input_dim = encoder_output_dim + action_embedding_dim
+
+        # TODO(pradeep): Do not hardcode decoder cell type.
+        self._decoder_cell = LSTMCell(self._decoder_input_dim, self._output_dim)
+        self._output_projection_layer = Linear(self._output_dim, num_actions)
 
     @overrides
     def take_step(self,
-                  state: DecoderState,
-                  decoder_input: torch.Tensor,
-                  allowed_actions: List[int] = None,
-                  max_next_states: int = None) -> Generator[DecoderState, None, None]:
-        embedded_input = self._target_embedder(state.get_input())
-        decoder_hidden, decoder_context = decoder_state.hidden_state
-        if self._attention_function:
-            # (batch_size, input_sequence_length)
-            input_weights = self._decoder_attention(decoder_hidden,
-                                                    decoder_state.encoder_outputs,
-                                                    decoder_state.encoder_output_mask)
-            # (batch_size, encoder_output_dim)
-            attended_input = util.weighted_sum(decoder_state.encoder_outputs, input_weights)
-            # (batch_size, encoder_output_dim + target_embedding_dim)
-            decoder_input = torch.cat((attended_input, embedded_input), -1)
-        else:
-            decoder_input = embedded_input
+                  state: WikiTablesDecoderState,
+                  allowed_actions: Set[int] = None) -> Generator[WikiTablesDecoderState, None, None]:
+        # Outline here: first we'll construct the input to the decoder, which is a concatenation of
+        # an embedding of the decoder input (the last action taken) and an attention over the
+        # question.
+        step_input = state.action_history[-1] if state.action_history else self._start_index
+        embedded_input = self._action_embedder(step_input)
+        decoder_hidden, decoder_context = state.hidden_state
+        # (batch_size, input_sequence_length)
+        input_weights = self._input_attention(decoder_hidden,
+                                              state.encoder_outputs,
+                                              state.encoder_output_mask)
+        # (batch_size, encoder_output_dim)
+        attended_input = util.weighted_sum(state.encoder_outputs, input_weights)
+        # (batch_size, encoder_output_dim + target_embedding_dim)
+        decoder_input = torch.cat((attended_input, embedded_input), -1)
         decoder_hidden, decoder_context = self._decoder_cell(decoder_input,
                                                              (decoder_hidden, decoder_context))
-        # (batch_size, num_classes)
+
+        # (batch_size, num_actions)
         logits = self._output_projection_layer(decoder_hidden)
         with torch.cuda.device_of(logits):
-            output_mask = decoder_state.get_output_mask()
-        normalized_logits = util.masked_log_softmax(logits, output_mask)
-        return normalized_logits, decoder_state.get_valid_actions(), (decoder_hidden, decoder_context)
+            output_mask = state.get_output_mask()
+        log_probs = util.masked_log_softmax(logits, output_mask)
+        sorted_log_probs = []
+        for i, log_prob in enumerate(log_probs):
+            sorted_log_probs.append((log_prob, i))
+        sorted_log_probs.sort(key=lambda x: -x[0])
+
+        valid_actions = state.get_valid_actions()
+        for log_prob, action in sorted_log_probs:
+            if valid_actions is not None and action not in valid_actions:
+                # If we have a constrained decoder, we need to skip any actions that are not valid
+                # in the current state.
+                continue
+            if allowed_actions is not None and action not in allowed_actions:
+                # This happens when our _decoder trainer_ wants us to only evaluate certain
+                # actions, likely because they are the gold actions in this state.  We just skip
+                # emitting any state that isn't allowed by the trainer, because constructing the
+                # new state can be expensive.
+                # TODO(mattg): is this really all that expensive?  If it isn't, it would make
+                # computing metrics easier if this skipping logic happened in the trainer - the
+                # trainer could keep track of when the top action wasn't allowed.
+                continue
+            new_action_history = state.action_history + [action]
+            new_score = util.logsumexp(torch.cat([state.score, log_prob]))
+            new_hidden_state = (decoder_hidden, decoder_context)
+            yield WikiTablesDecoderState(new_action_history,
+                                         new_score,
+                                         state.encoder_outputs,
+                                         state.encoder_output_mask,
+                                         new_hidden_state,
+                                         state.end_index)
