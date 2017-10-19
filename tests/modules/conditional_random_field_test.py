@@ -26,8 +26,17 @@ class TestConditionalRandomField(AllenNlpTestCase):
                 [3, 2, 2]
         ]))
 
+        transitions = torch.Tensor([
+            [0.1, 0.2, 0.3, 0.4, 0.5],
+            [0.8, 0.3, 0.1, 0.7, 0.9],
+            [-0.3, 2.1, -5.6, 3.4, 4.0],
+            [0.2, 0.4, 0.6, -0.3, -0.4],
+            [1.0, 1.0, 1.0, 1.0, 1.0]
+        ])
+
         # Use the CRF Module to compute the log_likelihood
         crf = ConditionalRandomField(5, START_TAG, END_TAG)
+        crf.transitions = torch.nn.Parameter(transitions)
         log_likelihood = crf.forward(logits, tags).data[0]
 
         # Now compute the log-likelihood manually
@@ -39,14 +48,14 @@ class TestConditionalRandomField(AllenNlpTestCase):
             given the provided logits (and the transition weights in the CRF model)
             """
             # Start with transitions from START and to END
-            total = crf.transitions[tags[0], START_TAG] + crf.transitions[END_TAG, tags[-1]]
+            total = transitions[tags[0], START_TAG] + transitions[END_TAG, tags[-1]]
             # Add in all the intermediate transitions
             for tag, next_tag in zip(tags, tags[1:]):
-                total += crf.transitions[next_tag, tag]
+                total += transitions[next_tag, tag]
             # Add in the logits for the observed tags
             for logit, tag in zip(logits, tags):
                 total += logit[tag]
-            return total.data[0]
+            return total
 
         # For each instance, manually compute the numerator
         # (which is just the score for the logits and actual tags)
