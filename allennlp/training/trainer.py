@@ -200,8 +200,6 @@ class Trainer:
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
-        start_time = time.time()
-
         train_loss = 0.0
         # Set the model to "train" mode.
         self._model.train()
@@ -215,6 +213,7 @@ class Trainer:
         self._last_log = time.time()
         batch_num = 0
 
+        logger.info("Training")
         for batch in train_generator_tqdm:
             batch_num += 1
             self._optimizer.zero_grad()
@@ -258,8 +257,6 @@ class Trainer:
             if self._no_tqdm and time.time() - self._last_log > self._log_interval:
                 logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
                 self._last_log = time.time()
-
-        time.strftime("Duration: %H:%M:%S", time.gmtime(elapsed_time))
 
         return self._get_metrics(train_loss, batch_num, reset=True)
 
