@@ -7,17 +7,7 @@ import pytest
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.nn.util import arrays_to_variables
-from allennlp.nn.util import get_lengths_from_binary_sequence_mask
-from allennlp.nn.util import get_text_field_mask
-from allennlp.nn.util import last_dim_softmax
-from allennlp.nn.util import masked_log_softmax
-from allennlp.nn.util import masked_softmax
-from allennlp.nn.util import replace_masked_values
-from allennlp.nn.util import sequence_cross_entropy_with_logits
-from allennlp.nn.util import sort_batch_by_length
-from allennlp.nn.util import viterbi_decode
-from allennlp.nn.util import weighted_sum
+from allennlp.nn import util
 
 
 class TestNnUtil(AllenNlpTestCase):
@@ -30,7 +20,7 @@ class TestNnUtil(AllenNlpTestCase):
                         },
                 "tags": numpy.ones([2, 3])
         }
-        torch_array_dict = arrays_to_variables(array_dict)
+        torch_array_dict = util.arrays_to_variables(array_dict)
 
         assert torch_array_dict["sentence"]["words"].data.equal(
                 torch.DoubleTensor(numpy.zeros([3, 4])))
@@ -48,7 +38,7 @@ class TestNnUtil(AllenNlpTestCase):
                         },
                 "tags": numpy.ones([3])
         }
-        torch_array_dict = arrays_to_variables(array_dict, add_batch_dimension=True)
+        torch_array_dict = util.arrays_to_variables(array_dict, add_batch_dimension=True)
 
         assert torch_array_dict["sentence"]["words"].data.equal(
                 torch.DoubleTensor(numpy.zeros([1, 4])))
@@ -66,7 +56,7 @@ class TestNnUtil(AllenNlpTestCase):
                         },
                 "tags": numpy.ones([2, 3], dtype="uint8")
         }
-        torch_array_dict = arrays_to_variables(array_dict)
+        torch_array_dict = util.arrays_to_variables(array_dict)
 
         assert torch_array_dict["sentence"]["words"].data.equal(
                 torch.FloatTensor(numpy.zeros([3, 4])))
@@ -85,7 +75,7 @@ class TestNnUtil(AllenNlpTestCase):
                         },
                 "tags": numpy.ones([2, 3], dtype="uint8")
         }
-        torch_array_dict = arrays_to_variables(array_dict, cuda_device=1)
+        torch_array_dict = util.arrays_to_variables(array_dict, cuda_device=1)
 
         assert torch_array_dict["sentence"]["words"].data.equal(
                 torch.cuda.FloatTensor(numpy.zeros([3, 4])))
@@ -99,7 +89,7 @@ class TestNnUtil(AllenNlpTestCase):
                                         [1, 1, 0, 0, 0, 0],
                                         [1, 1, 1, 1, 1, 1],
                                         [1, 0, 0, 0, 0, 0]])
-        lengths = get_lengths_from_binary_sequence_mask(binary_mask)
+        lengths = util.get_lengths_from_binary_sequence_mask(binary_mask)
         numpy.testing.assert_array_equal(lengths.numpy(), numpy.array([3, 2, 6, 1]))
 
     def test_get_sequence_lengths_converts_to_long_tensor_and_avoids_variable_overflow(self):
@@ -111,7 +101,7 @@ class TestNnUtil(AllenNlpTestCase):
         # var_mask = torch.autograd.Variable(mask)
         # var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
         binary_mask = Variable(torch.ones(2, 260).byte())
-        lengths = get_lengths_from_binary_sequence_mask(binary_mask)
+        lengths = util.get_lengths_from_binary_sequence_mask(binary_mask)
         numpy.testing.assert_array_equal(lengths.data.numpy(), numpy.array([260, 260]))
 
     def test_sort_tensor_by_length(self):
@@ -123,7 +113,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         tensor = Variable(tensor)
         sequence_lengths = Variable(torch.LongTensor([3, 4, 1, 5, 7]))
-        sorted_tensor, sorted_lengths, reverse_indices = sort_batch_by_length(tensor, sequence_lengths)
+        sorted_tensor, sorted_lengths, reverse_indices = util.sort_batch_by_length(tensor, sequence_lengths)
 
         # Test sorted indices are padded correctly.
         numpy.testing.assert_array_equal(sorted_tensor[1, 5:, :].data.numpy(), 0.0)
@@ -140,37 +130,37 @@ class TestNnUtil(AllenNlpTestCase):
         tensor = torch.rand([5, 7, 9])
         sequence_lengths = Variable(torch.LongTensor([3, 4, 1, 5, 7]))
         with pytest.raises(ConfigurationError):
-            _ = sort_batch_by_length(tensor, sequence_lengths)
+            _ = util.sort_batch_by_length(tensor, sequence_lengths)
 
     def test_masked_softmax_no_mask(self):
         # Testing the general unmasked 1D case.
         vector_1d = Variable(torch.FloatTensor([[1.0, 2.0, 3.0]]))
-        vector_1d_softmaxed = masked_softmax(vector_1d, None).data.numpy()
+        vector_1d_softmaxed = util.masked_softmax(vector_1d, None).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed,
                                   numpy.array([[0.090031, 0.244728, 0.665241]]))
         assert_almost_equal(1.0, numpy.sum(vector_1d_softmaxed), decimal=6)
 
         vector_1d = Variable(torch.FloatTensor([[1.0, 2.0, 5.0]]))
-        vector_1d_softmaxed = masked_softmax(vector_1d, None).data.numpy()
+        vector_1d_softmaxed = util.masked_softmax(vector_1d, None).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed,
                                   numpy.array([[0.017148, 0.046613, 0.93624]]))
 
         # Testing the unmasked 1D case where the input is all 0s.
         vector_zero = Variable(torch.FloatTensor([[0.0, 0.0, 0.0]]))
-        vector_zero_softmaxed = masked_softmax(vector_zero, None).data.numpy()
+        vector_zero_softmaxed = util.masked_softmax(vector_zero, None).data.numpy()
         assert_array_almost_equal(vector_zero_softmaxed,
                                   numpy.array([[0.33333334, 0.33333334, 0.33333334]]))
 
         # Testing the general unmasked batched case.
         matrix = Variable(torch.FloatTensor([[1.0, 2.0, 5.0], [1.0, 2.0, 3.0]]))
-        masked_matrix_softmaxed = masked_softmax(matrix, None).data.numpy()
+        masked_matrix_softmaxed = util.masked_softmax(matrix, None).data.numpy()
         assert_array_almost_equal(masked_matrix_softmaxed,
                                   numpy.array([[0.01714783, 0.04661262, 0.93623955],
                                                [0.09003057, 0.24472847, 0.66524096]]))
 
         # Testing the unmasked batched case where one of the inputs are all 0s.
         matrix = Variable(torch.FloatTensor([[1.0, 2.0, 5.0], [0.0, 0.0, 0.0]]))
-        masked_matrix_softmaxed = masked_softmax(matrix, None).data.numpy()
+        masked_matrix_softmaxed = util.masked_softmax(matrix, None).data.numpy()
         assert_array_almost_equal(masked_matrix_softmaxed,
                                   numpy.array([[0.01714783, 0.04661262, 0.93623955],
                                                [0.33333334, 0.33333334, 0.33333334]]))
@@ -179,13 +169,13 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the general masked 1D case.
         vector_1d = Variable(torch.FloatTensor([[1.0, 2.0, 5.0]]))
         mask_1d = Variable(torch.FloatTensor([[1.0, 0.0, 1.0]]))
-        vector_1d_softmaxed = masked_softmax(vector_1d, mask_1d).data.numpy()
+        vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed,
                                   numpy.array([[0.01798621, 0.0, 0.98201382]]))
 
         vector_1d = Variable(torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]]))
         mask_1d = Variable(torch.FloatTensor([[1.0, 0.0, 1.0, 1.0]]))
-        vector_1d_softmaxed = masked_softmax(vector_1d, mask_1d).data.numpy()
+        vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed,
                                   numpy.array([[0.01321289, 0.0, 0.26538793, 0.72139918]]))
 
@@ -193,7 +183,7 @@ class TestNnUtil(AllenNlpTestCase):
         # is not all 0s.
         vector_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]]))
         mask_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 1.0]]))
-        vector_1d_softmaxed = masked_softmax(vector_1d, mask_1d).data.numpy()
+        vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed,
                                   numpy.array([[0, 0, 0, 1]]))
 
@@ -201,7 +191,7 @@ class TestNnUtil(AllenNlpTestCase):
         # and the mask is all 0s.
         vector_1d = Variable(torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]]))
         mask_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]]))
-        vector_1d_softmaxed = masked_softmax(vector_1d, mask_1d).data.numpy()
+        vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed,
                                   numpy.array([[0.0, 0.0, 0.0, 0.0]]))
 
@@ -209,14 +199,14 @@ class TestNnUtil(AllenNlpTestCase):
         # the mask is all 0s.
         vector_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]]))
         mask_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]]))
-        vector_1d_softmaxed = masked_softmax(vector_1d, mask_1d).data.numpy()
+        vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed,
                                   numpy.array([[0.0, 0.0, 0.0, 0.0]]))
 
         # Testing the general masked batched case.
         matrix = Variable(torch.FloatTensor([[1.0, 2.0, 5.0], [1.0, 2.0, 3.0]]))
         mask = Variable(torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 1.0]]))
-        masked_matrix_softmaxed = masked_softmax(matrix, mask).data.numpy()
+        masked_matrix_softmaxed = util.masked_softmax(matrix, mask).data.numpy()
         assert_array_almost_equal(masked_matrix_softmaxed,
                                   numpy.array([[0.01798621, 0.0, 0.98201382],
                                                [0.090031, 0.244728, 0.665241]]))
@@ -225,7 +215,7 @@ class TestNnUtil(AllenNlpTestCase):
         # none of the masks are all 0.
         matrix = Variable(torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]]))
         mask = Variable(torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 1.0]]))
-        masked_matrix_softmaxed = masked_softmax(matrix, mask).data.numpy()
+        masked_matrix_softmaxed = util.masked_softmax(matrix, mask).data.numpy()
         assert_array_almost_equal(masked_matrix_softmaxed,
                                   numpy.array([[0.5, 0.0, 0.5],
                                                [0.090031, 0.244728, 0.665241]]))
@@ -234,14 +224,14 @@ class TestNnUtil(AllenNlpTestCase):
         # one of the masks are all 0.
         matrix = Variable(torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]]))
         mask = Variable(torch.FloatTensor([[1.0, 0.0, 1.0], [0.0, 0.0, 0.0]]))
-        masked_matrix_softmaxed = masked_softmax(matrix, mask).data.numpy()
+        masked_matrix_softmaxed = util.masked_softmax(matrix, mask).data.numpy()
         assert_array_almost_equal(masked_matrix_softmaxed,
                                   numpy.array([[0.5, 0.0, 0.5],
                                                [0.0, 0.0, 0.0]]))
 
         matrix = Variable(torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]]))
         mask = Variable(torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 0.0, 1.0]]))
-        masked_matrix_softmaxed = masked_softmax(matrix, mask).data.numpy()
+        masked_matrix_softmaxed = util.masked_softmax(matrix, mask).data.numpy()
         assert_array_almost_equal(masked_matrix_softmaxed,
                                   numpy.array([[0.0, 0.0, 0.0],
                                                [0.11920292, 0.0, 0.88079708]]))
@@ -253,13 +243,13 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the general masked 1D case.
         vector_1d = Variable(torch.FloatTensor([[1.0, 2.0, 5.0]]))
         mask_1d = Variable(torch.FloatTensor([[1.0, 0.0, 1.0]]))
-        vector_1d_softmaxed = masked_log_softmax(vector_1d, mask_1d).data.numpy()
+        vector_1d_softmaxed = util.masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
                                   numpy.array([[0.01798621, 0.0, 0.98201382]]))
 
         vector_1d = Variable(torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]]))
         mask_1d = Variable(torch.FloatTensor([[1.0, 0.0, 1.0, 1.0]]))
-        vector_1d_softmaxed = masked_log_softmax(vector_1d, mask_1d).data.numpy()
+        vector_1d_softmaxed = util.masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
                                   numpy.array([[0.01321289, 0.0,
                                                 0.26538793, 0.72139918]]))
@@ -268,7 +258,7 @@ class TestNnUtil(AllenNlpTestCase):
         # is not all 0s.
         vector_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]]))
         mask_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 1.0]]))
-        vector_1d_softmaxed = masked_log_softmax(vector_1d, mask_1d).data.numpy()
+        vector_1d_softmaxed = util.masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
                                   numpy.array([[0., 0., 0., 1.]]))
 
@@ -276,7 +266,7 @@ class TestNnUtil(AllenNlpTestCase):
         # and the mask is all 0s.
         vector_1d = Variable(torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]]))
         mask_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]]))
-        vector_1d_softmaxed = masked_softmax(vector_1d, mask_1d).data.numpy()
+        vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
                                   numpy.array([[1.0, 1.0, 1.0, 1.0]]))
 
@@ -286,8 +276,8 @@ class TestNnUtil(AllenNlpTestCase):
                 "token_characters": numpy.asarray([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
                                                    [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
                 }
-        text_field_tensors = arrays_to_variables(text_field_arrays)
-        assert_almost_equal(get_text_field_mask(text_field_tensors).data.numpy(),
+        text_field_tensors = util.arrays_to_variables(text_field_arrays)
+        assert_almost_equal(util.get_text_field_mask(text_field_tensors).data.numpy(),
                             [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]])
 
     def test_last_dim_softmax_does_softmax_on_last_dim(self):
@@ -300,7 +290,7 @@ class TestNnUtil(AllenNlpTestCase):
             for j in range(length_2):
                 options_array[0, i, j] = [2, 4, 0, 1]
         options_tensor = Variable(torch.from_numpy(options_array))
-        softmax_tensor = last_dim_softmax(options_tensor).data.numpy()
+        softmax_tensor = util.last_dim_softmax(options_tensor).data.numpy()
         assert softmax_tensor.shape == (batch_size, length_1, length_2, num_options)
         for i in range(length_1):
             for j in range(length_2):
@@ -319,7 +309,7 @@ class TestNnUtil(AllenNlpTestCase):
                 options_array[0, i, j] = [2, 4, 0, 1, 6]
         mask = Variable(torch.IntTensor([[1, 1, 1, 1, 0]]))
         options_tensor = Variable(torch.from_numpy(options_array).float())
-        softmax_tensor = last_dim_softmax(options_tensor, mask).data.numpy()
+        softmax_tensor = util.last_dim_softmax(options_tensor, mask).data.numpy()
         assert softmax_tensor.shape == (batch_size, length_1, length_2, num_options)
         for i in range(length_1):
             for j in range(length_2):
@@ -334,7 +324,7 @@ class TestNnUtil(AllenNlpTestCase):
         sentence_array = numpy.random.rand(batch_size, sentence_length, embedding_dim)
         sentence_tensor = Variable(torch.from_numpy(sentence_array).float())
         attention_tensor = Variable(torch.FloatTensor([[.3, .4, .1, 0, 1.2]]))
-        aggregated_array = weighted_sum(sentence_tensor, attention_tensor).data.numpy()
+        aggregated_array = util.weighted_sum(sentence_tensor, attention_tensor).data.numpy()
         assert aggregated_array.shape == (batch_size, embedding_dim)
         expected_array = (0.3 * sentence_array[0, 0] +
                           0.4 * sentence_array[0, 1] +
@@ -353,7 +343,7 @@ class TestNnUtil(AllenNlpTestCase):
         attention_array = numpy.random.rand(batch_size, length_1, length_2, length_3)
         sentence_tensor = Variable(torch.from_numpy(sentence_array).float())
         attention_tensor = Variable(torch.from_numpy(attention_array).float())
-        aggregated_array = weighted_sum(sentence_tensor, attention_tensor).data.numpy()
+        aggregated_array = util.weighted_sum(sentence_tensor, attention_tensor).data.numpy()
         assert aggregated_array.shape == (batch_size, length_1, length_2, embedding_dim)
         expected_array = (attention_array[0, 3, 2, 0] * sentence_array[0, 3, 2, 0] +
                           attention_array[0, 3, 2, 1] * sentence_array[0, 3, 2, 1])
@@ -369,7 +359,7 @@ class TestNnUtil(AllenNlpTestCase):
         attention_array = numpy.random.rand(batch_size, length_1, length_2, length_3)
         sentence_tensor = Variable(torch.from_numpy(sentence_array).float())
         attention_tensor = Variable(torch.from_numpy(attention_array).float())
-        aggregated_array = weighted_sum(sentence_tensor, attention_tensor).data.numpy()
+        aggregated_array = util.weighted_sum(sentence_tensor, attention_tensor).data.numpy()
         assert aggregated_array.shape == (batch_size, length_1, length_2, embedding_dim)
         for i in range(length_1):
             for j in range(length_2):
@@ -387,7 +377,7 @@ class TestNnUtil(AllenNlpTestCase):
         attention_array = numpy.random.rand(batch_size, length_1, length_2)
         sentence_tensor = Variable(torch.from_numpy(sentence_array).float())
         attention_tensor = Variable(torch.from_numpy(attention_array).float())
-        aggregated_array = weighted_sum(sentence_tensor, attention_tensor).data.numpy()
+        aggregated_array = util.weighted_sum(sentence_tensor, attention_tensor).data.numpy()
         assert aggregated_array.shape == (batch_size, length_1, embedding_dim)
         for i in range(length_1):
             expected_array = (attention_array[0, i, 0] * sentence_array[0, 0] +
@@ -399,7 +389,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Test Viterbi decoding is equal to greedy decoding with no pairwise potentials.
         sequence_predictions = torch.nn.functional.softmax(Variable(torch.rand([5, 9])))
         transition_matrix = torch.zeros([9, 9])
-        indices, _ = viterbi_decode(sequence_predictions.data, transition_matrix)
+        indices, _ = util.viterbi_decode(sequence_predictions.data, transition_matrix)
         _, argmax_indices = torch.max(sequence_predictions, 1)
         assert indices == argmax_indices.data.squeeze().tolist()
 
@@ -415,7 +405,7 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([5, 5])
         for i in range(5):
             transition_matrix[i, i] = float("-inf")
-        indices, _ = viterbi_decode(sequence_predictions, transition_matrix)
+        indices, _ = util.viterbi_decode(sequence_predictions, transition_matrix)
         assert indices == [4, 3, 4, 3, 4, 3]
 
         # Test that unbalanced pairwise potentials break ties
@@ -432,7 +422,7 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([5, 5])
         transition_matrix[4, 4] = -10
         transition_matrix[4, 3] = -10
-        indices, _ = viterbi_decode(sequence_predictions, transition_matrix)
+        indices, _ = util.viterbi_decode(sequence_predictions, transition_matrix)
         assert indices == [3, 3, 3, 3, 3, 3]
 
         sequence_predictions = torch.FloatTensor([[1, 0, 0, 4],
@@ -443,7 +433,7 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([4, 4])
         transition_matrix[0, 0] = 1
         transition_matrix[2, 1] = 5
-        indices, value = viterbi_decode(sequence_predictions, transition_matrix)
+        indices, value = util.viterbi_decode(sequence_predictions, transition_matrix)
         assert indices == [3, 2, 1]
         assert value.numpy() == 18
 
@@ -470,8 +460,8 @@ class TestNnUtil(AllenNlpTestCase):
         tensor2 = Variable(tensor2)
         targets = Variable(targets)
         weights = Variable(weights)
-        loss = sequence_cross_entropy_with_logits(tensor, targets, weights)
-        loss2 = sequence_cross_entropy_with_logits(tensor2, targets, weights)
+        loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights)
+        loss2 = util.sequence_cross_entropy_with_logits(tensor2, targets, weights)
         assert loss.data.numpy() == loss2.data.numpy()
 
     def test_sequence_cross_entropy_with_logits_averages_batch_correctly(self):
@@ -489,9 +479,9 @@ class TestNnUtil(AllenNlpTestCase):
         tensor = Variable(tensor)
         targets = Variable(targets)
         weights = Variable(weights)
-        loss = sequence_cross_entropy_with_logits(tensor, targets, weights)
+        loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights)
 
-        vector_loss = sequence_cross_entropy_with_logits(tensor, targets, weights,
+        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights,
                                                          batch_average=False)
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.data.sum() / 4
@@ -499,5 +489,23 @@ class TestNnUtil(AllenNlpTestCase):
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = Variable(torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]))
         mask = Variable(torch.FloatTensor([[1, 1, 0]]))
-        replaced = replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
+        replaced = util.replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
         assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])
+
+    def test_logsumexp(self):
+        # First a simple example where we add probabilities in log space.
+        tensor = Variable(torch.FloatTensor([[.4, .1, .2]]))
+        log_tensor = tensor.log()
+        log_summed = util.logsumexp(log_tensor, dim=-1, keepdim=False)
+        assert_almost_equal(log_summed.exp().data.numpy(), [.7])
+        log_summed = util.logsumexp(log_tensor, dim=-1, keepdim=True)
+        assert_almost_equal(log_summed.exp().data.numpy(), [[.7]])
+
+        # Then some more atypical examples, and making sure this will work with how we handle
+        # log masks.
+        tensor = Variable(torch.FloatTensor([[float('-inf'), 20.0]]))
+        assert_almost_equal(util.logsumexp(tensor).data.numpy(), [20.0])
+        tensor = Variable(torch.FloatTensor([[-200.0, 20.0]]))
+        assert_almost_equal(util.logsumexp(tensor).data.numpy(), [20.0])
+        tensor = Variable(torch.FloatTensor([[20.0, 20.0], [-200.0, 200.0]]))
+        assert_almost_equal(util.logsumexp(tensor, dim=0).data.numpy(), [20.0, 200.0])
