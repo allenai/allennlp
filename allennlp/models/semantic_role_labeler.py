@@ -212,12 +212,8 @@ class SemanticRoleLabeler(Model):
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
         binary_feature_dim = params.pop("binary_feature_dim")
 
-        init_params = params.pop('initializer', None)
-        reg_params = params.pop('regularizer', None)
-        initializer = (InitializerApplicator.from_params(init_params)
-                       if init_params is not None
-                       else InitializerApplicator())
-        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
+        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
+        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,

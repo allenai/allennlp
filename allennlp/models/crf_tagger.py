@@ -11,7 +11,7 @@ from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, ConditionalRandomField
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, viterbi_decode
+import allennlp.nn.util as util
 from allennlp.training.metrics import SpanBasedF1Measure
 
 START_TAG = "@@START@@"
@@ -20,7 +20,7 @@ END_TAG = "@@END@@"
 @Model.register("crf_tagger")
 class CrfTagger(Model):
     """
-    The ``CrfTagger`` encodes a sequence of text with a stacked ``Seq2SeqEncoder``,
+    The ``CrfTagger`` encodes a sequence of text with a ``Seq2SeqEncoder``,
     then uses a Conditional Random Field model to predict a tag for each token in the sequence.
 
     Parameters
@@ -29,10 +29,9 @@ class CrfTagger(Model):
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
         Used to embed the ``tokens`` ``TextField`` we get as input to the model.
-    stacked_encoder : ``Seq2SeqEncoder``
-        The encoder (with its own internal stacking) that we will use in between embedding tokens
-        and predicting output tags.
-    label_namespace: ``str``, optional (default=``"labels"``)
+    encoder : ``Seq2SeqEncoder``
+        The encoder that we will use in between embedding tokens and predicting output tags.
+    label_namespace : ``str``, optional (default=``"labels"``)
         We'll need to add special START and END tags to whatever namespace holds our labels.
         Unless you did something unusual, the default value should be what you want.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
@@ -43,35 +42,31 @@ class CrfTagger(Model):
 
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 stacked_encoder: Seq2SeqEncoder,
+                 encoder: Seq2SeqEncoder,
                  label_namespace: str = "labels",
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
-
         self.label_namespace = label_namespace
-
         self.text_field_embedder = text_field_embedder
 
         # Make sure we have START and END tags
-        self.start_tag = vocab.add_token_to_namespace(START_TAG, label_namespace)
-        self.end_tag = vocab.add_token_to_namespace(END_TAG, label_namespace)
+        self.start_tag_index = vocab.add_token_to_namespace(START_TAG, label_namespace)
+        self.end_tag_index = vocab.add_token_to_namespace(END_TAG, label_namespace)
         self.num_tags = self.vocab.get_vocab_size(label_namespace)
 
-        self.stacked_encoder = stacked_encoder
-
-        self.tag_projection_layer = TimeDistributed(Linear(self.stacked_encoder.get_output_dim(),
+        self.encoder = encoder
+        self.tag_projection_layer = TimeDistributed(Linear(self.encoder.get_output_dim(),
                                                            self.num_tags))
-
-        self.crf = ConditionalRandomField(self.num_tags, self.start_tag, self.end_tag)
+        self.crf = ConditionalRandomField(self.num_tags, self.start_tag_index, self.end_tag_index)
 
         self.span_metric = SpanBasedF1Measure(vocab, tag_namespace=label_namespace)
 
-        if text_field_embedder.get_output_dim() != stacked_encoder.get_input_dim():
+        if text_field_embedder.get_output_dim() != encoder.get_input_dim():
             raise ConfigurationError("The output dimension of the text_field_embedder must match the "
                                      "input dimension of the phrase_encoder. Found {} and {}, "
                                      "respectively.".format(text_field_embedder.get_output_dim(),
-                                                            stacked_encoder.get_input_dim()))
+                                                            encoder.get_input_dim()))
         initializer(self)
 
     @overrides
@@ -82,7 +77,7 @@ class CrfTagger(Model):
         """
         Parameters
         ----------
-        tokens : Dict[str, torch.LongTensor], required
+        tokens : ``Dict[str, torch.LongTensor]``, required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
             tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
@@ -91,7 +86,7 @@ class CrfTagger(Model):
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
             which knows how to combine different word representations into a single vector per
             token in your input.
-        tags : torch.LongTensor, optional (default = None)
+        tags : ``torch.LongTensor``, optional (default = ``None``)
             A torch tensor representing the sequence of integer gold class labels of shape
             ``(batch_size, num_tokens)``.
 
@@ -99,18 +94,18 @@ class CrfTagger(Model):
         -------
         An output dictionary consisting of:
 
-        logits : torch.FloatTensor
+        logits : ``torch.FloatTensor``
             The logits that are the output of the ``tag_projection_layer``
-        mask : torch.ByteTensor
+        mask : ``torch.LongTensor``
             The text field mask for the input tokens
-        tags : List[List[str]]
+        tags : ``List[List[str]]``
             The predicted tags using the Viterbi algorithm.
-        loss : torch.FloatTensor, optional
+        loss : ``torch.FloatTensor``, optional
             A scalar loss to be optimised. Only computed if gold label ``tags`` are provided.
         """
         embedded_text_input = self.text_field_embedder(tokens)
-        mask = get_text_field_mask(tokens)
-        encoded_text = self.stacked_encoder(embedded_text_input, mask)
+        mask = util.get_text_field_mask(tokens)
+        encoded_text = self.encoder(embedded_text_input, mask)
 
         logits = self.tag_projection_layer(encoded_text)
         predicted_tags = self._viterbi_tags(logits, mask)
@@ -144,42 +139,31 @@ class CrfTagger(Model):
         # but ``viterbi_decode`` expects (prev_state, next_state)
         transitions = self.crf.transitions.data.transpose(1, 0)
 
-        # TODO(joelgrus): Get rid of this after markn makes changes to ``Predictor``
-        if isinstance(logits, numpy.ndarray):
-            logits, mask = torch.from_numpy(logits), torch.from_numpy(mask)
-        elif isinstance(logits, torch.autograd.Variable):
-            logits, mask = logits.data, mask.data
-
-        # "unbatch" logits and mask
-        if logits.ndimension() == 3:
-            predictions_list = [logits[i] for i in range(logits.shape[0])]
-            mask_list = [mask[i] for i in range(mask.shape[0])]
-        else:
-            predictions_list = [logits]
-            mask_list = [mask]
+        # Get the tensors out of the variables
+        logits, mask = logits.data, mask.data
 
         all_tags = []
         # Pad the max sequence length by 2 to account for start_tag + end_tag.
         tag_sequence = torch.Tensor(max_seq_length + 2, num_tags)
 
-        for prediction, prediction_mask in zip(predictions_list, mask_list):
+        for prediction, prediction_mask in zip(logits, mask):
             sequence_length = torch.sum(prediction_mask)
 
             # Start with everything totally unlikely
             tag_sequence.fill_(-10000.)
             # At timestep 0 we must have the START_TAG
-            tag_sequence[0, self.start_tag] = 0.
+            tag_sequence[0, self.start_tag_index] = 0.
             # At steps 1, ..., sequence_length we just use the incoming prediction
-            tag_sequence[1:sequence_length+1] = prediction[:sequence_length]
+            tag_sequence[1:(sequence_length + 1)] = prediction[:sequence_length]
             # And at the last timestep we must have the END_TAG
-            tag_sequence[sequence_length+1, self.end_tag] = 0.
+            tag_sequence[sequence_length + 1, self.end_tag_index] = 0.
 
             # We pass the tags and the transitions to ``viterbi_decode``.
-            viterbi_path, _ = viterbi_decode(tag_sequence[:sequence_length+2], transitions)
-            # And replace the indices with the actual tags.
-            tags = [self.vocab.get_token_from_index(ix, self.label_namespace) for ix in viterbi_path]
-            # Finally, get rid of start and end tags and add to the output.
-            all_tags.append(tags[1:-1])
+            viterbi_path, _ = util.viterbi_decode(tag_sequence[:(sequence_length + 2)], transitions)
+            # Get rid of START and END sentinels and replace the indices with the actual tags.
+            tags = [self.vocab.get_token_from_index(index, self.label_namespace)
+                    for index in viterbi_path[1:-1]]
+            all_tags.append(tags)
 
         return all_tags
 
@@ -192,19 +176,14 @@ class CrfTagger(Model):
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'CrfTagger':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
-
-        init_params = params.pop('initializer', None)
-        reg_params = params.pop('regularizer', None)
-        initializer = (InitializerApplicator.from_params(init_params)
-                       if init_params is not None
-                       else InitializerApplicator())
-        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
+        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
+        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
         params.assert_empty(cls.__name__)
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
-                   stacked_encoder=stacked_encoder,
+                   encoder=encoder,
                    initializer=initializer,
                    regularizer=regularizer)

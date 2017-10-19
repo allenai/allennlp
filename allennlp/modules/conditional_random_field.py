@@ -1,19 +1,9 @@
 """
 Conditional random field
 """
-
 import torch
 
-def log_sum_exp(x: torch.Tensor) -> torch.Tensor:  # pylint: disable=invalid-name
-    """
-    Computes log(sum(exp(x))) in a numerically stable way,
-    where the sum is only over the last dimension.
-    """
-    maxes, _ = torch.max(x, -1, keepdim=True)
-    exps = torch.exp(x - maxes)
-
-    return maxes.squeeze(-1) + torch.log(torch.sum(exps, -1))
-
+from allennlp.nn.util import log_sum_exp
 
 class ConditionalRandomField(torch.nn.Module):
     """
@@ -24,11 +14,11 @@ class ConditionalRandomField(torch.nn.Module):
 
     Parameters
     ----------
-    num_tags: int, required
+    num_tags : int, required
         The number of tags.
-    start_tag: int, required
+    start_tag : int, required
         The id of the sentinel <START> tag.
-    stop_tag: int, required
+    stop_tag : int, required
         The id of the sentinel <STOP> tag.
     """
     def __init__(self,

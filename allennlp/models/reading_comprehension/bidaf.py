@@ -336,12 +336,8 @@ class BidirectionalAttentionFlow(Model):
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
         dropout = params.pop('dropout', 0.2)
 
-        init_params = params.pop('initializer', None)
-        reg_params = params.pop('regularizer', None)
-        initializer = (InitializerApplicator.from_params(init_params)
-                       if init_params is not None
-                       else InitializerApplicator())
-        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
+        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
+        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
         mask_lstms = params.pop('mask_lstms', True)
         params.assert_empty(cls.__name__)

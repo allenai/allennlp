@@ -35,29 +35,33 @@ class Conll2003DatasetReader(DatasetReader):
     and '-DOCSTART- -X- -X- O' indicating the end of each article,
     and converts it into a ``Dataset`` suitable for sequence tagging.
 
+    Each ``Instance`` contains the words in the ``"tokens"`` ``TextField``.
+    The values corresponding to the ``tag_label``
+    values will get loaded into the ``"tags"`` ``SequenceLabelField``.
+    And if you specify any ``feature_labels`` (you probably shouldn't),
+    the corresponding values will get loaded into their own ``SequenceLabelField``s.
+
     This dataset reader ignores the "article" divisions and simply treats
-    each sentence as an independent Instance. (Technically the reader splits sentences
+    each sentence as an independent ``Instance``. (Technically the reader splits sentences
     on any combination of blank lines and "DOCSTART" tags; in particular, it does the right
     thing on well formed inputs.)
 
     Parameters
     ----------
-
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
-    tag_label: ``str``, optional (default=``None``)
+    tag_label: ``str``, optional (default=``ner``)
         Specify `ner`, `pos`, or `chunk` to have that tag loaded into the instance field `tag`.
-        If you are building a model to predict one of the labels, it should be specified here.
     feature_labels: ``Sequence[str]``, optional (default=``()``)
         These labels will be loaded as features into the corresponding instance fields:
         ``pos`` -> ``pos_tags``, ``chunk`` -> ``chunk_tags``, ``ner`` -> ``ner_tags``
         Each will have its own namespace: ``pos_labels``, ``chunk_labels``, ``ner_labels``.
-        If you want to use one of the labels as a _feature_ in your model, it should be
+        If you want to use one of the labels as a `feature` in your model, it should be
         specified here.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 tag_label: str = None,
+                 tag_label: str = "ner",
                  feature_labels: Sequence[str] = ()) -> None:
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in _VALID_LABELS:
@@ -95,11 +99,11 @@ class Conll2003DatasetReader(DatasetReader):
 
                     # Add "feature labels" to instance
                     if 'pos' in self.feature_labels:
-                        instance_fields['pos_tags'] = SequenceLabelField(pos_tags, sequence, "pos_labels")
+                        instance_fields['pos_tags'] = SequenceLabelField(pos_tags, sequence, "pos_tags")
                     if 'chunk' in self.feature_labels:
-                        instance_fields['chunk_tags'] = SequenceLabelField(chunk_tags, sequence, "chunk_labels")
+                        instance_fields['chunk_tags'] = SequenceLabelField(chunk_tags, sequence, "chunk_tags")
                     if 'ner' in self.feature_labels:
-                        instance_fields['ner_tags'] = SequenceLabelField(ner_tags, sequence, "ner_labels")
+                        instance_fields['ner_tags'] = SequenceLabelField(ner_tags, sequence, "ner_tags")
 
                     # Add "tag label" to instance
                     if self.tag_label == 'ner':
@@ -110,6 +114,9 @@ class Conll2003DatasetReader(DatasetReader):
                         instance_fields['tags'] = SequenceLabelField(chunk_tags, sequence)
 
                     instances.append(Instance(instance_fields))
+
+        if not instances:
+            raise ConfigurationError("reading {} resulted in an empty Dataset".format(file_path))
 
         return Dataset(instances)
 

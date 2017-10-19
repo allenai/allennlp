@@ -149,7 +149,7 @@ a couple of changes:
 We don't *need* to, but we also make a few other changes
 
 * following [Peters, Ammar, Bhagavatula, and Power 2017](https://www.semanticscholar.org/paper/Semi-supervised-sequence-tagging-with-bidirectiona-Peters-Ammar/73e59cb556351961d1bdd4ab68cbbefc5662a9fc), we use a GRU character encoding
-as well as a GRU for our stacked encoder
+as well as a GRU for our phrase encoder
 * we also start with pretrained GloVe vectors for our token embeddings
 * we add a regularizer that applies a L2 penalty just to the `transitions`
   parameters to help avoid overfitting

@@ -10,6 +10,15 @@ from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 
+def log_sum_exp(inputs: torch.Tensor) -> torch.Tensor:
+    """
+    Computes log(sum(exp(inputs))) in a numerically stable way,
+    where the sum is over the last dimension.
+    """
+    maxes, _ = torch.max(inputs, -1, keepdim=True)
+    exps = torch.exp(inputs - maxes)
+
+    return maxes.squeeze(-1) + torch.log(torch.sum(exps, -1))
 
 def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     """

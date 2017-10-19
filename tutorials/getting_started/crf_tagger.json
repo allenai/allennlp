@@ -40,7 +40,7 @@
                 }
               }
       },
-      "stacked_encoder": {
+      "encoder": {
               "type": "gru",
               "input_size": 210,
               "hidden_size": 300,
