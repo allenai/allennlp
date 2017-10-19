@@ -4,17 +4,27 @@ title: Creating Your Own Models
 id: creating-a-model
 ---
 
-Using the included models is fine, but at some point you'll probably want to implement your own models,
-which is what this tutorial is for.
+Using the included models is fine, but at some point you'll probably want to implement your own models, which is what this tutorial is for.
+
+Generally speaking, in order to implement a new model, you'll need to implement a
+[`DatasetReader`](https://allenai.github.io/allennlp-docs/api/allennlp.data.dataset_readers.html)
+subclass to read in your datasets and a
+[`Model`](https://allenai.github.io/allennlp-docs/api/allennlp.models.model.html)
+subclass corresponding to the model you want to implement.
+(If there's already a `DatasetReader` for the dataset you want to use,
+ of course you can reuse that one.)
+In this tutorial we'll also implement a custom PyTorch
+[`Module`](http://pytorch.org/docs/master/nn.html#torch.nn.Module),
+but you won't need to do that in general.
 
 Our [simple tagger](simple-tagger) model
 uses an LSTM to capture dependencies between
 the words in the input sentence, but doesn't have a great way
 to capture dependencies between the _tags_. This can be a problem
 for tasks like [named-entity recognition](https://en.wikipedia.org/wiki/Named-entity_recognition)
-where you'd never want to (for example) have a "start of a place" tag followed by a "inside a person" tag.
+where you'd never want to (for example) have a "start of a place" tag followed by an "inside a person" tag.
 
-We'll try to build a NER model that can outperform our simple tagger
+We'll try to build an NER model that can outperform our simple tagger
 on the [CoNLL 2003 dataset](https://www.clips.uantwerpen.be/conll2003/ner/),
 which (due to licensing reasons) you'll have to source for yourself.
 
@@ -176,8 +186,8 @@ You can actually copy that one, the only change you need to make
 is to import all of your custom classes at the top:
 
 ```python
+from myallennlp.data.dataset_readers import Conll2003DatasetReader
 from myallennlp.models import CrfTagger
-from myallennlp.modules import ConditionalRandomField
 ```
 
 and so on. After which you're ready to train:
