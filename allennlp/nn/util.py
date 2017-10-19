@@ -448,6 +448,7 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(',')]
     return torch.cat(to_concatenate, dim=-1)
 
+
 def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
     if combination.isdigit():
         index = int(combination) - 1
@@ -505,3 +506,28 @@ def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
         if first_tensor_dim != second_tensor_dim:
             raise ConfigurationError("Tensor dims must match for operation \"{}\"".format(operation))
         return first_tensor_dim
+
+
+def logsumexp(tensor: torch.Tensor,
+              dim: int = -1,
+              keepdim: bool = False) -> torch.Tensor:
+    """
+    A numerically stable computation of logsumexp. This is mathematically equivalent to
+    `tensor.exp().sum(dim, keep=keepdim).log()`.  This function is typically used for summing log
+    probabilities.
+
+    Parameters
+    ----------
+    tensor : torch.FloatTensor, required.
+        A tensor of arbitrary size.
+    dim : int, optional (default = -1)
+        The dimension of the tensor to apply the logsumexp to.
+    keepdim: bool, optional (default = False)
+        Whether to retain a dimension of size one at the dimension we reduce over.
+    """
+    max_score, _ = tensor.max(dim, keepdim=keepdim)
+    if keepdim:
+        stable_vec = tensor - max_score
+    else:
+        stable_vec = tensor - max_score.unsqueeze(dim)
+    return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
