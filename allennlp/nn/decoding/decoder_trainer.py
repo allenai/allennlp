@@ -36,4 +36,4 @@ class DecoderTrainer(Registrable):
     @classmethod
     def from_params(cls, params: Params) -> 'DecoderTrainer':
         choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(vocab, vocab_namespace, params)
+        return cls.by_name(choice).from_params(params)

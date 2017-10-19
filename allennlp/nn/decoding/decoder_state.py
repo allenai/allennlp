@@ -26,21 +26,9 @@ class DecoderState:
         self.action_history = action_history
         self.score = score
 
-    def initial_input(self):
-        """
-        The input symbol or token that you would expect the first step of decoding to receive.  We
-        need this so that the decoder trainer doesn't have to know the particulars of how you
-        define start symbols.
-
-        This is likely constant across all instances of a particular subclass, for but ease of
-        implementation, we're making it an instance method, not a class method.
-        """
-        raise NotImplementedError
-
     def is_finished(self):
         """
         Is this an end state?  Often this will correspond to having the last action be an end
-        symbol, but again, we're using this here so that the decoder trainer doesn't have to know
-        the details of how your model defines end symbol.s
+        symbol.
         """
         raise NotImplementedError

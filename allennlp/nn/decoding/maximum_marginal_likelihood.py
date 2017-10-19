@@ -6,7 +6,7 @@ import torch
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.nn import util
-from allennlp.nn.decoding.decode_step import DecodeStep
+from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
 
@@ -28,26 +28,10 @@ class MaximumMarginalLikelihood(DecoderTrainer):
     normalization in our loss function, we just sum the probabilities assigned to all correct
     target sequences, relying on the local normalization at each time step to push probability mass
     from bad actions to good ones.
-
-    Parameters
-    ----------
-    vocab : ``Vocabulary``
-        We need this so that we know the index of the start and end symbols for decoding.
-    vocab_namespace : ``str``
-        This tells us what namespace to look in to find the index of the start and end symbols.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 vocab_namespace: str) -> None:
-        # We need the start symbol to provide as the input at the first timestep of decoding, and
-        # end symbol as a way to indicate the end of the decoded sequence.
-        self._start_index = vocab.get_token_index(START_SYMBOL, vocab_namespace)
-        self._end_index = vocab.get_token_index(END_SYMBOL, vocab_namespace)
-
     def decode(self,
-               num_steps: int,
                initial_state: DecoderState,
-               decode_step: DecodeStep,
+               decode_step: DecoderStep,
                targets: torch.Tensor = None,
                target_mask: torch.Tensor = None) -> Dict[str, torch.Tensor]:
         if targets.dim() != 2:
@@ -58,9 +42,8 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         while states:
             next_states = []
             for state in states:
-                decoder_input = state.action_history[-1] if state.action_history else state.initial_input()
-                allowed_actions = allowed_transitions[state.action_history]
-                for next_state in decode_step.take_step(state, decoder_input, allowed_actions):
+                allowed_actions = allowed_transitions[tuple(state.action_history)]
+                for next_state in decode_step.take_step(state, allowed_actions):
                     if next_state.is_finished():
                         finished_states.append(next_state)
                     else:
@@ -95,7 +78,7 @@ class MaximumMarginalLikelihood(DecoderTrainer):
 
         While the example and types above say that this should be a 2D tensor, the implementation
         logic is actually more flexible - any sequence of sequences is valid here, with any
-        contained types.  So your targets could be strings, for instance, if your ``DecodeStep``
+        contained types.  So your targets could be strings, for instance, if your ``DecoderStep``
         and ``DecoderState`` objects know how to handle that.
         """
         allowed_transitions: Dict[Tuple[int, ...], Set[int]] = defaultdict(set)
@@ -109,9 +92,6 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         return allowed_transitions
 
     @classmethod
-    def from_params(cls,
-                    vocab: Vocabulary,
-                    vocab_namespace: str,
-                    params: Params) -> 'MaximumMarginalLikelihoodDecoder':
-        return cls(vocab=vocab,
-                   vocab_namespace=vocab_namespace)
+    def from_params(cls, params: Params) -> 'MaximumMarginalLikelihood':
+        params.assert_empty(cls.__name__)
+        return cls()

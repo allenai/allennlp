@@ -16,7 +16,7 @@ from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn import util
-from allennlp.nn.decoding import DecodingAlgorithm, DecoderState, DecodeStep
+from allennlp.nn.decoding import DecodingAlgorithm, DecoderState, DecoderStep
 
 
 @Model.register("wikitables_parser")
@@ -130,7 +130,6 @@ class WikiTablesSemanticParser(Model):
                                              targets,
                                              target_mask)
 
-
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -187,6 +186,17 @@ class WikiTablesSemanticParser(Model):
 
 
 class WikiTablesDecoderState(DecoderState):
+    """
+    Parameters
+    ----------
+    action_history : ``List[int]``
+        The list of actions taken so far in this state.
+
+        The type annotation says this is an ``int``, but none of the training logic relies on this
+        being an ``int``.  In some cases, items from this list will get passed as inputs to
+        ``DecodeStep``, so this must return items that are compatible with inputs to your
+        ``DecodeStep`` class.
+    """
     def __init__(self,
                  encoder_outputs: torch.Tensor,
                  encoder_output_mask: torch.Tensor,
@@ -198,6 +208,7 @@ class WikiTablesDecoderState(DecoderState):
         self.hidden_state = hidden_state
         self.score = score
         self.action_history = action_history or ()
+        step_input = state.action_history[-1] if state.action_history else state.initial_input()
 
     def get_output_mask(self) -> torch.Tensor:
         return None
@@ -213,7 +224,7 @@ class WikiTablesDecoderState(DecoderState):
         return self
 
 
-class WikiTablesDecodeStep(DecodeStep):
+class WikiTablesDecodeStep(DecoderStep):
     def __init__(self,
                  encoder_output_dim: int,
                  attention_function: SimilarityFunction = None) -> None:
@@ -241,7 +252,7 @@ class WikiTablesDecodeStep(DecodeStep):
                   decoder_input: torch.Tensor,
                   allowed_actions: List[int] = None,
                   max_next_states: int = None) -> Generator[DecoderState, None, None]:
-        embedded_input = self._target_embedder(step_input)
+        embedded_input = self._target_embedder(state.get_input())
         decoder_hidden, decoder_context = decoder_state.hidden_state
         if self._attention_function:
             # (batch_size, input_sequence_length)
