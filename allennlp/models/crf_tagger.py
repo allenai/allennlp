@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from overrides import overrides
 import torch
@@ -12,9 +12,6 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 import allennlp.nn.util as util
 from allennlp.training.metrics import SpanBasedF1Measure
-
-START_TAG = "@@START@@"
-END_TAG = "@@END@@"
 
 @Model.register("crf_tagger")
 class CrfTagger(Model):
@@ -46,18 +43,14 @@ class CrfTagger(Model):
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
+
         self.label_namespace = label_namespace
         self.text_field_embedder = text_field_embedder
-
-        # Make sure we have START and END tags
-        self.start_tag_index = vocab.add_token_to_namespace(START_TAG, label_namespace)
-        self.end_tag_index = vocab.add_token_to_namespace(END_TAG, label_namespace)
         self.num_tags = self.vocab.get_vocab_size(label_namespace)
-
         self.encoder = encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.encoder.get_output_dim(),
                                                            self.num_tags))
-        self.crf = ConditionalRandomField(self.num_tags, self.start_tag_index, self.end_tag_index)
+        self.crf = ConditionalRandomField(self.num_tags)
 
         self.span_metric = SpanBasedF1Measure(vocab, tag_namespace=label_namespace)
 
@@ -107,7 +100,8 @@ class CrfTagger(Model):
         encoded_text = self.encoder(embedded_text_input, mask)
 
         logits = self.tag_projection_layer(encoded_text)
-        predicted_tags = self._viterbi_tags(logits, mask)
+        predicted_tags = [[self.vocab.get_token_from_index(index, self.label_namespace) for index in row]
+                          for row in self.crf.viterbi_tags(logits, mask)]
 
         output = {"logits": logits, "mask": mask, "tags": predicted_tags}
 
@@ -127,41 +121,6 @@ class CrfTagger(Model):
             self.span_metric(class_probabilities, tags, mask)
 
         return output
-
-    def _viterbi_tags(self, logits, mask) -> List[List[str]]:
-        """
-        Uses viterbi algorithm to find most likely tags
-        """
-        _, max_seq_length, num_tags = logits.size()
-
-        # Get the tensors out of the variables
-        transitions = self.crf.transitions.data
-        logits, mask = logits.data, mask.data
-
-        all_tags = []
-        # Pad the max sequence length by 2 to account for start_tag + end_tag.
-        tag_sequence = torch.Tensor(max_seq_length + 2, num_tags)
-
-        for prediction, prediction_mask in zip(logits, mask):
-            sequence_length = torch.sum(prediction_mask)
-
-            # Start with everything totally unlikely
-            tag_sequence.fill_(-10000.)
-            # At timestep 0 we must have the START_TAG
-            tag_sequence[0, self.start_tag_index] = 0.
-            # At steps 1, ..., sequence_length we just use the incoming prediction
-            tag_sequence[1:(sequence_length + 1)] = prediction[:sequence_length]
-            # And at the last timestep we must have the END_TAG
-            tag_sequence[sequence_length + 1, self.end_tag_index] = 0.
-
-            # We pass the tags and the transitions to ``viterbi_decode``.
-            viterbi_path, _ = util.viterbi_decode(tag_sequence[:(sequence_length + 2)], transitions)
-            # Get rid of START and END sentinels and replace the indices with the actual tags.
-            tags = [self.vocab.get_token_from_index(index, self.label_namespace)
-                    for index in viterbi_path[1:-1]]
-            all_tags.append(tags)
-
-        return all_tags
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

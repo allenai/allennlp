@@ -1,9 +1,12 @@
 """
 Conditional random field
 """
-import torch
+from typing import List
 
-from allennlp.nn.util import logsumexp
+import torch
+from torch.autograd import Variable
+
+import allennlp.nn.util as util
 
 class ConditionalRandomField(torch.nn.Module):
     """
@@ -16,27 +19,18 @@ class ConditionalRandomField(torch.nn.Module):
     ----------
     num_tags : int, required
         The number of tags.
-    start_tag_id : int, required
-        The id of the sentinel <START> tag.
-    stop_tag_id : int, required
-        The id of the sentinel <STOP> tag.
     """
     def __init__(self,
-                 num_tags: int,
-                 start_tag_id: int,
-                 stop_tag_id: int) -> None:
+                 num_tags: int) -> None:
         super().__init__()
-
         self.num_tags = num_tags
-        self.start_tag_id = start_tag_id
-        self.stop_tag_id = stop_tag_id
 
-        # transitions[i, j] is the logit for transitioning from state i to state j
+        # transitions[i, j] is the logit for transitioning from state i to state j.
         self.transitions = torch.nn.Parameter(torch.randn(num_tags, num_tags))
 
-        # We never transition to the start tag and we never transition from the stop tag.
-        self.transitions.data[:, start_tag_id] = -10000
-        self.transitions.data[stop_tag_id, :] = -10000
+        # Also need logits for transitioning from "start" state and to "end" state.
+        self.start_transitions = torch.nn.Parameter(torch.randn(num_tags))
+        self.end_transitions = torch.nn.Parameter(torch.randn(num_tags))
 
     def _input_likelihood(self, logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
@@ -51,30 +45,32 @@ class ConditionalRandomField(torch.nn.Module):
 
         # Initial alpha is the (batch_size, num_tags) tensor of likelihoods combining the
         # transitions to the initial states and the logits for the first timestep.
-        alpha = self.transitions[self.start_tag_id].view(1, num_tags) + logits[0]
+        alpha = self.start_transitions.view(1, num_tags) + logits[0]
 
         # For each i we compute logits for the transitions from timestep i-1 to timestep i.
         # We do so in a (batch_size, num_tags, num_tags) tensor where the axes are
-        # (instance, prev_tag, next_tag)
+        # (instance, current_tag, next_tag)
         for i in range(1, sequence_length):
-            # The emit scores are for time i ("next_tag") so we broadcast along the prev_tag axis.
+            # The emit scores are for time i ("next_tag") so we broadcast along the current_tag axis.
             emit_scores = logits[i].view(batch_size, 1, num_tags)
-            # Transition scores are (prev_tag, next_tag) so we broadcast along the instance axis.
+            # Transition scores are (current_tag, next_tag) so we broadcast along the instance axis.
             transition_scores = self.transitions.view(1, num_tags, num_tags)
-            # Alpha is for the prev_tag, so we broadcast along the next_tag axis.
-            alpha = alpha.view(batch_size, num_tags, 1)
+            # Alpha is for the current_tag, so we broadcast along the next_tag axis.
+            broadcast_alpha = alpha.view(batch_size, num_tags, 1)
 
-            # We add the emit + transition scores only if timestep i - 1 was included.
-            inner = alpha + (emit_scores + transition_scores) * mask[i - 1].view(batch_size, 1, 1)
+            # Add all the scores together and logexp over the prev_tag axis
+            inner = broadcast_alpha + emit_scores + transition_scores
 
-            # Now we logsumexp over the "prev_tag" axis.
-            alpha = logsumexp(inner, 1)
+            # In valid positions (mask == 1) we want to take the logsumexp over the current_tag dimension
+            # of ``inner``. Otherwise (mask == 0) we want to retain the previous alpha.
+            alpha = (util.logsumexp(inner, 1) * mask[i].view(batch_size, 1) +
+                     alpha * (1 - mask[i]).view(batch_size, 1))
 
         # Every sequence needs to end with a transition to the stop_tag.
-        stops = alpha + self.transitions[:, self.stop_tag_id].contiguous().view(1, num_tags)
+        stops = alpha + self.end_transitions.view(1, num_tags)
 
         # Finally we log_sum_exp along the num_tags dim, result is (batch_size,)
-        return logsumexp(stops)
+        return util.logsumexp(stops)
 
     def _joint_likelihood(self,
                           logits: torch.Tensor,
@@ -91,7 +87,7 @@ class ConditionalRandomField(torch.nn.Module):
         tags = tags.transpose(0, 1).contiguous()
 
         # Start with the transition scores from start_tag to the first tag in each input
-        score = self.transitions[self.start_tag_id].index_select(0, tags[0])
+        score = self.start_transitions.index_select(0, tags[0])
 
         # Broadcast the transition scores to one per batch element
         broadcast_transitions = self.transitions.view(1, num_tags, num_tags).expand(batch_size, num_tags, num_tags)
@@ -130,7 +126,7 @@ class ConditionalRandomField(torch.nn.Module):
         last_tags = last_tags[0]
 
         # Compute score of transitioning to `stop_tag` from each "last tag".
-        last_transition_score = self.transitions.index_select(0, last_tags)[:, self.stop_tag_id]
+        last_transition_score = self.end_transitions.index_select(0, last_tags)
 
         # Add the last input if it's not masked.
         last_inputs = logits[-1]                                         # (batch_size, num_tags)
@@ -156,3 +152,44 @@ class ConditionalRandomField(torch.nn.Module):
         log_numerator = self._joint_likelihood(inputs, tags, mask)
 
         return torch.sum(log_numerator - log_denominator)
+
+    def viterbi_tags(self, logits: Variable, mask: Variable) -> List[List[int]]:
+        """
+        Uses viterbi algorithm to find most likely tags for the given inputs.
+        """
+        _, max_seq_length, num_tags = logits.size()
+
+        # Get the tensors out of the variables
+        logits, mask = logits.data, mask.data
+
+        # Augment transitions matrix with start and end transitions
+        start_tag = num_tags
+        end_tag = num_tags + 1
+        transitions = torch.Tensor(num_tags + 2, num_tags + 2).fill_(-10000.)
+
+        transitions[:num_tags, :num_tags] = self.transitions.data
+        transitions[start_tag, :num_tags] = self.start_transitions.data
+        transitions[:num_tags, end_tag] = self.end_transitions.data
+
+        all_tags = []
+        # Pad the max sequence length by 2 to account for start_tag + end_tag.
+        tag_sequence = torch.Tensor(max_seq_length + 2, num_tags + 2)
+
+        for prediction, prediction_mask in zip(logits, mask):
+            sequence_length = torch.sum(prediction_mask)
+
+            # Start with everything totally unlikely
+            tag_sequence.fill_(-10000.)
+            # At timestep 0 we must have the START_TAG
+            tag_sequence[0, start_tag] = 0.
+            # At steps 1, ..., sequence_length we just use the incoming prediction
+            tag_sequence[1:(sequence_length + 1), :num_tags] = prediction[:sequence_length]
+            # And at the last timestep we must have the END_TAG
+            tag_sequence[sequence_length + 1, end_tag] = 0.
+
+            # We pass the tags and the transitions to ``viterbi_decode``.
+            viterbi_path, _ = util.viterbi_decode(tag_sequence[:(sequence_length + 2)], transitions)
+            # Get rid of START and END sentinels and append.
+            all_tags.append(viterbi_path[1:-1])
+
+        return all_tags
