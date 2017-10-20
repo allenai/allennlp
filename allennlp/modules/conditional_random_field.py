@@ -3,7 +3,7 @@ Conditional random field
 """
 import torch
 
-from allennlp.nn.util import log_sum_exp
+from allennlp.nn.util import logsumexp
 
 class ConditionalRandomField(torch.nn.Module):
     """
@@ -67,13 +67,13 @@ class ConditionalRandomField(torch.nn.Module):
             inner = alpha + (emit_scores + transition_scores) * masks[i - 1].view(batch_size, 1, 1)
 
             # Now we log_sum_exp over the "prev_tag" axis.
-            alpha = log_sum_exp(inner)
+            alpha = logsumexp(inner)
 
         # Every sequence needs to end with a transition to the stop_tag.
         stops = alpha + self.transitions[self.stop_tag].view(1, num_tags)
 
         # Finally we log_sum_exp along the num_tags dim, result is (batch_size,)
-        return log_sum_exp(stops)
+        return logsumexp(stops)
 
     def _joint_likelihood(self,
                           logits: torch.Tensor,
