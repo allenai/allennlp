@@ -48,10 +48,10 @@ class TestConditionalRandomField(AllenNlpTestCase):
             given the provided logits (and the transition weights in the CRF model)
             """
             # Start with transitions from START and to END
-            total = transitions[tags[0], START_TAG] + transitions[END_TAG, tags[-1]]
+            total = transitions[START_TAG, tags[0]] + transitions[tags[-1], END_TAG]
             # Add in all the intermediate transitions
             for tag, next_tag in zip(tags, tags[1:]):
-                total += transitions[next_tag, tag]
+                total += transitions[tag, next_tag]
             # Add in the logits for the observed tags
             for logit, tag in zip(logits, tags):
                 total += logit[tag]

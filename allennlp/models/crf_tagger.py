@@ -134,11 +134,8 @@ class CrfTagger(Model):
         """
         _, max_seq_length, num_tags = logits.size()
 
-        # The CRF transitions are (next_state, prev_state),
-        # but ``viterbi_decode`` expects (prev_state, next_state)
-        transitions = self.crf.transitions.data.transpose(1, 0)
-
         # Get the tensors out of the variables
+        transitions = self.crf.transitions.data
         logits, mask = logits.data, mask.data
 
         all_tags = []
