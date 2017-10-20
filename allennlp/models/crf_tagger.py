@@ -173,6 +173,7 @@ class CrfTagger(Model):
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+        label_namespace = params.pop("label_namespace", "labels")
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
@@ -181,5 +182,6 @@ class CrfTagger(Model):
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    encoder=encoder,
+                   label_namespace=label_namespace,
                    initializer=initializer,
                    regularizer=regularizer)
