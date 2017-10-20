@@ -4,7 +4,6 @@ AllenNLP and its models are configured correctly.
 """
 
 import logging
-import os
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
