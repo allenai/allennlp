@@ -104,6 +104,8 @@ def make_app(build_dir: str = None) -> Sanic:
         # parts of them.
         if model_name == "machine-comprehension":
             log_blob["outputs"]["best_span_str"] = prediction["best_span_str"]
+        elif model_name == "coreference-resolution":
+            log_blob["outputs"]["clusters"] = prediction["clusters"]
         elif model_name == "textual-entailment":
             log_blob["outputs"]["label_probs"] = prediction["label_probs"]
         elif model_name == "semantic-role-labeling":
