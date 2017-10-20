@@ -260,16 +260,16 @@ class Trainer:
 
         return self._get_metrics(train_loss, batch_num, reset=True)
 
-    def _should_stop_early(self, prev_metrics: List[float]) -> bool:
+    def _should_stop_early(self, metric_history: List[float]) -> bool:
         """
         uses patience and the validation metric to determine if training should stop early
         """
-        if len(prev_metrics) > self._patience:
+        if len(metric_history) > self._patience:
             # Is the best score in the past N epochs worse than the best score overall?
             if self._validation_metric_decreases:
-                return min(prev_metrics[-self._patience:]) > min(prev_metrics)
+                return min(metric_history[-self._patience:]) > min(metric_history)
             else:
-                return max(prev_metrics[-self._patience:]) < max(prev_metrics)
+                return max(metric_history[-self._patience:]) < max(metric_history)
 
         return False
 

@@ -61,6 +61,25 @@ class TestTrainer(AllenNlpTestCase):
         assert val_metrics_per_epoch[0] != 0.
         new_trainer.train()
 
+    def test_should_stop_early_positive(self):
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.dataset,
+                              validation_dataset=self.dataset,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="+test")
+        assert new_trainer._should_stop_early([.5, .3, .2, .1, .4, .4])
+        assert not new_trainer._should_stop_early([.3, .3, .1, .2, .5, .3])
+
+    def test_should_stop_early_negative(self):
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.dataset,
+                              validation_dataset=self.dataset,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="-test")
+        assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4])
+        assert not new_trainer._should_stop_early([.3, .3, .2, .1, .4, .4])
+
+
     def test_train_driver_raises_on_model_with_no_loss_key(self):
 
         class FakeModel(torch.nn.Module):
