@@ -260,7 +260,7 @@ class Trainer:
 
         return self._get_metrics(train_loss, batch_num, reset=True)
 
-    def _should_stop_early(self, latest_metric: float, prev_metrics: List[float]) -> bool:
+    def _should_stop_early(self, prev_metrics: List[float]) -> bool:
         """
         uses patience and the validation metric to determine if training should stop early
         """
@@ -374,6 +374,7 @@ class Trainer:
                 val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
 
                 # Check validation metric for early stopping
+                this_epoch_val_metric = val_metrics[self._validation_metric]
                 validation_metric_per_epoch.append(this_epoch_val_metric)
                 if self._should_stop_early(validation_metric_per_epoch):
                     logger.info("Ran out of patience.  Stopping training.")
