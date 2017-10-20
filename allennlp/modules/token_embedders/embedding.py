@@ -8,6 +8,7 @@ from torch.nn.functional import embedding
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
@@ -207,7 +208,7 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
 
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading embeddings from file")
-    with gzip.open(embeddings_filename, 'rb') as embeddings_file:
+    with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
         for line in embeddings_file:
             fields = line.decode('utf-8').strip().split(' ')
             if len(fields) - 1 != embedding_dim:

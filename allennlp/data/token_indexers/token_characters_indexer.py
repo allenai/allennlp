@@ -75,7 +75,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                            padding_lengths: Dict[str, int]) -> List[List[int]]:
         padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=lambda: [])
         desired_token_length = padding_lengths['num_token_characters']
-        longest_token = max(tokens, key=len)
+        longest_token: List[int] = max(tokens, key=len, default=[])
         padding_index = 0
         if desired_token_length > len(longest_token):
             # Since we want to pad to greater than the longest token, we add a
