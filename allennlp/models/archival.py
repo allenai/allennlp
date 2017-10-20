@@ -49,7 +49,7 @@ def archive_model(serialization_dir: str,
         archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
 
-def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
+def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
@@ -71,7 +71,7 @@ def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
         archive.extractall(tempdir)
 
     # Load config
-    config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME))
+    config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME), overrides)
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),

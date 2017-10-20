@@ -46,7 +46,7 @@ COPY tests/ tests/
 COPY pytest.ini pytest.ini
 COPY scripts/ scripts/
 COPY tutorials/ tutorials/
-COPY experiment_config experiment_config/
+COPY training_config training_config/
 
 # Run tests to verify the Docker build
 RUN PYTHONDONTWRITEBYTECODE=1 pytest
