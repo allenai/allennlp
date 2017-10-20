@@ -10,8 +10,6 @@ set -e
 
 python --version
 
-export PYTHONHASHSEED=2157
-
 run_tests() {
     pytest -v --cov=allennlp --durations=20
 }

@@ -5,7 +5,6 @@ from allennlp.commands.serve import add_subparser as add_serve_subparser
 from allennlp.commands.predict import add_subparser as add_predict_subparser
 from allennlp.commands.train import add_subparser as add_train_subparser
 from allennlp.commands.evaluate import add_subparser as add_evaluate_subparser
-from allennlp.common.checks import ensure_pythonhashseed_set
 
 # a mapping from predictor `type` to the location of the trained model of that type
 DEFAULT_MODELS = {
@@ -38,7 +37,6 @@ def main(prog: str = None,
     ``model_overrides`` and ``predictor_overrides`` arguments will take precedence over the defaults.
     """
     # pylint: disable=dangerous-default-value
-    ensure_pythonhashseed_set()
 
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]', prog=prog)
     subparsers = parser.add_subparsers(title='Commands', metavar='')
