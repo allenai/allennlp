@@ -59,26 +59,20 @@ and override
 
 to compute the log-likelihood of the provided inputs.
 
-To initialize this module,
-we just need the number of tags and the ids of the special start and end tags.
+To initialize this module, we just need the number of tags.
 
 ```python
-    def __init__(self,
-                 num_tags: int,
-                 start_tag: int,
-                 stop_tag: int) -> None:
+    def __init__(self, num_tags: int) -> None:
         super().__init__()
 
         self.num_tags = num_tags
-        self.start_tag = start_tag
-        self.stop_tag = stop_tag
 
-        # transitions[i, j] is the score for transitioning to state i from state j
+        # transitions[i, j] is the logit for transitioning from state i to state j.
         self.transitions = torch.nn.Parameter(torch.randn(num_tags, num_tags))
 
-        # We never transition to the start tag and we never transition from the stop tag
-        self.transitions.data[start_tag, :] = -10000
-        self.transitions.data[:, stop_tag] = -10000
+        # Also need logits for transitioning from "start" state and to "end" state.
+        self.start_transitions = torch.nn.Parameter(torch.randn(num_tags))
+        self.end_transitions = torch.nn.Parameter(torch.randn(num_tags))
 ```
 
 I'm not going to get into the exact mechanics of how the log-likelihood is calculated;
@@ -95,20 +89,18 @@ if you want the details. The key points are
   tag at the previous position
 * Computing the overall likelihood requires summing across all possible tag sequences,
   but we can use clever dynamic programming tricks to do so efficiently.
+* We also add a `viterbi_tags()` method that accepts some input logits,
+  gets the transition probabilities, and uses the
+  [Viterbi algorithm](https://en.wikipedia.org/wiki/Viterbi_algorithm)
+  to compute the most likely sequence of tags for a given input.
 
 ## Implementing the CRF Tagger Model
 
 The `CrfTagger` is not terribly different from the `SimpleTagger` model,
 so we can take that as a starting point. We need to make the following changes:
 
-* define `START_TAG` and `END_TAG` sentinels and make sure they're included
-  in our vocabulary's "labels" namespace
 * give our model a `crf` attribute containing an appropriately initialized
   `ConditionalRandomField` module
-* create a private `_viterbi_tags()` method that uses the logits from the
-  `tag_projection_layer`, the `transitions` from the CRF module,
-   and the [Viterbi algorithm](https://en.wikipedia.org/wiki/Viterbi_algorithm)
-   to compute the most likely sequence of tags for a given input.
 * replace the softmax class probabilities with the Viterbi-generated most likely tags
 * replace the softmax + cross-entropy loss function
   with the negative of the CRF log-likelihood
@@ -158,9 +150,10 @@ a couple of changes:
 
 We don't *need* to, but we also make a few other changes
 
-* following [Peters, Ammar, Bhagavatula, and Power 2017](https://www.semanticscholar.org/paper/Semi-supervised-sequence-tagging-with-bidirectiona-Peters-Ammar/73e59cb556351961d1bdd4ab68cbbefc5662a9fc), we use a GRU character encoding
-as well as a GRU for our phrase encoder
-* we also start with pretrained GloVe vectors for our token embeddings
+* following [Peters, Ammar, Bhagavatula, and Power 2017](https://www.semanticscholar.org/paper/Semi-supervised-sequence-tagging-with-bidirectiona-Peters-Ammar/73e59cb556351961d1bdd4ab68cbbefc5662a9fc), we use a
+  Gated Recurrent Unit (GRU) character encoder
+  as well as a GRU for our phrase encoder
+* we also start with pretrained [GloVe vectors](https://nlp.stanford.edu/projects/glove/) for our token embeddings
 * we add a regularizer that applies a L2 penalty just to the `transitions`
   parameters to help avoid overfitting
 * we add a `test_data_path` and set `evaluate_on_test` to true.
