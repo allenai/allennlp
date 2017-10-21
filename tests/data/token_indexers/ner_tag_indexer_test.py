@@ -12,7 +12,7 @@ class TestNerTagIndexer(AllenNlpTestCase):
         super(TestNerTagIndexer, self).setUp()
         self.tokenizer = SpacyWordSplitter(ner=True)
 
-    def test_count_vocab_items_uses_pos_tags(self):
+    def test_count_vocab_items_uses_ner_tags(self):
         tokens = self.tokenizer.split_words("Larry Page is CEO of Google.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
         indexer = NerTagIndexer()
@@ -21,7 +21,7 @@ class TestNerTagIndexer(AllenNlpTestCase):
             indexer.count_vocab_items(token, counter)
         assert counter["ner_tags"] == {'PERSON': 2, 'ORG': 1, 'NONE': 6}
 
-    def test_token_to_indices_uses_pos_tags(self):
+    def test_token_to_indices_uses_ner_tags(self):
         tokens = self.tokenizer.split_words("Larry Page is CEO of Google.")
         tokens = [t for t in tokens] + [Token("</S>")]
         vocab = Vocabulary()
