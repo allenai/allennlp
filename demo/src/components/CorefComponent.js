@@ -110,18 +110,29 @@ render() {
 class CorefOutput extends React.Component {
     render() {
       const { document, clusters } = this.props;
-      console.log(this.clusters);
       return (
         <div className="model__content">
           <div className="form__field">
             <label>Clusters</label>
-            <div className="model__content__summary">{ clusters }</div>
+            <div className="model__content__summary">
+            <ul>
+              {this.props.clusters.map((cluster) =>
+               <li>
+                {cluster.map((span) =>
+                <span> {this.props.document.slice(span[0], span[1] + 1).join(" ")}, </span>
+                )}
+               </li>
+            )}
+            </ul>
+            </div>
           </div>
 
           <div className="form__field">
             <label>Document</label>
             <div className="passage model__content__summary">
-              <span>{document}</span>
+            {this.props.document.map((word, index) =>
+              <span> {word} </span>
+            )}
             </div>
           </div>
         </div>
@@ -141,7 +152,7 @@ class CorefComponent extends React.Component {
       this.state = {
         outputState: "empty", // valid values: "working", "empty", "received", "error"
         document: "",
-        clusters: [],
+        clusters: {},
       };
 
       this.runCorefModel = this.runCorefModel.bind(this);
