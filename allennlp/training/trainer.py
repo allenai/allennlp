@@ -260,17 +260,16 @@ class Trainer:
 
         return self._get_metrics(train_loss, batch_num, reset=True)
 
-    def _should_stop_early(self, latest_metric: float, prev_metrics: List[float]) -> bool:
+    def _should_stop_early(self, metric_history: List[float]) -> bool:
         """
         uses patience and the validation metric to determine if training should stop early
         """
-        if len(prev_metrics) > self._patience:
-            # Is the worst validation performance in past self._patience
-            # epochs is better than current value?
+        if len(metric_history) > self._patience:
+            # Is the best score in the past N epochs worse than the best score overall?
             if self._validation_metric_decreases:
-                return max(prev_metrics[-self._patience:]) < latest_metric
+                return min(metric_history[-self._patience:]) > min(metric_history)
             else:
-                return min(prev_metrics[-self._patience:]) > latest_metric
+                return max(metric_history[-self._patience:]) < max(metric_history)
 
         return False
 
@@ -376,10 +375,10 @@ class Trainer:
 
                 # Check validation metric for early stopping
                 this_epoch_val_metric = val_metrics[self._validation_metric]
-                if self._should_stop_early(this_epoch_val_metric, validation_metric_per_epoch):
+                validation_metric_per_epoch.append(this_epoch_val_metric)
+                if self._should_stop_early(validation_metric_per_epoch):
                     logger.info("Ran out of patience.  Stopping training.")
                     break
-                validation_metric_per_epoch.append(this_epoch_val_metric)
 
                 # Check validation metric to see if it's the best so far
                 if self._validation_metric_decreases:
