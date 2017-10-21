@@ -507,6 +507,17 @@ class CoreferenceResolver(Model):
         # Compute indices for antecedent spans to consider.
         max_antecedents = min(self._max_antecedents, num_spans_to_keep)
 
+        # This next section can be confusing - it does _not_ have a batch size dimension.
+        # This is because the antecedent indices are agnostic to the batch size - it is
+        # a function only of the number of spans we are considering (i.e which survived the
+        # pruning stage) and the max_antecedents that we will consider. We then _look up_
+        # these indices in top_span_embeddings to get the embeddings for them for each
+        # instance in the batch. This tensor represents the indices which we will be generating
+        # distributions over - for each span we kept, we will generate a distribution over
+        # the maximum number of anteceedents we choose to consider. As these are just the
+        # indices of the spans, and we consider the same number for each element in the batch,
+        # it is batch agnostic.
+
         # Shapes:
         # (num_spans_to_keep, max_antecedents),
         # (1, max_antecedents),

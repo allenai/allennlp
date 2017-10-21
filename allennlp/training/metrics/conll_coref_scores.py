@@ -49,7 +49,7 @@ class ConllCorefScores(Metric):
     @staticmethod
     def get_predicted_clusters(top_spans, antecedent_indices, predicted_antecedents):
         mention_to_predicted: Dict[Tuple[int, int], int] = {}
-        predicted_clusters: List[List[Tuple[int, int]]] = []
+        clusters: List[List[Tuple[int, int]]] = []
         for i, predicted_antecedent in enumerate(predicted_antecedents):
             if predicted_antecedent < 0:
                 continue
@@ -65,18 +65,18 @@ class ConllCorefScores(Metric):
                 predicted_cluster_id: int = mention_to_predicted[antecedent_span]
             else:
                 # We start a new cluster.
-                predicted_cluster_id: int = len(predicted_clusters)
-                predicted_clusters.append([antecedent_span])
+                predicted_cluster_id: int = len(clusters)
+                clusters.append([antecedent_span])
                 mention_to_predicted[antecedent_span] = predicted_cluster_id
 
             mention = tuple(top_spans[i])
-            predicted_clusters[predicted_cluster_id].append(mention)
+            clusters[predicted_cluster_id].append(mention)
             mention_to_predicted[mention] = predicted_cluster_id
 
         # finalise the spans and clusters.
-        predicted_clusters = [tuple(pc) for pc in predicted_clusters]
-        mention_to_predicted = {m:predicted_clusters[i] for m, i in mention_to_predicted.items()}
-        return predicted_clusters, mention_to_predicted
+        clusters = [tuple(pc) for pc in clusters]
+        mention_to_predicted = {m:clusters[i] for m, i in mention_to_predicted.items()}
+        return clusters, mention_to_predicted
 
 
 class Scorer:
