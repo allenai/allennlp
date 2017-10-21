@@ -1,7 +1,6 @@
 import logging
 import math
-from typing import Any, Dict, List, Optional, Tuple, Set, DefaultDict
-from collections import defaultdict
+from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -27,7 +26,7 @@ class CoreferenceResolver(Model):
     <https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83>
     by Lee et al., 2017.
     The basic outline of this model is to get an embedded representation of each span in the
-    document. These span representation are scored and use to prune away spans that are unlikely
+    document. These span representations are scored and use to prune away spans that are unlikely
     to occur in a coreference cluster. For the remaining spans, the model decides which antecedent
     span (if any) they are coreferent with. The resulting coreference links, after applying
     transitivity, imply a clustering of the spans in the document.
@@ -536,6 +535,8 @@ class CoreferenceResolver(Model):
         # Shape: (batch_size, num_spans_to_keep, 2)
         top_spans = torch.cat([top_span_starts, top_span_ends], -1)
 
+        # We now have, for each span which survived the pruning stage,
+        # a predicted pre
         # Shape: (batch_size, num_spans_to_keep)
         _, predicted_antecedents = augmented_antecedent_scores.max(2)
         predicted_antecedents -= 1
@@ -586,40 +587,49 @@ class CoreferenceResolver(Model):
             which are in turn comprised of a list of (start, end) inclusive spans into the
             original document.
         """
-        top_spans = output_dict["top_spans"].data.cpu()
-        predicted_antecedents = output_dict["predicted_antecedents"].data.cpu()
+        batch_top_spans = output_dict["top_spans"].data.cpu()
+        batch_predicted_antecedents = output_dict["predicted_antecedents"].data.cpu()
+        antecedent_indices = output_dict["antecedent_indices"].data.cpu()
         batch_clusters: List[List[List[Tuple[int, int]]]] = []
 
         # Calling zip() on two tensors results in an iterator over their
         # first dimension. This is iterating over instances in the batch.
-        for spans, span_antecedents in zip(top_spans, predicted_antecedents):
+        for top_spans, predicted_antecedents in zip(batch_top_spans, batch_predicted_antecedents):
+            spans_to_cluster_ids: Dict[Tuple[int, int], int] = {}
+            clusters: List[List[Tuple[int, int]]] = []
 
-            clusters: DefaultDict[int, Set[Tuple[int, int]]] = defaultdict(set)
-            for span, antecedent_index in zip(spans, span_antecedents):
-                if antecedent_index != -1:
-                    # Find the right cluster to update with this span.
-                    # We might have referred to a span which in turn
-                    # refers to some previous span, so here we trace back
-                    # through the list to find the "root" of the cluster,
-                    # and only update that set.
-                    cluster_index_to_update = antecedent_index
-                    # This while loop must halt because antecedents are
-                    # strictly less than the current index, so the cluster
-                    # we are referring to must decrease at each step.
-                    while span_antecedents[cluster_index_to_update] != -1:
-                        cluster_index_to_update = span_antecedents[cluster_index_to_update]
+            for i, (span, predicted_antecedent) in enumerate(zip(top_spans, predicted_antecedents)):
+                if predicted_antecedent < 0:
+                    # We don't care about spans which are
+                    # not co-referent with anything.
+                    continue
 
-                    # Add the root span to the set, as we might not have seen it before.
-                    root_span_start, root_span_end = spans[cluster_index_to_update]
-                    clusters[cluster_index_to_update].add((root_span_start, root_span_end))
-                    # Now add the span we are currently considering.
-                    span_start, span_end = span
-                    clusters[cluster_index_to_update].add((span_start, span_end))
+                # Find the right cluster to update with this span.
+                # To do this, we find the row in ``antecedent_indices``
+                # corresponding to this span we are considering.
+                # The predicted antecedent is then an index into this list
+                # of indices, denoting the span from ``top_spans`` which is the
+                # most likely antecedent.
+                predicted_index = antecedent_indices[i, predicted_antecedent]
+
+                antecedent_span = (top_spans[predicted_index, 0],
+                                   top_spans[predicted_index, 1])
+                # Check if we've seen the span before.
+                if antecedent_span in spans_to_cluster_ids.keys():
+                    predicted_cluster_id: int = spans_to_cluster_ids[antecedent_span]
                 else:
-                    # We don't care about spans which are not
-                    # co-referent with anything.
-                    pass
-            batch_clusters.append([list(x) for x in clusters.values()])
+                    # We start a new cluster.
+                    predicted_cluster_id: int = len(clusters)
+                    # Append a new cluster containing only this span.
+                    clusters.append([antecedent_span])
+                    # Record the new id of this span.
+                    spans_to_cluster_ids[antecedent_span] = predicted_cluster_id
+
+                # Now add the span we are currently considering.
+                span_start, span_end = span
+                clusters[predicted_cluster_id].append((span_start, span_end))
+                spans_to_cluster_ids[(span_start, span_end)] = predicted_cluster_id
+            batch_clusters.append(clusters)
 
         output_dict["clusters"] = batch_clusters
         return output_dict

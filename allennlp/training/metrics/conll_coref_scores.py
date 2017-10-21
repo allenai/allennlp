@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Dict, List, Tuple
 from collections import Counter
 import numpy as np
 from sklearn.utils.linear_assignment_ import linear_assignment
@@ -48,29 +48,38 @@ class ConllCorefScores(Metric):
 
     @staticmethod
     def get_predicted_clusters(top_spans, antecedent_indices, predicted_antecedents):
-        mention_to_predicted = {}
-        predicted_clusters = []
+        mention_to_predicted: Dict[Tuple[int, int], int] = {}
+        predicted_clusters: List[List[Tuple[int, int]]] = []
         for i, predicted_antecedent in enumerate(predicted_antecedents):
             if predicted_antecedent < 0:
                 continue
+
+            # Find predicted index in the antecedent spans.
             predicted_index = antecedent_indices[i, predicted_antecedent]
+            # Must be a previous span.
             assert i > predicted_index
-            predicted_antecedent = tuple(top_spans[predicted_index])
-            if predicted_antecedent in mention_to_predicted:
-                predicted_cluster = mention_to_predicted[predicted_antecedent]
+            antecedent_span = tuple(top_spans[predicted_index])
+
+            # Check if we've seen the span before.
+            if antecedent_span in mention_to_predicted.keys():
+                predicted_cluster_id: int = mention_to_predicted[antecedent_span]
             else:
-                predicted_cluster = len(predicted_clusters)
-                predicted_clusters.append([predicted_antecedent])
-                mention_to_predicted[predicted_antecedent] = predicted_cluster
+                # We start a new cluster.
+                predicted_cluster_id: int = len(predicted_clusters)
+                predicted_clusters.append([antecedent_span])
+                mention_to_predicted[antecedent_span] = predicted_cluster_id
+
             mention = tuple(top_spans[i])
-            predicted_clusters[predicted_cluster].append(mention)
-            mention_to_predicted[mention] = predicted_cluster
+            predicted_clusters[predicted_cluster_id].append(mention)
+            mention_to_predicted[mention] = predicted_cluster_id
+
+        # finalise the spans and clusters.
         predicted_clusters = [tuple(pc) for pc in predicted_clusters]
         mention_to_predicted = {m:predicted_clusters[i] for m, i in mention_to_predicted.items()}
         return predicted_clusters, mention_to_predicted
 
 
-class Scorer(object):
+class Scorer:
     """
     Mostly borrowed from <https://github.com/clarkkev/deep-coref/blob/master/evaluation.py>
     """
