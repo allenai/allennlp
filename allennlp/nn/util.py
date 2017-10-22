@@ -3,6 +3,7 @@ Assorted utilities for working with neural networks in AllenNLP.
 """
 
 from typing import Dict, List, Optional, Union
+import logging
 
 import numpy
 import torch
@@ -10,6 +11,7 @@ from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     """
@@ -184,7 +186,9 @@ def masked_log_softmax(vector, mask):
     return torch.nn.functional.log_softmax(vector)
 
 
-def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
+def viterbi_decode(tag_sequence: torch.Tensor,
+                   transition_matrix: torch.Tensor,
+                   tag_evidence: Optional[List[int]] = None):
     """
     Perform Viterbi decoding in log space over a sequence given a transition matrix
     specifying pairwise (transition) potentials between tags and a matrix of shape
@@ -199,6 +203,14 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     transition_matrix : torch.Tensor, required.
         A tensor of shape (num_tags, num_tags) representing the binary potentials
         for transitioning between a given pair of tags.
+    tag_evidence : Optional[List[int]], optional, (default = None)
+        A list of length ``sequence_length`` containing the class ids of observed
+        elements in the sequence, with unobserved elements being set to -1. Note that
+        it is possible to provide evidence which results in degenerate labellings if
+        the sequences of tags you provide as evidence cannot transition between each
+        other, or those transitions are extremely unlikely. In this situation we log a
+        warning, but the responsibility for providing self-consistent evidence ultimately
+        lies with the user.
 
     Returns
     -------
@@ -207,17 +219,47 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     viterbi_score : float
         The score of the viterbi path.
     """
-    sequence_length, _ = list(tag_sequence.size())
+    sequence_length, num_tags = list(tag_sequence.size())
+    if tag_evidence:
+        if len(tag_evidence) != sequence_length:
+            raise ConfigurationError("Evidence was provided, but it was not the same length as "
+                                     "the sequence. Found sequence of length: {} and evidence: "
+                                     .format(sequence_length, tag_evidence))
+    else:
+        tag_evidence = [-1 for _ in range(sequence_length)]
+
     path_scores = []
     path_indices = []
-    path_scores.append(tag_sequence[0, :])
+
+    if tag_evidence[0] != -1:
+        one_hot = torch.zeros(num_tags)
+        one_hot[tag_evidence[0]] = 100000.
+        path_scores.append(one_hot)
+    else:
+        path_scores.append(tag_sequence[0, :])
 
     # Evaluate the scores for all possible paths.
     for timestep in range(1, sequence_length):
         # Add pairwise potentials to current scores.
         summed_potentials = path_scores[timestep - 1].unsqueeze(-1) + transition_matrix
         scores, paths = torch.max(summed_potentials, 0)
-        path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
+
+        # If we have evidence for this timestep, use it
+        # instead of the distribution over tags.
+        evidence = tag_evidence[timestep]
+        # Warn the user if they have passed
+        # invalid/extremely unlikely evidence.
+        if tag_evidence[timestep - 1] != -1:
+            if transition_matrix[tag_evidence[timestep - 1], evidence] < -10000:
+                logger.warning("The pairwise potential between tags you have passed as "
+                               "evidence is extremely unlikely. Double check your evidence "
+                               "or transition potentials!")
+        if evidence != -1:
+            one_hot = torch.zeros(num_tags)
+            one_hot[evidence] = 100000.
+            path_scores.append(one_hot)
+        else:
+            path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
         path_indices.append(paths.squeeze())
 
     # Construct the most likely sequence backwards.

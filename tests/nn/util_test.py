@@ -437,6 +437,30 @@ class TestNnUtil(AllenNlpTestCase):
         assert indices == [3, 2, 1]
         assert value.numpy() == 18
 
+        # Test that providing evidence results in paths containing specified tags.
+        sequence_predictions = torch.FloatTensor([[0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4],
+                                                  [0, 0, 0, 4, 4]])
+        # The 5th tag has a penalty for appearing sequentially
+        # or for transitioning to the 4th tag, making the best
+        # path to take the 4th tag for every label.
+        transition_matrix = torch.zeros([5, 5])
+        transition_matrix[4, 4] = -10
+        transition_matrix[4, 3] = -2
+        # The 4th and 5th tags are observed - they should be equal to
+        # 0 and 4. The last tag should be equal to 3, because although
+        # the penalty for transitioning to the 4th tag is -2, the unary
+        # potential is 4, which is greater than the combination for
+        # any of the other labels.
+        evidence = [2, -1, -1, 0, 4, -1]
+        indices, _ = util.viterbi_decode(sequence_predictions,
+                                         transition_matrix,
+                                         evidence)
+        assert indices == [2, 3, 3, 0, 4, 3]
+
     def test_sequence_cross_entropy_with_logits_masks_loss_correctly(self):
 
         # test weight masking by checking that a tensor with non-zero values in
