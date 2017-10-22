@@ -33,3 +33,7 @@ if [[ "$BUILD_DOCS" == "true" ]]; then
   make html-strict
   cd ..
 fi
+
+if [[ "$CHECK_DOCS" == "true" ]]; then
+  python scripts/check_docs.py
+fi
