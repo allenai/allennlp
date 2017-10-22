@@ -123,6 +123,7 @@ class SimpleSeq2Seq(Model):
         """
         # (batch_size, input_sequence_length, encoder_output_dim)
         embedded_input = self._source_embedder(source_tokens)
+        batch_size, _, _ = embedded_input.size()
         source_mask = get_text_field_mask(source_tokens)
         encoder_outputs = self._encoder(embedded_input, source_mask)
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
@@ -135,8 +136,8 @@ class SimpleSeq2Seq(Model):
         else:
             num_decoding_steps = self._max_decoding_steps
         decoder_hidden = final_encoder_output
-        with torch.cuda.device_of(decoder_hidden):
-            decoder_context = Variable(torch.zeros(1, self._decoder_output_dim))
+        decoder_context = Variable(encoder_outputs.data.new()
+                                   .resize_(batch_size, self._decoder_output_dim).fill_(0))
         last_predictions = None
         step_logits = []
         step_probabilities = []
@@ -148,13 +149,13 @@ class SimpleSeq2Seq(Model):
                 if timestep == 0:
                     # For the first timestep, when we do not have targets, we input start symbols.
                     # (batch_size,)
-                    with torch.cuda.device_of(final_encoder_output):
-                        input_choices = Variable(torch.LongTensor([self._start_index]).expand_as(
-                                final_encoder_output[:, 0]))
+                    input_choices = Variable(source_mask.data.new()
+                                             .resize_(batch_size).fill_(self._start_index))
                 else:
                     input_choices = last_predictions
             decoder_input = self._prepare_decode_step_input(input_choices, decoder_hidden,
                                                             encoder_outputs, source_mask)
+            print(decoder_input)
             decoder_hidden, decoder_context = self._decoder_cell(decoder_input,
                                                                  (decoder_hidden, decoder_context))
             # (batch_size, num_classes)
