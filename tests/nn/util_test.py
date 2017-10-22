@@ -450,8 +450,8 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([5, 5])
         transition_matrix[4, 4] = -10
         transition_matrix[4, 3] = -2
-        # The 4th and 5th tags are observed - they should be equal to
-        # 0 and 4. The last tag should be equal to 3, because although
+        # The 1st, 4th and 5th tags are observed - they should be equal to
+        # 2, 0 and 4. The last tag should be equal to 3, because although
         # the penalty for transitioning to the 4th tag is -2, the unary
         # potential is 4, which is greater than the combination for
         # any of the other labels.
