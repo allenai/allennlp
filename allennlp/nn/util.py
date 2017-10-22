@@ -13,6 +13,7 @@ from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     """
     Compute sequence lengths for each batch element in a tensor using a
@@ -223,7 +224,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
     if tag_evidence:
         if len(tag_evidence) != sequence_length:
             raise ConfigurationError("Evidence was provided, but it was not the same length as "
-                                     "the sequence. Found sequence of length: {} and evidence: "
+                                     "the sequence. Found sequence of length: {} and evidence: {}"
                                      .format(sequence_length, tag_evidence))
     else:
         tag_evidence = [-1 for _ in range(sequence_length)]
