@@ -507,9 +507,9 @@ class CoreferenceResolver(Model):
         # Compute indices for antecedent spans to consider.
         max_antecedents = min(self._max_antecedents, num_spans_to_keep)
 
-        # This next section can be confusing - it does _not_ have a batch size dimension.
-        # This is because the antecedent indices are agnostic to the batch size - it is
-        # a function only of the number of spans we are considering (i.e which survived the
+        # This next section can be confusing - the returned tensors do _not_ have a batch size
+        # dimension. This is because the antecedent indices are agnostic to the batch size -
+        # it is a function only of the number of spans we are considering (i.e which survived the
         # pruning stage) and the max_antecedents that we will consider. We then _look up_
         # these indices in top_span_embeddings to get the embeddings for them for each
         # instance in the batch. This tensor represents the indices which we will be generating
@@ -547,9 +547,13 @@ class CoreferenceResolver(Model):
         top_spans = torch.cat([top_span_starts, top_span_ends], -1)
 
         # We now have, for each span which survived the pruning stage,
-        # a predicted pre
+        # a predicted antecedent. This implies a clustering if we group
+        # mentions which refer to each other in a chain.
         # Shape: (batch_size, num_spans_to_keep)
         _, predicted_antecedents = augmented_antecedent_scores.max(2)
+        # Subtract one here because index 0 is the "no antecedent" class,
+        # so this makes the indices line up with actual spans if the prediction
+        # is greater than -1.
         predicted_antecedents -= 1
 
         output_dict = {"top_spans": top_spans,
