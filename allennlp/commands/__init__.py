@@ -18,7 +18,8 @@ DEFAULT_PREDICTORS = {
         'srl': 'semantic-role-labeling',
         'decomposable_attention': 'textual-entailment',
         'bidaf': 'machine-comprehension',
-        'simple_tagger': 'simple-tagger'
+        'simple_tagger': 'simple-tagger',
+        'crf_tagger': 'crf-tagger'
 }
 
 def main(prog: str = None,
