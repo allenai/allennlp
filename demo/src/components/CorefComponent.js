@@ -24,81 +24,80 @@ const corefExamples = [
 ];
 
 class CorefInput extends React.Component {
-constructor() {
-    super();
-    this.state = {
-    corefDocumentValue: "",
-    };
-    this.handleListChange = this.handleListChange.bind(this);
-    this.handleDocumentChange = this.handleDocumentChange.bind(this);
-}
-
-handleListChange(e) {
-    if (e.target.value !== "") {
-    this.setState({
-        corefDocumentValue: corefExamples[e.target.value].document,
-    });
+    constructor() {
+        super();
+        this.state = {
+        corefDocumentValue: "",
+        };
+        this.handleListChange = this.handleListChange.bind(this);
+        this.handleDocumentChange = this.handleDocumentChange.bind(this);
     }
-}
 
-handleDocumentChange(e) {
-    this.setState({
-    corefDocumentValue: e.target.value,
-    });
-}
+    handleListChange(e) {
+        if (e.target.value !== "") {
+        this.setState({
+            corefDocumentValue: corefExamples[e.target.value].document,
+        });
+        }
+    }
 
-render() {
+    handleDocumentChange(e) {
+        this.setState({
+        corefDocumentValue: e.target.value,
+        });
+    }
 
-    const { corefDocumentValue } = this.state;
-    const { outputState, runCorefModel } = this.props;
+    render() {
+        const { corefDocumentValue } = this.state;
+        const { outputState, runCorefModel } = this.props;
 
-    const corefInputs = {
-    "documentValue": corefDocumentValue,
-    };
+        const corefInputs = {
+        "documentValue": corefDocumentValue,
+        };
 
-    const title = "Co-reference Resolution";
-    const description = (
-      <div>
-        <span>
-        Coreference resolution is the task of finding all expressions that refer to the same entity
-        in a text. It is an important step for a lot of higher level NLP tasks that involve natural
-        language understanding such as document summarization, question answering, and information extraction.
-        </span>
-        <a href = "https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83" target="_blank" rel="noopener noreferrer">{' '} End-to-end Neural Coreference Resolution ( Lee et al, 2017)</a>
-        <span>
-        a neural model which considers all possible spans in the document as potential mentions and
-        learns distributions over possible anteceedents for each span, using aggressive, learnt
-        pruning strategies to retain computational efficiency. It achieved state-of-the-art accuracies on
-        </span>
-        <a href = "http://cemantix.org/data/ontonotes.html" target="_blank" rel="noopener noreferrer">{' '} the Ontonotes 5.0 dataset {' '}</a>
-        <span>
-        in early 2017.
-        </span>
-      </div>
-    );
+        const title = "Co-reference Resolution";
+        const description = (
+          <div>
+            <span>
+            Coreference resolution is the task of finding all expressions that refer to the same entity
+            in a text. It is an important step for a lot of higher level NLP tasks that involve natural
+            language understanding such as document summarization, question answering, and information extraction.
+            </span>
+            <a href = "https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83" target="_blank" rel="noopener noreferrer">{' '} End-to-end Neural Coreference Resolution ( Lee et al, 2017)</a>
+            <span>
+            a neural model which considers all possible spans in the document as potential mentions and
+            learns distributions over possible anteceedents for each span, using aggressive, learnt
+            pruning strategies to retain computational efficiency. It achieved state-of-the-art accuracies on
+            </span>
+            <a href = "http://cemantix.org/data/ontonotes.html" target="_blank" rel="noopener noreferrer">{' '} the Ontonotes 5.0 dataset {' '}</a>
+            <span>
+            in early 2017.
+            </span>
+          </div>
+        );
 
-    return (
-        <div className="model__content">
-        <ModelIntro title={title} description={description} />
-            <div className="form__instructions"><span>Enter text or</span>
-            <select disabled={outputState === "working"} onChange={this.handleListChange}>
-                <option value="">Choose an example...</option>
-                {corefExamples.map((example, index) => {
-                return (
-                    <option value={index} key={index}>{example.document.substring(0,60) + ".. ."}</option>
-                );
-                })}
-            </select>
+        return (
+            <div className="model__content">
+            <ModelIntro title={title} description={description} />
+                <div className="form__instructions"><span>Enter text or</span>
+                <select disabled={outputState === "working"} onChange={this.handleListChange}>
+                    <option value="">Choose an example...</option>
+                    {corefExamples.map((example, index) => {
+                    return (
+                        <option value={index} key={index}>{example.document.substring(0,60) + ".. ."}</option>
+                    );
+                    })}
+                </select>
+                </div>
+                <div className="form__field">
+                <label htmlFor="#input--mc-passage">Document</label>
+                <textarea onChange={this.handleDocumentChange} id="input--mc-passage" type="text"
+                required="true" autoFocus="true" placeholder="E.g. &quot;Saturn is the sixth planet from the Sun and the second-largest in the Solar System, after Jupiter. It is a gas giant with an average radius about nine times that of Earth. Although it has only one-eighth the average density of Earth, with its larger volume Saturn is just over 95 times more massive. Saturn is named after the Roman god of agriculture; its astronomical symbol represents the god&#39;s sickle.&quot;" value={corefDocumentValue} disabled={outputState === "working"}></textarea>
+                </div>
+                <div className="form__field form__field--btn">
+                <Button outputState={outputState} runModel={runCorefModel} inputs={corefInputs} />
+                </div>
             </div>
-            <div className="form__field">
-            <label htmlFor="#input--mc-passage">Document</label>
-            <textarea onChange={this.handleDocumentChange} id="input--mc-passage" type="text"
-            required="true" autoFocus="true" placeholder="E.g. &quot;Saturn is the sixth planet from the Sun and the second-largest in the Solar System, after Jupiter. It is a gas giant with an average radius about nine times that of Earth. Although it has only one-eighth the average density of Earth, with its larger volume Saturn is just over 95 times more massive. Saturn is named after the Roman god of agriculture; its astronomical symbol represents the god&#39;s sickle.&quot;" value={corefDocumentValue} disabled={outputState === "working"}></textarea>
-            </div>
-            <div className="form__field form__field--btn">
-            <Button outputState={outputState} runModel={runCorefModel} inputs={corefInputs} />
-            </div>
-        </div>
         );
     }
 }
@@ -182,7 +181,7 @@ class CorefComponent extends React.Component {
         this.setState({outputState: "received"});
       }).catch((error) => {
         this.setState({outputState: "error"});
-        throw error; // todo(michaels): is this right?
+        console.error(error);
       });
     }
 
