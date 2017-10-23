@@ -203,6 +203,14 @@ class TestNnUtil(AllenNlpTestCase):
         assert_array_almost_equal(vector_1d_softmaxed,
                                   numpy.array([[0.0, 0.0, 0.0, 0.0]]))
 
+        # Testing the masked 1D case where there are large elements in the
+        # padding.
+        vector_1d = Variable(torch.FloatTensor([[1.0, 1.0, 1e5]]))
+        mask_1d = Variable(torch.FloatTensor([[1.0, 1.0, 0.0]]))
+        vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
+        assert_array_almost_equal(vector_1d_softmaxed,
+                                  numpy.array([[0.5, 0.5, 0]]))
+
         # Testing the general masked batched case.
         matrix = Variable(torch.FloatTensor([[1.0, 2.0, 5.0], [1.0, 2.0, 3.0]]))
         mask = Variable(torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 1.0]]))

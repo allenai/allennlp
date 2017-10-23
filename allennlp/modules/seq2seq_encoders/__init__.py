@@ -15,6 +15,7 @@ The available Seq2Seq encoders are
 """
 
 from typing import Type
+import logging
 
 import torch
 
@@ -25,6 +26,8 @@ from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSent
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class _Seq2SeqWrapper:
     """
@@ -75,5 +78,12 @@ Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
 if torch.cuda.is_available():
-    from allennlp.modules.alternating_highway_lstm import AlternatingHighwayLSTM
-    Seq2SeqEncoder.register("alternating_highway_lstm_cuda")(_Seq2SeqWrapper(AlternatingHighwayLSTM))
+    try:
+        # TODO(Mark): Remove this once we have a CPU wrapper for the kernel/switch to ATen.
+        from allennlp.modules.alternating_highway_lstm import AlternatingHighwayLSTM
+        Seq2SeqEncoder.register("alternating_highway_lstm_cuda")(_Seq2SeqWrapper(AlternatingHighwayLSTM))
+    except (ModuleNotFoundError, FileNotFoundError):
+        logger.debug("allennlp could not register 'alternating_highway_lstm_cuda' - installation "
+                     "needs to be completed manually if you have pip-installed the package. "
+                     "Run ``bash make.sh`` in the 'custom_extensions' module on a machine with a "
+                     "GPU.")

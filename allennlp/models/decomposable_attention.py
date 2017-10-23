@@ -201,13 +201,8 @@ class DecomposableAttention(Model):
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
         compare_feedforward = FeedForward.from_params(params.pop('compare_feedforward'))
         aggregate_feedforward = FeedForward.from_params(params.pop('aggregate_feedforward'))
-
-        init_params = params.pop('initializer', None)
-        reg_params = params.pop('regularizer', None)
-        initializer = (InitializerApplicator.from_params(init_params)
-                       if init_params is not None
-                       else InitializerApplicator())
-        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
+        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
+        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,

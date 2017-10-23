@@ -163,8 +163,11 @@ def masked_softmax(vector, mask):
     of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
     that uses categorical cross-entropy loss.
     """
-    result = torch.nn.functional.softmax(vector)
-    if mask is not None:
+    if mask is None:
+        result = torch.nn.functional.softmax(vector)
+    else:
+        # To limit numerical errors from large vector elements outside mask, we zero these out
+        result = torch.nn.functional.softmax(vector * mask)
         result = result * mask
         result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
     return result
