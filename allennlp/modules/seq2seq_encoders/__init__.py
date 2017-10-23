@@ -79,6 +79,7 @@ Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
 if torch.cuda.is_available():
     try:
+        # TODO(Mark): Remove this once we have a CPU wrapper for the kernel/switch to ATen.
         from allennlp.modules.alternating_highway_lstm import AlternatingHighwayLSTM
         Seq2SeqEncoder.register("alternating_highway_lstm_cuda")(_Seq2SeqWrapper(AlternatingHighwayLSTM))
     except (ModuleNotFoundError, FileNotFoundError):
