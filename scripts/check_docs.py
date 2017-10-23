@@ -11,7 +11,18 @@ MODULE_REGEX = r"\ballennlp\.[a-z0-9_.]+\b"
 MODULE_GLOB = 'allennlp/**/*.py'
 
 MODULES_THAT_NEED_NO_DOCS: Set[str] = {
-        'allennlp',  # no docs at top level
+        # no docs at top level
+        'allennlp',
+
+        # no docs for custom extensions, which aren't even in python
+        'allennlp.custom_extensions',
+        'allennlp.custom_extensions._ext',
+        'allennlp.custom_extensions._ext.highway_lstm_layer',
+        'allennlp.custom_extensions.build',
+
+        # TODO(joelgrus) figure out how to make these docs build, the cffi part
+        # is causing problems
+        'allennlp.modules.alternating_highway_lstm',
 }
 
 DOCS_THAT_NEED_NO_MODULES: Set[str] = {
@@ -46,11 +57,11 @@ if __name__ == "__main__":
     success = True
     existing = existing_modules()
     documented = documented_modules()
-    for module in existing:
+    for module in sorted(existing):
         if module not in documented and module not in MODULES_THAT_NEED_NO_DOCS:
             print("undocumented module:", module)
             success = False
-    for module in documented:
+    for module in sorted(documented):
         if module not in existing and module not in DOCS_THAT_NEED_NO_MODULES:
             print("documented but nonexistent:", module)
             success = False
