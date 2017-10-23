@@ -13,6 +13,7 @@ env:
     - RUN_PYLINT="true"
     - RUN_MYPY="true"
     - BUILD_DOCS="true"
+    - CHECK_DOCS="true"
 notifications:
   email: false
 addons:
