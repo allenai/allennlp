@@ -28,7 +28,7 @@ class CrfTagger(Model):
     encoder : ``Seq2SeqEncoder``
         The encoder that we will use in between embedding tokens and predicting output tags.
     label_namespace : ``str``, optional (default=``"labels"``)
-        We'll need to add special START and END tags to whatever namespace holds our labels.
+        This is needed to compute the SpanBasedF1Measure metric.
         Unless you did something unusual, the default value should be what you want.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
@@ -100,8 +100,7 @@ class CrfTagger(Model):
         encoded_text = self.encoder(embedded_text_input, mask)
 
         logits = self.tag_projection_layer(encoded_text)
-        predicted_tags = [[self.vocab.get_token_from_index(index, self.label_namespace) for index in row]
-                          for row in self.crf.viterbi_tags(logits, mask)]
+        predicted_tags = self.crf.viterbi_tags(logits, mask)
 
         output = {"logits": logits, "mask": mask, "tags": predicted_tags}
 
@@ -114,9 +113,8 @@ class CrfTagger(Model):
             # feed into the `span_metric`
             class_probabilities = logits * 0.
             for i, instance_tags in enumerate(predicted_tags):
-                for j, tag in enumerate(instance_tags):
-                    k = self.vocab.get_token_index(tag, self.label_namespace)
-                    class_probabilities[i, j, k] = 1
+                for j, tag_id in enumerate(instance_tags):
+                    class_probabilities[i, j, tag_id] = 1
 
             self.span_metric(class_probabilities, tags, mask)
 

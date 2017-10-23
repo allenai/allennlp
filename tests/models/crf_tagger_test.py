@@ -30,7 +30,8 @@ class CrfTaggerTest(ModelTestCase):
         assert len(tags[0]) == 7
         assert len(tags[1]) == 7
         for example_tags in tags:
-            for tag in example_tags:
+            for tag_id in example_tags:
+                tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
                 assert tag in {'O', 'I-ORG', 'I-PER', 'I-LOC'}
 
     def test_mismatching_dimensions_throws_configuration_error(self):

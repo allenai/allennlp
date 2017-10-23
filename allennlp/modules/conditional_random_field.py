@@ -26,11 +26,17 @@ class ConditionalRandomField(torch.nn.Module):
         self.num_tags = num_tags
 
         # transitions[i, j] is the logit for transitioning from state i to state j.
-        self.transitions = torch.nn.Parameter(torch.randn(num_tags, num_tags))
+        self.transitions = torch.nn.Parameter(torch.Tensor(num_tags, num_tags))
 
         # Also need logits for transitioning from "start" state and to "end" state.
-        self.start_transitions = torch.nn.Parameter(torch.randn(num_tags))
-        self.end_transitions = torch.nn.Parameter(torch.randn(num_tags))
+        self.start_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
+        self.end_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        torch.nn.init.xavier_normal(self.transitions)
+        torch.nn.init.normal(self.start_transitions)
+        torch.nn.init.normal(self.end_transitions)
 
     def _input_likelihood(self, logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
@@ -58,7 +64,7 @@ class ConditionalRandomField(torch.nn.Module):
             # Alpha is for the current_tag, so we broadcast along the next_tag axis.
             broadcast_alpha = alpha.view(batch_size, num_tags, 1)
 
-            # Add all the scores together and logexp over the prev_tag axis
+            # Add all the scores together and logexp over the current_tag axis
             inner = broadcast_alpha + emit_scores + transition_scores
 
             # In valid positions (mask == 1) we want to take the logsumexp over the current_tag dimension
@@ -97,7 +103,7 @@ class ConditionalRandomField(torch.nn.Module):
             # Each is shape (batch_size,)
             current_tag, next_tag = tags[i], tags[i+1]
 
-            # The scores for transitioning from prev_tag to next_tag
+            # The scores for transitioning from current_tag to next_tag
             transition_score = (
                     broadcast_transitions
                     # Choose the current_tag-th row for each input
@@ -110,7 +116,7 @@ class ConditionalRandomField(torch.nn.Module):
                     .squeeze(1)
             )
 
-            # The score for using prev_tag
+            # The score for using current_tag
             emit_score = logits[i].gather(1, current_tag.view(batch_size, 1)).squeeze(1)
 
             # Include transition score if next element is unmasked,

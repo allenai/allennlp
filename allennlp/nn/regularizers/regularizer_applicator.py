@@ -1,5 +1,5 @@
 import re
-from typing import Sequence, Tuple, List, Optional  # pylint: disable=unused-import
+from typing import Sequence, Tuple, List, Optional
 
 import torch
 
@@ -41,7 +41,7 @@ class RegularizerApplicator:
         return accumulator
 
     @classmethod
-    def from_params(cls, params: List[Tuple[str, Params]]) -> 'Optional[RegularizerApplicator]':
+    def from_params(cls, params: List[Tuple[str, Params]]) -> Optional['RegularizerApplicator']:
         """
         Converts a List of pairs (regex, params) into an RegularizerApplicator.
         This list should look like
@@ -58,7 +58,7 @@ class RegularizerApplicator:
 
         Parameters
         ----------
-        params: ``Params``, required.
+        params : ``Params``, required.
             A Params object containing a "regularizers" key.
 
         Returns
