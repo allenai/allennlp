@@ -10,10 +10,7 @@ import ModelIntro from './ModelIntro'
 
 const corefExamples = [
     {
-      document: "A reusable launch system (RLS, or reusable launch vehicle, RLV) is a launch system which is capable of launching a payload into space more than once. This contrasts with expendable launch systems, where each launch vehicle is launched once and then discarded. No completely reusable orbital launch system has ever been created. Two partially reusable launch systems were developed, the Space Shuttle and Falcon 9. The Space Shuttle was partially reusable: the orbiter (which included the Space Shuttle main engines and the Orbital Maneuvering System engines), and the two solid rocket boosters were reused after several months of refitting work for each launch. The external tank was discarded after each flight.",
-    },
-    {
-      document: "Robotics is an interdisciplinary branch of engineering and science that includes mechanical engineering, electrical engineering, computer science, and others. Robotics deals with the design, construction, operation, and use of robots, as well as computer systems for their control, sensory feedback, and information processing. These technologies are used to develop machines that can substitute for humans. Robots can be used in any situation and for any purpose, but today many are used in dangerous environments (including bomb detection and de-activation), manufacturing processes, or where humans cannot survive. Robots can take on any form but some are made to resemble humans in appearance. This is said to help in the acceptance of a robot in certain replicative behaviors usually performed by people. Such robots attempt to replicate walking, lifting, speech, cognition, and basically anything a human can do.",
+      document: "is an interdisciplinary branch of engineering and science that includes mechanical engineering, electrical engineering, computer science, and others. Robotics deals with the design, construction, operation, and use of robots, as well as computer systems for their control, sensory feedback, and information processing. These technologies are used to develop machines that can substitute for humans. Robots can be used in any situation and for any purpose, but today many are used in dangerous environments (including bomb detection and de-activation), manufacturing processes, or where humans cannot survive. Robots can take on any form but some are made to resemble humans in appearance. This is said to help in the acceptance of a robot in certain replicative behaviors usually performed by people. Such robots attempt to replicate walking, lifting, speech, cognition, and basically anything a human can do.",
     },
     {
       document: "The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called \"the Matrix\", created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer \"Neo\" learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the \"dream world.\"",
@@ -107,18 +104,54 @@ class CorefInput extends React.Component {
 *******************************************************************************/
 
 class CorefOutput extends React.Component {
+    constructor() {
+      super();
+      this.state = {
+        selectedCluster: -1,
+      };
+      this.onClusterMouseover = this.onClusterMouseover.bind(this);
+    }
+
+    onClusterMouseover(e) {
+      console.log(e.target.value);
+      this.setState( { selectedCluster: 0 });
+    }
+
     render() {
       const { document, clusters } = this.props;
+      var clusteredDocument = document.map((word, wordIndex) => {
+        var membershipClusters = [];
+        clusters.forEach((cluster, clusterIndex) => {
+          cluster.forEach((span) => {
+            if (wordIndex >= span[0] && wordIndex <= span[1]) {
+              membershipClusters.push(clusterIndex);
+            }
+          });
+        });
+        return { word : word, clusters : membershipClusters }
+      });
+
+      var wordStyle = (clusteredWord) => {
+        var clusters = clusteredWord['clusters'];
+
+        if (clusters.includes(this.state.selectedCluster)) {
+          return "passage__answer";
+        }
+        else {
+          return "unselected";
+        }
+      }
+
       return (
         <div className="model__content">
           <div className="form__field">
             <label>Clusters</label>
             <div className="model__content__summary">
             <ul>
-              {this.props.clusters.map((cluster) =>
+              {clusters.map((cluster, index) =>
                <li>
                 {cluster.map((span) =>
-                <span> {this.props.document.slice(span[0], span[1] + 1).join(" ")}, </span>
+                <a href="#" value={ index } onMouseEnter={ this.onClusterMouseover }> {document.slice(span[0], span[1] + 1).join(" ")}, </a>
                 )}
                </li>
             )}
@@ -129,8 +162,8 @@ class CorefOutput extends React.Component {
           <div className="form__field">
             <label>Document</label>
             <div className="passage model__content__summary">
-            {this.props.document.map((word, index) =>
-              <span> {word} </span>
+            {clusteredDocument.map((clusteredWord, index) =>
+              <span className={ wordStyle(clusteredWord) }> {clusteredWord['word']}</span>
             )}
             </div>
           </div>
