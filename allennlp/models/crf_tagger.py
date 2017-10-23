@@ -27,7 +27,7 @@ class CrfTagger(Model):
         Used to embed the tokens ``TextField`` we get as input to the model.
     encoder : ``Seq2SeqEncoder``
         The encoder that we will use in between embedding tokens and predicting output tags.
-    label_namespace : ``str``, optional (default=``"labels"``)
+    label_namespace : ``str``, optional (default=``labels``)
         This is needed to compute the SpanBasedF1Measure metric.
         Unless you did something unusual, the default value should be what you want.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
