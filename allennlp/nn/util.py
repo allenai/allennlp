@@ -189,7 +189,7 @@ def masked_log_softmax(vector, mask):
 
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
-                   tag_evidence: Optional[List[int]] = None):
+                   tag_observations: Optional[List[int]] = None):
     """
     Perform Viterbi decoding in log space over a sequence given a transition matrix
     specifying pairwise (transition) potentials between tags and a matrix of shape
@@ -204,7 +204,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
     transition_matrix : torch.Tensor, required.
         A tensor of shape (num_tags, num_tags) representing the binary potentials
         for transitioning between a given pair of tags.
-    tag_evidence : Optional[List[int]], optional, (default = None)
+    tag_observations : Optional[List[int]], optional, (default = None)
         A list of length ``sequence_length`` containing the class ids of observed
         elements in the sequence, with unobserved elements being set to -1. Note that
         it is possible to provide evidence which results in degenerate labellings if
@@ -221,20 +221,20 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         The score of the viterbi path.
     """
     sequence_length, num_tags = list(tag_sequence.size())
-    if tag_evidence:
-        if len(tag_evidence) != sequence_length:
-            raise ConfigurationError("Evidence was provided, but it was not the same length as "
-                                     "the sequence. Found sequence of length: {} and evidence: {}"
-                                     .format(sequence_length, tag_evidence))
+    if tag_observations:
+        if len(tag_observations) != sequence_length:
+            raise ConfigurationError("Observations were provided, but they were not the same length "
+                                     "as the sequence. Found sequence of length: {} and evidence: {}"
+                                     .format(sequence_length, tag_observations))
     else:
-        tag_evidence = [-1 for _ in range(sequence_length)]
+        tag_observations = [-1 for _ in range(sequence_length)]
 
     path_scores = []
     path_indices = []
 
-    if tag_evidence[0] != -1:
+    if tag_observations[0] != -1:
         one_hot = torch.zeros(num_tags)
-        one_hot[tag_evidence[0]] = 100000.
+        one_hot[tag_observations[0]] = 100000.
         path_scores.append(one_hot)
     else:
         path_scores.append(tag_sequence[0, :])
@@ -245,19 +245,19 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         summed_potentials = path_scores[timestep - 1].unsqueeze(-1) + transition_matrix
         scores, paths = torch.max(summed_potentials, 0)
 
-        # If we have evidence for this timestep, use it
+        # If we have an observation for this timestep, use it
         # instead of the distribution over tags.
-        evidence = tag_evidence[timestep]
+        observation = tag_observations[timestep]
         # Warn the user if they have passed
         # invalid/extremely unlikely evidence.
-        if tag_evidence[timestep - 1] != -1:
-            if transition_matrix[tag_evidence[timestep - 1], evidence] < -10000:
+        if tag_observations[timestep - 1] != -1:
+            if transition_matrix[tag_observations[timestep - 1], observation] < -10000:
                 logger.warning("The pairwise potential between tags you have passed as "
-                               "evidence is extremely unlikely. Double check your evidence "
+                               "observations is extremely unlikely. Double check your evidence "
                                "or transition potentials!")
-        if evidence != -1:
+        if observation != -1:
             one_hot = torch.zeros(num_tags)
-            one_hot[evidence] = 100000.
+            one_hot[observation] = 100000.
             path_scores.append(one_hot)
         else:
             path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
