@@ -634,7 +634,7 @@ class CoreferenceResolver(Model):
                     predicted_cluster_id: int = spans_to_cluster_ids[antecedent_span]
                 else:
                     # We start a new cluster.
-                    predicted_cluster_id: int = len(clusters)
+                    predicted_cluster_id = len(clusters)
                     # Append a new cluster containing only this span.
                     clusters.append([antecedent_span])
                     # Record the new id of this span.
