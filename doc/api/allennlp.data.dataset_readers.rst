@@ -9,6 +9,7 @@ allennlp.data.dataset_readers
 .. toctree::
 
   allennlp.data.dataset_readers.dataset_reader
+  allennlp.data.dataset_readers.conll2003
   allennlp.data.dataset_readers.language_modeling
   allennlp.data.dataset_readers.reading_comprehension
   allennlp.data.dataset_readers.semantic_role_labeling

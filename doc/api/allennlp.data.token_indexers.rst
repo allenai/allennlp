@@ -8,6 +8,7 @@ allennlp.data.token_indexers
 
 * :ref:`TokenIndexer<token-indexer>`
 * :ref:`DepLabelIndexer<dep-label-indexer>`
+* :ref:`NerTagIndexer<ner-tag-indexer>`
 * :ref:`PosTagIndexer<pos-tag-indexer>`
 * :ref:`SingleIdTokenIndexer<single-id-token-indexer>`
 * :ref:`TokenCharactersIndexer<token-characters-indexer>`
@@ -20,6 +21,12 @@ allennlp.data.token_indexers
 
 .. _dep-label-indexer:
 .. automodule:: allennlp.data.token_indexers.dep_label_indexer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _ner-tag-indexer:
+.. automodule:: allennlp.data.token_indexers.ner_tag_indexer
    :members:
    :undoc-members:
    :show-inheritance:
