@@ -26,7 +26,8 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
 }
 
 DOCS_THAT_NEED_NO_MODULES: Set[str] = {
-        'allennlp.commands.main',  # is in __init__.py
+        # Function is defined in allennlp/commands/__init__.py.
+        'allennlp.commands.main',
 }
 
 
