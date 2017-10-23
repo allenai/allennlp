@@ -39,3 +39,18 @@ python -m allennlp.run serve
 ```
 
 You may need to force refresh your web browser.
+
+## Rebuilding changes automatically
+
+Often you want your code to be reflected on the server immediately when you save a file.  To do this, run the website with `npm start`.  This will watch the repository for changes, and rebuild the assets when there is a change.  You also need to make sure you set `SANIC_CACHE_SIZE` to `0` before running the Sanic server.  Since `npm start` rebuilds the asset files that Sanic is serving, Sanic will serve the latest files built.
+
+```
+$ cd allennlp/demo
+$ npm start
+```
+
+```
+$ cd allennlp
+$ export SANIC_CACHE_SIZE=0
+$ python -m allennlp.run serve
+```
