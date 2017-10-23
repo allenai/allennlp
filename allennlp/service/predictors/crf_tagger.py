@@ -7,13 +7,13 @@ from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 
 
-@Predictor.register('simple-tagger')
-class SimpleTaggerPredictor(Predictor):
+@Predictor.register('crf-tagger')
+class CrfTaggerPredictor(Predictor):
     """
-    Wrapper for the :class:`~allennlp.models.bidaf.SimpleTagger` model.
+    Wrapper for the :class:`~allennlp.models.crf_tagger.CrfTagger` model.
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
-        super(SimpleTaggerPredictor, self).__init__(model, dataset_reader)
+        super().__init__(model, dataset_reader)
         self._tokenizer = WordTokenizer()
 
     @overrides

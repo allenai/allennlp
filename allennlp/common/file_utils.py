@@ -102,6 +102,8 @@ def get_from_cache(url: str, cache_dir: str = DATASET_CACHE) -> str:
                     progress.update(len(chunk))
                     temp_file.write(chunk)
 
+        progress.close()
+
         logger.info("copying %s to cache at %s", temp_filename, cache_path)
         shutil.copyfile(temp_filename, cache_path)
         logger.info("removing temp file %s", temp_filename)

@@ -160,8 +160,11 @@ def masked_softmax(vector, mask):
     of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
     that uses categorical cross-entropy loss.
     """
-    result = torch.nn.functional.softmax(vector)
-    if mask is not None:
+    if mask is None:
+        result = torch.nn.functional.softmax(vector)
+    else:
+        # To limit numerical errors from large vector elements outside mask, we zero these out
+        result = torch.nn.functional.softmax(vector * mask)
         result = result * mask
         result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
     return result
@@ -438,6 +441,7 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(',')]
     return torch.cat(to_concatenate, dim=-1)
 
+
 def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
     if combination.isdigit():
         index = int(combination) - 1
@@ -495,3 +499,28 @@ def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
         if first_tensor_dim != second_tensor_dim:
             raise ConfigurationError("Tensor dims must match for operation \"{}\"".format(operation))
         return first_tensor_dim
+
+
+def logsumexp(tensor: torch.Tensor,
+              dim: int = -1,
+              keepdim: bool = False) -> torch.Tensor:
+    """
+    A numerically stable computation of logsumexp. This is mathematically equivalent to
+    `tensor.exp().sum(dim, keep=keepdim).log()`.  This function is typically used for summing log
+    probabilities.
+
+    Parameters
+    ----------
+    tensor : torch.FloatTensor, required.
+        A tensor of arbitrary size.
+    dim : int, optional (default = -1)
+        The dimension of the tensor to apply the logsumexp to.
+    keepdim: bool, optional (default = False)
+        Whether to retain a dimension of size one at the dimension we reduce over.
+    """
+    max_score, _ = tensor.max(dim, keepdim=keepdim)
+    if keepdim:
+        stable_vec = tensor - max_score
+    else:
+        stable_vec = tensor - max_score.unsqueeze(dim)
+    return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()

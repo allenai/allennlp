@@ -39,8 +39,8 @@ docker push $IMAGE
 
 CONFIG_DATASET_ID=$(beaker dataset create --quiet $PARAM_FILE)
 FILENAME=$(basename $PARAM_FILE)
-SOURCES_ARG="$SOURCES_ARG --source $CONFIG_DATASET_ID:/config"
+SOURCES_ARG="$SOURCES_ARG --source $CONFIG_DATASET_ID:/config.json"
 
-CMD="allennlp/run train /config/$FILENAME -s /output"
+CMD="allennlp/run train /config.json -s /output"
 
 beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_DESC_ARG $GPU_ARG $DETACH_ARG $IMAGE $CMD
