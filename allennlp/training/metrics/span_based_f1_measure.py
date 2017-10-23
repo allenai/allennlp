@@ -155,6 +155,14 @@ class SpanBasedF1Measure(Metric):
                 # We don't care about tags we are
                 # told to ignore, so we do nothing.
                 continue
+            elif bio_tag == "U":
+                # The U tag is used to indicate a span of length 1,
+                # so if there's an active tag we end it, and then
+                # we add a "length 0" tag.
+                if active_conll_tag:
+                    spans.add(((span_start, span_end), active_conll_tag))
+                spans.add(((index, index), conll_tag))
+                active_conll_tag = None
             elif bio_tag == "B":
                 # We are entering a new span; reset indices
                 # and active tag to new span.

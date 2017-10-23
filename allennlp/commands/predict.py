@@ -72,7 +72,8 @@ def run(predictor: Predictor,
             output = json.dumps(result)
 
             if print_to_console:
-                print(output)
+                print("input: ", data)
+                print("prediction: ", output)
             if output_file:
                 output_file.write(output + "\n")
 

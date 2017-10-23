@@ -1,5 +1,5 @@
 import re
-from typing import Sequence, Tuple, List
+from typing import Sequence, Tuple, List, Optional
 
 import torch
 
@@ -41,7 +41,7 @@ class RegularizerApplicator:
         return accumulator
 
     @classmethod
-    def from_params(cls, params: List[Tuple[str, Params]]) -> 'RegularizerApplicator':
+    def from_params(cls, params: List[Tuple[str, Params]]) -> Optional['RegularizerApplicator']:
         """
         Converts a List of pairs (regex, params) into an RegularizerApplicator.
         This list should look like
@@ -58,13 +58,17 @@ class RegularizerApplicator:
 
         Parameters
         ----------
-        params: Params, required.
+        params : ``Params``, required.
             A Params object containing a "regularizers" key.
 
         Returns
         -------
-        A RegularizerApplicator containing the specified Regularizers.
+        A RegularizerApplicator containing the specified Regularizers,
+        or ``None`` if no Regularizers are specified.
         """
+        if not params:
+            return None
+
         instantiated_regularizers = []
         for parameter_regex, regularizer_params in params:
             if isinstance(regularizer_params, str):
