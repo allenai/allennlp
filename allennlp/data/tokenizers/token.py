@@ -16,6 +16,8 @@ class Token:
         The fine-grained part of speech of this token.
     dep : ``str``, optional
         The dependency relation for this token.
+    ent_type : ``str``, optional
+        The entity type (i.e., the NER tag) for this token.
     text_id : ``int``, optional
         If your tokenizer returns integers instead of strings (e.g., because you're doing byte
         encoding, or some hash-based embedding), set this with the integer.  If this is set, we
@@ -32,10 +34,12 @@ class Token:
                  pos: str = None,
                  tag: str = None,
                  dep: str = None,
+                 ent_type: str = None,
                  text_id: int = None) -> None:
         self.text = text
         self.idx = idx
         self.pos_ = pos
         self.tag_ = tag
         self.dep_ = dep
+        self.ent_type_ = ent_type
         self.text_id = text_id

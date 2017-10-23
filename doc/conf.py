@@ -41,6 +41,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.linkcode',
               'sphinx.ext.mathjax',
               'sphinx.ext.autosummary',
+              'sphinx.ext.coverage',
               'numpydoc'
 ]
 

@@ -61,6 +61,25 @@ class TestTrainer(AllenNlpTestCase):
         assert val_metrics_per_epoch[0] != 0.
         new_trainer.train()
 
+    def test_should_stop_early_with_increasing_metric(self):
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.dataset,
+                              validation_dataset=self.dataset,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="+test")
+        assert new_trainer._should_stop_early([.5, .3, .2, .1, .4, .4]) #pylint: disable=protected-access
+        assert not new_trainer._should_stop_early([.3, .3, .3, .2, .5, .1]) #pylint: disable=protected-access
+
+    def test_should_stop_early_with_decreasing_metric(self):
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.dataset,
+                              validation_dataset=self.dataset,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="-test")
+        assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4]) #pylint: disable=protected-access
+        assert not new_trainer._should_stop_early([.3, .3, .2, .1, .4, .5]) #pylint: disable=protected-access
+
+
     def test_train_driver_raises_on_model_with_no_loss_key(self):
 
         class FakeModel(torch.nn.Module):
