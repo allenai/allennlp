@@ -17,8 +17,8 @@
       }
     }
   },
-  "train_data_path": "/Users/lucyw/corp/s2-research/scigraph/data/ontoemma/training/ontoemma.context.train",
-  "validation_data_path": "/Users/lucyw/corp/s2-research/scigraph/data/ontoemma/training/ontoemma.context.dev",
+  "train_data_path": "/net/nfs.corp/s2-research/scigraph/data/ontoemma/training/ontoemma.context.train",
+  "validation_data_path": "/net/nfs.corp/s2-research/scigraph/data/ontoemma/training/ontoemma.context.dev",
   "model": {
     "type": "ontoemma",
     "name_text_field_embedder": {
@@ -40,12 +40,6 @@
                     "dropout": 0.2
             }
     },
-//    "alias_text_field_embedder": {
-//            "tokens": {
-//                    "type": "embedding",
-//                    "embedding_dim": 100
-//            }
-//    },
     "name_rnn_encoder": {
       "type": "rnn",
       "input_size": 100,
@@ -54,14 +48,6 @@
       "dropout": 0.2,
       "bidirectional": true
     },
-//    "alias_rnn_encoder": {
-//      "type": "rnn",
-//      "input_size": 100,
-//      "hidden_size": 100,
-//      "num_layers": 8,
-//      "dropout": 0.2,
-//      "bidirectional": true
-//    },
     "siamese_feedforward": {
       "input_dim": 200,
       "num_layers": 2,

@@ -4,18 +4,12 @@ from overrides import overrides
 import torch
 
 from allennlp.training.metrics.metric import Metric
-from allennlp.nn.util import ones_like
 
 
 @Metric.register("boolean_f1")
 class BooleanF1(Metric):
     """
-    Just checks batch-equality of two tensors and computes an accuracy metric based on that.  This
-    is similar to :class:`CategoricalAccuracy`, if you've already done a ``.max()`` on your
-    predictions.  If you have categorical output, though, you should typically just use
-    :class:`CategoricalAccuracy`.  The reason you might want to use this instead is if you've done
-    some kind of constrained inference and don't have a prediction tensor that matches the API of
-    :class:`CategoricalAccuracy`, which assumes a final dimension of size ``num_classes``.
+    Computes precision, recall, f1 score from boolean predictions and labels
     """
     def __init__(self) -> None:
         self._true_positives = 0.
@@ -66,7 +60,7 @@ class BooleanF1(Metric):
         """
         Returns
         -------
-        The accumulated accuracy.
+        Precison, recall, accuracy, and F1 score
         """
         precision = float(self._true_positives) / (float(self._true_positives) + float(self._false_positives))
         recall = float(self._true_positives) / (float(self._true_positives) + float(self._false_negatives))

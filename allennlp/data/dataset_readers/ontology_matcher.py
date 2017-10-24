@@ -46,13 +46,10 @@ class OntologyMatchingDatasetReader(DatasetReader):
     """
     def __init__(self,
                  tokenizer: Tokenizer = None,
-                 name_token_indexers: Dict[str, TokenIndexer] = None,
-                 alias_token_indexers: Dict[str, TokenIndexer] = None) -> None:
+                 name_token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._name_token_indexers = name_token_indexers or \
                                {'tokens': SingleIdTokenIndexer(namespace="tokens"),
                                 'token_characters': TokenCharactersIndexer(namespace="token_characters")}
-        # self._alias_token_indexers = alias_token_indexers or \
-        #                              {'tokens': SingleIdTokenIndexer(namespace="tokens")}
         self._tokenizer = tokenizer or WordTokenizer()
 
     @overrides
@@ -61,19 +58,18 @@ class OntologyMatchingDatasetReader(DatasetReader):
         file_path = cached_path(file_path)
 
         instances = []
+
+        # open data file and read lines
         with open(file_path, 'r') as ontm_file:
             logger.info("Reading ontology matching instances from jsonl dataset at: %s", file_path)
             for line in tqdm.tqdm(ontm_file):
                 training_pair = json.loads(line)
-
                 s_ent = training_pair['source_ent']
                 t_ent = training_pair['target_ent']
                 label = training_pair['label']
 
+                # convert entry to instance and append to instances
                 instances.append(self.text_to_instance(s_ent, t_ent, label))
-                if label == 1:
-                    for i in range(0, 4):
-                        instances.append(self.text_to_instance(s_ent, t_ent, label))
 
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
@@ -87,21 +83,15 @@ class OntologyMatchingDatasetReader(DatasetReader):
                          label: str = None) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
+        # tokenize names
         s_name_tokens = self._tokenizer.tokenize(s_ent['canonical_name'].lower())
         t_name_tokens = self._tokenizer.tokenize(t_ent['canonical_name'].lower())
 
-        # s_alias_tokens = [self._tokenizer.tokenize(a+';') for a in s_ent['aliases']]
-        # t_alias_tokens = [self._tokenizer.tokenize(a+';') for a in t_ent['aliases']]
-        #
-        # s_aliases_tokens = [item for sublist in s_alias_tokens for item in sublist]
-        # t_aliases_tokens = [item for sublist in t_alias_tokens for item in sublist]
-
+        # add entity name fields
         fields['s_ent_name'] = TextField(s_name_tokens, self._name_token_indexers)
         fields['t_ent_name'] = TextField(t_name_tokens, self._name_token_indexers)
 
-        # fields['s_ent_aliases'] = TextField(s_aliases_tokens, self._alias_token_indexers)
-        # fields['t_ent_aliases'] = TextField(t_aliases_tokens, self._alias_token_indexers)
-
+        # add boolean label (0 = no match, 1 = match)
         fields['label'] = BooleanField(label)
 
         return Instance(fields)
@@ -110,8 +100,6 @@ class OntologyMatchingDatasetReader(DatasetReader):
     def from_params(cls, params: Params) -> 'OntologyMatchingDatasetReader':
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         name_token_indexers = TokenIndexer.dict_from_params(params.pop('name_token_indexers', {}))
-        alias_token_indexers = TokenIndexer.dict_from_params(params.pop('alias_token_indexers', {}))
         params.assert_empty(cls.__name__)
         return OntologyMatchingDatasetReader(tokenizer=tokenizer,
-                                             name_token_indexers=name_token_indexers,
-                                             alias_token_indexers=alias_token_indexers)
+                                             name_token_indexers=name_token_indexers)
