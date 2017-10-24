@@ -12,3 +12,4 @@ from .decomposable_attention import DecomposableAttentionPredictor
 from .semantic_role_labeler import SemanticRoleLabelerPredictor
 from .simple_tagger import SimpleTaggerPredictor
 from .crf_tagger import CrfTaggerPredictor
+from .ontoemma import OntoEmmaPredictor

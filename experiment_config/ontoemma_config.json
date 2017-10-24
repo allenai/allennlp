@@ -1,7 +1,7 @@
 {
   "dataset_reader": {
     "type": "ontology_matcher",
-    "token_indexers": {
+    "name_token_indexers": {
       "tokens": {
         "type": "single_id",
         "lowercase_tokens": true
@@ -9,13 +9,19 @@
       "token_characters": {
         "type": "characters"
       }
+    },
+    "alias_token_indexers": {
+      "tokens": {
+        "type": "single_id",
+        "lowercase_tokens": true
+      }
     }
   },
-  "train_data_path": "/Users/lucyw/corp/s2-research/scigraph/data/ontoemma/training/ontoemma.context.mini.train",
-  "validation_data_path": "/Users/lucyw/corp/s2-research/scigraph/data/ontoemma/training/ontoemma.context.mini.dev",
+  "train_data_path": "/Users/lucyw/corp/s2-research/scigraph/data/ontoemma/training/ontoemma.context.train",
+  "validation_data_path": "/Users/lucyw/corp/s2-research/scigraph/data/ontoemma/training/ontoemma.context.dev",
   "model": {
     "type": "ontoemma",
-    "text_field_embedder": {
+    "name_text_field_embedder": {
             "tokens": {
                     "type": "embedding",
                     "embedding_dim": 50
@@ -34,7 +40,13 @@
                     "dropout": 0.2
             }
     },
-    "rnn_encoder": {
+//    "alias_text_field_embedder": {
+//            "tokens": {
+//                    "type": "embedding",
+//                    "embedding_dim": 100
+//            }
+//    },
+    "name_rnn_encoder": {
       "type": "rnn",
       "input_size": 100,
       "hidden_size": 100,
@@ -42,6 +54,14 @@
       "dropout": 0.2,
       "bidirectional": true
     },
+//    "alias_rnn_encoder": {
+//      "type": "rnn",
+//      "input_size": 100,
+//      "hidden_size": 100,
+//      "num_layers": 8,
+//      "dropout": 0.2,
+//      "bidirectional": true
+//    },
     "siamese_feedforward": {
       "input_dim": 200,
       "num_layers": 2,
@@ -60,8 +80,8 @@
   "iterator": {"type": "basic", "batch_size": 100},
   "trainer": {
     "optimizer": "adam",
-    "num_epochs": 40,
-    "patience": 8,
+    "num_epochs": 50,
+    "patience": 10,
     "cuda_device": -1
   }
 }

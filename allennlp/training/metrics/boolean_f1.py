@@ -4,10 +4,11 @@ from overrides import overrides
 import torch
 
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import ones_like
 
 
-@Metric.register("boolean_accuracy")
-class BooleanAccuracy(Metric):
+@Metric.register("boolean_f1")
+class BooleanF1(Metric):
     """
     Just checks batch-equality of two tensors and computes an accuracy metric based on that.  This
     is similar to :class:`CategoricalAccuracy`, if you've already done a ``.max()`` on your
@@ -17,7 +18,10 @@ class BooleanAccuracy(Metric):
     :class:`CategoricalAccuracy`, which assumes a final dimension of size ``num_classes``.
     """
     def __init__(self) -> None:
-        self._correct_count = 0.
+        self._true_positives = 0.
+        self._false_positives = 0.
+        self._false_negatives = 0.
+        self._true_negatives = 0.
         self._total_count = 0.
 
     def __call__(self,
@@ -39,20 +43,24 @@ class BooleanAccuracy(Metric):
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
         if mask is not None:
-            # We can multiply by the mask up front, because we're just checking equality below, and
-            # this way everything that's masked will be equal.
             predictions = predictions * mask
             gold_labels = gold_labels * mask
 
-        batch_size = predictions.size(0)
-        predictions = predictions.view(batch_size, -1)
-        gold_labels = gold_labels.view(batch_size, -1)
+        positive_label_mask = gold_labels.eq(1)
+        negative_label_mask = gold_labels.eq(0)
 
-        # The .prod() here is functioning as a logical and.
-        correct = predictions.eq(gold_labels).prod(dim=1).float()
-        count = torch.ones(gold_labels.size(0))
-        self._correct_count += correct.sum()
-        self._total_count += count.sum()
+        # True Positives: correct positively labeled predictions.
+        tp = (predictions == 1) * positive_label_mask
+        fp = (predictions == 1) * negative_label_mask
+        fn = (predictions == 0) * positive_label_mask
+        tn = (predictions == 0) * negative_label_mask
+
+        self._true_positives += tp.sum()
+        self._false_positives += fp.sum()
+        self._false_negatives += fn.sum()
+        self._true_negatives += tn.sum()
+
+        self._total_count = self._true_positives + self._false_positives + self._false_negatives + self._true_negatives
 
     def get_metric(self, reset: bool = False):
         """
@@ -60,12 +68,18 @@ class BooleanAccuracy(Metric):
         -------
         The accumulated accuracy.
         """
-        accuracy = float(self._correct_count) / float(self._total_count)
+        precision = float(self._true_positives) / (float(self._true_positives) + float(self._false_positives))
+        recall = float(self._true_positives) / (float(self._true_positives) + float(self._false_negatives))
+        accuracy = (float(self._true_positives) + float(self._true_negatives)) / float(self._total_count)
+        f1_score = 2.0 * precision * recall / (precision + recall)
         if reset:
             self.reset()
-        return accuracy
+        return precision, recall, accuracy, f1_score
 
     @overrides
     def reset(self):
-        self._correct_count = 0.0
-        self._total_count = 0.0
+        self._true_positives = 0.
+        self._false_positives = 0.
+        self._false_negatives = 0.
+        self._true_negatives = 0.
+        self._total_count = 0.
