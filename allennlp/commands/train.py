@@ -27,7 +27,6 @@ import sys
 from copy import deepcopy
 
 from allennlp.commands.evaluate import evaluate
-from allennlp.common.checks import ensure_pythonhashseed_set
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.common.util import prepare_environment
