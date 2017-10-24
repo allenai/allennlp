@@ -1,9 +1,11 @@
 from typing import List
-from pyparsing import OneOrMore, nestedExpr
+import pyparsing
 
-from nltk.sem.logic import LogicParser, Expression
+from nltk.sem.logic import Expression
 
-from allennlp.data.dataset_readers.wikitables import WTD, TableKnowledgeGraph
+from allennlp.data.dataset_readers.wikitables import REVERSE_TYPE, MAX_MIN_TYPE, DATE_FUNCTION_TYPE
+from allennlp.data.dataset_readers.wikitables import COLUMN_TYPE, CELL_TYPE
+from allennlp.data.dataset_readers.wikitables import LogicParserWithReverse, TableKnowledgeGraph
 
 
 class World:
@@ -16,7 +18,7 @@ class World:
         self.table_graph = TableKnowledgeGraph.read_table_from_tsv(table_filename)
         # NLTK has a naming convention for variable types (see ``_map_name`` for more details).
         # We initialize this dict with common predicate names and update it as we process logical forms.
-        # TODO: Should we do updates while reading tables instead?
+        # TODO (pradeep): Should we do updates while reading tables instead?
         self.name_mapping = {"reverse": "R", "max": "M0", "min": "M1",
                              "argmax": "A0", "argmin": "A1",
                              "and": "A", "or": "O", "next": "N",
@@ -24,9 +26,9 @@ class World:
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
         # Initial type signature. Will update when we see more predicates.
-        self.type_signature = {"R": WTD.REVERSE_TYPE, "M0": WTD.MAX_MIN_TYPE, "M1": WTD.MAX_MIN_TYPE,
-                               "A0": WTD.MAX_MIN_TYPE, "A1": WTD.MAX_MIN_TYPE}
-        self._logic_parser = LogicParser(type_check=True)
+        self.type_signature = {"R": REVERSE_TYPE, "M0": MAX_MIN_TYPE, "M1": MAX_MIN_TYPE,
+                               "A0": MAX_MIN_TYPE, "A1": MAX_MIN_TYPE, "D": DATE_FUNCTION_TYPE}
+        self._logic_parser = LogicParserWithReverse(type_check=True)
 
     def process_sempre_forms(self, sempre_forms: List[str]) -> List[Expression]:
         """
@@ -36,7 +38,7 @@ class World:
         """
         expressions = []
         for sempre_form in sempre_forms:
-            parsed_lisp = OneOrMore(nestedExpr()).parseString(sempre_form).asList()
+            parsed_lisp = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(sempre_form).asList()
             translated_string = self._process_nested_expression(parsed_lisp)
             expression = self._logic_parser.parse(translated_string, signature=self.type_signature)
             expressions.append(expression)
@@ -79,11 +81,11 @@ class World:
                 # Column name
                 translated_name = "C%d" % self._column_counter
                 self._column_counter += 1
-                self.type_signature[translated_name] = WTD.COLUMN_TYPE
+                self.type_signature[translated_name] = COLUMN_TYPE
             elif sempre_name.startswith("fb:cell"):
                 # Cell name.
                 translated_name = "cell:%s" % sempre_name.split(".")[-1]
-                self.type_signature[translated_name] = WTD.CELL_TYPE
+                self.type_signature[translated_name] = CELL_TYPE
             self.name_mapping[sempre_name] = translated_name
         return self.name_mapping[sempre_name]
 

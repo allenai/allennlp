@@ -28,6 +28,16 @@ class TableKnowledgeGraph:
 
     @classmethod
     def read_table_from_tsv(cls, table_filename: str) -> 'Table':
+        """
+        We read tables formatted as TSV files here. We assume the first line in the file is a tab separated
+        list of column headers, and all subsequent lines are content rows. For example if the TSV file is,
+            Nation      Olympics    Medals
+            USA         1896        8
+            China       1932        9
+
+        we read "Nation", "Olympics" and "Medals" as column headers, "USA" and "China" as cells under the
+        "Nation" column and so on.
+        """
         column_neighbors = defaultdict(list)
         cell_neighbors = defaultdict(list)
         columns = []
@@ -53,7 +63,7 @@ class TableKnowledgeGraph:
         These are the transformation rules used to normalize cell in column names in Sempre.
         See ``edu.stanford.nlp.sempre.tables.StringNormalizationUtils.characterNormalize`` and
         ``edu.stanford.nlp.sempre.tables.TableTypeSystem.canonicalizeName``.
-        We reproduce those rules here to normlaize and canonicalize cells and columns in the same way
+        We reproduce those rules here to normalize and canonicalize cells and columns in the same way
         so that we can match them against constants in logical forms appropriately.
         """
         # Normalization rules from Sempre
@@ -78,18 +88,20 @@ class TableKnowledgeGraph:
         string = re.sub("_$", "", string)
         return string.lower()
 
-    def get_cell_neighbors(self,
-                           cell: str,
-                           name_mapping: Dict[str, str] = None) -> List[str]:
-        if not name_mapping:
-            # Returns empty list if cell not in graph
-            return self._cell_neighbors[cell]
-        return self._cell_neighbors[name_mapping[cell]]
+    def get_cell_neighbors(self, cell: str) -> List[str]:
+        """
+        Parameters
+        ----------
+        cell : str
+            Sempre name of the cell (Eg. fb:cell.usa)
+        """
+        return self._cell_neighbors[cell]
 
-    def get_column_neighbors(self,
-                             column: str,
-                             name_mapping: Dict[str, str] = None) -> List[str]:
-        if not name_mapping:
-            # Returns empty list if column not in graph
-            return self._column_neighbors[column]
-        return self._column_neighbors[name_mapping[column]]
+    def get_column_neighbors(self, column: str) -> List[str]:
+        """
+        Parameters
+        ----------
+        column : str
+            Sempre name of the column (Eg. fb:row.row.nation)
+        """
+        return self._column_neighbors[column]
