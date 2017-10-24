@@ -39,7 +39,7 @@ class Conll2003DatasetReader(DatasetReader):
     The values corresponding to the ``tag_label``
     values will get loaded into the ``"tags"`` ``SequenceLabelField``.
     And if you specify any ``feature_labels`` (you probably shouldn't),
-    the corresponding values will get loaded into their own ``SequenceLabelField``s.
+    the corresponding values will get loaded into their own ``SequenceLabelField`` s.
 
     This dataset reader ignores the "article" divisions and simply treats
     each sentence as an independent ``Instance``. (Technically the reader splits sentences
