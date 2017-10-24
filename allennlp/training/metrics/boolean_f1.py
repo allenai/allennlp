@@ -71,7 +71,10 @@ class BooleanF1(Metric):
         precision = float(self._true_positives) / (float(self._true_positives) + float(self._false_positives))
         recall = float(self._true_positives) / (float(self._true_positives) + float(self._false_negatives))
         accuracy = (float(self._true_positives) + float(self._true_negatives)) / float(self._total_count)
-        f1_score = 2.0 * precision * recall / (precision + recall)
+        if precision + recall > 0.:
+            f1_score = 2.0 * precision * recall / (precision + recall)
+        else:
+            f1_score = 0.
         if reset:
             self.reset()
         return precision, recall, accuracy, f1_score
