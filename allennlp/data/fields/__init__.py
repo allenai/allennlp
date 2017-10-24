@@ -11,3 +11,4 @@ from allennlp.data.fields.metadata_field import MetadataField
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.fields.sequence_label_field import SequenceLabelField
 from allennlp.data.fields.text_field import TextField
+from allennlp.data.fields.boolean_field import BooleanField
