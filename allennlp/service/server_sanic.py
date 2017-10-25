@@ -14,8 +14,8 @@ import sys
 from functools import lru_cache
 
 from sanic import Sanic, response, request
-from sanic_cors import CORS, cross_origin
 from sanic.exceptions import ServerError
+from sanic_cors import CORS
 
 from allennlp.common.util import JsonDict
 from allennlp.models.archival import load_archive
@@ -33,7 +33,7 @@ def run(port: int, workers: int,
     print("Starting a sanic server on port {}.".format(port))
 
     app = make_app(static_dir)
-    cors = CORS(app, resources={r"/predict/*": {"origins": "localhost"}})
+    CORS(app) # It is acceptible to enable CORS because we have no auth.
 
     for predictor_name, archive_file in trained_models.items():
         archive = load_archive(archive_file)
@@ -76,7 +76,7 @@ def make_app(build_dir: str = None) -> Sanic:
         """make a prediction using the specified model and return the results"""
 
         if req.method == "OPTIONS":
-            return text("ok")
+            return response.text("")
 
         model = app.predictors.get(model_name.lower())
         if model is None:
