@@ -4,9 +4,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 from allennlp.common.file_utils import filename_to_url
-
-CACHE_ROOT = os.path.expanduser(os.path.join('~', '.allennlp'))
-DATASET_CACHE = os.path.join(CACHE_ROOT, "datasets")
+from allennlp.common.file_utils import DATASET_CACHE
 
 try:
     cached_files = os.listdir(DATASET_CACHE)
@@ -20,5 +18,4 @@ try:
         print('ETag: %s' % etag)
         print()
 except FileNotFoundError:
-    print('Dataset cache directory not found: %s' % str(DATASET_CACHE))
-    print('Does it exist?')
+    print('No cached datasets found.')    
