@@ -35,6 +35,9 @@ def run(port: int, workers: int,
     app = make_app(static_dir)
     CORS(app) # It is acceptible to enable CORS because we have no auth.
 
+    if port != 8000:
+        logger.warning("The demo requires the API to be run on port 8000.")
+
     for predictor_name, archive_file in trained_models.items():
         archive = load_archive(archive_file)
         predictor = Predictor.from_archive(archive, predictor_name)
