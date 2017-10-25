@@ -178,7 +178,7 @@ class McComponent extends React.Component {
         passage: inputs.passageValue,
         question: inputs.questionValue,
       };
-      fetch('/predict/machine-comprehension', {
+      fetch('http://localhost:8000/predict/machine-comprehension', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
