@@ -7,8 +7,11 @@ that's used by datasets, models, trainers, and so on.
 .. toctree::
 
    allennlp.common.checks
+   allennlp.common.file_utils
    allennlp.common.params
    allennlp.common.registrable
+   allennlp.common.squad_eval
+   allennlp.common.tee_logger
    allennlp.common.testing
    allennlp.common.util
 

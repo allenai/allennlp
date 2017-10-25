@@ -10,8 +10,6 @@ set -e
 
 python --version
 
-export PYTHONHASHSEED=2157
-
 run_tests() {
     pytest -v --cov=allennlp --durations=20
 }
@@ -32,4 +30,8 @@ if [[ "$BUILD_DOCS" == "true" ]]; then
   cd doc
   make html-strict
   cd ..
+fi
+
+if [[ "$CHECK_DOCS" == "true" ]]; then
+  python scripts/check_docs.py
 fi

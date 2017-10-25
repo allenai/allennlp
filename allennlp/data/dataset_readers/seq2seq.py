@@ -27,7 +27,7 @@ class Seq2SeqDatasetReader(DatasetReader):
 
     Expected format for each input line: <source_sequence_string>\t<target_sequence_string>
 
-    The output of ``read`` is a list of ``Instance``s with the fields:
+    The output of ``read`` is a list of ``Instance`` s with the fields:
         source_tokens: ``TextField`` and
         target_tokens: ``TextField``
 

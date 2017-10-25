@@ -1,3 +1,7 @@
+"""
+Utilities for working with the local dataset cache.
+"""
+
 from typing import Tuple
 import os
 import base64
@@ -42,13 +46,16 @@ def filename_to_url(filename: str) -> Tuple[str, str]:
     url_bytes = base64.b64decode(filename_bytes)
     return url_bytes.decode('utf-8'), etag
 
-def cached_path(url_or_filename: str, cache_dir: str = DATASET_CACHE) -> str:
+def cached_path(url_or_filename: str, cache_dir: str = None) -> str:
     """
     Given something that might be a URL (or might be a local path),
     determine which. If it's a URL, download the file and cache it, and
     return the path to the cached file. If it's already a local path,
     make sure the file exists and then return the path.
     """
+    if cache_dir is None:
+        cache_dir = DATASET_CACHE
+
     parsed = urlparse(url_or_filename)
 
     if parsed.scheme in ('http', 'https'):
@@ -66,11 +73,14 @@ def cached_path(url_or_filename: str, cache_dir: str = DATASET_CACHE) -> str:
 
 
 # TODO(joelgrus): do we want to do checksums or anything like that?
-def get_from_cache(url: str, cache_dir: str = DATASET_CACHE) -> str:
+def get_from_cache(url: str, cache_dir: str = None) -> str:
     """
     Given a URL, look for the corresponding dataset in the local cache.
     If it's not there, download it. Then return the path to the cached file.
     """
+    if cache_dir is None:
+        cache_dir = DATASET_CACHE
+
     os.makedirs(cache_dir, exist_ok=True)
 
     # make HEAD request to check ETag
