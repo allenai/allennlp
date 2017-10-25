@@ -22,12 +22,12 @@ class TableKnowledgeGraph:
     """
     def __init__(self,
                  column_neighbors: Dict[str, List[str]],
-                 cell_neighbors: Dict[str, List[str]]):
+                 cell_neighbors: Dict[str, List[str]]) -> None:
         self._column_neighbors = column_neighbors
         self._cell_neighbors = cell_neighbors
 
     @classmethod
-    def read_table_from_tsv(cls, table_filename: str) -> 'Table':
+    def read_table_from_tsv(cls, table_filename: str) -> 'TableKnowledgeGraph':
         """
         We read tables formatted as TSV files here. We assume the first line in the file is a tab separated
         list of column headers, and all subsequent lines are content rows. For example if the TSV file is,

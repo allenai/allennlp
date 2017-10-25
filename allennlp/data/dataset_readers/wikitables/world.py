@@ -3,9 +3,10 @@ import pyparsing
 
 from nltk.sem.logic import Expression
 
-from allennlp.data.dataset_readers.wikitables import REVERSE_TYPE, MAX_MIN_TYPE, DATE_FUNCTION_TYPE
 from allennlp.data.dataset_readers.wikitables import COLUMN_TYPE, CELL_TYPE
-from allennlp.data.dataset_readers.wikitables import LogicParserWithReverse, TableKnowledgeGraph
+from allennlp.data.dataset_readers.wikitables import COMMON_NAME_MAPPING, COMMON_TYPE_SIGNATURE
+
+from allennlp.data.dataset_readers.wikitables import LogicParserWithPlaceholders, TableKnowledgeGraph
 
 
 class World:
@@ -19,16 +20,12 @@ class World:
         # NLTK has a naming convention for variable types (see ``_map_name`` for more details).
         # We initialize this dict with common predicate names and update it as we process logical forms.
         # TODO (pradeep): Should we do updates while reading tables instead?
-        self.name_mapping = {"reverse": "R", "max": "M0", "min": "M1",
-                             "argmax": "A0", "argmin": "A1",
-                             "and": "A", "or": "O", "next": "N",
-                             "fb:cell.cell.date": "D", "fb:cell.cell.number": "B"}
+        self.name_mapping = COMMON_NAME_MAPPING.copy()
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
         # Initial type signature. Will update when we see more predicates.
-        self.type_signature = {"R": REVERSE_TYPE, "M0": MAX_MIN_TYPE, "M1": MAX_MIN_TYPE,
-                               "A0": MAX_MIN_TYPE, "A1": MAX_MIN_TYPE, "D": DATE_FUNCTION_TYPE}
-        self._logic_parser = LogicParserWithReverse(type_check=True)
+        self.type_signature = COMMON_TYPE_SIGNATURE.copy()
+        self._logic_parser = LogicParserWithPlaceholders(type_check=True)
 
     def process_sempre_forms(self, sempre_forms: List[str]) -> List[Expression]:
         """
@@ -49,7 +46,9 @@ class World:
         ``nested_expression`` is the result of parsing a Lambda-DCS expression in Lisp format. We process it
         recursively and return a string in the format that NLTK's ``LogicParser`` would understand.
         """
-        if isinstance(nested_expression, list) and len(nested_expression) == 1:
+        expression_is_list = isinstance(nested_expression, list)
+        expression_size = len(nested_expression)
+        if expression_is_list and expression_size == 1 and isinstance(nested_expression[0], list):
             return self._process_nested_expression(nested_expression[0])
         elements_are_leaves = [isinstance(element, str) for element in nested_expression]
         if all(elements_are_leaves):
@@ -61,9 +60,14 @@ class World:
                     mapped_names.append(self._map_name(element))
                 else:
                     mapped_names.append(self._process_nested_expression(element))
-        return "(%s %s)" % (mapped_names[0], " ".join("(%s)" % name for name in mapped_names[1:]))
+        if mapped_names[0] == "\\":
+            # This means the predicate is lambda. NLTK wants the variable name to not be within parantheses.
+            arguments = [mapped_names[1]] + ["(%s)" % name for name in mapped_names[2:]]
+        else:
+            arguments = ["(%s)" % name for name in mapped_names[1:]]
+        return "(%s %s)" % (mapped_names[0], " ".join(arguments))
 
-    def _map_name(self, sempre_name: str):
+    def _map_name(self, sempre_name: str) -> str:
         """
         Takes the name of a predicate or a constant as used by Sempre, maps it to a unique string such that
         NLTK processes it appropriately. This is needed because NLTK has a naming convention for variables:
@@ -82,12 +86,17 @@ class World:
                 translated_name = "C%d" % self._column_counter
                 self._column_counter += 1
                 self.type_signature[translated_name] = COLUMN_TYPE
+                self.name_mapping[sempre_name] = translated_name
             elif sempre_name.startswith("fb:cell"):
                 # Cell name.
                 translated_name = "cell:%s" % sempre_name.split(".")[-1]
                 self.type_signature[translated_name] = CELL_TYPE
-            self.name_mapping[sempre_name] = translated_name
-        return self.name_mapping[sempre_name]
+                self.name_mapping[sempre_name] = translated_name
+            else:
+                translated_name = sempre_name
+        else:
+            translated_name = self.name_mapping[sempre_name]
+        return translated_name
 
     @staticmethod
     def get_action_sequence(expression: Expression) -> List[str]:
