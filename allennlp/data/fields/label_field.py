@@ -1,5 +1,4 @@
-from typing import Dict, Union, DefaultDict
-from collections import defaultdict
+from typing import Dict, Union, Set
 import logging
 
 from overrides import overrides
@@ -40,7 +39,7 @@ class LabelField(Field[numpy.ndarray]):
     # This warning will be repeated for every instantiation of this class (i.e for every data
     # instance), spewing a lot of warnings so this class variable is used to only log a single
     # warning per namespace.
-    _should_warn_for_namespace: DefaultDict[str, bool] = defaultdict(lambda: True)
+    _already_warned_namespaces: Set[str] = set()
 
     def __init__(self,
                  label: Union[str, int],
@@ -49,13 +48,8 @@ class LabelField(Field[numpy.ndarray]):
         self.label = label
         self._label_namespace = label_namespace
         self._label_id = None
-        if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith(
-                "tags")) and self._should_warn_for_namespace[label_namespace]:
-            logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
-                           "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
-                           "default to your vocabulary.  See documentation for "
-                           "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
-            self._should_warn_for_namespace[label_namespace] = False
+        self._maybe_warn_for_namespace(label_namespace)
+
         if skip_indexing:
             if not isinstance(label, int):
                 raise ConfigurationError("In order to skip indexing, your labels must be integers. "
@@ -66,6 +60,17 @@ class LabelField(Field[numpy.ndarray]):
             if not isinstance(label, str):
                 raise ConfigurationError("LabelFields must be passed a string label if skip_indexing=False. "
                                          "Found label: {} with type: {}.".format(label, type(label)))
+
+    def _maybe_warn_for_namespace(self, label_namespace: str):
+
+        if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
+            if label_namespace not in self._already_warned_namespaces:
+                logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
+                               "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
+                               "default to your vocabulary.  See documentation for "
+                               "`non_padded_namespaces` parameter in Vocabulary.",
+                               self._label_namespace)
+                self._already_warned_namespaces.add(label_namespace)
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

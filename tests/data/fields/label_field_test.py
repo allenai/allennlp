@@ -40,17 +40,17 @@ class TestLabelField(AllenNlpTestCase):
 
     def test_class_variables_for_namespace_warnings_work_correctly(self):
         # pylint: disable=protected-access
-        assert LabelField._should_warn_for_namespace["text"]
+        assert "text" not in LabelField._already_warned_namespaces
         with self.assertLogs(logger="allennlp.data.fields.label_field", level="WARNING"):
             _ = LabelField("test", label_namespace="text")
 
         # We've warned once, so we should have set the class variable to False.
-        assert not LabelField._should_warn_for_namespace["text"]
+        assert "text" in LabelField._already_warned_namespaces
         with pytest.raises(AssertionError):
             with self.assertLogs(logger="allennlp.data.fields.label_field", level="WARNING"):
                 _ = LabelField("test2", label_namespace="text")
 
         # ... but a new namespace should still log a warning.
-        assert LabelField._should_warn_for_namespace["text2"]
+        assert "text2" not in LabelField._already_warned_namespaces
         with self.assertLogs(logger="allennlp.data.fields.label_field", level="WARNING"):
             _ = LabelField("test", label_namespace="text2")
