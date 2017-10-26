@@ -37,3 +37,21 @@ class TestLabelField(AllenNlpTestCase):
         label = LabelField("test")
         empty_label = label.empty_field()
         assert empty_label.label == -1
+
+    def test_class_variables_for_namespace_warnings_work_correctly(self):
+
+        assert LabelField.should_warn_for_namespace["text"]
+        with self.assertLogs(logger="allennlp.data.fields.label_field", level="WARNING"):
+            _ = LabelField("test", label_namespace="text")
+
+        # We've warned once, so we should have set the class variable to False.
+        assert not LabelField.should_warn_for_namespace["text"]
+        with pytest.raises(AssertionError):
+            with self.assertLogs(logger="allennlp.data.fields.label_field", level="WARNING"):
+                _ = LabelField("test2", label_namespace="text")
+
+        # ... but a new namespace should still log a warning.
+        assert LabelField.should_warn_for_namespace["text2"]
+
+        with self.assertLogs(logger="allennlp.data.fields.label_field", level="WARNING"):
+            _ = LabelField("test", label_namespace="text2")

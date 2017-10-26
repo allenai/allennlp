@@ -1,4 +1,5 @@
-from typing import Dict, Union
+from typing import Dict, Union, DefaultDict
+from collections import defaultdict
 import logging
 
 from overrides import overrides
@@ -35,6 +36,12 @@ class LabelField(Field[numpy.ndarray]):
         If your labels are 0-indexed integers, you can pass in this flag, and we'll skip the indexing
         step.  If this is ``False`` and your labels are not strings, this throws a ``ConfigurationError``.
     """
+    # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
+    # This warning will be repeated for every instantiation of this class (i.e for every data
+    # instance), spewing a lot of warnings so this class variable is used to only log a single
+    # warning per namespace.
+    should_warn_for_namespace: DefaultDict[str, bool] = defaultdict(lambda: True)
+
     def __init__(self,
                  label: Union[str, int],
                  label_namespace: str = 'labels',
@@ -42,11 +49,13 @@ class LabelField(Field[numpy.ndarray]):
         self.label = label
         self._label_namespace = label_namespace
         self._label_id = None
-        if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
+        if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith(
+                "tags")) and self.should_warn_for_namespace[label_namespace]:
             logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
                            "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
                            "default to your vocabulary.  See documentation for "
                            "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
+            self.should_warn_for_namespace[label_namespace] = False
         if skip_indexing:
             if not isinstance(label, int):
                 raise ConfigurationError("In order to skip indexing, your labels must be integers. "

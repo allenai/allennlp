@@ -1,4 +1,5 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, DefaultDict
+from collections import defaultdict
 import logging
 
 from overrides import overrides
@@ -37,6 +38,12 @@ class SequenceLabelField(Field[numpy.ndarray]):
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
+    # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
+    # This warning will be repeated for every instantiation of this class (i.e for every data
+    # instance), spewing a lot of warnings so this class variable is used to only log a single
+    # warning per namespace.
+    should_warn_for_namespace: DefaultDict[str, bool] = defaultdict(lambda: True)
+
     def __init__(self,
                  labels: Union[List[str], List[int]],
                  sequence_field: SequenceField,
@@ -46,11 +53,13 @@ class SequenceLabelField(Field[numpy.ndarray]):
         self._label_namespace = label_namespace
         self._indexed_labels = None
 
-        if not (self._label_namespace.endswith("tags") or self._label_namespace.endswith("labels")):
+        if not (self._label_namespace.endswith("tags") or self._label_namespace.endswith(
+                "labels")) and self.should_warn_for_namespace[label_namespace]:
             logger.warning("Your sequence label namespace was '%s'. We recommend you use a namespace "
                            "ending with 'tags' or 'labels', so we don't add UNK and PAD tokens by "
                            "default to your vocabulary.  See documentation for "
                            "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
+            self.should_warn_for_namespace[label_namespace] = False
 
         if len(labels) != sequence_field.sequence_length():
             raise ConfigurationError("Label length and sequence length "
