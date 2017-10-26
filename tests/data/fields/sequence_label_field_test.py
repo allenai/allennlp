@@ -76,12 +76,10 @@ class TestSequenceLabelField(AllenNlpTestCase):
         # We've warned once, so we should have set the class variable to False.
         assert not SequenceLabelField._should_warn_for_namespace["text"]
         with pytest.raises(AssertionError):
-            with self.assertLogs(logger="allennlp.data.fields.sequence_label_field",
-                                 level="WARNING"):
+            with self.assertLogs(logger="allennlp.data.fields.sequence_label_field", level="WARNING"):
                 _ = SequenceLabelField(tags, self.text, label_namespace="text")
 
         # ... but a new namespace should still log a warning.
         assert SequenceLabelField._should_warn_for_namespace["text2"]
-
         with self.assertLogs(logger="allennlp.data.fields.sequence_label_field", level="WARNING"):
             _ = SequenceLabelField(tags, self.text, label_namespace="text2")

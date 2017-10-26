@@ -52,6 +52,5 @@ class TestLabelField(AllenNlpTestCase):
 
         # ... but a new namespace should still log a warning.
         assert LabelField._should_warn_for_namespace["text2"]
-
         with self.assertLogs(logger="allennlp.data.fields.label_field", level="WARNING"):
             _ = LabelField("test", label_namespace="text2")
