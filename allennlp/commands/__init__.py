@@ -28,9 +28,9 @@ def main(prog: str = None,
          predictor_overrides: Dict[str, str] = {},
          subcommand_overrides: Dict[str, Subcommand] = {}) -> None:
     """
-    The :mod:``allennlp.run`` command only knows about the registered classes
+    The :mod:`~allennlp.run` command only knows about the registered classes
     in the ``allennlp`` codebase. In particular, once you start creating your own
-    ``Model``s and so forth, it won't work for them. However, ``allennlp.run`` is
+    ``Model`` s and so forth, it won't work for them. However, ``allennlp.run`` is
     simply a wrapper around this function. To use the command line interface with your
     own custom classes, just create your own script that imports all of the classes you want
     and then calls ``main()``.
