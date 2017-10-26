@@ -61,7 +61,7 @@ class LabelField(Field[numpy.ndarray]):
                 raise ConfigurationError("LabelFields must be passed a string label if skip_indexing=False. "
                                          "Found label: {} with type: {}.".format(label, type(label)))
 
-    def _maybe_warn_for_namespace(self, label_namespace: str):
+    def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
 
         if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
             if label_namespace not in self._already_warned_namespaces:

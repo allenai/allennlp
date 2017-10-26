@@ -64,7 +64,7 @@ class SequenceLabelField(Field[numpy.ndarray]):
                                      "strings or all ints. Found labels {} with "
                                      "types: {}.".format(labels, [type(x) for x in labels]))
 
-    def _maybe_warn_for_namespace(self, label_namespace: str):
+    def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
         if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
             if label_namespace not in self._already_warned_namespaces:
                 logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
