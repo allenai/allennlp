@@ -27,6 +27,7 @@ import sys
 from copy import deepcopy
 
 from allennlp.commands.evaluate import evaluate
+from allennlp.commands.subcommand import Subcommand
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.common.util import prepare_environment
@@ -39,23 +40,26 @@ from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
-    description = '''Train the specified model on the specified dataset.'''
-    subparser = parser.add_parser(
-            'train', description=description, help='Train a model')
-    subparser.add_argument('param_path',
-                           type=str,
-                           help='path to parameter file describing the model to be trained')
-    subparser.add_argument('-s', '--serialization_dir',
-                           type=str,
-                           required=True,
-                           help='directory in which to save the model and its logs')
-    subparser.set_defaults(func=_train_model_from_args)
 
-    return subparser
+class Train(Subcommand):
+    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+        # pylint: disable=protected-access
+        description = '''Train the specified model on the specified dataset.'''
+        subparser = parser.add_parser(
+                name, description=description, help='Train a model')
+        subparser.add_argument('param_path',
+                               type=str,
+                               help='path to parameter file describing the model to be trained')
+        subparser.add_argument('-s', '--serialization_dir',
+                               type=str,
+                               required=True,
+                               help='directory in which to save the model and its logs')
+        subparser.set_defaults(func=train_model_from_args)
+
+        return subparser
 
 
-def _train_model_from_args(args: argparse.Namespace):
+def train_model_from_args(args: argparse.Namespace):
     """
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
