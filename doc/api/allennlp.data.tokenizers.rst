@@ -1,6 +1,10 @@
 allennlp.data.tokenizers
 ================================
 
+.. automodule:: allennlp.data.tokenizers.token
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.data.tokenizers
    :members:

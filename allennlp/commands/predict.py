@@ -27,32 +27,36 @@ import json
 import sys
 from typing import Optional, IO, Dict
 
+from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
-def add_subparser(parser: argparse._SubParsersAction,
-                  predictors: Dict[str, str]) -> argparse.ArgumentParser:
-    # pylint: disable=protected-access
-    description = '''Run the specified model against a JSON-lines input file.'''
-    subparser = parser.add_parser(
-            'predict', description=description, help='Use a trained model to make predictions.')
-    subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
-    subparser.add_argument('input_file', metavar='input-file', type=argparse.FileType('r'),
-                           help='path to input file')
-    subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
-    subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
-    subparser.add_argument('--cuda_device', type=int, default=-1, help='id of GPU to use (if any)')
-    subparser.add_argument('-o', '--overrides',
-                           type=str,
-                           default="",
-                           help='a HOCON structure used to override the experiment configuration')
+class Predict(Subcommand):
+    def __init__(self, predictors: Dict[str, str]) -> None:
+        self.predictors = predictors
 
-    subparser.set_defaults(func=predict(predictors))
+    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+        # pylint: disable=protected-access
+        description = '''Run the specified model against a JSON-lines input file.'''
+        subparser = parser.add_parser(
+                name, description=description, help='Use a trained model to make predictions.')
+        subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
+        subparser.add_argument('input_file', metavar='input-file', type=argparse.FileType('r'),
+                               help='path to input file')
+        subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
+        subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
+        subparser.add_argument('--cuda_device', type=int, default=-1, help='id of GPU to use (if any)')
+        subparser.add_argument('-o', '--overrides',
+                               type=str,
+                               default="",
+                               help='a HOCON structure used to override the experiment configuration')
 
-    return subparser
+        subparser.set_defaults(func=_predict(self.predictors))
 
-def get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Predictor:
+        return subparser
+
+def _get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Predictor:
     archive = load_archive(args.archive_file, cuda_device=args.cuda_device, overrides=args.overrides)
     model_type = archive.config.get("model").get("type")
     if model_type not in predictors:
@@ -60,11 +64,11 @@ def get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Predi
     predictor = Predictor.from_archive(archive, predictors[model_type])
     return predictor
 
-def run(predictor: Predictor,
-        input_file: IO,
-        output_file: Optional[IO],
-        print_to_console: bool,
-        cuda_device: int) -> None:
+def _run(predictor: Predictor,
+         input_file: IO,
+         output_file: Optional[IO],
+         print_to_console: bool,
+         cuda_device: int) -> None:
     for line in input_file:
         if not line.isspace():
             data = json.loads(line)
@@ -72,13 +76,14 @@ def run(predictor: Predictor,
             output = json.dumps(result)
 
             if print_to_console:
-                print(output)
+                print("input: ", data)
+                print("prediction: ", output)
             if output_file:
                 output_file.write(output + "\n")
 
-def predict(predictors: Dict[str, str]):
+def _predict(predictors: Dict[str, str]):
     def predict_inner(args: argparse.Namespace) -> None:
-        predictor = get_predictor(args, predictors)
+        predictor = _get_predictor(args, predictors)
         output_file = None
 
         if args.silent and not args.output_file:
@@ -92,6 +97,6 @@ def predict(predictors: Dict[str, str]):
             if args.output_file:
                 output_file = stack.enter_context(args.output_file)  # type: ignore
 
-            run(predictor, input_file, output_file, not args.silent, args.cuda_device)
+            _run(predictor, input_file, output_file, not args.silent, args.cuda_device)
 
     return predict_inner

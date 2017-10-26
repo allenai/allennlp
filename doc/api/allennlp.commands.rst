@@ -32,6 +32,7 @@ you'll need to make your own script which imports them and then
 calls ``main()``.
 
 .. toctree::
+    allennlp.commands.subcommand
     allennlp.commands.evaluate
     allennlp.commands.predict
     allennlp.commands.serve

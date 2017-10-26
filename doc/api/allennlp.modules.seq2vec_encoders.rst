@@ -20,3 +20,8 @@ allennlp.modules.seq2vec_encoders
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.modules.seq2vec_encoders.boe_encoder
+   :members:
+   :undoc-members:
+   :show-inheritance:

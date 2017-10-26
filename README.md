@@ -118,12 +118,6 @@ used for development along with all the dependencies needed to run AllenNLP.
 
 6. Visit http://pytorch.org/ and install the relevant pytorch package.
 
-7.  Set the `PYTHONHASHSEED` for repeatable experiments.  You may want to put this in your `.bashrc`.
-
-    ```
-    export PYTHONHASHSEED=2157
-    ```
-
 You should now be able to test your installation with `pytest -v`.  Congratulations!
 
 ### Installing via pip

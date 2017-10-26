@@ -20,11 +20,19 @@ class SpanBasedF1Test(AllenNlpTestCase):
         vocab.add_token_to_namespace("I-ARG2", "tags")
         vocab.add_token_to_namespace("B-V", "tags")
         vocab.add_token_to_namespace("I-V", "tags")
+        vocab.add_token_to_namespace("U-ARG1", "tags")
+        vocab.add_token_to_namespace("U-ARG2", "tags")
         self.vocab = vocab
 
     def test_span_based_f1_extracts_correct_spans(self):
         metric = SpanBasedF1Measure(self.vocab, tag_namespace="tags")
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "B-ARG1", "B-ARG2"]
+        indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
+        spans = metric._extract_spans(indices)
+        assert spans == {((1, 2), "ARG1"), ((4, 5), "ARG2"), ((6, 6), "ARG1"), ((7, 7), "ARG2")}
+
+        # Check that it works when we use U- tags for single tokens.
+        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "U-ARG1", "U-ARG2"]
         indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
         spans = metric._extract_spans(indices)
         assert spans == {((1, 2), "ARG1"), ((4, 5), "ARG2"), ((6, 6), "ARG1"), ((7, 7), "ARG2")}
@@ -35,6 +43,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
         spans = metric._extract_spans(indices)
         assert spans == {((1, 2), "ARG1"), ((5, 6), "ARG2"), ((7, 7), "ARG1"),
                          ((4, 4), "ARG1"), ((8, 9), "ARG2")}
+
 
     def test_span_based_f1_ignores_specified_tags(self):
         metric = SpanBasedF1Measure(self.vocab, "tags", ["ARG1", "V"])
