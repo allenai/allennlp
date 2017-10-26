@@ -42,7 +42,7 @@ class SequenceLabelField(Field[numpy.ndarray]):
     # This warning will be repeated for every instantiation of this class (i.e for every data
     # instance), spewing a lot of warnings so this class variable is used to only log a single
     # warning per namespace.
-    should_warn_for_namespace: DefaultDict[str, bool] = defaultdict(lambda: True)
+    _should_warn_for_namespace: DefaultDict[str, bool] = defaultdict(lambda: True)
 
     def __init__(self,
                  labels: Union[List[str], List[int]],
@@ -54,12 +54,12 @@ class SequenceLabelField(Field[numpy.ndarray]):
         self._indexed_labels = None
 
         if not (self._label_namespace.endswith("tags") or self._label_namespace.endswith(
-                "labels")) and self.should_warn_for_namespace[label_namespace]:
+                "labels")) and self._should_warn_for_namespace[label_namespace]:
             logger.warning("Your sequence label namespace was '%s'. We recommend you use a namespace "
                            "ending with 'tags' or 'labels', so we don't add UNK and PAD tokens by "
                            "default to your vocabulary.  See documentation for "
                            "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
-            self.should_warn_for_namespace[label_namespace] = False
+            self._should_warn_for_namespace[label_namespace] = False
 
         if len(labels) != sequence_field.sequence_length():
             raise ConfigurationError("Label length and sequence length "
