@@ -27,15 +27,39 @@ class NamedBasicType(BasicType):
 
 class PlaceholderType(ComplexType):
     """
-    This is a ``ComplexType`` that involve placeholders, and thus the type resolution is context sensitive.
+    ``PlaceholderType`` is a ``ComplexType`` that involves placeholders, and thus its type resolution is
+    context sensitive. This is an abstract class for all placeholder types like reverse, and, or, argmax, etc.
+    The subclasses need to do two things:
+        1) Override the property ``_signature`` to define the type signature (this is just the signature's
+        string representation and will not affect type inference or checking). You will see this signature in
+        action sequences.
+        2) Override ``resolve`` to resolve the type appropriately (see the docstring in ``resolve`` for more
+        information).
     """
-    def __init__(self, first, second) -> None:
-        super(PlaceholderType, self).__init__(first, second)
-        self._signature = "?"
+    @property
+    def _signature(self):
+        raise NotImplementedError
 
     @overrides
     def resolve(self, other):
-        # TODO (pradeep): Generally explain how resolution works.
+        """
+        This method is central to type inference and checking. When a variable's type is being checked, we
+        compare what we know of its type against what is expected of its type by its context. The expectation
+        is provided as ``other``. We make sure that there are no contradictions between this type and other,
+        and return an updated type which may be more specific than the original type.
+
+        For example, say this type is of the function variable F in F(cell), and we start out with <?, d> (that
+        is, it takes any type and returns d). Now we have already resolved `cell` to be of type `e`. Then
+        ``resolve`` gets called with other = <e, ?>, because we know F is a function that took a constant of
+        type `e`. When we resolve <e, ?> against <?, d>, there will not be a contradiction, because any type
+        can be successfully resolved against ?. Finally we return <e, d> as the resolved type.
+
+        As a counter example, if we are trying to resolve <?, d> against <?, e>, the resolution fails, and in
+        that case, this method returns ``None``.
+
+        Note that resolution may be unidirectional because of ?, and so in the subclasses of this type, we
+        explicitly resolve in both directions.
+        """
         raise NotImplementedError
 
     @overrides
@@ -75,9 +99,9 @@ class ReverseType(PlaceholderType):
         <<r,?>, ?>      :   <<r,?>, <?,r>>>
         <<r,?>, <e,?>>  :   None  (causes resolution failure)
     """
-    def __init__(self, first, second):
-        super(ReverseType, self).__init__(first, second)
-        self._signature = "<<#1,#2>,<#2,#1>>"
+    @property
+    def _signature(self):
+        return "<<#1,#2>,<#2,#1>>"
 
     @overrides
     def resolve(self, other):
@@ -100,12 +124,13 @@ class IdentityType(PlaceholderType):
     ``IdentityType`` is a special kind of ``ComplexType`` that takes an argument of any type and returns
     an expression of the same type. That is, type signature is <#1, #1>.
     """
-    def __init__(self, first, second):
-        super(IdentityType, self).__init__(first, second)
-        self._signature = "<#1,#1>"
+    @property
+    def _signature(self):
+        return "<#1,#1>"
 
     @overrides
     def resolve(self, other):
+        """See ``PlaceholderType.resolve``"""
         if not isinstance(other, ComplexType):
             return None
         other_first = other.first.resolve(other.second)
@@ -122,12 +147,13 @@ class ConjunctionType(PlaceholderType):
     ``ConjunctionType`` takes an entity of any type and returns a function that takes and returns the same
     type. That is, its signature is <#1, <#1, #1>>
     """
-    def __init__(self, first, second):
-        super(ConjunctionType, self).__init__(first, second)
-        self._signature = "<#1,<#1,#1>>"
+    @property
+    def _signature(self):
+        return "<#1,<#1,#1>>"
 
     @overrides
     def resolve(self, other):
+        """See ``PlaceholderType.resolve``"""
         if not isinstance(other, ComplexType):
             return None
         if not isinstance(other.second, ComplexType):
@@ -148,12 +174,13 @@ class ArgExtremeType(PlaceholderType):
     Example: (argmax (number 1) (number 1) (fb:row.row.league fb:cell.usl_a_league) fb:row.row.index),
         meaning, of the subset of rows where league == usl_a_league, find the row with the maximum index.
     """
-    def __init__(self, first, second):
-        super(ArgExtremeType, self).__init__(first, second)
-        self._signature = "<d,<d,<#1,<<d,#1>,#1>>>>"
+    @property
+    def _signature(self):
+        return "<d,<d,<#1,<<d,#1>,#1>>>>"
 
     @overrides
     def resolve(self, other):
+        """See ``PlaceholderType.resolve``"""
         if not isinstance(other, ComplexType):
             return None
         expected_second = ComplexType(DATE_NUM_TYPE,
@@ -203,8 +230,10 @@ COLUMN_TYPE = ComplexType(CELL_TYPE, ROW_TYPE)
 DATE_FUNCTION_TYPE = ComplexType(DATE_NUM_TYPE, CELL_TYPE)
 # number
 NUMBER_TYPE = ComplexType(EntityType(), DATE_NUM_TYPE)
-# Numerical operations: max, min, >, <. argmax, argmin etc.
-NUM_OP_TYPE = ComplexType(DATE_NUM_TYPE, DATE_NUM_TYPE)
+# Unary numerical operations: max, min, >, <, sum etc.
+UNARY_NUM_OP_TYPE = ComplexType(DATE_NUM_TYPE, DATE_NUM_TYPE)
+# Binary numerical operation: -
+BINARY_NUM_OP_TYPE = ComplexType(DATE_NUM_TYPE, ComplexType(DATE_NUM_TYPE, DATE_NUM_TYPE))
 # next
 NEXT_ROW_TYPE = ComplexType(ROW_TYPE, ROW_TYPE)
 # reverse
@@ -212,8 +241,6 @@ REVERSE_TYPE = ReverseType(ComplexType(ANY_TYPE, ANY_TYPE), ComplexType(ANY_TYPE
 # !=, fb:type.object.type
 # fb:type.object.type takes a type and returns all objects of that type.
 IDENTITY_TYPE = IdentityType(ANY_TYPE, ANY_TYPE)
-# var. var (x) can be of any type.
-#VARIABLE_TYPE = ComplexType(EntityType(), ANY_TYPE)
 # index
 ROW_INDEX_TYPE = ComplexType(DATE_NUM_TYPE, ROW_TYPE)
 # count
@@ -230,7 +257,7 @@ COMMON_NAME_MAPPING = {"reverse": "R",
                        "argmin": "A1",
                        "and": "A",
                        "or": "O",
-                       "next": "N",
+                       "fb:row.row.next": "N",
                        "number": "I",
                        "lambda": "\\",
                        "var": "V",
@@ -244,17 +271,24 @@ COMMON_NAME_MAPPING = {"reverse": "R",
                        "!=": "Q",
                        ">=": "G",
                        "<=": "L",
+                       "sum": "S0",
+                       "avg": "S1",
+                       "-": "F",
+                       "x": "X",
                       }
 
 COMMON_TYPE_SIGNATURE = {"R": REVERSE_TYPE,
-                         "M0": NUM_OP_TYPE,
-                         "M1": NUM_OP_TYPE,
                          "A0": ARG_EXTREME_TYPE,
                          "A1": ARG_EXTREME_TYPE,
-                         ">": NUM_OP_TYPE,
-                         "<": NUM_OP_TYPE,
-                         "G": NUM_OP_TYPE,
-                         "L": NUM_OP_TYPE,
+                         "M0": UNARY_NUM_OP_TYPE,
+                         "M1": UNARY_NUM_OP_TYPE,
+                         ">": UNARY_NUM_OP_TYPE,
+                         "<": UNARY_NUM_OP_TYPE,
+                         "G": UNARY_NUM_OP_TYPE,
+                         "L": UNARY_NUM_OP_TYPE,
+                         "S0": UNARY_NUM_OP_TYPE,
+                         "S1": UNARY_NUM_OP_TYPE,
+                         "F": BINARY_NUM_OP_TYPE,
                          "D": DATE_FUNCTION_TYPE,
                          "B": DATE_FUNCTION_TYPE,
                          "B2": DATE_FUNCTION_TYPE,
@@ -262,26 +296,39 @@ COMMON_TYPE_SIGNATURE = {"R": REVERSE_TYPE,
                          "N": NEXT_ROW_TYPE,
                          "Q": IDENTITY_TYPE,
                          "T": IDENTITY_TYPE,
-                         #"V": VARIABLE_TYPE,
                          "V": IDENTITY_TYPE,
                          "O": CONJUNCTION_TYPE,
                          "A": CONJUNCTION_TYPE,
                          "W": ROW_INDEX_TYPE,
                          "C": COUNT_TYPE,
                          "T0": ROW_TYPE,
+                         "X": ANY_TYPE,
                         }
 
 
-class PlaceholderApplicationExpression(ApplicationExpression):
+class DynamicTypeApplicationExpression(ApplicationExpression):
     """
-    NLTK's ``ApplicationExpression`` (which represents function applications like P(x)) does not
-    handle the case where P's type involves placeholders (R, V, !=, etc.), which are special cases because
-    their return types depend on the type of their arguments (x). We override ``ApplicationExpression`` to
-    redefine the type of the application.
+    NLTK's ``ApplicationExpression`` (which represents function applications like P(x)) has two limitations,
+    which we overcome by inheriting from ``ApplicationExpression`` and overriding two methods.
+
+    Firstly, ``ApplicationExpression`` does not handle the case where P's type involves placeholders
+    (R, V, !=, etc.), which are special cases because their return types depend on the type of their
+    arguments (x). We override the property ``type`` to redefine the type of the application.
+
+    Secondly, NLTK's variables only bind to entities, and thus the variable types are 'e' by default. We
+    get around this issue by replacing x with a function V(X), whose initial type is ANY_TYPE, and later
+    gets resolved based on the type signature of the function whose scope the variable appears in. This
+    variable binding operation is implemented by overriding ``_set_type`` below.
     """
     @property
     def type(self):
-        assert isinstance(self.function.type, (ReverseType, IdentityType, ConjunctionType, ArgExtremeType))
+        # This gets called when the tree is being built by ``LogicParser.parse``. So, we do not
+        # have access to the type signatures yet. Thus, we need to look at the name of the function
+        # to return the type.
+        if not self._has_placeholder(str(self.function)):
+            return super(DynamicTypeApplicationExpression, self).type
+        if self.function.type == ANY_TYPE:
+            return ANY_TYPE
         argument_type = self.argument.type
         if isinstance(self.function.type, ReverseType):
             return_type = ComplexType(argument_type.second, argument_type.first)
@@ -295,24 +342,37 @@ class PlaceholderApplicationExpression(ApplicationExpression):
             return_type = argument_type
         return return_type
 
+    def _set_type(self, other_type=ANY_TYPE, signature=None):
+        """
+        We override this method to do just one thing on top of ``ApplicationExpression._set_type``. In
+        lambda expressions of the form /x F(x), where the function is F and the argument is x, we can use
+        the type of F to infer the type of x. That is, if F is of type <a, b>, we can resolve the type of
+        x against a. We do this as the additional step after setting the type of F(x).
 
-class LogicParserWithPlaceholders(LogicParser):
-    """
-    Since we defined a new kinds of ``ApplicationExpression``s above, the ``LogicParser`` should be able to
-    create these new kinds of expressions when needed. We do that by overriding the ``LogicParser`` as well.
-    """
-    @overrides
-    def make_ApplicationExpression(self, function, argument):
-        # This gets called when the tree is being built by ``LogicParser.parse``. So, we do not
-        # have access to the type signatures yet. Thus, we need to look at the name of the function
-        # to define the appropriate kind of ``ApplicationExpression``.
-        if self.has_placeholder(str(function)):
-            return PlaceholderApplicationExpression(function, argument)
-        return super(LogicParserWithPlaceholders, self).make_ApplicationExpression(function, argument)
+        So why does NLTK not already do this? NLTK assumes all variables (x) are of type entity (e). So it
+        does not have to resolve the type of x anymore. However, this would cause type inference failures in
+        our case since x can bind to rows, numbers or cells, each of which has a different type. To deal with
+        this issue, we replaced x with V(X) ((var x) in Sempre) and made X of type ANY_TYPE, and V of type
+        <#1, #1>. We cannot leave X as ANY_TYPE because that would propagate up the tree. We need to set its
+        type when we have the information about F. Hence this method.
+        """
+        super(DynamicTypeApplicationExpression, self)._set_type(other_type, signature)
+        if isinstance(self.argument, ApplicationExpression) and str(self.argument.function) == "V":
+            # pylint: disable=protected-access
+            self.argument.argument._set_type(self.function.type.first)
 
     @staticmethod
-    def has_placeholder(variable_name):
+    def _has_placeholder(variable_name):
         if variable_name not in COMMON_TYPE_SIGNATURE:
             return False
         return COMMON_TYPE_SIGNATURE[variable_name] in [REVERSE_TYPE, IDENTITY_TYPE,
                                                         CONJUNCTION_TYPE, ARG_EXTREME_TYPE]
+
+class DynamicTypeLogicParser(LogicParser):
+    """
+    Since we defined a new kind of ``ApplicationExpression`` above, the ``LogicParser`` should be able to
+    create this new kind of expression. We do that by overriding the ``LogicParser`` as well.
+    """
+    @overrides
+    def make_ApplicationExpression(self, function, argument):
+        return DynamicTypeApplicationExpression(function, argument)

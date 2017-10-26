@@ -1,12 +1,12 @@
 from typing import List
 import pyparsing
 
-from nltk.sem.logic import Expression
+from nltk.sem.logic import Expression, LambdaExpression
 
 from allennlp.data.dataset_readers.wikitables import COLUMN_TYPE, CELL_TYPE
 from allennlp.data.dataset_readers.wikitables import COMMON_NAME_MAPPING, COMMON_TYPE_SIGNATURE
 
-from allennlp.data.dataset_readers.wikitables import LogicParserWithPlaceholders, TableKnowledgeGraph
+from allennlp.data.dataset_readers.wikitables import DynamicTypeLogicParser, TableKnowledgeGraph
 
 
 class World:
@@ -25,7 +25,7 @@ class World:
         self._column_counter = 0
         # Initial type signature. Will update when we see more predicates.
         self.type_signature = COMMON_TYPE_SIGNATURE.copy()
-        self._logic_parser = LogicParserWithPlaceholders(type_check=True)
+        self._logic_parser = DynamicTypeLogicParser(type_check=True)
 
     def process_sempre_forms(self, sempre_forms: List[str]) -> List[Expression]:
         """
@@ -111,8 +111,15 @@ class World:
                 # sub-expression and the second is a combinator that is applied to the list of values returned
                 # from the function applications. We just want the list of all sub-expressions here.
                 sub_expressions = expression.visit(lambda x: x, lambda x: x)
+                transformed_types = [sub_exp.type for sub_exp in sub_expressions]
+                if isinstance(expression, LambdaExpression):
+                    # If the expression is a lambda expression, the list of sub expressions does not include
+                    # the "lambda x" term. We're adding it here so that we will see transitions like
+                    #   <e,d> -> [\x, d] instead of
+                    #   <e,d> -> [d]
+                    transformed_types = ["/X"] + transformed_types
                 current_transitions.append("%s -> %s" % (expression_type,
-                                                         str([sub_exp.type for sub_exp in sub_expressions])))
+                                                         str(transformed_types)))
                 for sub_expression in sub_expressions:
                     _get_transitions(sub_expression, current_transitions)
             except NotImplementedError:
