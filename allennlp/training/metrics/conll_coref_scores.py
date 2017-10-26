@@ -48,7 +48,7 @@ class ConllCorefScores(Metric):
 
     @staticmethod
     def get_predicted_clusters(top_spans, antecedent_indices, predicted_antecedents):
-        mention_to_predicted: Dict[Tuple[int, int], int] = {}
+        predicted_clusters_to_ids: Dict[Tuple[int, int], int] = {}
         clusters: List[List[Tuple[int, int]]] = []
         for i, predicted_antecedent in enumerate(predicted_antecedents):
             if predicted_antecedent < 0:
@@ -61,22 +61,26 @@ class ConllCorefScores(Metric):
             antecedent_span = tuple(top_spans[predicted_index])
 
             # Check if we've seen the span before.
-            if antecedent_span in mention_to_predicted.keys():
-                predicted_cluster_id: int = mention_to_predicted[antecedent_span]
+            if antecedent_span in predicted_clusters_to_ids.keys():
+                predicted_cluster_id: int = predicted_clusters_to_ids[antecedent_span]
             else:
                 # We start a new cluster.
-                predicted_cluster_id: int = len(clusters)
+                predicted_cluster_id = len(clusters)
                 clusters.append([antecedent_span])
-                mention_to_predicted[antecedent_span] = predicted_cluster_id
+                predicted_clusters_to_ids[antecedent_span] = predicted_cluster_id
 
             mention = tuple(top_spans[i])
             clusters[predicted_cluster_id].append(mention)
-            mention_to_predicted[mention] = predicted_cluster_id
+            predicted_clusters_to_ids[mention] = predicted_cluster_id
 
         # finalise the spans and clusters.
-        clusters = [tuple(pc) for pc in clusters]
-        mention_to_predicted = {m:clusters[i] for m, i in mention_to_predicted.items()}
-        return clusters, mention_to_predicted
+        clusters = [tuple(cluster) for cluster in clusters]
+        # Return a mapping of each mention to the cluster containing it.
+        predicted_clusters_to_ids: Dict[Tuple[int, int], List[Tuple[int, int]]] = \
+            {mention: clusters[cluster_id] for mention, cluster_id
+             in predicted_clusters_to_ids.items()}
+
+        return clusters, predicted_clusters_to_ids
 
 
 class Scorer:
