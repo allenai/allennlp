@@ -1,10 +1,11 @@
 from typing import Dict
 import argparse
 
-from allennlp.commands.serve import add_subparser as add_serve_subparser
-from allennlp.commands.predict import add_subparser as add_predict_subparser
-from allennlp.commands.train import add_subparser as add_train_subparser
-from allennlp.commands.evaluate import add_subparser as add_evaluate_subparser
+from allennlp.commands.serve import Serve
+from allennlp.commands.predict import Predict
+from allennlp.commands.train import Train
+from allennlp.commands.evaluate import Evaluate
+from allennlp.commands.subcommand import Subcommand
 
 # a mapping from predictor `type` to the location of the trained model of that type
 DEFAULT_MODELS = {
@@ -24,11 +25,12 @@ DEFAULT_PREDICTORS = {
 
 def main(prog: str = None,
          model_overrides: Dict[str, str] = {},
-         predictor_overrides: Dict[str, str] = {}) -> None:
+         predictor_overrides: Dict[str, str] = {},
+         subcommand_overrides: Dict[str, Subcommand] = {}) -> None:
     """
-    The :mod:``allennlp.run`` command only knows about the registered classes
+    The :mod:`~allennlp.run` command only knows about the registered classes
     in the ``allennlp`` codebase. In particular, once you start creating your own
-    ``Model``s and so forth, it won't work for them. However, ``allennlp.run`` is
+    ``Model`` s and so forth, it won't work for them. However, ``allennlp.run`` is
     simply a wrapper around this function. To use the command line interface with your
     own custom classes, just create your own script that imports all of the classes you want
     and then calls ``main()``.
@@ -45,11 +47,19 @@ def main(prog: str = None,
     trained_models = {**DEFAULT_MODELS, **model_overrides}
     predictors = {**DEFAULT_PREDICTORS, **predictor_overrides}
 
-    # Add sub-commands
-    add_train_subparser(subparsers)
-    add_evaluate_subparser(subparsers)
-    add_predict_subparser(subparsers, predictors=predictors)
-    add_serve_subparser(subparsers, trained_models=trained_models)
+    subcommands = {
+            # Default commands
+            "train": Train(),
+            "evaluate": Evaluate(),
+            "predict": Predict(predictors),
+            "serve": Serve(trained_models),
+
+            # Superseded by overrides
+            **subcommand_overrides
+    }
+
+    for name, subcommand in subcommands.items():
+        subcommand.add_subparser(name, subparsers)
 
     args = parser.parse_args()
 

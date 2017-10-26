@@ -3,7 +3,7 @@ import argparse
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import train_model, add_subparser, _train_model_from_args
+from allennlp.commands.train import Train, train_model, train_model_from_args
 
 
 class TestTrain(AllenNlpTestCase):
@@ -70,13 +70,13 @@ class TestTrain(AllenNlpTestCase):
     def test_train_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
-        add_subparser(subparsers)
+        Train().add_subparser('train', subparsers)
 
         raw_args = ["train", "path/to/params", "-s", "serialization_dir"]
 
         args = parser.parse_args(raw_args)
 
-        assert args.func == _train_model_from_args
+        assert args.func == train_model_from_args
         assert args.param_path == "path/to/params"
         assert args.serialization_dir == "serialization_dir"
 

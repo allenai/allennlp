@@ -8,7 +8,7 @@ from unittest import TestCase
 
 from allennlp.common.util import JsonDict
 from allennlp.commands import main, DEFAULT_PREDICTORS
-from allennlp.commands.predict import add_subparser
+from allennlp.commands.predict import Predict
 from allennlp.service.predictors import Predictor, BidafPredictor
 
 
@@ -17,7 +17,7 @@ class TestPredict(TestCase):
     def test_add_predict_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
-        add_subparser(subparsers, DEFAULT_PREDICTORS)
+        Predict(DEFAULT_PREDICTORS).add_subparser('predict', subparsers)
 
         raw_args = ["predict",          # command
                     "/path/to/archive", # archive

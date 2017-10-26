@@ -24,23 +24,27 @@ their predictions.
 import argparse
 from typing import Dict
 
+from allennlp.commands.subcommand import Subcommand
 from allennlp.service import server_sanic
 
-def add_subparser(parser: argparse._SubParsersAction,
-                  trained_models: Dict[str, str]) -> argparse.ArgumentParser:
-    # pylint: disable=protected-access
-    description = '''Run the web service, which provides an HTTP API as well as a web demo.'''
-    subparser = parser.add_parser(
-            'serve', description=description, help='Run the web service and demo.')
+class Serve(Subcommand):
+    def __init__(self, trained_models: Dict[str, str]) -> None:
+        self.trained_models = trained_models
 
-    subparser.add_argument('--port', type=int, default=8000)
-    subparser.add_argument('--workers', type=int, default=1)
+    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+        # pylint: disable=protected-access
+        description = '''Run the web service, which provides an HTTP API as well as a web demo.'''
+        subparser = parser.add_parser(
+                name, description=description, help='Run the web service and demo.')
 
-    subparser.set_defaults(func=serve(trained_models))
+        subparser.add_argument('--port', type=int, default=8000)
+        subparser.add_argument('--workers', type=int, default=1)
 
-    return subparser
+        subparser.set_defaults(func=_serve(self.trained_models))
 
-def serve(trained_models: Dict[str, str]):
+        return subparser
+
+def _serve(trained_models: Dict[str, str]):
     def serve_inner(args: argparse.Namespace) -> None:
         server_sanic.run(args.port, args.workers, trained_models)
 
