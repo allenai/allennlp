@@ -27,7 +27,6 @@ import sys
 from copy import deepcopy
 
 from allennlp.commands.evaluate import evaluate
-from allennlp.common.checks import ensure_pythonhashseed_set
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.common.util import prepare_environment
@@ -74,10 +73,6 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Mo
     serialization_dir: str, required
         The directory in which to save results and logs.
     """
-
-    # We need the python hashseed to be set if we're training a model
-    ensure_pythonhashseed_set()
-
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename)
     return train_model(params, serialization_dir)

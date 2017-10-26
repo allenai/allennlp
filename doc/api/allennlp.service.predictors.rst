@@ -8,12 +8,19 @@ allennlp.service.predictors
 
 * :ref:`Predictor<predictor>`
 * :ref:`BidafPredictor<bidaf>`
+* :ref:`CrfTaggerPredictor<crf-tagger>`
 * :ref:`DecomposableAttentionPredictor<decomposable-attention>`
 * :ref:`SemanticRoleLabelerPredictor<semantic-role-labeler>`
 * :ref:`SimpleTaggerPredictor<simple-tagger>`
 
 .. _predictor:
 .. automodule:: allennlp.service.predictors.predictor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _crf-tagger:
+.. automodule:: allennlp.service.predictors.crf_tagger
    :members:
    :undoc-members:
    :show-inheritance:
