@@ -28,7 +28,18 @@ class TestWorldRepresentation(AllenNlpTestCase):
         actions = world.get_action_sequence(expression)
         target_action_sequence = ['d -> [<d,d>, d]', '<d,d> -> M0', 'd -> [<e,d>, e]',
                                   '<e,d> -> [<<#1,#2>,<#2,#1>>, <d,e>]', '<<#1,#2>,<#2,#1>> -> R',
-                                  '<d,e> -> D', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
+                                  '<d,e> -> D1', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
                                   '<<#1,#2>,<#2,#1>> -> R', '<e,r> -> C0', 'r -> [<e,r>, e]',
                                   '<e,r> -> C1', 'e -> cell:usl_a_league']
         assert actions == target_action_sequence
+
+    def test_large_scale_processing(self):
+        world = World("tests/fixtures/data/wikitables/sample_table.tsv")
+        forms = [x.strip() for x in open("tests/fixtures/data/wikitables/logical_forms_large_sample.txt")]
+        expressions = world.process_sempre_forms(forms)
+        for form, expression in zip(forms, expressions):
+            action_sequence = world.get_action_sequence(expression)
+            for action in action_sequence:
+                assert "?" not in action, ("Found an unresolved type for form: %s\n"
+                                           "Expression: %s\n"
+                                           "Action sequence: %s\n" % (form, expression, action_sequence))

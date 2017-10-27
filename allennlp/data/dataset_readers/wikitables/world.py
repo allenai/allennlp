@@ -1,9 +1,11 @@
+import re
+
 from typing import List
 import pyparsing
 
 from nltk.sem.logic import Expression, LambdaExpression
 
-from allennlp.data.dataset_readers.wikitables import COLUMN_TYPE, CELL_TYPE
+from allennlp.data.dataset_readers.wikitables import COLUMN_TYPE, CELL_TYPE, PART_TYPE
 from allennlp.data.dataset_readers.wikitables import COMMON_NAME_MAPPING, COMMON_TYPE_SIGNATURE
 
 from allennlp.data.dataset_readers.wikitables import DynamicTypeLogicParser, TableKnowledgeGraph
@@ -88,12 +90,23 @@ class World:
                 self.type_signature[translated_name] = COLUMN_TYPE
                 self.name_mapping[sempre_name] = translated_name
             elif sempre_name.startswith("fb:cell"):
-                # Cell name.
+                # Cell name
                 translated_name = "cell:%s" % sempre_name.split(".")[-1]
                 self.type_signature[translated_name] = CELL_TYPE
                 self.name_mapping[sempre_name] = translated_name
+            elif sempre_name.startswith("fb:part"):
+                # part name
+                translated_name = "part:%s" % sempre_name.split(".")[-1]
+                self.type_signature[translated_name] = PART_TYPE
+                self.name_mapping[sempre_name] = translated_name
             else:
-                translated_name = sempre_name
+                # NLTK throws an error if it sees a "." in constants, which will most likely happen within
+                # numbers as a decimal point. We're changing those to underscores.
+                translated_name = sempre_name.replace(".", "_")
+                if re.match("-[0-9_]+", translated_name):
+                    # The string is a negative number. This makes NLTK interpret this as a negated expression
+                    # and force its type to be TRUTH_VALUE (t).
+                    translated_name = translated_name.replace("-", "~")
         else:
             translated_name = self.name_mapping[sempre_name]
         return translated_name

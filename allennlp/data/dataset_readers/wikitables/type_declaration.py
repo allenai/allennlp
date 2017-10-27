@@ -4,7 +4,8 @@ here. This module also contains two helper classes that add some functionality o
 """
 from overrides import overrides
 
-from nltk.sem.logic import ApplicationExpression, BasicType, ComplexType, EntityType, ANY_TYPE, LogicParser
+from nltk.sem.logic import ApplicationExpression, ConstantExpression, Variable, LogicParser
+from nltk.sem.logic import BasicType, ComplexType, EntityType, ANY_TYPE
 
 
 class NamedBasicType(BasicType):
@@ -22,14 +23,24 @@ class NamedBasicType(BasicType):
     def __str__(self) -> str:
         return self._string_rep.lower()[0]
 
-    def str(self) -> str:
+    def str(self):
         return self._string_rep
+
 
 class PlaceholderType(ComplexType):
     """
     ``PlaceholderType`` is a ``ComplexType`` that involves placeholders, and thus its type resolution is
     context sensitive. This is an abstract class for all placeholder types like reverse, and, or, argmax, etc.
-    The subclasses need to do two things:
+
+    Note that ANY_TYPE in NLTK's type system doesn't work like a wild card. Once the type of a variable gets
+    resolved to a specific type, NLTK changes the type of that variable to that specific type. Hence, what
+    NLTK calls "ANY_TYPE", is essentially a "yet-to-be-decided type". This is a problem because we may want the
+    same variable to bind to different types within a logical form, and using ANY_TYPE for this purpose will
+    cause a resolution failure. For example the count function may apply to both rows and cells in the same
+    logical form, and making count of type ``ComplexType(ANY_TYPE, DATE_NUM_TYPE)`` will cause a resolution
+    error. This class lets you define ``ComplexType``s with placeholders that are actually wild cards.
+
+    The subclasses of this abstract class need to do two things:
         1) Override the property ``_signature`` to define the type signature (this is just the signature's
         string representation and will not affect type inference or checking). You will see this signature in
         action sequences.
@@ -85,7 +96,6 @@ class PlaceholderType(ComplexType):
             return self._signature
 
 
-
 class ReverseType(PlaceholderType):
     """
     ReverseType is a kind of ``PlaceholderType`` where type resolution involves matching the return
@@ -121,7 +131,7 @@ class ReverseType(PlaceholderType):
 
 class IdentityType(PlaceholderType):
     """
-    ``IdentityType`` is a special kind of ``ComplexType`` that takes an argument of any type and returns
+    ``IdentityType`` is a kind of ``PlaceholderType`` that takes an argument of any type and returns
     an expression of the same type. That is, type signature is <#1, #1>.
     """
     @property
@@ -220,16 +230,42 @@ class ArgExtremeType(PlaceholderType):
         except AttributeError:
             return None
 
+
+class CountType(PlaceholderType):
+    """
+    Type of a function that counts arbitrary things. Signature is <#1,d>.
+    """
+    @property
+    def _signature(self):
+        return "<#1,d>"
+
+    @overrides
+    def resolve(self, other):
+        """See ``PlaceholderType.resolve``"""
+        if not isinstance(other, ComplexType):
+            return None
+        resolved_second = DATE_NUM_TYPE.resolve(other.second)
+        if not resolved_second:
+            return None
+        return CountType(ANY_TYPE, resolved_second)
+
+
 CELL_TYPE = EntityType()
+PART_TYPE = NamedBasicType("PART")
 ROW_TYPE = NamedBasicType("ROW")
 # TODO (pradeep): Merging dates and nums. Can define a hierarchy instead.
 DATE_NUM_TYPE = NamedBasicType("DATENUM")
 # Functions like fb:row.row.year.
 COLUMN_TYPE = ComplexType(CELL_TYPE, ROW_TYPE)
+# fb:cell.cell.part
+PART2CELL_TYPE = ComplexType(PART_TYPE, CELL_TYPE)
 # fb:cell.cell.date
-DATE_FUNCTION_TYPE = ComplexType(DATE_NUM_TYPE, CELL_TYPE)
+CELL2DATE_NUM_TYPE = ComplexType(DATE_NUM_TYPE, CELL_TYPE)
 # number
-NUMBER_TYPE = ComplexType(EntityType(), DATE_NUM_TYPE)
+NUMBER_FUNCTION_TYPE = ComplexType(EntityType(), DATE_NUM_TYPE)
+# date (Signature: <e,<e,<e,d>>>; Example: (date 1982 -1 -1))
+DATE_FUNCTION_TYPE = ComplexType(EntityType(),
+                                 ComplexType(EntityType(), ComplexType(EntityType(), DATE_NUM_TYPE)))
 # Unary numerical operations: max, min, >, <, sum etc.
 UNARY_NUM_OP_TYPE = ComplexType(DATE_NUM_TYPE, DATE_NUM_TYPE)
 # Binary numerical operation: -
@@ -244,7 +280,7 @@ IDENTITY_TYPE = IdentityType(ANY_TYPE, ANY_TYPE)
 # index
 ROW_INDEX_TYPE = ComplexType(DATE_NUM_TYPE, ROW_TYPE)
 # count
-COUNT_TYPE = ComplexType(ANY_TYPE, DATE_NUM_TYPE)
+COUNT_TYPE = CountType(ANY_TYPE, DATE_NUM_TYPE)
 # and, or
 CONJUNCTION_TYPE = ConjunctionType(ANY_TYPE, ANY_TYPE)
 # argmax, argmin
@@ -259,21 +295,25 @@ COMMON_NAME_MAPPING = {"reverse": "R",
                        "or": "O",
                        "fb:row.row.next": "N",
                        "number": "I",
+                       "date": "D0",
                        "lambda": "\\",
                        "var": "V",
-                       "fb:cell.cell.date": "D",
-                       "fb:cell.cell.number": "B",
-                       "fb:cell.cell.num2": "B2",
+                       "fb:cell.cell.part": "P",
+                       "fb:cell.cell.date": "D1",
+                       "fb:cell.cell.number": "I1",
+                       "fb:cell.cell.num2": "I2",
                        "fb:row.row.index": "W",
                        "fb:type.row": "T0",
                        "fb:type.object.type": "T",
                        "count": "C",
                        "!=": "Q",
-                       ">=": "G",
-                       "<=": "L",
+                       ">": "G0",
+                       ">=": "G1",
+                       "<": "L0",
+                       "<=": "L1",
                        "sum": "S0",
                        "avg": "S1",
-                       "-": "F",
+                       "-": "F",  # This is the binary operator (subtraction)
                        "x": "X",
                       }
 
@@ -282,17 +322,19 @@ COMMON_TYPE_SIGNATURE = {"R": REVERSE_TYPE,
                          "A1": ARG_EXTREME_TYPE,
                          "M0": UNARY_NUM_OP_TYPE,
                          "M1": UNARY_NUM_OP_TYPE,
-                         ">": UNARY_NUM_OP_TYPE,
-                         "<": UNARY_NUM_OP_TYPE,
-                         "G": UNARY_NUM_OP_TYPE,
-                         "L": UNARY_NUM_OP_TYPE,
+                         "G0": UNARY_NUM_OP_TYPE,
+                         "L0": UNARY_NUM_OP_TYPE,
+                         "G1": UNARY_NUM_OP_TYPE,
+                         "L1": UNARY_NUM_OP_TYPE,
                          "S0": UNARY_NUM_OP_TYPE,
                          "S1": UNARY_NUM_OP_TYPE,
                          "F": BINARY_NUM_OP_TYPE,
-                         "D": DATE_FUNCTION_TYPE,
-                         "B": DATE_FUNCTION_TYPE,
-                         "B2": DATE_FUNCTION_TYPE,
-                         "I": NUMBER_TYPE,
+                         "P": PART2CELL_TYPE,
+                         "D1": CELL2DATE_NUM_TYPE,
+                         "I1": CELL2DATE_NUM_TYPE,
+                         "I2": CELL2DATE_NUM_TYPE,
+                         "I": NUMBER_FUNCTION_TYPE,
+                         "D0": DATE_FUNCTION_TYPE,
                          "N": NEXT_ROW_TYPE,
                          "Q": IDENTITY_TYPE,
                          "T": IDENTITY_TYPE,
@@ -304,6 +346,24 @@ COMMON_TYPE_SIGNATURE = {"R": REVERSE_TYPE,
                          "T0": ROW_TYPE,
                          "X": ANY_TYPE,
                         }
+
+
+class TypedConstantExpression(ConstantExpression):
+    # pylint: disable=abstract-method
+    """
+    NLTK assumes all constants are of type ``EntityType`` (e) by default. We define this new class where we
+    can pass a default type to the constructor and use that in the ``_set_type`` method.
+    """
+    def __init__(self, variable, default_type):
+        super(TypedConstantExpression, self).__init__(variable)
+        self._default_type = default_type
+
+    @overrides
+    def _set_type(self, other_type=ANY_TYPE, signature=None):
+        if other_type == ANY_TYPE:
+            super(TypedConstantExpression, self)._set_type(self._default_type, signature)
+        else:
+            super(TypedConstantExpression, self)._set_type(other_type, signature)
 
 
 class DynamicTypeApplicationExpression(ApplicationExpression):
@@ -335,10 +395,11 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
         elif isinstance(self.function.type, ConjunctionType):
             return_type = ComplexType(argument_type, argument_type)
         elif isinstance(self.function.type, ArgExtremeType):
-            # Returning the first #1 from <d,<d,<#1,<<d,#1>,#1>>>>.
+            # Returning <d,<#1,<<d,#1>,#1>>>.
             # This is called after the placeholders are resolved.
-            return_type = self.function.type.second.second.first
+            return_type = self.function.type.second
         else:
+            # The function is of type IdentityType.
             return_type = argument_type
         return return_type
 
@@ -376,3 +437,9 @@ class DynamicTypeLogicParser(LogicParser):
     @overrides
     def make_ApplicationExpression(self, function, argument):
         return DynamicTypeApplicationExpression(function, argument)
+
+    @overrides
+    def make_VariableExpression(self, name):
+        if name.startswith("part:"):
+            return TypedConstantExpression(Variable(name), PART_TYPE)
+        return super(DynamicTypeLogicParser, self).make_VariableExpression(name)

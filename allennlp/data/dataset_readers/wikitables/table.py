@@ -38,8 +38,8 @@ class TableKnowledgeGraph:
         we read "Nation", "Olympics" and "Medals" as column headers, "USA" and "China" as cells under the
         "Nation" column and so on.
         """
-        column_neighbors = defaultdict(list)
-        cell_neighbors = defaultdict(list)
+        _column_neighbors = defaultdict(list)
+        _cell_neighbors = defaultdict(list)
         columns = []
         # We assume the first row is column names.
         for row_index, line in enumerate(open(table_filename)):
@@ -53,9 +53,9 @@ class TableKnowledgeGraph:
                 assert len(columns) == len(cells), ("Invalid format. Row %d has %d columns, but header "
                                                     "has %d columns" % (row_index, len(cells), len(columns)))
                 for column, cell in zip(columns, cells):
-                    column_neighbors[column].append(cell)
-                    cell_neighbors[cell].append(column)
-        return cls(column_neighbors, cell_neighbors)
+                    _column_neighbors[column].append(cell)
+                    _cell_neighbors[cell].append(column)
+        return cls(dict(_column_neighbors), dict(_cell_neighbors))
 
     @staticmethod
     def _normalize_string(string: str) -> str:
