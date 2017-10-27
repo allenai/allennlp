@@ -16,4 +16,7 @@ allennlp.modules.seq2seq_encoders
    :undoc-members:
    :show-inheritance:
 
-
+.. automodule:: allennlp.modules.seq2seq_encoders.intra_sentence_attention
+   :members:
+   :undoc-members:
+   :show-inheritance:

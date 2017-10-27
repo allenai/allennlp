@@ -4,7 +4,7 @@ import argparse
 from flaky import flaky
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.evaluate import evaluate_from_args, add_subparser
+from allennlp.commands.evaluate import evaluate_from_args, Evaluate
 
 
 class TestEvaluate(AllenNlpTestCase):
@@ -13,7 +13,7 @@ class TestEvaluate(AllenNlpTestCase):
     def test_evaluate_from_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
-        add_subparser(subparsers)
+        Evaluate().add_subparser('evaluate', subparsers)
 
         raw_args = ["evaluate",
                     "--archive_file", "tests/fixtures/bidaf/serialization/model.tar.gz",

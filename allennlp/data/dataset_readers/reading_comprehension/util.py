@@ -1,3 +1,7 @@
+"""
+Utilities for reading comprehension dataset readers.
+"""
+
 from collections import Counter, defaultdict
 import logging
 import string

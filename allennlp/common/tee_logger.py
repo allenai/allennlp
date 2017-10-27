@@ -1,3 +1,7 @@
+"""
+A logger that maintains logs of both stdout and stderr when models are run.
+"""
+
 from typing import TextIO
 import os
 
