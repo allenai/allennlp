@@ -23,21 +23,30 @@ class CorefTest(ModelTestCase):
                                   [5, 6],
                                   [14, 56],
                                   [17, 80]])
-        spans = Variable(spans.unsqueeze(0))
 
-        # Indices into ``spans`` indicating that the
-        # two mentions are co-referent.
-        antecedents = torch.LongTensor([-1, 0, -1, -1, 1, 3])
-        antecedents = Variable(antecedents.unsqueeze(0))
+        antecedent_indices = torch.LongTensor([[0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0],
+                                               [1, 0, 0, 0, 0, 0],
+                                               [2, 1, 0, 0, 0, 0],
+                                               [3, 2, 1, 0, 0, 0],
+                                               [4, 3, 2, 1, 0, 0]])
+
+        spans = Variable(spans.unsqueeze(0))
+        antecedent_indices = Variable(antecedent_indices)
+        # Indices into ``antecedent_indices`` indicating the predicted antecedent
+        # index in ``top_spans``.
+        predicted_antecedents = torch.LongTensor([-1, 0, -1, -1, 1, 3])
+        predicted_antecedents = Variable(predicted_antecedents.unsqueeze(0))
         output_dict = {
                         "top_spans": spans,
-                        "predicted_antecedents": antecedents
+                        "antecedent_indices": antecedent_indices,
+                        "predicted_antecedents": predicted_antecedents
                     }
         output = self.model.decode(output_dict)
 
         clusters = output["clusters"][0]
-        gold1 = [(1, 2), (3, 4), (14, 56)]
-        gold2 = [(5, 6), (17, 80)]
+        gold1 = [(1, 2), (3, 4), (17, 80)]
+        gold2 = [(3, 7), (14, 56)]
 
         assert len(clusters) == 2
         assert gold1 in clusters

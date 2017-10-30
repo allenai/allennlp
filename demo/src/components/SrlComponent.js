@@ -222,7 +222,7 @@ class SrlComponent extends React.Component {
         this.setState({outputState: "received"});
       }).catch((error) => {
         this.setState({outputState: "error"});
-        throw error; // todo(michaels): is this right?
+        console.error(error);
       });
     }
 

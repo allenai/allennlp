@@ -26,6 +26,7 @@ class Header extends React.Component {
                 {buildLink("srl", "SRL Model")}
                 {buildLink("mc", "MC Model")}
                 {buildLink("te", "TE Model")}
+                {buildLink("coref", "Coref Model")}
               </ul>
             </nav>
             <h1 className="header__content__logo">
