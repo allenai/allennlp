@@ -2,6 +2,7 @@ import React from 'react';
 import SrlComponent from './components/SrlComponent';
 import TeComponent from './components/TeComponent';
 import McComponent from './components/McComponent';
+import CorefComponent from './components/CorefComponent'
 import Header from './components/Header';
 
 /*******************************************************************************
@@ -12,7 +13,7 @@ class App extends React.Component {
   constructor() {
     super();
     this.state = {
-      selectedModel: "srl", // valid values: "srl", "mc", "te"
+      selectedModel: "srl", // valid values: "srl", "mc", "te", "coref"
       rawOutput: "",
     };
     this.changeModel = this.changeModel.bind(this);
@@ -37,6 +38,9 @@ class App extends React.Component {
       }
       else if (selectedModel === "mc") {
         return (<McComponent />)
+      }
+      else if (selectedModel === "coref") {
+        return (<CorefComponent />)
       }
     }
 
