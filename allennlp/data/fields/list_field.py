@@ -47,7 +47,7 @@ class ListField(SequenceField[DataArray]):
         field_lengths = [field.get_padding_lengths() for field in self.field_list]
         padding_lengths = {'num_fields': len(self.field_list)}
         for key in field_lengths[0].keys():
-            padding_lengths[key] = max(x[key] if key in x else 0 for x in field_lengths)
+            padding_lengths['list_' + key] = max(x[key] if key in x else 0 for x in field_lengths)
         return padding_lengths
 
     @overrides
@@ -59,7 +59,10 @@ class ListField(SequenceField[DataArray]):
         padded_field_list = pad_sequence_to_length(self.field_list,
                                                    padding_lengths['num_fields'],
                                                    self.field_list[0].empty_field)
-        padded_fields = [field.as_array(padding_lengths) for field in padded_field_list]
+        child_padding_lengths = {key.replace('list_', ''): value
+                                 for key, value in padding_lengths.items()
+                                 if key.startswith('list_')}
+        padded_fields = [field.as_array(child_padding_lengths) for field in padded_field_list]
         if isinstance(padded_fields[0], dict):
             namespaces = list(padded_fields[0].keys())
             return {namespace: numpy.array([field[namespace] for field in padded_fields])
@@ -68,6 +71,12 @@ class ListField(SequenceField[DataArray]):
             return numpy.asarray(padded_fields)
 
     @overrides
-    def empty_field(self):  # pylint: disable=no-self-use
-        raise RuntimeError("Nested ListFields are not implemented, and if you want this "
-                           "you should probably try to simplify your data type, anyway")
+    def empty_field(self):
+        # Our "empty" list field will actually have a single field in the list, so that we can
+        # correctly construct nested lists.  For example, if we have a type that is
+        # `ListField[ListField[LabelField]]`, we need the top-level `ListField` to know to
+        # construct a `ListField[LabelField]` when it's padding, and the nested `ListField` needs
+        # to know that it's empty objects are `LabelFields`.  Having an "empty" list actually have
+        # length one makes this all work out, and we'll always be padding to at least length 1,
+        # anyway.
+        return ListField([self.field_list[0].empty_field()])
