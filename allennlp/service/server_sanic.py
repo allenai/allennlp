@@ -99,6 +99,8 @@ def make_app(build_dir: str = None) -> Sanic:
             request_data = {"premise":"If you help the needy, God will reward you.","hypothesis":"Giving money to the poor has good consequences."}
             response_data = {"label_logits":[-0.0950802863,-0.5699284673,0.5117189884],"label_probs":[0.2893075049,0.179943338,0.5307491422]}
 
+        await asyncio.sleep(0.25)
+
         return response.json({
                 "modelName": model_name,
                 "requestData": request_data,

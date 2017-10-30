@@ -12,7 +12,7 @@ class App extends React.Component {
   constructor() {
     super();
     this.state = {
-      permalink: "waiting", // valid values: "waiting", null, {...data...}
+      permalink: "waiting", // valid values: "url", null, {...data...}
       selectedModel: "srl", // valid values: "srl", "mc", "te"
       rawOutput: "",
     };
@@ -37,7 +37,6 @@ class App extends React.Component {
       console.log(this.state);
     } else {
       const slug = match[1];
-      const self = this;
       fetch('http://localhost:8000/permadata', {
         method: 'POST',
         headers: {
@@ -48,9 +47,9 @@ class App extends React.Component {
       }).then(function(response) {
         return response.json();
       }).then((json) => {
-        self.setState({permalink: json, selectedModel: json.modelName});
+        this.setState({permalink: json, selectedModel: json.modelName});
       }).catch((error) => {
-        self.setState({outputState: "error"});
+        this.setState({outputState: "error"});
         throw error; // todo(michaels): is this right?
       });
     }
@@ -85,7 +84,7 @@ class App extends React.Component {
       // It is a permalink, so render using that path:
       return (
         <div className="pane-container">
-          <Header/>
+          <Header permalink={true}/>
           <ModelComponent />
         </div>
       )

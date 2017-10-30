@@ -2,6 +2,8 @@ import React from 'react';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
+import WaitingForPermalink from './WaitingForPermalink'
+
 
 /*******************************************************************************
   <SrlInput /> Component
@@ -258,9 +260,8 @@ class SrlComponent extends React.Component {
             </PaneRight>
           </div>
         );
-      } else if (permadata == "waiting") {
-        // Waiting
-        return (<div>WAITING</div>)
+      } else if (permadata === "waiting") {
+        return <WaitingForPermalink />
       } else {
         const { requestData, responseData } = permadata;
 

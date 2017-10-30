@@ -6,7 +6,7 @@ import React from 'react';
 
 class Header extends React.Component {
     render() {
-      const { selectedModel, changeModel } = this.props;
+      const { selectedModel, changeModel, permalink } = this.props;
 
       const buildLink = (thisModel, label) => {
         return (
@@ -18,14 +18,38 @@ class Header extends React.Component {
         )
       }
 
+      let links = null;
+
+      if (permalink) {
+        const slugRegex = /\/permalink\/([^/]+)\/?$/;
+        const demoRoot = window.location.href.replace(slugRegex, '');
+
+        links = (
+          <ul>
+            <li>
+              <a href={demoRoot} className="nav__link" target="_blank">
+                <span>Try Your Own</span>
+              </a>
+            </li>
+          </ul>
+        )
+      } else {
+        links = (
+          <ul>
+            {buildLink("srl", "SRL Model")}
+            {buildLink("mc", "MC Model")}
+            {buildLink("te", "TE Model")}
+          </ul>
+        )
+      }
+
       return (
         <header>
           <div className="header__content">
             <nav>
+
               <ul>
-                {buildLink("srl", "SRL Model")}
-                {buildLink("mc", "MC Model")}
-                {buildLink("te", "TE Model")}
+              {links}
               </ul>
             </nav>
             <h1 className="header__content__logo">

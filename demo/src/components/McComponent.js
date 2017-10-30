@@ -2,6 +2,7 @@ import React from 'react';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
+import WaitingForPermalink from './WaitingForPermalink'
 
 
 /*******************************************************************************
@@ -234,8 +235,7 @@ class McComponent extends React.Component {
           </div>
         );
       } else if (permadata === "waiting") {
-        // Waiting
-        return (<div>WAITING</div>)
+        return <WaitingForPermalink />
       } else {
         const { requestData, responseData } = permadata;
 
