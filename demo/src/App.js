@@ -1,4 +1,5 @@
 import React from 'react';
+import PermalinkResult from './components/PermalinkResult';
 import SrlComponent from './components/SrlComponent';
 import TeComponent from './components/TeComponent';
 import McComponent from './components/McComponent';
@@ -26,6 +27,7 @@ class App extends React.Component {
   }
 
   componentDidMount() {
+    // Check if this is a /permalink/xyz URL. If so, grab the slug
     const slugRegex = /\/permalink\/([^/]+)\/?$/;
     const url = window.location.href;
     const match = slugRegex.exec(url);
@@ -35,38 +37,58 @@ class App extends React.Component {
       this.setState({permalink: null});
     } else {
       const slug = match[1];
+      fetch('/permadata', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({"slug": slug})
+      }).then(function(response) {
+        return response.json();
+      }).then((json) => {
+        this.setState({permalink: json, selectedModel: json.model});
+      }).catch((error) => {
+        this.setState({outputState: "error"});
+        throw error; // todo(michaels): is this right?
+      });
     }
   }
 
   render() {
-
-    if (this.state.permalink == "waiting") {
-      return (<div class="waiting-for-permalink">waiting for permalink</div>)
-    } else if (this.state.permalink !== null) {
-      return (<div class="rendered-permalink">rendered permalink</div>)
-    }
-
-    // Otherwise render the demo.
+    const permadata = this.state.permalink;
     const { selectedModel } = this.state;
 
     const ModelComponent = () => {
       if (selectedModel === "srl") {
-        return (<SrlComponent />)
+        return (<SrlComponent permadata={permadata}/>)
       }
       else if (selectedModel === "te") {
-        return (<TeComponent />)
+        return (<TeComponent permadata={permadata}/>)
       }
       else if (selectedModel === "mc") {
-        return (<McComponent />)
+        return (<McComponent permadata={permadata}/>)
       }
     }
 
-    return (
-      <div className="pane-container">
-        <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
-        <ModelComponent />
-      </div>
-    );
+    if (this.state.permalink === null) {
+      // Not a permalink, so render the demo
+
+      return (
+        <div className="pane-container">
+          <Header selectedModel={selectedModel} changeModel={this.changeModel}/>
+          <ModelComponent />
+        </div>
+      );
+    } else {
+      // It is a permalink, so render using that path:
+      return (
+        <div className="pane-container">
+          <Header/>
+          <ModelComponent />
+        </div>
+      )
+    }
   }
 }
 

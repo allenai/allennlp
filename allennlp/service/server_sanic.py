@@ -52,8 +52,6 @@ def make_app(build_dir: str = None) -> Sanic:
         logger.error("app directory %s does not exist, aborting", build_dir)
         sys.exit(-1)
 
-    app.static('/', os.path.join(build_dir, 'index.html'))
-    app.static('/', build_dir)
     app.predictors = {}
 
     try:
@@ -74,6 +72,7 @@ def make_app(build_dir: str = None) -> Sanic:
         """
         Just return the index.html page
         """
+        print(slug)
         return await response.file(os.path.join(build_dir, 'index.html'))
 
     @app.route('/permadata', methods=['POST'])
@@ -84,12 +83,14 @@ def make_app(build_dir: str = None) -> Sanic:
         slug = req.json["slug"]
 
         # data = get_data_for(slug)
+        model_name = "srl"
         request_data = {"sentence":"If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!"}
         response_data = {"words":["If","you","liked","the","music","we","were","playing","last","night",",","you","will","absolutely","love","what","we","'re","playing","tomorrow","!"],"verbs":[{"verb":"liked","description":"If [ARG0: you] [V: liked] [ARG1: the music we were playing last night] , you will absolutely love what we 're playing tomorrow !","tags":["O","B-ARG0","B-V","B-ARG1","I-ARG1","I-ARG1","I-ARG1","I-ARG1","I-ARG1","I-ARG1","O","O","O","O","O","O","O","O","O","O","O"]},{"verb":"were","description":"If you liked the music we [V: were] playing last night , you will absolutely love what we 're playing tomorrow !","tags":["O","O","O","O","O","O","B-V","O","O","O","O","O","O","O","O","O","O","O","O","O","O"]},{"verb":"playing","description":"If you liked [ARG1: the music] [ARG0: we] were [V: playing] [ARGM-TMP: last night] , you will absolutely love what we 're playing tomorrow !","tags":["O","O","O","B-ARG1","I-ARG1","B-ARG0","O","B-V","B-ARGM-TMP","I-ARGM-TMP","O","O","O","O","O","O","O","O","O","O","O"]},{"verb":"will","description":"[ARGM-ADV: If you liked the music we were playing last night] , [ARG0: you] [V: will] [ARG1: absolutely love what we 're playing tomorrow] !","tags":["B-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","O","B-ARG0","B-V","B-ARG1","I-ARG1","I-ARG1","I-ARG1","I-ARG1","I-ARG1","I-ARG1","O"]},{"verb":"love","description":"[ARGM-ADV: If you liked the music we were playing last night] , [ARG0: you] [ARGM-MOD: will] [ARGM-ADV: absolutely] [V: love] [ARG1: what we 're playing tomorrow] !","tags":["B-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","I-ARGM-ADV","O","B-ARG0","B-ARGM-MOD","B-ARGM-ADV","B-V","B-ARG1","I-ARG1","I-ARG1","I-ARG1","I-ARG1","O"]},{"verb":"'re","description":"If you liked the music we were playing last night , you will absolutely love what we [V: 're] playing tomorrow !","tags":["O","O","O","O","O","O","O","O","O","O","O","O","O","O","O","O","O","B-V","O","O","O"]},{"verb":"playing","description":"If you liked the music we were playing last night , you will absolutely love [ARG1: what] [ARG0: we] 're [V: playing] [ARGM-TMP: tomorrow] !","tags":["O","O","O","O","O","O","O","O","O","O","O","O","O","O","O","B-ARG1","B-ARG0","O","B-V","B-ARGM-TMP","O"]}],"tokens":["If","you","liked","the","music","we","were","playing","last","night",",","you","will","absolutely","love","what","we","'re","playing","tomorrow","!"]}
 
-        return request.json({
-                "request_data": request_data,
-                "response_data": response_data
+        return response.json({
+                "modelName": model_name,
+                "requestData": request_data,
+                "responseData": response_data
         })
 
     @app.route('/predict/<model_name>', methods=['POST'])
@@ -148,5 +149,8 @@ def make_app(build_dir: str = None) -> Sanic:
     async def list_models(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """list the available models"""
         return response.json({"models": list(app.predictors.keys())})
+
+    app.static('/', os.path.join(build_dir, 'index.html'))
+    app.static('/', build_dir)
 
     return app

@@ -227,16 +227,33 @@ class SrlComponent extends React.Component {
     }
 
     render() {
-      return (
-        <div className="pane model">
+      const { permadata } = this.state;
+
+      if (permadata == null) {
+        return (
+          <div className="pane model">
+            <PaneLeft>
+              <SrlInput runSrlModel={this.runSrlModel} outputState={this.state.outputState}/>
+            </PaneLeft>
+            <PaneRight outputState={this.state.outputState}>
+              <SrlOutput rawOutput={this.state.rawOutput}/>
+            </PaneRight>
+          </div>
+        );
+      } else {
+        const { requestData, responseData } = permadata;
+
+        return (
+          <div className="pane model">
           <PaneLeft>
-            <SrlInput runSrlModel={this.runSrlModel} outputState={this.state.outputState}/>
+            <SrlInput srlSentenceValue={requestData.sentence}/>
           </PaneLeft>
-          <PaneRight outputState={this.state.outputState}>
-            <SrlOutput rawOutput={this.state.rawOutput}/>
+          <PaneRight>
+            <SrlOutput rawOutput={responseData}/>
           </PaneRight>
         </div>
-      );
+        )
+      }
     }
 }
 
