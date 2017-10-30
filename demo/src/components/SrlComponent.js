@@ -15,6 +15,40 @@ const srlSentences = [
     "More than a few CEOs say the red-carpet treatment tempts them to return to a heartland city for future meetings.",
   ];
 
+const title = "Semantic Role Labeling";
+const description = (
+  <div>
+    <span>
+      Semantic Role Labeling (SRL) recovers the latent predicate argument structure of a sentence,
+      providing representations that answer basic questions about sentence meaning, including “who” did “what” to “whom,” etc.
+      The AllenNLP toolkit provides the following SRL visualization, which can be used for any SRL model in AllenNLP.
+      This page demonstrates a reimplementation of
+    </span>
+    <a href = "https://www.semanticscholar.org/paper/Deep-Semantic-Role-Labeling-What-Works-and-What-s-He-Lee/a3ccff7ad63c2805078b34b8514fa9eab80d38e9" target="_blank" rel="noopener noreferrer">{' '} a deep BiLSTM model (He et al, 2017)</a>
+    <span>
+      , which is currently state of the art for PropBank SRL (Newswire sentences).
+    </span>
+  </div>
+);
+
+
+  class SrlPermaInput extends React.Component {
+    render() {
+      const { srlSentenceValue } = this.props;
+
+      return (
+        <div className="model__content">
+        <ModelIntro title={title} description={description} />
+          <div className="form__field">
+            <label htmlFor="#input--srl-sentence">Input Sentence</label>
+            <div className="perma-input">{srlSentenceValue}</div>
+          </div>
+        </div>
+      );
+
+    }
+  }
+
   class SrlInput extends React.Component {
     constructor() {
       super();
@@ -46,22 +80,6 @@ const srlSentences = [
       const srlInputs = {
         "sentenceValue": srlSentenceValue,
       };
-
-      const title = "Semantic Role Labeling";
-      const description = (
-        <div>
-          <span>
-            Semantic Role Labeling (SRL) recovers the latent predicate argument structure of a sentence,
-            providing representations that answer basic questions about sentence meaning, including “who” did “what” to “whom,” etc.
-            The AllenNLP toolkit provides the following SRL visualization, which can be used for any SRL model in AllenNLP.
-            This page demonstrates a reimplementation of
-          </span>
-          <a href = "https://www.semanticscholar.org/paper/Deep-Semantic-Role-Labeling-What-Works-and-What-s-He-Lee/a3ccff7ad63c2805078b34b8514fa9eab80d38e9" target="_blank" rel="noopener noreferrer">{' '} a deep BiLSTM model (He et al, 2017)</a>
-          <span>
-            , which is currently state of the art for PropBank SRL (Newswire sentences).
-          </span>
-        </div>
-      );
 
       return (
         <div className="model__content">
@@ -191,11 +209,11 @@ class SrlOutput extends React.Component {
 *******************************************************************************/
 
 class SrlComponent extends React.Component {
-    constructor() {
-      super();
+    constructor(props) {
+      super(props);
 
       this.state = {
-        outputState: "empty", // valid values: "working", "empty", "received", "error"
+        outputState: this.props.permadata ? "received" : "empty", // valid values: "working", "empty", "received", "error"
         rawOutput: {},
       };
 
@@ -208,7 +226,7 @@ class SrlComponent extends React.Component {
       });
 
       var payload = { sentence: inputs.sentenceValue };
-      fetch('/predict/semantic-role-labeling', {
+      fetch('http://localhost:8000/predict/semantic-role-labeling', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -227,7 +245,7 @@ class SrlComponent extends React.Component {
     }
 
     render() {
-      const { permadata } = this.state;
+      const { permadata } = this.props;
 
       if (permadata == null) {
         return (
@@ -240,15 +258,18 @@ class SrlComponent extends React.Component {
             </PaneRight>
           </div>
         );
+      } else if (permadata == "waiting") {
+        // Waiting
+        return (<div>WAITING</div>)
       } else {
         const { requestData, responseData } = permadata;
 
         return (
           <div className="pane model">
           <PaneLeft>
-            <SrlInput srlSentenceValue={requestData.sentence}/>
+            <SrlPermaInput srlSentenceValue={requestData.sentence}/>
           </PaneLeft>
-          <PaneRight>
+          <PaneRight outputState="received">
             <SrlOutput rawOutput={responseData}/>
           </PaneRight>
         </div>

@@ -31,6 +31,47 @@ const teExamples = [
     },
   ];
 
+  const title = "Textual Entailment";
+  const description = (
+    <div>
+      <span>
+        Textual Entailment (TE) takes a pair of sentences and predicts whether the facts in the first
+        necessarily imply the facts in the second one.  The AllenNLP toolkit provides the following TE visualization,
+        which can be run for any TE model you develop.
+        This page demonstrates a reimplementation of
+      </span>
+      <a href = "https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27" target="_blanke" rel="noopener noreferrer">{' '} the decomposable attention model (Parikh et al, 2017) {' '}</a>
+      <span>
+        , which was state of the art for
+      </span>
+      <a href = "https://nlp.stanford.edu/projects/snli/" target="_blank" rel="noopener noreferrer">{' '} the SNLI benchmark {' '}</a>
+      <span>
+        (short sentences about visual scenes) in 2016.
+      </span>
+    </div>
+  );
+
+  class TePermaInput extends React.Component {
+    render() {
+      const { premise, hypothesis } = this.props;
+
+      return (
+        <div className="model__content">
+          <ModelIntro title={title} description={description} />
+          <div className="form__field">
+            <label htmlFor="input--te-premise">Premise</label>
+            <div id="input--te-premise">{premise}</div>
+          </div>
+          <div className="form__field">
+            <label htmlFor="input--te-hypothesis">Hypothesis</label>
+            <div id="input--te-hypothesis">{hypothesis}</div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+
   class TeInput extends React.Component {
     constructor() {
       super();
@@ -73,26 +114,6 @@ const teExamples = [
         "premiseValue": tePremiseValue,
         "hypothesisValue": teHypothesisValue
       };
-
-      const title = "Textual Entailment";
-      const description = (
-        <div>
-          <span>
-            Textual Entailment (TE) takes a pair of sentences and predicts whether the facts in the first
-            necessarily imply the facts in the second one.  The AllenNLP toolkit provides the following TE visualization,
-            which can be run for any TE model you develop.
-            This page demonstrates a reimplementation of
-          </span>
-          <a href = "https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27" target="_blanke" rel="noopener noreferrer">{' '} the decomposable attention model (Parikh et al, 2017) {' '}</a>
-          <span>
-            , which was state of the art for
-          </span>
-          <a href = "https://nlp.stanford.edu/projects/snli/" target="_blank" rel="noopener noreferrer">{' '} the SNLI benchmark {' '}</a>
-          <span>
-            (short sentences about visual scenes) in 2016.
-          </span>
-        </div>
-      );
 
       return (
         <div className="model__content">
@@ -315,16 +336,36 @@ class TeComponent extends React.Component {
     }
 
     render() {
-      return (
-        <div className="pane model">
-          <PaneLeft>
-            <TeInput runTeModel={this.runTeModel} outputState={this.state.outputState}/>
-          </PaneLeft>
-          <PaneRight outputState={this.state.outputState}>
-            <TeOutput rawOutput={this.state.rawOutput}/>
-          </PaneRight>
-        </div>
-      );
+      const { permadata } = this.props;
+
+      if (permadata === null) {
+        return (
+          <div className="pane model">
+            <PaneLeft>
+              <TeInput runTeModel={this.runTeModel} outputState={this.state.outputState}/>
+            </PaneLeft>
+            <PaneRight outputState={this.state.outputState}>
+              <TeOutput rawOutput={this.state.rawOutput}/>
+            </PaneRight>
+          </div>
+        );
+      } else if (permadata === "waiting") {
+        return (<div>WAITING</div>)
+      } else {
+        const { requestData, responseData } = permadata;
+
+        return (
+          <div className="pane model">
+            <PaneLeft>
+              <TePermaInput premise={requestData.premise} hypothesis={requestData.hypothesis}/>
+            </PaneLeft>
+            <PaneRight outputState="received">
+              <TeOutput rawOutput={responseData}/>
+            </PaneRight>
+          </div>
+        )
+      }
+
     }
 }
 

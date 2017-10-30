@@ -1,5 +1,4 @@
 import React from 'react';
-import PermalinkResult from './components/PermalinkResult';
 import SrlComponent from './components/SrlComponent';
 import TeComponent from './components/TeComponent';
 import McComponent from './components/McComponent';
@@ -35,9 +34,11 @@ class App extends React.Component {
     if (!match) {
       // This is not a permalink, so just render normally.
       this.setState({permalink: null});
+      console.log(this.state);
     } else {
       const slug = match[1];
-      fetch('/permadata', {
+      const self = this;
+      fetch('http://localhost:8000/permadata', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -47,9 +48,9 @@ class App extends React.Component {
       }).then(function(response) {
         return response.json();
       }).then((json) => {
-        this.setState({permalink: json, selectedModel: json.model});
+        self.setState({permalink: json, selectedModel: json.modelName});
       }).catch((error) => {
-        this.setState({outputState: "error"});
+        self.setState({outputState: "error"});
         throw error; // todo(michaels): is this right?
       });
     }

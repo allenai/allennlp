@@ -27,6 +27,48 @@ const mcExamples = [
     }
 ];
 
+const title = "Machine Comprehension";
+const description = (
+  <div>
+    <span>
+      Machine Comprehension (MC) answers natural language questions by selecting an answer span within an evidence text.
+      The AllenNLP toolkit provides the following MC visualization, which can be used for any MC model in AllenNLP.
+      This page demonstrates a reimplementation of
+    </span>
+    <a href = "https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Comprehen-Seo-Kembhavi/007ab5528b3bd310a80d553cccad4b78dc496b02" target="_blank" rel="noopener noreferrer">{' '} BiDAF (Seo et al, 2017)</a>
+    <span>
+      , or Bi-Directional Attention Flow,
+      a widely used MC baseline that achieved state-of-the-art accuracies on
+    </span>
+    <a href = "https://rajpurkar.github.io/SQuAD-explorer/" target="_blank" rel="noopener noreferrer">{' '} the SQuAD dataset {' '}</a>
+    <span>
+      (Wikipedia sentences) in early 2017.
+    </span>
+  </div>
+);
+
+
+class McPermaInput extends React.Component {
+  render() {
+    const { passage, question } = this.props;
+
+    return (
+      <div className="model__content">
+      <ModelIntro title={title} description={description} />
+          <div className="form__field">
+            <label htmlFor="#input--mc-passage">Passage</label>
+            <div id="input--mc-passage">{passage}</div>
+          </div>
+          <div className="form__field">
+            <label htmlFor="#input--mc-question">Question</label>
+            <div id="input--mc-question">{question}</div>
+          </div>
+      </div>
+      );
+
+  }
+}
+
 class McInput extends React.Component {
 constructor() {
     super();
@@ -69,26 +111,6 @@ render() {
     "passageValue": mcPassageValue,
     "questionValue": mcQuestionValue
     };
-
-    const title = "Machine Comprehension";
-    const description = (
-      <div>
-        <span>
-          Machine Comprehension (MC) answers natural language questions by selecting an answer span within an evidence text.
-          The AllenNLP toolkit provides the following MC visualization, which can be used for any MC model in AllenNLP.
-          This page demonstrates a reimplementation of
-        </span>
-        <a href = "https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Comprehen-Seo-Kembhavi/007ab5528b3bd310a80d553cccad4b78dc496b02" target="_blank" rel="noopener noreferrer">{' '} BiDAF (Seo et al, 2017)</a>
-        <span>
-          , or Bi-Directional Attention Flow,
-          a widely used MC baseline that achieved state-of-the-art accuracies on
-        </span>
-        <a href = "https://rajpurkar.github.io/SQuAD-explorer/" target="_blank" rel="noopener noreferrer">{' '} the SQuAD dataset {' '}</a>
-        <span>
-          (Wikipedia sentences) in early 2017.
-        </span>
-      </div>
-    );
 
     return (
         <div className="model__content">
@@ -198,16 +220,36 @@ class McComponent extends React.Component {
     }
 
     render() {
-      return (
-        <div className="pane model">
-          <PaneLeft>
-            <McInput runMcModel={this.runMcModel} outputState={this.state.outputState}/>
-          </PaneLeft>
-          <PaneRight outputState={this.state.outputState}>
-            <McOutput answer={this.state.answer} passage={this.state.passage} />
-          </PaneRight>
-        </div>
-      );
+      const { permadata } = this.props;
+
+      if (permadata === null) {
+        return (
+          <div className="pane model">
+            <PaneLeft>
+              <McInput runMcModel={this.runMcModel} outputState={this.state.outputState}/>
+            </PaneLeft>
+            <PaneRight outputState={this.state.outputState}>
+              <McOutput answer={this.state.answer} passage={this.state.passage} />
+            </PaneRight>
+          </div>
+        );
+      } else if (permadata === "waiting") {
+        // Waiting
+        return (<div>WAITING</div>)
+      } else {
+        const { requestData, responseData } = permadata;
+
+        return (
+          <div className="pane model">
+            <PaneLeft>
+              <McPermaInput passage={requestData.passage} question={requestData.question}/>
+            </PaneLeft>
+            <PaneRight outputState="received">
+              <McOutput answer={responseData.best_span_str} passage={requestData.passage} />
+            </PaneRight>
+          </div>
+        )
+      }
     }
 }
 
