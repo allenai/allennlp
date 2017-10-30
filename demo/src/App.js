@@ -12,6 +12,7 @@ class App extends React.Component {
   constructor() {
     super();
     this.state = {
+      permalink: "waiting", // valid values: "waiting", null, {...data...}
       selectedModel: "srl", // valid values: "srl", "mc", "te"
       rawOutput: "",
     };
@@ -24,8 +25,28 @@ class App extends React.Component {
     });
   }
 
+  componentDidMount() {
+    const slugRegex = /\/permalink\/([^/]+)\/?$/;
+    const url = window.location.href;
+    const match = slugRegex.exec(url);
+
+    if (!match) {
+      // This is not a permalink, so just render normally.
+      this.setState({permalink: null});
+    } else {
+      const slug = match[1];
+    }
+  }
+
   render() {
 
+    if (this.state.permalink == "waiting") {
+      return (<div class="waiting-for-permalink">waiting for permalink</div>)
+    } else if (this.state.permalink !== null) {
+      return (<div class="rendered-permalink">rendered permalink</div>)
+    }
+
+    // Otherwise render the demo.
     const { selectedModel } = this.state;
 
     const ModelComponent = () => {
