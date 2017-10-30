@@ -4,7 +4,6 @@ from typing import Dict, Tuple, Set
 import torch
 
 from allennlp.common import Params
-from allennlp.data import Vocabulary
 from allennlp.nn import util
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
@@ -36,14 +35,21 @@ class MaximumMarginalLikelihood(DecoderTrainer):
                target_mask: torch.Tensor = None) -> Dict[str, torch.Tensor]:
         if targets.dim() != 2:
             raise NotImplementedError("This implementation cannot yet handle batched inputs")
-        allowed_transitions = self._create_allowed_transitions(targets)
+        allowed_transitions = self._create_allowed_transitions(targets, target_mask)
         finished_states = []
         states = [initial_state]
+        step_num = 0
         while states:
+            step_num += 1
             next_states = []
             for state in states:
                 allowed_actions = allowed_transitions[tuple(state.action_history)]
-                for next_state in decode_step.take_step(state, allowed_actions):
+                generator = decode_step.take_step(state, allowed_actions)
+                while True:
+                    try:
+                        next_state = next(generator)
+                    except StopIteration:
+                        break
                     if next_state.is_finished():
                         finished_states.append(next_state)
                     else:
@@ -85,10 +91,10 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         for i, target_sequence in enumerate(targets):
             history: Tuple[int, ...] = ()
             for j, action in enumerate(target_sequence[1:]):
-                if target_mask[i][j + 1] == 0:  # +1 because we're starting at index 1, not 0
+                if target_mask[i][j + 1].data[0] == 0:  # +1 because we're starting at index 1, not 0
                     break
-                allowed_transitions[history].add(action)
-                history = history + (action,)
+                allowed_transitions[history].add(action.data[0])
+                history = history + (action.data[0],)
         return allowed_transitions
 
     @classmethod

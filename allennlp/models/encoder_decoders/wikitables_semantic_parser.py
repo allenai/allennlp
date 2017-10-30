@@ -9,6 +9,7 @@ from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
@@ -88,7 +89,7 @@ class WikiTablesSemanticParser(Model):
 
     @overrides
     def forward(self,  # type: ignore
-                source_tokens: Dict[str, torch.LongTensor],
+                question: Dict[str, torch.LongTensor],
                 target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -96,23 +97,32 @@ class WikiTablesSemanticParser(Model):
 
         Parameters
         ----------
-        source_tokens : Dict[str, torch.LongTensor]
-           The output of ``TextField.as_array()`` applied on the source ``TextField``. This will be
-           passed through a ``TextFieldEmbedder`` and then through an encoder.
+        question : Dict[str, torch.LongTensor]
+           The output of ``TextField.as_array()`` applied on the question ``TextField``. This will
+           be passed through a ``TextFieldEmbedder`` and then through an encoder.
         target_action_sequences : torch.LongTensor, optional (default = None)
            A list of possibly valid action sequences, with shape ``(batch_size, num_sequences,
-           sequence_length)``.
+           sequence_length, 1)``.  The trailing dimension is because of how our ``ListFields``
+           work, and will be stripped in this method with a ``squeeze``.
         """
         # (batch_size, input_sequence_length, encoder_output_dim)
-        embedded_input = self._source_embedder(source_tokens)
-        source_mask = util.get_text_field_mask(source_tokens)
+        embedded_input = self._source_embedder(question)
+        source_mask = util.get_text_field_mask(question)
+        batch_size = embedded_input.size(0)
+        if batch_size != 1:
+            raise ConfigurationError("This implementation does not currently handle batched "
+                                     "inputs.  Please set the batch size of your dataset reader "
+                                     "to 1.")
+
         encoder_outputs = self._encoder(embedded_input, source_mask)
 
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
         with torch.cuda.device_of(final_encoder_output):
-            decoder_context = Variable(torch.zeros(1, self._decoder_output_dim))
+            decoder_context = Variable(torch.zeros(1, self._encoder.get_output_dim()))
 
-        if target_action_sequences:
+        if target_action_sequences is not None:
+            # Remove batch dimension and trailing dimension (from ListField[LabelField]]).
+            target_action_sequences = target_action_sequences.squeeze(0).squeeze(-1)
             target_mask = target_action_sequences > 0
         else:
             target_mask = None
@@ -125,18 +135,25 @@ class WikiTablesSemanticParser(Model):
                                                hidden_state=(final_encoder_output, decoder_context),
                                                end_index=self._end_index)
         if self.training:
-            return self._decoder_train.decode(initial_state,
-                                              self._decoder_step,
-                                              target_action_sequences,
-                                              target_mask)
+            return self._decoder_trainer.decode(initial_state,
+                                                self._decoder_step,
+                                                target_action_sequences,
+                                                target_mask)
         else:
+            outputs = {}
             if target_action_sequences is not None:
                 num_steps = target_action_sequences.size(1) - 1
+                outputs['loss'] = self._decoder_trainer.decode(initial_state,
+                                                               self._decoder_step,
+                                                               target_action_sequences,
+                                                               target_mask)['loss']
             else:
                 num_steps = self._max_decoding_steps
             best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)
+            best_final_state = best_final_states[0]
+            outputs['best_action_sequence'] = best_final_state.action_history
             # TODO(matt): compute accuracy here.
-            return {'best_action_sequence': best_final_states[0].action_history}
+            return outputs
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -219,10 +236,10 @@ class WikiTablesDecoderState(DecoderState):
         self.hidden_state = hidden_state
         self.end_index = end_index
 
-    def get_output_mask(self) -> torch.Tensor:
+    def get_output_mask(self) -> torch.Tensor:  # pylint: disable=no-self-use
         return None
 
-    def get_valid_actions(self) -> Set[int]:
+    def get_valid_actions(self) -> Set[int]:  # pylint: disable=no-self-use
         return None
 
     def is_finished(self) -> bool:
@@ -259,9 +276,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # Outline here: first we'll construct the input to the decoder, which is a concatenation of
         # an embedding of the decoder input (the last action taken) and an attention over the
         # question.
-        step_input = state.action_history[-1] if state.action_history else self._start_index
-        embedded_input = self._action_embedder(step_input)
         decoder_hidden, decoder_context = state.hidden_state
+        action = state.action_history[-1] if state.action_history else self._start_index
+        action_input = Variable(decoder_hidden.data.new().resize_(1).long().fill_(action))
+        embedded_input = self._action_embedder(action_input)
         # (batch_size, input_sequence_length)
         input_weights = self._input_attention(decoder_hidden,
                                               state.encoder_outputs,
@@ -275,16 +293,19 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
         # (batch_size, num_actions)
         logits = self._output_projection_layer(decoder_hidden)
-        with torch.cuda.device_of(logits):
-            output_mask = state.get_output_mask()
+        output_mask = state.get_output_mask()
         log_probs = util.masked_log_softmax(logits, output_mask)
         sorted_log_probs = []
-        for i, log_prob in enumerate(log_probs):
-            sorted_log_probs.append((log_prob, i))
+        # TODO(mattg): think about how to make batching work here; batch_size is currently required
+        # to be 1, so we enumerate `log_probs[0]`.
+        for i, log_prob in enumerate(log_probs[0]):
+            # We need to keep the gradient history, but also have a float for easy comparisons.
+            # That's why we have three things here: (float_log_prob, variable_log_prob, action_id).
+            sorted_log_probs.append((log_prob.data[0], log_prob, i))
         sorted_log_probs.sort(key=lambda x: -x[0])
 
         valid_actions = state.get_valid_actions()
-        for log_prob, action in sorted_log_probs:
+        for _, log_prob, action in sorted_log_probs:
             if valid_actions is not None and action not in valid_actions:
                 # If we have a constrained decoder, we need to skip any actions that are not valid
                 # in the current state.

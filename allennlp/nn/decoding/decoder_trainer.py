@@ -1,14 +1,10 @@
-from typing import Callable, Dict, List, Tuple
+from typing import Dict
 
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import Params, Registrable
-from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
-from allennlp.nn import util
 
 
 class DecoderTrainer(Registrable):
