@@ -5,10 +5,11 @@ import pyparsing
 
 from nltk.sem.logic import Expression, LambdaExpression
 
-from allennlp.data.dataset_readers.wikitables import COLUMN_TYPE, CELL_TYPE, PART_TYPE
-from allennlp.data.dataset_readers.wikitables import COMMON_NAME_MAPPING, COMMON_TYPE_SIGNATURE
+from allennlp.data.dataset_readers.wikitables.type_declaration import COLUMN_TYPE, CELL_TYPE, PART_TYPE
+from allennlp.data.dataset_readers.wikitables.type_declaration import COMMON_NAME_MAPPING, COMMON_TYPE_SIGNATURE
 
-from allennlp.data.dataset_readers.wikitables import DynamicTypeLogicParser, TableKnowledgeGraph
+from allennlp.data.dataset_readers.wikitables.type_declaration import DynamicTypeLogicParser
+from allennlp.data.dataset_readers.wikitables.table import TableKnowledgeGraph
 
 
 class World:
@@ -17,8 +18,8 @@ class World:
     executed) here. For WikiTableQuestions, this includes a representation of a table, mapping from
     Sempre variables in all logical forms to NLTK variables, and the types of all predicates and entities.
     """
-    def __init__(self, table_filename: str) -> None:
-        self.table_graph = TableKnowledgeGraph.read_table_from_tsv(table_filename)
+    def __init__(self, table_graph: TableKnowledgeGraph) -> None:
+        self.table_graph = table_graph
         # NLTK has a naming convention for variable types (see ``_map_name`` for more details).
         # We initialize this dict with common predicate names and update it as we process logical forms.
         # TODO (pradeep): Should we do updates while reading tables instead?
