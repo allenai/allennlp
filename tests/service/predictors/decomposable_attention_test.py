@@ -54,13 +54,15 @@ class TestDecomposableAttentionPredictor(TestCase):
 
         archive = load_archive('tests/fixtures/decomposable_attention/serialization/model.tar.gz')
         predictor = Predictor.from_archive(archive, 'textual-entailment')
-        result = predictor.predict_batch_json(batch_inputs)
-        # Logits should be 3 floats that softmax to label_probs
-        batch_label_logits = result.get("label_logits")
-        # Label probs should be 3 floats that sum to one
-        batch_label_probs = result.get("label_probs")
+        results = predictor.predict_batch_json(batch_inputs)
+        print(results)
+        assert len(results) == 2
 
-        for label_probs, label_logits in zip(batch_label_probs, batch_label_logits):
+        for result in results:
+            # Logits should be 3 floats that softmax to label_probs
+            label_logits = result.get("label_logits")
+            # Label probs should be 3 floats that sum to one
+            label_probs = result.get("label_probs")
             assert label_probs is not None
             assert isinstance(label_probs, list)
             assert len(label_probs) == 3

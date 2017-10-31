@@ -45,6 +45,7 @@ class Predict(Subcommand):
         subparser.add_argument('input_file', metavar='input-file', type=argparse.FileType('r'),
                                help='path to input file')
         subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
+        subparser.add_argument('--batch_size', type=int, default=1, help='The batch size to use for processing')
         subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
         subparser.add_argument('--cuda_device', type=int, default=-1, help='id of GPU to use (if any)')
         subparser.add_argument('-o', '--overrides',
@@ -67,19 +68,42 @@ def _get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Pred
 def _run(predictor: Predictor,
          input_file: IO,
          output_file: Optional[IO],
+         batch_size: int,
          print_to_console: bool,
          cuda_device: int) -> None:
+
+    def _run_predictor(batch_data):
+        if len(batch_data) == 1:
+            result = predictor.predict_json(batch_data[0], cuda_device)
+            # Batch results return a list of json objects, so in
+            # order to iterate over the result below we wrap this in a list.
+            results = [result]
+        else:
+            results = predictor.predict_batch_json(batch_data, cuda_device)
+
+        for model_input, output in zip(batch_data, results):
+            string_output = json.dumps(output)
+            if print_to_console:
+                print("input: ", model_input)
+                print("prediction: ", string_output)
+            if output_file:
+                output_file.write(string_output + "\n")
+
+    batch_json_data = []
     for line in input_file:
         if not line.isspace():
-            data = json.loads(line)
-            result = predictor.predict_json(data, cuda_device)
-            output = json.dumps(result)
+            # Collect batch size amount of data.
+            json_data = json.loads(line)
+            batch_json_data.append(json_data)
+            if len(batch_json_data) == batch_size:
+                _run_predictor(batch_json_data)
+                batch_json_data = []
 
-            if print_to_console:
-                print("input: ", data)
-                print("prediction: ", output)
-            if output_file:
-                output_file.write(output + "\n")
+    # We might not have a dataset perfectly divisible by the batch size,
+    # so tidy up the scraps.
+    if batch_json_data:
+        _run_predictor(batch_json_data)
+
 
 def _predict(predictors: Dict[str, str]):
     def predict_inner(args: argparse.Namespace) -> None:
@@ -97,6 +121,6 @@ def _predict(predictors: Dict[str, str]):
             if args.output_file:
                 output_file = stack.enter_context(args.output_file)  # type: ignore
 
-            _run(predictor, input_file, output_file, not args.silent, args.cuda_device)
+            _run(predictor, input_file, output_file, args.batch_size, not args.silent, args.cuda_device)
 
     return predict_inner

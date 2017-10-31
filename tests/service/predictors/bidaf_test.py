@@ -51,17 +51,14 @@ class TestBidafPredictor(TestCase):
         archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
         predictor = Predictor.from_archive(archive, 'machine-comprehension')
 
-        result = predictor.predict_batch_json(inputs)
+        results = predictor.predict_batch_json(inputs)
+        assert len(results) == 2
 
-        batch_best_span = result.get("best_span")
-        batch_best_span_str = result.get("best_span_str")
-        batch_start_probs = result.get("span_start_probs")
-        batch_end_probs = result.get("span_end_probs")
-
-        for best_span, best_span_str, start_probs, end_probs in zip(batch_best_span,
-                                                                    batch_best_span_str,
-                                                                    batch_start_probs,
-                                                                    batch_end_probs):
+        for result in results:
+            best_span = result.get("best_span")
+            best_span_str = result.get("best_span_str")
+            start_probs = result.get("span_start_probs")
+            end_probs = result.get("span_end_probs")
             assert best_span is not None
             assert isinstance(best_span, list)
             assert len(best_span) == 2

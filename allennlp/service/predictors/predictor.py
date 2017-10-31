@@ -26,12 +26,12 @@ class Predictor(Registrable):
         """
         raise NotImplementedError
 
-    def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> JsonDict:
-        instances = self._batch_json_to_instance(inputs)
-        outputs = self._model.forward_on_batch(instances, cuda_device)
+    def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
+        instances = self._batch_json_to_instances(inputs)
+        outputs = self._model.forward_on_instances(instances, cuda_device)
         return sanitize(outputs)
 
-    def _batch_json_to_instance(self, json: List[JsonDict]) -> List[Instance]:
+    def _batch_json_to_instances(self, json: List[JsonDict]) -> List[Instance]:
         """
         Converts a list of JSON objects into a list of :class:`~allennlp.data.instance.Instance`s.
         By default, this expects that a "batch" consists of a list of JSON blobs which would

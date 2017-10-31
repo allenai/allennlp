@@ -125,14 +125,16 @@ class Model(torch.nn.Module, Registrable):
             outputs[name] = output
         return outputs
 
-    def forward_on_batch(self, instances: List[Instance],
-                         cuda_device: int) -> Dict[str, numpy.ndarray]:
+    def forward_on_instances(self,
+                             instances: List[Instance],
+                             cuda_device: int) -> List[Dict[str, numpy.ndarray]]:
         """
         Takes a list of  :class:`~allennlp.data.instance.Instance`s, converts that text into
         arrays using this model's :class:`Vocabulary`, passes those arrays through
         :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
         and returns the result.  Before returning the result, we convert any
-        ``torch.autograd.Variables`` or ``torch.Tensors`` into numpy arrays.
+        ``torch.autograd.Variables`` or ``torch.Tensors`` into numpy arrays and separate the
+        batched output into a list of individual dicts per instance.
         """
 
         dataset = Dataset(instances)
@@ -142,11 +144,14 @@ class Model(torch.nn.Module, Registrable):
                                           for_training=False)
         outputs = self.decode(self.forward(**model_input))
 
+        instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
         for name, output in list(outputs.items()):
             if isinstance(output, torch.autograd.Variable):
                 output = output.data.cpu().numpy()
             outputs[name] = output
-        return outputs
+            for instance_output, batch_element in zip(instance_separated_output, output):
+                instance_output[name] = batch_element
+        return instance_separated_output
 
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
