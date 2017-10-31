@@ -48,6 +48,10 @@ class SemanticRoleLabelerPredictor(Predictor):
         raise RuntimeError("this should never be called")
 
     @overrides
+    def _batch_json_to_instance(self, json: JsonDict) -> List[Instance]:
+        raise NotImplementedError("The SRL Predictor does not currently support batch prediction.")
+
+    @overrides
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         """
         Expects JSON that looks like ``{"sentence": "..."}``
