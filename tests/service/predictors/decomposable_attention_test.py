@@ -41,7 +41,6 @@ class TestDecomposableAttentionPredictor(TestCase):
             assert e / sumexps == approx(p)
 
     def test_batch_prediction(self):
-
         batch_inputs = [
                 {
                         "premise": "I always write unit tests for my code.",
