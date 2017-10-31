@@ -1,33 +1,25 @@
 import re
 
 from collections import defaultdict
-from typing import List, Dict
+from typing import List, DefaultDict
+
+from allennlp.data.knowledge_graph import KnowledgeGraph
 
 
-class TableKnowledgeGraph:
+class TableKnowledgeGraph(KnowledgeGraph):
     """
     Graph representation of the table. For now, we just store the neighborhood information of cells and
     columns. A column's neighbors are all the cells under it, and a cell's only neighbor is the column
-    it is under. This is a rather simplistic view of the table. For example, we don't store the order
+    it is under. We store them all in a single dict. We don't have to worry about name clashes because we
+    follow NLTK's naming convention for representing cells and columns, and thus they have unique names.
+
+    This is a rather simplistic view of the table. For example, we don't store the order
     of rows, and we do not distinguish between multiple occurrences of the same cell name (we treat all
-    those cells as the same entity). We may want to reconsider this later.
-
-    Parameters
-    ----------
-    column_neighbors : Dict[str, List[str]]
-        All the cells related to each column. Keys are column names and values are lists of cell names.
-    cell_neighbors: Dict[str, List[str]]
-        All the columns under which each cell name occurs. Keys are cell names and values are lists of
-        column names.
+    those cells as the same entity).
     """
-    def __init__(self,
-                 column_neighbors: Dict[str, List[str]],
-                 cell_neighbors: Dict[str, List[str]]) -> None:
-        self._column_neighbors = column_neighbors
-        self._cell_neighbors = cell_neighbors
-
+    # TODO (pradeep): We may want to reconsider this representation later.
     @classmethod
-    def read_table_from_tsv(cls, table_filename: str) -> 'TableKnowledgeGraph':
+    def read_from_file(cls, filename: str) -> 'TableKnowledgeGraph':
         """
         We read tables formatted as TSV files here. We assume the first line in the file is a tab separated
         list of column headers, and all subsequent lines are content rows. For example if the TSV file is,
@@ -38,11 +30,9 @@ class TableKnowledgeGraph:
         we read "Nation", "Olympics" and "Medals" as column headers, "USA" and "China" as cells under the
         "Nation" column and so on.
         """
-        _column_neighbors = defaultdict(list)
-        _cell_neighbors = defaultdict(list)
-        columns = []
+        _neighbors: DefaultDict[str, List[str]] = defaultdict(list)
         # We assume the first row is column names.
-        for row_index, line in enumerate(open(table_filename)):
+        for row_index, line in enumerate(open(filename)):
             line = line.rstrip('\n')
             if row_index == 0:
                 # Following Sempre's convention for naming columns.
@@ -53,9 +43,9 @@ class TableKnowledgeGraph:
                 assert len(columns) == len(cells), ("Invalid format. Row %d has %d columns, but header "
                                                     "has %d columns" % (row_index, len(cells), len(columns)))
                 for column, cell in zip(columns, cells):
-                    _column_neighbors[column].append(cell)
-                    _cell_neighbors[cell].append(column)
-        return cls(dict(_column_neighbors), dict(_cell_neighbors))
+                    _neighbors[column].append(cell)
+                    _neighbors[cell].append(column)
+        return cls(dict(_neighbors))
 
     @staticmethod
     def _normalize_string(string: str) -> str:
@@ -95,7 +85,7 @@ class TableKnowledgeGraph:
         cell : str
             Sempre name of the cell (Eg. fb:cell.usa)
         """
-        return self._cell_neighbors[cell]
+        return super(TableKnowledgeGraph, self).get_neighbors(cell)
 
     def get_column_neighbors(self, column: str) -> List[str]:
         """
@@ -104,4 +94,4 @@ class TableKnowledgeGraph:
         column : str
             Sempre name of the column (Eg. fb:row.row.nation)
         """
-        return self._column_neighbors[column]
+        return super(TableKnowledgeGraph, self).get_neighbors(column)
