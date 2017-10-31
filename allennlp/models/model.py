@@ -134,7 +134,9 @@ class Model(torch.nn.Module, Registrable):
         :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
         and returns the result.  Before returning the result, we convert any
         ``torch.autograd.Variables`` or ``torch.Tensors`` into numpy arrays and separate the
-        batched output into a list of individual dicts per instance.
+        batched output into a list of individual dicts per instance. Note that typically
+        this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
+        :func:`forward_on_instance`.
         """
 
         dataset = Dataset(instances)
