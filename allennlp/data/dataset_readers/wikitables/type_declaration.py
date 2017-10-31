@@ -105,9 +105,9 @@ class ReverseType(PlaceholderType):
 
     Following are the resolutions for some example type signatures being matched against:
         <?, <e,r>>      :   <<r,e>, <e,r>>
-        <<r,?>, <?,e>>  :   <<r,e>, <e,r>>
+        <<r,?>, <e,?>>  :   <<r,e>, <e,r>>
         <<r,?>, ?>      :   <<r,?>, <?,r>>>
-        <<r,?>, <e,?>>  :   None  (causes resolution failure)
+        <<r,?>, <?,e>>  :   None  (causes resolution failure)
     """
     @property
     def _signature(self):
@@ -169,6 +169,8 @@ class ConjunctionType(PlaceholderType):
         if not isinstance(other.second, ComplexType):
             return None
         other_first = other.first.resolve(other.second.first)
+        if other_first is None:
+            return None
         other_first = other_first.resolve(other.second.second)
         if not other_first:
             return None
