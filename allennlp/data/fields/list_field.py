@@ -47,6 +47,10 @@ class ListField(SequenceField[DataArray]):
         field_lengths = [field.get_padding_lengths() for field in self.field_list]
         padding_lengths = {'num_fields': len(self.field_list)}
         for key in field_lengths[0].keys():
+            # In order to be able to nest ListFields, we need to scope the padding length keys
+            # appropriately, so that nested ListFields don't all use the same "num_fields" key.  So
+            # when we construct the dictionary from the list of fields, we add something to the
+            # name, and we remove it when padding the list of fields.
             padding_lengths['list_' + key] = max(x[key] if key in x else 0 for x in field_lengths)
         return padding_lengths
 
@@ -59,7 +63,9 @@ class ListField(SequenceField[DataArray]):
         padded_field_list = pad_sequence_to_length(self.field_list,
                                                    padding_lengths['num_fields'],
                                                    self.field_list[0].empty_field)
-        child_padding_lengths = {key.replace('list_', ''): value
+        # Here we're removing the scoping on the padding length keys that we added in
+        # `get_padding_lengths`; see the note there for more detail.
+        child_padding_lengths = {key.replace('list_', '', 1): value
                                  for key, value in padding_lengths.items()
                                  if key.startswith('list_')}
         padded_fields = [field.as_array(child_padding_lengths) for field in padded_field_list]

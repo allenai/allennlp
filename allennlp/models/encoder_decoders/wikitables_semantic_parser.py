@@ -1,6 +1,5 @@
 from typing import Dict, Generator, List, Set
 
-import numpy
 from overrides import overrides
 
 import torch
@@ -49,10 +48,10 @@ class WikiTablesSemanticParser(Model):
     max_decoding_steps : ``int``
         When we're decoding with a beam search, what's the maximum number of steps we should take?
         This only applies at evaluation time, not during training.
-    action_namespace : str
+    action_namespace : ``str``
         Parser actions are represented as strings in the data.  This is the namespace in the
         vocabulary that was used to convert them into integers.
-    action_embedding_dim : int
+    action_embedding_dim : ``int``
         Parser actions get embeddings in this model, so we can use action histories as decoder
         inputs.  This specifies the dimensionality of action embeddings.
     attention_function: ``SimilarityFunction``
@@ -117,17 +116,18 @@ class WikiTablesSemanticParser(Model):
         encoder_outputs = self._encoder(embedded_input, source_mask)
 
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
-        with torch.cuda.device_of(final_encoder_output):
-            decoder_context = Variable(torch.zeros(1, self._encoder.get_output_dim()))
+        decoder_context = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim())
+                                   .fill_(0))
 
         if target_action_sequences is not None:
             # Remove batch dimension and trailing dimension (from ListField[LabelField]]).
             target_action_sequences = target_action_sequences.squeeze(0).squeeze(-1)
+            # TODO(mattg): might be better to not hard-code the 0 here.
             target_mask = target_action_sequences > 0
         else:
             target_mask = None
 
-        initial_score = Variable(embedded_input.data.new().resize_(1).fill_(0))
+        initial_score = Variable(embedded_input.data.new(1).fill_(0))
         initial_state = WikiTablesDecoderState([],
                                                initial_score,
                                                encoder_outputs=encoder_outputs,
@@ -165,22 +165,16 @@ class WikiTablesSemanticParser(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
-        predicted_indices = output_dict["predictions"]
-        if not isinstance(predicted_indices, numpy.ndarray):
-            predicted_indices = predicted_indices.data.cpu().numpy()
-        all_predicted_tokens = []
-        end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
-        for indices in predicted_indices:
-            indices = list(indices)
+        best_action_indices = output_dict["best_action_sequence"]
+        end_index = self.vocab.get_token_index(END_SYMBOL, self._action_namespace)
+        action_strings = []
+        for action_index in best_action_indices:
             # Collect indices till the first end_symbol
-            if end_index in indices:
-                indices = indices[:indices.index(end_index)]
-            predicted_tokens = [self.vocab.get_token_from_index(x, namespace="target_tokens")
-                                for x in indices]
-            all_predicted_tokens.append(predicted_tokens)
-        if len(all_predicted_tokens) == 1:
-            all_predicted_tokens = all_predicted_tokens[0]  # type: ignore
-        output_dict["predicted_tokens"] = all_predicted_tokens
+            if action_index == end_index:
+                break
+            action_strings.append(self.vocab.get_token_from_index(action_index,
+                                                                  namespace=self._action_namespace))
+        output_dict["predicted_actions"] = action_strings
         return output_dict
 
     @classmethod
@@ -278,7 +272,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # question.
         decoder_hidden, decoder_context = state.hidden_state
         action = state.action_history[-1] if state.action_history else self._start_index
-        action_input = Variable(decoder_hidden.data.new().resize_(1).long().fill_(action))
+        action_input = Variable(decoder_hidden.data.new(1).long().fill_(action))
         embedded_input = self._action_embedder(action_input)
         # (batch_size, input_sequence_length)
         input_weights = self._input_attention(decoder_hidden,
