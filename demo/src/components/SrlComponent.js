@@ -2,7 +2,7 @@ import React from 'react';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
-import WaitingForPermalink from './WaitingForPermalink'
+import Permalink from './Permalink'
 
 
 /*******************************************************************************
@@ -250,21 +250,21 @@ class SrlComponent extends React.Component {
       const { permadata } = this.props;
 
       if (permadata == null) {
+        // Make a new prediction.
         return (
           <div className="pane model">
             <PaneLeft>
               <SrlInput runSrlModel={this.runSrlModel} outputState={this.state.outputState}/>
             </PaneLeft>
             <PaneRight outputState={this.state.outputState}>
+              <Permalink slug={this.state.rawOutput.slug}/>
               <SrlOutput rawOutput={this.state.rawOutput}/>
             </PaneRight>
           </div>
         );
-      } else if (permadata === "waiting") {
-        return <WaitingForPermalink />
       } else {
+        // Serve a permalink prediction.
         const { requestData, responseData } = permadata;
-
         return (
           <div className="pane model">
           <PaneLeft>

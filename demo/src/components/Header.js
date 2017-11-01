@@ -18,9 +18,12 @@ class Header extends React.Component {
         )
       }
 
+      // Header links are different in the permalink and non-permalink case.
       let links = null;
 
       if (permalink) {
+        // This is the header for a permalink page, so we grab the root URL
+        // and just provide a link to it.
         const slugRegex = /\/permalink\/([^/]+)\/?$/;
         const demoRoot = window.location.href.replace(slugRegex, '');
 
@@ -36,9 +39,9 @@ class Header extends React.Component {
       } else {
         links = (
           <ul>
-            {buildLink("srl", "SRL Model")}
-            {buildLink("mc", "MC Model")}
-            {buildLink("te", "TE Model")}
+            {buildLink("semantic-role-labeling", "SRL Model")}
+            {buildLink("machine-comprehension", "MC Model")}
+            {buildLink("textual-entailment", "TE Model")}
           </ul>
         )
       }

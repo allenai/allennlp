@@ -1,8 +1,8 @@
 import React from 'react';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
+import Permalink from './Permalink'
 import ModelIntro from './ModelIntro'
-import WaitingForPermalink from './WaitingForPermalink'
 
 
 /*******************************************************************************
@@ -318,7 +318,7 @@ class TeComponent extends React.Component {
         premise: inputs.premiseValue,
         hypothesis: inputs.hypothesisValue,
       };
-      fetch('/predict/textual-entailment', {
+      fetch('http://localhost:8000/predict/textual-entailment', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -339,6 +339,7 @@ class TeComponent extends React.Component {
     render() {
       const { permadata } = this.props;
 
+      // Make a prediction
       if (permadata === null) {
         return (
           <div className="pane model">
@@ -346,13 +347,13 @@ class TeComponent extends React.Component {
               <TeInput runTeModel={this.runTeModel} outputState={this.state.outputState}/>
             </PaneLeft>
             <PaneRight outputState={this.state.outputState}>
+              <Permalink slug={this.state.rawOutput.slug}/>
               <TeOutput rawOutput={this.state.rawOutput}/>
             </PaneRight>
           </div>
         );
-      } else if (permadata === "waiting") {
-        return <WaitingForPermalink />
       } else {
+        // Permalink
         const { requestData, responseData } = permadata;
 
         return (

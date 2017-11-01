@@ -2,7 +2,7 @@ import React from 'react';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
-import WaitingForPermalink from './WaitingForPermalink'
+import Permalink from './Permalink'
 
 
 /*******************************************************************************
@@ -74,8 +74,8 @@ class McInput extends React.Component {
 constructor() {
     super();
     this.state = {
-    mcPassageValue: "",
-    mcQuestionValue: "",
+      mcPassageValue: "",
+      mcQuestionValue: "",
     };
     this.handleListChange = this.handleListChange.bind(this);
     this.handleQuestionChange = this.handleQuestionChange.bind(this);
@@ -201,7 +201,7 @@ class McComponent extends React.Component {
         passage: inputs.passageValue,
         question: inputs.questionValue,
       };
-      fetch('/predict/machine-comprehension', {
+      fetch('http://localhost:8000/predict/machine-comprehension', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -224,19 +224,20 @@ class McComponent extends React.Component {
       const { permadata } = this.props;
 
       if (permadata === null) {
+        // Make a new prediction.
         return (
           <div className="pane model">
             <PaneLeft>
               <McInput runMcModel={this.runMcModel} outputState={this.state.outputState}/>
             </PaneLeft>
             <PaneRight outputState={this.state.outputState}>
+              <Permalink slug={this.state.rawOutput.slug}/>
               <McOutput answer={this.state.answer} passage={this.state.passage} />
             </PaneRight>
           </div>
         );
-      } else if (permadata === "waiting") {
-        return <WaitingForPermalink />
       } else {
+        // Return a permalink prediction.
         const { requestData, responseData } = permadata;
 
         return (
