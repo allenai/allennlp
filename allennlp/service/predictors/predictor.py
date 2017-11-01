@@ -1,3 +1,4 @@
+from typing import List
 from allennlp.common import Registrable
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
@@ -24,6 +25,25 @@ class Predictor(Registrable):
         Converts a JSON object into an :class:`~allennlp.data.instance.Instance`.
         """
         raise NotImplementedError
+
+    def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
+        instances = self._batch_json_to_instances(inputs)
+        outputs = self._model.forward_on_instances(instances, cuda_device)
+        return sanitize(outputs)
+
+    def _batch_json_to_instances(self, json: List[JsonDict]) -> List[Instance]:
+        """
+        Converts a list of JSON objects into a list of :class:`~allennlp.data.instance.Instance`s.
+        By default, this expects that a "batch" consists of a list of JSON blobs which would
+        individually be predicted by :func:`predict_json`. In order to use this method for
+        batch prediction, :func:`_json_to_instance` should be implemented by the subclass, or
+        if the instances have some dependency on each other, this method should be overridden
+        directly.
+        """
+        instances = []
+        for blob in json:
+            instances.append(self._json_to_instance(blob))
+        return instances
 
     @classmethod
     def from_archive(cls, archive: Archive, predictor_name: str) -> 'Predictor':
