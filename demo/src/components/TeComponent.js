@@ -347,8 +347,8 @@ class TeComponent extends React.Component {
               <TeInput runTeModel={this.runTeModel} outputState={this.state.outputState}/>
             </PaneLeft>
             <PaneRight outputState={this.state.outputState}>
-              <Permalink slug={this.state.rawOutput.slug}/>
-              <TeOutput rawOutput={this.state.rawOutput}/>
+            <Permalink slug={this.state.rawOutput && this.state.rawOutput.slug}/>
+            <TeOutput rawOutput={this.state.rawOutput}/>
             </PaneRight>
           </div>
         );

@@ -257,8 +257,8 @@ class SrlComponent extends React.Component {
               <SrlInput runSrlModel={this.runSrlModel} outputState={this.state.outputState}/>
             </PaneLeft>
             <PaneRight outputState={this.state.outputState}>
-              <Permalink slug={this.state.rawOutput.slug}/>
-              <SrlOutput rawOutput={this.state.rawOutput}/>
+              <Permalink slug={this.state.rawOutput && this.state.rawOutput.slug}/>
+            <SrlOutput rawOutput={this.state.rawOutput}/>
             </PaneRight>
           </div>
         );

@@ -231,7 +231,7 @@ class McComponent extends React.Component {
               <McInput runMcModel={this.runMcModel} outputState={this.state.outputState}/>
             </PaneLeft>
             <PaneRight outputState={this.state.outputState}>
-              <Permalink slug={this.state.rawOutput.slug}/>
+              <Permalink slug={this.state.rawOutput && this.state.rawOutput.slug}/>
               <McOutput answer={this.state.answer} passage={this.state.passage} />
             </PaneRight>
           </div>
