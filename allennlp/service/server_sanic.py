@@ -15,6 +15,7 @@ from functools import lru_cache
 
 from sanic import Sanic, response, request
 from sanic.exceptions import ServerError
+from sanic_cors import CORS
 
 from allennlp.common.util import JsonDict
 from allennlp.models.archival import load_archive
@@ -32,6 +33,10 @@ def run(port: int, workers: int,
     print("Starting a sanic server on port {}.".format(port))
 
     app = make_app(static_dir)
+    CORS(app) # It is acceptible to enable CORS because we have no auth.
+
+    if port != 8000:
+        logger.warning("The demo requires the API to be run on port 8000.")
 
     for predictor_name, archive_file in trained_models.items():
         archive = load_archive(archive_file)
@@ -69,9 +74,13 @@ def make_app(build_dir: str = None) -> Sanic:
         """
         return model.predict_json(json.loads(data))
 
-    @app.route('/predict/<model_name>', methods=['POST'])
+    @app.route('/predict/<model_name>', methods=['POST', 'OPTIONS'])
     async def predict(req: request.Request, model_name: str) -> response.HTTPResponse:  # pylint: disable=unused-variable
         """make a prediction using the specified model and return the results"""
+
+        if req.method == "OPTIONS":
+            return response.text("")
+
         model = app.predictors.get(model_name.lower())
         if model is None:
             raise ServerError("unknown model: {}".format(model_name), status_code=400)

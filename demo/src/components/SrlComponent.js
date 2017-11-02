@@ -208,7 +208,7 @@ class SrlComponent extends React.Component {
       });
 
       var payload = { sentence: inputs.sentenceValue };
-      fetch('/predict/semantic-role-labeling', {
+      fetch('http://localhost:8000/predict/semantic-role-labeling', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',

@@ -41,6 +41,7 @@ awscli>=1.11.91
 
 # REST interface for models
 sanic==0.6.0
+sanic-cors
 
 #### LIBRARIES USED IN SCRIPTS ####
 # argument parsing in for data cleaning scripts
