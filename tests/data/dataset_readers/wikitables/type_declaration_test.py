@@ -4,11 +4,17 @@ from allennlp.data.dataset_readers.wikitables.type_declaration import Conjunctio
 from allennlp.data.dataset_readers.wikitables.type_declaration import REVERSE_TYPE, IDENTITY_TYPE, CELL_TYPE
 from allennlp.data.dataset_readers.wikitables.type_declaration import CONJUNCTION_TYPE, COUNT_TYPE, ROW_TYPE
 from allennlp.data.dataset_readers.wikitables.type_declaration import ARG_EXTREME_TYPE, DATE_NUM_TYPE, ANY_TYPE
+from allennlp.data.dataset_readers.wikitables.type_declaration import NamedBasicType
 
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestPlaceholderTypeResolution(AllenNlpTestCase):
+    def test_basic_types_conflict_on_names(self):
+        type_a = NamedBasicType("A")
+        type_b = NamedBasicType("B")
+        assert type_a.resolve(type_b) is None
+
     def test_reverse_resolves_correctly(self):
         assert REVERSE_TYPE.resolve(CELL_TYPE) is None
 

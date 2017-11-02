@@ -5,8 +5,7 @@ import pyparsing
 
 from nltk.sem.logic import Expression, LambdaExpression
 
-from allennlp.data.dataset_readers.wikitables.type_declaration import COLUMN_TYPE, CELL_TYPE, PART_TYPE
-from allennlp.data.dataset_readers.wikitables.type_declaration import COMMON_NAME_MAPPING, COMMON_TYPE_SIGNATURE
+from allennlp.data.dataset_readers.wikitables import type_declaration as types
 
 from allennlp.data.dataset_readers.wikitables.type_declaration import DynamicTypeLogicParser
 from allennlp.data.dataset_readers.wikitables.table import TableKnowledgeGraph
@@ -23,11 +22,11 @@ class World:
         # NLTK has a naming convention for variable types (see ``_map_name`` for more details).
         # We initialize this dict with common predicate names and update it as we process logical forms.
         # TODO (pradeep): Should we do updates while reading tables instead?
-        self.name_mapping = COMMON_NAME_MAPPING.copy()
+        self.name_mapping = types.COMMON_NAME_MAPPING.copy()
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
         # Initial type signature. Will update when we see more predicates.
-        self.type_signature = COMMON_TYPE_SIGNATURE.copy()
+        self.type_signature = types.COMMON_TYPE_SIGNATURE.copy()
         self._logic_parser = DynamicTypeLogicParser(type_check=True)
 
     def process_sempre_forms(self, sempre_forms: List[str]) -> List[Expression]:
@@ -65,6 +64,7 @@ class World:
                     mapped_names.append(self._process_nested_expression(element))
         if mapped_names[0] == "\\":
             # This means the predicate is lambda. NLTK wants the variable name to not be within parantheses.
+            # Adding parentheses after the variable.
             arguments = [mapped_names[1]] + ["(%s)" % name for name in mapped_names[2:]]
         else:
             arguments = ["(%s)" % name for name in mapped_names[1:]]
@@ -88,17 +88,17 @@ class World:
                 # Column name
                 translated_name = "C%d" % self._column_counter
                 self._column_counter += 1
-                self.type_signature[translated_name] = COLUMN_TYPE
+                self.type_signature[translated_name] = types.COLUMN_TYPE
                 self.name_mapping[sempre_name] = translated_name
             elif sempre_name.startswith("fb:cell"):
                 # Cell name
                 translated_name = "cell:%s" % sempre_name.split(".")[-1]
-                self.type_signature[translated_name] = CELL_TYPE
+                self.type_signature[translated_name] = types.CELL_TYPE
                 self.name_mapping[sempre_name] = translated_name
             elif sempre_name.startswith("fb:part"):
                 # part name
                 translated_name = "part:%s" % sempre_name.split(".")[-1]
-                self.type_signature[translated_name] = PART_TYPE
+                self.type_signature[translated_name] = types.PART_TYPE
                 self.name_mapping[sempre_name] = translated_name
             else:
                 # NLTK throws an error if it sees a "." in constants, which will most likely happen within
@@ -140,4 +140,5 @@ class World:
                 # This means that the expression is a leaf. We simply make a transition from its type to itself.
                 current_transitions.append("%s -> %s" % (expression_type, expression))
             return current_transitions
-        return _get_transitions(expression, [])
+        # Starting with the type of the whole expression
+        return _get_transitions(expression, [str(expression.type)])

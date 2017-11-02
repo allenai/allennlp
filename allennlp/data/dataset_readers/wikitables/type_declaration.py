@@ -10,7 +10,9 @@ from nltk.sem.logic import BasicType, ComplexType, EntityType, ANY_TYPE
 
 class NamedBasicType(BasicType):
     """
-    A ``BasicType`` that also takes the name of the type as an argument to its constructor.
+    A ``BasicType`` that also takes the name of the type as an argument to its constructor. Type resolution
+    uses the output of ``__str__`` as well, so basic types with different representations do not resolve
+    against each other.
 
     Parameters
     ----------
@@ -68,8 +70,8 @@ class PlaceholderType(ComplexType):
         As a counter example, if we are trying to resolve <?, d> against <?, e>, the resolution fails, and in
         that case, this method returns ``None``.
 
-        Note that resolution may be unidirectional because of ?, and so in the subclasses of this type, we
-        explicitly resolve in both directions.
+        Note that a successful resolution does not imply equality of types because of one of them may be
+        ANY_TYPE, and so in the subclasses of this type, we explicitly resolve in both directions.
         """
         raise NotImplementedError
 
@@ -79,11 +81,13 @@ class PlaceholderType(ComplexType):
 
     @overrides
     def matches(self, other):
+        # self == ANY_TYPE = True iff self.first == ANY_TYPE and self.second == ANY_TYPE.
         return self == other or self == ANY_TYPE or other == ANY_TYPE
 
     @overrides
     def __str__(self):
         if self == ANY_TYPE:
+            # If the type remains unresolved, we return `?` instead of its signature.
             return "%s" % ANY_TYPE
         else:
             return self._signature
@@ -115,6 +119,8 @@ class ReverseType(PlaceholderType):
 
     @overrides
     def resolve(self, other):
+        # Idea: Since its signature is <<#1,#2>,<#2,#1>> no information about types in self is relevant.
+        # All that matters is that other.fiirst resolves against the reverse of other.second and vice versa.
         if not isinstance(other, ComplexType):
             return None
         # other.first and other.second are the argument and return types respectively.
@@ -210,7 +216,7 @@ class ArgExtremeType(PlaceholderType):
             # This is the third #1 in the type signature above.
             return_type = resolved_second.second.second.second
 
-            # All three types above should resolve against each other.
+            # All three placeholder (ph) types above should resolve against each other.
             resolved_first_ph = selector_function_type.resolve(quant_function_argument_type)
             resolved_first_ph.resolve(return_type)
 
@@ -288,66 +294,42 @@ CONJUNCTION_TYPE = ConjunctionType(ANY_TYPE, ANY_TYPE)
 # argmax, argmin
 ARG_EXTREME_TYPE = ArgExtremeType(ANY_TYPE, ANY_TYPE)
 
-COMMON_NAME_MAPPING = {"reverse": "R",
-                       "max": "M0",
-                       "min": "M1",
-                       "argmax": "A0",
-                       "argmin": "A1",
-                       "and": "A",
-                       "or": "O",
-                       "fb:row.row.next": "N",
-                       "number": "I",
-                       "date": "D0",
-                       "lambda": "\\",
-                       "var": "V",
-                       "fb:cell.cell.part": "P",
-                       "fb:cell.cell.date": "D1",
-                       "fb:cell.cell.number": "I1",
-                       "fb:cell.cell.num2": "I2",
-                       "fb:row.row.index": "W",
-                       "fb:type.row": "T0",
-                       "fb:type.object.type": "T",
-                       "count": "C",
-                       "!=": "Q",
-                       ">": "G0",
-                       ">=": "G1",
-                       "<": "L0",
-                       "<=": "L1",
-                       "sum": "S0",
-                       "avg": "S1",
-                       "-": "F",  # This is the binary operator (subtraction)
-                       "x": "X",
-                      }
+COMMON_NAME_MAPPING = {"lambda": "\\"}
 
-COMMON_TYPE_SIGNATURE = {"R": REVERSE_TYPE,
-                         "A0": ARG_EXTREME_TYPE,
-                         "A1": ARG_EXTREME_TYPE,
-                         "M0": UNARY_NUM_OP_TYPE,
-                         "M1": UNARY_NUM_OP_TYPE,
-                         "G0": UNARY_NUM_OP_TYPE,
-                         "L0": UNARY_NUM_OP_TYPE,
-                         "G1": UNARY_NUM_OP_TYPE,
-                         "L1": UNARY_NUM_OP_TYPE,
-                         "S0": UNARY_NUM_OP_TYPE,
-                         "S1": UNARY_NUM_OP_TYPE,
-                         "F": BINARY_NUM_OP_TYPE,
-                         "P": PART2CELL_TYPE,
-                         "D1": CELL2DATE_NUM_TYPE,
-                         "I1": CELL2DATE_NUM_TYPE,
-                         "I2": CELL2DATE_NUM_TYPE,
-                         "I": NUMBER_FUNCTION_TYPE,
-                         "D0": DATE_FUNCTION_TYPE,
-                         "N": NEXT_ROW_TYPE,
-                         "Q": IDENTITY_TYPE,
-                         "T": IDENTITY_TYPE,
-                         "V": IDENTITY_TYPE,
-                         "O": CONJUNCTION_TYPE,
-                         "A": CONJUNCTION_TYPE,
-                         "W": ROW_INDEX_TYPE,
-                         "C": COUNT_TYPE,
-                         "T0": ROW_TYPE,
-                         "X": ANY_TYPE,
-                        }
+COMMON_TYPE_SIGNATURE = {}
+
+def _add_common_name_with_type(name, mapping, type_signature):
+    COMMON_NAME_MAPPING[name] = mapping
+    COMMON_TYPE_SIGNATURE[mapping] = type_signature
+
+_add_common_name_with_type("reverse", "R", REVERSE_TYPE)
+_add_common_name_with_type("argmax", "A0", ARG_EXTREME_TYPE)
+_add_common_name_with_type("argmin", "A1", ARG_EXTREME_TYPE)
+_add_common_name_with_type("max", "M0", UNARY_NUM_OP_TYPE)
+_add_common_name_with_type("min", "M1", UNARY_NUM_OP_TYPE)
+_add_common_name_with_type("and", "A", CONJUNCTION_TYPE)
+_add_common_name_with_type("or", "O", CONJUNCTION_TYPE)
+_add_common_name_with_type("fb:row.row.next", "N", NEXT_ROW_TYPE)
+_add_common_name_with_type("number", "I", NUMBER_FUNCTION_TYPE)
+_add_common_name_with_type("date", "D0", DATE_FUNCTION_TYPE)
+_add_common_name_with_type("var", "V", IDENTITY_TYPE)
+_add_common_name_with_type("fb:cell.cell.part", "P", PART2CELL_TYPE)
+_add_common_name_with_type("fb:cell.cell.date", "D1", CELL2DATE_NUM_TYPE)
+_add_common_name_with_type("fb:cell.cell.number", "I1", CELL2DATE_NUM_TYPE)
+_add_common_name_with_type("fb:cell.cell.num2", "I2", CELL2DATE_NUM_TYPE)
+_add_common_name_with_type("fb:row.row.index", "W", ROW_INDEX_TYPE)
+_add_common_name_with_type("fb:type.row", "T0", ROW_TYPE)
+_add_common_name_with_type("fb:type.object.type", "T", IDENTITY_TYPE)
+_add_common_name_with_type("count", "C", COUNT_TYPE)
+_add_common_name_with_type("!=", "Q", IDENTITY_TYPE)
+_add_common_name_with_type(">", "G0", UNARY_NUM_OP_TYPE)
+_add_common_name_with_type(">=", "G1", UNARY_NUM_OP_TYPE)
+_add_common_name_with_type("<", "L0", UNARY_NUM_OP_TYPE)
+_add_common_name_with_type("<=", "L1", UNARY_NUM_OP_TYPE)
+_add_common_name_with_type("sum", "S0", UNARY_NUM_OP_TYPE)
+_add_common_name_with_type("avg", "S1", UNARY_NUM_OP_TYPE)
+_add_common_name_with_type("-", "F", BINARY_NUM_OP_TYPE)  # subtraction
+_add_common_name_with_type("x", "X", ANY_TYPE)
 
 
 class TypedConstantExpression(ConstantExpression):

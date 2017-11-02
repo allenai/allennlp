@@ -17,7 +17,7 @@ class TestWorldRepresentation(AllenNlpTestCase):
         sempre_form = "((reverse fb:row.row.year) (fb:row.row.league fb:cell.usl_a_league))"
         expression = world.process_sempre_forms([sempre_form])[0]
         actions = world.get_action_sequence(expression)
-        target_action_sequence = ['e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
+        target_action_sequence = ['e', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
                                   '<<#1,#2>,<#2,#1>> -> R', '<e,r> -> C0', 'r -> [<e,r>, e]',
                                   '<e,r> -> C1', 'e -> cell:usl_a_league']
         assert actions == target_action_sequence
@@ -29,7 +29,7 @@ class TestWorldRepresentation(AllenNlpTestCase):
                        "(fb:row.row.league fb:cell.usl_a_league))))")
         expression = world.process_sempre_forms([sempre_form])[0]
         actions = world.get_action_sequence(expression)
-        target_action_sequence = ['d -> [<d,d>, d]', '<d,d> -> M0', 'd -> [<e,d>, e]',
+        target_action_sequence = ['d', 'd -> [<d,d>, d]', '<d,d> -> M0', 'd -> [<e,d>, e]',
                                   '<e,d> -> [<<#1,#2>,<#2,#1>>, <d,e>]', '<<#1,#2>,<#2,#1>> -> R',
                                   '<d,e> -> D1', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
                                   '<<#1,#2>,<#2,#1>> -> R', '<e,r> -> C0', 'r -> [<e,r>, e]',
