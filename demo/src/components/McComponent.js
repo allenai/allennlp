@@ -187,7 +187,6 @@ class _McComponent extends React.Component {
         passage: inputs.passageValue,
         question: inputs.questionValue,
       };
-
       fetch('http://localhost:8000/predict/machine-comprehension', {
         method: 'POST',
         headers: {

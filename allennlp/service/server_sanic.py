@@ -34,6 +34,9 @@ def run(port: int, workers: int,
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
 
+    if port != 8000:
+        logger.warning("The demo requires the API to be run on port 8000.")
+
     # This will be ``None`` if all the relevant environment variables are not defined.
     demo_db = DemoDatabase.from_environment()
 
