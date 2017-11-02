@@ -30,3 +30,6 @@ class KnowledgeGraph:
             String representation of the entity whose neighbors will be returned.
         """
         return self._neighbors[entity]
+
+    def get_all_entities(self):
+        return self._neighbors.keys()

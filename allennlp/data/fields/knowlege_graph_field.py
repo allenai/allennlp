@@ -1,7 +1,8 @@
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from overrides import overrides
 
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields.field import Field, DataArray
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.knowledge_graph import KnowledgeGraph
@@ -17,7 +18,17 @@ class KnowledgeGraphField(Field[DataArray]):
                  token_indexers: Dict[str, TokenIndexer]) -> None:
         self._knowledge_graph = knowledge_graph
         self._token_indexers = token_indexers
-        self._indexed_entities: Optional[Dict[str, List[TokenType]]] = None
+        # {entity: {indexer: indexed_tokens}}
+        self._indexed_entities: Dict[str, Dict[str, List[TokenType]]] = None
+
+    @overrides
+    def index(self, vocab: Vocabulary):
+        entity_arrays = {}
+        for entity in self._knowledge_graph.get_all_entities():
+            indexed_entity = {indexer_name: indexer.token_to_indices(entity, vocab)
+                              for indexer_name, indexer in self._token_indexers.items()}
+            entity_arrays[entity] = indexed_entity
+        self._indexed_entities = entity_arrays
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:

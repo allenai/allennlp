@@ -4,14 +4,19 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestWikitablesDatasetReader(AllenNlpTestCase):
-    def test_reading_works(self):
+    def test_reader_reads(self):
         tables_directory = "tests/fixtures/data/wikitables"
         dpd_output_directory = "tests/fixtures/data/wikitables/dpd_output"
         reader = WikitablesDatasetReader(tables_directory, dpd_output_directory)
         dataset = reader.read("tests/fixtures/data/wikitables/sample_data.examples")
         assert len(dataset.instances) == 2
-        action_sequence = dataset.instances[0].fields["action_sequences"].field_list[0]
+        instance = dataset.instances[0]
+        action_sequence = instance.fields["action_sequences"].field_list[0]
         actions = [l.label for l in action_sequence.field_list]
+        assert [t.text for t in instance.fields["utterance"].tokens] == ["what", "was", "the", "last", "year",
+                                                                         "where", "this", "team", "was", "a",
+                                                                         "part", "of", "the", "usl", "a", "-",
+                                                                         "league", "?"]
         assert actions == ['@@START@@', 'd', 'd -> [<d,d>, d]', '<d,d> -> M0', 'd -> [<e,d>, e]',
                            '<e,d> -> [<<#1,#2>,<#2,#1>>, <d,e>]', '<<#1,#2>,<#2,#1>> -> R',
                            '<d,e> -> D1', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
