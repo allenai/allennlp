@@ -157,10 +157,9 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
                 prediction["slug"] = slug
                 log_blob["slug"] = slug
 
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 # TODO(joelgrus): catch more specific errors
-                logger.error("Unable to add result to database")
-                logger.exception(exc)
+                logger.exception("Unable to add result to database", exc_info=True)
 
         if post_hits > pre_hits:
             # Cache hit, so insert an artifical pause
