@@ -53,6 +53,8 @@ class McInput extends React.Component {
 constructor(props) {
     super(props);
 
+    // If we're showing a permalinked result,
+    // we'll get passed in a passage and question.
     const { passage, question } = props;
 
     this.state = {
@@ -133,6 +135,7 @@ render() {
 class McOutput extends React.Component {
     render() {
       const { passage, answer } = this.props;
+
       const start = passage.indexOf(answer);
       const head = passage.slice(0, start);
       const tail = passage.slice(start + answer.length);
@@ -170,8 +173,6 @@ class _McComponent extends React.Component {
 
       this.state = {
         outputState: this.props.responseData ? "received" : "empty", // valid values: "working", "empty", "received", "error"
-        passage: "",
-        answer: "",
         requestData: requestData,
         responseData: responseData
       };
@@ -180,14 +181,13 @@ class _McComponent extends React.Component {
     }
 
     runMcModel(event, inputs) {
-      this.setState({
-        outputState: "working",
-      });
+      this.setState({outputState: "working"});
 
       var payload = {
         passage: inputs.passageValue,
         question: inputs.questionValue,
       };
+
       fetch('http://localhost:8000/predict/machine-comprehension', {
         method: 'POST',
         headers: {
@@ -198,9 +198,13 @@ class _McComponent extends React.Component {
       }).then((response) => {
         return response.json();
       }).then((json) => {
+        // If the response contains a `slug` for a permalink, we want to redirect
+        // to the corresponding path using `history.push`.
         const { slug } = json;
         const newPath = slug ? '/machine-comprehension/' + slug : '/machine-comprehension';
 
+        // We'll pass the request and response data along as part of the location object
+        // so that the `Demo` component can use them to re-render.
         const location = {
           pathname: newPath,
           state: { requestData: payload, responseData: json }

@@ -12,10 +12,10 @@ import WaitingForPermalink from './components/WaitingForPermalink'
 
 const DEFAULT_PATH = "/semantic-role-labeling"
 
+// The App is just a react-router wrapped around the Demo component.
 const App = () => (
   <Router>
     <div>
-
       <Route exact path="/" render={() => (
         <Redirect to={DEFAULT_PATH}/>
       )}/>
@@ -28,6 +28,7 @@ class Demo extends React.Component {
   constructor(props) {
     super(props);
 
+    // React router supplies us with a model name and (possibly) a slug.
     const { model, slug } = props.match.params;
 
     this.state = {
@@ -37,13 +38,17 @@ class Demo extends React.Component {
       responseData: null
     };
 
+    // We'll need to pass this to the Header component so that it can clear
+    // out the data when you switch from one model to another.
     this.clearData = () => {
       this.setState({requestData: null, responseData: null})
     }
 
+    // Our components will be using history.push to change the location,
+    // and they will be attaching `requestData` and `responseData` updates
+    // to the location object. That means we need to listen for location changes
+    // and update our state accordingly.
     props.history.listen((location, action) => {
-      console.log(location);
-      console.log(action);
       const { state } = location;
       if (state) {
         const { requestData, responseData } = state;
@@ -52,21 +57,17 @@ class Demo extends React.Component {
     });
   }
 
+  // We also need to update the state whenever we receive new props from React router.
   componentWillReceiveProps({ match }) {
     const { model, slug } = match.params;
-
-    // Only trigger setState if this is an actual change.
-    if (model !== this.state.model || slug !== this.state.slug) {
-      this.setState({selectedModel: model, slug: slug});
-    }
+    this.setState({selectedModel: model, slug: slug});
   }
 
   componentDidMount() {
-    const { slug } = this.state;
-    const { location } = this.props;
+    const { slug, responseData } = this.state;
 
     // If this is a permalink and we don't yet have the data for it...
-    if (slug && !location.responseData) {
+    if (slug && !responseData) {
       // Make an ajax call to get the permadata,
       // and then use it to update the state.
       fetch('http://localhost:8000/permadata', {

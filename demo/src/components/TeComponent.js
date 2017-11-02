@@ -56,7 +56,9 @@ const teExamples = [
     constructor(props) {
       super(props);
 
-      const { premise, hypothesis } = props;
+    // If we're showing a permalinked result,
+    // we'll get passed in a premise and hypothesis.
+    const { premise, hypothesis } = props;
 
       this.state = {
         tePremiseValue: premise || "",
@@ -164,65 +166,62 @@ class TeGraph extends React.Component {
 class TeOutput extends React.Component {
     render() {
       const { labelProbs } = this.props;
+      const [entailment, contradiction, neutral] = labelProbs;
 
-      const entailment = labelProbs[0];
-      const contradiction = labelProbs[1];
-      const neutral = labelProbs[2];
-
-      let judgement; // Valid values: "e", "c", "n"
+      let judgment; // Valid values: "e", "c", "n"
       let degree; // Valid values: "somewhat", "very"
 
       if (entailment > contradiction && entailment > neutral) {
-        judgement = "e"
+        judgment = "e"
       }
       else if (contradiction > entailment && contradiction > neutral) {
-        judgement = "c"
+        judgment = "c"
       }
       else if (neutral > entailment && neutral > contradiction) {
-        judgement = "n"
+        judgment = "n"
       }
 
       const veryConfident = 0.75;
       const somewhatConfident = 0.50;
       const summaryText = () => {
         if (entailment >= veryConfident || contradiction >= veryConfident || neutral >= veryConfident) {
-          let judgementStr;
-          switch(judgement) {
+          let judgmentStr;
+          switch(judgment) {
             case "c":
-              judgementStr = (<span>the premise <strong>contradicts</strong> the hypothesis</span>);
+              judgmentStr = (<span>the premise <strong>contradicts</strong> the hypothesis</span>);
               break;
             case "e":
-              judgementStr = (<span>the premise <strong>entails</strong> the hypothesis</span>);
+              judgmentStr = (<span>the premise <strong>entails</strong> the hypothesis</span>);
               break;
             case "n":
-              judgementStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
+              judgmentStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
               break;
             default:
               // Can't happen, but let's make the linter happy.
               break;
           }
           return (
-            <div className="model__content__summary">It is <strong>{degree} likely</strong> that {judgementStr}.</div>
+            <div className="model__content__summary">It is <strong>{degree} likely</strong> that {judgmentStr}.</div>
           );
         }
         else if (entailment >= somewhatConfident || contradiction >= somewhatConfident || neutral >= somewhatConfident) {
-          let judgementStr;
-          switch(judgement) {
+          let judgmentStr;
+          switch(judgment) {
             case "c":
-              judgementStr = (<span>the premise <strong>contradicts</strong> the hypothesis</span>);
+              judgmentStr = (<span>the premise <strong>contradicts</strong> the hypothesis</span>);
               break;
             case "e":
-              judgementStr = (<span>the premise <strong>entails</strong> the hypothesis</span>);
+              judgmentStr = (<span>the premise <strong>entails</strong> the hypothesis</span>);
               break;
             case "n":
-              judgementStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
+              judgmentStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
               break;
             default:
               // Can't happen, but let's make the linter happy.
               break;
           }
           return (
-            <div className="model__content__summary">It is <strong>somewhat likely</strong> that {judgementStr}.</div>
+            <div className="model__content__summary">It is <strong>somewhat likely</strong> that {judgmentStr}.</div>
           );
         }
         else {
@@ -301,14 +300,13 @@ class _TeComponent extends React.Component {
     }
 
     runTeModel(event, inputs) {
-      this.setState({
-        outputState: "working",
-      });
+      this.setState({outputState: "working"});
 
       var payload = {
         premise: inputs.premiseValue,
         hypothesis: inputs.hypothesisValue,
       };
+
       fetch('http://localhost:8000/predict/textual-entailment', {
         method: 'POST',
         headers: {
@@ -319,9 +317,13 @@ class _TeComponent extends React.Component {
       }).then((response) => {
         return response.json();
       }).then((json) => {
+        // If the response contains a `slug` for a permalink, we want to redirect
+        // to the corresponding path using `history.push`.
         const { slug } = json;
         const newPath = slug ? '/textual-entailment/' + slug : '/textual-entailment';
 
+        // We'll pass the request and response data along as part of the location object
+        // so that the `Demo` component can use them to re-render.
         const location = {
           pathname: newPath,
           state: {requestData: payload, responseData: json}
