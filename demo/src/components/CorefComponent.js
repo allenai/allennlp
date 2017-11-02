@@ -112,9 +112,8 @@ class CorefOutput extends React.Component {
       this.onClusterMouseover = this.onClusterMouseover.bind(this);
     }
 
-    onClusterMouseover(e) {
-      console.log(e.target.value);
-      this.setState( { selectedCluster: 0 });
+    onClusterMouseover(index) {
+      this.setState( { selectedCluster: index });
     }
 
     render() {
@@ -151,7 +150,7 @@ class CorefOutput extends React.Component {
               {clusters.map((cluster, index) =>
                <li>
                 {cluster.map((span) =>
-                <a href="#" value={ index } onMouseEnter={ this.onClusterMouseover }> {document.slice(span[0], span[1] + 1).join(" ")}, </a>
+                <a href="#" value={ index } onMouseEnter={ () => this.onClusterMouseover(index) }> {document.slice(span[0], span[1] + 1).join(" ")}, </a>
                 )}
                </li>
             )}
@@ -199,7 +198,7 @@ class CorefComponent extends React.Component {
         document: inputs.documentValue,
       };
 
-      fetch('/predict/coreference-resolution', {
+      fetch('http://localhost:8000/predict/coreference-resolution', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
