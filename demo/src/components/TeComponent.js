@@ -296,7 +296,7 @@ class TeComponent extends React.Component {
         premise: inputs.premiseValue,
         hypothesis: inputs.hypothesisValue,
       };
-      fetch('/predict/textual-entailment', {
+      fetch('http://localhost:8000/predict/textual-entailment', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
