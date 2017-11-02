@@ -27,6 +27,7 @@ import logging
 
 import tqdm
 
+from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import prepare_environment
 from allennlp.data import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -38,30 +39,32 @@ from allennlp.nn.util import arrays_to_variables
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def add_subparser(parser: argparse._SubParsersAction) -> argparse.ArgumentParser:  # pylint: disable=protected-access
-    description = '''Evaluate the specified model + dataset'''
-    subparser = parser.add_parser(
-            'evaluate', description=description, help='Evaluate the specified model + dataset')
-    subparser.add_argument('--archive_file',
-                           type=str,
-                           required=True,
-                           help='path to an archived trained model')
-    subparser.add_argument('--evaluation_data_file',
-                           type=str,
-                           required=True,
-                           help='path to the file containing the evaluation data')
-    subparser.add_argument('--cuda_device',
-                           type=int,
-                           default=-1,
-                           help='id of GPU to use (if any)')
-    subparser.add_argument('-o', '--overrides',
-                           type=str,
-                           default="",
-                           help='a HOCON structure used to override the experiment configuration')
+class Evaluate(Subcommand):
+    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+        # pylint: disable=protected-access
+        description = '''Evaluate the specified model + dataset'''
+        subparser = parser.add_parser(
+                name, description=description, help='Evaluate the specified model + dataset')
+        subparser.add_argument('--archive_file',
+                               type=str,
+                               required=True,
+                               help='path to an archived trained model')
+        subparser.add_argument('--evaluation_data_file',
+                               type=str,
+                               required=True,
+                               help='path to the file containing the evaluation data')
+        subparser.add_argument('--cuda_device',
+                               type=int,
+                               default=-1,
+                               help='id of GPU to use (if any)')
+        subparser.add_argument('-o', '--overrides',
+                               type=str,
+                               default="",
+                               help='a HOCON structure used to override the experiment configuration')
 
-    subparser.set_defaults(func=evaluate_from_args)
+        subparser.set_defaults(func=evaluate_from_args)
 
-    return subparser
+        return subparser
 
 
 def evaluate(model: Model,

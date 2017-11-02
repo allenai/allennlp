@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Set
 import logging
 
 from overrides import overrides
@@ -37,6 +37,12 @@ class SequenceLabelField(Field[numpy.ndarray]):
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
+    # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
+    # This warning will be repeated for every instantiation of this class (i.e for every data
+    # instance), spewing a lot of warnings so this class variable is used to only log a single
+    # warning per namespace.
+    _already_warned_namespaces: Set[str] = set()
+
     def __init__(self,
                  labels: Union[List[str], List[int]],
                  sequence_field: SequenceField,
@@ -45,13 +51,7 @@ class SequenceLabelField(Field[numpy.ndarray]):
         self.sequence_field = sequence_field
         self._label_namespace = label_namespace
         self._indexed_labels = None
-
-        if not (self._label_namespace.endswith("tags") or self._label_namespace.endswith("labels")):
-            logger.warning("Your sequence label namespace was '%s'. We recommend you use a namespace "
-                           "ending with 'tags' or 'labels', so we don't add UNK and PAD tokens by "
-                           "default to your vocabulary.  See documentation for "
-                           "`non_padded_namespaces` parameter in Vocabulary.", self._label_namespace)
-
+        self._maybe_warn_for_namespace(label_namespace)
         if len(labels) != sequence_field.sequence_length():
             raise ConfigurationError("Label length and sequence length "
                                      "don't match: %d and %d" % (len(labels), sequence_field.sequence_length()))
@@ -63,6 +63,16 @@ class SequenceLabelField(Field[numpy.ndarray]):
             raise ConfigurationError("SequenceLabelFields must be passed either all "
                                      "strings or all ints. Found labels {} with "
                                      "types: {}.".format(labels, [type(x) for x in labels]))
+
+    def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
+        if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
+            if label_namespace not in self._already_warned_namespaces:
+                logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
+                               "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
+                               "default to your vocabulary.  See documentation for "
+                               "`non_padded_namespaces` parameter in Vocabulary.",
+                               self._label_namespace)
+                self._already_warned_namespaces.add(label_namespace)
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

@@ -8,7 +8,7 @@ from unittest import TestCase
 
 from allennlp.common.util import JsonDict
 from allennlp.commands import main, DEFAULT_PREDICTORS
-from allennlp.commands.predict import add_subparser
+from allennlp.commands.predict import Predict
 from allennlp.service.predictors import Predictor, BidafPredictor
 
 
@@ -17,7 +17,7 @@ class TestPredict(TestCase):
     def test_add_predict_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
-        add_subparser(subparsers, DEFAULT_PREDICTORS)
+        Predict(DEFAULT_PREDICTORS).add_subparser('predict', subparsers)
 
         raw_args = ["predict",          # command
                     "/path/to/archive", # archive
@@ -53,6 +53,37 @@ class TestPredict(TestCase):
 
         assert os.path.exists(outfile)
 
+        with open(outfile, 'r') as f:
+            results = [json.loads(line) for line in f]
+
+        assert len(results) == 2
+        for result in results:
+            assert set(result.keys()) == {"span_start_logits", "span_end_logits",
+                                          "span_start_probs", "span_end_probs", "best_span",
+                                          "best_span_str"}
+
+    def test_batch_prediction_works_with_known_model(self):
+        tempdir = tempfile.mkdtemp()
+        infile = os.path.join(tempdir, "inputs.txt")
+        outfile = os.path.join(tempdir, "outputs.txt")
+
+        with open(infile, 'w') as f:
+            f.write("""{"passage": "the seahawks won the super bowl in 2016", """
+                    """ "question": "when did the seahawks win the super bowl?"}\n""")
+            f.write("""{"passage": "the mariners won the super bowl in 2037", """
+                    """ "question": "when did the mariners win the super bowl?"}\n""")
+
+        sys.argv = ["run.py",  # executable
+                    "predict",  # command
+                    "tests/fixtures/bidaf/serialization/model.tar.gz",
+                    infile,  # input_file
+                    "--output-file", outfile,
+                    "--silent",
+                    "--batch_size", '2']
+
+        main()
+
+        assert os.path.exists(outfile)
         with open(outfile, 'r') as f:
             results = [json.loads(line) for line in f]
 
