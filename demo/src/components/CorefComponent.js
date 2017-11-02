@@ -149,8 +149,8 @@ class CorefOutput extends React.Component {
             <ul>
               {clusters.map((cluster, index) =>
                <li>
-                {cluster.map((span) =>
-                <a href="#" value={ index } onMouseEnter={ () => this.onClusterMouseover(index) }> {document.slice(span[0], span[1] + 1).join(" ")}, </a>
+                {cluster.map((span, wordIndex) =>
+                <a href="#" key={ wordIndex } onMouseEnter={ () => this.onClusterMouseover(index) }> {document.slice(span[0], span[1] + 1).join(" ")}, </a>
                 )}
                </li>
             )}
