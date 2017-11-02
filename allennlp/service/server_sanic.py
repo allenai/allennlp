@@ -74,17 +74,6 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
         """
         return model.predict_json(json.loads(data))
 
-    @app.route('/permalink/<slug>', methods=['GET'])
-    async def permalink(req: request.Request, slug: str) -> response.HTTPResponse: # pylint: disable=unused-argument,unused-variable
-        """
-        When a permalink is requested, just return the index.html page.
-        The JavaScript there will take care of fetching the result from the database.
-        """
-        if demo_db is None:
-            raise ServerError('Permalinks are not enabled', 400)
-        else:
-            return await response.file(os.path.join(build_dir, 'index.html'))
-
     @app.route('/permadata', methods=['POST', 'OPTIONS'])
     async def permadata(req: request.Request) -> response.HTTPResponse: # pylint: disable=unused-variable
         """

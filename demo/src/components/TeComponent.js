@@ -1,7 +1,7 @@
 import React from 'react';
+import { withRouter } from 'react-router-dom';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
-import Permalink from './Permalink'
 import ModelIntro from './ModelIntro'
 
 
@@ -52,33 +52,15 @@ const teExamples = [
     </div>
   );
 
-  class TePermaInput extends React.Component {
-    render() {
-      const { premise, hypothesis } = this.props;
-
-      return (
-        <div className="model__content">
-          <ModelIntro title={title} description={description} />
-          <div className="form__field">
-            <label htmlFor="input--te-premise">Premise</label>
-            <div id="input--te-premise">{premise}</div>
-          </div>
-          <div className="form__field">
-            <label htmlFor="input--te-hypothesis">Hypothesis</label>
-            <div id="input--te-hypothesis">{hypothesis}</div>
-          </div>
-        </div>
-      );
-    }
-  }
-
-
   class TeInput extends React.Component {
-    constructor() {
-      super();
+    constructor(props) {
+      super(props);
+
+      const { premise, hypothesis } = props;
+
       this.state = {
-        tePremiseValue: "",
-        teHypothesisValue: "",
+        tePremiseValue: premise || "",
+        teHypothesisValue: hypothesis || "",
       };
       this.handleListChange = this.handleListChange.bind(this);
       this.handlePremiseChange = this.handlePremiseChange.bind(this);
@@ -107,7 +89,6 @@ const teExamples = [
     }
 
     render() {
-
       const { tePremiseValue, teHypothesisValue } = this.state;
       const { outputState, runTeModel } = this.props;
 
@@ -123,8 +104,9 @@ const teExamples = [
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
               <option value="">Choose an example...</option>
               {teExamples.map((example, index) => {
+                const selected = example.premise === tePremiseValue && example.hypothesis === teHypothesisValue;
                 return (
-                  <option value={index} key={index}>{example.premise}</option>
+                  <option value={index} key={index} selected={selected}>{example.premise}</option>
                 );
               })}
             </select>
@@ -138,7 +120,7 @@ const teExamples = [
             <input onChange={this.handleHypothesisChange} id="input--te-hypothesis" type="text" required="true" value={teHypothesisValue} placeholder="E.g. &quot;The cat is black.&quot;" />
           </div>
           <div className="form__field form__field--btn">
-            <Button outputState={outputState} runModel={runTeModel} inputs={teInputs} />
+            <Button enabled={outputState !== "working"} runModel={runTeModel} inputs={teInputs} />
           </div>
         </div>
       );
@@ -181,11 +163,11 @@ class TeGraph extends React.Component {
 
 class TeOutput extends React.Component {
     render() {
-      const { rawOutput } = this.props;
+      const { labelProbs } = this.props;
 
-      const entailment = rawOutput['label_probs'][0];
-      const contradiction = rawOutput['label_probs'][1];
-      const neutral = rawOutput['label_probs'][2];
+      const entailment = labelProbs[0];
+      const contradiction = labelProbs[1];
+      const neutral = labelProbs[2];
 
       let judgement; // Valid values: "e", "c", "n"
       let degree; // Valid values: "somewhat", "very"
@@ -215,6 +197,9 @@ class TeOutput extends React.Component {
             case "n":
               judgementStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
               break;
+            default:
+              // Can't happen, but let's make the linter happy.
+              break;
           }
           return (
             <div className="model__content__summary">It is <strong>{degree} likely</strong> that {judgementStr}.</div>
@@ -231,6 +216,9 @@ class TeOutput extends React.Component {
               break;
             case "n":
               judgementStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
+              break;
+            default:
+              // Can't happen, but let's make the linter happy.
               break;
           }
           return (
@@ -297,13 +285,16 @@ class TeOutput extends React.Component {
   <TeComponent /> Component
 *******************************************************************************/
 
-class TeComponent extends React.Component {
-    constructor() {
-      super();
+class _TeComponent extends React.Component {
+    constructor(props) {
+      super(props);
+
+      const { requestData, responseData } = props;
 
       this.state = {
-        outputState: "empty", // valid values: "working", "empty", "received", "error"
-        rawOutput: {},
+        outputState: this.props.responseData ? "received" : "empty", // valid values: "working", "empty", "received", "error"
+        requestData: requestData,
+        responseData: responseData
       };
 
       this.runTeModel = this.runTeModel.bind(this);
@@ -328,8 +319,14 @@ class TeComponent extends React.Component {
       }).then((response) => {
         return response.json();
       }).then((json) => {
-        this.setState({rawOutput: json});
-        this.setState({outputState: "received"});
+        const { slug } = json;
+        const newPath = slug ? '/textual-entailment/' + slug : '/textual-entailment';
+
+        const location = {
+          pathname: newPath,
+          state: {requestData: payload, responseData: json}
+        }
+        this.props.history.push(location);
       }).catch((error) => {
         this.setState({outputState: "error"});
         throw error; // todo(michaels): is this right?
@@ -337,38 +334,29 @@ class TeComponent extends React.Component {
     }
 
     render() {
-      const { permadata } = this.props;
+      const { requestData, responseData } = this.props;
 
-      // Make a prediction
-      if (permadata === null) {
-        return (
-          <div className="pane model">
-            <PaneLeft>
-              <TeInput runTeModel={this.runTeModel} outputState={this.state.outputState}/>
-            </PaneLeft>
-            <PaneRight outputState={this.state.outputState}>
-            <Permalink slug={this.state.rawOutput && this.state.rawOutput.slug}/>
-            <TeOutput rawOutput={this.state.rawOutput}/>
-            </PaneRight>
-          </div>
-        );
-      } else {
-        // Permalink
-        const { requestData, responseData } = permadata;
+      // Get inputs and outputs, which may be null.
+      const premise = requestData && requestData.premise;
+      const hypothesis = requestData && requestData.hypothesis;
+      const labelProbs = responseData && responseData.label_probs;
 
-        return (
-          <div className="pane model">
-            <PaneLeft>
-              <TePermaInput premise={requestData.premise} hypothesis={requestData.hypothesis}/>
-            </PaneLeft>
-            <PaneRight outputState="received">
-              <TeOutput rawOutput={responseData}/>
-            </PaneRight>
-          </div>
-        )
-      }
-
+      return (
+        <div className="pane model">
+          <PaneLeft>
+            <TeInput runTeModel={this.runTeModel}
+                     outputState={this.state.outputState}
+                     premise={premise}
+                     hypothesis={hypothesis}/>
+          </PaneLeft>
+          <PaneRight outputState={this.state.outputState}>
+            <TeOutput labelProbs={labelProbs}/>
+          </PaneRight>
+        </div>
+      );
     }
 }
+
+const TeComponent = withRouter(_TeComponent);
 
 export default TeComponent;

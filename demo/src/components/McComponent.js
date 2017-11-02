@@ -1,8 +1,8 @@
 import React from 'react';
+import { withRouter } from 'react-router-dom';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
-import Permalink from './Permalink'
 
 
 /*******************************************************************************
@@ -49,33 +49,15 @@ const description = (
 );
 
 
-class McPermaInput extends React.Component {
-  render() {
-    const { passage, question } = this.props;
-
-    return (
-      <div className="model__content">
-      <ModelIntro title={title} description={description} />
-          <div className="form__field">
-            <label htmlFor="#input--mc-passage">Passage</label>
-            <div id="input--mc-passage">{passage}</div>
-          </div>
-          <div className="form__field">
-            <label htmlFor="#input--mc-question">Question</label>
-            <div id="input--mc-question">{question}</div>
-          </div>
-      </div>
-      );
-
-  }
-}
-
 class McInput extends React.Component {
-constructor() {
-    super();
+constructor(props) {
+    super(props);
+
+    const { passage, question } = props;
+
     this.state = {
-      mcPassageValue: "",
-      mcQuestionValue: "",
+      mcPassageValue: passage || "",
+      mcQuestionValue: question || ""
     };
     this.handleListChange = this.handleListChange.bind(this);
     this.handleQuestionChange = this.handleQuestionChange.bind(this);
@@ -84,16 +66,16 @@ constructor() {
 
 handleListChange(e) {
     if (e.target.value !== "") {
-    this.setState({
-        mcPassageValue: mcExamples[e.target.value].passage,
-        mcQuestionValue: mcExamples[e.target.value].question,
-    });
+      this.setState({
+          mcPassageValue: mcExamples[e.target.value].passage,
+          mcQuestionValue: mcExamples[e.target.value].question,
+      });
     }
 }
 
 handlePassageChange(e) {
     this.setState({
-    mcPassageValue: e.target.value,
+      mcPassageValue: e.target.value,
     });
 }
 
@@ -120,9 +102,10 @@ render() {
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
                 <option value="">Choose an example...</option>
                 {mcExamples.map((example, index) => {
-                return (
-                    <option value={index} key={index}>{example.passage.substring(0,60) + "..."}</option>
-                );
+                  const selected = example.passage === mcPassageValue && example.question === mcQuestionValue;
+                  return (
+                      <option value={index} key={index} selected={selected}>{example.passage.substring(0,60) + "..."}</option>
+                  );
                 })}
             </select>
             </div>
@@ -135,7 +118,7 @@ render() {
             <input onChange={this.handleQuestionChange} id="input--mc-question" type="text" required="true" value={mcQuestionValue} placeholder="E.g. &quot;What does Saturn’s astronomical symbol represent?&quot;" disabled={outputState === "working"} />
             </div>
             <div className="form__field form__field--btn">
-            <Button outputState={outputState} runModel={runMcModel} inputs={mcInputs} />
+            <Button enabled={outputState !== "working"} runModel={runMcModel} inputs={mcInputs} />
             </div>
         </div>
         );
@@ -179,14 +162,18 @@ class McOutput extends React.Component {
   <McComponent /> Component
 *******************************************************************************/
 
-class McComponent extends React.Component {
-    constructor() {
-      super();
+class _McComponent extends React.Component {
+    constructor(props) {
+      super(props);
+
+      const { requestData, responseData } = props;
 
       this.state = {
-        outputState: "empty", // valid values: "working", "empty", "received", "error"
+        outputState: this.props.responseData ? "received" : "empty", // valid values: "working", "empty", "received", "error"
         passage: "",
         answer: "",
+        requestData: requestData,
+        responseData: responseData
       };
 
       this.runMcModel = this.runMcModel.bind(this);
@@ -211,9 +198,14 @@ class McComponent extends React.Component {
       }).then((response) => {
         return response.json();
       }).then((json) => {
-        this.setState({answer: json["best_span_str"]});
-        this.setState({passage: inputs.passageValue});
-        this.setState({outputState: "received"});
+        const { slug } = json;
+        const newPath = slug ? '/machine-comprehension/' + slug : '/machine-comprehension';
+
+        const location = {
+          pathname: newPath,
+          state: { requestData: payload, responseData: json }
+        }
+        this.props.history.push(location);
       }).catch((error) => {
         this.setState({outputState: "error"});
         throw error; // todo(michaels): is this right?
@@ -221,37 +213,29 @@ class McComponent extends React.Component {
     }
 
     render() {
-      const { permadata } = this.props;
+      const { requestData, responseData } = this.props;
 
-      if (permadata === null) {
-        // Make a new prediction.
-        return (
-          <div className="pane model">
-            <PaneLeft>
-              <McInput runMcModel={this.runMcModel} outputState={this.state.outputState}/>
-            </PaneLeft>
-            <PaneRight outputState={this.state.outputState}>
-              <Permalink slug={this.state.rawOutput && this.state.rawOutput.slug}/>
-              <McOutput answer={this.state.answer} passage={this.state.passage} />
-            </PaneRight>
-          </div>
-        );
-      } else {
-        // Return a permalink prediction.
-        const { requestData, responseData } = permadata;
+      const passage = requestData && requestData.passage;
+      const question = requestData && requestData.question;
+      const answer = responseData && responseData.best_span_str;
 
-        return (
-          <div className="pane model">
-            <PaneLeft>
-              <McPermaInput passage={requestData.passage} question={requestData.question}/>
-            </PaneLeft>
-            <PaneRight outputState="received">
-              <McOutput answer={responseData.best_span_str} passage={requestData.passage} />
-            </PaneRight>
-          </div>
-        )
-      }
+      return (
+        <div className="pane model">
+          <PaneLeft>
+            <McInput runMcModel={this.runMcModel}
+                     outputState={this.state.outputState}
+                     passage={passage}
+                     question={question}/>
+          </PaneLeft>
+          <PaneRight outputState={this.state.outputState}>
+            <McOutput passage={passage} answer={answer}/>
+          </PaneRight>
+        </div>
+      );
+
     }
 }
+
+const McComponent = withRouter(_McComponent);
 
 export default McComponent;

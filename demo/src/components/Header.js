@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 /*******************************************************************************
   <Header /> Component
@@ -6,43 +7,17 @@ import React from 'react';
 
 class Header extends React.Component {
     render() {
-      const { selectedModel, changeModel, permalink } = this.props;
+      const { selectedModel, clearData } = this.props;
 
       const buildLink = (thisModel, label) => {
         return (
           <li>
-            <a href="#" className={`nav__link ${selectedModel === thisModel ? "nav__link--selected" : ""}`} onClick={() => { changeModel(thisModel) }}>
-              <span>{label}</span>
-            </a>
+            <span className={`nav__link ${selectedModel === thisModel ? "nav__link--selected" : ""}`}>
+              <Link to={"/" + thisModel} onClick={clearData}>
+                <span>{label}</span>
+              </Link>
+            </span>
           </li>
-        )
-      }
-
-      // Header links are different in the permalink and non-permalink case.
-      let links = null;
-
-      if (permalink) {
-        // This is the header for a permalink page, so we grab the root URL
-        // and just provide a link to it.
-        const slugRegex = /\/permalink\/([^/]+)\/?$/;
-        const demoRoot = window.location.href.replace(slugRegex, '');
-
-        links = (
-          <ul>
-            <li>
-              <a href={demoRoot} className="nav__link" target="_blank">
-                <span>Try Your Own</span>
-              </a>
-            </li>
-          </ul>
-        )
-      } else {
-        links = (
-          <ul>
-            {buildLink("semantic-role-labeling", "SRL Model")}
-            {buildLink("machine-comprehension", "MC Model")}
-            {buildLink("textual-entailment", "TE Model")}
-          </ul>
         )
       }
 
@@ -50,9 +25,10 @@ class Header extends React.Component {
         <header>
           <div className="header__content">
             <nav>
-
               <ul>
-              {links}
+                {buildLink("semantic-role-labeling", "SRL Model")}
+                {buildLink("machine-comprehension", "MC Model")}
+                {buildLink("textual-entailment", "TE Model")}
               </ul>
             </nav>
             <h1 className="header__content__logo">

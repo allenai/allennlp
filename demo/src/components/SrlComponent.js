@@ -1,8 +1,8 @@
 import React from 'react';
+import { withRouter } from 'react-router-dom';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
-import Permalink from './Permalink'
 
 
 /*******************************************************************************
@@ -33,29 +33,16 @@ const description = (
   </div>
 );
 
-
-  class SrlPermaInput extends React.Component {
-    render() {
-      const { srlSentenceValue } = this.props;
-
-      return (
-        <div className="model__content">
-        <ModelIntro title={title} description={description} />
-          <div className="form__field">
-            <label htmlFor="#input--srl-sentence">Input Sentence</label>
-            <div className="perma-input">{srlSentenceValue}</div>
-          </div>
-        </div>
-      );
-
-    }
-  }
-
   class SrlInput extends React.Component {
-    constructor() {
-      super();
+    constructor(props) {
+      super(props);
+
+      // If we were given requestData (which we would be when showing a permalinked result)
+      // then we want to get the sentence from that.
+      const { sentence } = props;
+
       this.state = {
-        srlSentenceValue: "",
+        srlSentenceValue: sentence || "",
       };
       this.handleListChange = this.handleListChange.bind(this);
       this.handleSentenceChange = this.handleSentenceChange.bind(this);
@@ -88,10 +75,11 @@ const description = (
         <ModelIntro title={title} description={description} />
           <div className="form__instructions"><span>Enter text or</span>
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
-              <option value="">Choose an example...</option>
+              <option>Choose an example...</option>
               {srlSentences.map((sentence, index) => {
+                const selected = sentence === srlSentenceValue;
                 return (
-                  <option value={index} key={index}>{sentence}</option>
+                  <option value={index} key={index} selected={selected}>{sentence}</option>
                 );
               })}
             </select>
@@ -101,7 +89,7 @@ const description = (
             <input onChange={this.handleSentenceChange} value={srlSentenceValue} id="input--srl-sentence" ref="srlSentence" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
           </div>
           <div className="form__field form__field--btn">
-            <Button outputState={outputState} runModel={runSrlModel}  inputs={srlInputs} />
+            <Button enabled={outputState !== "working"} outputState={outputState} runModel={runSrlModel}  inputs={srlInputs} />
           </div>
         </div>
       );
@@ -193,8 +181,7 @@ class SrlFrame extends React.Component {
 
 class SrlOutput extends React.Component {
     render() {
-        const { rawOutput } = this.props;
-        const { words, verbs } = rawOutput;
+        const { words, verbs } = this.props;
 
         return (
             <div className="model__content model__content--srl-output">
@@ -210,13 +197,16 @@ class SrlOutput extends React.Component {
   <SrlComponent /> Component
 *******************************************************************************/
 
-class SrlComponent extends React.Component {
+class _SrlComponent extends React.Component {
     constructor(props) {
       super(props);
 
+      const { requestData, responseData } = props;
+
       this.state = {
-        outputState: this.props.permadata ? "received" : "empty", // valid values: "working", "empty", "received", "error"
-        rawOutput: {},
+        outputState: this.props.responseData ? "received" : "empty", // valid values: "working", "empty", "received", "error"
+        requestData: requestData,
+        responseData: responseData
       };
 
       this.runSrlModel = this.runSrlModel.bind(this);
@@ -228,6 +218,7 @@ class SrlComponent extends React.Component {
       });
 
       var payload = { sentence: inputs.sentenceValue };
+
       fetch('http://localhost:8000/predict/semantic-role-labeling', {
         method: 'POST',
         headers: {
@@ -238,8 +229,14 @@ class SrlComponent extends React.Component {
       }).then(function(response) {
         return response.json();
       }).then((json) => {
-        this.setState({rawOutput: json});
-        this.setState({outputState: "received"});
+        const { slug } = json;
+        const newPath = slug ? '/semantic-role-labeling/' + slug : '/semantic-role-labeling';
+
+        const location = {
+          pathname: newPath,
+          state: {requestData: payload, responseData: json}
+        }
+        this.props.history.push(location);
       }).catch((error) => {
         this.setState({outputState: "error"});
         throw error; // todo(michaels): is this right?
@@ -247,36 +244,26 @@ class SrlComponent extends React.Component {
     }
 
     render() {
-      const { permadata } = this.props;
+      const { requestData, responseData } = this.props;
+      const sentence = requestData && requestData.sentence;
+      const words = responseData && responseData.words;
+      const verbs = responseData && responseData.verbs;
 
-      if (permadata == null) {
-        // Make a new prediction.
-        return (
-          <div className="pane model">
-            <PaneLeft>
-              <SrlInput runSrlModel={this.runSrlModel} outputState={this.state.outputState}/>
-            </PaneLeft>
-            <PaneRight outputState={this.state.outputState}>
-              <Permalink slug={this.state.rawOutput && this.state.rawOutput.slug}/>
-            <SrlOutput rawOutput={this.state.rawOutput}/>
-            </PaneRight>
-          </div>
-        );
-      } else {
-        // Serve a permalink prediction.
-        const { requestData, responseData } = permadata;
-        return (
-          <div className="pane model">
+      return (
+        <div className="pane model">
           <PaneLeft>
-            <SrlPermaInput srlSentenceValue={requestData.sentence}/>
+            <SrlInput runSrlModel={this.runSrlModel}
+                      outputState={this.state.outputState}
+                      sentence={sentence}/>
           </PaneLeft>
-          <PaneRight outputState="received">
-            <SrlOutput rawOutput={responseData}/>
+          <PaneRight outputState={this.state.outputState}>
+            <SrlOutput words={words} verbs={verbs}/>
           </PaneRight>
         </div>
-        )
-      }
+      );
     }
 }
+
+const SrlComponent = withRouter(_SrlComponent)
 
 export default SrlComponent;

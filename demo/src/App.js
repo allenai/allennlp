@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter as Router, Route, Redirect } from 'react-router-dom';
 import SrlComponent from './components/SrlComponent';
 import TeComponent from './components/TeComponent';
 import McComponent from './components/McComponent';
@@ -9,39 +10,63 @@ import WaitingForPermalink from './components/WaitingForPermalink'
   <App /> Container
 *******************************************************************************/
 
-class App extends React.Component {
-  constructor() {
-    super();
+const DEFAULT_PATH = "/semantic-role-labeling"
 
-    // Check if this is a /permalink/xyz URL.
-    // This regex will capture the slug if it matches.
-    const slugRegex = /\/permalink\/([^/]+)\/?$/;
-    const url = window.location.href;
-    const match = slugRegex.exec(url);
+const App = () => (
+  <Router>
+    <div>
+
+      <Route exact path="/" render={() => (
+        <Redirect to={DEFAULT_PATH}/>
+      )}/>
+      <Route path="/:model/:slug?" component={Demo}/>
+    </div>
+  </Router>
+)
+
+class Demo extends React.Component {
+  constructor(props) {
+    super(props);
+
+    const { model, slug } = props.match.params;
 
     this.state = {
-      match: match,
-      permadata: null,
-      selectedModel: "semantic-role-labeling",
-      rawOutput: "",
+      slug: slug,
+      selectedModel: model,
+      requestData: null,
+      responseData: null
     };
-    this.changeModel = this.changeModel.bind(this);
-  }
 
-  changeModel(thisModel) {
-    this.setState({
-      selectedModel: thisModel,
+    this.clearData = () => {
+      this.setState({requestData: null, responseData: null})
+    }
+
+    props.history.listen((location, action) => {
+      console.log(location);
+      console.log(action);
+      const { state } = location;
+      if (state) {
+        const { requestData, responseData } = state;
+        this.setState({requestData: requestData, responseData: responseData})
+      }
     });
   }
 
+  componentWillReceiveProps({ match }) {
+    const { model, slug } = match.params;
+
+    // Only trigger setState if this is an actual change.
+    if (model !== this.state.model || slug !== this.state.slug) {
+      this.setState({selectedModel: model, slug: slug});
+    }
+  }
+
   componentDidMount() {
-    const { match } = this.state;
+    const { slug } = this.state;
+    const { location } = this.props;
 
-    if (match) {
-      // match[0] is "/permalink/xyz"
-      // match[1] is "xyz"
-      const slug = match[1];
-
+    // If this is a permalink and we don't yet have the data for it...
+    if (slug && !location.responseData) {
       // Make an ajax call to get the permadata,
       // and then use it to update the state.
       fetch('http://localhost:8000/permadata', {
@@ -54,7 +79,8 @@ class App extends React.Component {
       }).then(function(response) {
         return response.json();
       }).then((json) => {
-        this.setState({permadata: json, selectedModel: json.modelName});
+        const { requestData, responseData } = json;
+        this.setState({requestData: requestData, responseData: responseData});
       }).catch((error) => {
         this.setState({outputState: "error"});
         throw error; // todo(michaels): is this right?
@@ -63,36 +89,26 @@ class App extends React.Component {
   }
 
   render() {
-    const { match, permadata, selectedModel } = this.state;
-
-    const HeaderComponent = () => {
-      if (match) {
-        // This is a permalink request, so return that header.
-        return (<Header permalink={true}/>)
-      } else {
-        // Otherwise return the usual header.
-        return (<Header selectedModel={selectedModel} changeModel={this.changeModel}/>)
-      }
-    }
+    const { slug, selectedModel, requestData, responseData } = this.state;
 
     const ModelComponent = () => {
-      if (match && !permadata) {
+      if (slug && !responseData) {
         // We're still waiting for permalink data, so just return the placeholder component.
         return (<WaitingForPermalink/>)
       } else if (selectedModel === "semantic-role-labeling") {
-        return (<SrlComponent permadata={permadata}/>)
+        return (<SrlComponent requestData={requestData} responseData={responseData}/>)
       }
       else if (selectedModel === "textual-entailment") {
-        return (<TeComponent permadata={permadata}/>)
+        return (<TeComponent requestData={requestData} responseData={responseData}/>)
       }
       else if (selectedModel === "machine-comprehension") {
-        return (<McComponent permadata={permadata}/>)
+        return (<McComponent requestData={requestData} responseData={responseData}/>)
       }
     }
 
     return (
       <div className="pane-container">
-        <HeaderComponent/>
+        <Header selectedModel={selectedModel} clearData={this.clearData}/>
         <ModelComponent />
       </div>
     );
