@@ -38,7 +38,8 @@ class ElmoLstmCell(torch.nn.Module):
         <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM.
-
+    state_projection_clip_value: float optional, (default = 3)
+        The magnitude with which to clip the hidden_state after projecting it.
     use_input_projection_bias : bool, optional (default = True)
         Whether or not to use a bias on the input projection layer. This is mainly here
         for backwards compatibility reasons and will be removed (and set to False)
@@ -58,7 +59,7 @@ class ElmoLstmCell(torch.nn.Module):
                  cell_size: int,
                  go_forward: bool = True,
                  recurrent_dropout_probability: float = 0.0,
-                 cell_projection_clip_value: float = 3.0,
+                 state_projection_clip_value: float = 3.0,
                  use_input_projection_bias: bool = True) -> None:
         super(ElmoLstmCell, self).__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
@@ -67,7 +68,7 @@ class ElmoLstmCell(torch.nn.Module):
         self.cell_size = cell_size
 
         self.go_forward = go_forward
-        self.cell_projection_clip_value = cell_projection_clip_value
+        self.state_projection_clip_value = state_projection_clip_value
         self.recurrent_dropout_probability = recurrent_dropout_probability
 
         # We do the projections for all the gates all at once.
@@ -192,8 +193,8 @@ class ElmoLstmCell(torch.nn.Module):
             timestep_output = output_gate * torch.tanh(memory)
 
             projected_timestep_output = torch.clamp(self.state_projection(timestep_output),
-                                                    -self.cell_projection_clip_value,
-                                                    self.cell_projection_clip_value)
+                                                    -self.state_projection_clip_value,
+                                                    self.state_projection_clip_value)
 
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
             if dropout_mask is not None and self.training:
