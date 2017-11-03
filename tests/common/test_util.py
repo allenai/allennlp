@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
+import torch
+
 from allennlp.common import util
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -18,3 +20,7 @@ class TestCommonUtils(AllenNlpTestCase):
         assert util.namespace_match("*tags", "question_tags")
         assert util.namespace_match("tokens", "tokens")
         assert not util.namespace_match("tokens", "stemmed_tokens")
+
+    def test_sanitize(self):
+        assert util.sanitize(torch.Tensor([1, 2])) == [1, 2]
+        assert util.sanitize(torch.LongTensor([1, 2])) == [1, 2]
