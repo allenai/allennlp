@@ -3,7 +3,7 @@ import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
-from allennlp.data.fields import TextField, ListField
+from allennlp.data.fields import TextField, ListField, SequenceLabelField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 
 
@@ -29,6 +29,13 @@ class TestListField(AllenNlpTestCase):
                                 self.word_indexer)
         self.field3 = TextField([Token(t) for t in ["this", "is", "another", "sentence"]],
                                 self.word_indexer)
+
+        self.empty_text_field = self.field1.empty_field()
+        self.index_field = IndexField(1, self.field1)
+        self.empty_index_field = self.index_field.empty_field()
+        self.sequence_label_field = SequenceLabelField([1, 1, 1, 1], self.field1)
+        self.empty_sequence_label_field = self.sequence_label_field.empty_field()
+
         super(TestListField, self).setUp()
 
     def test_get_padding_lengths(self):
@@ -36,6 +43,26 @@ class TestListField(AllenNlpTestCase):
         list_field.index(self.vocab)
         lengths = list_field.get_padding_lengths()
         assert lengths == {"num_fields": 3, "num_tokens": 5}
+
+    def test_list_field_can_handle_empty_text_fields(self):
+
+        list_field = ListField([self.field1, self.field2, self.empty_text_field])
+        list_field.index(self.vocab)
+        array_dict = list_field.as_array(list_field.get_padding_lengths())
+
+    def test_list_field_can_handle_empty_index_fields(self):
+
+        list_field = ListField([self.index_field, self.index_field, self.empty_index_field])
+        list_field.index(self.vocab)
+        array_dict = list_field.as_array(list_field.get_padding_lengths())
+
+    def test_list_field_can_handle_empty_sequence_label_fields(self):
+
+        list_field = ListField([self.sequence_label_field,
+                                self.sequence_label_field,
+                                self.empty_sequence_label_field])
+        list_field.index(self.vocab)
+        array_dict = list_field.as_array(list_field.get_padding_lengths())
 
     def test_all_fields_padded_to_max_length(self):
         list_field = ListField([self.field1, self.field2, self.field3])
