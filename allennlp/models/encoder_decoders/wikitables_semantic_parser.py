@@ -1,4 +1,4 @@
-from typing import Dict, Generator, List, Set
+from typing import Dict, Generator, List, Set, Tuple
 
 from overrides import overrides
 
@@ -70,16 +70,16 @@ class WikiTablesSemanticParser(Model):
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction) -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
-        self._source_embedder = question_embedder
+        self._question_embedder = question_embedder
         self._encoder = encoder
         self._decoder_trainer = decoder_trainer
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._action_namespace = action_namespace
 
-        num_actions = self.vocab.get_vocab_size(self._action_namespace)
         self._start_index = self.vocab.get_token_index(START_SYMBOL, self._action_namespace)
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._action_namespace)
+        num_actions = self.vocab.get_vocab_size(self._action_namespace)
         self._decoder_step = WikiTablesDecoderStep(self._encoder.get_output_dim(),
                                                    action_embedding_dim,
                                                    num_actions,
@@ -105,15 +105,15 @@ class WikiTablesSemanticParser(Model):
            work, and will be stripped in this method with a ``squeeze``.
         """
         # (batch_size, input_sequence_length, encoder_output_dim)
-        embedded_input = self._source_embedder(question)
-        source_mask = util.get_text_field_mask(question)
+        embedded_input = self._question_embedder(question)
+        question_mask = util.get_text_field_mask(question)
         batch_size = embedded_input.size(0)
         if batch_size != 1:
             raise ConfigurationError("This implementation does not currently handle batched "
                                      "inputs.  Please set the batch size of your dataset reader "
                                      "to 1.")
 
-        encoder_outputs = self._encoder(embedded_input, source_mask)
+        encoder_outputs = self._encoder(embedded_input, question_mask)
 
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
         decoder_context = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim())
@@ -128,11 +128,12 @@ class WikiTablesSemanticParser(Model):
             target_mask = None
 
         initial_score = Variable(embedded_input.data.new(1).fill_(0))
+        initial_state = (final_encoder_output, decoder_context, None)
         initial_state = WikiTablesDecoderState([],
                                                initial_score,
                                                encoder_outputs=encoder_outputs,
-                                               encoder_output_mask=source_mask.float(),
-                                               hidden_state=(final_encoder_output, decoder_context),
+                                               encoder_output_mask=question_mask.float(),
+                                               hidden_state=initial_state,
                                                end_index=self._end_index)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
@@ -151,7 +152,7 @@ class WikiTablesSemanticParser(Model):
                 num_steps = self._max_decoding_steps
             best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)
             best_final_state = best_final_states[0]
-            outputs['best_action_sequence'] = best_final_state.action_history
+            outputs['best_action_sequence'] = [best_final_state.action_history]
             # TODO(matt): compute accuracy here.
             return outputs
 
@@ -165,7 +166,7 @@ class WikiTablesSemanticParser(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
-        best_action_indices = output_dict["best_action_sequence"]
+        best_action_indices = output_dict["best_action_sequence"][0]
         end_index = self.vocab.get_token_index(END_SYMBOL, self._action_namespace)
         action_strings = []
         for action_index in best_action_indices:
@@ -174,13 +175,13 @@ class WikiTablesSemanticParser(Model):
                 break
             action_strings.append(self.vocab.get_token_from_index(action_index,
                                                                   namespace=self._action_namespace))
-        output_dict["predicted_actions"] = action_strings
+        output_dict["predicted_actions"] = [action_strings]
         return output_dict
 
     @classmethod
     def from_params(cls, vocab, params: Params) -> 'WikiTablesSemanticParser':
-        source_embedder_params = params.pop("question_embedder")
-        question_embedder = TextFieldEmbedder.from_params(vocab, source_embedder_params)
+        question_embedder_params = params.pop("question_embedder")
+        question_embedder = TextFieldEmbedder.from_params(vocab, question_embedder_params)
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         max_decoding_steps = params.pop("max_decoding_steps")
         action_namespace = params.pop("action_namespace")
@@ -222,7 +223,7 @@ class WikiTablesDecoderState(DecoderState):
                  score: torch.Tensor,
                  encoder_outputs: torch.Tensor,
                  encoder_output_mask: torch.Tensor,
-                 hidden_state: torch.Tensor,
+                 hidden_state: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
                  end_index: int) -> None:
         super(WikiTablesDecoderState, self).__init__(action_history, score)
         self.encoder_outputs = encoder_outputs
@@ -250,18 +251,24 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         super(WikiTablesDecoderStep, self).__init__()
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with that of the final hidden states of the encoder.
-        self._output_dim = encoder_output_dim
+        self.vocab = vocab
         self._action_embedder = Embedding(num_actions, action_embedding_dim)
         self._input_attention = Attention(attention_function)
         self._start_index = start_index
 
-        # The output of attention, which is a weighted average over encoder outputs, will be
-        # concatenated to the input vector of the decoder at each time step.
-        self._decoder_input_dim = encoder_output_dim + action_embedding_dim
+        output_dim = encoder_output_dim
+        input_dim = output_dim
+        # Our decoder input will be the concatenation of the decoder hidden state and the previous
+        # action embedding, and we'll project that down to the decoder's `input_dim`, which we
+        # arbitrarily set to be the same as `output_dim`.
+        self._input_projection_layer = Linear(output_dim + action_embedding_dim, input_dim)
+        # Before making a prediction, we'll compute an attention over the input given our updated
+        # hidden state.  Then we concatenate that with the decoder state and project to
+        # `num_actions` to make a prediction.
+        self._output_projection_layer = Linear(output_dim + output_dim, num_actions)
 
         # TODO(pradeep): Do not hardcode decoder cell type.
-        self._decoder_cell = LSTMCell(self._decoder_input_dim, self._output_dim)
-        self._output_projection_layer = Linear(self._output_dim, num_actions)
+        self._decoder_cell = LSTMCell(input_dim, output_dim)
 
     @overrides
     def take_step(self,
@@ -270,36 +277,52 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # Outline here: first we'll construct the input to the decoder, which is a concatenation of
         # an embedding of the decoder input (the last action taken) and an attention over the
         # question.
-        decoder_hidden, decoder_context = state.hidden_state
+        decoder_hidden, decoder_context, attended_question = state.hidden_state
         action = state.action_history[-1] if state.action_history else self._start_index
         action_input = Variable(decoder_hidden.data.new(1).long().fill_(action))
         embedded_input = self._action_embedder(action_input)
-        # (batch_size, input_sequence_length)
-        input_weights = self._input_attention(decoder_hidden,
-                                              state.encoder_outputs,
-                                              state.encoder_output_mask)
-        # (batch_size, encoder_output_dim)
-        attended_input = util.weighted_sum(state.encoder_outputs, input_weights)
-        # (batch_size, encoder_output_dim + target_embedding_dim)
-        decoder_input = torch.cat((attended_input, embedded_input), -1)
+
+        if attended_question is None:
+            # Unless this is the first timestep, we've already computed an attention over the input
+            # given the current hidden state.  If it's the first timestep, we compute an initial
+            # attention with the hidden state, which is the output of the encoder.
+            # (batch_size, input_sequence_length)
+            question_attention_weights = self._input_attention(decoder_hidden,
+                                                               state.encoder_outputs,
+                                                               state.encoder_output_mask)
+            # (batch_size, encoder_output_dim)
+            attended_question = util.weighted_sum(state.encoder_outputs, question_attention_weights)
+
+        # (batch_size, decoder_input_dim)
+        decoder_input = self._input_projection_layer(torch.cat([attended_question, embedded_input], -1))
+
         decoder_hidden, decoder_context = self._decoder_cell(decoder_input,
                                                              (decoder_hidden, decoder_context))
 
+        # (batch_size, question_length)
+        question_attention_weights = self._input_attention(decoder_hidden,
+                                                           state.encoder_outputs,
+                                                           state.encoder_output_mask)
+        # (batch_size, encoder_output_dim)
+        attended_question = util.weighted_sum(state.encoder_outputs, question_attention_weights)
+
         # (batch_size, num_actions)
-        logits = self._output_projection_layer(decoder_hidden)
+        logits = self._output_projection_layer(torch.cat([decoder_hidden, attended_question], -1))
         output_mask = state.get_output_mask()
         log_probs = util.masked_log_softmax(logits, output_mask)
-        sorted_log_probs = []
-        # TODO(mattg): think about how to make batching work here; batch_size is currently required
-        # to be 1, so we enumerate `log_probs[0]`.
-        for i, log_prob in enumerate(log_probs[0]):
-            # We need to keep the gradient history, but also have a float for easy comparisons.
-            # That's why we have three things here: (float_log_prob, variable_log_prob, action_id).
-            sorted_log_probs.append((log_prob.data[0], log_prob, i))
-        sorted_log_probs.sort(key=lambda x: -x[0])
+        new_hidden_state = (decoder_hidden, decoder_context, attended_question)
+        return self._yield_new_states(state, log_probs, new_hidden_state, allowed_actions)
 
+    def _yield_new_states(self,  # pylint: disable=no-self-use
+                          state: WikiTablesDecoderState,
+                          log_probs: Variable,
+                          new_hidden_state: Tuple[Variable, Variable],
+                          allowed_actions: Set[int]) -> Generator[WikiTablesDecoderState, None, None]:
+        sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
+        sorted_actions = sorted_actions.data.cpu().numpy().tolist()
         valid_actions = state.get_valid_actions()
-        for _, log_prob, action in sorted_log_probs:
+        for i in range(sorted_log_probs.size(1)):
+            action = sorted_actions[0][i]
             if valid_actions is not None and action not in valid_actions:
                 # If we have a constrained decoder, we need to skip any actions that are not valid
                 # in the current state.
@@ -309,13 +332,13 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # actions, likely because they are the gold actions in this state.  We just skip
                 # emitting any state that isn't allowed by the trainer, because constructing the
                 # new state can be expensive.
-                # TODO(mattg): is this really all that expensive?  If it isn't, it would make
-                # computing metrics easier if this skipping logic happened in the trainer - the
-                # trainer could keep track of when the top action wasn't allowed.
+                # TODO(mattg): is this really all that expensive?  If it isn't, it would simplify
+                # the API to remove the `allowed_actions` argument, and it would make computing
+                # metrics easier if this skipping logic happened in the trainer - the trainer could
+                # keep track of when the top action wasn't allowed.
                 continue
             new_action_history = state.action_history + [action]
-            new_score = util.logsumexp(torch.cat([state.score, log_prob]))
-            new_hidden_state = (decoder_hidden, decoder_context)
+            new_score = state.score + sorted_log_probs[0, i]
             yield WikiTablesDecoderState(new_action_history,
                                          new_score,
                                          state.encoder_outputs,
