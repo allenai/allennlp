@@ -69,7 +69,8 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
             if not token_lengths:
                 # This is a padding edge case and occurs when we want to pad a ListField of
                 # TextFields. In order to pad the list field, we need to be able to have an
-                # _empty_ TextField
+                # _empty_ TextField, but if this is the case, token_lengths will be an empty
+                # list, so we add the default empty padding dictionary to the list instead.
                 token_lengths = [{}]
             # Iterate over the keys in the first element of the list.
             # This is fine as for a given indexer, all tokens will return the same keys,
