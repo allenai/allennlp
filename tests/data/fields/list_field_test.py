@@ -3,7 +3,7 @@ import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
-from allennlp.data.fields import TextField, ListField, SequenceLabelField, IndexField
+from allennlp.data.fields import TextField, LabelField, ListField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 
 
@@ -19,6 +19,9 @@ class TestListField(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("n", 'characters')
         self.vocab.add_token_to_namespace("t", 'characters')
         self.vocab.add_token_to_namespace("c", 'characters')
+        for label in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k']:
+            self.vocab.add_token_to_namespace(label, 'labels')
+        self.vocab.add_token_to_namespace("c", 'characters')
 
         self.word_indexer = {"words": SingleIdTokenIndexer("words")}
         self.words_and_characters_indexer = {"words": SingleIdTokenIndexer("words"),
@@ -33,7 +36,7 @@ class TestListField(AllenNlpTestCase):
         self.empty_text_field = self.field1.empty_field()
         self.index_field = IndexField(1, self.field1)
         self.empty_index_field = self.index_field.empty_field()
-        self.sequence_label_field = SequenceLabelField([1, 1, 1, 1], self.field1)
+        self.sequence_label_field = SequenceLabelField([1, 1, 0, 1], self.field1)
         self.empty_sequence_label_field = self.sequence_label_field.empty_field()
 
         super(TestListField, self).setUp()
@@ -42,27 +45,31 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([self.field1, self.field2, self.field3])
         list_field.index(self.vocab)
         lengths = list_field.get_padding_lengths()
-        assert lengths == {"num_fields": 3, "num_tokens": 5}
+        assert lengths == {"num_fields": 3, "list_num_tokens": 5}
 
     def test_list_field_can_handle_empty_text_fields(self):
 
         list_field = ListField([self.field1, self.field2, self.empty_text_field])
         list_field.index(self.vocab)
         array_dict = list_field.as_array(list_field.get_padding_lengths())
+        print(array_dict)
 
     def test_list_field_can_handle_empty_index_fields(self):
 
         list_field = ListField([self.index_field, self.index_field, self.empty_index_field])
         list_field.index(self.vocab)
-        array_dict = list_field.as_array(list_field.get_padding_lengths())
+        array = list_field.as_array(list_field.get_padding_lengths())
+        numpy.testing.assert_array_equal(array, numpy.array([[1], [1], [-1]]))
 
     def test_list_field_can_handle_empty_sequence_label_fields(self):
-
         list_field = ListField([self.sequence_label_field,
                                 self.sequence_label_field,
                                 self.empty_sequence_label_field])
         list_field.index(self.vocab)
-        array_dict = list_field.as_array(list_field.get_padding_lengths())
+        array = list_field.as_array(list_field.get_padding_lengths())
+        numpy.testing.assert_array_equal(array, numpy.array([[1, 1, 0, 1],
+                                                             [1, 1, 0, 1],
+                                                             [0, 0, 0, 0]]))
 
     def test_all_fields_padded_to_max_length(self):
         list_field = ListField([self.field1, self.field2, self.field3])
@@ -72,11 +79,22 @@ class TestListField(AllenNlpTestCase):
         numpy.testing.assert_array_almost_equal(array_dict["words"][1], numpy.array([2, 3, 4, 1, 5]))
         numpy.testing.assert_array_almost_equal(array_dict["words"][2], numpy.array([2, 3, 1, 5, 0]))
 
+    def test_nested_list_fields_are_padded_correctly(self):
+        nested_field1 = ListField([LabelField(c) for c in ['a', 'b', 'c', 'd', 'e']])
+        nested_field2 = ListField([LabelField(c) for c in ['f', 'g', 'h', 'i', 'j', 'k']])
+        list_field = ListField([nested_field1, nested_field2])
+        list_field.index(self.vocab)
+        padding_lengths = list_field.get_padding_lengths()
+        assert padding_lengths == {'num_fields': 2, 'list_num_fields': 6}
+        array = list_field.as_array(padding_lengths)
+        numpy.testing.assert_almost_equal(array, [[[0], [1], [2], [3], [4], [-1]],
+                                                  [[5], [6], [7], [8], [9], [10]]])
+
     def test_fields_can_pad_to_greater_than_max_length(self):
         list_field = ListField([self.field1, self.field2, self.field3])
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
-        padding_lengths["num_tokens"] = 7
+        padding_lengths["list_num_tokens"] = 7
         padding_lengths["num_fields"] = 5
         array_dict = list_field.as_array(padding_lengths)
         numpy.testing.assert_array_almost_equal(array_dict["words"][0], numpy.array([2, 3, 4, 5, 0, 0, 0]))
@@ -118,3 +136,19 @@ class TestListField(AllenNlpTestCase):
                                                                             [1, 4, 1, 5, 1, 3, 1, 0, 0],
                                                                             [2, 3, 4, 5, 3, 4, 6, 3, 0],
                                                                             [0, 0, 0, 0, 0, 0, 0, 0, 0]]))
+
+    def test_as_array_can_handle_multiple_token_indexers_and_empty_fields(self):
+        # pylint: disable=protected-access
+        self.field1._token_indexers = self.words_and_characters_indexer
+        self.field2._token_indexers = self.words_and_characters_indexer
+        self.field3._token_indexers = self.words_and_characters_indexer
+
+        list_field = ListField([self.field1.empty_field(), self.field1, self.field2])
+        list_field.index(self.vocab)
+        padding_lengths = list_field.get_padding_lengths()
+        array_dict = list_field.as_array(padding_lengths)
+        words = array_dict["words"]
+        characters = array_dict["characters"]
+
+        print(words)
+        print(characters)
