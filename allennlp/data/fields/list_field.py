@@ -46,7 +46,14 @@ class ListField(SequenceField[DataArray]):
     def get_padding_lengths(self) -> Dict[str, int]:
         field_lengths = [field.get_padding_lengths() for field in self.field_list]
         padding_lengths = {'num_fields': len(self.field_list)}
-        for key in field_lengths[0].keys():
+
+        # We take the set of all possible padding keys, rather than just
+        # a random key, because it is possible for fields to be completely
+        # empty.
+        possible_padding_keys = [key for field_length in field_lengths
+                                 for key in list(field_length.keys())]
+
+        for key in set(possible_padding_keys):
             # In order to be able to nest ListFields, we need to scope the padding length keys
             # appropriately, so that nested ListFields don't all use the same "num_fields" key.  So
             # when we construct the dictionary from the list of fields, we add something to the

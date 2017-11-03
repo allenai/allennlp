@@ -3,7 +3,7 @@ import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
-from allennlp.data.fields import TextField, LabelField, ListField
+from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 
 
@@ -52,7 +52,10 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([self.field1, self.field2, self.empty_text_field])
         list_field.index(self.vocab)
         array_dict = list_field.as_array(list_field.get_padding_lengths())
-        print(array_dict)
+
+        numpy.testing.assert_array_equal(array_dict["words"], numpy.array([[2, 3, 4, 5, 0],
+                                                                           [2, 3, 4, 1, 5],
+                                                                           [0, 0, 0, 0, 0]]))
 
     def test_list_field_can_handle_empty_index_fields(self):
 
@@ -82,12 +85,14 @@ class TestListField(AllenNlpTestCase):
     def test_nested_list_fields_are_padded_correctly(self):
         nested_field1 = ListField([LabelField(c) for c in ['a', 'b', 'c', 'd', 'e']])
         nested_field2 = ListField([LabelField(c) for c in ['f', 'g', 'h', 'i', 'j', 'k']])
-        list_field = ListField([nested_field1, nested_field2])
+        list_field = ListField([nested_field1.empty_field(), nested_field1, nested_field2])
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
-        assert padding_lengths == {'num_fields': 2, 'list_num_fields': 6}
+        assert padding_lengths == {'num_fields': 3, 'list_num_fields': 6}
         array = list_field.as_array(padding_lengths)
-        numpy.testing.assert_almost_equal(array, [[[0], [1], [2], [3], [4], [-1]],
+        print(array)
+        numpy.testing.assert_almost_equal(array, [[[-1], [-1], [-1], [-1], [-1], [-1]],
+                                                  [[0], [1], [2], [3], [4], [-1]],
                                                   [[5], [6], [7], [8], [9], [10]]])
 
     def test_fields_can_pad_to_greater_than_max_length(self):
@@ -150,5 +155,22 @@ class TestListField(AllenNlpTestCase):
         words = array_dict["words"]
         characters = array_dict["characters"]
 
-        print(words)
-        print(characters)
+        numpy.testing.assert_array_almost_equal(words, numpy.array([[0, 0, 0, 0, 0],
+                                                                    [2, 3, 4, 5, 0],
+                                                                    [2, 3, 4, 1, 5]]))
+
+        numpy.testing.assert_array_almost_equal(characters[0], numpy.zeros([5, 9]))
+
+
+        numpy.testing.assert_array_almost_equal(characters[1], numpy.array([[5, 1, 1, 2, 0, 0, 0, 0, 0],
+                                                                            [1, 2, 0, 0, 0, 0, 0, 0, 0],
+                                                                            [1, 0, 0, 0, 0, 0, 0, 0, 0],
+                                                                            [2, 3, 4, 5, 3, 4, 6, 3, 0],
+                                                                            [0, 0, 0, 0, 0, 0, 0, 0, 0]]))
+
+        numpy.testing.assert_array_almost_equal(characters[2], numpy.array([[5, 1, 1, 2, 0, 0, 0, 0, 0],
+                                                                            [1, 2, 0, 0, 0, 0, 0, 0, 0],
+                                                                            [1, 0, 0, 0, 0, 0, 0, 0, 0],
+                                                                            [1, 1, 1, 1, 3, 1, 3, 4, 5],
+                                                                            [2, 3, 4, 5, 3, 4, 6, 3, 0]]))
+
