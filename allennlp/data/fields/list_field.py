@@ -47,9 +47,9 @@ class ListField(SequenceField[DataArray]):
         field_lengths = [field.get_padding_lengths() for field in self.field_list]
         padding_lengths = {'num_fields': len(self.field_list)}
 
-        # We take the set of all possible padding keys, rather than just
-        # a random key, because it is possible for fields to be completely
-        # empty.
+        # We take the set of all possible padding keys for all fields, rather
+        # than just a random key, because it is possible for fields to be empty
+        # when we pad ListFields.
         possible_padding_keys = [key for field_length in field_lengths
                                  for key in list(field_length.keys())]
 

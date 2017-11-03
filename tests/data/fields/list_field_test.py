@@ -90,7 +90,6 @@ class TestListField(AllenNlpTestCase):
         padding_lengths = list_field.get_padding_lengths()
         assert padding_lengths == {'num_fields': 3, 'list_num_fields': 6}
         array = list_field.as_array(padding_lengths)
-        print(array)
         numpy.testing.assert_almost_equal(array, [[[-1], [-1], [-1], [-1], [-1], [-1]],
                                                   [[0], [1], [2], [3], [4], [-1]],
                                                   [[5], [6], [7], [8], [9], [10]]])
