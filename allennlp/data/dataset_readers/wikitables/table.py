@@ -1,3 +1,9 @@
+"""
+Classes related to representing a table in WikitableQuestions. At this point we have just a
+``TableKnowledgeGraph``, a ``KnowledgeGraph`` that reads a TSV file and stores a table representation.
+"""
+
+
 import re
 
 from collections import defaultdict

@@ -1,3 +1,6 @@
+"""
+Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/releases/tag/v1.0.2).
+"""
 from typing import Dict, List, TypeVar
 import logging
 import gzip
@@ -26,7 +29,6 @@ LispValueType = TypeVar("LispValueType", str, List[str], None)  # pylint: disabl
 @DatasetReader.register("wikitables")
 class WikitablesDatasetReader(DatasetReader):
     """
-    Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/releases/tag/v1.0.2).
     We assume you are reading in ``data/*.examples`` files, and you have access to the output from
     Dynamic Programming on Denotations (DPD) on the training dataset.
 

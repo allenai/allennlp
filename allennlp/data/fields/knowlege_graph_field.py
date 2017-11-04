@@ -1,3 +1,7 @@
+"""
+``KnowledgeGraphField`` is a ``Field`` which stores a knowledge graph representation.
+"""
+
 from typing import Dict, List
 
 from overrides import overrides
@@ -10,8 +14,17 @@ from allennlp.data.knowledge_graph import KnowledgeGraph
 
 class KnowledgeGraphField(Field[DataArray]):
     """
-    ``KnowledgeGraphField`` is a ``Field`` which stores a knowledge graph representation. It indexes entities
-    and collects information necessary for embedding the knowledge graph.
+    ``KnowledgeGraphField`` indexes entities and collects information necessary for embedding the knowledge
+    graph. Here we assume the token indexers will index all the information needed to embed entities
+    (say names and types).
+
+    Parameters
+    ----------
+    knowledge_graph : ``KnowledgeGraph``
+        The knowledge graph that this field stores.
+    token_indexers : ``Dict[str, TokenIndexer]``
+        Token indexers for indexing various aspects of entities (say names and type of entities) for embedding
+        them.
     """
     def __init__(self,
                  knowledge_graph: KnowledgeGraph,

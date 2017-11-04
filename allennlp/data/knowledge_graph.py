@@ -1,11 +1,16 @@
+"""
+A ``KnowledgeGraph`` is a graphical representation of some structured knowledge source: say a table, figure
+or an explicit knowledge base.
+"""
+
 from typing import Dict, List
 
 
 class KnowledgeGraph:
     """
-    A ``KnowledgeGraph`` is a graphical representation of some knowledge base. We store some basic neighborhood
-    information here, and minimal functionality for querying that information, for embedding this knowledge
-    or linking the entities in the knowledge base to some text.
+    ``KnowledgeGraph`` currently stores some basic neighborhood information, and provides  minimal
+    functionality for querying that information, for embedding this knowledge or linking the entities in the
+    knowledge base to some text.
     The knowledge base itself can be a table (like in WikitableQuestions), a figure (like in NLVR) or some
     other structured knowledge source. This abstract class needs to be inherited for implementing the
     functionality appropriate for a given KB.
