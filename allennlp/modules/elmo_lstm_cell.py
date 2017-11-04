@@ -40,10 +40,6 @@ class ElmoLstmCell(torch.nn.Module):
         LSTM.
     state_projection_clip_value: float optional, (default = 3)
         The magnitude with which to clip the hidden_state after projecting it.
-    use_input_projection_bias : bool, optional (default = True)
-        Whether or not to use a bias on the input projection layer. This is mainly here
-        for backwards compatibility reasons and will be removed (and set to False)
-        in future releases.
 
     Returns
     -------
@@ -59,8 +55,7 @@ class ElmoLstmCell(torch.nn.Module):
                  cell_size: int,
                  go_forward: bool = True,
                  recurrent_dropout_probability: float = 0.0,
-                 state_projection_clip_value: float = 3.0,
-                 use_input_projection_bias: bool = True) -> None:
+                 state_projection_clip_value: float = 3.0) -> None:
         super(ElmoLstmCell, self).__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
@@ -72,8 +67,7 @@ class ElmoLstmCell(torch.nn.Module):
         self.recurrent_dropout_probability = recurrent_dropout_probability
 
         # We do the projections for all the gates all at once.
-        self.input_linearity = torch.nn.Linear(input_size, 4 * cell_size,
-                                               bias=use_input_projection_bias)
+        self.input_linearity = torch.nn.Linear(input_size, 4 * cell_size, bias=False)
         self.state_linearity = torch.nn.Linear(hidden_size, 4 * cell_size, bias=True)
 
         # Additional projection matrix for making the hidden state smaller.
