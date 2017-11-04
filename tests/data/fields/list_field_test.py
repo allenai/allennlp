@@ -21,11 +21,10 @@ class TestListField(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("c", 'characters')
         for label in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k']:
             self.vocab.add_token_to_namespace(label, 'labels')
-        self.vocab.add_token_to_namespace("c", 'characters')
 
         self.word_indexer = {"words": SingleIdTokenIndexer("words")}
-        self.words_and_characters_indexer = {"words": SingleIdTokenIndexer("words"),
-                                             "characters": TokenCharactersIndexer("characters")}
+        self.words_and_characters_indexers = {"words": SingleIdTokenIndexer("words"),
+                                              "characters": TokenCharactersIndexer("characters")}
         self.field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence"]],
                                 self.word_indexer)
         self.field2 = TextField([Token(t) for t in ["this", "is", "a", "different", "sentence"]],
@@ -48,17 +47,14 @@ class TestListField(AllenNlpTestCase):
         assert lengths == {"num_fields": 3, "list_num_tokens": 5}
 
     def test_list_field_can_handle_empty_text_fields(self):
-
         list_field = ListField([self.field1, self.field2, self.empty_text_field])
         list_field.index(self.vocab)
         array_dict = list_field.as_array(list_field.get_padding_lengths())
-
         numpy.testing.assert_array_equal(array_dict["words"], numpy.array([[2, 3, 4, 5, 0],
                                                                            [2, 3, 4, 1, 5],
                                                                            [0, 0, 0, 0, 0]]))
 
     def test_list_field_can_handle_empty_index_fields(self):
-
         list_field = ListField([self.index_field, self.index_field, self.empty_index_field])
         list_field.index(self.vocab)
         array = list_field.as_array(list_field.get_padding_lengths())
@@ -109,9 +105,9 @@ class TestListField(AllenNlpTestCase):
 
     def test_as_array_can_handle_multiple_token_indexers(self):
         # pylint: disable=protected-access
-        self.field1._token_indexers = self.words_and_characters_indexer
-        self.field2._token_indexers = self.words_and_characters_indexer
-        self.field3._token_indexers = self.words_and_characters_indexer
+        self.field1._token_indexers = self.words_and_characters_indexers
+        self.field2._token_indexers = self.words_and_characters_indexers
+        self.field3._token_indexers = self.words_and_characters_indexers
 
         list_field = ListField([self.field1, self.field2, self.field3])
         list_field.index(self.vocab)
@@ -143,9 +139,9 @@ class TestListField(AllenNlpTestCase):
 
     def test_as_array_can_handle_multiple_token_indexers_and_empty_fields(self):
         # pylint: disable=protected-access
-        self.field1._token_indexers = self.words_and_characters_indexer
-        self.field2._token_indexers = self.words_and_characters_indexer
-        self.field3._token_indexers = self.words_and_characters_indexer
+        self.field1._token_indexers = self.words_and_characters_indexers
+        self.field2._token_indexers = self.words_and_characters_indexers
+        self.field3._token_indexers = self.words_and_characters_indexers
 
         list_field = ListField([self.field1.empty_field(), self.field1, self.field2])
         list_field.index(self.vocab)
@@ -159,7 +155,6 @@ class TestListField(AllenNlpTestCase):
                                                                     [2, 3, 4, 1, 5]]))
 
         numpy.testing.assert_array_almost_equal(characters[0], numpy.zeros([5, 9]))
-
 
         numpy.testing.assert_array_almost_equal(characters[1], numpy.array([[5, 1, 1, 2, 0, 0, 0, 0, 0],
                                                                             [1, 2, 0, 0, 0, 0, 0, 0, 0],
