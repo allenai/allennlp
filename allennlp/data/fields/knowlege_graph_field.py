@@ -4,7 +4,7 @@ from overrides import overrides
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields.field import Field, DataArray
-from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.knowledge_graph import KnowledgeGraph
 
 
@@ -16,10 +16,10 @@ class KnowledgeGraphField(Field[DataArray]):
     def __init__(self,
                  knowledge_graph: KnowledgeGraph,
                  token_indexers: Dict[str, TokenIndexer]) -> None:
-        self._knowledge_graph = knowledge_graph
-        self._token_indexers = token_indexers
+        self._knowledge_graph: KnowledgeGraph = knowledge_graph
+        self._token_indexers: Dict[str, TokenIndexer] = token_indexers
         # {entity: {indexer: indexed_tokens}}
-        self._indexed_entities: Dict[str, Dict[str, List[TokenType]]] = None
+        self._indexed_entities: Dict[str, Dict[str, List[int]]] = None
 
     @overrides
     def index(self, vocab: Vocabulary):

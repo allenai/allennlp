@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, TypeVar
 import logging
 import gzip
 import pyparsing
@@ -19,6 +19,8 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+LispValueType = TypeVar("LispValueType", str, List[str], None)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("wikitables")
@@ -66,9 +68,9 @@ class WikitablesDatasetReader(DatasetReader):
         return Dataset(instances)
 
     @overrides
-    def text_to_instance(self,
+    def text_to_instance(self,  # type: ignore
                          input_lisp_string: str,
-                         for_train: bool = False) -> Instance:  # type: ignore
+                         for_train: bool = False) -> Instance:
         # pylint: disable=arguments-differ
         parsed_info = self._parse_line_as_lisp(input_lisp_string)
         tokenized_utterance = self._utterance_tokenizer.tokenize(parsed_info["utterance"])
@@ -99,8 +101,8 @@ class WikitablesDatasetReader(DatasetReader):
         return ListField([LabelField(action, label_namespace='actions') for action in action_sequence])
 
     @staticmethod
-    def _parse_line_as_lisp(lisp_string: str) -> Dict[str, List[str]]:
-        parsed_info = {x: None for x in ["id", "utterance", "context", "targetValue"]}
+    def _parse_line_as_lisp(lisp_string: str) -> Dict[str, LispValueType]:
+        parsed_info = {}
         input_nested_list = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(lisp_string).asList()[0]
         for key_value in input_nested_list:
             if not isinstance(key_value, list):
@@ -113,7 +115,7 @@ class WikitablesDatasetReader(DatasetReader):
                 parsed_info["context"] = key_value[1][-1]
             elif key_value[0] == "targetValue":
                 parsed_info["targetValue"] = [x[1] for x in key_value[1][1:]]
-        assert all([parsed_info[x] is not None for x in ["id", "utterance", "context"]]), "Invalid format"
+        assert all([x in parsed_info for x in ["id", "utterance", "context"]]), "Invalid format"
         return parsed_info
 
     @classmethod
