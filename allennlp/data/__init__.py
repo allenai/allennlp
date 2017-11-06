@@ -1,3 +1,5 @@
+import spacy  # pylint: disable=unused-import
+
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields.field import DataArray, Field
