@@ -2,7 +2,6 @@ import re
 from typing import Any, Dict, List, Tuple
 
 from overrides import overrides
-import spacy
 
 from allennlp.common import Params, Registrable
 from allennlp.data.tokenizers.token import Token
@@ -163,6 +162,8 @@ class SpacyWordSplitter(WordSplitter):
     A ``WordSplitter`` that uses spaCy's tokenizer.  It's fast and reasonable - this is the
     recommended ``WordSplitter``.
     """
+    import spacy
+
     # In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
     # keyed by the options we used to create the spacy model, so any particular configuration only
     # gets loaded once.
