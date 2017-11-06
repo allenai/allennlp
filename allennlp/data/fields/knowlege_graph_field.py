@@ -6,6 +6,7 @@ from typing import Dict, List
 
 from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields.field import Field, DataArray
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
@@ -45,8 +46,15 @@ class KnowledgeGraphField(Field[DataArray]):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        # pylint: disable=no-self-use
-        return {}
+        # TODO (pradeep): This may change after the actual entity token indexers are implemented.
+        if self._indexed_entities is None:
+            raise ConfigurationError("This field is not indexed yet. Call .index(vocabulary) before determining "
+                                     "padding lengths.")
+        padding_lengths = {"num_tokens": len(self._indexed_entities)}
+        for indexer_name in self._token_indexers:
+            padding_lengths[indexer_name] = max([len(index[indexer_name]) if indexer_name in index else 0
+                                                 for index in self._indexed_entities.values()])
+        return padding_lengths
 
     @overrides
     def as_array(self, padding_lengths: Dict[str, int]) -> DataArray:

@@ -7,7 +7,7 @@ Classes related to representing a table in WikitableQuestions. At this point we 
 import re
 
 from collections import defaultdict
-from typing import List, DefaultDict
+from typing import List, DefaultDict, Dict, Any
 
 from allennlp.data.knowledge_graph import KnowledgeGraph
 
@@ -36,21 +36,38 @@ class TableKnowledgeGraph(KnowledgeGraph):
         we read "Nation", "Olympics" and "Medals" as column headers, "USA" and "China" as cells under the
         "Nation" column and so on.
         """
-        neighbors: DefaultDict[str, List[str]] = defaultdict(list)
+        all_cells = []
         # We assume the first row is column names.
         for row_index, line in enumerate(open(filename)):
             line = line.rstrip('\n')
             if row_index == 0:
-                # Following Sempre's convention for naming columns.
-                columns = ["fb:row.row.%s" % cls._normalize_string(x) for x in line.split('\t')]
+                columns = line.split('\t')
             else:
-                # Following Sempre's convention for naming cells.
-                cells = ["fb:cell.%s" % cls._normalize_string(x) for x in line.split('\t')]
-                assert len(columns) == len(cells), ("Invalid format. Row %d has %d columns, but header "
-                                                    "has %d columns" % (row_index, len(cells), len(columns)))
-                for column, cell in zip(columns, cells):
-                    neighbors[column].append(cell)
-                    neighbors[cell].append(column)
+                all_cells.append(line.split('\t'))
+        return cls.read_from_json({"columns": columns, "cells": all_cells})
+
+    @classmethod
+    def read_from_json(cls, json_object: Dict[str, Any]) -> 'TableKnowledgeGraph':
+        """
+        We read tables formatted as JSON objects (dicts) here. This is useful when you are reading data
+        from a demo. The expected format is:
+            {"columns": [column1, column2, ...],
+             "cells": [[row1_cell1, row1_cell2, ...],
+                       [row2_cell1, row2_cell2, ...],
+                       ... ]}
+        """
+        neighbors: DefaultDict[str, List[str]] = defaultdict(list)
+        # Following Sempre's convention for naming columns.
+        columns = ["fb:row.row.%s" % cls._normalize_string(x) for x in json_object["columns"]]
+        all_cells = json_object["cells"]
+        for row_index, row_cells in enumerate(all_cells):
+            assert len(columns) == len(row_cells), ("Invalid format. Row %d has %d cells, but header has %d"
+                                                    " columns" % (row_index, len(row_cells), len(columns)))
+            # Following Sempre's convention for naming cells.
+            row_cells = ["fb:cell.%s" % cls._normalize_string(x) for x in row_cells]
+            for column, cell in zip(columns, row_cells):
+                neighbors[column].append(cell)
+                neighbors[cell].append(column)
         return cls(dict(neighbors))
 
     @staticmethod

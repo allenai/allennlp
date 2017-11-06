@@ -1,7 +1,7 @@
 """
 Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/releases/tag/v1.0.2).
 """
-from typing import Dict, List, TypeVar
+from typing import Dict, List, TypeVar, Any
 import logging
 import gzip
 import pyparsing
@@ -24,20 +24,27 @@ from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 LispValueType = TypeVar("LispValueType", str, List[str], None)  # pylint: disable=invalid-name
+TableInfoType = TypeVar("TableInfoType", str, Dict[str, Any])  # pylint: disable=invalid-name
+
 
 
 @DatasetReader.register("wikitables")
 class WikitablesDatasetReader(DatasetReader):
     """
-    We assume you are reading in ``data/*.examples`` files, and you have access to the output from
+    Initialize the dataset reader with paths to the tables directory and the directory where DPD output is stored
+    if you are training. While testing, you can either provide existing table filenames or if your question is
+    about a new table, provide the contnet of the table as a dict (See ``TableKnowledgeGraph.read_from_json`` for
+    the expected format). If you are doing the former, you still need to provide a ``tables_directory`` path here.
+
+    For training, we assume you are reading in ``data/*.examples`` files, and you have access to the output from
     Dynamic Programming on Denotations (DPD) on the training dataset.
 
     Parameters
     ----------
-    tables_directory : ``str``
+    tables_directory : ``str`` (optional)
         Prefix for the path to the directory in which the tables reside. For example, ``*.examples`` files
         contain paths like ``csv/204-csv/590.csv``, this is the directory that contains the ``csv`` directory.
-    dpd_output_directory : ``str``
+    dpd_output_directory : ``str`` (optional)
         Directory that contains all the gzipped dpd output files. We assume the filenames match the
         example IDs (e.g.: ``nt-0.gz``).
     utterance_tokenizer : ``Tokenizer`` (optional)
@@ -46,7 +53,7 @@ class WikitablesDatasetReader(DatasetReader):
         Token indexers for questions. Will default to ``{"tokens": SingleIdTokenIndexer()}``.
     """
     def __init__(self,
-                 tables_directory: str,
+                 tables_directory: str = None,
                  dpd_output_directory: str = None,
                  utterance_tokenizer: Tokenizer = None,
                  utterance_token_indexers: Dict[str, TokenIndexer] = None) -> None:
@@ -64,29 +71,49 @@ class WikitablesDatasetReader(DatasetReader):
                 line = line.strip("\n")
                 if not line:
                     continue
-                instances.append(self.text_to_instance(line, True))
+                parsed_info = self._parse_line_as_lisp(line)
+                utterance = parsed_info["utterance"]
+                # We want the TSV file, but the ``*.examples`` files typically point to CSV.
+                table_filename = "%s/%s" % (self._tables_directory, parsed_info["context"].replace(".csv", ".tsv"))
+                dpd_output_filename = "%s/%s.gz" % (self._dpd_output_directory, parsed_info["id"])
+                sempre_forms = [line.strip().decode('utf-8') for line in gzip.open(dpd_output_filename)]
+                instances.append(self.text_to_instance(utterance, table_filename, sempre_forms))
         if not instances:
             raise ConfigurationError("No instances read!")
         return Dataset(instances)
 
     @overrides
     def text_to_instance(self,  # type: ignore
-                         input_lisp_string: str,
-                         for_train: bool = False) -> Instance:
+                         utterance: str,
+                         table_info: TableInfoType,
+                         dpd_output: List[str] = None) -> Instance:
+        """
+        Reads text inputs and makes an instance. WikitableQuestions dataset provides tables as TSV files, which we
+        use for training. For running a demo, we may want to provide tables in a JSON format. To make this method
+        compatible with both, we take ``table_info``, which can either be a filename, or a dict. We check the
+        argument's type and calle the appropriate method in ``TableKnowledgeGraph``.
+
+        Parameters
+        ----------
+        utterance : ``str``
+            Input utterance
+        table_info : ``str`` or ``Dict[str, Any]``
+            Table filename or the table content itself, as a dict. See ``TableKnowledgeGraph.read_from_json`` for
+            the expected format.
+        dpd_output : List[str] (optional)
+            List of logical forms, produced by dynamic programming on denotations. Not required during test.
+        """
         # pylint: disable=arguments-differ
-        parsed_info = self._parse_line_as_lisp(input_lisp_string)
-        tokenized_utterance = self._utterance_tokenizer.tokenize(parsed_info["utterance"])
+        tokenized_utterance = self._utterance_tokenizer.tokenize(utterance)
         utterance_field = TextField(tokenized_utterance, self._utterance_token_indexers)
-        table_filename = "%s/%s" % (self._tables_directory, parsed_info["context"])
-        # We want the TSV file, but the ``*.examples`` files typically point to CSV.
-        table_filename = table_filename.replace(".csv", ".tsv")
-        table_knowledge_graph = TableKnowledgeGraph.read_from_file(table_filename)
+        if isinstance(table_info, str):
+            table_knowledge_graph = TableKnowledgeGraph.read_from_file(table_info)
+        else:
+            table_knowledge_graph = TableKnowledgeGraph.read_from_json(table_info)
         table_field = KnowledgeGraphField(table_knowledge_graph, self._utterance_token_indexers)
-        if for_train:
+        if dpd_output:
             world = World(table_knowledge_graph)
-            dpd_output_filename = "%s/%s.gz" % (self._dpd_output_directory, parsed_info["id"])
-            sempre_forms = [line.strip().decode('utf-8') for line in gzip.open(dpd_output_filename)]
-            expressions = world.process_sempre_forms(sempre_forms)
+            expressions = world.process_sempre_forms(dpd_output)
             action_sequences = [world.get_action_sequence(expression) for expression in expressions]
             action_sequences_field = ListField([self._make_action_sequence_field(sequence)
                                                 for sequence in action_sequences])
@@ -104,19 +131,30 @@ class WikitablesDatasetReader(DatasetReader):
 
     @staticmethod
     def _parse_line_as_lisp(lisp_string: str) -> Dict[str, LispValueType]:
+        """
+        Training data in WikitableQuestions comes with examples in the form of lisp strings in the format:
+            (example (id <example-id>)
+                     (utterance <utterance>)
+                     (context (graph tables.TableKnowledgeGraph <table-filename>))
+                     (targetValue (list (description <answer1>) (description <answer2>) ...)))
+
+        We parse such strings and return the parsed information here.
+        """
         parsed_info = {}
         input_nested_list = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(lisp_string).asList()[0]
-        for key_value in input_nested_list:
-            if not isinstance(key_value, list):
-                continue
-            if key_value[0] == "id":
-                parsed_info["id"] = key_value[1]
-            elif key_value[0] == "utterance":
-                parsed_info["utterance"] = key_value[1].replace("\"", "")
-            elif key_value[0] == "context":
-                parsed_info["context"] = key_value[1][-1]
-            elif key_value[0] == "targetValue":
-                parsed_info["targetValue"] = [x[1] for x in key_value[1][1:]]
+        # Skipping "example"
+        for key, value in input_nested_list[1:]:
+            if key == "id":
+                parsed_info["id"] = value
+            elif key == "utterance":
+                parsed_info["utterance"] = value.replace("\"", "")
+            elif key == "context":
+                # Skipping "graph" and "tables.TableKnowledgeGraph"
+                parsed_info["context"] = value[-1]
+            elif key == "targetValue":
+                # Skipping "list", and "description" within each nested list.
+                parsed_info["targetValue"] = [x[1] for x in value[1:]]
+        # targetValue may not be present if the answer is not provided.
         assert all([x in parsed_info for x in ["id", "utterance", "context"]]), "Invalid format"
         return parsed_info
 
@@ -124,16 +162,8 @@ class WikitablesDatasetReader(DatasetReader):
     def from_params(cls, params: Params) -> 'WikitablesDatasetReader':
         tables_directory = params.pop('tables_directory')
         dpd_output_directory = params.pop('dpd_output_directory', None)
-        utterance_tokenizer_type = params.pop('utterance_tokenizer', None)
-        if utterance_tokenizer_type:
-            utterance_tokenizer = Tokenizer.from_params(utterance_tokenizer_type)
-        else:
-            utterance_tokenizer = None
-        utterance_token_indexers_type = params.pop('utterance_token_indexers', None)
-        if utterance_token_indexers_type:
-            utterance_token_indexers = TokenIndexer.dict_from_params(utterance_token_indexers_type)
-        else:
-            utterance_token_indexers = None
+        utterance_tokenizer = Tokenizer.from_params(params.pop('utterance_tokenizer', {}))
+        utterance_token_indexers = TokenIndexer.dict_from_params(params.pop('utterance_token_indexers', {}))
         params.assert_empty(cls.__name__)
         return WikitablesDatasetReader(tables_directory,
                                        dpd_output_directory,
