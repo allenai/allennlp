@@ -5,6 +5,7 @@ standard word vectors, or pass through an LSTM.
 from typing import Dict, List, Optional
 
 from overrides import overrides
+from spacy.tokens import Token as SpacyToken
 import numpy
 
 from allennlp.data.fields.sequence_field import SequenceField
@@ -32,9 +33,6 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
     def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
-        # Only import this if necessary, to avoid TLS errors.
-        from spacy.tokens import Token as SpacyToken
-
         self.tokens = tokens
         self._token_indexers = token_indexers
         self._indexed_tokens: Optional[Dict[str, TokenList]] = None
