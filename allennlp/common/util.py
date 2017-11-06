@@ -14,7 +14,7 @@ from allennlp.common.params import Params
 
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
-def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name
+def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
     """
     Sanitize turns PyTorch and Numpy types into basic Python types so they
     can be serialized into JSON.
@@ -22,7 +22,9 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name
     if isinstance(x, (str, float, int, bool)):
         # x is already serializable
         return x
-    elif isinstance(x, torch.Tensor):
+    elif isinstance(x, torch.autograd.Variable):
+        return sanitize(x.data)
+    elif isinstance(x, torch._TensorBase):  # pylint: disable=protected-access
         # tensor needs to be converted to a list (and moved to cpu if necessary)
         return x.cpu().tolist()
     elif isinstance(x, numpy.ndarray):
