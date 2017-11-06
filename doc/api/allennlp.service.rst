@@ -7,7 +7,6 @@ via a REST API or similar.
 
 .. toctree::
 
-   allennlp.service.permalinks
    allennlp.service.predictors
    allennlp.service.server_sanic
 
