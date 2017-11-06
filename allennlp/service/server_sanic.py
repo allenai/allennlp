@@ -21,7 +21,7 @@ import psycopg2
 
 from allennlp.common.util import JsonDict
 from allennlp.models.archival import load_archive
-from allennlp.service.db import DemoDatabase
+from allennlp.service.db import DemoDatabase, PostgresDemoDatabase
 from allennlp.service.permalinks import int_to_slug, slug_to_int
 from allennlp.service.predictors import Predictor
 
@@ -40,7 +40,7 @@ def run(port: int, workers: int,
         logger.warning("The demo requires the API to be run on port 8000.")
 
     # This will be ``None`` if all the relevant environment variables are not defined.
-    demo_db = DemoDatabase.from_environment()
+    demo_db = PostgresDemoDatabase.from_environment()
 
     app = make_app(static_dir, demo_db)
     CORS(app)

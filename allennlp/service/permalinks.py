@@ -2,6 +2,7 @@
 Utilities for creating permalinks.
 """
 import base64
+import binascii
 import logging
 from typing import Optional, NamedTuple
 
@@ -28,9 +29,9 @@ def slug_to_int(slug: str) -> Optional[int]:
     Returns ``None`` if slug is not well-formed.
     """
     byt = slug.encode('utf-8')
-    int_bytes = base64.urlsafe_b64decode(byt)
     try:
+        int_bytes = base64.urlsafe_b64decode(byt)
         return int(int_bytes)
-    except ValueError:
+    except (binascii.Error, ValueError):
         logger.error("Unable to interpret slug: %s", slug)
         return None
