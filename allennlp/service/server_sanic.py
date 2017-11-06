@@ -193,6 +193,17 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
         """list the available models"""
         return response.json({"models": list(app.predictors.keys())})
 
+    # As a SPA, we need to return index.html for /model-name and /model-name/permalink
+    @app.route('/semantic-role-labeling')
+    @app.route('/machine-comprehension')
+    @app.route('/textual-entailment')
+    @app.route('/semantic-role-labeling/<permalink>')
+    @app.route('/machine-comprehension/<permalink>')
+    @app.route('/textual-entailment/<permalink>')
+    async def return_page(req: request.Request, permalink: str = None) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
+        """return the page"""
+        return await response.file(os.path.join(build_dir, 'index.html'))
+
     app.static('/', os.path.join(build_dir, 'index.html'))
     app.static('/', build_dir)
 
