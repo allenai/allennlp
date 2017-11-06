@@ -18,6 +18,13 @@ TEST_ARCHIVE_FILES = {
         'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
 }
 
+PREDICTORS = {
+        name: Predictor.from_archive(load_archive(archive_file),
+                                     predictor_name=name)
+        for name, archive_file in TEST_ARCHIVE_FILES.items()
+}
+
+
 class CountingPredictor(Predictor):
     """
     bogus predictor that just returns a copy of its inputs
@@ -44,12 +51,7 @@ class TestSanic(AllenNlpTestCase):
         if self.client is None:
 
             self.app = make_app(build_dir=self.TEST_DIR)
-            self.app.predictors = {
-                    name: Predictor.from_archive(load_archive(archive_file),
-                                                 predictor_name=name)
-                    for name, archive_file in TEST_ARCHIVE_FILES.items()
-            }
-
+            self.app.predictors = PREDICTORS
             self.app.testing = True
             self.client = self.app.test_client
 
