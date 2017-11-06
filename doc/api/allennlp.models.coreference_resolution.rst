@@ -1,5 +1,5 @@
 allennlp.models.coreference_resolution
-=====================================
+======================================
 
 .. automodule:: allennlp.models.coreference_resolution
    :members:
