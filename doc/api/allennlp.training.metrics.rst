@@ -72,7 +72,7 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
-.. _conll_coref_scores:
+.. _conll-coref-scores:
 .. automodule:: allennlp.training.metrics.conll_coref_scores
    :members:
    :undoc-members:
