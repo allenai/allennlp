@@ -26,7 +26,7 @@ class CoreferenceResolver(Model):
     <https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83>
     by Lee et al., 2017.
     The basic outline of this model is to get an embedded representation of each span in the
-    document. These span representations are scored and use to prune away spans that are unlikely
+    document. These span representations are scored and used to prune away spans that are unlikely
     to occur in a coreference cluster. For the remaining spans, the model decides which antecedent
     span (if any) they are coreferent with. The resulting coreference links, after applying
     transitivity, imply a clustering of the spans in the document.
@@ -280,7 +280,7 @@ class CoreferenceResolver(Model):
         top_span_embeddings: torch.FloatTensor
             Embedding representations of the top spans.
         antecedent_embeddings: torch.FloatTensor
-            Embedding representaitons of the antecedent spans for each top span.
+            Embedding representations of the antecedent spans for each top span.
         antecedent_offsets: torch.IntTensor
             The offsets between each top span and its antecedent spans.
         Returns
@@ -514,9 +514,10 @@ class CoreferenceResolver(Model):
         # these indices in top_span_embeddings to get the embeddings for them for each
         # instance in the batch. This tensor represents the indices which we will be generating
         # distributions over - for each span we kept, we will generate a distribution over
-        # the maximum number of anteceedents we choose to consider. As these are just the
+        # the maximum number of antecedents we choose to consider. As these are just the
         # indices of the spans, and we consider the same number for each element in the batch,
-        # it is batch agnostic.
+        # it is batch agnostic. In fact, the next step in the model is to look up all of the
+        # embeddings for these indices in _every_ batch.
 
         # Shapes:
         # (num_spans_to_keep, max_antecedents),
@@ -602,8 +603,19 @@ class CoreferenceResolver(Model):
             which are in turn comprised of a list of (start, end) inclusive spans into the
             original document.
         """
+
+        # A tensor of shape (batch_size, num_spans_to_keep, 2), representing
+        # the start and end indices of each span.
         batch_top_spans = output_dict["top_spans"].data.cpu()
+
+        # A tensor of shape (batch_size, num_spans_to_keep) representing, for each span,
+        # the index into ``antecedent_indices`` which specifies the antecedent span. Additionally,
+        # the index can be -1, specifying that the span has no predicted antecedent.
         batch_predicted_antecedents = output_dict["predicted_antecedents"].data.cpu()
+
+        # A tensor of shape (num_spans_to_keep, max_antecedents), representing the indices
+        # of the predicted antecedents with respect to the 2nd dimension of ``batch_top_spans``
+        # for each antecedent we considered.
         antecedent_indices = output_dict["antecedent_indices"].data.cpu()
         batch_clusters: List[List[List[Tuple[int, int]]]] = []
 
