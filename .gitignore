@@ -11,3 +11,5 @@ dist/
 
 # vim temporary files
 *.swp
+
+.envrc
