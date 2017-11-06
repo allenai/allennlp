@@ -39,13 +39,36 @@ class DemoDatabase:
     In the future it could also be used to store user-submitted feedback about predictions.
     """
     def __init__(self, dbname: str, host: str, user: str, password: str) -> None:
+        self.dbname = dbname
+        self.host = host
+        self.user = user
+        self.password = password
+        self.conn = None
+        self._connect()
+
+    def _health_check(self) -> None:
+        try:
+            with self.conn.cursor() as curs:
+                # Run a simple query
+                curs.execute("""SELECT 1""")
+                curs.fetchone()
+        except psycopg2.Error:
+            logger.exception("database connection lost, reconnecting")
+            self._connect()
+
+    def _connect(self) -> None:
         logger.info("initializing database connection:")
-        logger.info("host: %s", host)
-        logger.info("dbname: %s", dbname)
-        self.conn = psycopg2.connect(host=host,
-                                     user=user,
-                                     password=password,
-                                     dbname=dbname)
+        logger.info("host: %s", self.host)
+        logger.info("dbname: %s", self.dbname)
+        try:
+            self.conn = psycopg2.connect(host=self.host,
+                                         user=self.user,
+                                         password=self.password,
+                                         dbname=self.dbname)
+        except psycopg2.Error:
+            logger.exception("unable to connect to database, permalinks not enabled")
+            return
+
         logger.info("successfully initialized database connection")
 
     @classmethod
@@ -56,10 +79,10 @@ class DemoDatabase:
         password = os.environ.get("DEMO_POSTGRES_PASSWORD")
 
         if all([host, dbname, user, password]):
-            logger.info("initializing demo database connection using environment variables")
+            logger.info("Initializing demo database connection using environment variables")
             return DemoDatabase(dbname=dbname, host=host, user=user, password=password)
         else:
-            logger.info("relevant environment variables not found, so no demo database")
+            logger.info("Relevant environment variables not found, so no demo database")
             return None
 
 
@@ -72,6 +95,8 @@ class DemoDatabase:
         Add the prediction to the database so that it can later
         be retrieved via permalink.
         """
+        self._health_check()
+
         with self.conn.cursor() as curs:
             logger.info("inserting into the database")
 
@@ -93,6 +118,8 @@ class DemoDatabase:
         Gets the result from the database with the given id.
         Returns ``None`` if no such result.
         """
+        self._health_check()
+
         with self.conn.cursor() as curs:
             logger.info("retrieving perma_id %s from database", perma_id)
             curs.execute(RETRIEVE_SQL, (perma_id,))

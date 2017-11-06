@@ -17,6 +17,8 @@ from sanic import Sanic, response, request
 from sanic.exceptions import ServerError
 from sanic_cors import CORS
 
+import psycopg2
+
 from allennlp.common.util import JsonDict
 from allennlp.models.archival import load_archive
 from allennlp.service.db import DemoDatabase
@@ -97,19 +99,18 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
         perma_id = slug_to_int(slug)
         if perma_id is None:
             # Malformed slug
-            raise ServerError('Unrecognized permalink', 400)
+            raise ServerError("Unrecognized permalink: {}".format(slug), 400)
 
         # Fetch the results from the database.
         try:
             permadata = demo_db.get_result(perma_id)
-        except Exception:
-            # TODO(joelgrus) more specific exception type
-            # Error talking to database
+        except psycopg2.Error:
+            logger.exception("Unable to get results from database: perma_id %s", perma_id)
             raise ServerError('Database trouble', 500)
 
         if permadata is None:
             # No data found, invalid id?
-            raise ServerError('Unrecognized permalink', 400)
+            raise ServerError("Unrecognized permalink: {}".format(slug), 400)
 
         return response.json({
                 "modelName": permadata.model_name,

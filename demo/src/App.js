@@ -45,7 +45,7 @@ class Demo extends React.Component {
     }
 
     // Our components will be using history.push to change the location,
-    // and they will be attaching `requestData` and `responseData` updates
+    // and they will be attaching any `requestData` and `responseData` updates
     // to the location object. That means we need to listen for location changes
     // and update our state accordingly.
     props.history.listen((location, action) => {
@@ -63,6 +63,8 @@ class Demo extends React.Component {
     this.setState({selectedModel: model, slug: slug});
   }
 
+  // After the component mounts, we check if we need to fetch the data
+  // for a permalink.
   componentDidMount() {
     const { slug, responseData } = this.state;
 

@@ -172,7 +172,7 @@ class _McComponent extends React.Component {
       const { requestData, responseData } = props;
 
       this.state = {
-        outputState: this.props.responseData ? "received" : "empty", // valid values: "working", "empty", "received", "error"
+        outputState: responseData ? "received" : "empty", // valid values: "working", "empty", "received", "error"
         requestData: requestData,
         responseData: responseData
       };
