@@ -19,6 +19,7 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.highway import Highway
 from allennlp.nn.util import add_bos_eos
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
+from allennlp.data import Vocabulary
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 DTYPE = 'float32'
@@ -211,8 +212,7 @@ class ELMoTokenEmbedder(TokenEmbedder):
             self._projection.bias.requires_grad = False
 
     @classmethod
-    def from_params(cls, params: Params) -> 'ELMoTokenEmbedder':
-        # pylint: disable=arguments-differ
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'ELMoTokenEmbedder':
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
         params.assert_empty(cls.__name__)
