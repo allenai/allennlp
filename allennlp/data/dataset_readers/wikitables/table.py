@@ -28,10 +28,11 @@ class TableKnowledgeGraph(KnowledgeGraph):
     def read_from_file(cls, filename: str) -> 'TableKnowledgeGraph':
         """
         We read tables formatted as TSV files here. We assume the first line in the file is a tab separated
-        list of column headers, and all subsequent lines are content rows. For example if the TSV file is,
-            Nation      Olympics    Medals
-            USA         1896        8
-            China       1932        9
+        list of column headers, and all subsequent lines are content rows. For example if the TSV file is:
+
+        Nation      Olympics    Medals
+        USA         1896        8
+        China       1932        9
 
         we read "Nation", "Olympics" and "Medals" as column headers, "USA" and "China" as cells under the
         "Nation" column and so on.
@@ -51,10 +52,11 @@ class TableKnowledgeGraph(KnowledgeGraph):
         """
         We read tables formatted as JSON objects (dicts) here. This is useful when you are reading data
         from a demo. The expected format is:
-            {"columns": [column1, column2, ...],
-             "cells": [[row1_cell1, row1_cell2, ...],
-                       [row2_cell1, row2_cell2, ...],
-                       ... ]}
+
+        {"columns": [column1, column2, ...],
+         "cells": [[row1_cell1, row1_cell2, ...],
+                   [row2_cell1, row2_cell2, ...],
+                   ... ]}
         """
         neighbors: DefaultDict[str, List[str]] = defaultdict(list)
         # Following Sempre's convention for naming columns.
