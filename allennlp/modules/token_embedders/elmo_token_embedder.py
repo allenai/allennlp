@@ -5,10 +5,11 @@ import json
 import logging
 
 import numpy
-import torch
 import h5py
 
 from overrides import overrides
+
+import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
@@ -21,6 +22,8 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 DTYPE = 'float32'
+
+# pylint: disable=invalid-name,protected-access,attribute-defined-outside-init,bad-continuation
 
 
 @TokenEmbedder.register("elmo_token_embedder")
@@ -209,8 +212,8 @@ class ELMoTokenEmbedder(TokenEmbedder):
 
     @classmethod
     def from_params(cls, params: Params) -> 'ELMoTokenEmbedder':
+        # pylint: disable=arguments-differ
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
         params.assert_empty(cls.__name__)
         return cls(options_file, weight_file)
-
