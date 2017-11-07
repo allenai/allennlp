@@ -1,9 +1,12 @@
+# pylint: disable=bad-continuation,no-self-use
 
 import os
 import numpy
-import torch
 import h5py
+
+import torch
 from torch.autograd import Variable
+
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.token_embedders.elmo_token_embedder import ELMoTokenEmbedder
@@ -46,4 +49,3 @@ class TestELMoTokenEmbedder(AllenNlpTestCase):
             expected_embeddings = fin['embedding'][...]
 
         assert numpy.allclose(actual_embeddings[:len(tokens)], expected_embeddings, atol=1e-6)
-

@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name, no-self-use,too-many-public-methods
+# pylint: disable=invalid-name,no-self-use,too-many-public-methods,bad-continuation,bad-whitespace
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
@@ -559,7 +559,7 @@ class TestNnUtil(AllenNlpTestCase):
                   [[[ 1,  2,  3,  4],
                     [ 5,  5,  5,  5],
                     [ 6,  8,  1,  2]],
-            
+
                    [[ 4,  3,  2,  1],
                     [ 8,  7,  6,  5],
                     [ 0,  0,  0,  0]]]
@@ -584,4 +584,3 @@ class TestNnUtil(AllenNlpTestCase):
         )
         assert (new_tensor.data.numpy() == expected_new_tensor).all()
         assert (new_mask.data.numpy() == ((expected_new_tensor > 0).sum(axis=-1) > 0)).all()
-

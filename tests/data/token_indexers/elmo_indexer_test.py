@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,bad-continuation,bad-whitespace
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
@@ -43,7 +43,7 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
                                 261, 261, 261, 261, 261
                             ]
         assert indices == expected_indices
-    
+
     def test_elmo_as_array_produces_token_sequence(self):
         indexer = ELMoTokenCharactersIndexer()
         indices = [
@@ -75,4 +75,3 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
         ]
 
         assert padded_tokens == expected_padded_tokens
-
