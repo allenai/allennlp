@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
+import copy
 import json
 import os
 import pathlib
@@ -9,6 +10,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 from allennlp.service.server_sanic import make_app
+from allennlp.service.db import InMemoryDemoDatabase
 
 TEST_ARCHIVE_FILES = {
         'machine-comprehension': 'tests/fixtures/bidaf/serialization/model.tar.gz',
@@ -16,9 +18,16 @@ TEST_ARCHIVE_FILES = {
         'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
 }
 
+PREDICTORS = {
+        name: Predictor.from_archive(load_archive(archive_file),
+                                     predictor_name=name)
+        for name, archive_file in TEST_ARCHIVE_FILES.items()
+}
+
+
 class CountingPredictor(Predictor):
     """
-    bogus predictor that just returns its input as is
+    bogus predictor that just returns a copy of its inputs
     and also counts how many times it was called with a given input
     """
     # pylint: disable=abstract-method
@@ -28,7 +37,7 @@ class CountingPredictor(Predictor):
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         key = json.dumps(inputs)
         self.calls[key] += 1
-        return inputs
+        return copy.deepcopy(inputs)
 
 class TestSanic(AllenNlpTestCase):
 
@@ -42,12 +51,7 @@ class TestSanic(AllenNlpTestCase):
         if self.client is None:
 
             self.app = make_app(build_dir=self.TEST_DIR)
-            self.app.predictors = {
-                    name: Predictor.from_archive(load_archive(archive_file),
-                                                 predictor_name=name)
-                    for name, archive_file in TEST_ARCHIVE_FILES.items()
-            }
-
+            self.app.predictors = PREDICTORS
             self.app.testing = True
             self.client = self.app.test_client
 
@@ -163,3 +167,53 @@ class TestSanic(AllenNlpTestCase):
         with self.assertRaises(SystemExit) as cm:
             make_app(fake_dir)
             assert cm.code == -1  # pylint: disable=no-member
+
+    def test_permalinks_fail_gracefully_with_no_database(self):
+        app = make_app(build_dir=self.TEST_DIR)
+        predictor = CountingPredictor()
+        app.predictors = {"counting": predictor}
+        app.testing = True
+        client = app.test_client
+
+        # Make a prediction, no permalinks.
+        data = {"some": "input"}
+        _, response = client.post("/predict/counting", json=data)
+
+        assert response.status == 200
+
+        # With permalinks not enabled, the result shouldn't contain a slug.
+        result = json.loads(response.text)
+        assert "slug" not in result
+
+        # With permalinks not enabled, a post to the /permadata endpoint should be a 400.
+        _, response = self.client.post("/permadata", json={"slug": "someslug"})
+        assert response.status == 400
+
+    def test_permalinks_work(self):
+        db = InMemoryDemoDatabase()
+        app = make_app(build_dir=self.TEST_DIR, demo_db=db)
+        predictor = CountingPredictor()
+        app.predictors = {"counting": predictor}
+        app.testing = True
+        client = app.test_client
+
+        data = {"some": "input"}
+        _, response = client.post("/predict/counting", json=data)
+
+        assert response.status == 200
+        result = json.loads(response.text)
+        slug = result.get("slug")
+        assert slug is not None
+
+        print("db data", db.data)
+
+        _, response = client.post("/permadata", json={"slug": "not the right slug"})
+        assert response.status == 400
+
+        _, response = client.post("/permadata", json={"slug": slug})
+        assert response.status == 200
+        result2 = json.loads(response.text)
+        assert set(result2.keys()) == {"modelName", "requestData", "responseData"}
+        assert result2["modelName"] == "counting"
+        assert result2["requestData"] == data
+        assert result2["responseData"] == result
