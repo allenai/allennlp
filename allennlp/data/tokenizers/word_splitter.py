@@ -168,18 +168,19 @@ class SpacyWordSplitter(WordSplitter):
     # gets loaded once.
     _spacy_tokenizers: Dict[Tuple, Any] = {}
     def __init__(self,
-                 language: str = 'en',
+                 language: str = 'en_core_web_sm',
                  pos_tags: bool = False,
                  parse: bool = False,
                  ner: bool = False) -> None:
+
         self.spacy = self._get_spacy_model(language, pos_tags, parse, ner)
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
         return [t for t in self.spacy(sentence) if not t.is_space]
 
-    def _get_spacy_model(self, language: str, pos_tags: bool, parse: bool, ner: bool) -> Any:
-        options = (language, pos_tags, parse, ner)
+    def _get_spacy_model(self, spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool) -> Any:
+        options = (spacy_model_name, pos_tags, parse, ner)
         if options not in self._spacy_tokenizers:
             kwargs = {'vectors': False}
             if not pos_tags:
@@ -188,13 +189,13 @@ class SpacyWordSplitter(WordSplitter):
                 kwargs['parser'] = False
             if not ner:
                 kwargs['entity'] = False
-            spacy_model = spacy.load(language, **kwargs)
+            spacy_model = spacy.load(spacy_model_name, **kwargs)
             self._spacy_tokenizers[options] = spacy_model
         return self._spacy_tokenizers[options]
 
     @classmethod
     def from_params(cls, params: Params) -> 'WordSplitter':
-        language = params.pop('language', 'en')
+        language = params.pop('language', 'en_core_web_sm')
         pos_tags = params.pop('pos_tags', False)
         parse = params.pop('parse', False)
         ner = params.pop('ner', False)

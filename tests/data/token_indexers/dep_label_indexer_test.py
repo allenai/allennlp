@@ -19,7 +19,9 @@ class TestDepLabelIndexer(AllenNlpTestCase):
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
-        assert counter["dep_labels"] == {"ROOT": 1, "nsubj": 1, "advmod": 3, "NONE": 2}
+
+        assert counter["dep_labels"] == {"ROOT": 1, "nsubj": 1,
+                                         "det": 1, "NONE": 2, "attr": 1, "punct": 1}
 
     def test_token_to_indices_uses_pos_tags(self):
         tokens = self.tokenizer.split_words("This is a sentence.")
