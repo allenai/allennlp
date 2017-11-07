@@ -1,4 +1,5 @@
 import React from 'react';
+import { withRouter } from 'react-router-dom';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
@@ -31,12 +32,37 @@ const teExamples = [
     },
   ];
 
+  const title = "Textual Entailment";
+  const description = (
+    <div>
+      <span>
+        Textual Entailment (TE) takes a pair of sentences and predicts whether the facts in the first
+        necessarily imply the facts in the second one.  The AllenNLP toolkit provides the following TE visualization,
+        which can be run for any TE model you develop.
+        This page demonstrates a reimplementation of
+      </span>
+      <a href = "https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27" target="_blanke" rel="noopener noreferrer">{' '} the decomposable attention model (Parikh et al, 2017) {' '}</a>
+      <span>
+        , which was state of the art for
+      </span>
+      <a href = "https://nlp.stanford.edu/projects/snli/" target="_blank" rel="noopener noreferrer">{' '} the SNLI benchmark {' '}</a>
+      <span>
+        (short sentences about visual scenes) in 2016.
+      </span>
+    </div>
+  );
+
   class TeInput extends React.Component {
-    constructor() {
-      super();
+    constructor(props) {
+      super(props);
+
+    // If we're showing a permalinked result,
+    // we'll get passed in a premise and hypothesis.
+    const { premise, hypothesis } = props;
+
       this.state = {
-        tePremiseValue: "",
-        teHypothesisValue: "",
+        tePremiseValue: premise || "",
+        teHypothesisValue: hypothesis || "",
       };
       this.handleListChange = this.handleListChange.bind(this);
       this.handlePremiseChange = this.handlePremiseChange.bind(this);
@@ -65,7 +91,6 @@ const teExamples = [
     }
 
     render() {
-
       const { tePremiseValue, teHypothesisValue } = this.state;
       const { outputState, runTeModel } = this.props;
 
@@ -74,26 +99,6 @@ const teExamples = [
         "hypothesisValue": teHypothesisValue
       };
 
-      const title = "Textual Entailment";
-      const description = (
-        <div>
-          <span>
-            Textual Entailment (TE) takes a pair of sentences and predicts whether the facts in the first
-            necessarily imply the facts in the second one.  The AllenNLP toolkit provides the following TE visualization,
-            which can be run for any TE model you develop.
-            This page demonstrates a reimplementation of
-          </span>
-          <a href = "https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27" target="_blanke" rel="noopener noreferrer">{' '} the decomposable attention model (Parikh et al, 2017) {' '}</a>
-          <span>
-            , which was state of the art for
-          </span>
-          <a href = "https://nlp.stanford.edu/projects/snli/" target="_blank" rel="noopener noreferrer">{' '} the SNLI benchmark {' '}</a>
-          <span>
-            (short sentences about visual scenes) in 2016.
-          </span>
-        </div>
-      );
-
       return (
         <div className="model__content">
         <ModelIntro title={title} description={description} />
@@ -101,8 +106,9 @@ const teExamples = [
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
               <option value="">Choose an example...</option>
               {teExamples.map((example, index) => {
+                const selected = example.premise === tePremiseValue && example.hypothesis === teHypothesisValue;
                 return (
-                  <option value={index} key={index}>{example.premise}</option>
+                  <option value={index} key={index} selected={selected}>{example.premise}</option>
                 );
               })}
             </select>
@@ -116,7 +122,7 @@ const teExamples = [
             <input onChange={this.handleHypothesisChange} id="input--te-hypothesis" type="text" required="true" value={teHypothesisValue} placeholder="E.g. &quot;The cat is black.&quot;" />
           </div>
           <div className="form__field form__field--btn">
-            <Button outputState={outputState} runModel={runTeModel} inputs={teInputs} />
+            <Button enabled={outputState !== "working"} runModel={runTeModel} inputs={teInputs} />
           </div>
         </div>
       );
@@ -159,64 +165,67 @@ class TeGraph extends React.Component {
 
 class TeOutput extends React.Component {
     render() {
-      const { rawOutput } = this.props;
+      const { labelProbs } = this.props;
+      const [entailment, contradiction, neutral] = labelProbs;
 
-      const entailment = rawOutput['label_probs'][0];
-      const contradiction = rawOutput['label_probs'][1];
-      const neutral = rawOutput['label_probs'][2];
-
-      let judgement; // Valid values: "e", "c", "n"
+      let judgment; // Valid values: "e", "c", "n"
       let degree; // Valid values: "somewhat", "very"
 
       if (entailment > contradiction && entailment > neutral) {
-        judgement = "e"
+        judgment = "e"
       }
       else if (contradiction > entailment && contradiction > neutral) {
-        judgement = "c"
+        judgment = "c"
       }
       else if (neutral > entailment && neutral > contradiction) {
-        judgement = "n"
+        judgment = "n"
       }
 
       const veryConfident = 0.75;
       const somewhatConfident = 0.50;
       const summaryText = () => {
         if (entailment >= veryConfident || contradiction >= veryConfident || neutral >= veryConfident) {
-          let judgementStr;
-          switch(judgement) {
+          let judgmentStr;
+          switch(judgment) {
             case "c":
-              judgementStr = (<span>the premise <strong>contradicts</strong> the hypothesis</span>);
+              judgmentStr = (<span>the premise <strong>contradicts</strong> the hypothesis</span>);
               break;
             case "e":
-              judgementStr = (<span>the premise <strong>entails</strong> the hypothesis</span>);
+              judgmentStr = (<span>the premise <strong>entails</strong> the hypothesis</span>);
               break;
             case "n":
-              judgementStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
+              judgmentStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
+              break;
+            default:
+              // Can't happen, but let's make the linter happy.
               break;
             default:
               throw new Error("Unhandled case for judgement confidence.")
           }
           return (
-            <div className="model__content__summary">It is <strong>{degree} likely</strong> that {judgementStr}.</div>
+            <div className="model__content__summary">It is <strong>{degree} likely</strong> that {judgmentStr}.</div>
           );
         }
         else if (entailment >= somewhatConfident || contradiction >= somewhatConfident || neutral >= somewhatConfident) {
-          let judgementStr;
-          switch(judgement) {
+          let judgmentStr;
+          switch(judgment) {
             case "c":
-              judgementStr = (<span>the premise <strong>contradicts</strong> the hypothesis</span>);
+              judgmentStr = (<span>the premise <strong>contradicts</strong> the hypothesis</span>);
               break;
             case "e":
-              judgementStr = (<span>the premise <strong>entails</strong> the hypothesis</span>);
+              judgmentStr = (<span>the premise <strong>entails</strong> the hypothesis</span>);
               break;
             case "n":
-              judgementStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
+              judgmentStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
+              break;
+            default:
+              // Can't happen, but let's make the linter happy.
               break;
             default:
               throw new Error("Unhandled case for judgement correlation.")
           }
           return (
-            <div className="model__content__summary">It is <strong>somewhat likely</strong> that {judgementStr}.</div>
+            <div className="model__content__summary">It is <strong>somewhat likely</strong> that {judgmentStr}.</div>
           );
         }
         else {
@@ -279,22 +288,23 @@ class TeOutput extends React.Component {
   <TeComponent /> Component
 *******************************************************************************/
 
-class TeComponent extends React.Component {
-    constructor() {
-      super();
+class _TeComponent extends React.Component {
+    constructor(props) {
+      super(props);
+
+      const { requestData, responseData } = props;
 
       this.state = {
-        outputState: "empty", // valid values: "working", "empty", "received", "error"
-        rawOutput: {},
+        outputState: responseData ? "received" : "empty", // valid values: "working", "empty", "received", "error"
+        requestData: requestData,
+        responseData: responseData
       };
 
       this.runTeModel = this.runTeModel.bind(this);
     }
 
     runTeModel(event, inputs) {
-      this.setState({
-        outputState: "working",
-      });
+      this.setState({outputState: "working"});
 
       var payload = {
         premise: inputs.premiseValue,
@@ -310,8 +320,18 @@ class TeComponent extends React.Component {
       }).then((response) => {
         return response.json();
       }).then((json) => {
-        this.setState({rawOutput: json});
-        this.setState({outputState: "received"});
+        // If the response contains a `slug` for a permalink, we want to redirect
+        // to the corresponding path using `history.push`.
+        const { slug } = json;
+        const newPath = slug ? '/textual-entailment/' + slug : '/textual-entailment';
+
+        // We'll pass the request and response data along as part of the location object
+        // so that the `Demo` component can use them to re-render.
+        const location = {
+          pathname: newPath,
+          state: {requestData: payload, responseData: json}
+        }
+        this.props.history.push(location);
       }).catch((error) => {
         this.setState({outputState: "error"});
         console.error(error);
@@ -319,17 +339,29 @@ class TeComponent extends React.Component {
     }
 
     render() {
+      const { requestData, responseData } = this.props;
+
+      // Get inputs and outputs, which may be null.
+      const premise = requestData && requestData.premise;
+      const hypothesis = requestData && requestData.hypothesis;
+      const labelProbs = responseData && responseData.label_probs;
+
       return (
         <div className="pane model">
           <PaneLeft>
-            <TeInput runTeModel={this.runTeModel} outputState={this.state.outputState}/>
+            <TeInput runTeModel={this.runTeModel}
+                     outputState={this.state.outputState}
+                     premise={premise}
+                     hypothesis={hypothesis}/>
           </PaneLeft>
           <PaneRight outputState={this.state.outputState}>
-            <TeOutput rawOutput={this.state.rawOutput}/>
+            <TeOutput labelProbs={labelProbs}/>
           </PaneRight>
         </div>
       );
     }
 }
+
+const TeComponent = withRouter(_TeComponent);
 
 export default TeComponent;

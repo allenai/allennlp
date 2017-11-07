@@ -41,7 +41,10 @@ awscli>=1.11.91
 
 # REST interface for models
 sanic==0.6.0
-sanic-cors
+sanic-cors==0.6.0.2
+
+# Talk to postgres demo database
+psycopg2
 
 #### LIBRARIES USED IN SCRIPTS ####
 # argument parsing in for data cleaning scripts
