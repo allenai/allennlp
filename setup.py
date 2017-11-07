@@ -101,7 +101,8 @@ setup(name='allennlp',
           'requests>=2.18',
           'tqdm',
           'editdistance',
-          'jupyter'
+          'jupyter',
+          'h5py'
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
