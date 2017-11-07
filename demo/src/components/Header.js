@@ -26,9 +26,9 @@ class Header extends React.Component {
           <div className="header__content">
             <nav>
               <ul>
-                {buildLink("semantic-role-labeling", "SRL Model")}
-                {buildLink("machine-comprehension", "MC Model")}
-                {buildLink("textual-entailment", "TE Model")}
+                {buildLink("machine-comprehension", "Machine Comprehension")}
+                {buildLink("textual-entailment", "Textual Entailment")}
+                {buildLink("semantic-role-labeling", "Semantic Role Labeling")}
               </ul>
             </nav>
             <h1 className="header__content__logo">
