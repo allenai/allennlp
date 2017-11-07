@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 /*******************************************************************************
   <Header /> Component
@@ -6,14 +7,16 @@ import React from 'react';
 
 class Header extends React.Component {
     render() {
-      const { selectedModel, changeModel } = this.props;
+      const { selectedModel, clearData } = this.props;
 
       const buildLink = (thisModel, label) => {
         return (
           <li>
-            <a href="#" className={`nav__link ${selectedModel === thisModel ? "nav__link--selected" : ""}`} onClick={() => { changeModel(thisModel) }}>
-              <span>{label}</span>
-            </a>
+            <span className={`nav__link ${selectedModel === thisModel ? "nav__link--selected" : ""}`}>
+              <Link to={"/" + thisModel} onClick={clearData}>
+                <span>{label}</span>
+              </Link>
+            </span>
           </li>
         )
       }
@@ -23,9 +26,9 @@ class Header extends React.Component {
           <div className="header__content">
             <nav>
               <ul>
-                {buildLink("srl", "SRL Model")}
-                {buildLink("mc", "MC Model")}
-                {buildLink("te", "TE Model")}
+                {buildLink("semantic-role-labeling", "SRL Model")}
+                {buildLink("machine-comprehension", "MC Model")}
+                {buildLink("textual-entailment", "TE Model")}
               </ul>
             </nav>
             <h1 className="header__content__logo">
