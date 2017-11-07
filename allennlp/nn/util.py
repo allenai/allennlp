@@ -2,7 +2,7 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any, Tuple
 import logging
 
 import numpy
@@ -569,21 +569,29 @@ def logsumexp(tensor: torch.Tensor,
     return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
 
 
-def add_bos_eos(tensor, mask, bos, eos):
+def add_bos_eos(
+        tensor: torch.Tensor,
+        mask: torch.Tensor,
+        bos: Any,
+        eos: Any) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Add begin/end of sentence tokens to the batch of sentences.
-    Given a batch of sentences with size ``(batch_size, n_times)`` or
-    ``(batch_size, n_times, dim)`` this returns a tensor of shape ``(batch_size, n_times + 2)`` or
-    ``(batch_size, n_times + 2, dim)`` respectively.
+    Given a batch of sentences with size ``(batch_size, timesteps)`` or
+    ``(batch_size, timesteps, dim)`` this returns a tensor of shape
+    ``(batch_size, timesteps + 2)`` or ``(batch_size, timesteps + 2, dim)`` respectively.
 
-    Returns both the new tensor and updated mask
+    Returns both the new tensor and updated mask.
 
     Parameters
     ----------
-    tensor : A tensor of shape ``(batch_size, n_times)`` or ``(batch_size, n_times, dim)``
-    mask : A tensor of shape ``(batch_size, n_times)``
-    bos: For 2D input, a scalar with the <S> id. For 3D input, a tensor with length dim.
-    eos: For 2D input, a scalar with the </S> id. For 3D input, a tensor with length dim.
+    tensor : torch.Tensor
+        A tensor of shape ``(batch_size, timesteps)`` or ``(batch_size, timesteps, dim)``
+    mask : torch.Tensor
+         A tensor of shape ``(batch_size, timesteps)``
+    bos: Any (anything that can be broadcast in torch for assignment)
+        For 2D input, a scalar with the <S> id. For 3D input, a tensor with length dim.
+    eos: Any (anything that can be broadcast in torch for assignment)
+        For 2D input, a scalar with the </S> id. For 3D input, a tensor with length dim.
     """
     sequence_lengths = mask.sum(dim=1).data.numpy()
     tensor_shape = list(tensor.data.shape)
