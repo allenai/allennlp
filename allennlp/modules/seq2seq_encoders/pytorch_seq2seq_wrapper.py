@@ -96,6 +96,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         if sequence_length_difference > 0:
             zeros = unpacked_sequence_tensor.data.new(batch_size, sequence_length_difference,
                                                       unpacked_sequence_tensor.size(-1)).fill_(0)
+            zeros = torch.autograd.Variable(zeros)
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
 
 
