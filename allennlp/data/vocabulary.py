@@ -4,16 +4,18 @@ out-of-vocabulary token.
 """
 
 from collections import defaultdict
-from typing import Any, Callable, Dict, Union, Sequence
+from typing import Any, Callable, Dict, Union, Sequence, Set
 import codecs
 import logging
 import os
+import gzip
 
 import tqdm
 
 from allennlp.common.util import namespace_match
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
@@ -139,7 +141,9 @@ class Vocabulary:
                  counter: Dict[str, Dict[str, int]] = None,
                  min_count: int = 1,
                  max_vocab_size: Union[int, Dict[str, int]] = None,
-                 non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES) -> None:
+                 non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
+                 pretrained_files: Dict[str, str] = {},
+                 pretrained_exclusive: bool = False) -> None:
         self._padding_token = DEFAULT_PADDING_TOKEN
         self._oov_token = DEFAULT_OOV_TOKEN
         if not isinstance(max_vocab_size, dict):
@@ -153,14 +157,35 @@ class Vocabulary:
                                                         self._oov_token)
         if counter is not None:
             for namespace in counter:
+                if namespace in pretrained_files:
+                    pretrained_list = self._read_pretrained_words(pretrained_files[namespace])
+                else:
+                    pretrained_list = None
                 token_counts = list(counter[namespace].items())
                 token_counts.sort(key=lambda x: x[1], reverse=True)
                 max_vocab = max_vocab_size.get(namespace)
                 if max_vocab:
                     token_counts = token_counts[:max_vocab]
                 for token, count in token_counts:
-                    if count >= min_count:
+                    if pretrained_list is not None:
+                        if pretrained_exclusive: 
+                            if token in pretrained_list and count >= min_count:
+                                self.add_token_to_namespace(token, namespace)
+                        elif token in pretrained_list or count >= min_count:
+                            self.add_token_to_namespace(token, namespace)
+                    elif count >= min_count:
                         self.add_token_to_namespace(token, namespace)
+
+    def _read_pretrained_words(self, embeddings_filename: str)-> Set[str]:
+        words = set()
+        with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
+            for line in embeddings_file:
+                fields = line.decode('utf-8').strip().split(' ')
+                word = fields[0]
+                words.add(word)
+        return words
+
+
 
     def save_to_files(self, directory: str) -> None:
         """
@@ -275,7 +300,9 @@ class Vocabulary:
                      dataset,
                      min_count: int = 1,
                      max_vocab_size: Union[int, Dict[str, int]] = None,
-                     non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES) -> 'Vocabulary':
+                     non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
+                     pretrained_files: Dict[str, str] = {},
+                     pretrained_exclusive: bool = False) -> 'Vocabulary':
         """
         Constructs a vocabulary given a :class:`.Dataset` and some parameters.  We count all of the
         vocabulary items in the dataset, then pass those counts, and the other parameters, to
@@ -289,7 +316,9 @@ class Vocabulary:
         return Vocabulary(counter=namespace_token_counts,
                           min_count=min_count,
                           max_vocab_size=max_vocab_size,
-                          non_padded_namespaces=non_padded_namespaces)
+                          non_padded_namespaces=non_padded_namespaces,
+                          pretrained_files=pretrained_files,
+                          pretrained_exclusive=pretrained_exclusive)
 
     @classmethod
     def from_params(cls, params: Params, dataset=None):
@@ -325,11 +354,15 @@ class Vocabulary:
         min_count = params.pop("min_count", 1)
         max_vocab_size = params.pop("max_vocab_size", None)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
+        pretrained_files = params.pop("pretrained_files", {})
+        pretrained_exclusive = params.pop("pretrained_exlusive", False)
         params.assert_empty("Vocabulary - from dataset")
         return Vocabulary.from_dataset(dataset,
                                        min_count,
                                        max_vocab_size,
-                                       non_padded_namespaces)
+                                       non_padded_namespaces,
+                                       pretrained_files=pretrained_files,
+                                       pretrained_exclusive=pretrained_exclusive)
 
     def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:
         """
