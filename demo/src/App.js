@@ -52,7 +52,7 @@ class Demo extends React.Component {
       const { state } = location;
       if (state) {
         const { requestData, responseData } = state;
-        this.setState({requestData: requestData, responseData: responseData})
+        this.setState({requestData, responseData})
       }
     });
   }
@@ -83,10 +83,10 @@ class Demo extends React.Component {
         return response.json();
       }).then((json) => {
         const { requestData, responseData } = json;
-        this.setState({requestData: requestData, responseData: responseData});
+        this.setState({requestData, responseData});
       }).catch((error) => {
         this.setState({outputState: "error"});
-        throw error; // todo(michaels): is this right?
+        console.error(error);
       });
     }
   }

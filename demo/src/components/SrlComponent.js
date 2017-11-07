@@ -240,7 +240,7 @@ class _SrlComponent extends React.Component {
       this.props.history.push(location);
     }).catch((error) => {
       this.setState({ outputState: "error" });
-      throw error; // todo(michaels): is this right?
+      console.error(error);
     });
   }
 
