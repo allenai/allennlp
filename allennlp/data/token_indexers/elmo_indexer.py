@@ -17,7 +17,7 @@ def _make_bos_eos(char, pad_char, bow_char, eow_char, max_word_length):
     ret[2] = eow_char
     return ret
 
-class ELMoCharacterMapper(object):
+class ELMoCharacterMapper:
     """
     Maps individual tokens to sequences of character ids, compatible with ELMo.
     To be consistent with previously trained models, we include it here as special of existing
