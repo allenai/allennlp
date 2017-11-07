@@ -41,6 +41,9 @@ class DemoDatabase:
 
     @classmethod
     def from_environment(cls) -> Optional['DemoDatabase']:
+        """
+        Instantiate a database using parameters (host, user, password, etc...) from environment variables.
+        """
         raise NotImplementedError
 
 
