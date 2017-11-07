@@ -2,7 +2,7 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union
 import logging
 
 import numpy
@@ -606,4 +606,3 @@ def add_bos_eos(tensor, mask, bos, eos):
         raise ValueError("add_bos_eos only accepts 2D and 3D input")
 
     return ret, new_mask
-
