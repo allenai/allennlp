@@ -4,7 +4,7 @@ from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
 
 
-class ELMoTokenCharactersIndexerTest(AllenNlpTestCase):
+class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
     def test_bos_to_char_ids(self):
         indexer = ELMoTokenCharactersIndexer()
         indices = indexer.token_to_indices(Token('<S>'), Vocabulary())
