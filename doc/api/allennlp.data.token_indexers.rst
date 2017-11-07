@@ -49,3 +49,8 @@ allennlp.data.token_indexers
    :undoc-members:
    :show-inheritance:
 
+.. _elmo-indexer:
+.. automodule:: allennlp.data.token_indexers.elmo_indexer
+   :members:
+   :undoc-members:
+   :show-inheritance:
