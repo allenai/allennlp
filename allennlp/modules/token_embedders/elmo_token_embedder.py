@@ -4,6 +4,8 @@ Compute the context insensitive token embeddings from pretrained biLMs.
 import json
 import logging
 
+from typing import Dict
+
 import numpy
 import h5py
 
@@ -24,7 +26,7 @@ from allennlp.data import Vocabulary
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 DTYPE = 'float32'
 
-# pylint: disable=invalid-name,protected-access,attribute-defined-outside-init,bad-continuation
+# pylint: disable=attribute-defined-outside-init
 
 
 @TokenEmbedder.register("elmo_token_embedder")
@@ -65,22 +67,41 @@ class ELMoTokenEmbedder(TokenEmbedder):
         return self.output_dim
 
     @overrides
-    def forward(self, inputs):  # pylint: disable=arguments-differ
+    def forward(self, inputs: torch.Tensor) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
+        """
+        Compute context insensitive token embeddings for ELMo representations.
+
+        Parameters
+        ----------
+        inputs: ``torch.autograd.Variable``
+            Shape ``(batch_size, sequence_length, 50)`` of character ids representing the
+            current batch.
+
+        Returns
+        -------
+        Dict with keys:
+
+        ``'token_embedding'``: ``torch.autograd.Variable``
+            Shape ``(batch_size, sequence_length + 2, embedding_dim)`` tensor with context
+            insensitive token representations.
+        ``'mask'``:  ``torch.autograd.Variable``
+            Shape ``(batch_size, sequence_length + 2)`` long tensor with sequence mask.
+        """
         # Add BOS/EOS
         mask = ((inputs > 0).sum(dim=-1) > 0).long()
         character_ids_with_bos_eos, mask_with_bos_eos = add_bos_eos(
-            inputs,
-            mask,
-            Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.bos_chars))),
-            Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.eos_chars)))
+                inputs,
+                mask,
+                Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.bos_chars))),
+                Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.eos_chars)))
         )
 
         # the character id embedding
         max_chars_per_token = self._options['char_cnn']['max_characters_per_token']
         # (batch_size * sequence_length, max_chars_per_token, embed_dim)
-        char_embeds = torch.nn.functional.embedding(
-            character_ids_with_bos_eos.view(-1, max_chars_per_token),
-            self._char_embedding_weights
+        character_embedding = torch.nn.functional.embedding(
+                character_ids_with_bos_eos.view(-1, max_chars_per_token),
+                self._char_embedding_weights
         )
 
         # run convolutions
@@ -93,30 +114,30 @@ class ELMoTokenEmbedder(TokenEmbedder):
             raise ConfigurationError("Unknown activation")
 
         # (batch_size * sequence_length, embed_dim, max_chars_per_token)
-        char_embeds = torch.transpose(char_embeds, 1, 2)
+        character_embedding = torch.transpose(character_embedding, 1, 2)
         convs = []
         for conv in self._convolutions:
-            convolved = conv(char_embeds)
+            convolved = conv(character_embedding)
             # (batch_size * sequence_length, n_filters for this width)
             convolved, _ = torch.max(convolved, dim=-1)
             convolved = activation(convolved)
             convs.append(convolved)
 
         # (batch_size * sequence_length, n_filters)
-        ret = torch.cat(convs, dim=-1)
+        token_embedding = torch.cat(convs, dim=-1)
 
         # apply the highway layers (batch_size * sequence_length, n_filters)
-        ret = self._highways(ret)
+        token_embedding = self._highways(token_embedding)
 
         # final projection  (batch_size * sequence_length, embedding_dim)
-        ret = self._projection(ret)
+        token_embedding = self._projection(token_embedding)
 
         # reshape to (batch_size, sequence_length, embedding_dim)
-        batch_size, sequence_length, _ = inputs.data.shape
+        batch_size, sequence_length, _ = character_ids_with_bos_eos.size()
 
         return {
-            'mask': mask_with_bos_eos,
-            'token_embedding': ret.view(batch_size, sequence_length + 2, -1)
+                'mask': mask_with_bos_eos,
+                'token_embedding': token_embedding.view(batch_size, sequence_length, -1)
         }
 
     def _load_weights(self):
@@ -130,16 +151,17 @@ class ELMoTokenEmbedder(TokenEmbedder):
             char_embed_weights = fin['char_embed'][...]
 
         weights = numpy.zeros(
-            (char_embed_weights.shape[0] + 1, char_embed_weights.shape[1]),
-            dtype=DTYPE
+                (char_embed_weights.shape[0] + 1, char_embed_weights.shape[1]),
+                dtype=DTYPE
         )
         weights[1:, :] = char_embed_weights
 
         self._char_embedding_weights = torch.nn.Parameter(
-            torch.FloatTensor(weights), requires_grad=False
+                torch.FloatTensor(weights), requires_grad=False
         )
 
     def _load_cnn_weights(self):
+        # pylint: disable=invalid-name
         cnn_options = self._options['char_cnn']
         filters = cnn_options['filters']
         char_embed_dim = cnn_options['embedding']['dim']
@@ -147,10 +169,10 @@ class ELMoTokenEmbedder(TokenEmbedder):
         convolutions = []
         for i, (width, num) in enumerate(filters):
             conv = torch.nn.Conv1d(
-                in_channels=char_embed_dim,
-                out_channels=num,
-                kernel_size=width,
-                bias=True
+                    in_channels=char_embed_dim,
+                    out_channels=num,
+                    kernel_size=width,
+                    bias=True
             )
             # load the weights
             with h5py.File(cached_path(self._weight_file), 'r') as fin:
@@ -171,6 +193,7 @@ class ELMoTokenEmbedder(TokenEmbedder):
         self._convolutions = convolutions
 
     def _load_highway(self):
+        # pylint: disable=protected-access,invalid-name
         # the highway layers have same dimensionality as the number of cnn filters
         cnn_options = self._options['char_cnn']
         filters = cnn_options['filters']
@@ -183,9 +206,11 @@ class ELMoTokenEmbedder(TokenEmbedder):
             # The AllenNLP highway is one matrix multplication with concatenation of
             # transform and carry weights.
             with h5py.File(cached_path(self._weight_file), 'r') as fin:
-                W_transform = fin['CNN_high_{}'.format(k)]['W_transform'][...].T
+                # The weights are transposed due to multiplication order assumptions in tf
+                # vs pytorch (tf.matmul(X, W) vs pytorch.matmul(W, X))
+                W_transform = numpy.transpose(fin['CNN_high_{}'.format(k)]['W_transform'][...])
                 # -1.0 since AllenNLP is g * x + (1 - g) * f(x) but tf is (1 - g) * x + g * f(x)
-                W_carry = -1.0 * fin['CNN_high_{}'.format(k)]['W_carry'][...].T
+                W_carry = -1.0 * numpy.transpose(fin['CNN_high_{}'.format(k)]['W_carry'][...])
                 W = numpy.concatenate([W_transform, W_carry], axis=0)
                 self._highways._layers[k].weight.data.copy_(torch.FloatTensor(W))
                 self._highways._layers[k].weight.requires_grad = False
@@ -197,6 +222,7 @@ class ELMoTokenEmbedder(TokenEmbedder):
                 self._highways._layers[k].bias.requires_grad = False
 
     def _load_projection(self):
+        # pylint: disable=invalid-name
         cnn_options = self._options['char_cnn']
         filters = cnn_options['filters']
         n_filters = sum(f[1] for f in filters)
@@ -205,7 +231,7 @@ class ELMoTokenEmbedder(TokenEmbedder):
         with h5py.File(cached_path(self._weight_file), 'r') as fin:
             W = fin['CNN_proj']['W_proj'][...]
             b = fin['CNN_proj']['b_proj'][...]
-            self._projection.weight.data.copy_(torch.FloatTensor(W.T))
+            self._projection.weight.data.copy_(torch.FloatTensor(numpy.transpose(W)))
             self._projection.bias.data.copy_(torch.FloatTensor(b))
 
             self._projection.weight.requires_grad = False
