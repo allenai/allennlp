@@ -1,5 +1,4 @@
 from typing import Dict, List
-import itertools
 
 from overrides import overrides
 
@@ -11,10 +10,10 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.vocabulary import Vocabulary
 
 
-def _make_bos_eos(c, pad_char, bow_char, eow_char, max_word_length):
+def _make_bos_eos(char, pad_char, bow_char, eow_char, max_word_length):
     ret = [pad_char] * max_word_length
     ret[0] = bow_char
-    ret[1] = c
+    ret[1] = char
     ret[2] = eow_char
     return ret
 
@@ -47,8 +46,9 @@ class ELMoCharacterMapper(object):
             ret[0] = ELMoCharacterMapper.bow_char
             for k, chr_id in enumerate(word_encoded, start=1):
                 ret[k] = chr_id
+            # pylint: disable=undefined-loop-variable
             ret[k + 1] = ELMoCharacterMapper.eow_char
-    
+
         # +1 one for masking
         return [c + 1 for c in ret]
 
@@ -73,6 +73,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
     @overrides
     def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> List[int]:
+        #pylint: disable=unused-argument
         if token.text is None:
             raise ConfigurationError('ELMoTokenCharactersIndexer needs a tokenizer '
                                      'that retains text')
@@ -80,6 +81,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
     @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
+        #pylint: disable=unused-argument
         return {}
 
     @overrides
@@ -95,6 +97,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
                            tokens: List[List[int]],
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[List[int]]:
+        #pylint: disable=unused-argument
         return pad_sequence_to_length(tokens, desired_num_tokens,
                                       default_value=self._default_value_for_padding)
 
