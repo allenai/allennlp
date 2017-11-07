@@ -37,7 +37,7 @@ awscli>=1.11.91
 
 # REST interface for models
 sanic==0.6.0
-sanic-cors
+sanic-cors==0.6.0.2
 
 # Talk to postgres demo database
 psycopg2
