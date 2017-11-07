@@ -18,9 +18,11 @@ def _make_bos_eos(char, pad_char, bow_char, eow_char, max_word_length):
     return ret
 
 class ELMoCharacterMapper(object):
-    '''
+    """
     Maps individual tokens to sequences of character ids, compatible with ELMo.
-    '''
+    To be consistent with previously trained models, we include it here as special of existing
+    character indexers.
+    """
     max_word_length = 50
 
     # char ids 0-255 come from utf-8 encoding bytes
@@ -34,11 +36,14 @@ class ELMoCharacterMapper(object):
     bos_chars = _make_bos_eos(bos_char, pad_char, bow_char, eow_char, max_word_length)
     eos_chars = _make_bos_eos(eos_char, pad_char, bow_char, eow_char, max_word_length)
 
+    bos_token = '<S>'
+    eos_token = '</S>'
+
     @staticmethod
     def convert_word_to_char_ids(word):
-        if word == '<S>':
+        if word == ELMoCharacterMapper.bos_token:
             ret = ELMoCharacterMapper.bos_chars
-        elif word == '</S>':
+        elif word == ELMoCharacterMapper.eos_token:
             ret = ELMoCharacterMapper.eos_chars
         else:
             word_encoded = word.encode('utf-8', 'ignore')[:(ELMoCharacterMapper.max_word_length-2)]
@@ -46,8 +51,7 @@ class ELMoCharacterMapper(object):
             ret[0] = ELMoCharacterMapper.bow_char
             for k, chr_id in enumerate(word_encoded, start=1):
                 ret[k] = chr_id
-            # pylint: disable=undefined-loop-variable
-            ret[k + 1] = ELMoCharacterMapper.eow_char
+            ret[len(word_encoded) + 1] = ELMoCharacterMapper.eow_char
 
         # +1 one for masking
         return [c + 1 for c in ret]
