@@ -11,12 +11,12 @@ from allennlp.data.vocabulary import Vocabulary
 
 
 def _make_bos_eos(
-            character,
-            padding_character,
-            beginning_of_word_character,
-            end_of_word_character,
-            max_word_length
-    ):
+        character,
+        padding_character,
+        beginning_of_word_character,
+        end_of_word_character,
+        max_word_length
+):
     ret = [padding_character] * max_word_length
     ret[0] = beginning_of_word_character
     ret[1] = character
