@@ -10,7 +10,7 @@ import WaitingForPermalink from './components/WaitingForPermalink'
   <App /> Container
 *******************************************************************************/
 
-const DEFAULT_PATH = "/semantic-role-labeling"
+const DEFAULT_PATH = "/machine-comprehension"
 
 // The App is just a react-router wrapped around the Demo component.
 const App = () => (
