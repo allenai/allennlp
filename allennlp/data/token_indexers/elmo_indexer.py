@@ -10,11 +10,17 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.vocabulary import Vocabulary
 
 
-def _make_bos_eos(char, pad_char, bow_char, eow_char, max_word_length):
-    ret = [pad_char] * max_word_length
-    ret[0] = bow_char
-    ret[1] = char
-    ret[2] = eow_char
+def _make_bos_eos(
+            character,
+            padding_character,
+            beginning_of_word_character,
+            end_of_word_character,
+            max_word_length
+    ):
+    ret = [padding_character] * max_word_length
+    ret[0] = beginning_of_word_character
+    ret[1] = character
+    ret[2] = end_of_word_character
     return ret
 
 class ELMoCharacterMapper:
@@ -27,14 +33,26 @@ class ELMoCharacterMapper:
 
     # char ids 0-255 come from utf-8 encoding bytes
     # assign 256-300 to special chars
-    bos_char = 256  # <begin sentence>
-    eos_char = 257  # <end sentence>
-    bow_char = 258  # <begin word>
-    eow_char = 259  # <end word>
-    pad_char = 260 # <padding>
+    beginning_of_sentence_character = 256  # <begin sentence>
+    end_of_sentence_character = 257  # <end sentence>
+    beginning_of_word_character = 258  # <begin word>
+    end_of_word_character = 259  # <end word>
+    padding_character = 260 # <padding>
 
-    bos_chars = _make_bos_eos(bos_char, pad_char, bow_char, eow_char, max_word_length)
-    eos_chars = _make_bos_eos(eos_char, pad_char, bow_char, eow_char, max_word_length)
+    beginning_of_sentence_characters = _make_bos_eos(
+            beginning_of_sentence_character,
+            padding_character,
+            beginning_of_word_character,
+            end_of_word_character,
+            max_word_length
+    )
+    end_of_sentence_characters = _make_bos_eos(
+            end_of_sentence_character,
+            padding_character,
+            beginning_of_word_character,
+            end_of_word_character,
+            max_word_length
+    )
 
     bos_token = '<S>'
     eos_token = '</S>'
@@ -42,16 +60,16 @@ class ELMoCharacterMapper:
     @staticmethod
     def convert_word_to_char_ids(word):
         if word == ELMoCharacterMapper.bos_token:
-            ret = ELMoCharacterMapper.bos_chars
+            ret = ELMoCharacterMapper.beginning_of_sentence_characters
         elif word == ELMoCharacterMapper.eos_token:
-            ret = ELMoCharacterMapper.eos_chars
+            ret = ELMoCharacterMapper.end_of_sentence_characters
         else:
             word_encoded = word.encode('utf-8', 'ignore')[:(ELMoCharacterMapper.max_word_length-2)]
-            ret = [ELMoCharacterMapper.pad_char] * ELMoCharacterMapper.max_word_length
-            ret[0] = ELMoCharacterMapper.bow_char
+            ret = [ELMoCharacterMapper.padding_character] * ELMoCharacterMapper.max_word_length
+            ret[0] = ELMoCharacterMapper.beginning_of_word_character
             for k, chr_id in enumerate(word_encoded, start=1):
                 ret[k] = chr_id
-            ret[len(word_encoded) + 1] = ELMoCharacterMapper.eow_char
+            ret[len(word_encoded) + 1] = ELMoCharacterMapper.end_of_word_character
 
         # +1 one for masking
         return [c + 1 for c in ret]

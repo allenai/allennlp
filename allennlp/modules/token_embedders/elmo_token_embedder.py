@@ -92,8 +92,8 @@ class ELMoTokenEmbedder(TokenEmbedder):
         character_ids_with_bos_eos, mask_with_bos_eos = add_bos_eos(
                 inputs,
                 mask,
-                Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.bos_chars))),
-                Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.eos_chars)))
+                Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.beginning_of_sentence_characters))),
+                Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.end_of_sentence_characters)))
         )
 
         # the character id embedding
