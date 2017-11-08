@@ -35,10 +35,13 @@ class BeamSearch:
                         if step_num == num_steps and keep_final_unfinished_states:
                             finished_states.append(next_state)
                         next_states.append(next_state)
+            # TODO(mattg): do this sort on the GPU, not on the CPU, and copy once.
             to_sort = [(-state.score.data[0], state) for state in next_states]
             to_sort.sort(key=lambda x: x[0])
             states = [state[1] for state in to_sort[:self._beam_size]]
-        finished_to_sort = [(-state.score.data[0], state) for state in finished_states]
+        # The time this one takes is pretty negligible, no particular need to optimize this yet.
+        # Maybe with a larger beam size...
+        finished_to_sort = [(-state.score.data[0] / len(state.action_history), state) for state in finished_states]
         finished_to_sort.sort(key=lambda x: x[0])
         return [state[1] for state in finished_to_sort]
 
