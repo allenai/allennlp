@@ -13,17 +13,17 @@ class TestLanguageModelingDatasetReader(AllenNlpTestCase):
         # in here, anyway.
         assert len(instances) == 5
 
-        assert instances[0].fields["input_tokens"].tokens == ["This", "is", "a"]
-        assert instances[0].fields["output_tokens"].tokens == ["is", "a", "sentence"]
+        assert [t.text for t in instances[0].fields["input_tokens"].tokens] == ["This", "is", "a"]
+        assert [t.text for t in instances[0].fields["output_tokens"].tokens] == ["is", "a", "sentence"]
 
-        assert instances[1].fields["input_tokens"].tokens == ["sentence", "for", "language"]
-        assert instances[1].fields["output_tokens"].tokens == ["for", "language", "modelling"]
+        assert [t.text for t in instances[1].fields["input_tokens"].tokens] == ["sentence", "for", "language"]
+        assert [t.text for t in instances[1].fields["output_tokens"].tokens] == ["for", "language", "modelling"]
 
-        assert instances[2].fields["input_tokens"].tokens == ["modelling", ".", "Here"]
-        assert instances[2].fields["output_tokens"].tokens == [".", "Here", "'s"]
+        assert [t.text for t in instances[2].fields["input_tokens"].tokens] == ["modelling", ".", "Here"]
+        assert [t.text for t in instances[2].fields["output_tokens"].tokens] == [".", "Here", "'s"]
 
-        assert instances[3].fields["input_tokens"].tokens == ["'s", "another", "one"]
-        assert instances[3].fields["output_tokens"].tokens == ["another", "one", "for"]
+        assert [t.text for t in instances[3].fields["input_tokens"].tokens] == ["'s", "another", "one"]
+        assert [t.text for t in instances[3].fields["output_tokens"].tokens] == ["another", "one", "for"]
 
-        assert instances[4].fields["input_tokens"].tokens == ["for", "extra", "language"]
-        assert instances[4].fields["output_tokens"].tokens == ["extra", "language", "modelling"]
+        assert [t.text for t in instances[4].fields["input_tokens"].tokens] == ["for", "extra", "language"]
+        assert [t.text for t in instances[4].fields["output_tokens"].tokens] == ["extra", "language", "modelling"]

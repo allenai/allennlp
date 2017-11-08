@@ -2,7 +2,7 @@ from overrides import overrides
 import torch
 
 from allennlp.common import Params
-from allennlp.modules.similarity_function import SimilarityFunction
+from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
 
 
 @SimilarityFunction.register("cosine")

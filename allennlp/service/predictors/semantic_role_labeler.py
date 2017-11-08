@@ -1,10 +1,10 @@
 from typing import List
 
 from overrides import overrides
-import spacy
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 
@@ -16,7 +16,7 @@ class SemanticRoleLabelerPredictor(Predictor):
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
-        self.nlp = spacy.load('en', parser=False, vectors=False, entity=False)
+        self._tokenizer = SpacyWordSplitter(language='en', pos_tags=True)
 
     @staticmethod
     def make_srl_string(words: List[str], tags: List[str]) -> str:
@@ -48,7 +48,11 @@ class SemanticRoleLabelerPredictor(Predictor):
         raise RuntimeError("this should never be called")
 
     @overrides
-    def predict_json(self, inputs: JsonDict) -> JsonDict:
+    def _batch_json_to_instances(self, json: List[JsonDict]) -> List[Instance]:
+        raise NotImplementedError("The SRL Predictor does not currently support batch prediction.")
+
+    @overrides
+    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         """
         Expects JSON that looks like ``{"sentence": "..."}``
         and returns JSON that looks like
@@ -64,16 +68,16 @@ class SemanticRoleLabelerPredictor(Predictor):
         """
         sentence = inputs["sentence"]
 
-        spacy_doc = self.nlp(sentence)
-        words = [token.text for token in spacy_doc]
+        tokens = self._tokenizer.split_words(sentence)
+        words = [token.text for token in tokens]
         results: JsonDict = {"words": words, "verbs": []}
-        for i, word in enumerate(spacy_doc):
+        for i, word in enumerate(tokens):
             if word.pos_ == "VERB":
                 verb = word.text
                 verb_labels = [0 for _ in words]
                 verb_labels[i] = 1
-                instance = self._dataset_reader.text_to_instance(words, verb_labels)
-                output = self._model.decode(self._model.forward_on_instance(instance))
+                instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
+                output = self._model.forward_on_instance(instance, cuda_device)
                 tags = output['tags']
 
                 description = SemanticRoleLabelerPredictor.make_srl_string(words, tags)
@@ -84,6 +88,6 @@ class SemanticRoleLabelerPredictor(Predictor):
                         "tags": tags,
                 })
 
-        results["tokens"] = [word.text for word in spacy_doc]
+        results["tokens"] = words
 
         return sanitize(results)

@@ -92,7 +92,25 @@ about them.
 ### Serving the Demo
 
 The `serve` command starts the demo server.
-The first time you run it, it will download
+If you are using the Docker image, all the relevant files
+are included and you don't have to do anything special.
+
+If you have installed from source, you'll need to build the files
+(for which you'll need [npm](https://www.npmjs.com/get-npm)):
+
+```bash
+cd demo
+npm install
+npm run build
+cd ..
+```
+
+After which the files for the demo website will be in `demo/build`.
+
+Currently `serve` doesn't work if you installed using `pip`,
+as the static files for the demo website don't get installed. We're working on it.
+
+The first time you run `serve`, it will download
 several large serialized models from Amazon S3.
 
 ```
@@ -105,8 +123,6 @@ Starting a sanic server on port 8000.
 2017-08-16 18:55:12,323 - INFO - sanic - Starting worker [33290]
 ```
 
-(Currently `serve` doesn't work if you installed using `pip`,
- as the static files for the demo website don't get installed. We're working on it.)
 
 If you now visit `http://localhost:8000` in your browser, you can play around with the same demo
 that runs on the AllenNLP website.

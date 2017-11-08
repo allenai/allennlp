@@ -3,8 +3,10 @@ import itertools
 
 from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.util import pad_sequence_to_length
+from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
@@ -34,33 +36,33 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         self._character_tokenizer = character_tokenizer
 
     @overrides
-    def count_vocab_items(self, token: str, counter: Dict[str, Dict[str, int]]):
-        for character in self._character_tokenizer.tokenize(token)[0]:
-            # If our character tokenizer is using byte encoding, the character might already be an
-            # int.  In that case, we'll bypass the vocabulary entirely.
-            if not isinstance(character, int):
-                counter[self._namespace][character] += 1
+    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
+        if token.text is None:
+            raise ConfigurationError('TokenCharactersIndexer needs a tokenizer that retains text')
+        for character in self._character_tokenizer.tokenize(token.text):
+            # If `text_id` is set on the character token (e.g., if we're using byte encoding), we
+            # will not be using the vocab for this character.
+            if getattr(character, 'text_id', None) is None:
+                counter[self._namespace][character.text] += 1
 
     @overrides
-    def token_to_indices(self, token: str, vocabulary: Vocabulary) -> List[int]:
+    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> List[int]:
         indices = []
-        for character in self._character_tokenizer.tokenize(token)[0]:
-            # If our character tokenizer is using byte encoding, the character might already be an
-            # int.  In that case, we'll bypass the vocabulary entirely.
-            if isinstance(character, int):
-                index = character
+        if token.text is None:
+            raise ConfigurationError('TokenCharactersIndexer needs a tokenizer that retains text')
+        for character in self._character_tokenizer.tokenize(token.text):
+            if getattr(character, 'text_id', None) is not None:
+                # `text_id` being set on the token means that we aren't using the vocab, we just
+                # use this id instead.
+                index = character.text_id
             else:
-                index = vocabulary.get_token_index(character, self._namespace)
+                index = vocabulary.get_token_index(character.text, self._namespace)
             indices.append(index)
         return indices
 
     @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
         return {'num_token_characters': len(token)}
-
-    @overrides
-    def get_input_shape(self, num_tokens: int, padding_lengths: Dict[str, int]):
-        return (num_tokens, padding_lengths['num_token_characters'])
 
     @overrides
     def get_padding_token(self) -> List[int]:
@@ -73,7 +75,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                            padding_lengths: Dict[str, int]) -> List[List[int]]:
         padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=lambda: [])
         desired_token_length = padding_lengths['num_token_characters']
-        longest_token = max(tokens, key=len)
+        longest_token: List[int] = max(tokens, key=len, default=[])
         padding_index = 0
         if desired_token_length > len(longest_token):
             # Since we want to pad to greater than the longest token, we add a

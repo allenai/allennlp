@@ -2,5 +2,5 @@ include README.md
 include requirements.txt
 recursive-include scripts *
 recursive-include tutorials *
-recursive-include experiment_config *.json
+recursive-include training_config *.json
 recursive-exclude tests *

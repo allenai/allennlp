@@ -29,6 +29,10 @@ class StackedAlternatingLstm(torch.nn.Module):
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
+    use_input_projection_bias : bool, optional (default = True)
+        Whether or not to use a bias on the input projection layer. This is mainly here
+        for backwards compatibility reasons and will be removed (and set to False)
+        in future releases.
 
     Returns
     -------
@@ -43,12 +47,14 @@ class StackedAlternatingLstm(torch.nn.Module):
                  hidden_size: int,
                  num_layers: int,
                  recurrent_dropout_probability: float = 0.0,
-                 use_highway: bool = True) -> None:
+                 use_highway: bool = True,
+                 use_input_projection_bias: bool = True) -> None:
         super(StackedAlternatingLstm, self).__init__()
 
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.num_layers = num_layers
 
         layers = []
         lstm_input_size = input_size
@@ -56,7 +62,8 @@ class StackedAlternatingLstm(torch.nn.Module):
             go_forward = True if layer_index % 2 == 0 else False
             layer = AugmentedLstm(lstm_input_size, hidden_size, go_forward,
                                   recurrent_dropout_probability=recurrent_dropout_probability,
-                                  use_highway=use_highway)
+                                  use_highway=use_highway,
+                                  use_input_projection_bias=use_input_projection_bias)
             lstm_input_size = hidden_size
             self.add_module('layer_{}'.format(layer_index), layer)
             layers.append(layer)

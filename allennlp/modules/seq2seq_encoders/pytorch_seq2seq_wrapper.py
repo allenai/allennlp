@@ -56,6 +56,22 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         if mask is None:
             return self._module(inputs, hidden_state)[0]
+
+        # In some circumstances you may have sequences of zero length.
+        # ``pack_padded_sequence`` requires all sequence lengths to be > 0, so here we
+        # adjust the ``mask`` so that every sequence has length at least 1. Then after
+        # running the RNN we zero out the corresponding rows in the result.
+
+        # First count how many sequences are empty.
+        batch_size, total_sequence_length = mask.size()
+        num_valid = torch.sum(mask[:, 0]).int().data[0]
+
+        # Force every sequence to be length at least one. Need to `.clone()` the mask
+        # to avoid a RuntimeError from shared storage.
+        if num_valid < batch_size:
+            mask = mask.clone()
+            mask[:, 0] = 1
+
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
@@ -66,5 +82,23 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         # Actually call the module on the sorted PackedSequence.
         packed_sequence_output, _ = self._module(packed_sequence_input, hidden_state)
         unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
+
+        # We sorted by length, so if there are invalid rows that need to be zeroed out
+        # they will be at the end.
+        if num_valid < batch_size:
+            unpacked_sequence_tensor[num_valid:, :, :] = 0.
+
+        # It's possible to need to pass sequences which are padded to longer than the
+        # max length of the sequence to a Seq2SeqEncoder. However, packing and unpacking
+        # the sequences mean that the returned tensor won't include these dimensions, because
+        # the RNN did not need to process them. We add them back on in the form of zeros here.
+        sequence_length_difference = total_sequence_length - unpacked_sequence_tensor.size(1)
+        if sequence_length_difference > 0:
+            zeros = unpacked_sequence_tensor.data.new(batch_size, sequence_length_difference,
+                                                      unpacked_sequence_tensor.size(-1)).fill_(0)
+            zeros = torch.autograd.Variable(zeros)
+            unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
+
+
         # Restore the original indices and return the sequence.
         return unpacked_sequence_tensor.index_select(0, restoration_indices)

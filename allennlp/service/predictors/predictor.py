@@ -1,16 +1,10 @@
+from typing import List
 from allennlp.common import Registrable
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.models.archival import Archive
 
-# a mapping from model `type` to the default Predictor for that type
-DEFAULT_PREDICTORS = {
-        'srl': 'semantic-role-labeling',
-        'decomposable_attention': 'textual-entailment',
-        'bidaf': 'machine-comprehension',
-        'simple_tagger': 'simple-tagger'
-}
 
 class Predictor(Registrable):
     """
@@ -21,9 +15,9 @@ class Predictor(Registrable):
         self._model = model
         self._dataset_reader = dataset_reader
 
-    def predict_json(self, inputs: JsonDict) -> JsonDict:
+    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         instance = self._json_to_instance(inputs)
-        outputs = self._model.decode(self._model.forward_on_instance(instance))
+        outputs = self._model.forward_on_instance(instance, cuda_device)
         return sanitize(outputs)
 
     def _json_to_instance(self, json: JsonDict) -> Instance:
@@ -32,8 +26,27 @@ class Predictor(Registrable):
         """
         raise NotImplementedError
 
+    def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
+        instances = self._batch_json_to_instances(inputs)
+        outputs = self._model.forward_on_instances(instances, cuda_device)
+        return sanitize(outputs)
+
+    def _batch_json_to_instances(self, json: List[JsonDict]) -> List[Instance]:
+        """
+        Converts a list of JSON objects into a list of :class:`~allennlp.data.instance.Instance`s.
+        By default, this expects that a "batch" consists of a list of JSON blobs which would
+        individually be predicted by :func:`predict_json`. In order to use this method for
+        batch prediction, :func:`_json_to_instance` should be implemented by the subclass, or
+        if the instances have some dependency on each other, this method should be overridden
+        directly.
+        """
+        instances = []
+        for blob in json:
+            instances.append(self._json_to_instance(blob))
+        return instances
+
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
+    def from_archive(cls, archive: Archive, predictor_name: str) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
@@ -47,6 +60,4 @@ class Predictor(Registrable):
         model = archive.model
         model.eval()
 
-        model_name = config.get("model").get("type")
-        predictor_name = predictor_name or DEFAULT_PREDICTORS[model_name]
         return Predictor.by_name(predictor_name)(model, dataset_reader)

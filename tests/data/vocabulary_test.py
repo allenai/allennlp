@@ -5,7 +5,7 @@ from copy import deepcopy
 
 import pytest
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Dataset, Instance
+from allennlp.data import Dataset, Instance, Token
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
@@ -17,7 +17,8 @@ from allennlp.common.checks import ConfigurationError
 class TestVocabulary(AllenNlpTestCase):
     def setUp(self):
         token_indexer = SingleIdTokenIndexer("tokens")
-        text_field = TextField(["a", "a", "a", "a", "b", "b", "c", "c", "c"], {"tokens": token_indexer})
+        text_field = TextField([Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]],
+                               {"tokens": token_indexer})
         self.instance = Instance({"text": text_field})
         self.dataset = Dataset([self.instance])
         super(TestVocabulary, self).setUp()
@@ -103,6 +104,7 @@ class TestVocabulary(AllenNlpTestCase):
             vocab_file.write('</S>\n')
             vocab_file.write('<UNK>\n')
             vocab_file.write('a\n')
+            vocab_file.write('tricky\x0bchar\n')
             vocab_file.write('word\n')
             vocab_file.write('another\n')
 
@@ -115,15 +117,17 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab.get_token_index("</S>") == 2
         assert vocab.get_token_index(DEFAULT_OOV_TOKEN) == 3
         assert vocab.get_token_index("a") == 4
-        assert vocab.get_token_index("word") == 5
-        assert vocab.get_token_index("another") == 6
+        assert vocab.get_token_index("tricky\x0bchar") == 5
+        assert vocab.get_token_index("word") == 6
+        assert vocab.get_token_index("another") == 7
         assert vocab.get_token_from_index(0) == vocab._padding_token
         assert vocab.get_token_from_index(1) == "<S>"
         assert vocab.get_token_from_index(2) == "</S>"
         assert vocab.get_token_from_index(3) == DEFAULT_OOV_TOKEN
         assert vocab.get_token_from_index(4) == "a"
-        assert vocab.get_token_from_index(5) == "word"
-        assert vocab.get_token_from_index(6) == "another"
+        assert vocab.get_token_from_index(5) == "tricky\x0bchar"
+        assert vocab.get_token_from_index(6) == "word"
+        assert vocab.get_token_from_index(7) == "another"
 
     def test_set_from_file_reads_non_padded_files(self):
         # pylint: disable=protected-access
@@ -194,7 +198,7 @@ class TestVocabulary(AllenNlpTestCase):
         # result.
         tokenizer = CharacterTokenizer(byte_encoding='utf-8')
         token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer)
-        tokens = ["Øyvind", "für", "汉字"]
+        tokens = [Token(t) for t in ["Øyvind", "für", "汉字"]]
         text_field = TextField(tokens, {"characters": token_indexer})
         dataset = Dataset([Instance({"sentence": text_field})])
         vocab = Vocabulary.from_dataset(dataset)

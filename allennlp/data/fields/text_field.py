@@ -5,9 +5,11 @@ standard word vectors, or pass through an LSTM.
 from typing import Dict, List, Optional
 
 from overrides import overrides
+from spacy.tokens import Token as SpacyToken
 import numpy
 
 from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
@@ -30,13 +32,13 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
     ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
-    def __init__(self, tokens: List[str], token_indexers: Dict[str, TokenIndexer]) -> None:
+    def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
         self.tokens = tokens
         self._token_indexers = token_indexers
         self._indexed_tokens: Optional[Dict[str, TokenList]] = None
 
-        if not all([isinstance(x, str) for x in tokens]):
-            raise ConfigurationError("TextFields must be passed strings. "
+        if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
+            raise ConfigurationError("TextFields must be passed Tokens. "
                                      "Found: {} with types {}.".format(tokens, [type(x) for x in tokens]))
 
     @overrides
@@ -64,8 +66,12 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
 
             # This is a list of dicts, one for each token in the field.
             token_lengths = [indexer.get_padding_lengths(token) for token in self._indexed_tokens[indexer_name]]
-            # TODO(Mark): This breaks if the token list is empty, but we need to be able to have empty fields.
-            # Just raise here?
+            if not token_lengths:
+                # This is a padding edge case and occurs when we want to pad a ListField of
+                # TextFields. In order to pad the list field, we need to be able to have an
+                # _empty_ TextField, but if this is the case, token_lengths will be an empty
+                # list, so we add the default empty padding dictionary to the list instead.
+                token_lengths = [{}]
             # Iterate over the keys in the first element of the list.
             # This is fine as for a given indexer, all tokens will return the same keys,
             # so we can just use the first one.

@@ -17,21 +17,6 @@ from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-PARAMETER = 60
-logging.addLevelName(PARAMETER, "PARAM")
-
-
-def __param(self, message, *args, **kws):
-    """
-    Add a method to logger which allows us to always log parameters unless you set the logging
-    level to be higher than 60 (which is higher than the standard highest level of 50,
-    corresponding to WARNING).
-    """
-    # Logger takes its '*args' as 'args'.
-    if self.isEnabledFor(PARAMETER):
-        self._log(PARAMETER, message, args, **kws) # pylint: disable=protected-access
-logging.Logger.param = __param  # type: ignore
-
 
 class Params(MutableMapping):
     """
@@ -81,7 +66,7 @@ class Params(MutableMapping):
         else:
             value = self.params.pop(key, default)
         if not isinstance(value, dict):
-            logger.param(self.history + key + " = " + str(value))  # type: ignore
+            logger.info(self.history + key + " = " + str(value))  # type: ignore
         return self._check_is_dict(key, value)
 
     @overrides
@@ -150,7 +135,7 @@ class Params(MutableMapping):
                     new_local_history = history + key  + "."
                     log_recursively(value, new_local_history)
                 else:
-                    logger.param(history + key + " = " + str(value))
+                    logger.info(history + key + " = " + str(value))
 
         logger.info("Converting Params object to dict; logging of default "
                     "values will not occur when dictionary parameters are "
@@ -203,14 +188,17 @@ class Params(MutableMapping):
         return value
 
     @staticmethod
-    def from_file(params_file: str) -> 'Params':
+    def from_file(params_file: str, params_overrides: str = "") -> 'Params':
         """
         Load a `Params` object from a configuration file.
         """
         # redirect to cache, if necessary
         params_file = cached_path(params_file)
 
-        param_dict = pyhocon.ConfigFactory.parse_file(params_file)
+        file_dict = pyhocon.ConfigFactory.parse_file(params_file)
+
+        overrides_dict = pyhocon.ConfigFactory.parse_string(params_overrides)
+        param_dict = overrides_dict.with_fallback(file_dict)
         return Params(param_dict)
 
 

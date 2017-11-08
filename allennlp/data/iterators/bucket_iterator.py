@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import List, Tuple, Dict, cast
 
@@ -8,6 +9,8 @@ from allennlp.common.util import add_noise_to_dict_values
 from allennlp.data import Dataset, Instance
 from allennlp.data.iterators.basic_iterator import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DataIterator.register("bucket")
@@ -71,6 +74,9 @@ class BucketIterator(BasicIterator):
             penultimate_batch = grouped_instances.pop()
         if shuffle:
             random.shuffle(grouped_instances)
+        else:
+            logger.warning("shuffle parameter is set to False,"
+                           " while bucket iterators by definition change the order of your data.")
         if self._biggest_batch_first:
             grouped_instances.insert(0, penultimate_batch)
             grouped_instances.insert(0, last_batch)

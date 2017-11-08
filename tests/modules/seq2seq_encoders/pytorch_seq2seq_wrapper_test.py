@@ -22,6 +22,28 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         assert encoder.get_output_dim() == 7
         assert encoder.get_input_dim() == 2
 
+    def test_forward_works_even_with_empty_sequences(self):
+        lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
+        encoder = PytorchSeq2SeqWrapper(lstm)
+
+        tensor = torch.autograd.Variable(torch.rand([5, 7, 3]))
+        tensor[1, 6:, :] = 0
+        tensor[2, :, :] = 0
+        tensor[3, 2:, :] = 0
+        tensor[4, :, :] = 0
+        mask = torch.autograd.Variable(torch.ones(5, 7))
+        mask[1, 6:] = 0
+        mask[2, :] = 0
+        mask[3, 2:] = 0
+        mask[4, :] = 0
+
+        results = encoder.forward(tensor, mask)
+
+        for i in (0, 1, 3):
+            assert not (results[i] == 0.).data.all()
+        for i in (2, 4):
+            assert (results[i] == 0.).data.all()
+
     def test_forward_pulls_out_correct_tensor_without_sequence_lengths(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
@@ -80,6 +102,20 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         lstm_tensor, _ = pad_packed_sequence(lstm_output, batch_first=True)
         assert_almost_equal(encoder_output.data.numpy(),
                             lstm_tensor.index_select(0, restoration_indices).data.numpy())
+
+    def test_forward_does_not_compress_tensors_padded_to_greater_than_the_max_sequence_length(self):
+
+        lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
+        encoder = PytorchSeq2SeqWrapper(lstm)
+        tensor = torch.rand([5, 8, 3])
+        tensor[:, 7, :] = 0
+        mask = torch.ones(5, 8)
+        mask[:, 7] = 0
+
+        input_tensor = Variable(tensor)
+        mask = Variable(mask)
+        encoder_output = encoder(input_tensor, mask)
+        assert encoder_output.size(1) == 8
 
     def test_wrapper_raises_if_batch_first_is_false(self):
 

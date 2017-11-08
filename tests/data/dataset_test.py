@@ -3,12 +3,10 @@ import pytest
 import numpy
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.dataset import Dataset
-from allennlp.data.fields import TextField, LabelField
-from allennlp.data.instance import Instance
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Dataset, Instance, Token, Vocabulary
+from allennlp.data.fields import TextField, LabelField
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
 class TestDataset(AllenNlpTestCase):
@@ -24,7 +22,7 @@ class TestDataset(AllenNlpTestCase):
 
     def test_instances_must_have_homogeneous_fields(self):
         instance1 = Instance({"tag": (LabelField(1, skip_indexing=True))})
-        instance2 = Instance({"words": TextField(["hello"], {})})
+        instance2 = Instance({"words": TextField([Token("hello")], {})})
         with pytest.raises(ConfigurationError):
             _ = Dataset([instance1, instance2])
 
@@ -48,10 +46,14 @@ class TestDataset(AllenNlpTestCase):
                                                                     [2, 3, 1, 0, 0, 0]]))
 
     def get_dataset(self):
-        field1 = TextField(["this", "is", "a", "sentence", "."], self.token_indexer)
-        field2 = TextField(["this", "is", "a", "different", "sentence", "."], self.token_indexer)
-        field3 = TextField(["here", "is", "a", "sentence", "."], self.token_indexer)
-        field4 = TextField(["this", "is", "short"], self.token_indexer)
+        field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence", "."]],
+                           self.token_indexer)
+        field2 = TextField([Token(t) for t in ["this", "is", "a", "different", "sentence", "."]],
+                           self.token_indexer)
+        field3 = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]],
+                           self.token_indexer)
+        field4 = TextField([Token(t) for t in ["this", "is", "short"]],
+                           self.token_indexer)
         instances = [Instance({"text1": field1, "text2": field2}),
                      Instance({"text1": field3, "text2": field4})]
         return Dataset(instances)

@@ -1,3 +1,7 @@
+"""
+Helper functions for archiving models and restoring archived models.
+"""
+
 from typing import NamedTuple
 import logging
 import os
@@ -49,23 +53,7 @@ def archive_model(serialization_dir: str,
         archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
 
-def _sanitize_config(config: Params) -> None:
-    """
-    There are some elements of the model config that we need to get rid of
-    when we load from archive, as they refer to paths on the training machine
-    that are unlikely to exist on the un-archiving machine. To be extra-safe
-    we just remove them from the config.
-
-    This is a temporary fix; once we implement https://github.com/allenai/allennlp/issues/244
-    it should become unnecessary.
-    """
-    evaluation_json_file = config.get("model", {}).get('evaluation_json_file', None)
-
-    if evaluation_json_file and not os.path.exists(evaluation_json_file):
-        logger.warning("specified evaluation_json_file %s does not exist, removing key", evaluation_json_file)
-        config.get("model", {}).pop('evaluation_json_file')
-
-def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
+def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
@@ -87,8 +75,7 @@ def load_archive(archive_file: str, cuda_device: int = -1) -> Archive:
         archive.extractall(tempdir)
 
     # Load config
-    config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME))
-    _sanitize_config(config)
+    config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME), overrides)
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),

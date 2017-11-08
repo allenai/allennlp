@@ -2,13 +2,16 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
+import logging
 
 import numpy
 import torch
 from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
@@ -148,17 +151,6 @@ def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
             return torch_variable.cuda(cuda_device)
 
 
-def _get_normalized_masked_log_probablities(vector, mask):
-    # We calculate normalized log probabilities in a numerically stable fashion, as done
-    # in https://github.com/rkadlec/asreader/blob/master/asreader/custombricks/softmax_mask_bricks.py
-    input_masked = mask * vector
-    shifted = mask * (input_masked - input_masked.max(dim=1, keepdim=True)[0])
-    # We add epsilon to avoid numerical instability when the sum in the log yields 0.
-    normalization_constant = ((mask * shifted.exp()).sum(dim=1, keepdim=True) + 1e-7).log()
-    normalized_log_probabilities = (shifted - normalization_constant)
-    return normalized_log_probabilities
-
-
 def masked_softmax(vector, mask):
     """
     ``torch.nn.functional.softmax(vector)`` does not work if some elements of ``vector`` should be
@@ -171,11 +163,14 @@ def masked_softmax(vector, mask):
     of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
     that uses categorical cross-entropy loss.
     """
-    if mask is not None:
-        return mask * _get_normalized_masked_log_probablities(vector, mask).exp()
+    if mask is None:
+        result = torch.nn.functional.softmax(vector)
     else:
-        # There is no mask, so we use the provided ``torch.nn.functional.softmax`` function.
-        return torch.nn.functional.softmax(vector)
+        # To limit numerical errors from large vector elements outside mask, we zero these out
+        result = torch.nn.functional.softmax(vector * mask)
+        result = result * mask
+        result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
+    return result
 
 
 def masked_log_softmax(vector, mask):
@@ -185,16 +180,19 @@ def masked_log_softmax(vector, mask):
     ``None`` in for the mask is also acceptable; you'll just get a regular log_softmax.
 
     We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
+
+    In the case that the input vector is completely masked, this function returns an array
+    of ``0.0``.  You should be masking the result of whatever computation comes out of this in that
+    case, anyway, so it shouldn't matter.
     """
     if mask is not None:
-        masked_log_probs = _get_normalized_masked_log_probablities(vector, mask)
-        return replace_masked_values(masked_log_probs, mask, -1e7)
-    else:
-        # There is no mask, so we use the provided ``torch.nn.functional.log_softmax`` function.
-        return torch.nn.functional.log_softmax(vector)
+        vector = vector + mask.log()
+    return torch.nn.functional.log_softmax(vector)
 
 
-def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
+def viterbi_decode(tag_sequence: torch.Tensor,
+                   transition_matrix: torch.Tensor,
+                   tag_observations: Optional[List[int]] = None):
     """
     Perform Viterbi decoding in log space over a sequence given a transition matrix
     specifying pairwise (transition) potentials between tags and a matrix of shape
@@ -209,6 +207,14 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     transition_matrix : torch.Tensor, required.
         A tensor of shape (num_tags, num_tags) representing the binary potentials
         for transitioning between a given pair of tags.
+    tag_observations : Optional[List[int]], optional, (default = None)
+        A list of length ``sequence_length`` containing the class ids of observed
+        elements in the sequence, with unobserved elements being set to -1. Note that
+        it is possible to provide evidence which results in degenerate labellings if
+        the sequences of tags you provide as evidence cannot transition between each
+        other, or those transitions are extremely unlikely. In this situation we log a
+        warning, but the responsibility for providing self-consistent evidence ultimately
+        lies with the user.
 
     Returns
     -------
@@ -217,17 +223,47 @@ def viterbi_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor):
     viterbi_score : float
         The score of the viterbi path.
     """
-    sequence_length, _ = list(tag_sequence.size())
+    sequence_length, num_tags = list(tag_sequence.size())
+    if tag_observations:
+        if len(tag_observations) != sequence_length:
+            raise ConfigurationError("Observations were provided, but they were not the same length "
+                                     "as the sequence. Found sequence of length: {} and evidence: {}"
+                                     .format(sequence_length, tag_observations))
+    else:
+        tag_observations = [-1 for _ in range(sequence_length)]
+
     path_scores = []
     path_indices = []
-    path_scores.append(tag_sequence[0, :])
+
+    if tag_observations[0] != -1:
+        one_hot = torch.zeros(num_tags)
+        one_hot[tag_observations[0]] = 100000.
+        path_scores.append(one_hot)
+    else:
+        path_scores.append(tag_sequence[0, :])
 
     # Evaluate the scores for all possible paths.
     for timestep in range(1, sequence_length):
         # Add pairwise potentials to current scores.
         summed_potentials = path_scores[timestep - 1].unsqueeze(-1) + transition_matrix
         scores, paths = torch.max(summed_potentials, 0)
-        path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
+
+        # If we have an observation for this timestep, use it
+        # instead of the distribution over tags.
+        observation = tag_observations[timestep]
+        # Warn the user if they have passed
+        # invalid/extremely unlikely evidence.
+        if tag_observations[timestep - 1] != -1:
+            if transition_matrix[tag_observations[timestep - 1], observation] < -10000:
+                logger.warning("The pairwise potential between tags you have passed as "
+                               "observations is extremely unlikely. Double check your evidence "
+                               "or transition potentials!")
+        if observation != -1:
+            one_hot = torch.zeros(num_tags)
+            one_hot[observation] = 100000.
+            path_scores.append(one_hot)
+        else:
+            path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
         path_indices.append(paths.squeeze())
 
     # Construct the most likely sequence backwards.
@@ -308,6 +344,12 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     ``(batch_size, num_queries, embedding_dim)`` and
     ``(batch_size, num_documents, num_queries, embedding_dim)`` respectively.
     """
+    # We'll special-case a few settings here, where there are efficient (but poorly-named)
+    # operations in pytorch that already do the computation we need.
+    if attention.dim() == 2 and matrix.dim() == 3:
+        return attention.unsqueeze(1).bmm(matrix).squeeze(1)
+    if attention.dim() == 3 and matrix.dim() == 3:
+        return attention.bmm(matrix)
     if matrix.dim() - 1 < attention.dim():
         expanded_size = list(matrix.size())
         for i in range(attention.dim() - matrix.dim() + 1):
@@ -389,6 +431,7 @@ def replace_masked_values(tensor: Variable, mask: Variable, replace_with: float)
     values_to_add = replace_with * one_minus_mask
     return tensor * mask + values_to_add
 
+
 def device_mapping(cuda_device: int):
     """
     In order to `torch.load()` a GPU-trained model onto a CPU (or specific GPU),
@@ -402,9 +445,125 @@ def device_mapping(cuda_device: int):
             return storage
     return inner_device_mapping
 
+
 def ones_like(tensor: torch.Tensor) -> torch.Tensor:
     """
     Use clone() + fill_() to make sure that a ones tensor ends up on the right
     device at runtime.
     """
     return tensor.clone().fill_(1)
+
+
+def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
+    """
+    Combines a list of tensors using element-wise operations and concatenation, specified by a
+    ``combination`` string.  The string refers to (1-indexed) positions in the input tensor list,
+    and looks like ``"1,2,1+2,3-1"``.
+
+    We allow the following kinds of combinations: ``x``, ``x*y``, ``x+y``, ``x-y``, and ``x/y``,
+    where ``x`` and ``y`` are positive integers less than or equal to ``len(tensors)``.  Each of
+    the binary operations is performed elementwise.  You can give as many combinations as you want
+    in the ``combination`` string.  For example, for the input string ``"1,2,1*2"``, the result
+    would be ``[1;2;1*2]``, as you would expect, where ``[;]`` is concatenation along the last
+    dimension.
+
+    If you have a fixed, known way to combine tensors that you use in a model, you should probably
+    just use something like ``torch.cat([x_tensor, y_tensor, x_tensor * y_tensor])``.  This
+    function adds some complexity that is only necessary if you want the specific combination used
+    to be `configurable`.
+
+    If you want to do any element-wise operations, the tensors involved in each element-wise
+    operation must have the same shape.
+
+    This function also accepts ``x`` and ``y`` in place of ``1`` and ``2`` in the combination
+    string.
+    """
+    if len(tensors) > 9:
+        raise ConfigurationError("Double-digit tensor lists not currently supported")
+    combination = combination.replace('x', '1').replace('y', '2')
+    to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(',')]
+    return torch.cat(to_concatenate, dim=-1)
+
+
+def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
+    if combination.isdigit():
+        index = int(combination) - 1
+        return tensors[index]
+    else:
+        if len(combination) != 3:
+            raise ConfigurationError("Invalid combination: " + combination)
+        first_tensor = _get_combination(combination[0], tensors)
+        second_tensor = _get_combination(combination[2], tensors)
+        operation = combination[1]
+        if operation == '*':
+            return first_tensor * second_tensor
+        elif operation == '/':
+            return first_tensor / second_tensor
+        elif operation == '+':
+            return first_tensor + second_tensor
+        elif operation == '-':
+            return first_tensor - second_tensor
+        else:
+            raise ConfigurationError("Invalid operation: " + operation)
+
+
+def get_combined_dim(combination: str, tensor_dims: List[int]) -> int:
+    """
+    For use with :func:`combine_tensors`.  This function computes the resultant dimension when
+    calling ``combine_tensors(combination, tensors)``, when the tensor dimension is known.  This is
+    necessary for knowing the sizes of weight matrices when building models that use
+    ``combine_tensors``.
+
+    Parameters
+    ----------
+    combination : ``str``
+        A comma-separated list of combination pieces, like ``"1,2,1*2"``, specified identically to
+        ``combination`` in :func:`combine_tensors`.
+    tensor_dims : ``List[int]``
+        A list of tensor dimensions, where each dimension is from the `last axis` of the tensors
+        that will be input to :func:`combine_tensors`.
+    """
+    if len(tensor_dims) > 9:
+        raise ConfigurationError("Double-digit tensor lists not currently supported")
+    combination = combination.replace('x', '1').replace('y', '2')
+    return sum([_get_combination_dim(piece, tensor_dims) for piece in combination.split(',')])
+
+
+def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
+    if combination.isdigit():
+        index = int(combination) - 1
+        return tensor_dims[index]
+    else:
+        if len(combination) != 3:
+            raise ConfigurationError("Invalid combination: " + combination)
+        first_tensor_dim = _get_combination_dim(combination[0], tensor_dims)
+        second_tensor_dim = _get_combination_dim(combination[2], tensor_dims)
+        operation = combination[1]
+        if first_tensor_dim != second_tensor_dim:
+            raise ConfigurationError("Tensor dims must match for operation \"{}\"".format(operation))
+        return first_tensor_dim
+
+
+def logsumexp(tensor: torch.Tensor,
+              dim: int = -1,
+              keepdim: bool = False) -> torch.Tensor:
+    """
+    A numerically stable computation of logsumexp. This is mathematically equivalent to
+    `tensor.exp().sum(dim, keep=keepdim).log()`.  This function is typically used for summing log
+    probabilities.
+
+    Parameters
+    ----------
+    tensor : torch.FloatTensor, required.
+        A tensor of arbitrary size.
+    dim : int, optional (default = -1)
+        The dimension of the tensor to apply the logsumexp to.
+    keepdim: bool, optional (default = False)
+        Whether to retain a dimension of size one at the dimension we reduce over.
+    """
+    max_score, _ = tensor.max(dim, keepdim=keepdim)
+    if keepdim:
+        stable_vec = tensor - max_score
+    else:
+        stable_vec = tensor - max_score.unsqueeze(dim)
+    return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
