@@ -1,7 +1,7 @@
 """
 Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/releases/tag/v1.0.2).
 """
-from typing import Dict, List, TypeVar, Any
+from typing import Dict, List, Union
 import logging
 import gzip
 import pyparsing
@@ -12,6 +12,7 @@ import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import JsonDict
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
@@ -22,10 +23,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-LispValueType = TypeVar("LispValueType", str, List[str], None)  # pylint: disable=invalid-name
-TableInfoType = TypeVar("TableInfoType", str, Dict[str, Any])  # pylint: disable=invalid-name
-
 
 
 @DatasetReader.register("wikitables")
@@ -85,7 +82,7 @@ class WikitablesDatasetReader(DatasetReader):
     @overrides
     def text_to_instance(self,  # type: ignore
                          utterance: str,
-                         table_info: TableInfoType,
+                         table_info: Union[str, JsonDict],
                          dpd_output: List[str] = None) -> Instance:
         """
         Reads text inputs and makes an instance. WikitableQuestions dataset provides tables as TSV files, which we
@@ -130,7 +127,7 @@ class WikitablesDatasetReader(DatasetReader):
         return ListField([LabelField(action, label_namespace='actions') for action in action_sequence])
 
     @staticmethod
-    def _parse_line_as_lisp(lisp_string: str) -> Dict[str, LispValueType]:
+    def _parse_line_as_lisp(lisp_string: str) -> Dict[str, Union[str, List[str], None]]:
         """
         Training data in WikitableQuestions comes with examples in the form of lisp strings in the format:
             (example (id <example-id>)
