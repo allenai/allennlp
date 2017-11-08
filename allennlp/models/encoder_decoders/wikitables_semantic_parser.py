@@ -351,7 +351,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # TODO(mattg): is this really all that expensive?  If it isn't, it would simplify
                 # the API to remove the `allowed_actions` argument, and it would make computing
                 # metrics easier if this skipping logic happened in the trainer - the trainer could
-                # keep track of when the top action wasn't allowed.
+                # keep track of when the top action wasn't allowed.  NOTE: without batching, when
+                # there are ~80 possible actions in each state, this gives a ~2x slowdown.  So I'm
+                # keeping it for now.  I'll re-evaluate once batching is implemented.
                 continue
             new_action_history = state.action_history + [action]
             # TODO(matt): we might need to normalize this by length eventually.  If the training
