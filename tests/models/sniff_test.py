@@ -1,6 +1,6 @@
 # pylint: disable=line-too-long,bad-whitespace,no-self-use
 
-from allennlp.commands.serve import DEFAULT_CONFIG
+from allennlp.commands import DEFAULT_MODELS
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
@@ -9,7 +9,7 @@ from allennlp.service.predictors import Predictor
 class SniffTest(AllenNlpTestCase):
 
     def test_config(self):
-        assert set(DEFAULT_CONFIG.keys()) == {
+        assert set(DEFAULT_MODELS.keys()) == {
                 'machine-comprehension',
                 'semantic-role-labeling',
                 'textual-entailment'
@@ -17,7 +17,10 @@ class SniffTest(AllenNlpTestCase):
 
 
     def test_machine_comprehension(self):
-        predictor = Predictor.from_archive(load_archive(DEFAULT_CONFIG['machine-comprehension']))
+        predictor = Predictor.from_archive(
+                load_archive(DEFAULT_MODELS['machine-comprehension']),
+                'machine-comprehension'
+        )
 
         passage = """The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called "the Matrix", created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer Neo" learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the "dream world". """
         question = "Who stars in The Matrix?"
@@ -30,7 +33,10 @@ class SniffTest(AllenNlpTestCase):
 
 
     def test_semantic_role_labeling(self):
-        predictor = Predictor.from_archive(load_archive(DEFAULT_CONFIG['semantic-role-labeling']))
+        predictor = Predictor.from_archive(
+                load_archive(DEFAULT_MODELS['semantic-role-labeling']),
+                'semantic-role-labeling'
+        )
 
         sentence = "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!"
 
@@ -51,7 +57,10 @@ class SniffTest(AllenNlpTestCase):
         ]
 
     def test_textual_entailment(self):
-        predictor = Predictor.from_archive(load_archive(DEFAULT_CONFIG['textual-entailment']))
+        predictor = Predictor.from_archive(
+                load_archive(DEFAULT_MODELS['textual-entailment']),
+                'textual-entailment'
+        )
 
         result = predictor.predict_json({
                 "premise": "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
