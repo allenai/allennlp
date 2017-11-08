@@ -370,10 +370,10 @@ class Vocabulary:
         pretrained_files = params.pop("pretrained_files", {})
         only_include_pretrained_words = params.pop("only_include_pretrained_words", False)
         params.assert_empty("Vocabulary - from dataset")
-        return Vocabulary.from_dataset(dataset,
-                                       min_count,
-                                       max_vocab_size,
-                                       non_padded_namespaces,
+        return Vocabulary.from_dataset(dataset=dataset,
+                                       min_count=min_count,
+                                       max_vocab_size=max_vocab_size,
+                                       non_padded_namespaces=non_padded_namespaces,
                                        pretrained_files=pretrained_files,
                                        only_include_pretrained_words=only_include_pretrained_words)
 
