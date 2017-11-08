@@ -47,7 +47,7 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary.from_dataset(self.dataset,
                                         min_count=4,
                                         pretrained_files={'tokens': embeddings_filename},
-                                        pretrained_exclusive=True)
+                                        only_include_pretrained_words=True)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' not in words
@@ -56,7 +56,7 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary.from_dataset(self.dataset,
                                         min_count=-1,
                                         pretrained_files={'tokens': embeddings_filename},
-                                        pretrained_exclusive=True)
+                                        only_include_pretrained_words=True)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' in words
@@ -71,7 +71,7 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary.from_dataset(self.dataset,
                                         min_count=4,
                                         pretrained_files={'tokens': embeddings_filename},
-                                        pretrained_exclusive=False)
+                                        only_include_pretrained_words=False)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' in words
@@ -80,7 +80,7 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary.from_dataset(self.dataset,
                                         min_count=-1,
                                         pretrained_files={'tokens': embeddings_filename},
-                                        pretrained_exclusive=False)
+                                        only_include_pretrained_words=False)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' in words

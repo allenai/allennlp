@@ -145,11 +145,13 @@ class Vocabulary:
         "labels" (which is true by default for all tag and label fields in this code), you don't
         have to specify anything here.
     pretrained_files : ``Dict[str, str]``, optional
-        If provides, this map specifies the path to optional pretrained embedding files for each
+        If provided, this map specifies the path to optional pretrained embedding files for each
         namespace. This can be used to either restrict the vocabulary to only words which appear
         in this file, or to ensure that any words in this file are included in the vocabulary
-        regardless of their count, depending on the value of ``pretrained_exclusive``.
-    pretrained_exclusive : bool, optional (default = False)
+        regardless of their count, depending on the value of ``only_include_pretrained_words``.
+        Words which appear in the pretrained embedding file but not in the data are NOT included
+        in the Vocabulary.
+    only_include_pretrained_words : bool, optional (default = False)
         This defines the stategy for using any pretrained embedding files which may have been
         specified in ``pretrained_files``. If False, an inclusive stategy is used: and words
         which are in the ``counter`` and in the pretrained file are added to the ``Vocabulary``,
@@ -163,7 +165,7 @@ class Vocabulary:
                  max_vocab_size: Union[int, Dict[str, int]] = None,
                  non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
                  pretrained_files: Optional[Dict[str, str]] = None,
-                 pretrained_exclusive: bool = False) -> None:
+                 only_include_pretrained_words: bool = False) -> None:
         self._padding_token = DEFAULT_PADDING_TOKEN
         self._oov_token = DEFAULT_OOV_TOKEN
         if not isinstance(max_vocab_size, dict):
@@ -190,7 +192,7 @@ class Vocabulary:
                     token_counts = token_counts[:max_vocab]
                 for token, count in token_counts:
                     if pretrained_list is not None:
-                        if pretrained_exclusive:
+                        if only_include_pretrained_words:
                             if token in pretrained_list and count >= min_count:
                                 self.add_token_to_namespace(token, namespace)
                         elif token in pretrained_list or count >= min_count:
@@ -313,7 +315,7 @@ class Vocabulary:
                      max_vocab_size: Union[int, Dict[str, int]] = None,
                      non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
                      pretrained_files: Optional[Dict[str, str]] = None,
-                     pretrained_exclusive: bool = False) -> 'Vocabulary':
+                     only_include_pretrained_words: bool = False) -> 'Vocabulary':
         """
         Constructs a vocabulary given a :class:`.Dataset` and some parameters.  We count all of the
         vocabulary items in the dataset, then pass those counts, and the other parameters, to
@@ -329,7 +331,7 @@ class Vocabulary:
                           max_vocab_size=max_vocab_size,
                           non_padded_namespaces=non_padded_namespaces,
                           pretrained_files=pretrained_files,
-                          pretrained_exclusive=pretrained_exclusive)
+                          only_include_pretrained_words=only_include_pretrained_words)
 
     @classmethod
     def from_params(cls, params: Params, dataset=None):
@@ -366,14 +368,14 @@ class Vocabulary:
         max_vocab_size = params.pop("max_vocab_size", None)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
-        pretrained_exclusive = params.pop("pretrained_exlusive", False)
+        only_include_pretrained_words = params.pop("only_include_pretrained_words", False)
         params.assert_empty("Vocabulary - from dataset")
         return Vocabulary.from_dataset(dataset,
                                        min_count,
                                        max_vocab_size,
                                        non_padded_namespaces,
                                        pretrained_files=pretrained_files,
-                                       pretrained_exclusive=pretrained_exclusive)
+                                       only_include_pretrained_words=only_include_pretrained_words)
 
     def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:
         """
