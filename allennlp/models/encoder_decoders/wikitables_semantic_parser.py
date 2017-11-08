@@ -128,12 +128,15 @@ class WikiTablesSemanticParser(Model):
             target_mask = None
 
         initial_score = Variable(embedded_input.data.new(1).fill_(0))
-        initial_state = (final_encoder_output, decoder_context, None)
+        attended_question = self._decoder_step.attend_on_question(final_encoder_output,
+                                                                  encoder_outputs,
+                                                                  question_mask.float())
+        initial_hidden_state = (final_encoder_output, decoder_context, attended_question)
         initial_state = WikiTablesDecoderState([],
                                                initial_score,
                                                encoder_outputs=encoder_outputs,
                                                encoder_output_mask=question_mask.float(),
-                                               hidden_state=initial_state,
+                                               hidden_state=initial_hidden_state,
                                                end_index=self._end_index)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
@@ -251,7 +254,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         super(WikiTablesDecoderStep, self).__init__()
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with that of the final hidden states of the encoder.
-        self.vocab = vocab
         self._action_embedder = Embedding(num_actions, action_embedding_dim)
         self._input_attention = Attention(attention_function)
         self._start_index = start_index
@@ -276,22 +278,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                   allowed_actions: Set[int] = None) -> Generator[WikiTablesDecoderState, None, None]:
         # Outline here: first we'll construct the input to the decoder, which is a concatenation of
         # an embedding of the decoder input (the last action taken) and an attention over the
-        # question.
+        # question.  Then we'll update our decoder's hidden state given this input, and recompute
+        # an attention over the question given our new hidden state.  We'll use a concatenation of
+        # the new hidden state and the new attention to predict an output, then yield new states.
+        # Each new state corresponds to one valid action that can be taken from the current state,
+        # and they are ordered by their probability of being selected.
         decoder_hidden, decoder_context, attended_question = state.hidden_state
         action = state.action_history[-1] if state.action_history else self._start_index
         action_input = Variable(decoder_hidden.data.new(1).long().fill_(action))
         embedded_input = self._action_embedder(action_input)
-
-        if attended_question is None:
-            # Unless this is the first timestep, we've already computed an attention over the input
-            # given the current hidden state.  If it's the first timestep, we compute an initial
-            # attention with the hidden state, which is the output of the encoder.
-            # (batch_size, input_sequence_length)
-            question_attention_weights = self._input_attention(decoder_hidden,
-                                                               state.encoder_outputs,
-                                                               state.encoder_output_mask)
-            # (batch_size, encoder_output_dim)
-            attended_question = util.weighted_sum(state.encoder_outputs, question_attention_weights)
 
         # (batch_size, decoder_input_dim)
         decoder_input = self._input_projection_layer(torch.cat([attended_question, embedded_input], -1))
@@ -299,12 +294,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         decoder_hidden, decoder_context = self._decoder_cell(decoder_input,
                                                              (decoder_hidden, decoder_context))
 
-        # (batch_size, question_length)
-        question_attention_weights = self._input_attention(decoder_hidden,
-                                                           state.encoder_outputs,
-                                                           state.encoder_output_mask)
         # (batch_size, encoder_output_dim)
-        attended_question = util.weighted_sum(state.encoder_outputs, question_attention_weights)
+        attended_question = self.attend_on_question(decoder_hidden,
+                                                    state.encoder_outputs,
+                                                    state.encoder_output_mask)
 
         # (batch_size, num_actions)
         logits = self._output_projection_layer(torch.cat([decoder_hidden, attended_question], -1))
@@ -313,15 +306,38 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         new_hidden_state = (decoder_hidden, decoder_context, attended_question)
         return self._yield_new_states(state, log_probs, new_hidden_state, allowed_actions)
 
+    def attend_on_question(self,
+                           decoder_hidden: Variable,
+                           encoder_outputs: Variable,
+                           encoder_output_mask: Variable) -> Variable:
+        """
+        Given a query (which is the decoder hidden state), compute an attention over the output of
+        the question encoder, and return a weighted sum of the question representations given this
+        attention.
+
+        This is a simple computation, but we have it as a separate method so that the ``forward``
+        method on the main parser module can call it on the initial hidden state, to simplify the
+        logic in ``take_step``.
+        """
+
+        # (batch_size, question_length)
+        question_attention_weights = self._input_attention(decoder_hidden,
+                                                           encoder_outputs,
+                                                           encoder_output_mask)
+        # (batch_size, encoder_output_dim)
+        return util.weighted_sum(encoder_outputs, question_attention_weights)
+
     def _yield_new_states(self,  # pylint: disable=no-self-use
                           state: WikiTablesDecoderState,
                           log_probs: Variable,
-                          new_hidden_state: Tuple[Variable, Variable],
+                          new_hidden_state: Tuple[Variable, Variable, Variable],
                           allowed_actions: Set[int]) -> Generator[WikiTablesDecoderState, None, None]:
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
         sorted_actions = sorted_actions.data.cpu().numpy().tolist()
         valid_actions = state.get_valid_actions()
         for i in range(sorted_log_probs.size(1)):
+            # TODO(mattg): allow for batched computation here, instead of hard-coding a batch size
+            # of 1.
             action = sorted_actions[0][i]
             if valid_actions is not None and action not in valid_actions:
                 # If we have a constrained decoder, we need to skip any actions that are not valid
@@ -338,6 +354,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # keep track of when the top action wasn't allowed.
                 continue
             new_action_history = state.action_history + [action]
+            # TODO(matt): we might need to normalize this by length eventually.  If the training
+            # algorithm allows for comparing states at different timesteps, it might matter.
             new_score = state.score + sorted_log_probs[0, i]
             yield WikiTablesDecoderState(new_action_history,
                                          new_score,
