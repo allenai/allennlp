@@ -57,7 +57,7 @@ class MaximumMarginalLikelihood(DecoderTrainer):
             states = next_states
 
         scores = torch.cat([state.score for state in finished_states])
-        return {'loss': util.logsumexp(scores)}
+        return {'loss': -util.logsumexp(scores)}
 
     @staticmethod
     def _create_allowed_transitions(targets: torch.Tensor,
@@ -88,13 +88,15 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         and ``DecoderState`` objects know how to handle that.
         """
         allowed_transitions: Dict[Tuple[int, ...], Set[int]] = defaultdict(set)
+        targets = targets.data.cpu().numpy().tolist()
+        target_mask = target_mask.data.cpu().numpy().tolist()
         for i, target_sequence in enumerate(targets):
             history: Tuple[int, ...] = ()
             for j, action in enumerate(target_sequence[1:]):
-                if target_mask[i][j + 1].data[0] == 0:  # +1 because we're starting at index 1, not 0
+                if target_mask[i][j + 1] == 0:  # +1 because we're starting at index 1, not 0
                     break
-                allowed_transitions[history].add(action.data[0])
-                history = history + (action.data[0],)
+                allowed_transitions[history].add(action)
+                history = history + (action,)
         return allowed_transitions
 
     @classmethod
