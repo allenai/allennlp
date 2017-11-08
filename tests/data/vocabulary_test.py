@@ -44,13 +44,19 @@ class TestVocabulary(AllenNlpTestCase):
             embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
 
-        vocab = Vocabulary.from_dataset(self.dataset, min_count=4, pretrained_files={'tokens': embeddings_filename}, pretrained_exclusive=True)
+        vocab = Vocabulary.from_dataset(self.dataset,
+                                        min_count=4,
+                                        pretrained_files={'tokens': embeddings_filename},
+                                        pretrained_exclusive=True)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' not in words
         assert 'c' not in words
 
-        vocab = Vocabulary.from_dataset(self.dataset, min_count=-1, pretrained_files={'tokens': embeddings_filename}, pretrained_exclusive=True)
+        vocab = Vocabulary.from_dataset(self.dataset,
+                                        min_count=-1,
+                                        pretrained_files={'tokens': embeddings_filename},
+                                        pretrained_exclusive=True)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' in words
@@ -62,13 +68,19 @@ class TestVocabulary(AllenNlpTestCase):
             embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
 
-        vocab = Vocabulary.from_dataset(self.dataset, min_count=4, pretrained_files={'tokens': embeddings_filename}, pretrained_exclusive=False)
+        vocab = Vocabulary.from_dataset(self.dataset,
+                                        min_count=4,
+                                        pretrained_files={'tokens': embeddings_filename},
+                                        pretrained_exclusive=False)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' in words
         assert 'c' not in words
 
-        vocab = Vocabulary.from_dataset(self.dataset, min_count=-1, pretrained_files={'tokens': embeddings_filename}, pretrained_exclusive=False)
+        vocab = Vocabulary.from_dataset(self.dataset,
+                                        min_count=-1,
+                                        pretrained_files={'tokens': embeddings_filename},
+                                        pretrained_exclusive=False)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' in words
