@@ -30,6 +30,7 @@ class SimpleTaggerTest(ModelTestCase):
     def test_forward_pass_runs_correctly(self):
         training_arrays = self.dataset.as_array_dict()
         output_dict = self.model.forward(**arrays_to_variables(training_arrays))
+        output_dict = self.model.decode(output_dict)
         class_probs = output_dict['class_probabilities'][0].data.numpy()
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.array([1, 1, 1, 1]))
 

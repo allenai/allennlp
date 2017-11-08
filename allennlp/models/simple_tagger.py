@@ -122,8 +122,7 @@ class SimpleTagger(Model):
         adds a ``"tags"`` key to the dictionary with the result.
         """
         all_predictions = output_dict['class_probabilities']
-        if not isinstance(all_predictions, numpy.ndarray):
-            all_predictions = all_predictions.cpu().numpy()
+        all_predictions = all_predictions.cpu().data.numpy()
         if all_predictions.ndim == 3:
             predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
         else:
@@ -134,8 +133,6 @@ class SimpleTagger(Model):
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in argmax_indices]
             all_tags.append(tags)
-        if len(all_tags) == 1:
-            all_tags = all_tags[0]  # type: ignore
         output_dict['tags'] = all_tags
         return output_dict
 

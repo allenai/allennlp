@@ -5,8 +5,8 @@ standard word vectors, or pass through an LSTM.
 from typing import Dict, List, Optional
 
 from overrides import overrides
-import numpy
 from spacy.tokens import Token as SpacyToken
+import numpy
 
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.tokenizers.token import Token
