@@ -22,8 +22,8 @@ class BeamSearch:
         finished_states = []
         states = [initial_state]
         step_num = 1
+        print(num_steps)
         while states and step_num <= num_steps:
-            step_num += 1
             next_states = []
             for state in states:
                 next_state_generator = decoder_step.take_step(state)
@@ -36,12 +36,17 @@ class BeamSearch:
                             finished_states.append(next_state)
                         next_states.append(next_state)
             # TODO(mattg): do this sort on the GPU, not on the CPU, and copy once.
-            to_sort = [(-state.score.data[0], state) for state in next_states]
+            # NOTE: we're doing state.score[0] here, hard-coding a group size of 1.  But, our use
+            # of `next_state.is_finished()` already checks for that, as it crashes if the group
+            # size is not 1.
+            to_sort = [(-state.score[0].data[0], state) for state in next_states]
             to_sort.sort(key=lambda x: x[0])
             states = [state[1] for state in to_sort[:self._beam_size]]
+            step_num += 1
         # The time this one takes is pretty negligible, no particular need to optimize this yet.
         # Maybe with a larger beam size...
-        finished_to_sort = [(-state.score.data[0] / len(state.action_history), state) for state in finished_states]
+        finished_to_sort = [(-state.score[0].data[0] / len(state.action_history), state)
+                            for state in finished_states]
         finished_to_sort.sort(key=lambda x: x[0])
         return [state[1] for state in finished_to_sort]
 

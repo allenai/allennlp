@@ -104,15 +104,12 @@ class WikiTablesSemanticParser(Model):
            sequence_length, 1)``.  The trailing dimension is because of how our ``ListFields``
            work, and will be stripped in this method with a ``squeeze``.
         """
-        # (batch_size, input_sequence_length, encoder_output_dim)
+        # (batch_size, question_length, embedding_dim)
         embedded_input = self._question_embedder(question)
-        question_mask = util.get_text_field_mask(question)
+        question_mask = util.get_text_field_mask(question).float()
         batch_size = embedded_input.size(0)
-        if batch_size != 1:
-            raise ConfigurationError("This implementation does not currently handle batched "
-                                     "inputs.  Please set the batch size of your dataset reader "
-                                     "to 1.")
 
+        # (batch_size, question_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, question_mask)
 
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
@@ -121,22 +118,36 @@ class WikiTablesSemanticParser(Model):
 
         if target_action_sequences is not None:
             # Remove batch dimension and trailing dimension (from ListField[LabelField]]).
-            target_action_sequences = target_action_sequences.squeeze(0).squeeze(-1)
+            target_action_sequences = target_action_sequences.squeeze(-1)
             # TODO(mattg): might be better to not hard-code the 0 here.
             target_mask = target_action_sequences > 0
         else:
             target_mask = None
 
-        initial_score = Variable(embedded_input.data.new(1).fill_(0))
+        initial_score = Variable(embedded_input.data.new(batch_size).fill_(0))
         attended_question = self._decoder_step.attend_on_question(final_encoder_output,
                                                                   encoder_outputs,
-                                                                  question_mask.float())
-        initial_hidden_state = (final_encoder_output, decoder_context, attended_question)
-        initial_state = WikiTablesDecoderState([],
-                                               initial_score,
-                                               encoder_outputs=encoder_outputs,
-                                               encoder_output_mask=question_mask.float(),
+                                                                  question_mask)
+
+        # To make grouping states together in the decoder easier, we convert the batch dimension in
+        # all of our tensors into an outer list.  For instance, the encoder outputs have shape
+        # `(batch_size, question_length, encoder_output_dim)`.  We need to convert this into a list
+        # of `batch_size` tensors, each of shape `(question_length, encoder_output_dim)`.  Then we
+        # won't have to do any index selects, or anything, we'll just do some `torch.cat()`s.
+        initial_score_list = [initial_score[i] for i in range(batch_size)]
+        initial_hidden_state = [final_encoder_output[i] for i in range(batch_size)]
+        initial_memory_cell = [decoder_context[i] for i in range(batch_size)]
+        initial_attended_question = [attended_question[i] for i in range(batch_size)]
+        encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
+        question_mask_list = [question_mask[i] for i in range(batch_size)]
+        initial_state = WikiTablesDecoderState(list(range(batch_size)),
+                                               [[] for _ in range(batch_size)],
+                                               initial_score_list,
                                                hidden_state=initial_hidden_state,
+                                               memory_cell=initial_memory_cell,
+                                               attended_question=initial_attended_question,
+                                               encoder_outputs=encoder_output_list,
+                                               encoder_output_mask=question_mask_list,
                                                end_index=self._end_index)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
@@ -146,7 +157,7 @@ class WikiTablesSemanticParser(Model):
         else:
             outputs = {}
             if target_action_sequences is not None:
-                num_steps = target_action_sequences.size(1) - 1
+                num_steps = target_action_sequences.size(-1) - 1
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
                                                                target_action_sequences,
@@ -209,39 +220,142 @@ class WikiTablesSemanticParser(Model):
                    attention_function=attention_function)
 
 
-class WikiTablesDecoderState(DecoderState):
+# This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that
+# we've defined.  We're using generics to make the types of `combine_states` and `split_finished`
+# come out right.  See the note in `nn.decoding.decoder_state.py` for a little more detail.
+class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
     """
     Parameters
     ----------
-    action_history : ``List[int]``
-        The list of actions taken so far in this state.
+    batch_indices : ``List[int]``
+        Passed to super class; see docs there.
+    action_history : ``List[List[int]]``
+        Passed to super class; see docs there.
+    score : ``List[Variable]``
+        Passed to super class; see docs there.
+    hidden_state : ``List[Variable]``
+        This holds the LSTM hidden state for each element of the group.  Each variable has shape
+        ``(decoder_output_dim,)``.
+    memory_cell : ``List[Variable]``
+        This holds to LSTM memory cell for each element of the group.  Each variable has shape
+        ``(decoder_output_dim,)``.
+    attended_question : ``List[Variable]``
+        This holds the attention-weighted sum over the question representations that we computed in
+        the previous timestep, for each element in the group.  We keep this as part of the state
+        because we use the previous attention as part of our decoder cell update.  Each variable in
+        this list has shape ``(encoder_output_dim,)``.
+    encoder_outputs : ``List[Variable]``
+        A list of variables, each of shape ``(question_length, encoder_output_dim)``, containing
+        the encoder outputs at each timestep.  The list is over batch elements, and we do the input
+        this way so we can easily do a ``torch.cat`` on a list of indices into this batched list.
 
-        The type annotation says this is an ``int``, but none of the training logic relies on this
-        being an ``int``.  In some cases, items from this list will get passed as inputs to
-        ``DecodeStep``, so this must return items that are compatible with inputs to your
-        ``DecodeStep`` class.
+        Note that all of the above lists are of length ``group_size``, while the encoder outputs
+        and mask are lists of length ``batch_size``.  We always pass around the encoder outputs and
+        mask unmodified, regardless of what's in the grouping for this state.  We'll use the
+        ``batch_indices`` for the group to pull pieces out of these lists when we're ready to
+        actually do some computation.
+    encoder_output_mask : ``List[Variable]``
+        A list of variables, each of shape ``(question_length,)``, containing a mask over question
+        tokens for each batch instance.  This is a list over batch elements, for the same reasons
+        as above.
+    end_index : ``int``
+        This is the index of the stop symbol, which we need so we know if we've emitted a stop
+        action and are thus finished.
     """
     def __init__(self,
-                 action_history: List[int],
-                 score: torch.Tensor,
-                 encoder_outputs: torch.Tensor,
-                 encoder_output_mask: torch.Tensor,
-                 hidden_state: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+                 batch_indices: List[int],
+                 action_history: List[List[int]],
+                 score: Variable,
+                 hidden_state: List[Variable],
+                 memory_cell: List[Variable],
+                 attended_question: List[Variable],
+                 encoder_outputs: Variable,
+                 encoder_output_mask: Variable,
                  end_index: int) -> None:
-        super(WikiTablesDecoderState, self).__init__(action_history, score)
+        super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
+        self.hidden_state = hidden_state
+        self.memory_cell = memory_cell
+        self.attended_question = attended_question
         self.encoder_outputs = encoder_outputs
         self.encoder_output_mask = encoder_output_mask
-        self.hidden_state = hidden_state
         self.end_index = end_index
 
     def get_output_mask(self) -> torch.Tensor:  # pylint: disable=no-self-use
         return None
 
-    def get_valid_actions(self) -> Set[int]:  # pylint: disable=no-self-use
+    def get_valid_actions(self) -> List[Set[int]]:  # pylint: disable=no-self-use
         return None
 
+    # @overrides  - overrides can't handle the generics we're using here, apparently
     def is_finished(self) -> bool:
-        return len(self.action_history) > 0 and self.action_history[-1] == self.end_index
+        if len(self.batch_indices) != 1:
+            raise RuntimeError("is_finished() is only defined with a group_size of 1")
+        return len(self.action_history[0]) > 0 and self.action_history[0][-1] == self.end_index
+
+    # @overrides  - overrides can't handle the generics we're using here, apparently
+    def split_finished(self) -> Tuple['WikiTablesDecoderState', 'WikiTablesDecoderState']:
+        # We keep track of both of these so we can efficiently decide whether we need to split at
+        # all.
+        finished_indices = []
+        not_finished_indices = []
+        for i, action_history in enumerate(self.action_history):
+            if action_history and action_history[-1] == self.end_index:
+                finished_indices.append(i)
+            else:
+                not_finished_indices.append(i)
+
+        # Return value is (finished, not_finished)
+        if not finished_indices:
+            return (None, self)
+        if not not_finished_indices:
+            return (self, None)
+        finished_state = self._make_new_state_with_group_indices(finished_indices)
+        not_finished_state = self._make_new_state_with_group_indices(not_finished_indices)
+        return (finished_state, not_finished_state)
+
+    @classmethod
+    # @overrides  - overrides can't handle the generics we're using here, apparently
+    def combine_states(cls, states: List['WikiTablesDecoderState']) -> 'WikiTablesDecoderState':
+        batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
+        action_histories = [action_history for state in states for action_history in state.action_history]
+        scores = [score for state in states for score in state.score]
+        hidden_states = [hidden_state for state in states for hidden_state in state.hidden_state]
+        memory_cells = [memory_cell for state in states for memory_cell in state.memory_cell]
+        attended_question = [attended for state in states for attended in state.attended_question]
+        return WikiTablesDecoderState(batch_indices,
+                                      action_histories,
+                                      scores,
+                                      hidden_states,
+                                      memory_cells,
+                                      attended_question,
+                                      states[0].encoder_outputs,
+                                      states[0].encoder_output_mask,
+                                      states[0].end_index)
+
+    def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'WikiTablesDecoderState':
+        """
+        The ``WikiTablesDecoderState`` is `grouped`.  This is batching together the computation of
+        many individual states, but we're using a different word here because it's not the same
+        batching as the input training examples.  This method returns a new state that contains
+        only selected elements of the group.  You might use this to split the group elements in a
+        state into a finished state and a not finished state, for instance, if you know which group
+        elements are finished.
+        """
+        group_batch_indices = [self.batch_indices[i] for i in group_indices]
+        group_action_histories = [self.action_history[i] for i in group_indices]
+        group_scores = [self.score[i] for i in group_indices]
+        group_hidden_states = [self.hidden_state[i] for i in group_indices]
+        group_memory_cells = [self.memory_cell[i] for i in group_indices]
+        group_attended_question = [self.attended_question[i] for i in group_indices]
+        return WikiTablesDecoderState(group_batch_indices,
+                                      group_action_histories,
+                                      group_scores,
+                                      group_hidden_states,
+                                      group_memory_cells,
+                                      group_attended_question,
+                                      self.encoder_outputs,
+                                      self.encoder_output_mask,
+                                      self.end_index)
 
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
@@ -275,7 +389,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     @overrides
     def take_step(self,
                   state: WikiTablesDecoderState,
-                  allowed_actions: Set[int] = None) -> Generator[WikiTablesDecoderState, None, None]:
+                  allowed_actions: List[Set[int]] = None) -> Generator[WikiTablesDecoderState, None, None]:
         # Outline here: first we'll construct the input to the decoder, which is a concatenation of
         # an embedding of the decoder input (the last action taken) and an attention over the
         # question.  Then we'll update our decoder's hidden state given this input, and recompute
@@ -283,85 +397,101 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # the new hidden state and the new attention to predict an output, then yield new states.
         # Each new state corresponds to one valid action that can be taken from the current state,
         # and they are ordered by their probability of being selected.
-        decoder_hidden, decoder_context, attended_question = state.hidden_state
-        action = state.action_history[-1] if state.action_history else self._start_index
-        action_input = Variable(decoder_hidden.data.new(1).long().fill_(action))
+        attended_question = torch.stack([x for x in state.attended_question])
+        hidden_state = torch.stack([x for x in state.hidden_state])
+        memory_cell = torch.stack([x for x in state.memory_cell])
+        actions = [action_history[-1] if action_history else self._start_index
+                   for action_history in state.action_history]
+        action_input = Variable(hidden_state.data.new(actions).long())
         embedded_input = self._action_embedder(action_input)
 
-        # (batch_size, decoder_input_dim)
+        # (group_size, decoder_input_dim)
         decoder_input = self._input_projection_layer(torch.cat([attended_question, embedded_input], -1))
 
-        decoder_hidden, decoder_context = self._decoder_cell(decoder_input,
-                                                             (decoder_hidden, decoder_context))
+        hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
 
-        # (batch_size, encoder_output_dim)
-        attended_question = self.attend_on_question(decoder_hidden,
-                                                    state.encoder_outputs,
-                                                    state.encoder_output_mask)
+        # (group_size, encoder_output_dim)
+        encoder_outputs = torch.stack([state.encoder_outputs[i] for i in state.batch_indices])
+        encoder_output_mask = torch.stack([state.encoder_output_mask[i] for i in state.batch_indices])
+        attended_question = self.attend_on_question(hidden_state,
+                                                    encoder_outputs,
+                                                    encoder_output_mask)
 
-        # (batch_size, num_actions)
-        logits = self._output_projection_layer(torch.cat([decoder_hidden, attended_question], -1))
+        # (group_size, num_actions)
+        logits = self._output_projection_layer(torch.cat([hidden_state, attended_question], -1))
         output_mask = state.get_output_mask()
         log_probs = util.masked_log_softmax(logits, output_mask)
-        new_hidden_state = (decoder_hidden, decoder_context, attended_question)
-        return self._yield_new_states(state, log_probs, new_hidden_state, allowed_actions)
+        return self._yield_new_states(state,
+                                      log_probs,
+                                      hidden_state,
+                                      memory_cell,
+                                      attended_question,
+                                      allowed_actions)
 
     def attend_on_question(self,
-                           decoder_hidden: Variable,
+                           query: Variable,
                            encoder_outputs: Variable,
                            encoder_output_mask: Variable) -> Variable:
         """
-        Given a query (which is the decoder hidden state), compute an attention over the output of
-        the question encoder, and return a weighted sum of the question representations given this
-        attention.
+        Given a query (which is typically the decoder hidden state), compute an attention over the
+        output of the question encoder, and return a weighted sum of the question representations
+        given this attention.
 
         This is a simple computation, but we have it as a separate method so that the ``forward``
         method on the main parser module can call it on the initial hidden state, to simplify the
         logic in ``take_step``.
         """
 
-        # (batch_size, question_length)
-        question_attention_weights = self._input_attention(decoder_hidden,
+        # (group_size, question_length)
+        question_attention_weights = self._input_attention(query,
                                                            encoder_outputs,
                                                            encoder_output_mask)
-        # (batch_size, encoder_output_dim)
+        # (group_size, encoder_output_dim)
         return util.weighted_sum(encoder_outputs, question_attention_weights)
 
     def _yield_new_states(self,  # pylint: disable=no-self-use
                           state: WikiTablesDecoderState,
                           log_probs: Variable,
-                          new_hidden_state: Tuple[Variable, Variable, Variable],
-                          allowed_actions: Set[int]) -> Generator[WikiTablesDecoderState, None, None]:
+                          hidden_state: Variable,
+                          memory_cell: Variable,
+                          attended_question: Variable,
+                          allowed_actions: List[Set[int]]) -> Generator[WikiTablesDecoderState, None, None]:
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
+        group_size, num_actions = sorted_log_probs.size()
         sorted_actions = sorted_actions.data.cpu().numpy().tolist()
         valid_actions = state.get_valid_actions()
-        for i in range(sorted_log_probs.size(1)):
-            # TODO(mattg): allow for batched computation here, instead of hard-coding a batch size
-            # of 1.
-            action = sorted_actions[0][i]
-            if valid_actions is not None and action not in valid_actions:
-                # If we have a constrained decoder, we need to skip any actions that are not valid
-                # in the current state.
-                continue
-            if allowed_actions is not None and action not in allowed_actions:
-                # This happens when our _decoder trainer_ wants us to only evaluate certain
-                # actions, likely because they are the gold actions in this state.  We just skip
-                # emitting any state that isn't allowed by the trainer, because constructing the
-                # new state can be expensive.
-                # TODO(mattg): is this really all that expensive?  If it isn't, it would simplify
-                # the API to remove the `allowed_actions` argument, and it would make computing
-                # metrics easier if this skipping logic happened in the trainer - the trainer could
-                # keep track of when the top action wasn't allowed.  NOTE: without batching, when
-                # there are ~80 possible actions in each state, this gives a ~2x slowdown.  So I'm
-                # keeping it for now.  I'll re-evaluate once batching is implemented.
-                continue
-            new_action_history = state.action_history + [action]
-            # TODO(matt): we might need to normalize this by length eventually.  If the training
-            # algorithm allows for comparing states at different timesteps, it might matter.
-            new_score = state.score + sorted_log_probs[0, i]
-            yield WikiTablesDecoderState(new_action_history,
-                                         new_score,
-                                         state.encoder_outputs,
-                                         state.encoder_output_mask,
-                                         new_hidden_state,
-                                         state.end_index)
+        for group_index in range(group_size):
+            for action_index in range(num_actions):
+                action = sorted_actions[group_index][action_index]
+                if valid_actions is not None and action not in valid_actions[group_index]:
+                    # If we have a constrained decoder, we need to skip any actions that are not valid
+                    # in the current state.
+                    continue
+                if allowed_actions is not None and action not in allowed_actions[group_index]:
+                    # This happens when our _decoder trainer_ wants us to only evaluate certain
+                    # actions, likely because they are the gold actions in this state.  We just skip
+                    # emitting any state that isn't allowed by the trainer, because constructing the
+                    # new state can be expensive.
+                    # TODO(mattg): is this really all that expensive?  If it isn't, it would simplify
+                    # the API to remove the `allowed_actions` argument, and it would make computing
+                    # metrics easier if this skipping logic happened in the trainer - the trainer could
+                    # keep track of when the top action wasn't allowed.  NOTE: without batching, when
+                    # there are ~80 possible actions in each state, this gives a ~2x slowdown.  So I'm
+                    # keeping it for now.  I'll re-evaluate once batching is implemented.
+                    continue
+                # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
+                # learning algorithm can decide how many of these it wants to keep, and it can just
+                # regroup them later, as that's a really easy operation.
+                new_action_history = state.action_history[group_index] + [action]
+                # TODO(matt): we might need to normalize this by length eventually.  If the training
+                # algorithm allows for comparing states at different timesteps, it might matter.
+                new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
+                yield WikiTablesDecoderState([state.batch_indices[group_index]],
+                                             [new_action_history],
+                                             [new_score],
+                                             [hidden_state[group_index]],
+                                             [memory_cell[group_index]],
+                                             [attended_question[group_index]],
+                                             state.encoder_outputs,
+                                             state.encoder_output_mask,
+                                             state.end_index)
