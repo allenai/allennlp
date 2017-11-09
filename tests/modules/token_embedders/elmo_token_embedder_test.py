@@ -1,4 +1,4 @@
-# pylint: disable=bad-continuation,no-self-use
+# pylint: disable=no-self-use
 
 import os
 import numpy
@@ -28,9 +28,9 @@ class TestELMoTokenEmbedder(AllenNlpTestCase):
         sentences = []
         for k in range(10):
             sentences.append(
-                indexer.pad_token_sequence(
-                    indices[(k * 45):((k + 1) * 45)], desired_num_tokens=45, padding_lengths={}
-                )
+                    indexer.pad_token_sequence(
+                            indices[(k * 45):((k + 1) * 45)], desired_num_tokens=45, padding_lengths={}
+                    )
             )
         batch = Variable(torch.from_numpy(numpy.array(sentences)))
 
