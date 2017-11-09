@@ -38,9 +38,9 @@ class ElmoLstmCell(torch.nn.Module):
         <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM.
-    state_projection_clip_value: float optional, (default = 3)
+    state_projection_clip_value: float, optional, (default = 3)
         The magnitude with which to clip the hidden_state after projecting it.
-    memory_cell_clip_value: float optional, (default = 3)
+    memory_cell_clip_value: float, optional, (default = 3)
         The magnitude with which to clip the memory cell.
 
     Returns

@@ -28,7 +28,10 @@ class ElmoLstm(torch.nn.Module):
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
-
+    state_projection_clip_value: float, optional, (default = 3)
+        The magnitude with which to clip the hidden_state after projecting it.
+    memory_cell_clip_value: float, optional, (default = 3)
+        The magnitude with which to clip the memory cell.
 
     Returns
     -------
@@ -43,7 +46,9 @@ class ElmoLstm(torch.nn.Module):
                  hidden_size: int,
                  cell_size: int,
                  num_layers: int,
-                 recurrent_dropout_probability: float = 0.0) -> None:
+                 recurrent_dropout_probability: float = 0.0,
+                 memory_cell_clip_value: float = 3.0,
+                 state_projection_clip_value: float = 3.0) -> None:
         super(ElmoLstm, self).__init__()
 
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
@@ -53,15 +58,25 @@ class ElmoLstm(torch.nn.Module):
 
         forward_layers = []
         backward_layers = []
-        static_args = {
-                    "hidden_size": hidden_size,
-                    "cell_size": cell_size,
-                    "recurrent_dropout_probability": recurrent_dropout_probability
-               }
+
         lstm_input_size = input_size
+        go_forward = True
         for layer_index in range(num_layers):
-            forward_layer = ElmoLstmCell(input_size=lstm_input_size, go_forward=True, **static_args)
-            backward_layer = ElmoLstmCell(input_size=lstm_input_size, go_forward=False, **static_args)
+            forward_layer = ElmoLstmCell(lstm_input_size,
+                                         cell_size,
+                                         hidden_size,
+                                         go_forward,
+                                         recurrent_dropout_probability,
+                                         memory_cell_clip_value,
+                                         state_projection_clip_value)
+            backward_layer = ElmoLstmCell(lstm_input_size,
+                                          cell_size,
+                                          hidden_size,
+                                          not go_forward,
+                                          recurrent_dropout_probability,
+                                          memory_cell_clip_value,
+                                          state_projection_clip_value)
+
             lstm_input_size = hidden_size
             self.add_module('forward_layer_{}'.format(layer_index), forward_layer)
             self.add_module('backward_layer_{}'.format(layer_index), backward_layer)
@@ -107,7 +122,6 @@ class ElmoLstm(torch.nn.Module):
         for layer_index, (forward_layer, backward_layer, state) in enumerate(zip(self.lstm_layers,
                                                                                  hidden_states)):
             # The state is duplicated to mirror the Pytorch API for LSTMs.
-
             forward_cache = forward_output_sequence
             backward_cache = backward_output_sequence
 
@@ -120,9 +134,11 @@ class ElmoLstm(torch.nn.Module):
                 backward_output_sequence += backward_cache
 
             sequence_outputs.append(torch.cat([forward_output_sequence,
-                                                 backward_output_sequence], -1))
+                                               backward_output_sequence], -1))
 
             final_states.append(torch.cat([forward_state, backward_state], -1))
 
+        # TODO(Mark): figure out the best api to return these.
+        sequence_outputs = torch.stack(sequence_outputs)
         final_state_tuple = (torch.cat(state_list, 0) for state_list in zip(*final_states))
         return sequence_outputs, final_state_tuple
