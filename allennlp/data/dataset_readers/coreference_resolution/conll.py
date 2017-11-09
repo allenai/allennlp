@@ -116,10 +116,6 @@ class ConllCorefReader(DatasetReader):
         cluster_dict = {}
         if gold_clusters is not None:
             for cluster_id, cluster in enumerate(gold_clusters):
-                # TODO(Mark): This doesn't take into account gold clusters which have spans
-                # longer than the max_span_width, which means we can get |1| clusters
-                # when we filter below. Check with Kenton.
-                assert len(cluster) > 1
                 for mention in cluster:
                     cluster_dict[tuple(mention)] = cluster_id
 
@@ -211,7 +207,6 @@ class ConllCorefReader(DatasetReader):
 
 
 class _DocumentState:
-
     """
     Represents the state of a document. Words are collected in a sentence buffer,
     which are incrementally collected in a list when sentences end, representing
@@ -226,7 +221,6 @@ class _DocumentState:
 
     Once an active span is closed, the span is added to the cluster for the given id.
     """
-
     def __init__(self) -> None:
         self.sentence_buffer: List[str] = []
         self.sentences: List[List[str]] = []
@@ -237,7 +231,6 @@ class _DocumentState:
         self.coref_stacks: DefaultDict[int, List[int]] = collections.defaultdict(list)
 
     def check_document_state(self) -> None:
-
         if self.sentence_buffer:
             raise ConfigurationError("Processing was attempted on a document which had "
                                      "incomplete sentences. Current sentence buffer "

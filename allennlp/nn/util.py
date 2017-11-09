@@ -593,7 +593,6 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
     Parameters
     ----------
     indices : ``torch.LongTensor``, required.
-
     sequence_length : ``int``, required.
         The length of the sequence the indices index into.
         This must be the second dimension of the tensor.
@@ -680,7 +679,6 @@ def flattened_index_select(target: torch.Tensor,
     ----------
     target : ``torch.Tensor``, required.
         A Tensor of shape (batch_size, sequence_length, embedding_size).
-
     indices : ``torch.LongTensor``, required.
         A LongTensor of shape (set_size, subset_size). All indices must be < sequence_length
         as this tensor is an index into the sequence_length dimension of the target.
