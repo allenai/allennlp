@@ -1,7 +1,7 @@
 ---
 layout: tutorial
-title: Getting Started
-id: getting-started
+title: Installation and Getting Started
+id: installation
 ---
 
 Welcome to AllenNLP!
@@ -92,25 +92,7 @@ about them.
 ### Serving the Demo
 
 The `serve` command starts the demo server.
-If you are using the Docker image, all the relevant files
-are included and you don't have to do anything special.
-
-If you have installed from source, you'll need to build the files
-(for which you'll need [npm](https://www.npmjs.com/get-npm)):
-
-```bash
-cd demo
-npm install
-npm run build
-cd ..
-```
-
-After which the files for the demo website will be in `demo/build`.
-
-Currently `serve` doesn't work if you installed using `pip`,
-as the static files for the demo website don't get installed. We're working on it.
-
-The first time you run `serve`, it will download
+The first time you run it, it will download
 several large serialized models from Amazon S3.
 
 ```
@@ -123,6 +105,8 @@ Starting a sanic server on port 8000.
 2017-08-16 18:55:12,323 - INFO - sanic - Starting worker [33290]
 ```
 
+(Currently `serve` doesn't work if you installed using `pip`,
+ as the static files for the demo website don't get installed. We're working on it.)
 
 If you now visit `http://localhost:8000` in your browser, you can play around with the same demo
 that runs on the AllenNLP website.
@@ -131,4 +115,4 @@ that runs on the AllenNLP website.
 
 ### Next Steps
 
-Continue on to the [Training a Model](training_a_model.md) tutorial.
+Continue on to the [Training and Evaluating Models](training-and-evaluating) tutorial.
