@@ -19,3 +19,4 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.snli
   allennlp.data.dataset_readers.penn_tree_bank
   allennlp.data.dataset_readers.dataset_utils
+  allennlp.data.dataset_readers.wikitables
