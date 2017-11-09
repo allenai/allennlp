@@ -31,7 +31,7 @@ DTYPE = 'float32'
 
 @TokenEmbedder.register("elmo_token_embedder")
 class ELMoTokenEmbedder(TokenEmbedder):
-    '''
+    """
     Compute context sensitive token representation using pretrained biLM.
 
     This embedder has input character ids of size (batch_size, sequence_length, 50)
@@ -43,11 +43,11 @@ class ELMoTokenEmbedder(TokenEmbedder):
 
     Parameters
     ----------
-    options_file : int
+    options_file : str
         ELMo JSON options file
-    weight_file : int
+    weight_file : str
         ELMo hdf5 weight file
-    '''
+    """
     def __init__(self,
                  options_file: str,
                  weight_file: str) -> None:
@@ -161,7 +161,6 @@ class ELMoTokenEmbedder(TokenEmbedder):
         )
 
     def _load_cnn_weights(self):
-        # pylint: disable=invalid-name
         cnn_options = self._options['char_cnn']
         filters = cnn_options['filters']
         char_embed_dim = cnn_options['embedding']['dim']
@@ -176,14 +175,14 @@ class ELMoTokenEmbedder(TokenEmbedder):
             )
             # load the weights
             with h5py.File(cached_path(self._weight_file), 'r') as fin:
-                w = fin['CNN']['W_cnn_{}'.format(i)][...]
-                b = fin['CNN']['b_cnn_{}'.format(i)][...]
+                weight = fin['CNN']['W_cnn_{}'.format(i)][...]
+                bias = fin['CNN']['b_cnn_{}'.format(i)][...]
 
-            w_reshaped = numpy.transpose(w.squeeze(axis=0), axes=(2, 1, 0))
+            w_reshaped = numpy.transpose(weight.squeeze(axis=0), axes=(2, 1, 0))
             if w_reshaped.shape != tuple(conv.weight.data.shape):
                 raise ValueError("Invalid weight file")
             conv.weight.data.copy_(torch.FloatTensor(w_reshaped))
-            conv.bias.data.copy_(torch.FloatTensor(b))
+            conv.bias.data.copy_(torch.FloatTensor(bias))
 
             conv.weight.requires_grad = False
             conv.bias.requires_grad = False
@@ -193,7 +192,7 @@ class ELMoTokenEmbedder(TokenEmbedder):
         self._convolutions = convolutions
 
     def _load_highway(self):
-        # pylint: disable=protected-access,invalid-name
+        # pylint: disable=protected-access
         # the highway layers have same dimensionality as the number of cnn filters
         cnn_options = self._options['char_cnn']
         filters = cnn_options['filters']
@@ -208,31 +207,30 @@ class ELMoTokenEmbedder(TokenEmbedder):
             with h5py.File(cached_path(self._weight_file), 'r') as fin:
                 # The weights are transposed due to multiplication order assumptions in tf
                 # vs pytorch (tf.matmul(X, W) vs pytorch.matmul(W, X))
-                W_transform = numpy.transpose(fin['CNN_high_{}'.format(k)]['W_transform'][...])
+                w_transform = numpy.transpose(fin['CNN_high_{}'.format(k)]['W_transform'][...])
                 # -1.0 since AllenNLP is g * x + (1 - g) * f(x) but tf is (1 - g) * x + g * f(x)
-                W_carry = -1.0 * numpy.transpose(fin['CNN_high_{}'.format(k)]['W_carry'][...])
-                W = numpy.concatenate([W_transform, W_carry], axis=0)
-                self._highways._layers[k].weight.data.copy_(torch.FloatTensor(W))
+                w_carry = -1.0 * numpy.transpose(fin['CNN_high_{}'.format(k)]['W_carry'][...])
+                weight = numpy.concatenate([w_transform, w_carry], axis=0)
+                self._highways._layers[k].weight.data.copy_(torch.FloatTensor(weight))
                 self._highways._layers[k].weight.requires_grad = False
 
                 b_transform = fin['CNN_high_{}'.format(k)]['b_transform'][...]
                 b_carry = -1.0 * fin['CNN_high_{}'.format(k)]['b_carry'][...]
-                b = numpy.concatenate([b_transform, b_carry], axis=0)
-                self._highways._layers[k].bias.data.copy_(torch.FloatTensor(b))
+                bias = numpy.concatenate([b_transform, b_carry], axis=0)
+                self._highways._layers[k].bias.data.copy_(torch.FloatTensor(bias))
                 self._highways._layers[k].bias.requires_grad = False
 
     def _load_projection(self):
-        # pylint: disable=invalid-name
         cnn_options = self._options['char_cnn']
         filters = cnn_options['filters']
         n_filters = sum(f[1] for f in filters)
 
         self._projection = torch.nn.Linear(n_filters, self.output_dim, bias=True)
         with h5py.File(cached_path(self._weight_file), 'r') as fin:
-            W = fin['CNN_proj']['W_proj'][...]
-            b = fin['CNN_proj']['b_proj'][...]
-            self._projection.weight.data.copy_(torch.FloatTensor(numpy.transpose(W)))
-            self._projection.bias.data.copy_(torch.FloatTensor(b))
+            weight = fin['CNN_proj']['W_proj'][...]
+            bias = fin['CNN_proj']['b_proj'][...]
+            self._projection.weight.data.copy_(torch.FloatTensor(numpy.transpose(weight)))
+            self._projection.bias.data.copy_(torch.FloatTensor(bias))
 
             self._projection.weight.requires_grad = False
             self._projection.bias.requires_grad = False
