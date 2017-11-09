@@ -12,7 +12,8 @@ class SniffTest(AllenNlpTestCase):
         assert set(DEFAULT_MODELS.keys()) == {
                 'machine-comprehension',
                 'semantic-role-labeling',
-                'textual-entailment'
+                'textual-entailment',
+                'coreference-resolution'
         }
 
 
@@ -102,3 +103,27 @@ class SniffTest(AllenNlpTestCase):
         })
 
         assert result["label_probs"][2] > 0.7  # neutral
+
+
+    def test_coreference_resolution(self):
+
+        predictor = Predictor.from_archive(load_archive(DEFAULT_MODELS['coreference-resolution']),
+                                           'coreference-resolution')
+
+        document = "We 're not going to skimp on quality , but we are very focused to make next year . The only problem is that some of the fabrics are wearing out - since I was a newbie I skimped on some of the fabric and the poor quality ones are developing holes . For some , an awareness of this exit strategy permeates the enterprise , allowing them to skimp on the niceties they would more or less have to extend toward a person they were likely to meet again ."
+
+        result = predictor.predict_json({"document": document})
+        assert result['clusters'] == [[[0, 0], [10, 10]],
+                                      [[33, 33], [37, 37]],
+                                      [[26, 27], [42, 43]],
+                                      [[63, 64], [67, 67], [73, 73], [84, 84]],
+                                      [[5, 5], [69, 69]]]
+        assert result["document"] ==['We', "'re", 'not', 'going', 'to', 'skimp', 'on', 'quality', ',', 'but', 'we', 'are',
+                                     'very', 'focused', 'to', 'make', 'next', 'year', '.', 'The', 'only', 'problem', 'is',
+                                     'that', 'some', 'of', 'the', 'fabrics', 'are', 'wearing', 'out', '-', 'since', 'I', 'was',
+                                     'a', 'newbie', 'I', 'skimped', 'on', 'some', 'of', 'the', 'fabric', 'and', 'the', 'poor',
+                                     'quality', 'ones', 'are', 'developing', 'holes', '.', 'For', 'some', ',', 'an',
+                                     'awareness', 'of', 'this', 'exit', 'strategy', 'permeates', 'the', 'enterprise', ',',
+                                     'allowing', 'them', 'to', 'skimp', 'on', 'the', 'niceties', 'they', 'would', 'more', 'or',
+                                     'less', 'have', 'to', 'extend', 'toward', 'a', 'person', 'they', 'were', 'likely', 'to',
+                                     'meet', 'again', '.']

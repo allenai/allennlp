@@ -17,7 +17,7 @@ class CorefPredictor(Predictor):
 
         # We have to use spacy to tokenise our document here, because we need
         # to also know sentence boundaries to propose valid mentions.
-        self._spacy = get_spacy_model("en", pos_tags=True, parse=True, ner=False)
+        self._spacy = get_spacy_model("en_core_web_sm", pos_tags=True, parse=True, ner=False)
 
     def _json_to_instance(self, json: JsonDict) -> Instance:
         # We're overriding `predict_json` directly, so we don't need this.  But I'd rather have a
