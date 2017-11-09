@@ -119,7 +119,8 @@ class ElmoLstm(torch.nn.Module):
 
         final_states = []
         sequence_outputs = []
-        for layer_index, (forward_layer, backward_layer, state) in enumerate(zip(self.lstm_layers,
+        for layer_index, (forward_layer, backward_layer, state) in enumerate(zip(self.forward_layers,
+                                                                                 self.backward_layers,
                                                                                  hidden_states)):
             # The state is duplicated to mirror the Pytorch API for LSTMs.
             forward_cache = forward_output_sequence

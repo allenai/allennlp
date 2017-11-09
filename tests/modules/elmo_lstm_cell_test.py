@@ -20,7 +20,7 @@ class TestElmoLstmCell(AllenNlpTestCase):
                             memory_cell_clip_value=2,
                             state_projection_clip_value=1)
         output, lstm_state = lstm(input_tensor)
-        output_sequence, final_state = pad_packed_sequence(output, batch_first=True)
+        output_sequence, _ = pad_packed_sequence(output, batch_first=True)
         numpy.testing.assert_array_equal(output_sequence.data[1, 4:, :].numpy(), 0.0)
         numpy.testing.assert_array_equal(output_sequence.data[2, 2:, :].numpy(), 0.0)
         numpy.testing.assert_array_equal(output_sequence.data[3, 1:, :].numpy(), 0.0)
