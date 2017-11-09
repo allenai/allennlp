@@ -103,6 +103,20 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         assert_almost_equal(encoder_output.data.numpy(),
                             lstm_tensor.index_select(0, restoration_indices).data.numpy())
 
+    def test_forward_does_not_compress_tensors_padded_to_greater_than_the_max_sequence_length(self):
+
+        lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
+        encoder = PytorchSeq2SeqWrapper(lstm)
+        tensor = torch.rand([5, 8, 3])
+        tensor[:, 7, :] = 0
+        mask = torch.ones(5, 8)
+        mask[:, 7] = 0
+
+        input_tensor = Variable(tensor)
+        mask = Variable(mask)
+        encoder_output = encoder(input_tensor, mask)
+        assert encoder_output.size(1) == 8
+
     def test_wrapper_raises_if_batch_first_is_false(self):
 
         with pytest.raises(ConfigurationError):
