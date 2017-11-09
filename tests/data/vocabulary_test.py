@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import codecs
 import os
+import gzip
 from copy import deepcopy
 
 import pytest
@@ -36,6 +37,55 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'a' in words
         assert 'b' in words
         assert 'c' in words
+
+    def test_from_dataset_respects_exclusive_embedding_file(self):
+        embeddings_filename = self.TEST_DIR + "embeddings.gz"
+        with gzip.open(embeddings_filename, 'wb') as embeddings_file:
+            embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
+            embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
+
+        vocab = Vocabulary.from_dataset(self.dataset,
+                                        min_count=4,
+                                        pretrained_files={'tokens': embeddings_filename},
+                                        only_include_pretrained_words=True)
+        words = vocab.get_index_to_token_vocabulary().values()
+        assert 'a' in words
+        assert 'b' not in words
+        assert 'c' not in words
+
+        vocab = Vocabulary.from_dataset(self.dataset,
+                                        min_count=-1,
+                                        pretrained_files={'tokens': embeddings_filename},
+                                        only_include_pretrained_words=True)
+        words = vocab.get_index_to_token_vocabulary().values()
+        assert 'a' in words
+        assert 'b' in words
+        assert 'c' not in words
+
+    def test_from_dataset_respects_inclusive_embedding_file(self):
+        embeddings_filename = self.TEST_DIR + "embeddings.gz"
+        with gzip.open(embeddings_filename, 'wb') as embeddings_file:
+            embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
+            embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
+
+        vocab = Vocabulary.from_dataset(self.dataset,
+                                        min_count=4,
+                                        pretrained_files={'tokens': embeddings_filename},
+                                        only_include_pretrained_words=False)
+        words = vocab.get_index_to_token_vocabulary().values()
+        assert 'a' in words
+        assert 'b' in words
+        assert 'c' not in words
+
+        vocab = Vocabulary.from_dataset(self.dataset,
+                                        min_count=-1,
+                                        pretrained_files={'tokens': embeddings_filename},
+                                        only_include_pretrained_words=False)
+        words = vocab.get_index_to_token_vocabulary().values()
+        assert 'a' in words
+        assert 'b' in words
+        assert 'c' in words
+
 
     def test_add_word_to_index_gives_consistent_results(self):
         vocab = Vocabulary()

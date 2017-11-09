@@ -848,7 +848,7 @@ header {
   height: .375em;
   background: #63a7d4;
   display: block;
-  bottom: 0;
+  bottom: -20px;
   left: 0;
   position: absolute
 }
