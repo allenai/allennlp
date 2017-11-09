@@ -11,17 +11,17 @@ from allennlp.data.vocabulary import Vocabulary
 
 
 def _make_bos_eos(
-        character,
-        padding_character,
-        beginning_of_word_character,
-        end_of_word_character,
-        max_word_length
+        character: int,
+        padding_character: int,
+        beginning_of_word_character: int,
+        end_of_word_character: int,
+        max_word_length: int
 ):
-    ret = [padding_character] * max_word_length
-    ret[0] = beginning_of_word_character
-    ret[1] = character
-    ret[2] = end_of_word_character
-    return ret
+    char_ids = [padding_character] * max_word_length
+    char_ids[0]= beginning_of_word_character
+    char_ids[1] = character
+    char_ids[2] = end_of_word_character
+    return char_ids
 
 class ELMoCharacterMapper:
     """
@@ -58,21 +58,21 @@ class ELMoCharacterMapper:
     eos_token = '</S>'
 
     @staticmethod
-    def convert_word_to_char_ids(word):
+    def convert_word_to_char_ids(word: str) -> List[int]:
         if word == ELMoCharacterMapper.bos_token:
-            ret = ELMoCharacterMapper.beginning_of_sentence_characters
+            char_ids = ELMoCharacterMapper.beginning_of_sentence_characters
         elif word == ELMoCharacterMapper.eos_token:
-            ret = ELMoCharacterMapper.end_of_sentence_characters
+            char_ids = ELMoCharacterMapper.end_of_sentence_characters
         else:
             word_encoded = word.encode('utf-8', 'ignore')[:(ELMoCharacterMapper.max_word_length-2)]
-            ret = [ELMoCharacterMapper.padding_character] * ELMoCharacterMapper.max_word_length
-            ret[0] = ELMoCharacterMapper.beginning_of_word_character
+            char_ids = [ELMoCharacterMapper.padding_character] * ELMoCharacterMapper.max_word_length
+            char_ids[0] = ELMoCharacterMapper.beginning_of_word_character
             for k, chr_id in enumerate(word_encoded, start=1):
-                ret[k] = chr_id
-            ret[len(word_encoded) + 1] = ELMoCharacterMapper.end_of_word_character
+                char_ids[k] = chr_id
+            char_ids[len(word_encoded) + 1] = ELMoCharacterMapper.end_of_word_character
 
         # +1 one for masking
-        return [c + 1 for c in ret]
+        return [c + 1 for c in char_ids]
 
 
 @TokenIndexer.register("elmo_characters")
@@ -95,7 +95,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
     @overrides
     def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> List[int]:
-        #pylint: disable=unused-argument
+        # pylint: disable=unused-argument
         if token.text is None:
             raise ConfigurationError('ELMoTokenCharactersIndexer needs a tokenizer '
                                      'that retains text')
@@ -103,7 +103,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
     @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
-        #pylint: disable=unused-argument
+        # pylint: disable=unused-argument
         return {}
 
     @overrides
@@ -119,7 +119,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
                            tokens: List[List[int]],
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[List[int]]:
-        #pylint: disable=unused-argument
+        # pylint: disable=unused-argument
         return pad_sequence_to_length(tokens, desired_num_tokens,
                                       default_value=self._default_value_for_padding)
 
