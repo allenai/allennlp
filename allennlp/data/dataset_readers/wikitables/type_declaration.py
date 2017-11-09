@@ -36,18 +36,18 @@ class PlaceholderType(ComplexType):
 
     Note that ANY_TYPE in NLTK's type system doesn't work like a wild card. Once the type of a variable gets
     resolved to a specific type, NLTK changes the type of that variable to that specific type. Hence, what
-    NLTK calls "ANY_TYPE", is essentially a "yet-to-be-decided type". This is a problem because we may want the
+    NLTK calls "ANY_TYPE", is essentially a "yet-to-be-decided" type. This is a problem because we may want the
     same variable to bind to different types within a logical form, and using ANY_TYPE for this purpose will
     cause a resolution failure. For example the count function may apply to both rows and cells in the same
     logical form, and making count of type ``ComplexType(ANY_TYPE, DATE_NUM_TYPE)`` will cause a resolution
-    error. This class lets you define ``ComplexType``s with placeholders that are actually wild cards.
+    error. This class lets you define ``ComplexType`` s with placeholders that are actually wild cards.
 
-    The subclasses of this abstract class need to do two things:
-        1) Override the property ``_signature`` to define the type signature (this is just the signature's
-        string representation and will not affect type inference or checking). You will see this signature in
-        action sequences.
-        2) Override ``resolve`` to resolve the type appropriately (see the docstring in ``resolve`` for more
-        information).
+    The subclasses of this abstract class need to do two things
+    1) Override the property ``_signature`` to define the type signature (this is just the signature's
+    string representation and will not affect type inference or checking). You will see this signature in
+    action sequences.
+    2) Override ``resolve`` to resolve the type appropriately (see the docstring in ``resolve`` for more
+    information).
     """
     @property
     def _signature(self):
@@ -61,14 +61,15 @@ class PlaceholderType(ComplexType):
         is provided as ``other``. We make sure that there are no contradictions between this type and other,
         and return an updated type which may be more specific than the original type.
 
-        For example, say this type is of the function variable F in F(cell), and we start out with <?, d> (that
-        is, it takes any type and returns d). Now we have already resolved `cell` to be of type `e`. Then
-        ``resolve`` gets called with other = <e, ?>, because we know F is a function that took a constant of
-        type `e`. When we resolve <e, ?> against <?, d>, there will not be a contradiction, because any type
-        can be successfully resolved against ?. Finally we return <e, d> as the resolved type.
+        For example, say this type is of the function variable F in F(cell), and we start out with ``<?, d>``
+        (that is, it takes any type and returns ``d`` ). Now we have already resolved cell to be of type
+        ``e`` . Then ``resolve`` gets called with ``other = <e, ?>`` , because we know F is a function that
+        took a constant of type ``e`` . When we resolve ``<e, ?>`` against ``<?, d>`` , there will not be a
+        contradiction, because any type can be successfully resolved against ``?`` . Finally we return
+        ``<e, d>`` as the resolved type.
 
-        As a counter example, if we are trying to resolve <?, d> against <?, e>, the resolution fails, and in
-        that case, this method returns ``None``.
+        As a counter example, if we are trying to resolve ``<?, d>`` against ``<?, e>`` , the resolution fails,
+        and in that case, this method returns ``None`` .
 
         Note that a successful resolution does not imply equality of types because of one of them may be
         ANY_TYPE, and so in the subclasses of this type, we explicitly resolve in both directions.
@@ -87,7 +88,7 @@ class PlaceholderType(ComplexType):
     @overrides
     def __str__(self):
         if self == ANY_TYPE:
-            # If the type remains unresolved, we return `?` instead of its signature.
+            # If the type remains unresolved, we return ? instead of its signature.
             return "%s" % ANY_TYPE
         else:
             return self._signature
@@ -107,11 +108,12 @@ class ReverseType(PlaceholderType):
     expressions, and return a resolution that matches whatever parts are present in the type signatures
     of the arguments and the return expressions.
 
-    Following are the resolutions for some example type signatures being matched against:
+    Following are the resolutions for some example type signatures being matched against::
+
         <?, <e,r>>      :   <<r,e>, <e,r>>
         <<r,?>, <e,?>>  :   <<r,e>, <e,r>>
         <<r,?>, ?>      :   <<r,?>, <?,r>>>
-        <<r,?>, <?,e>>  :   None  (causes resolution failure)
+        <<r,?>, <?,e>>  :   None
     """
     @property
     def _signature(self):
@@ -189,8 +191,8 @@ class ConjunctionType(PlaceholderType):
 class ArgExtremeType(PlaceholderType):
     """
     This is the type for argmax and argmin in Sempre. The type signature is <d,<d,<#1,<<d,#1>,#1>>>>.
-    Example: (argmax (number 1) (number 1) (fb:row.row.league fb:cell.usl_a_league) fb:row.row.index),
-        meaning, of the subset of rows where league == usl_a_league, find the row with the maximum index.
+    Example: (argmax (number 1) (number 1) (fb:row.row.league fb:cell.usl_a_league) fb:row.row.index)
+    meaning, of the subset of rows where league == usl_a_league, find the row with the maximum index.
     """
     @property
     def _signature(self):
