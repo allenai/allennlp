@@ -10,3 +10,8 @@ allennlp.models.encoder_decoders
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.models.encoder_decoders.wikitables_semantic_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
