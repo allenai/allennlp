@@ -1,6 +1,6 @@
-'''
+"""
 Compute the context insensitive token embeddings from pretrained biLMs.
-'''
+"""
 import json
 import logging
 
@@ -47,6 +47,17 @@ class ELMoTokenEmbedder(TokenEmbedder):
         ELMo JSON options file
     weight_file : str
         ELMo hdf5 weight file
+
+    The relevant section of the options file is something like:
+    {'char_cnn': {
+           'activation': 'relu',
+            'embedding': {'dim': 4},
+            'filters': [[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
+            'max_characters_per_token': 50,
+            'n_characters': 262,
+            'n_highway': 2
+        }
+    }
     """
     def __init__(self,
                  options_file: str,
@@ -55,7 +66,6 @@ class ELMoTokenEmbedder(TokenEmbedder):
 
         with open(cached_path(options_file), 'r') as fin:
             self._options = json.load(fin)
-
         self._weight_file = weight_file
 
         self.output_dim = self._options['lstm']['projection_dim']
@@ -88,7 +98,7 @@ class ELMoTokenEmbedder(TokenEmbedder):
             Shape ``(batch_size, sequence_length + 2)`` long tensor with sequence mask.
         """
         # Add BOS/EOS
-        mask = ((inputs > 0).sum(dim=-1) > 0).long()
+        mask = ((inputs > 0).long().sum(dim=-1) > 0).long()
         character_ids_with_bos_eos, mask_with_bos_eos = add_bos_eos(
                 inputs,
                 mask,
