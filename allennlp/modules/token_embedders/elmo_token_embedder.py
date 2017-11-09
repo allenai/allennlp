@@ -49,15 +49,21 @@ class ELMoTokenEmbedder(TokenEmbedder):
         ELMo hdf5 weight file
 
     The relevant section of the options file is something like:
-    {'char_cnn': {
-           'activation': 'relu',
-            'embedding': {'dim': 4},
-            'filters': [[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
-            'max_characters_per_token': 50,
-            'n_characters': 262,
-            'n_highway': 2
-        }
-    }
+    .. example-code::
+
+        .. code-block:: python
+
+            {'char_cnn': {
+                'activation': 'relu',
+                'embedding': {'dim': 4},
+                'filters': [[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
+                'max_characters_per_token': 50,
+                'n_characters': 262,
+                'n_highway': 2
+                }
+            }
+
+    something
     """
     def __init__(self,
                  options_file: str,
