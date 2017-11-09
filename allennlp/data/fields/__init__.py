@@ -12,3 +12,4 @@ from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.fields.sequence_label_field import SequenceLabelField
 from allennlp.data.fields.text_field import TextField
 from allennlp.data.fields.array_field import ArrayField
+from allennlp.data.fields.knowledge_graph_field import KnowledgeGraphField
