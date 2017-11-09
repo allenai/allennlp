@@ -16,6 +16,7 @@ allennlp.data.fields
 * :ref:`SequenceLabelField<sequence-label-field>`
 * :ref:`TextField<text-field>`
 * :ref:`ArrayField<array-field>`
+* :ref:`KnowledgeGraphField<knowledge-graph-field>`
 
 .. _field:
 .. automodule:: allennlp.data.fields.field
@@ -71,9 +72,17 @@ allennlp.data.fields
    :undoc-members:
    :show-inheritance:
 
+<<<<<<< f0bf513d6ff01786a399126e8740fc9970fb7670
 .. _array-field:
 .. automodule:: allennlp.data.fields.array_field
    :members:
    :undoc-members:
    :show-inheritance:
 
+=======
+.. _knowledge-graph-field:
+.. automodule:: allennlp.data.fields.knowledge_graph_field
+   :members:
+   :undoc-members:
+   :show-inheritance:
+>>>>>>> Wikitables dataset reader and a knowledge graph field (#458)
