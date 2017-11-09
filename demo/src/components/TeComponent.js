@@ -197,9 +197,6 @@ class TeOutput extends React.Component {
               judgmentStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
               break;
             default:
-              // Can't happen, but let's make the linter happy.
-              break;
-            default:
               throw new Error("Unhandled case for judgement confidence.")
           }
           return (
@@ -217,9 +214,6 @@ class TeOutput extends React.Component {
               break;
             case "n":
               judgmentStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
-              break;
-            default:
-              // Can't happen, but let's make the linter happy.
               break;
             default:
               throw new Error("Unhandled case for judgement correlation.")

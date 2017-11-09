@@ -108,8 +108,8 @@ class Demo extends React.Component {
       else if (selectedModel === "machine-comprehension") {
         return (<McComponent requestData={requestData} responseData={responseData}/>)
       }
-      else if (selectedModel === "coref") {
-        return (<CorefComponent />)
+      else if (selectedModel === "coreference-resolution") {
+        return (<CorefComponent requestData={requestData} responseData={responseData}/>)
       }
     }
 
