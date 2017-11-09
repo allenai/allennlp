@@ -18,8 +18,8 @@ class ElmoLstmCell(torch.nn.Module):
     """
     An LSTM with Recurrent Dropout and a projected and clipped hidden state.
     Note: this implementation is slower than the native Pytorch LSTM because
-    it cannot make use of CUDNN optimizations for stacked RNNs due to the and
-    variational dropout.
+    it cannot make use of CUDNN optimizations for stacked RNNs due to and
+    variational dropout and the custom nature of the cell state.
 
     Parameters
     ----------
@@ -40,6 +40,8 @@ class ElmoLstmCell(torch.nn.Module):
         LSTM.
     state_projection_clip_value: float optional, (default = 3)
         The magnitude with which to clip the hidden_state after projecting it.
+    memory_cell_clip_value: float optional, (default = 3)
+        The magnitude with which to clip the memory cell.
 
     Returns
     -------
@@ -55,6 +57,7 @@ class ElmoLstmCell(torch.nn.Module):
                  cell_size: int,
                  go_forward: bool = True,
                  recurrent_dropout_probability: float = 0.0,
+                 memory_cell_clip_value: float = 3.0,
                  state_projection_clip_value: float = 3.0) -> None:
         super(ElmoLstmCell, self).__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
@@ -64,6 +67,7 @@ class ElmoLstmCell(torch.nn.Module):
 
         self.go_forward = go_forward
         self.state_projection_clip_value = state_projection_clip_value
+        self.memory_cell_clip_value = memory_cell_clip_value
         self.recurrent_dropout_probability = recurrent_dropout_probability
 
         # We do the projections for all the gates all at once.
@@ -115,9 +119,9 @@ class ElmoLstmCell(torch.nn.Module):
 
         # We have to use this '.data.new().fill_' pattern to create tensors with the correct
         # type - forward has no knowledge of whether these are torch.Tensors or torch.cuda.Tensors.
-        output_accumulator = Variable(sequence_tensor.data.new((batch_size,
-                                                                total_timesteps,
-                                                                self.hidden_size)).fill_(0))
+        output_accumulator = Variable(sequence_tensor.data.new(batch_size,
+                                                               total_timesteps,
+                                                               self.hidden_size).fill_(0))
         if initial_state is None:
             full_batch_previous_memory = Variable(sequence_tensor.data.new(batch_size,
                                                                            self.cell_size).fill_(0))
@@ -184,16 +188,24 @@ class ElmoLstmCell(torch.nn.Module):
             output_gate = torch.sigmoid(projected_input[:, 3 * self.cell_size:4 * self.cell_size] +
                                         projected_state[:, 3 * self.cell_size:4 * self.cell_size])
             memory = input_gate * memory_init + forget_gate * previous_memory
-            timestep_output = output_gate * torch.tanh(memory)
 
-            projected_timestep_output = torch.clamp(self.state_projection(timestep_output),
-                                                    -self.state_projection_clip_value,
-                                                    self.state_projection_clip_value)
+            # Here is the non-standard part of this LSTM cell; first, we clip the
+            # memory cell, then we project the output of the timestep to a smaller size
+            # and again clip it.
+            memory = torch.clamp(memory, -self.memory_cell_clip_value, self.memory_cell_clip_value)
+
+            # shape (current_length_index, cell_size)
+            pre_projection_timestep_output = output_gate * torch.tanh(memory)
+
+            # shape (current_length_index, hidden_size)
+            timestep_output = self.state_projection(pre_projection_timestep_output)
+            timestep_output = torch.clamp(timestep_output,
+                                          -self.state_projection_clip_value,
+                                          self.state_projection_clip_value)
 
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
             if dropout_mask is not None and self.training:
-                projected_timestep_output = projected_timestep_output * \
-                                            dropout_mask[0: current_length_index + 1]
+                timestep_output = timestep_output * dropout_mask[0: current_length_index + 1]
 
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the
@@ -201,15 +213,15 @@ class ElmoLstmCell(torch.nn.Module):
             full_batch_previous_memory = Variable(full_batch_previous_memory.data.clone())
             full_batch_previous_state = Variable(full_batch_previous_state.data.clone())
             full_batch_previous_memory[0:current_length_index + 1] = memory
-            full_batch_previous_state[0:current_length_index + 1] = projected_timestep_output
-            output_accumulator[0:current_length_index + 1, index] = projected_timestep_output
+            full_batch_previous_state[0:current_length_index + 1] = timestep_output
+            output_accumulator[0:current_length_index + 1, index] = timestep_output
 
         output_accumulator = pack_padded_sequence(output_accumulator,
                                                   batch_lengths,
                                                   batch_first=True)
 
         # Mimic the pytorch API by returning state in the following shape:
-        # (num_layers * num_directions, batch_size, hidden_size). As this
+        # (num_layers * num_directions, batch_size, ...). As this
         # LSTM cannot be stacked, the first dimension here is just 1.
         final_state = (full_batch_previous_state.unsqueeze(0),
                        full_batch_previous_memory.unsqueeze(0))
