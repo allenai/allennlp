@@ -1,0 +1,2 @@
+(example (id nt-0) (utterance "what was the last year where this team was a part of the usl a-league?") (context (graph tables.TableKnowledgeGraph tables/590.csv)) (targetValue (list (description "2004"))))
+(example (id nt-1) (utterance "in what city did piotr's last 1st place finish occur?") (context (graph tables.TableKnowledgeGraph tables/622.csv)) (targetValue (list (description "Bangkok, Thailand"))))
