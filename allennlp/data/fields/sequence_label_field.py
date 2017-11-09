@@ -99,6 +99,6 @@ class SequenceLabelField(Field[numpy.ndarray]):
     @overrides
     def empty_field(self):  # pylint: disable=no-self-use
         # pylint: disable=protected-access
-        sequence_label_field = SequenceLabelField([], None)
+        sequence_label_field = SequenceLabelField([], self.sequence_field.empty_field())
         sequence_label_field._indexed_labels = []
         return sequence_label_field

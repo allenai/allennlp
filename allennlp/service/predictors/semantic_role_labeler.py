@@ -16,7 +16,7 @@ class SemanticRoleLabelerPredictor(Predictor):
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordSplitter(language='en', pos_tags=True)
+        self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
 
     @staticmethod
     def make_srl_string(words: List[str], tags: List[str]) -> str:
