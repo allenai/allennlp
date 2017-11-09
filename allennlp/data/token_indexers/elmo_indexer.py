@@ -18,7 +18,7 @@ def _make_bos_eos(
         max_word_length: int
 ):
     char_ids = [padding_character] * max_word_length
-    char_ids[0]= beginning_of_word_character
+    char_ids[0] = beginning_of_word_character
     char_ids[1] = character
     char_ids[2] = end_of_word_character
     return char_ids
