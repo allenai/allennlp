@@ -1,3 +1,8 @@
+"""
+We store all the information related to a world (i.e. the context in which logical forms will be
+executed) here. For WikiTableQuestions, this includes a representation of a table, mapping from
+Sempre variables in all logical forms to NLTK variables, and the types of all predicates and entities.
+"""
 import re
 
 from typing import List
@@ -13,9 +18,12 @@ from allennlp.data.dataset_readers.wikitables.table import TableKnowledgeGraph
 
 class World:
     """
-    We store all the information related to a world (i.e. the context in which logical forms will be
-    executed) here. For WikiTableQuestions, this includes a representation of a table, mapping from
-    Sempre variables in all logical forms to NLTK variables, and the types of all predicates and entities.
+    World representation for the WikitableQuestions domain.
+
+    Parameters
+    ----------
+    table_graph : ``TableKnowledgeGraph``
+        Context associated with this world.
     """
     def __init__(self, table_graph: TableKnowledgeGraph) -> None:
         self.table_graph = table_graph
