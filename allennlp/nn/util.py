@@ -735,7 +735,17 @@ def bucket_values(distances: torch.Tensor,
     A tensor of the same shape as the input, containing the indices of the buckets
     the values were placed in.
     """
-    logspace_idx = (distances.float().log()/math.log(2)).floor().long() + 3
-    use_identity = (distances <= num_identity_buckets).long()
-    combined_idx = use_identity * distances + (1 + (-1 * use_identity)) * logspace_idx
-    return combined_idx.clamp(0, num_total_buckets - 1)
+    # Chunk the values into semi-logscale buckets using .floor().
+    # This is a semi-logscale bucketing because we divide by log(2) after taking the log.
+    # We do this to make the buckets more granular in the initial range, where we expect
+    # most values to fall. We then add (num_identity_buckets - 1) because we want these indices
+    # to start _after_ the fixed number of buckets which we specified would only hold single values.
+    logspace_index = (distances.float().log()/math.log(2)).floor().long() + (num_identity_buckets - 1)
+    # create a mask for values which will go into single number buckets (i.e not a range).
+    use_identity_mask = (distances <= num_identity_buckets).long()
+    use_buckets_mask = 1 + (-1 * use_identity_mask)
+    # Use the original values if they are less than num_identity_buckets, otherwise
+    # use the logspace indices.
+    combined_index = use_identity_mask * distances + use_buckets_mask * logspace_index
+    # Clamp to put anything > num_total_buckets into the final bucket.
+    return combined_index.clamp(0, num_total_buckets - 1)

@@ -55,7 +55,8 @@ class CoreferenceResolver(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, vocab: Vocabulary,
+    def __init__(self,
+                 vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  context_layer: Seq2SeqEncoder,
                  mention_feedforward: FeedForward,
