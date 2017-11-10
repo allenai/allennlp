@@ -155,7 +155,6 @@ class SimpleSeq2Seq(Model):
                     input_choices = last_predictions
             decoder_input = self._prepare_decode_step_input(input_choices, decoder_hidden,
                                                             encoder_outputs, source_mask)
-            print(decoder_input)
             decoder_hidden, decoder_context = self._decoder_cell(decoder_input,
                                                                  (decoder_hidden, decoder_context))
             # (batch_size, num_classes)
