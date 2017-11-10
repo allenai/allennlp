@@ -12,6 +12,7 @@ allennlp.data.token_indexers
 * :ref:`PosTagIndexer<pos-tag-indexer>`
 * :ref:`SingleIdTokenIndexer<single-id-token-indexer>`
 * :ref:`TokenCharactersIndexer<token-characters-indexer>`
+* :ref:`ELMoTokenCharactersIndexer<elmo-indexer>`
 
 .. _token-indexer:
 .. automodule:: allennlp.data.token_indexers.token_indexer
@@ -49,3 +50,8 @@ allennlp.data.token_indexers
    :undoc-members:
    :show-inheritance:
 
+.. _elmo-indexer:
+.. automodule:: allennlp.data.token_indexers.elmo_indexer
+   :members:
+   :undoc-members:
+   :show-inheritance:
