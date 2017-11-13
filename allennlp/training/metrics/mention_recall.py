@@ -13,7 +13,7 @@ class MentionRecall(Metric):
         self._num_recalled_mentions = 0
 
     @overrides
-    def __call__(self,
+    def __call__(self,  # type: ignore
                  batched_top_spans: torch.Tensor,
                  batched_metadata: List[Dict[str, Any]]):
         for top_spans, metadata in zip(batched_top_spans.data.tolist(), batched_metadata):
