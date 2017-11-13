@@ -29,7 +29,7 @@ class _DocumentState:
     with the same id can be nested, which is why we collect these opening spans
     on a stack, e.g:
 
-     [Greg, the baker who referred to [himself]_ID1 as 'the bread man']_ID1
+    [Greg, the baker who referred to [himself]_ID1 as 'the bread man']_ID1
 
     Once an active span is closed, the span is added to the cluster for the given id.
     """
@@ -100,7 +100,7 @@ class _DocumentState:
 class ConllCorefReader(DatasetReader):
     """
     Reads a single CoNLL-formatted file. This is the same file format as used in the
-    :class:~`allennlp.data.dataset_readers.semantic_role_labelling.SrlReader`, but is preprocessed
+    :class:~`allennlp.data.dataset_readers.semantic_role_labelling.SrlReader` , but is preprocessed
     to dump all documents into a single file per train, dev and test split. See
     scripts/compile_coref_data.sh for more details of how to pre-process the Ontonotes 5.0 data
     into the correct format.
@@ -115,7 +115,7 @@ class ConllCorefReader(DatasetReader):
 
     Parameters
     ----------
-    max_span_width: ``int``
+    max_span_width: ``int``, required.
         The maximum width of candidate spans to consider.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         This is used to index the words in the document.  See :class:`TokenIndexer`.
@@ -130,7 +130,7 @@ class ConllCorefReader(DatasetReader):
 
     @overrides
     def read(self, file_path: str):
-        # if `file_path` is a URL, redirect to the cache
+        # if file_path is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
         logger.info("Reading file at %s", file_path)
@@ -176,7 +176,6 @@ class ConllCorefReader(DatasetReader):
 
         Returns
         -------
-
         An ``Instance`` containing the following ``Fields``:
             text : ``TextField``
                 The text of the full document.
