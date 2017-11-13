@@ -1,4 +1,5 @@
 import React from 'react';
+import { API_ROOT } from '../api-config';
 import { withRouter } from 'react-router-dom'
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
@@ -208,7 +209,7 @@ class _CorefComponent extends React.Component {
         document: inputs.documentValue,
       };
 
-      fetch('http://localhost:8000/predict/coreference-resolution', {
+      fetch(`${API_ROOT}/predict/coreference-resolution`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
