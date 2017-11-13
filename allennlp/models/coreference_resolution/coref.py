@@ -151,6 +151,13 @@ class CoreferenceResolver(Model):
 
         # Shape: (batch_size, num_spans, 1)
         span_mask = (span_starts >= 0).float()
+        # IndexFields return -1 when they are used as padding. As we do
+        # some comparisons based on span widths when we attend over the
+        # span representations that we generate from these indices, we
+        # need them to be <= 0. This is only relevant in edge cases where
+        # the number of spans we consider after the pruning stage is >= the
+        # total number of spans, because in this case, it is possible we might
+        # consider a masked span.
         span_starts = F.relu(span_starts.float()).long()
         span_ends = F.relu(span_ends.float()).long()
 
