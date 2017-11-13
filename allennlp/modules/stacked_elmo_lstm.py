@@ -4,42 +4,36 @@ A stacked bidirectional LSTM with skip connections between layers.
 
 from typing import Optional, Tuple
 import torch
-from torch.nn.utils.rnn import PackedSequence
+from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
 from allennlp.modules.elmo_lstm_cell import ElmoLstmCell
 from allennlp.common.checks import ConfigurationError
 
 
 class ElmoLstm(torch.nn.Module):
     """
-    A stacked, bidirectional LSTM with highway layers between the inputs to layers.
-    The inputs to the forward and backward directions are independent.
+    A stacked, bidirectional LSTM which uses :class:`~allennlp.modules.elmo_lstm_cell.ElmoLstmCell` 's
+    with highway layers between the inputs to layers.
+    The inputs to the forward and backward directions are independent - forward and backward
+    states are not concatenated between layers.
 
     Parameters
     ----------
-    input_size : int, required
+    input_size : ``int``, required
         The dimension of the inputs to the LSTM.
-    hidden_size : int, required
+    hidden_size : ``int``, required
         The dimension of the outputs of the LSTM.
-    cell_size : int, required.
+    cell_size : ``int``, required.
         The cell dimension of the :class:~`allennlp.modules.elmo_lstm_cell.ElmoLstmCell`.
-    num_layers : int, required
+    num_layers : ``int``, required
         The number of stacked LSTMs to use.
-    recurrent_dropout_probability: float, optional (default = 0.0)
+    recurrent_dropout_probability: ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
-    state_projection_clip_value: float, optional, (default = 3)
+    state_projection_clip_value: ``float``, optional, (default = 3)
         The magnitude with which to clip the hidden_state after projecting it.
-    memory_cell_clip_value: float, optional, (default = 3)
+    memory_cell_clip_value: ``float``, optional, (default = 3)
         The magnitude with which to clip the memory cell.
-
-    Returns
-    -------
-    output_accumulator : PackedSequence
-        The outputs of the interleaved LSTMs per timestep. A tensor of shape
-        (batch_size, max_timesteps, hidden_size) where for a given batch
-        element, all outputs past the sequence length for that batch are
-        zero tensors.
     """
     def __init__(self,
                  input_size: int,
@@ -63,21 +57,21 @@ class ElmoLstm(torch.nn.Module):
         go_forward = True
         for layer_index in range(num_layers):
             forward_layer = ElmoLstmCell(lstm_input_size,
-                                         cell_size,
                                          hidden_size,
+                                         cell_size,
                                          go_forward,
                                          recurrent_dropout_probability,
                                          memory_cell_clip_value,
                                          state_projection_clip_value)
             backward_layer = ElmoLstmCell(lstm_input_size,
-                                          cell_size,
                                           hidden_size,
+                                          cell_size,
                                           not go_forward,
                                           recurrent_dropout_probability,
                                           memory_cell_clip_value,
                                           state_projection_clip_value)
-
             lstm_input_size = hidden_size
+
             self.add_module('forward_layer_{}'.format(layer_index), forward_layer)
             self.add_module('backward_layer_{}'.format(layer_index), backward_layer)
             forward_layers.append(forward_layer)
@@ -99,21 +93,23 @@ class ElmoLstm(torch.nn.Module):
 
         Returns
         -------
-        output_sequence : PackedSequence
-            The encoded sequence of shape (batch_size, sequence_length, hidden_size)
-        final_states: torch.Tensor
-            The per-layer final (state, memory) states of the LSTM, each with shape
-            (num_layers, batch_size, 2 * hidden_size).
+        output_sequence : ``torch.FloatTensor``
+            The encoded sequence of shape (num_layers, batch_size, sequence_length, hidden_size)
+        final_states: ``Tuple[torch.FloatTensor, torch.FloatTensor]``
+            The per-layer final (state, memory) states of the LSTM, with shape
+            (num_layers, batch_size, 2 * hidden_size) and  (num_layers, batch_size, 2 * cell_size)
+            respectively.
         """
         if not initial_state:
-            hidden_states = [None] * len(self.lstm_layers)
-        elif initial_state[0].size()[0] != len(self.lstm_layers):
+            hidden_states = [None] * len(self.forward_layers)
+        elif initial_state[0].size()[0] != len(self.forward_layers):
             raise ConfigurationError("Initial states were passed to forward() but the number of "
                                      "initial states does not match the number of layers.")
         else:
             hidden_states = list(zip(initial_state[0].split(1, 0),
                                      initial_state[1].split(1, 0)))
 
+        inputs, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
         forward_output_sequence = inputs
         backward_output_sequence = inputs
 
@@ -122,13 +118,15 @@ class ElmoLstm(torch.nn.Module):
         for layer_index, (forward_layer, backward_layer, state) in enumerate(zip(self.forward_layers,
                                                                                  self.backward_layers,
                                                                                  hidden_states)):
-            # The state is duplicated to mirror the Pytorch API for LSTMs.
             forward_cache = forward_output_sequence
             backward_cache = backward_output_sequence
 
-            forward_output_sequence, forward_state = forward_layer(forward_output_sequence, state)
-            backward_output_sequence, backward_state = backward_layer(backward_output_sequence, state)
-
+            forward_output_sequence, forward_state = forward_layer(forward_output_sequence,
+                                                                   batch_lengths,
+                                                                   state)
+            backward_output_sequence, backward_state = backward_layer(backward_output_sequence,
+                                                                      batch_lengths,
+                                                                      state)
             # Vanilla highway layers.
             if layer_index != 0:
                 forward_output_sequence += forward_cache
@@ -136,10 +134,13 @@ class ElmoLstm(torch.nn.Module):
 
             sequence_outputs.append(torch.cat([forward_output_sequence,
                                                backward_output_sequence], -1))
-
-            final_states.append(torch.cat([forward_state, backward_state], -1))
-
-        # TODO(Mark): figure out the best api to return these.
+            # Append the state tuples in a list, so that we can return
+            # the final states for all the layers.
+            final_states.append((torch.cat([forward_state[0], backward_state[0]], -1),
+                                 torch.cat([forward_state[1], backward_state[1]], -1)))
+        # TODO(Mark): figure out the best api to return these. We need to specify the
+        # mixing method within this class otherwise we won't be able to use this as a
+        # Seq2SeqEncoder.
         sequence_outputs = torch.stack(sequence_outputs)
-        final_state_tuple = (torch.cat(state_list, 0) for state_list in zip(*final_states))
+        final_state_tuple = tuple([torch.cat(state_list, 0) for state_list in zip(*final_states)])
         return sequence_outputs, final_state_tuple

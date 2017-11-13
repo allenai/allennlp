@@ -1,55 +1,57 @@
 """
-An LSTM with Recurrent Dropout and the option to use highway
-connections between layers.
+An LSTM with Recurrent Dropout, a hidden_state which is projected and
+clipping on both the hidden state and the memory state of the LSTM.
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 import torch
 from torch.autograd import Variable
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, PackedSequence
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
 
 
 class ElmoLstmCell(torch.nn.Module):
     """
-    An LSTM with Recurrent Dropout and a projected and clipped hidden state.
-    Note: this implementation is slower than the native Pytorch LSTM because
+    An LSTM with Recurrent Dropout and a projected and clipped hidden state and
+    memory. Note: this implementation is slower than the native Pytorch LSTM because
     it cannot make use of CUDNN optimizations for stacked RNNs due to and
     variational dropout and the custom nature of the cell state.
 
     Parameters
     ----------
-    input_size : int, required.
+    input_size : ``int``, required.
         The dimension of the inputs to the LSTM.
-    hidden_size : int, required.
+    hidden_size : ``int``, required.
         The dimension of the outputs of the LSTM.
-    cell_size : int, required.
+    cell_size : ``int``, required.
         The dimension of the projections used for the LSTM equations.
-    go_forward: bool, optional (default = True)
+    go_forward: ``bool``, optional (default = True)
         The direction in which the LSTM is applied to the sequence.
         Forwards by default, or backwards if False.
-    recurrent_dropout_probability: float, optional (default = 0.0)
+    recurrent_dropout_probability: ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM.
-    state_projection_clip_value: float, optional, (default = 3)
+    state_projection_clip_value: ``float``, optional, (default = 3.0)
         The magnitude with which to clip the hidden_state after projecting it.
-    memory_cell_clip_value: float, optional, (default = 3)
+    memory_cell_clip_value: ``float``, optional, (default = 3.0)
         The magnitude with which to clip the memory cell.
 
     Returns
     -------
-    output_accumulator : PackedSequence
+    output_accumulator : ``torch.FloatTensor``
         The outputs of the LSTM for each timestep. A tensor of shape
         (batch_size, max_timesteps, hidden_size) where for a given batch
         element, all outputs past the sequence length for that batch are
         zero tensors.
+    final_state: ``Tuple[torch.FloatTensor, torch.FloatTensor]``
+        The final (state, memory) states of the LSTM, with shape
+        (num_layers, batch_size, hidden_size) and  (num_layers, batch_size, cell_size)
+        respectively.
     """
     def __init__(self,
                  input_size: int,
@@ -89,44 +91,44 @@ class ElmoLstmCell(torch.nn.Module):
         self.state_linearity.bias.data[self.cell_size:2 * self.cell_size].fill_(1.0)
 
     def forward(self,  # pylint: disable=arguments-differ
-                inputs: PackedSequence,
+                inputs: torch.FloatTensor,
+                batch_lengths: List[int],
                 initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         """
         Parameters
         ----------
-        inputs : PackedSequence, required.
+        inputs : ``torch.FloatTensor``, required.
             A tensor of shape (batch_size, num_timesteps, input_size)
             to apply the LSTM over.
-
-        initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
+        batch_lengths : ``List[int]``, required.
+            A list of length batch_size containing the lengths of the sequences in batch.
+        initial_state : ``Tuple[torch.Tensor, torch.Tensor]``, optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM. Each tensor has shape (1, batch_size, output_dimension).
 
         Returns
         -------
-        A PackedSequence containing a torch.FloatTensor of shape
-        (batch_size, num_timesteps, output_dimension) representing
-        the outputs of the LSTM per timestep and a tuple containing
-        the LSTM state, with shape (1, batch_size, hidden_size) to
-        match the Pytorch API.
+        output_accumulator : ``torch.FloatTensor``
+            The outputs of the LSTM for each timestep. A tensor of shape
+            (batch_size, max_timesteps, hidden_size) where for a given batch
+            element, all outputs past the sequence length for that batch are
+            zero tensors.
+        final_state : ``torch.FloatTensor``
+            The final state of the LSTM with shape (1, batch_size, hidden_size).
         """
-        if not isinstance(inputs, PackedSequence):
-            raise ConfigurationError('inputs must be PackedSequence but got %s' % (type(inputs)))
-
-        sequence_tensor, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
-        batch_size = sequence_tensor.size()[0]
-        total_timesteps = sequence_tensor.size()[1]
+        batch_size = inputs.size()[0]
+        total_timesteps = inputs.size()[1]
 
         # We have to use this '.data.new().fill_' pattern to create tensors with the correct
         # type - forward has no knowledge of whether these are torch.Tensors or torch.cuda.Tensors.
-        output_accumulator = Variable(sequence_tensor.data.new(batch_size,
-                                                               total_timesteps,
-                                                               self.hidden_size).fill_(0))
+        output_accumulator = Variable(inputs.data.new(batch_size,
+                                                      total_timesteps,
+                                                      self.hidden_size).fill_(0))
         if initial_state is None:
-            full_batch_previous_memory = Variable(sequence_tensor.data.new(batch_size,
-                                                                           self.cell_size).fill_(0))
-            full_batch_previous_state = Variable(sequence_tensor.data.new(batch_size,
-                                                                          self.hidden_size).fill_(0))
+            full_batch_previous_memory = Variable(inputs.data.new(batch_size,
+                                                                  self.cell_size).fill_(0))
+            full_batch_previous_state = Variable(inputs.data.new(batch_size,
+                                                                 self.hidden_size).fill_(0))
         else:
             full_batch_previous_state = initial_state[0].squeeze(0)
             full_batch_previous_memory = initial_state[1].squeeze(0)
@@ -170,7 +172,7 @@ class ElmoLstmCell(torch.nn.Module):
             # Shape (batch_size, hidden_size)
             previous_state = full_batch_previous_state[0: current_length_index + 1].clone()
             # Shape (batch_size, input_size)
-            timestep_input = sequence_tensor[0: current_length_index + 1, index]
+            timestep_input = inputs[0: current_length_index + 1, index]
 
             # Do the projections for all the gates all at once.
             # Both have shape (batch_size, 4 * cell_size)
@@ -216,13 +218,9 @@ class ElmoLstmCell(torch.nn.Module):
             full_batch_previous_state[0:current_length_index + 1] = timestep_output
             output_accumulator[0:current_length_index + 1, index] = timestep_output
 
-        output_accumulator = pack_padded_sequence(output_accumulator,
-                                                  batch_lengths,
-                                                  batch_first=True)
-
         # Mimic the pytorch API by returning state in the following shape:
         # (num_layers * num_directions, batch_size, ...). As this
-        # LSTM cannot be stacked, the first dimension here is just 1.
+        # LSTM cell cannot be stacked, the first dimension here is just 1.
         final_state = (full_batch_previous_state.unsqueeze(0),
                        full_batch_previous_memory.unsqueeze(0))
 
