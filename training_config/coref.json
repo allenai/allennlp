@@ -12,15 +12,15 @@
     },
     "max_span_width": 10
   },
-  "train_data_path": "/net/efs/aristo/allennlp/coref/ontonotes-coref/train.english.v4_gold_conll",
-  "validation_data_path": "/net/efs/aristo/allennlp/coref/ontonotes-coref/dev.english.v4_gold_conll",
-  "test_data_path": "/net/efs/aristo/allennlp/coref/ontonotes-coref/test.english.v4_gold_conll",
+  "train_data_path":"${COREF_TRAIN_DATA_PATH}",
+  "validation_data_path": "${COREF_DEV_DATA_PATH}",
+  "test_data_path": "${COREF_TEST_DATA_PATH}",
   "model": {
     "type": "coref",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "/net/efs/aristo/dlfa/glove/glove.840B.300d.txt.gz",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
         "embedding_dim": 300,
         "trainable": false
       },
