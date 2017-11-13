@@ -1,7 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
 import torch
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from allennlp.modules.elmo_lstm_cell import ElmoLstmCell
 from allennlp.common.testing import AllenNlpTestCase
@@ -13,14 +12,12 @@ class TestElmoLstmCell(AllenNlpTestCase):
         input_tensor[1, 4:, :] = 0.
         input_tensor[2, 2:, :] = 0.
         input_tensor[3, 1:, :] = 0.
-        input_tensor = pack_padded_sequence(input_tensor, [5, 4, 2, 1], batch_first=True)
         lstm = ElmoLstmCell(input_size=3,
                             hidden_size=5,
                             cell_size=7,
                             memory_cell_clip_value=2,
                             state_projection_clip_value=1)
-        output, lstm_state = lstm(input_tensor)
-        output_sequence, _ = pad_packed_sequence(output, batch_first=True)
+        output_sequence, lstm_state = lstm(input_tensor, [5, 4, 2, 1])
         numpy.testing.assert_array_equal(output_sequence.data[1, 4:, :].numpy(), 0.0)
         numpy.testing.assert_array_equal(output_sequence.data[2, 2:, :].numpy(), 0.0)
         numpy.testing.assert_array_equal(output_sequence.data[3, 1:, :].numpy(), 0.0)
