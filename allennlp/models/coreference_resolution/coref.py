@@ -168,9 +168,14 @@ class CoreferenceResolver(Model):
         num_spans_to_keep = int(math.floor(self._spans_per_word * text_embeddings.size(1)))
 
         # Shape: (batch_size, num_spans_to_keep)
+        # These are indices (with values between 0 and num_spans) into
+        # the span_embeddings tensor.
         top_span_indices = self._prune_and_sort_spans(mention_scores, num_spans_to_keep)
 
         # Shape: (batch_size * num_spans_to_keep)
+        # torch.index_select only accepts 1D indices, but here
+        # we need to do select spans for each element in the batch.
+        # This reformats the indices to take into account their index into the batch.
         flat_top_span_indices = util.flatten_and_batch_shift_indices(top_span_indices, span_starts.size(1))
 
         # Select the span embeddings corresponding to the
@@ -218,21 +223,22 @@ class CoreferenceResolver(Model):
             self._generate_antecedents(num_spans_to_keep, max_antecedents, text_mask.is_cuda)
         # Select tensors relating to the antecedent spans.
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
-        antecedent_embeddings = util.flattened_index_select(top_span_embeddings, antecedent_indices)
+        candidate_antecedent_embedidngs = util.flattened_index_select(top_span_embeddings,
+                                                                      antecedent_indices)
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents)
-        antecedent_mention_scores = util.flattened_index_select(top_span_mention_scores,
-                                                                antecedent_indices).squeeze(-1)
+        candidate_antecedent_mention_scores = util.flattened_index_select(top_span_mention_scores,
+                                                                          antecedent_indices).squeeze(-1)
         # Compute antecedent scores.
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         span_pair_embeddings = self._compute_span_pair_embeddings(top_span_embeddings,
-                                                                  antecedent_embeddings,
+                                                                  candidate_antecedent_embedidngs,
                                                                   antecedent_offsets)
 
         # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents)
         coreference_scores = self._compute_coreference_scores(span_pair_embeddings,
                                                               top_span_mention_scores,
-                                                              antecedent_mention_scores,
+                                                              candidate_antecedent_mention_scores,
                                                               antecedent_log_mask)
         # Compute final predictions.
         # Shape: (batch_size, num_spans_to_keep, 2)
@@ -418,32 +424,20 @@ class CoreferenceResolver(Model):
         # Shape: (batch_size * num_spans * max_span_width)
         flat_span_indices = util.flatten_and_batch_shift_indices(span_indices, text_embeddings.size(1))
 
-        # Shape: (batch_size, num_spans, max_span_width, embedding_size)
+        # Shape: (batch_size, num_spans, max_span_width, embedding_dim)
         span_text_embeddings = util.batched_index_select(text_embeddings, span_indices, flat_span_indices)
 
         # Shape: (batch_size, num_spans, max_span_width)
         span_head_scores = util.batched_index_select(head_scores, span_indices, flat_span_indices).squeeze(-1)
-        # We are going to normalise the attention, so we mask by adding log(mask),
-        # so that we correctly mask the normalisation.
-        span_head_scores += span_mask.float().log()
 
-        # Shape: (batch_size * num_spans, max_span_width)
-        flat_span_head_scores = span_head_scores.view(-1, self._max_span_width)
-        flat_span_head_weights = F.softmax(flat_span_head_scores)
+        # Shape: (batch_size, num_spans, max_span_width)
+        span_head_weights = util.last_dim_softmax(span_head_scores, span_mask)
 
-        # Shape: (batch_size * num_spans, 1, max_span_width)
-        flat_span_head_weights = flat_span_head_weights.unsqueeze(1)
+        # Do a weighted sum of the embedded spans with
+        # respect to the normalised head score distributions.
+        # Shape: (batch_size, num_spans, embedding_dim)
+        attended_text_embeddings = util.weighted_sum(span_text_embeddings, span_head_weights)
 
-        # Shape: (batch_size * num_spans, max_span_width, embedding_size)
-        flat_span_text_embeddings = span_text_embeddings.view(-1,
-                                                              self._max_span_width,
-                                                              span_text_embeddings.size(-1))
-        # Shape: (batch_size * num_spans, 1, embedding_size)
-        flat_attended_text_embeddings = flat_span_head_weights.bmm(flat_span_text_embeddings)
-
-        # Shape: (batch_size, num_spans, embedding_size)
-        attended_text_embeddings = flat_attended_text_embeddings.view(text_embeddings.size(0),
-                                                                      span_ends.size(1), -1)
         return attended_text_embeddings
 
     def _compute_span_representations(self,
