@@ -1,4 +1,5 @@
 import React from 'react';
+import { API_ROOT } from '../api-config';
 import { withRouter } from 'react-router-dom';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
@@ -304,7 +305,7 @@ class _TeComponent extends React.Component {
         premise: inputs.premiseValue,
         hypothesis: inputs.hypothesisValue,
       };
-      fetch('http://localhost:8000/predict/textual-entailment', {
+      fetch(`${API_ROOT}/predict/textual-entailment`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',

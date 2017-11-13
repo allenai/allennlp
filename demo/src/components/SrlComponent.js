@@ -1,5 +1,6 @@
 import React from 'react';
-import { withRouter } from 'react-router-dom'
+import { API_ROOT } from '../api-config';
+import { withRouter } from 'react-router-dom';
 import { PaneLeft, PaneRight } from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
@@ -216,7 +217,7 @@ class _SrlComponent extends React.Component {
 
     var payload = {sentence: inputs.sentenceValue};
 
-    fetch('http://localhost:8000/predict/semantic-role-labeling', {
+    fetch(`${API_ROOT}/predict/semantic-role-labeling`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',

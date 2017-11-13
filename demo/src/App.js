@@ -1,4 +1,5 @@
 import React from 'react';
+import { API_ROOT } from './api-config';
 import { BrowserRouter as Router, Route, Redirect } from 'react-router-dom';
 import SrlComponent from './components/SrlComponent';
 import TeComponent from './components/TeComponent';
@@ -73,7 +74,7 @@ class Demo extends React.Component {
     if (slug && !responseData) {
       // Make an ajax call to get the permadata,
       // and then use it to update the state.
-      fetch('http://localhost:8000/permadata', {
+      fetch(`${API_ROOT}/permadata`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
