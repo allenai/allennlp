@@ -615,47 +615,38 @@ class TestNnUtil(AllenNlpTestCase):
         numpy.testing.assert_array_equal(bucketed_distances.numpy(),
                                          numpy.array([1, 2, 5, 1, 8, 9]))
 
-    def test_add_bos_eos_2D(self):
+    def test_add_sentence_boundary_token_ids_handles_2D_input(self):
         tensor = Variable(torch.from_numpy(numpy.array([[1, 2, 3], [4, 5, 0]])))
-        mask = (tensor > 0).type(torch.LongTensor)
+        mask = (tensor > 0).long()
         bos = 9
         eos = 10
-        new_tensor, new_mask = util.add_bos_eos(tensor, mask, bos, eos)
-        expected_new_tensor = numpy.array(
-                [[9, 1, 2, 3, 10],
-                 [9, 4, 5, 10, 0]]
-        )
+        new_tensor, new_mask = util.add_sentence_boundary_token_ids(tensor, mask, bos, eos)
+        expected_new_tensor = numpy.array([[9, 1, 2, 3, 10],
+                                           [9, 4, 5, 10, 0]])
         assert (new_tensor.data.numpy() == expected_new_tensor).all()
         assert (new_mask.data.numpy() == (expected_new_tensor > 0)).all()
 
-    def test_add_bos_eos_3D(self):
+    def test_add_sentence_boundary_token_ids_handles_3D_input(self):
         tensor = Variable(torch.from_numpy(
-                numpy.array(
-                        [[[1, 2, 3, 4],
-                          [5, 5, 5, 5],
-                          [6, 8, 1, 2]],
-
-                         [[4, 3, 2, 1],
-                          [8, 7, 6, 5],
-                          [0, 0, 0, 0]]]
-                )
-        ))
+                numpy.array([[[1, 2, 3, 4],
+                              [5, 5, 5, 5],
+                              [6, 8, 1, 2]],
+                             [[4, 3, 2, 1],
+                              [8, 7, 6, 5],
+                              [0, 0, 0, 0]]])))
         mask = ((tensor > 0).sum(dim=-1) > 0).type(torch.LongTensor)
         bos = Variable(torch.from_numpy(numpy.array([9, 9, 9, 9])))
         eos = Variable(torch.from_numpy(numpy.array([10, 10, 10, 10])))
-        new_tensor, new_mask = util.add_bos_eos(tensor, mask, bos, eos)
-        expected_new_tensor = numpy.array(
-                [[[9, 9, 9, 9],
-                  [1, 2, 3, 4],
-                  [5, 5, 5, 5],
-                  [6, 8, 1, 2],
-                  [10, 10, 10, 10]],
-
-                 [[9, 9, 9, 9],
-                  [4, 3, 2, 1],
-                  [8, 7, 6, 5],
-                  [10, 10, 10, 10],
-                  [0, 0, 0, 0]]]
-        )
+        new_tensor, new_mask = util.add_sentence_boundary_token_ids(tensor, mask, bos, eos)
+        expected_new_tensor = numpy.array([[[9, 9, 9, 9],
+                                            [1, 2, 3, 4],
+                                            [5, 5, 5, 5],
+                                            [6, 8, 1, 2],
+                                            [10, 10, 10, 10]],
+                                           [[9, 9, 9, 9],
+                                            [4, 3, 2, 1],
+                                            [8, 7, 6, 5],
+                                            [10, 10, 10, 10],
+                                            [0, 0, 0, 0]]])
         assert (new_tensor.data.numpy() == expected_new_tensor).all()
         assert (new_mask.data.numpy() == ((expected_new_tensor > 0).sum(axis=-1) > 0)).all()

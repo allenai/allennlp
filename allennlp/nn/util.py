@@ -749,11 +749,10 @@ def bucket_values(distances: torch.Tensor,
     # Clamp to put anything > num_total_buckets into the final bucket.
     return combined_index.clamp(0, num_total_buckets - 1)
 
-  def add_bos_eos(
-        tensor: torch.Tensor,
-        mask: torch.Tensor,
-        bos: Any,
-        eos: Any) -> Tuple[torch.Tensor, torch.Tensor]:
+def add_sentence_boundary_token_ids(tensor: torch.Tensor,
+                                    mask: torch.Tensor,
+                                    sentence_begin_token: Any,
+                                    sentence_end_token: Any) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Add begin/end of sentence tokens to the batch of sentences.
     Given a batch of sentences with size ``(batch_size, timesteps)`` or
@@ -764,34 +763,43 @@ def bucket_values(distances: torch.Tensor,
 
     Parameters
     ----------
-    tensor : torch.Tensor
+    tensor : ``torch.Tensor``
         A tensor of shape ``(batch_size, timesteps)`` or ``(batch_size, timesteps, dim)``
-    mask : torch.Tensor
+    mask : ``torch.Tensor``
          A tensor of shape ``(batch_size, timesteps)``
-    bos: Any (anything that can be broadcast in torch for assignment)
+    sentence_begin_token: Any (anything that can be broadcast in torch for assignment)
         For 2D input, a scalar with the <S> id. For 3D input, a tensor with length dim.
-    eos: Any (anything that can be broadcast in torch for assignment)
+    sentence_end_token: Any (anything that can be broadcast in torch for assignment)
         For 2D input, a scalar with the </S> id. For 3D input, a tensor with length dim.
+
+    Returns
+    -------
+    tensor_with_boundary_tokens : ``torch.Tensor``
+        The tensor with the appended and prepended boundary tokens. If the input was 2D,
+        it has shape (batch_size, timesteps + 2) and if the input was 3D, it has shape
+        (batch_size, timesteps + 2, dim).
+    new_mask : ``torch.Tensor``
+        The new mask for the tensor, taking into account the appended tokens
+        marking the beginning and end of the sentence.
     """
     sequence_lengths = mask.sum(dim=1).data.numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
     new_shape[1] = tensor_shape[1] + 2
-    ret = Variable(tensor.data.new(*new_shape).fill_(0))
+    tensor_with_boundary_tokens = Variable(tensor.data.new(*new_shape).fill_(0))
     if len(tensor_shape) == 2:
-        ret[:, 1:-1] = tensor
-        ret[:, 0] = bos
+        tensor_with_boundary_tokens[:, 1:-1] = tensor
+        tensor_with_boundary_tokens[:, 0] = sentence_begin_token
         for i, j in enumerate(sequence_lengths):
-            ret[i, j + 1] = eos
-        new_mask = (ret != 0).long()
+            tensor_with_boundary_tokens[i, j + 1] = sentence_end_token
+        new_mask = (tensor_with_boundary_tokens != 0).long()
     elif len(tensor_shape) == 3:
-        ret[:, 1:-1, :] = tensor
+        tensor_with_boundary_tokens[:, 1:-1, :] = tensor
         for i, j in enumerate(sequence_lengths):
-            ret[i, 0, :] = bos
-            ret[i, j + 1, :] = eos
-        new_mask = ((ret > 0).sum(dim=-1) > 0).long()
+            tensor_with_boundary_tokens[i, 0, :] = sentence_begin_token
+            tensor_with_boundary_tokens[i, j + 1, :] = sentence_end_token
+        new_mask = ((tensor_with_boundary_tokens > 0).sum(dim=-1) > 0).long()
     else:
-        raise ValueError("add_bos_eos only accepts 2D and 3D input")
+        raise ValueError("add_sentence_boundary_token_ids only accepts 2D and 3D input")
 
-    return ret, new_mask
-  
+    return tensor_with_boundary_tokens, new_mask
