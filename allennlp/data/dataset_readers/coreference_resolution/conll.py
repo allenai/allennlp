@@ -66,10 +66,10 @@ class _DocumentState:
 
     def canonicalize_clusters(self) -> List[List[Tuple[int, int]]]:
         """
-        The CONLL 2012 data includes 2 annotations which have identical
-        spans, but different ids. This checks for spans in all clusters
-        which are equal, and if it finds any, merges the two relevant
-        clusters.
+        The CONLL 2012 data includes 2 annotatated spans which are identical,
+        but different ids. This checks all clusters for spans which are
+        identical, and if it finds any, merges the clusters containing the
+        identical spans.
         """
         merged_clusters: List[Set[Tuple[int, int]]] = []
         for cluster in self.clusters.values():
@@ -187,7 +187,11 @@ class ConllCorefReader(DatasetReader):
                 A ListField containing the span ends represented as ``IndexFields``
                 with respect to the document text.
             span_labels : ``SequenceLabelField``, optional
-                The ids of the spans.
+                The id of the cluster which each possible span belongs to, or -1 if it does
+                 not belong to a cluster. As these labels have variable length (it depends on
+                 how many spans we are considering), we represent this a as a ``SequenceLabelField``
+                 with respect to the ``span_starts`` ```ListField`.
+
         """
         flattened_sentences = [token for sentence in sentences for token in sentence]
 
