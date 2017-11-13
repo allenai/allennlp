@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, Generator, List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 from overrides import overrides
 
@@ -9,7 +9,6 @@ from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
@@ -462,7 +461,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                             allowed_actions: List[Set[int]],
                             max_actions: int = None) -> List[WikiTablesDecoderState]:
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
-        group_size, num_actions = sorted_log_probs.size()
         sorted_actions = sorted_actions.data.cpu().numpy().tolist()
         valid_actions = state.get_valid_actions()
         best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)

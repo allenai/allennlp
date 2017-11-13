@@ -1,4 +1,4 @@
-from typing import Generator, Generic, List, Set, TypeVar
+from typing import Generic, List, Set, TypeVar
 
 import torch
 

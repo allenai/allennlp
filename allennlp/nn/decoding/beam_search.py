@@ -26,20 +26,19 @@ class BeamSearch:
         """
         Parameters
         ----------
-            num_steps : ``int``
-                How many steps should we take in our search?  This is an upper bound, as it's
-                possible for the search to run out of valid actions before hitting this number, or
-                for all states on the beam to finish.
-            initial_state : ``DecoderState``
-                The starting state of our search.  This is assumed to be `batched`, and our beam
-                search is batch-aware - we'll keep ``beam_size`` states around for each instance in
-                the batch.
-            decoder_step : ``DecoderStep``
-                The ``DecoderStep`` object that defines and scores transitions from one state to
-                the next.
-            keep_final_unfinished_states : ``bool``, optional (default=True)
-                If we run out of steps before a state is "finished", should we return that state in
-                our search results?
+        num_steps : ``int``
+            How many steps should we take in our search?  This is an upper bound, as it's possible
+            for the search to run out of valid actions before hitting this number, or for all
+            states on the beam to finish.
+        initial_state : ``DecoderState``
+            The starting state of our search.  This is assumed to be `batched`, and our beam search
+            is batch-aware - we'll keep ``beam_size`` states around for each instance in the batch.
+        decoder_step : ``DecoderStep``
+            The ``DecoderStep`` object that defines and scores transitions from one state to the
+            next.
+        keep_final_unfinished_states : ``bool``, optional (default=True)
+            If we run out of steps before a state is "finished", should we return that state in our
+            search results?
 
         Returns
         -------
