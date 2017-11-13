@@ -189,7 +189,7 @@ class ConllCorefReader(DatasetReader):
                 The id of the cluster which each possible span belongs to, or -1 if it does
                  not belong to a cluster. As these labels have variable length (it depends on
                  how many spans we are considering), we represent this a as a ``SequenceLabelField``
-                 with respect to the ``span_starts`` ```ListField`.
+                 with respect to the ``span_starts`` ``ListField``.
 
         """
         flattened_sentences = [token for sentence in sentences for token in sentence]
