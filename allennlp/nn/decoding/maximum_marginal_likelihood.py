@@ -1,7 +1,8 @@
 from collections import defaultdict
-from typing import Dict, Tuple, Set
+from typing import Dict, List, Set, Tuple
 
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.nn import util
@@ -31,10 +32,8 @@ class MaximumMarginalLikelihood(DecoderTrainer):
     def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               targets: torch.Tensor = None,
-               target_mask: torch.Tensor = None) -> Dict[str, torch.Tensor]:
-        if targets.dim() != 2:
-            raise NotImplementedError("This implementation cannot yet handle batched inputs")
+               targets: torch.Tensor,
+               target_mask: torch.Tensor) -> Dict[str, torch.Tensor]:
         allowed_transitions = self._create_allowed_transitions(targets, target_mask)
         finished_states = []
         states = [initial_state]
@@ -42,34 +41,38 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         while states:
             step_num += 1
             next_states = []
-            for state in states:
-                allowed_actions = allowed_transitions[tuple(state.action_history)]
-                generator = decode_step.take_step(state, allowed_actions)
-                while True:
-                    try:
-                        next_state = next(generator)
-                    except StopIteration:
-                        break
-                    if next_state.is_finished():
-                        finished_states.append(next_state)
-                    else:
-                        next_states.append(next_state)
+            # We group together all current states to get more efficient (batched) computation.
+            grouped_state = states[0].combine_states(states)
+            allowed_actions = self._get_allowed_actions(grouped_state, allowed_transitions)
+            for next_state in decode_step.take_step(grouped_state, allowed_actions=allowed_actions):
+                finished, not_finished = next_state.split_finished()
+                if finished is not None:
+                    finished_states.append(finished)
+                if not_finished is not None:
+                    next_states.append(not_finished)
             states = next_states
 
-        scores = torch.cat([state.score for state in finished_states])
-        return {'loss': -util.logsumexp(scores)}
+        # This is a dictionary of lists - for each batch instance, we want the score of all
+        # finished states.  So this has shape (batch_size, num_target_action_sequences), though
+        # it's not actually a tensor, because different batch instance might have different numbers
+        # of finished states.
+        batch_scores = self._group_scores_by_batch(finished_states)
+        loss = 0
+        for scores in batch_scores.values():  # we don't care about the batch index, just the scores
+            loss += -util.logsumexp(torch.cat(scores))
+        return {'loss': loss / len(batch_scores)}
 
     @staticmethod
     def _create_allowed_transitions(targets: torch.Tensor,
-                                    target_mask: torch.Tensor = None) -> Dict[Tuple[int, ...], Set[int]]:
+                                    target_mask: torch.Tensor) -> List[Dict[Tuple[int, ...], Set[int]]]:
         """
         Takes a list of valid target action sequences and creates a mapping from all possible
         (valid) action prefixes to allowed actions given that prefix.  ``targets`` is assumed to be
-        a tensor of shape ``(num_valid_sequences, sequence_length)``.  If the mask is not ``None``,
-        it is assumed to have the same shape, and we will ignore any value in ``targets`` that has
-        a value of ``0`` in the corresponding position in the mask.  We assume that the mask has
-        the format 1*0* for each item in ``targets`` - that is, once we see our first zero, we stop
-        processing that target.
+        a tensor of shape ``(batch_size, num_valid_sequences, sequence_length)``.  If the mask is
+        not ``None``, it is assumed to have the same shape, and we will ignore any value in
+        ``targets`` that has a value of ``0`` in the corresponding position in the mask.  We assume
+        that the mask has the format 1*0* for each item in ``targets`` - that is, once we see our
+        first zero, we stop processing that target.
 
         Because of some implementation details around creating seq2seq datasets, our targets will
         have a start and end symbol added to them.  We want to ignore the start symbol here,
@@ -81,23 +84,49 @@ class MaximumMarginalLikelihood(DecoderTrainer):
 
         We use this to prune the set of actions we consider during decoding, because we only need
         to score the sequences in ``targets``.
-
-        While the example and types above say that this should be a 2D tensor, the implementation
-        logic is actually more flexible - any sequence of sequences is valid here, with any
-        contained types.  So your targets could be strings, for instance, if your ``DecoderStep``
-        and ``DecoderState`` objects know how to handle that.
         """
-        allowed_transitions: Dict[Tuple[int, ...], Set[int]] = defaultdict(set)
+        assert targets.dim() == 3, "targets tensor needs to be batched!"
+        batched_allowed_transitions: List[Dict[Tuple[int, ...], Set[int]]] = []
         targets = targets.data.cpu().numpy().tolist()
         target_mask = target_mask.data.cpu().numpy().tolist()
-        for i, target_sequence in enumerate(targets):
-            history: Tuple[int, ...] = ()
-            for j, action in enumerate(target_sequence[1:]):
-                if target_mask[i][j + 1] == 0:  # +1 because we're starting at index 1, not 0
-                    break
-                allowed_transitions[history].add(action)
-                history = history + (action,)
-        return allowed_transitions
+        for instance_targets, instance_mask in zip(targets, target_mask):
+            allowed_transitions: Dict[Tuple[int, ...], Set[int]] = defaultdict(set)
+            for i, target_sequence in enumerate(instance_targets):
+                history: Tuple[int, ...] = ()
+                for j, action in enumerate(target_sequence[1:]):
+                    if instance_mask[i][j + 1] == 0:  # +1 because we're starting at index 1, not 0
+                        break
+                    allowed_transitions[history].add(action)
+                    history = history + (action,)
+            batched_allowed_transitions.append(allowed_transitions)
+        return batched_allowed_transitions
+
+    @staticmethod
+    def _get_allowed_actions(state: DecoderState,
+                             allowed_transitions: List[Dict[Tuple[int, ...], Set[int]]]) -> List[Set[int]]:
+        """
+        Takes a list of allowed transitions for each element of a batch, and a decoder state that
+        contains the current action history for each element of the batch, and returns a list of
+        allowed actions in the current state, also for each element of the batch.
+        """
+        allowed_actions = []
+        for batch_index, action_history in zip(state.batch_indices, state.action_history):
+            allowed_actions.append(allowed_transitions[batch_index][tuple(action_history)])
+        return allowed_actions
+
+    @staticmethod
+    def _group_scores_by_batch(finished_states: List[DecoderState]) -> Dict[int, List[Variable]]:
+        """
+        Takes a list of finished states and groups all final scores for each batch element into a
+        list.  This is not trivial because the instances in the batch all might "finish" at
+        different times, so we re-batch them during the training process.  We need to recover the
+        original batch grouping so we can compute the loss correctly.
+        """
+        batch_scores: Dict[int, List[Variable]] = defaultdict(list)
+        for state in finished_states:
+            for score, batch_index in zip(state.score, state.batch_indices):
+                batch_scores[batch_index].append(score)
+        return batch_scores
 
     @classmethod
     def from_params(cls, params: Params) -> 'MaximumMarginalLikelihood':

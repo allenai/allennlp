@@ -20,13 +20,13 @@ class DecoderTrainer(Registrable):
     maximize the probability of a single target sequence, there are way more efficient ways to do
     that than using this API.
     """
-    # TODO(mattg): figure out how reward functions fit into this.  We could _either_ take a targets
-    # tensor _or_ a reward function over states?  Not really sure...
+    # TODO(mattg): Make `DecoderTrainer` generic over supervision type, so we can either take a
+    # tensor of targets, or a reward function, or something else.
     def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               targets: torch.Tensor = None,
-               target_mask: torch.Tensor = None) -> Dict[str, torch.Tensor]:
+               targets: torch.Tensor,
+               target_mask: torch.Tensor) -> Dict[str, torch.Tensor]:
         raise NotImplementedError
 
     @classmethod
