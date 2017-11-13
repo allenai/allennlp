@@ -182,7 +182,7 @@ class SpacyWordSplitter(WordSplitter):
     def _get_spacy_model(self, spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool) -> Any:
         options = (spacy_model_name, pos_tags, parse, ner)
         if options not in self._spacy_tokenizers:
-            disable = ['vectors','textcat']
+            disable = ['vectors', 'textcat']
             if not pos_tags:
                 disable.append('tagger')
             if not parse:
