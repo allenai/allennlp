@@ -1,4 +1,5 @@
 import React from 'react';
+import { API_ROOT } from '../api-config';
 import { withRouter } from 'react-router-dom';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
@@ -187,7 +188,7 @@ class _McComponent extends React.Component {
         passage: inputs.passageValue,
         question: inputs.questionValue,
       };
-      fetch('http://localhost:8000/predict/machine-comprehension', {
+      fetch(`${API_ROOT}/predict/machine-comprehension`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
