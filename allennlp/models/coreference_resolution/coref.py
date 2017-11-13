@@ -600,12 +600,15 @@ class CoreferenceResolver(Model):
         Parameters
         ----------
         top_span_embeddings : ``torch.FloatTensor``, required.
-            Embedding representations of the top spans.
+            Embedding representations of the top spans. Has shape
+            (batch_size, num_spans_to_keep, embedding_size).
         antecedent_embeddings : ``torch.FloatTensor``, required.
             Embedding representations of the antecedent spans we are considering
-            for each top span.
+            for each top span. Has shape
+            (batch_size, num_spans_to_keep, max_antecedents, embedding_size).
         antecedent_offsets : ``torch.IntTensor``, required.
-            The offsets between each top span and its antecedent spans.
+            The offsets between each top span and its antecedent spans in terms
+            of spans we are considering. Has shape (1, max_antecedents).
 
         Returns
         -------
@@ -648,9 +651,12 @@ class CoreferenceResolver(Model):
         Parameters
         ----------
         top_span_labels : ``torch.IntTensor``, required.
-            The cluster id label for every span.
+            The cluster id label for every span. The id is arbitrary,
+            as we just care about the clustering. Has shape (batch_size, num_spans_to_keep).
         antecedent_labels : ``torch.IntTensor``, required.
-            The cluster id label for every antecedent span.
+            The cluster id label for every antecedent span. The id is arbitrary,
+            as we just care about the clustering. Has shape
+            (batch_size, num_spans_to_keep, max_antecedents).
 
         Returns
         -------
@@ -742,11 +748,14 @@ class CoreferenceResolver(Model):
         Parameters
         ----------
         pairwise_embeddings: ``torch.FloatTensor``, required.
-            Embedding representations of pairs of spans.
+            Embedding representations of pairs of spans. Has shape
+            (batch_size, num_spans_to_keep, max_antecedents, encoding_dim)
         top_span_mention_scores: ``torch.FloatTensor``, required.
-            Mention scores for every span.
+            Mention scores for every span. Has shape
+            (batch_size, num_spans_to_keep, max_antecedents).
         antecedent_mention_scores: ``torch.FloatTensor``, required.
-            Mention scores for every antecedent.
+            Mention scores for every antecedent. Has shape
+            (batch_size, num_spans_to_keep, max_antecedents).
         antecedent_log_mask: ``torch.FloatTensor``, required.
             The log of the mask for valid antecedents.
 
