@@ -61,3 +61,7 @@ editdistance
 
 # Tutorial notebooks
 jupyter
+
+# For pretrained model weights
+h5py
+

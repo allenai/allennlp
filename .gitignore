@@ -2,3 +2,11 @@
 .cache/
 .coverage
 doc/_build/
+
+# build artifacts
+allennlp.egg-info/
+.eggs/
+build/
+dist/
+.mypy_cache
+

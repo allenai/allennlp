@@ -10,6 +10,7 @@ allennlp.modules.token_embedders
 * :ref:`TokenEmbedder<token-embedder>`
 * :ref:`Embedding<embedding>`
 * :ref:`TokenCharactersEncoder<token-characters-encoder>`
+* :ref:`ELMoTokenEmbedder<elmo-token-embedder>`
 
 .. _token-embedder:
 .. automodule:: allennlp.modules.token_embedders.token_embedder
@@ -29,3 +30,8 @@ allennlp.modules.token_embedders
    :undoc-members:
    :show-inheritance:
 
+.. _elmo-token-embedder:
+.. automodule:: allennlp.modules.token_embedders.elmo_token_embedder
+   :members:
+   :undoc-members:
+   :show-inheritance:
