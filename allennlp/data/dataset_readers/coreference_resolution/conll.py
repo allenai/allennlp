@@ -292,6 +292,3 @@ class ConllCorefReader(DatasetReader):
                         cluster_id = int(segment[:-1])
                         start = document_state.coref_stacks[cluster_id].pop()
                         document_state.clusters[cluster_id].append((start, word_index))
-
-
-

@@ -400,7 +400,7 @@ class CoreferenceResolver(Model):
         """
         # Shape: (1, 1, max_span_width)
         max_span_range_indices = util.get_range_vector(self._max_span_width,
-                                                   text_embeddings.is_cuda).view(1, 1, -1)
+                                                       text_embeddings.is_cuda).view(1, 1, -1)
 
         # Shape: (batch_size, num_spans, max_span_width)
         # This is a broadcasted comparison - for each span we are considering,
@@ -533,9 +533,9 @@ class CoreferenceResolver(Model):
     @staticmethod
     def _generate_antecedents(num_spans_to_keep: int,
                               max_antecedents: int,
-                              is_cuda: bool) -> [torch.IntTensor,
-                                                 torch.IntTensor,
-                                                 torch.FloatTensor]:
+                              is_cuda: bool) -> Tuple[torch.IntTensor,
+                                                      torch.IntTensor,
+                                                      torch.FloatTensor]:
         """
         This method generates possible antecedents per span which survived the pruning
         stage. This procedure is _generic across the batch_. The reason this is the case is

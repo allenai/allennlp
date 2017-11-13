@@ -1,4 +1,4 @@
-from typing import List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 from overrides import overrides
 
 import torch
@@ -15,13 +15,14 @@ class MentionRecall(Metric):
     @overrides
     def __call__(self,
                  batched_top_spans: torch.Tensor,
-                 batched_metadata: List[List[List[Tuple[int, int]]]]):
+                 batched_metadata: List[Dict[str, Any]]):
         for top_spans, metadata in zip(batched_top_spans.data.tolist(), batched_metadata):
+
             gold_mentions: Set[Tuple[int, int]] = {mention for cluster in metadata["clusters"]
                                                    for mention in cluster}
-            top_spans: Set[Tuple[int, int]] = {tuple(span) for span in top_spans}
+            predicted_spans: Set[Tuple[int, int]] = {(span[0], span[1]) for span in top_spans}
             self._num_gold_mentions += len(gold_mentions)
-            self._num_recalled_mentions += len(gold_mentions & top_spans)
+            self._num_recalled_mentions += len(gold_mentions & predicted_spans)
 
     @overrides
     def get_metric(self, reset: bool = False) -> float:
