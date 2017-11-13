@@ -102,7 +102,7 @@ class ConllCorefReader(DatasetReader):
     Reads a single CoNLL-formatted file. This is the same file format as used in the
     :class:~`allennlp.data.dataset_readers.semantic_role_labelling.SrlReader`, but is preprocessed
     to dump all documents into a single file per train, dev and test split. See
-    ``scripts/compile_coref_data.sh`` for more details of how to pre-process the Ontonotes 5.0 data
+    scripts/compile_coref_data.sh for more details of how to pre-process the Ontonotes 5.0 data
     into the correct format.
 
     Returns a ``Dataset`` where the ``Instances`` have four fields: ``text``, a ``TextField``
