@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Dict, Generator, List, Set, Tuple
 
 from overrides import overrides
@@ -112,9 +113,9 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, question_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, question_mask)
 
+        # This will be our initial hidden state and memory cell for the decoder LSTM.
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
-        decoder_context = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim())
-                                   .fill_(0))
+        memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
 
         if target_action_sequences is not None:
             # Remove batch dimension and trailing dimension (from ListField[LabelField]]).
@@ -136,7 +137,7 @@ class WikiTablesSemanticParser(Model):
         # won't have to do any index selects, or anything, we'll just do some `torch.cat()`s.
         initial_score_list = [initial_score[i] for i in range(batch_size)]
         initial_hidden_state = [final_encoder_output[i] for i in range(batch_size)]
-        initial_memory_cell = [decoder_context[i] for i in range(batch_size)]
+        initial_memory_cell = [memory_cell[i] for i in range(batch_size)]
         initial_attended_question = [attended_question[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
         question_mask_list = [question_mask[i] for i in range(batch_size)]
@@ -165,8 +166,10 @@ class WikiTablesSemanticParser(Model):
             else:
                 num_steps = self._max_decoding_steps
             best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)
-            best_final_state = best_final_states[0]
-            outputs['best_action_sequence'] = [best_final_state.action_history]
+            best_action_sequences = []
+            for i in range(batch_size):
+                best_action_sequences.append(best_final_states[i][0].action_history)
+            outputs['best_action_sequence'] = best_action_sequences
             # TODO(matt): compute accuracy here.
             return outputs
 
@@ -237,7 +240,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         This holds the LSTM hidden state for each element of the group.  Each variable has shape
         ``(decoder_output_dim,)``.
     memory_cell : ``List[Variable]``
-        This holds to LSTM memory cell for each element of the group.  Each variable has shape
+        This holds the LSTM memory cell for each element of the group.  Each variable has shape
         ``(decoder_output_dim,)``.
     attended_question : ``List[Variable]``
         This holds the attention-weighted sum over the question representations that we computed in
@@ -389,7 +392,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     @overrides
     def take_step(self,
                   state: WikiTablesDecoderState,
-                  allowed_actions: List[Set[int]] = None) -> Generator[WikiTablesDecoderState, None, None]:
+                  max_actions: int = None,
+                  allowed_actions: List[Set[int]] = None) -> List[WikiTablesDecoderState]:
         # Outline here: first we'll construct the input to the decoder, which is a concatenation of
         # an embedding of the decoder input (the last action taken) and an attention over the
         # question.  Then we'll update our decoder's hidden state given this input, and recompute
@@ -421,12 +425,13 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         logits = self._output_projection_layer(torch.cat([hidden_state, attended_question], -1))
         output_mask = state.get_output_mask()
         log_probs = util.masked_log_softmax(logits, output_mask)
-        return self._yield_new_states(state,
-                                      log_probs,
-                                      hidden_state,
-                                      memory_cell,
-                                      attended_question,
-                                      allowed_actions)
+        return self._compute_new_states(state,
+                                        log_probs,
+                                        hidden_state,
+                                        memory_cell,
+                                        attended_question,
+                                        allowed_actions,
+                                        max_actions)
 
     def attend_on_question(self,
                            query: Variable,
@@ -441,7 +446,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         method on the main parser module can call it on the initial hidden state, to simplify the
         logic in ``take_step``.
         """
-
         # (group_size, question_length)
         question_attention_weights = self._input_attention(query,
                                                            encoder_outputs,
@@ -449,20 +453,21 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # (group_size, encoder_output_dim)
         return util.weighted_sum(encoder_outputs, question_attention_weights)
 
-    def _yield_new_states(self,  # pylint: disable=no-self-use
-                          state: WikiTablesDecoderState,
-                          log_probs: Variable,
-                          hidden_state: Variable,
-                          memory_cell: Variable,
-                          attended_question: Variable,
-                          allowed_actions: List[Set[int]]) -> Generator[WikiTablesDecoderState, None, None]:
+    def _compute_new_states(self,  # pylint: disable=no-self-use
+                            state: WikiTablesDecoderState,
+                            log_probs: Variable,
+                            hidden_state: Variable,
+                            memory_cell: Variable,
+                            attended_question: Variable,
+                            allowed_actions: List[Set[int]],
+                            max_actions: int = None) -> List[WikiTablesDecoderState]:
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
         group_size, num_actions = sorted_log_probs.size()
         sorted_actions = sorted_actions.data.cpu().numpy().tolist()
         valid_actions = state.get_valid_actions()
-        for group_index in range(group_size):
-            for action_index in range(num_actions):
-                action = sorted_actions[group_index][action_index]
+        best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)
+        for group_index, (batch_index, group_actions) in enumerate(zip(state.batch_indices, sorted_actions)):
+            for action_index, action in enumerate(group_actions):
                 if valid_actions is not None and action not in valid_actions[group_index]:
                     # If we have a constrained decoder, we need to skip any actions that are not valid
                     # in the current state.
@@ -472,26 +477,25 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                     # actions, likely because they are the gold actions in this state.  We just skip
                     # emitting any state that isn't allowed by the trainer, because constructing the
                     # new state can be expensive.
-                    # TODO(mattg): is this really all that expensive?  If it isn't, it would simplify
-                    # the API to remove the `allowed_actions` argument, and it would make computing
-                    # metrics easier if this skipping logic happened in the trainer - the trainer could
-                    # keep track of when the top action wasn't allowed.  NOTE: without batching, when
-                    # there are ~80 possible actions in each state, this gives a ~2x slowdown.  So I'm
-                    # keeping it for now.  I'll re-evaluate once batching is implemented.
                     continue
+                best_next_states[batch_index].append((group_index, action_index, action))
+        new_states = []
+        for batch_index, best_states in best_next_states.items():
+            if max_actions is not None:
+                best_states = best_states[:max_actions]
+            for group_index, action_index, action in best_states:
                 # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
                 # learning algorithm can decide how many of these it wants to keep, and it can just
                 # regroup them later, as that's a really easy operation.
                 new_action_history = state.action_history[group_index] + [action]
-                # TODO(matt): we might need to normalize this by length eventually.  If the training
-                # algorithm allows for comparing states at different timesteps, it might matter.
                 new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
-                yield WikiTablesDecoderState([state.batch_indices[group_index]],
-                                             [new_action_history],
-                                             [new_score],
-                                             [hidden_state[group_index]],
-                                             [memory_cell[group_index]],
-                                             [attended_question[group_index]],
-                                             state.encoder_outputs,
-                                             state.encoder_output_mask,
-                                             state.end_index)
+                new_states.append(WikiTablesDecoderState([state.batch_indices[group_index]],
+                                                         [new_action_history],
+                                                         [new_score],
+                                                         [hidden_state[group_index]],
+                                                         [memory_cell[group_index]],
+                                                         [attended_question[group_index]],
+                                                         state.encoder_outputs,
+                                                         state.encoder_output_mask,
+                                                         state.end_index))
+        return new_states

@@ -32,8 +32,8 @@ class MaximumMarginalLikelihood(DecoderTrainer):
     def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               targets: torch.Tensor = None,
-               target_mask: torch.Tensor = None) -> Dict[str, torch.Tensor]:
+               targets: torch.Tensor,
+               target_mask: torch.Tensor) -> Dict[str, torch.Tensor]:
         allowed_transitions = self._create_allowed_transitions(targets, target_mask)
         finished_states = []
         states = [initial_state]
@@ -44,12 +44,7 @@ class MaximumMarginalLikelihood(DecoderTrainer):
             # We group together all current states to get more efficient (batched) computation.
             grouped_state = states[0].combine_states(states)
             allowed_actions = self._get_allowed_actions(grouped_state, allowed_transitions)
-            generator = decode_step.take_step(grouped_state, allowed_actions)
-            while True:
-                try:
-                    next_state = next(generator)
-                except StopIteration:
-                    break
+            for next_state in decode_step.take_step(grouped_state, allowed_actions=allowed_actions):
                 finished, not_finished = next_state.split_finished()
                 if finished is not None:
                     finished_states.append(finished)
@@ -69,7 +64,7 @@ class MaximumMarginalLikelihood(DecoderTrainer):
 
     @staticmethod
     def _create_allowed_transitions(targets: torch.Tensor,
-                                    target_mask: torch.Tensor = None) -> List[Dict[Tuple[int, ...], Set[int]]]:
+                                    target_mask: torch.Tensor) -> List[Dict[Tuple[int, ...], Set[int]]]:
         """
         Takes a list of valid target action sequences and creates a mapping from all possible
         (valid) action prefixes to allowed actions given that prefix.  ``targets`` is assumed to be
