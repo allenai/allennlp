@@ -3,6 +3,7 @@ These submodules contain the classes for AllenNLP models,
 all of which are subclasses of :class:`~allennlp.models.model.Model`.
 """
 
+from allennlp.models.academic_paper_classifier import AcademicPaperClassifier
 from allennlp.models.archival import archive_model, load_archive
 from allennlp.models.crf_tagger import CrfTagger
 from allennlp.models.decomposable_attention import DecomposableAttention
