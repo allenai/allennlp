@@ -180,11 +180,13 @@ class CoreferenceResolver(Model):
 
         # Shape: (batch_size, num_spans_to_keep)
         # These are indices (with values between 0 and num_spans) into
-        # the span_embeddings tensor. Now that we've decided which spans
-        # are actually mentions the next few steps are reformatting all of
-        # our variables to be in terms of num_spans_to_keep instead of
-        # num_spans, so we don't waste computation on spans that we've already discarded.
+        # the span_embeddings tensor.
         top_span_indices = self._prune_and_sort_spans(mention_scores, num_spans_to_keep)
+
+        # Now that we've decided which spans are actually mentions the next
+        # few steps are reformatting all of our variables to be in terms of
+        # num_spans_to_keep instead of num_spans, so we don't waste computation
+        # on spans that we've already discarded.
 
         # Shape: (batch_size * num_spans_to_keep)
         # torch.index_select only accepts 1D indices, but here
@@ -241,7 +243,7 @@ class CoreferenceResolver(Model):
             self._generate_valid_antecedents(num_spans_to_keep, max_antecedents, text_mask.is_cuda)
         # Select tensors relating to the antecedent spans.
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
-        candidate_antecedent_embedidngs = util.flattened_index_select(top_span_embeddings,
+        candidate_antecedent_embeddings = util.flattened_index_select(top_span_embeddings,
                                                                       valid_antecedent_indices)
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents)
@@ -250,7 +252,7 @@ class CoreferenceResolver(Model):
         # Compute antecedent scores.
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         span_pair_embeddings = self._compute_span_pair_embeddings(top_span_embeddings,
-                                                                  candidate_antecedent_embedidngs,
+                                                                  candidate_antecedent_embeddings,
                                                                   valid_antecedent_offsets)
 
         # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents)
