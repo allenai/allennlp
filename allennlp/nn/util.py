@@ -335,8 +335,8 @@ def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) 
 
 def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
     """
-    Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
-    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
+    Takes a tensor with 3 or more dimensions and does a masked log softmax over the last dimension.
+    We assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
     has shape ``(batch_size, sequence_length)``.
     """
     return _last_dimension_applicator(masked_log_softmax, tensor, mask)
