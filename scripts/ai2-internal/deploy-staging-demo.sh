@@ -10,7 +10,8 @@ fi
 
 echo "Deploying container '$CONTAINER' to staging."
 
-cat >spec.yaml <<EOF
+
+kubectl apply -f - <<EOF
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -78,5 +79,3 @@ spec:
     - port: 80
       targetPort: 8000
 EOF
-
-kubectl apply -f spec.yaml
