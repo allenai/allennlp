@@ -238,7 +238,7 @@ class CoreferenceResolver(Model):
         # (1, max_antecedents),
         # (1, num_spans_to_keep, max_antecedents)
         valid_antecedent_indices, valid_antecedent_offsets, valid_antecedent_log_mask = \
-            self._generate_antecedents(num_spans_to_keep, max_antecedents, text_mask.is_cuda)
+            self._generate_valid_antecedents(num_spans_to_keep, max_antecedents, text_mask.is_cuda)
         # Select tensors relating to the antecedent spans.
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         candidate_antecedent_embedidngs = util.flattened_index_select(top_span_embeddings,
@@ -289,14 +289,24 @@ class CoreferenceResolver(Model):
             # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
             gold_antecedent_labels = self._compute_antecedent_gold_labels(pruned_gold_labels,
                                                                           antecedent_labels)
-            # Compute loss using the negative marginal log-likelihood.
-            loss = self._compute_negative_marginal_log_likelihood(coreference_scores,
-                                                                  gold_antecedent_labels,
-                                                                  top_span_mask)
+            # Now, compute the loss using the negative marginal log-likelihood.
+            # This is equal to the log of the sum of the probabilities of all antecedent predictions
+            # that would be consistent with the data, in the sense that we are minimising, for a
+            # given span, the negative marginal log likelihood of all antecedents which are in the
+            # same gold cluster as the span we are currently considering. Each span i predicts a
+            # single antecedent j, but there might be several prior mentions k in the same
+            # coreference cluster that would be valid antecedents. Our loss is the sum of the
+            # probability assigned to all valid antecedents. This is a valid objective for
+            # clustering as we don't mind which antecedent is predicted, so long as they are in
+            #  the same coreference cluster.
+            coreference_log_probs = util.last_dim_log_softmax(coreference_scores, top_span_mask)
+            correct_antecedent_log_probs = coreference_log_probs + gold_antecedent_labels.log()
+            negative_marginal_log_likelihood = -util.logsumexp(correct_antecedent_log_probs).sum()
+
             self._mention_recall(top_spans, metadata)
             self._conll_coref_scores(top_spans, valid_antecedent_indices, predicted_antecedents, metadata)
 
-            output_dict["loss"] = loss
+            output_dict["loss"] = negative_marginal_log_likelihood
         return output_dict
 
     @overrides
@@ -639,8 +649,8 @@ class CoreferenceResolver(Model):
 
         # Shape: (1, max_antecedents, embedding_size)
         antecedent_distance_embeddings = self._distance_embedding(
-            util.bucket_values(antecedent_offsets,
-                               num_total_buckets=self._num_distance_buckets))
+                util.bucket_values(antecedent_offsets,
+                                   num_total_buckets=self._num_distance_buckets))
 
         # Shape: (1, 1, max_antecedents, embedding_size)
         antecedent_distance_embeddings = antecedent_distance_embeddings.unsqueeze(0)
@@ -698,59 +708,6 @@ class CoreferenceResolver(Model):
         # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
         pairwise_labels_with_dummy_label = torch.cat([dummy_labels, pairwise_labels], -1)
         return pairwise_labels_with_dummy_label
-
-    @staticmethod
-    def _compute_negative_marginal_log_likelihood(coreference_scores: torch.FloatTensor,
-                                                  augmented_labels: torch.IntTensor,
-                                                  top_span_mask: torch.FloatTensor) -> torch.FloatTensor:
-        """
-        Computes the negative marginal log likelihood with respect to the gold cluster labels.
-        This computes the log of the sum of the probabilities of all antecedent predictions that
-        would be consistent with the data, in the sense that we are minimising, for a given span,
-        the negative marginal log likelihood of all antecedents which are in the same gold cluster
-        as the span we are currently considering. Each span i predicts a single antecedent j, but
-        there might be several prior mentions k in the same coreference cluster that would be valid
-        antecedents. Our loss is the sum of the probability assigned to all valid antecedents.
-        This is a valid objective for clustering as we don't mind which antecedent is predicted,
-        so long as they are in the same coreference cluster.
-
-        The computation is performed in log-space for numerical stability.
-
-        Parameters
-        ----------
-        coreference_scores: ``torch.FloatTensor``, required.
-            The pairwise scores between every span and its possible antecedents.
-            Has shape (batch_size, num_spans_to_keep, max_antecedents + 1).
-        augmented_labels: ``torch.IntTensor``, required.
-            A binary indicator for whether it is consistent with the data for a span to choose
-            an antecedent. Has shape (batch_size, num_spans_to_keep, max_antecedents + 1).
-        top_span_mask : ``torch.FloatTensor``, required.
-            A binary mask of shape (batch_size, num_spans_to_keep, 1), representing which
-            spans are valid, as we may have considered different numbers of spans per batch.
-            It is infrequent that this is not all ones, because we prune to find the top spans,
-            and generally there are at least ``num_spans_to_keep`` spans for each element in the
-            batch and additionally, the mention scorer should learn to score valid mentions
-            higher than padded ones.
-
-        Returns
-        -------
-        negative_marginal_log_likelihood: ``torch.FloatTensor``
-            The scalar negative marginal log likelihood of the gold cluster labels.
-        """
-        # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
-        # Adding the log of the mask means that we add -inf to all
-        # antecedents not in the coreference cluster for a given span,
-        # meaning when we compute the marginal log likelihood, these are
-        # correctly masked to have no contribution.
-        masked_coreference_scores = coreference_scores + augmented_labels.log()
-
-        # Shape: (batch_size, num_spans_to_keep)
-        marginalized_gold_scores = util.logsumexp(masked_coreference_scores, 2)
-        log_norm = util.logsumexp(coreference_scores, 2)
-        negative_marginal_log_likelihood = log_norm - marginalized_gold_scores
-        negative_marginal_log_likelihood = (negative_marginal_log_likelihood *
-                                            top_span_mask.squeeze(-1)).sum()
-        return negative_marginal_log_likelihood
 
     def _compute_coreference_scores(self,
                                     pairwise_embeddings: torch.FloatTensor,
