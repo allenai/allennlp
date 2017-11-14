@@ -4,7 +4,7 @@ import { withRouter } from 'react-router-dom';
 import { PaneLeft, PaneRight } from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
-
+import { Tree } from 'hierplane';
 
 /*******************************************************************************
   <SrlInput /> Component
@@ -33,6 +33,81 @@ const description = (
     </span>
   </div>
 );
+
+function getStrIndex(words, wordIdx) {
+  if (wordIdx < 0) throw new Error(`Invalid word index: ${wordIdx}`);
+  return words.slice(0, wordIdx).join(' ').length;
+}
+
+function toHierplaneTrees(response) {
+  const text = response.words.join(' ');
+
+  // We create a tree for each verb
+  const trees = response.verbs.map(({ verb, tags }) => {
+    const verbTagIdx = tags.findIndex(tag => tag === 'B-V');
+    const start = getStrIndex(response.words, verbTagIdx);
+
+    const ignoredSpans = tags.reduce((children, tag, idx) => {
+      if (tag === 'O') {
+        const word = response.words[idx];
+        const start = getStrIndex(response.words, idx);
+        const end = start + word.length + 1;
+        const child = {
+          spanType: 'ignored',
+          start,
+          end
+        };
+        children.push(child);
+      }
+      return children;
+    }, []);
+
+    if (verb === "needed") {
+      console.log(ignoredSpans);
+    }
+
+    return {
+      text,
+      root: {
+        word: verb,
+        nodeType: 'V',
+        attributes: [ 'VERB' ],
+        spans: [{
+          start,
+          end: start + verb.length + 1,
+        }, ...ignoredSpans],
+        children: tags.reduce((children, tag, idx) => {
+          if (tag !== 'B-V' && tag.startsWith('B-')) {
+            const word = response.words[idx];
+            const link = tag.split('-').pop().replace(/\d+/g, '');
+            const start = getStrIndex(response.words, idx);
+            const newChild = {
+              word,
+              spans: [{
+                start,
+                end: start + word.length + 1
+              }],
+              nodeType: link,
+              link,
+              attributes: [ link ]
+            };
+            children.push(newChild);
+          } else if (tag.startsWith('I-')) {
+            const word = response.words[idx];
+            const lastChild = children[children.length - 1];
+            lastChild.word += ` ${word}`;
+            lastChild.spans[0].end += word.length + 1;
+          }
+          return children;
+        }, [])
+      }
+    };
+  });
+
+  // Filter out the trees with only a single child (AllenNLP's SRL output includes a node
+  // for each verb with a single child, the verb itself).
+  return trees.filter(t => t.root.children.length > 1);
+}
 
 class SrlInput extends React.Component {
   constructor(props) {
@@ -193,9 +268,66 @@ class SrlOutput extends React.Component {
   }
 }
 
+class HierplaneVisualization extends React.Component {
+  constructor(...args) {
+    super(...args);
+    this.state = { selectedIdx: 0 };
+
+    this.selectPrevVerb = this.selectPrevVerb.bind(this);
+    this.selectNextVerb = this.selectNextVerb.bind(this);
+  }
+  selectPrevVerb() {
+    const nextIdx =
+        this.state.selectedIdx === 0 ? this.props.trees.length - 1 : this.state.selectedIdx - 1;
+    this.setState({ selectedIdx: nextIdx });
+  }
+  selectNextVerb() {
+    const nextIdx =
+        this.state.selectedIdx === this.props.trees.length - 1 ? 0 : this.state.selectedIdx + 1;
+    this.setState({ selectedIdx: nextIdx });
+  }
+
+  render() {
+    if (this.props.trees) {
+      const verbs = this.props.trees.map(({ root: { word } }) => word);
+
+      const totalVerbCount = verbs.length;
+      const selectedVerbIdxLabel = this.state.selectedIdx + 1;
+      const selectedVerb = verbs[this.state.selectedIdx];
+
+      return (
+        <div className="hierplane__visualization">
+          <div className="hierplane__visualization-verbs">
+            <a className="hierplane__visualization-verbs__prev" onClick={this.selectPrevVerb}>
+              <svg width="12" height="12">
+                <use xlinkHref="#icon__disclosure"></use>
+              </svg>
+            </a>
+            <a onClick={this.selectNextVerb}>
+              <svg width="12" height="12">
+                <use xlinkHref="#icon__disclosure"></use>
+              </svg>
+            </a>
+            Verb {selectedVerbIdxLabel} of {totalVerbCount}: <strong>{selectedVerb}</strong>
+          </div>
+          <Tree tree={this.props.trees[this.state.selectedIdx]} theme="light" />
+        </div>
+      )
+    } else {
+      return null;
+    }
+  }
+}
+
 /*******************************************************************************
   <SrlComponent /> Component
 *******************************************************************************/
+
+const VisualizationType = {
+  TABLE: 'Table',
+  TREE: 'Tree'
+};
+Object.freeze(VisualizationType);
 
 class _SrlComponent extends React.Component {
   constructor(props) {
@@ -206,7 +338,9 @@ class _SrlComponent extends React.Component {
     this.state = {
       requestData: requestData,
       responseData: responseData,
-      outputState: responseData ? "received" : "empty" // valid values: "working", "empty", "received", "error"
+      // valid values: "working", "empty", "received", "error",
+      outputState: responseData ? "received" : "empty",
+      visualizationType: VisualizationType.TABLE
     };
 
     this.runSrlModel = this.runSrlModel.bind(this);
@@ -247,10 +381,22 @@ class _SrlComponent extends React.Component {
 
   render() {
     const { requestData, responseData } = this.props;
+    const { visualizationType } = this.state;
 
     const sentence = requestData && requestData.sentence;
     const words = responseData && responseData.words;
     const verbs = responseData && responseData.verbs;
+
+    let viz = null;
+    switch(visualizationType) {
+      case VisualizationType.TREE:
+        viz = <HierplaneVisualization trees={responseData ? toHierplaneTrees(responseData) : null} />
+        break;
+    case VisualizationType.TABLE:
+    default:
+        viz = <SrlOutput words={words} verbs={verbs} />;
+        break;
+    }
 
     return (
       <div className="pane model">
@@ -260,7 +406,24 @@ class _SrlComponent extends React.Component {
             sentence={sentence} />
         </PaneLeft>
         <PaneRight outputState={this.state.outputState}>
-          <SrlOutput words={words} verbs={verbs} />
+          <ul className="srl__vizualization-types">
+            {Object.keys(VisualizationType).map(tpe => {
+              const vizType = VisualizationType[tpe];
+              const className = (
+                visualizationType === vizType
+                  ? 'srl__vizualization-types__active-type'
+                  : null
+              );
+              return (
+                <li key={vizType} className={className}>
+                  <a onClick={() => this.setState({ visualizationType: vizType })}>
+                    {vizType}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+          {viz}
         </PaneRight>
       </div>
     );

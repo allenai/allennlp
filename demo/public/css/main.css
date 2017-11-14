@@ -1417,3 +1417,72 @@ svg {
 .t-white .t-sm * {
   color: rgba(255, 255, 255, .66)
 }
+
+.srl__vizualization-types {
+  background: #f9fafc;
+  display: flex;
+  list-style-type: none;
+  margin: 0;
+  padding: 0 1.25em;
+  border-bottom: 1px solid #e5eaf0;
+}
+
+.srl__vizualization-types li {
+  margin: 0 1em 0 0;
+  padding: 1em 1.25em 0.5em;
+  border-bottom: 6px solid transparent;
+}
+
+.srl__vizualization-types li a {
+  color: rgba(28, 47, 58, .5);
+}
+
+
+.srl__vizualization-types .srl__vizualization-types__active-type {
+  border-bottom-color: #63a7d4;
+}
+
+.srl__vizualization-types .srl__vizualization-types__active-type a {
+  color: #1c2f3a;
+}
+
+.hierplane__visualization-verbs {
+  background: #f9fafc;
+  padding: 1em 1.25em;
+  border-bottom: 1px solid #e5eaf0;
+  color: rgba(28, 47, 58, .5);
+}
+
+.hierplane__visualization-verbs a {
+  display: inline-block;
+  margin-right: 1em;
+}
+
+.hierplane__visualization-verbs a svg {
+  fill: rgba(28, 47, 58, .5);
+}
+
+.hierplane__visualization-verbs a:hover svg {
+  fill: #1c2f3a;
+}
+
+.hierplane__visualization-verbs__prev {
+  transform: rotateY(-180deg);
+}
+
+/* THESE ARE TERRIBLE HACKS PUT HERE BY CODEVIKING. */
+
+/* This hides the toolbar. Ideally hierplane would have an option to do this. */
+.hierplane .parse-tree-toolbar {
+  display: none !important;
+}
+
+/*
+   This eliminates the negative left margin used to artifically bump punctuation such that it
+   doesn't appear to have space before it. This isn't worth the side-effect in SRL, as here
+   we have spans that contain things other than punctuation that are ignored. This can in the
+   long run potentially be fixed in hierplane...but that might not happen.
+*/
+.hierplane__visualization .hierplane #passage p .passage__readonly .span-slice__ignored {
+  margin-left: 0 !important;
+}
