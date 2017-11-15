@@ -1162,6 +1162,10 @@ svg {
   padding-right: 2.5em
 }
 
+.ner-tag {
+  text-align: center;
+}
+
 .srl-table td, .ner-table td {
   padding: .625em
 }

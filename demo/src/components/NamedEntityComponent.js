@@ -130,7 +130,7 @@ const tagDescriptions = {
 class NerTagCell extends React.Component {
 
   render() {
-    const { tag, colorClass } = this.props;
+    const { tag, colorClass, colspan } = this.props;
 
     // Don't show "O" tags, and slice off all the "B-" and "I-" prefixes.
     const tagText = tag === "O" ? "" : tag.slice(2);
@@ -139,7 +139,7 @@ class NerTagCell extends React.Component {
     const description = tagDescriptions[tagText] || null;
 
     return (
-      <td data-tooltip={description} className={colorClass + ' ner-tag ner-tag-' + tagText.toLowerCase()}>
+      <td data-tooltip={description} colSpan={colspan} className={colorClass + ' ner-tag ner-tag-' + tagText.toLowerCase()}>
         {tagText}
       </td>
     )
@@ -155,7 +155,7 @@ class NerWordCell extends React.Component {
   }
 }
 
-class NerFrame extends React.Component {
+class NerOutput extends React.Component {
   render() {
     const { words, tags } = this.props;
 
@@ -165,48 +165,60 @@ class NerFrame extends React.Component {
     var colorClasses = [];
     var currentColor = 1;
 
+    // Want to track the indexes where spans start.
+    let spanLengths = {};
+    let lastSpanStart;
+
     tags.forEach(function (tag, i) {
       if (tag === "O") {
         // "O" tag, so append "" for "no color"
         colorClasses.push("");
+        spanLengths[i] = 1;
+        lastSpanStart = undefined;
       } else if (tag[0] === "B") {
         // "B-" tag, so toggle the current color and then append
         currentColor = (currentColor + 1) % 2;
         colorClasses.push("color" + currentColor);
+        lastSpanStart = i;
+        spanLengths[i] = 1;
+      } else if (tag[0] === "U") {
+        // Single length span
+        currentColor = (currentColor + 1) % 2;
+        colorClasses.push("color" + currentColor);
+        lastSpanStart = undefined;
+        spanLengths[i] = 1;
       } else /* (tag[0] == "I") */ {
         // "I-" tag, so append the current color
         colorClasses.push("color" + currentColor);
+        spanLengths[lastSpanStart] = spanLengths[lastSpanStart] + 1;
       }
     })
 
     return (
-      <div>
-        <table className="ner-table">
-          <tbody>
-            <tr>
-              {tags.map((tag, i) => <NerTagCell tag={tag} key={i} colorClass={colorClasses[i]} />)}
-            </tr>
-            <tr>
-              {words.map((word, i) => <NerWordCell word={word} key={i} colorClass={colorClasses[i]} />)}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    )
-  }
-}
-
-class NerOutput extends React.Component {
-  render() {
-    const { words, tags } = this.props;
-
-    return (
       <div className="model__content model__content--ner-output">
         <div className="form__field">
-          <NerFrame tags={tags} words={words}/>
+          <table className="ner-table">
+            <tbody>
+              <tr>
+                {
+                  tags.map((tag, i) => {
+                    const colspan = spanLengths[i];
+                    if (colspan) {
+                      return <NerTagCell tag={tag} key={i} colspan={colspan} colorClass={colorClasses[i]} />
+                    } else {
+                      return null;
+                    }
+                  })
+                }
+              </tr>
+              <tr>
+                {words.map((word, i) => <NerWordCell word={word} key={i} colorClass={colorClasses[i]} />)}
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-    );
+    )
   }
 }
 
