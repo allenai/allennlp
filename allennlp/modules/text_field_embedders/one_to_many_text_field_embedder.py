@@ -56,7 +56,7 @@ class OneToManyTextFieldEmbedder(TextFieldEmbedder):
         return torch.cat(embedded_representations, dim=-1)
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'OneToManyTextFieldEmbedder':
         token_embedders = {}
         keys = list(params.keys())
         for key in keys:

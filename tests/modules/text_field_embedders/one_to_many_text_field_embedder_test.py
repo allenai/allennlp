@@ -21,15 +21,14 @@ class TestOneToManyTextFieldEmbedder(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("4")
         params = Params({
                 "words1": [
-                    {
-                        "type": "embedding",
-                        "embedding_dim": 2
-                    },
-                    {
-                        "type": "embedding",
-                        "embedding_dim": 2
-                    }
-                ],
+                        {
+                                "type": "embedding",
+                                "embedding_dim": 2
+                        },
+                        {
+                                "type": "embedding",
+                                "embedding_dim": 2
+                        }],
                 "words2": [{
                         "type": "embedding",
                         "embedding_dim": 5
