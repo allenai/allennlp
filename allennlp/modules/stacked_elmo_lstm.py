@@ -162,6 +162,6 @@ class ElmoLstm(torch.nn.Module):
         # respectively.
         final_hidden_states, final_memory_states = zip(*final_states)
         final_state_tuple: Tuple[torch.FloatTensor,
-                                 torch.FloatTensor] = (torch.stack(final_hidden_states, 0),
-                                                       torch.stack(final_memory_states, 0))
+                                 torch.FloatTensor] = (torch.cat(final_hidden_states, 0),
+                                                       torch.cat(final_memory_states, 0))
         return stacked_sequence_outputs, final_state_tuple
