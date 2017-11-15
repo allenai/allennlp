@@ -32,7 +32,7 @@ kubectl apply $DRYRUN -f - <<EOF
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: allennlp-webdemo-2
+  name: allennlp-webdemo
   namespace: allennlp
   labels:
     contact: allennlp
@@ -41,10 +41,10 @@ spec:
   template:
     metadata:
       labels:
-        app: allennlp-webdemo-2
+        app: allennlp-webdemo
     spec:
       containers:
-        - name: allennlp-webdemo-2
+        - name: allennlp-webdemo
           image: "allennlp/webdemo:2017-11-13-2"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -86,12 +86,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: allennlp-webdemo-2
+  name: allennlp-webdemo
   namespace: allennlp
 spec:
   type: LoadBalancer
   selector:
-    app: allennlp-webdemo-2
+    app: allennlp-webdemo
   ports:
     - port: 80
       targetPort: 8000
