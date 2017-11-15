@@ -12,7 +12,7 @@ from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
 
 
-class ElmoLstmCell(torch.nn.Module):
+class LSTMCellWithProjection(torch.nn.Module):
     """
     An LSTM with Recurrent Dropout and a projected and clipped hidden state and
     memory. Note: this implementation is slower than the native Pytorch LSTM because
@@ -26,7 +26,7 @@ class ElmoLstmCell(torch.nn.Module):
     hidden_size : ``int``, required.
         The dimension of the outputs of the LSTM.
     cell_size : ``int``, required.
-        The dimension of the projections used for the LSTM equations.
+        The dimension of the memory cell used for the LSTM.
     go_forward: ``bool``, optional (default = True)
         The direction in which the LSTM is applied to the sequence.
         Forwards by default, or backwards if False.
@@ -36,9 +36,9 @@ class ElmoLstmCell(torch.nn.Module):
         <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM.
-    state_projection_clip_value: ``float``, optional, (default = 3.0)
+    state_projection_clip_value: ``float``, optional, (default = None)
         The magnitude with which to clip the hidden_state after projecting it.
-    memory_cell_clip_value: ``float``, optional, (default = 3.0)
+    memory_cell_clip_value: ``float``, optional, (default = None)
         The magnitude with which to clip the memory cell.
 
     Returns
@@ -50,8 +50,9 @@ class ElmoLstmCell(torch.nn.Module):
         zero tensors.
     final_state: ``Tuple[torch.FloatTensor, torch.FloatTensor]``
         The final (state, memory) states of the LSTM, with shape
-        (num_layers, batch_size, hidden_size) and  (num_layers, batch_size, cell_size)
-        respectively.
+        (1, batch_size, hidden_size) and  (1, batch_size, cell_size)
+        respectively. The first dimension is 1 in order to match the Pytorch
+        API for returning stacked LSTM states.
     """
     def __init__(self,
                  input_size: int,
@@ -59,9 +60,9 @@ class ElmoLstmCell(torch.nn.Module):
                  cell_size: int,
                  go_forward: bool = True,
                  recurrent_dropout_probability: float = 0.0,
-                 memory_cell_clip_value: float = 3.0,
-                 state_projection_clip_value: float = 3.0) -> None:
-        super(ElmoLstmCell, self).__init__()
+                 memory_cell_clip_value: Optional[float] = None,
+                 state_projection_clip_value: Optional[float] = None) -> None:
+        super(LSTMCellWithProjection, self).__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -104,7 +105,8 @@ class ElmoLstmCell(torch.nn.Module):
             A list of length batch_size containing the lengths of the sequences in batch.
         initial_state : ``Tuple[torch.Tensor, torch.Tensor]``, optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
-            of the LSTM. Each tensor has shape (1, batch_size, output_dimension).
+            of the LSTM. The ``state`` has shape (1, batch_size, hidden_size) and the
+            ``memory`` has shape (1, batch_size, cell_size).
 
         Returns
         -------
@@ -113,8 +115,10 @@ class ElmoLstmCell(torch.nn.Module):
             (batch_size, max_timesteps, hidden_size) where for a given batch
             element, all outputs past the sequence length for that batch are
             zero tensors.
-        final_state : ``torch.FloatTensor``
-            The final state of the LSTM with shape (1, batch_size, hidden_size).
+        final_state : ``Tuple[``torch.FloatTensor, torch.FloatTensor]``
+            A tuple (state, memory) representing the initial hidden state and memory
+            of the LSTM. The ``state`` has shape (1, batch_size, hidden_size) and the
+            ``memory`` has shape (1, batch_size, cell_size).
         """
         batch_size = inputs.size()[0]
         total_timesteps = inputs.size()[1]
@@ -134,7 +138,7 @@ class ElmoLstmCell(torch.nn.Module):
             full_batch_previous_memory = initial_state[1].squeeze(0)
 
         current_length_index = batch_size - 1 if self.go_forward else 0
-        if self.recurrent_dropout_probability > 0.0:
+        if self.recurrent_dropout_probability > 0.0 and self.training:
             dropout_mask = get_dropout_mask(self.recurrent_dropout_probability,
                                             full_batch_previous_state)
         else:
@@ -181,32 +185,36 @@ class ElmoLstmCell(torch.nn.Module):
 
             # Main LSTM equations using relevant chunks of the big linear
             # projections of the hidden state and inputs.
-            input_gate = torch.sigmoid(projected_input[:, 0 * self.cell_size:1 * self.cell_size] +
-                                       projected_state[:, 0 * self.cell_size:1 * self.cell_size])
-            forget_gate = torch.sigmoid(projected_input[:, 1 * self.cell_size:2 * self.cell_size] +
-                                        projected_state[:, 1 * self.cell_size:2 * self.cell_size])
-            memory_init = torch.tanh(projected_input[:, 2 * self.cell_size:3 * self.cell_size] +
-                                     projected_state[:, 2 * self.cell_size:3 * self.cell_size])
-            output_gate = torch.sigmoid(projected_input[:, 3 * self.cell_size:4 * self.cell_size] +
-                                        projected_state[:, 3 * self.cell_size:4 * self.cell_size])
+            input_gate = torch.sigmoid(projected_input[:, (0 * self.cell_size):(1 * self.cell_size)] +
+                                       projected_state[:, (0 * self.cell_size):(1 * self.cell_size)])
+            forget_gate = torch.sigmoid(projected_input[:, (1 * self.cell_size):(2 * self.cell_size)] +
+                                        projected_state[:, (1 * self.cell_size):(2 * self.cell_size)])
+            memory_init = torch.tanh(projected_input[:, (2 * self.cell_size):(3 * self.cell_size)] +
+                                     projected_state[:, (2 * self.cell_size):(3 * self.cell_size)])
+            output_gate = torch.sigmoid(projected_input[:, (3 * self.cell_size):(4 * self.cell_size)] +
+                                        projected_state[:, (3 * self.cell_size):(4 * self.cell_size)])
             memory = input_gate * memory_init + forget_gate * previous_memory
 
             # Here is the non-standard part of this LSTM cell; first, we clip the
             # memory cell, then we project the output of the timestep to a smaller size
             # and again clip it.
-            memory = torch.clamp(memory, -self.memory_cell_clip_value, self.memory_cell_clip_value)
+
+            if self.memory_cell_clip_value:
+                # pylint: disable=invalid-unary-operand-type
+                memory.data.clamp_(-self.memory_cell_clip_value, self.memory_cell_clip_value)
 
             # shape (current_length_index, cell_size)
             pre_projection_timestep_output = output_gate * torch.tanh(memory)
 
             # shape (current_length_index, hidden_size)
             timestep_output = self.state_projection(pre_projection_timestep_output)
-            timestep_output = torch.clamp(timestep_output,
-                                          -self.state_projection_clip_value,
-                                          self.state_projection_clip_value)
+            if self.state_projection_clip_value:
+                # pylint: disable=invalid-unary-operand-type
+                timestep_output.data.clamp_(-self.state_projection_clip_value,
+                                            self.state_projection_clip_value)
 
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
-            if dropout_mask is not None and self.training:
+            if dropout_mask is not None:
                 timestep_output = timestep_output * dropout_mask[0: current_length_index + 1]
 
             # We've been doing computation with less than the full batch, so here we create a new
