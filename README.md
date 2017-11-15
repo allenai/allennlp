@@ -104,7 +104,8 @@ used for development along with all the dependencies needed to run AllenNLP.
     conda create -n allennlp python=3.6
     ```
 
-4.  Now activate the Conda environment.  You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
+4.  Now activate the Conda environment.  You will need to activate the Conda environment in each terminal in which you want 
+to use AllenNLP.
 
     ```
     source activate allennlp
