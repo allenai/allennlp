@@ -9,10 +9,21 @@ if [ ! -n "$CONTAINER" ] ; then
   exit 1
 fi
 
+if [ "$#" -gt 2 ]; then
+  echo "Too many parameters"
+  echo "$USAGE"
+  exit 1
+fi
+
 DRYRUN="--dry-run"
-if [ ! -z $FORCE ] && [ $FORCE = "--force" ] ; then
-  DRYRUN=""
-  echo "Deploying container '$CONTAINER' to production."
+if [ ! -z $FORCE ] ; then
+  if [ $FORCE = "--force" ] ; then
+    DRYRUN=""
+    echo "Deploying container '$CONTAINER' to production."
+  else
+    echo "$USAGE"
+    exit 1
+  fi
 else
   echo "Deploying container '$CONTAINER' to production. (dry run)"
 fi
@@ -21,7 +32,7 @@ kubectl apply $DRYRUN -f - <<EOF
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: allennlp-webdemo
+  name: allennlp-webdemo-2
   namespace: allennlp
   labels:
     contact: allennlp
@@ -30,10 +41,10 @@ spec:
   template:
     metadata:
       labels:
-        app: allennlp-webdemo
+        app: allennlp-webdemo-2
     spec:
       containers:
-        - name: allennlp-webdemo
+        - name: allennlp-webdemo-2
           image: "allennlp/webdemo:2017-11-13-2"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -75,12 +86,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: allennlp-webdemo
+  name: allennlp-webdemo-2
   namespace: allennlp
 spec:
   type: LoadBalancer
   selector:
-    app: allennlp-webdemo
+    app: allennlp-webdemo-2
   ports:
     - port: 80
       targetPort: 8000
