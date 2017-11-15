@@ -1,7 +1,3 @@
-## Quickstart
-
-The fastest way to get an environment to run AllenNLP is with Docker.  Once you have [installed Docker](https://docs.docker.com/engine/installation/)
-just run `docker run -it --rm allennlp/allennlp` to get an environment that will run on either the cpu or gpu.
 
 Now you can do any of the following:
 
