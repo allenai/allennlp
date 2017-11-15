@@ -13,6 +13,7 @@ DEFAULT_MODELS = {
         'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
         'textual-entailment': 'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-2017.09.04.tar.gz',  # pylint: disable=line-too-long
         'coreference-resolution': 'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2017.11.09.tar.gz',  # pylint: disable=line-too-long
+        'crf-tagger': '/Users/joelg/models/crf_final/tmp/model.tar.gz'
 }
 
 # a mapping from model `type` to the default Predictor for that type

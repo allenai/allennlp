@@ -200,9 +200,13 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
     @app.route('/semantic-role-labeling')
     @app.route('/machine-comprehension')
     @app.route('/textual-entailment')
+    @app.route('/coreference-resolution')
+    @app.route('/crf-tagger')
     @app.route('/semantic-role-labeling/<permalink>')
     @app.route('/machine-comprehension/<permalink>')
     @app.route('/textual-entailment/<permalink>')
+    @app.route('/coreference-resolution/<permalink>')
+    @app.route('/crf-tagger/<permalink>')
     async def return_page(req: request.Request, permalink: str = None) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """return the page"""
         return await response.file(os.path.join(build_dir, 'index.html'))
