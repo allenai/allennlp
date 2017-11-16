@@ -7,10 +7,14 @@ from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 
 
-@Predictor.register('crf-tagger')
-class CrfTaggerPredictor(Predictor):
+@Predictor.register('sentence-tagger')
+class SentenceTaggerPredictor(Predictor):
     """
-    Wrapper for the :class:`~allennlp.models.crf_tagger.CrfTagger` model.
+    Wrapper for any model that takes in a sentence and returns
+    a single set of tags for it.  In particular, it can be used with
+    the :class:`~allennlp.models.crf_tagger.CrfTagger` model
+    and also
+    the :class:`~allennlp.models.simple_tagger.SimpleTagger` model.
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
@@ -26,21 +30,15 @@ class CrfTaggerPredictor(Predictor):
     @overrides
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         """
-        Expects JSON that looks like ``{"sentence": "..."}``
-        and returns JSON that looks like
-        ``{"tags": [...], "words": [...]}``
+        Expects JSON that looks like ``{"sentence": "..."}``.
+        Runs the underlying model, and adds the ``"words"`` to the output.
         """
         sentence = inputs["sentence"]
         tokens = self._tokenizer.split_words(sentence)
         instance = self._dataset_reader.text_to_instance(tokens)
+
         output = self._model.forward_on_instance(instance, cuda_device)
-        tags = output["tags"]
 
-        labels = [self._model.vocab.get_token_from_index(tag, 'labels') for tag in tags]
-
-        output = {
-                "words": [token.text for token in tokens],
-                "tags": labels
-        }
+        output["words"] = [token.text for token in tokens]
 
         return sanitize(output)
