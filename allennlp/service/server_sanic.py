@@ -20,10 +20,9 @@ from sanic_cors import CORS
 import psycopg2
 
 from allennlp.common.util import JsonDict
-from allennlp.models.archival import load_archive
 from allennlp.service.db import DemoDatabase, PostgresDemoDatabase
 from allennlp.service.permalinks import int_to_slug, slug_to_int
-from allennlp.service.predictors import Predictor
+from allennlp.service.predictors import Predictor, DemoModel
 
 # Can override cache size with an environment variable. If it's 0 then disable caching altogether.
 CACHE_SIZE = os.environ.get("SANIC_CACHE_SIZE") or 128
@@ -31,7 +30,7 @@ CACHE_SIZE = os.environ.get("SANIC_CACHE_SIZE") or 128
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def run(port: int, workers: int,
-        trained_models: Dict[str, str],
+        trained_models: Dict[str, DemoModel],
         static_dir: str = None) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
@@ -45,10 +44,9 @@ def run(port: int, workers: int,
     app = make_app(static_dir, demo_db)
     CORS(app)
 
-    for predictor_name, archive_file in trained_models.items():
-        archive = load_archive(archive_file)
-        predictor = Predictor.from_archive(archive, predictor_name)
-        app.predictors[predictor_name] = predictor
+    for name, demo_model in trained_models.items():
+        predictor = demo_model.predictor()
+        app.predictors[name] = predictor
 
     app.run(port=port, host="0.0.0.0", workers=workers)
 
