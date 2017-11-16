@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Route, Redirect } from 'react-router-dom';
 import SrlComponent from './components/SrlComponent';
 import TeComponent from './components/TeComponent';
 import McComponent from './components/McComponent';
+import CorefComponent from './components/CorefComponent'
 import Header from './components/Header';
 import WaitingForPermalink from './components/WaitingForPermalink'
 
@@ -107,6 +108,9 @@ class Demo extends React.Component {
       }
       else if (selectedModel === "machine-comprehension") {
         return (<McComponent requestData={requestData} responseData={responseData}/>)
+      }
+      else if (selectedModel === "coreference-resolution") {
+        return (<CorefComponent requestData={requestData} responseData={responseData}/>)
       }
     }
 

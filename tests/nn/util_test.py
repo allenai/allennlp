@@ -522,6 +522,7 @@ class TestNnUtil(AllenNlpTestCase):
         replaced = util.replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
         assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])
 
+
     def test_logsumexp(self):
         # First a simple example where we add probabilities in log space.
         tensor = Variable(torch.FloatTensor([[.4, .1, .2]]))
@@ -540,47 +541,112 @@ class TestNnUtil(AllenNlpTestCase):
         tensor = Variable(torch.FloatTensor([[20.0, 20.0], [-200.0, 200.0]]))
         assert_almost_equal(util.logsumexp(tensor, dim=0).data.numpy(), [20.0, 200.0])
 
-    def test_add_bos_eos_2D(self):
+
+    def test_flatten_and_batch_shift_indices(self):
+        indices = numpy.array([[[1, 2, 3, 4],
+                                [5, 6, 7, 8],
+                                [9, 9, 9, 9]],
+                               [[2, 1, 0, 7],
+                                [7, 7, 2, 3],
+                                [0, 0, 4, 2]]])
+        indices = Variable(torch.LongTensor(indices))
+        shifted_indices = util.flatten_and_batch_shift_indices(indices, 10)
+        numpy.testing.assert_array_equal(shifted_indices.data.numpy(),
+                                         numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                                      9, 9, 9, 12, 11, 10, 17, 17,
+                                                      17, 12, 13, 10, 10, 14, 12]))
+
+    def test_batched_index_select(self):
+        indices = numpy.array([[[1, 2],
+                                [3, 4]],
+                               [[5, 6],
+                                [7, 8]]])
+        # Each element is a vector of it's index.
+        targets = torch.ones([2, 10, 3]).cumsum(1) - 1
+        # Make the second batch double it's index so they're different.
+        targets[1, :, :] *= 2
+        indices = Variable(torch.LongTensor(indices))
+        targets = Variable(targets)
+        selected = util.batched_index_select(targets, indices)
+
+        assert list(selected.size()) == [2, 2, 2, 3]
+        ones = numpy.ones([3])
+        numpy.testing.assert_array_equal(selected[0, 0, 0, :].data.numpy(), ones)
+        numpy.testing.assert_array_equal(selected[0, 0, 1, :].data.numpy(), ones * 2)
+        numpy.testing.assert_array_equal(selected[0, 1, 0, :].data.numpy(), ones * 3)
+        numpy.testing.assert_array_equal(selected[0, 1, 1, :].data.numpy(), ones * 4)
+
+        numpy.testing.assert_array_equal(selected[1, 0, 0, :].data.numpy(), ones * 10)
+        numpy.testing.assert_array_equal(selected[1, 0, 1, :].data.numpy(), ones * 12)
+        numpy.testing.assert_array_equal(selected[1, 1, 0, :].data.numpy(), ones * 14)
+        numpy.testing.assert_array_equal(selected[1, 1, 1, :].data.numpy(), ones * 16)
+
+    def test_flattened_index_select(self):
+        indices = numpy.array([[1, 2],
+                               [3, 4]])
+        targets = torch.ones([2, 6, 3]).cumsum(1) - 1
+        # Make the second batch double it's index so they're different.
+        targets[1, :, :] *= 2
+        indices = Variable(torch.LongTensor(indices))
+        targets = Variable(targets)
+
+        selected = util.flattened_index_select(targets, indices)
+
+        assert list(selected.size()) == [2, 2, 2, 3]
+
+        ones = numpy.ones([3])
+        numpy.testing.assert_array_equal(selected[0, 0, 0, :].data.numpy(), ones)
+        numpy.testing.assert_array_equal(selected[0, 0, 1, :].data.numpy(), ones * 2)
+        numpy.testing.assert_array_equal(selected[0, 1, 0, :].data.numpy(), ones * 3)
+        numpy.testing.assert_array_equal(selected[0, 1, 1, :].data.numpy(), ones * 4)
+
+        numpy.testing.assert_array_equal(selected[1, 0, 0, :].data.numpy(), ones * 2)
+        numpy.testing.assert_array_equal(selected[1, 0, 1, :].data.numpy(), ones * 4)
+        numpy.testing.assert_array_equal(selected[1, 1, 0, :].data.numpy(), ones * 6)
+        numpy.testing.assert_array_equal(selected[1, 1, 1, :].data.numpy(), ones * 8)
+
+        # Check we only accept 2D indices.
+        with pytest.raises(ConfigurationError):
+            util.flattened_index_select(targets, torch.ones([3, 4, 5]))
+
+    def test_bucket_values(self):
+        indices = torch.LongTensor([1, 2, 7, 1, 56, 900])
+        bucketed_distances = util.bucket_values(indices)
+        numpy.testing.assert_array_equal(bucketed_distances.numpy(),
+                                         numpy.array([1, 2, 5, 1, 8, 9]))
+
+    def test_add_sentence_boundary_token_ids_handles_2D_input(self):
         tensor = Variable(torch.from_numpy(numpy.array([[1, 2, 3], [4, 5, 0]])))
-        mask = (tensor > 0).type(torch.LongTensor)
+        mask = (tensor > 0).long()
         bos = 9
         eos = 10
-        new_tensor, new_mask = util.add_bos_eos(tensor, mask, bos, eos)
-        expected_new_tensor = numpy.array(
-                [[9, 1, 2, 3, 10],
-                 [9, 4, 5, 10, 0]]
-        )
+        new_tensor, new_mask = util.add_sentence_boundary_token_ids(tensor, mask, bos, eos)
+        expected_new_tensor = numpy.array([[9, 1, 2, 3, 10],
+                                           [9, 4, 5, 10, 0]])
         assert (new_tensor.data.numpy() == expected_new_tensor).all()
         assert (new_mask.data.numpy() == (expected_new_tensor > 0)).all()
 
-    def test_add_bos_eos_3D(self):
+    def test_add_sentence_boundary_token_ids_handles_3D_input(self):
         tensor = Variable(torch.from_numpy(
-                numpy.array(
-                        [[[1, 2, 3, 4],
-                          [5, 5, 5, 5],
-                          [6, 8, 1, 2]],
-
-                         [[4, 3, 2, 1],
-                          [8, 7, 6, 5],
-                          [0, 0, 0, 0]]]
-                )
-        ))
+                numpy.array([[[1, 2, 3, 4],
+                              [5, 5, 5, 5],
+                              [6, 8, 1, 2]],
+                             [[4, 3, 2, 1],
+                              [8, 7, 6, 5],
+                              [0, 0, 0, 0]]])))
         mask = ((tensor > 0).sum(dim=-1) > 0).type(torch.LongTensor)
         bos = Variable(torch.from_numpy(numpy.array([9, 9, 9, 9])))
         eos = Variable(torch.from_numpy(numpy.array([10, 10, 10, 10])))
-        new_tensor, new_mask = util.add_bos_eos(tensor, mask, bos, eos)
-        expected_new_tensor = numpy.array(
-                [[[9, 9, 9, 9],
-                  [1, 2, 3, 4],
-                  [5, 5, 5, 5],
-                  [6, 8, 1, 2],
-                  [10, 10, 10, 10]],
-
-                 [[9, 9, 9, 9],
-                  [4, 3, 2, 1],
-                  [8, 7, 6, 5],
-                  [10, 10, 10, 10],
-                  [0, 0, 0, 0]]]
-        )
+        new_tensor, new_mask = util.add_sentence_boundary_token_ids(tensor, mask, bos, eos)
+        expected_new_tensor = numpy.array([[[9, 9, 9, 9],
+                                            [1, 2, 3, 4],
+                                            [5, 5, 5, 5],
+                                            [6, 8, 1, 2],
+                                            [10, 10, 10, 10]],
+                                           [[9, 9, 9, 9],
+                                            [4, 3, 2, 1],
+                                            [8, 7, 6, 5],
+                                            [10, 10, 10, 10],
+                                            [0, 0, 0, 0]]])
         assert (new_tensor.data.numpy() == expected_new_tensor).all()
         assert (new_mask.data.numpy() == ((expected_new_tensor > 0).sum(axis=-1) > 0)).all()

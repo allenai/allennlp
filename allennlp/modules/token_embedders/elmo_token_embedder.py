@@ -19,7 +19,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.highway import Highway
-from allennlp.nn.util import add_bos_eos
+from allennlp.nn.util import add_sentence_boundary_token_ids
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
 from allennlp.data import Vocabulary
 
@@ -105,7 +105,7 @@ class ELMoTokenEmbedder(TokenEmbedder):
         """
         # Add BOS/EOS
         mask = ((inputs > 0).long().sum(dim=-1) > 0).long()
-        character_ids_with_bos_eos, mask_with_bos_eos = add_bos_eos(
+        character_ids_with_bos_eos, mask_with_bos_eos = add_sentence_boundary_token_ids(
                 inputs,
                 mask,
                 Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.beginning_of_sentence_characters))),
