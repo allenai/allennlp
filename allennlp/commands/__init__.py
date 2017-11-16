@@ -1,4 +1,4 @@
-from typing import Dict, NamedTuple
+from typing import Dict
 import argparse
 
 from allennlp.commands.serve import Serve
