@@ -50,6 +50,10 @@ DEFAULT_MODELS = {
         'coreference-resolution': DemoModel(
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2017.11.09.tar.gz',  # pylint: disable=line-too-long
                 'coreference-resolution'
+        ),
+        'named-entity-recognition': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2017.11.15.tar.gz',  # pylint: disable=line-too-long
+                'sentence-tagger'
         )
 }
 

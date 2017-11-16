@@ -11,7 +11,8 @@ class SniffTest(AllenNlpTestCase):
                 'machine-comprehension',
                 'semantic-role-labeling',
                 'textual-entailment',
-                'coreference-resolution'
+                'coreference-resolution',
+                'named-entity-recognition',
         }
 
 
@@ -113,3 +114,14 @@ class SniffTest(AllenNlpTestCase):
                                       'allowing', 'them', 'to', 'skimp', 'on', 'the', 'niceties', 'they', 'would', 'more', 'or',
                                       'less', 'have', 'to', 'extend', 'toward', 'a', 'person', 'they', 'were', 'likely', 'to',
                                       'meet', 'again', '.']
+
+
+    def test_ner(self):
+        predictor = DEFAULT_MODELS['named-entity-recognition'].predictor()
+
+        sentence = """Michael Jordan is a professor at Berkeley."""
+
+        result = predictor.predict_json({"sentence": sentence})
+
+        assert result["words"] == ["Michael", "Jordan", "is", "a", "professor", "at", "Berkeley", "."]
+        assert result["tags"] == ["B-PER", "L-PER", "O", "O", "O", "O", "U-LOC", "O"]
