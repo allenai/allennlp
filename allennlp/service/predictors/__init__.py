@@ -11,5 +11,4 @@ from .bidaf import BidafPredictor
 from .decomposable_attention import DecomposableAttentionPredictor
 from .semantic_role_labeler import SemanticRoleLabelerPredictor
 from .coref import CorefPredictor
-from .simple_tagger import SimpleTaggerPredictor
-from .crf_tagger import CrfTaggerPredictor
+from .sentence_tagger import SentenceTaggerPredictor
