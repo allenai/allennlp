@@ -255,7 +255,7 @@ class _NerComponent extends React.Component {
 
     var payload = {sentence: inputs.sentenceValue};
 
-    fetch(`${API_ROOT}/predict/crf-tagger`, {
+    fetch(`${API_ROOT}/predict/named-entity-recognition`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
