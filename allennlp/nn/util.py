@@ -47,12 +47,13 @@ def get_mask_from_sequence_lengths(sequence_lengths: Variable, max_length: int) 
 
     Some of our functions are agnostic as to whether they accept ``Tensors`` or ``Variables``, and
     they just use ``Tensor`` for their type annotations.  We `require` ``Variables`` here, as we
-    call ``sequence_length.data.new()``.
+    call ``sequence_length.data.new()``.  The data type of ``sequence_lengths`` is assumed to be
+    ``long``, but really could be anything, and the data type of the returned mask is ``long``.
     """
     # (batch_size, max_length)
     ones = Variable(sequence_lengths.data.new(sequence_lengths.size(0), max_length).fill_(1))
     range_tensor = ones.cumsum(dim=1)
-    return sequence_lengths.unsqueeze(1) >= range_tensor
+    return (sequence_lengths.unsqueeze(1) >= range_tensor).long()
 
 def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torch.autograd.Variable):
     """

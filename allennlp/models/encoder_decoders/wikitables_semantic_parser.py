@@ -479,10 +479,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
     def _embed_actions(self, actions: List[List[int]]) -> Tuple[Variable, Variable]:
         """
-        Returns an embedded representation of the given actions.  The input is assumed to have
-        shape ``(group_size, num_actions)``, though the number of actions for each group element
-        need not be constant.  Because of this, we need to pad the number of actions so we have an
-        evenly-shaped tensor, and we additionally return a mask.
+        Returns an embedded representation of the given actions.  The input is a list of valid
+        actions for each element in the group, which may have variable length.  We pad these to
+        have shape ``(group_size, num_actions)``, and then embed them.  Because of the padding, we
+        additionally return a mask.
 
         Parameters
         ----------
@@ -496,7 +496,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             An embedded representation of all of the given actions.  Shape is ``(group_size,
             num_actions, action_embedding_dim)``, where ``num_actions`` is the maximum length of
             the input ``actions`` lists.
-        action_mask : byte ``Variable``
+        action_mask : long ``Variable``
             A mask of shape ``(group_size, num_actions)`` indicating which ``(group_index,
             action_index)`` pairs were merely added as padding.
         """
