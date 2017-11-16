@@ -137,9 +137,6 @@ class LSTMCellWithProjection(torch.nn.Module):
             full_batch_previous_state = initial_state[0].squeeze(0)
             full_batch_previous_memory = initial_state[1].squeeze(0)
 
-            print(full_batch_previous_state)
-            print(full_batch_previous_memory)
-
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0 and self.training:
             dropout_mask = get_dropout_mask(self.recurrent_dropout_probability,

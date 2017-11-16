@@ -94,7 +94,8 @@ class ElmoLstm(torch.nn.Module):
             A batch first ``PackedSequence`` to run the stacked LSTM over.
         initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
-            of the LSTM. Each tensor has shape (1, batch_size, output_dimension).
+            of the LSTM, with shape (num_layers, batch_size, 2 * hidden_size) and
+            (num_layers, batch_size, 2 * cell_size) respectively.
 
         Returns
         -------
@@ -153,11 +154,8 @@ class ElmoLstm(torch.nn.Module):
             # the final states for all the layers.
             final_states.append((torch.cat([forward_state[0], backward_state[0]], -1),
                                  torch.cat([forward_state[1], backward_state[1]], -1)))
-        # TODO(Mark): figure out the best api to return these. We need to specify the
-        # mixing method within this class otherwise we won't be able to use this as a
-        # Seq2SeqEncoder.
-        stacked_sequence_outputs: torch.FloatTensor = torch.stack(sequence_outputs)
 
+        stacked_sequence_outputs: torch.FloatTensor = torch.stack(sequence_outputs)
         # Stack the hidden state and memory for each layer into 2 tensors of shape
         # (num_layers, batch_size, hidden_size) and (num_layers, batch_size, cell_size)
         # respectively.
