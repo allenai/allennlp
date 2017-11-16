@@ -194,8 +194,8 @@ class NerOutput extends React.Component {
         // Add a span with length 1 and close it.
         spanLengths[i] = 1;
         lastSpanStart = undefined;
-      } else /* (tag[0] == "I") */ {
-        // "I-" tag, so append the current color
+      } else /* (tag[0] == "L") */ {
+        // "L-" tag, so append the current color
         colorClasses.push("color" + currentColor);
 
         // Extend the length of the currently open span.
