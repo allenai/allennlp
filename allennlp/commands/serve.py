@@ -26,9 +26,10 @@ from typing import Dict
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.service import server_sanic
+from allennlp.service.predictors import DemoModel
 
 class Serve(Subcommand):
-    def __init__(self, trained_models: Dict[str, str]) -> None:
+    def __init__(self, trained_models: Dict[str, DemoModel]) -> None:
         self.trained_models = trained_models
 
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
@@ -44,7 +45,7 @@ class Serve(Subcommand):
 
         return subparser
 
-def _serve(trained_models: Dict[str, str]):
+def _serve(trained_models: Dict[str, DemoModel]):
     def serve_inner(args: argparse.Namespace) -> None:
         server_sanic.run(args.port, args.workers, trained_models)
 

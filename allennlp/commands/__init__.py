@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, NamedTuple
 import argparse
 
 from allennlp.commands.serve import Serve
@@ -6,13 +6,30 @@ from allennlp.commands.predict import Predict
 from allennlp.commands.train import Train
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.subcommand import Subcommand
+from allennlp.service.predictors import DemoModel
 
-# a mapping from predictor `type` to the location of the trained model of that type
+# This maps from the name of model (as known to the front-end)
+# to the ``DemoModel`` indicating the location of the trained model
+# and the type of the ``Predictor``.  This is necessary, as you might
+# have multiple models (for example, a NER tagger and a POS tagger)
+# that have the same ``Predictor`` wrapper.
 DEFAULT_MODELS = {
-        'machine-comprehension': 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',  # pylint: disable=line-too-long
-        'semantic-role-labeling': 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
-        'textual-entailment': 'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-2017.09.04.tar.gz',  # pylint: disable=line-too-long
-        'coreference-resolution': 'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2017.11.09.tar.gz',  # pylint: disable=line-too-long
+        'machine-comprehension': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',  # pylint: disable=line-too-long
+                'machine-comprehension'
+        ),
+        'semantic-role-labeling': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
+                'semantic-role-labeling'
+        ),
+        'textual-entailment': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-2017.09.04.tar.gz',  # pylint: disable=line-too-long
+                'textual-entailment'
+        ),
+        'coreference-resolution': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2017.11.09.tar.gz',  # pylint: disable=line-too-long
+                'coreference-resolution'
+        )
 }
 
 # a mapping from model `type` to the default Predictor for that type
@@ -26,7 +43,7 @@ DEFAULT_PREDICTORS = {
 }
 
 def main(prog: str = None,
-         model_overrides: Dict[str, str] = {},
+         model_overrides: Dict[str, DemoModel] = {},
          predictor_overrides: Dict[str, str] = {},
          subcommand_overrides: Dict[str, Subcommand] = {}) -> None:
     """
