@@ -1,5 +1,3 @@
-
-* Run a model on example sentences with `allennlp/run bulk`.
 * Start a web service to host our models with `allennlp/run serve`.
 * Interactively code against AllenNLP from the Python interpreter with `python`.
 
