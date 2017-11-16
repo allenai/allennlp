@@ -8,39 +8,6 @@ from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.service.predictors import DemoModel
 
-# This maps from the name of model (as known to the front-end)
-# to the ``DemoModel`` indicating the location of the trained model
-# and the type of the ``Predictor``.  This is necessary, as you might
-# have multiple models (for example, a NER tagger and a POS tagger)
-# that have the same ``Predictor`` wrapper.
-DEFAULT_MODELS = {
-        'machine-comprehension': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',  # pylint: disable=line-too-long
-                'machine-comprehension'
-        ),
-        'semantic-role-labeling': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
-                'semantic-role-labeling'
-        ),
-        'textual-entailment': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-2017.09.04.tar.gz',  # pylint: disable=line-too-long
-                'textual-entailment'
-        ),
-        'coreference-resolution': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2017.11.09.tar.gz',  # pylint: disable=line-too-long
-                'coreference-resolution'
-        )
-}
-
-# a mapping from model `type` to the default Predictor for that type
-DEFAULT_PREDICTORS = {
-        'srl': 'semantic-role-labeling',
-        'decomposable_attention': 'textual-entailment',
-        'bidaf': 'machine-comprehension',
-        'simple_tagger': 'simple-tagger',
-        'crf_tagger': 'crf-tagger',
-        'coref': 'coreference-resolution'
-}
 
 def main(prog: str = None,
          model_overrides: Dict[str, DemoModel] = {},
@@ -63,15 +30,12 @@ def main(prog: str = None,
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]', prog=prog)
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 
-    trained_models = {**DEFAULT_MODELS, **model_overrides}
-    predictors = {**DEFAULT_PREDICTORS, **predictor_overrides}
-
     subcommands = {
             # Default commands
             "train": Train(),
             "evaluate": Evaluate(),
-            "predict": Predict(predictors),
-            "serve": Serve(trained_models),
+            "predict": Predict(predictor_overrides),
+            "serve": Serve(model_overrides),
 
             # Superseded by overrides
             **subcommand_overrides

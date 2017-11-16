@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,line-too-long
 
-from allennlp.commands import DEFAULT_MODELS
+from allennlp.commands.serve import DEFAULT_MODELS
 from allennlp.common.testing import AllenNlpTestCase
 
 
