@@ -51,6 +51,7 @@ class ElmoLstm(torch.nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.cell_size = cell_size
 
         forward_layers = []
         backward_layers = []
@@ -128,7 +129,7 @@ class ElmoLstm(torch.nn.Module):
 
             if state is not None:
                 forward_hidden_state, backward_hidden_state = state[0].split(self.hidden_size, 2)
-                forward_memory_state, backward_memory_state = state[0].split(self.cell_size, 2)
+                forward_memory_state, backward_memory_state = state[1].split(self.cell_size, 2)
                 forward_state = (forward_hidden_state, forward_memory_state)
                 backward_state = (backward_hidden_state, backward_memory_state)
             else:
