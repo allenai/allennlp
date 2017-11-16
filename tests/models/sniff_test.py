@@ -12,7 +12,7 @@ class SniffTest(AllenNlpTestCase):
                 'semantic-role-labeling',
                 'textual-entailment',
                 'coreference-resolution',
-                'crf-tagger',
+                'named-entity-recognition',
         }
 
 
@@ -117,10 +117,7 @@ class SniffTest(AllenNlpTestCase):
 
 
     def test_ner(self):
-        predictor = Predictor.from_archive(
-                load_archive(DEFAULT_MODELS['crf-tagger']),
-                'crf-tagger'
-        )
+        predictor = DEFAULT_MODELS['named-entity-recognition'].predictor()
 
         sentence = """Michael Jordan is a professor at Berkeley."""
 
