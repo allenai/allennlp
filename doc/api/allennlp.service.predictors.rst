@@ -8,20 +8,13 @@ allennlp.service.predictors
 
 * :ref:`Predictor<predictor>`
 * :ref:`BidafPredictor<bidaf>`
-* :ref:`CrfTaggerPredictor<crf-tagger>`
 * :ref:`DecomposableAttentionPredictor<decomposable-attention>`
 * :ref:`SemanticRoleLabelerPredictor<semantic-role-labeler>`
-* :ref:`SimpleTaggerPredictor<simple-tagger>`
+* :ref:`SentenceTaggerPredictor<sentence-tagger>`
 * :ref:`CorefPredictor<coreference-resolution>`
 
 .. _predictor:
 .. automodule:: allennlp.service.predictors.predictor
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _crf-tagger:
-.. automodule:: allennlp.service.predictors.crf_tagger
    :members:
    :undoc-members:
    :show-inheritance:
@@ -44,8 +37,8 @@ allennlp.service.predictors
    :undoc-members:
    :show-inheritance:
 
-.. _simple-tagger:
-.. automodule:: allennlp.service.predictors.simple_tagger
+.. _sentence-tagger:
+.. automodule:: allennlp.service.predictors.sentence_tagger
    :members:
    :undoc-members:
    :show-inheritance:
