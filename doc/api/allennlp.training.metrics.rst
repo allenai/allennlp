@@ -14,6 +14,8 @@ allennlp.training.metrics
 * :ref:`F1Measure<f1-measure>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
+* :ref:`MentionRecall<mention-recall>`
+* :ref:`ConllCorefScores<conll-coref-scores>`
 
 
 .. _metric:
@@ -63,3 +65,16 @@ allennlp.training.metrics
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _mention-recall:
+.. automodule:: allennlp.training.metrics.mention_recall
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _conll-coref-scores:
+.. automodule:: allennlp.training.metrics.conll_coref_scores
+   :members:
+   :undoc-members:
+   :show-inheritance:
+

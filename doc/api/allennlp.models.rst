@@ -14,6 +14,7 @@ allennlp.models
   allennlp.models.decomposable_attention
   allennlp.models.encoder_decoders
   allennlp.models.reading_comprehension
+  allennlp.models.coreference_resolution
   allennlp.models.semantic_role_labeler
   allennlp.models.simple_tagger
 

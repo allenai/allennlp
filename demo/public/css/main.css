@@ -1153,7 +1153,7 @@ svg {
   margin: 0 .125em
 }
 
-.srl-table {
+.srl-table, .ner-table {
   position: relative;
   width: 100%;
   box-shadow: 0 .375em 0 #f6f8fa;
@@ -1162,18 +1162,27 @@ svg {
   padding-right: 2.5em
 }
 
-.srl-table td {
+.ner-tag {
+  text-align: center;
+}
+
+.srl-table td, .ner-table td {
   padding: .625em
 }
 
 .srl-table td.srl-tag.color0,
-.srl-table td.srl-word.color0 {
+.srl-table td.srl-word.color0,
+.ner-table td.ner-tag.color0,
+.ner-table td.ner-word.color0
+{
   background: #dee6ea
 }
 
 .srl-table td.srl-tag.color1,
-.srl-table td.srl-word.color1 {
-  background: #eaeff3
+.srl-table td.srl-word.color1,
+.ner-table td.ner-tag.color1,
+.ner-table td.ner-word.color1 {
+    background: #eaeff3
 }
 
 .te-output {
@@ -1333,6 +1342,71 @@ svg {
   opacity: 1;
   -webkit-transition: opacity .2s ease .125s, z-index 0s linear .1s;
   transition: opacity .2s ease .125s, z-index 0s linear .1s
+}
+
+[data-tooltip] {
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+}
+
+[data-tooltip]:before,
+[data-tooltip]:after {
+  visibility: hidden;
+  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";
+  filter: progid: DXImageTransform.Microsoft.Alpha(Opacity=0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Position tooltip above the element */
+[data-tooltip]:before {
+  position: absolute;
+  bottom: 150%;
+  left: 50%;
+  margin-bottom: 5px;
+  margin-left: -80px;
+  padding: 7px;
+  width: 160px;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  background-color: #000;
+  background-color: hsla(0, 0%, 20%, 0.9);
+  color: #fff;
+  content: attr(data-tooltip);
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+/* Triangle hack to make tooltip look like a speech bubble */
+[data-tooltip]:after {
+  position: absolute;
+  bottom: 150%;
+  left: 50%;
+  margin-left: -5px;
+  width: 0;
+  border-top: 5px solid #000;
+  border-top: 5px solid hsla(0, 0%, 20%, 0.9);
+  border-right: 5px solid transparent;
+  border-left: 5px solid transparent;
+  content: " ";
+  font-size: 0;
+  line-height: 0;
+}
+
+/* Show tooltip content on hover */
+[data-tooltip]:hover:before,
+[data-tooltip]:hover:after {
+  visibility: visible;
+  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=100)";
+  filter: progid: DXImageTransform.Microsoft.Alpha(Opacity=100);
+  opacity: 1;
+}
+
+.ner-table {
+  margin-top: 50px;
 }
 
 .t-crisp {

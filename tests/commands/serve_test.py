@@ -2,8 +2,7 @@
 import argparse
 from unittest import TestCase
 
-from allennlp.commands import DEFAULT_MODELS
-from allennlp.commands.serve import Serve
+from allennlp.commands.serve import Serve, DEFAULT_MODELS
 
 
 class TestServe(TestCase):

@@ -2,9 +2,10 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
-from typing import Dict, List, Optional, Union, Any, Tuple
+from typing import Dict, List, Optional, Union, Any, Tuple, Callable
 import logging
 
+import math
 import numpy
 import torch
 from torch.autograd import Variable
@@ -302,13 +303,15 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Lo
     return (token_tensor != 0).long()
 
 
-def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+def _last_dimension_applicator(function_to_apply: Callable[[torch.Tensor, Optional[torch.Tensor]], torch.Tensor],
+                               tensor: torch.Tensor,
+                               mask: Optional[torch.Tensor] = None):
     """
-    Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
+    Takes a tensor with 3 or more dimensions and applies a function over the last dimension.  We
     assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
     has shape ``(batch_size, sequence_length)``.  We first unsqueeze and expand the mask so that it
     has the same shape as the tensor, then flatten them both to be 2D, pass them through
-    :func:`masked_softmax`, then put the tensor back in its original shape.
+    the function and put the tensor back in its original shape.
     """
     tensor_shape = tensor.size()
     reshaped_tensor = tensor.view(-1, tensor.size()[-1])
@@ -317,8 +320,26 @@ def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) 
             mask = mask.unsqueeze(1)
         mask = mask.expand_as(tensor).contiguous().float()
         mask = mask.view(-1, mask.size()[-1])
-    reshaped_result = masked_softmax(reshaped_tensor, mask)
+    reshaped_result = function_to_apply(reshaped_tensor, mask)
     return reshaped_result.view(*tensor_shape)
+
+
+def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    """
+    Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
+    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
+    has shape ``(batch_size, sequence_length)``.
+    """
+    return _last_dimension_applicator(masked_softmax, tensor, mask)
+
+
+def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    """
+    Takes a tensor with 3 or more dimensions and does a masked log softmax over the last dimension.
+    We assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
+    has shape ``(batch_size, sequence_length)``.
+    """
+    return _last_dimension_applicator(masked_log_softmax, tensor, mask)
 
 
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
@@ -568,12 +589,190 @@ def logsumexp(tensor: torch.Tensor,
         stable_vec = tensor - max_score.unsqueeze(dim)
     return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
 
+def flatten_and_batch_shift_indices(indices: torch.Tensor,
+                                    sequence_length: int) -> torch.Tensor:
+    """
+    This is a subroutine for :func:`~batched_index_select`. The given ``indices`` of size
+    ``(batch_size, d_1, ..., d_n)`` indexes into dimension 2 of a target tensor, which has size
+    ``(batch_size, sequence_length, embedding_size)``. This function returns a vector that
+    correctly indexes into the flattened target. The sequence length of the target must be
+    provided to compute the appropriate offsets.
 
-def add_bos_eos(
-        tensor: torch.Tensor,
-        mask: torch.Tensor,
-        bos: Any,
-        eos: Any) -> Tuple[torch.Tensor, torch.Tensor]:
+    .. code-block:: python
+
+        indices = torch.ones([2,3]).long()
+        # Sequence length of the target tensor.
+        sequence_length = 10
+        shifted_indices = flatten_and_batch_shift_indices(indices, sequence_length)
+        # Indices into the second element in the batch are correctly shifted
+        # to take into account that the target tensor will be flattened before
+        # the indices are applied.
+        assert shifted_indices == [1, 1, 1, 11, 11, 11]
+
+    Parameters
+    ----------
+    indices : ``torch.LongTensor``, required.
+    sequence_length : ``int``, required.
+        The length of the sequence the indices index into.
+        This must be the second dimension of the tensor.
+
+    Returns
+    -------
+    offset_indices : ``torch.LongTensor``
+    """
+    # Shape: (batch_size)
+    offsets = get_range_vector(indices.size(0), indices.is_cuda) * sequence_length
+    for _ in range(len(indices.size()) - 1):
+        offsets = offsets.unsqueeze(1)
+
+    # Shape: (batch_size, d_1, ..., d_n)
+    offset_indices = indices + offsets
+
+    # Shape: (batch_size * d_1 * ... * d_n)
+    offset_indices = offset_indices.view(-1)
+    return offset_indices
+
+
+def batched_index_select(target: torch.Tensor,
+                         indices: torch.LongTensor,
+                         flattened_indices: Optional[torch.LongTensor] = None) -> torch.Tensor:
+    """
+    The given `indices` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence dimension
+    (dimension 2) of the target, which has size ``(batch_size, sequence_length, embedding_size)``.
+
+    This function returns selected values in the target with respect to the provided indices, which
+    have size ``(batch_size, d_1, ..., d_n, embedding_size)``. This can use the optionally precomputed
+    :func:`~flattened_indices` with size ``(batch_size * d_1 * ... * d_n)`` if given.
+
+    An example use case of this function is looking up the start and end indices of spans in a
+    sequence tensor. This is used in the
+    :class:`~allennlp.models.coreference_resolution.CoreferenceResolver`. Model to select
+    contextual word representations corresponding to the start and end indices of mentions. The
+    key reason this can't be done with basic torch functions is that we want to be able to use
+    look-up tensors with an arbitrary number of dimensions (for example, in the coref model,
+    we don't know a-priori how many spans we are looking up).
+
+    Parameters
+    ----------
+    target : ``torch.Tensor``, required.
+        A 3 dimensional tensor of shape (batch_size, sequence_length, embedding_size).
+        This is the tensor to be indexed.
+    indices : ``torch.LongTensor``
+        A tensor of shape (batch_size, ...), where each element is an index into the
+        ``sequence_length`` dimension of the ``target`` tensor.
+    flattened_indices : Optional[torch.Tensor], optional (default = None)
+        An optional tensor representing the result of calling :func:~`flatten_and_batch_shift_indices`
+        on ``indices``. This is helpful in the case that the indices can be flattened once and
+        cached for many batch lookups.
+
+    Returns
+    -------
+    selected_targets : ``torch.Tensor``
+        A tensor with shape [indices.size(), target.size(-1)] representing the embedded indices
+        extracted from the batch flattened target tensor.
+    """
+    if flattened_indices is None:
+        # Shape: (batch_size * d_1 * ... * d_n)
+        flattened_indices = flatten_and_batch_shift_indices(indices, target.size(1))
+
+    # Shape: (batch_size * sequence_length, embedding_size)
+    flattened_target = target.view(-1, target.size(-1))
+
+    # Shape: (batch_size * d_1 * ... * d_n, embedding_size)
+    flattened_selected = flattened_target.index_select(0, flattened_indices)
+    selected_shape = list(indices.size()) + [target.size(-1)]
+    # Shape: (batch_size, d_1, ..., d_n, embedding_size)
+    selected_targets = flattened_selected.view(*selected_shape)
+    return selected_targets
+
+
+def flattened_index_select(target: torch.Tensor,
+                           indices: torch.LongTensor) -> torch.Tensor:
+    """
+    The given ``indices`` of size ``(set_size, subset_size)`` specifies subsets of the ``target``
+    that each of the set_size rows should select. The `target` has size
+    ``(batch_size, sequence_length, embedding_size)``, and the resulting selected tensor has size
+    ``(batch_size, set_size, subset_size, embedding_size)``.
+
+    Parameters
+    ----------
+    target : ``torch.Tensor``, required.
+        A Tensor of shape (batch_size, sequence_length, embedding_size).
+    indices : ``torch.LongTensor``, required.
+        A LongTensor of shape (set_size, subset_size). All indices must be < sequence_length
+        as this tensor is an index into the sequence_length dimension of the target.
+
+    Returns
+    -------
+    selected : ``torch.Tensor``, required.
+        A Tensor of shape (batch_size, set_size, subset_size, embedding_size).
+    """
+    if indices.dim() != 2:
+        raise ConfigurationError("Indices passed to flatten_index_select had shape {} but "
+                                 "only 2 dimensional inputs are supported.".format(indices.size()))
+    # Shape: (batch_size, set_size * subset_size, embedding_size)
+    flattened_selected = target.index_select(1, indices.view(-1))
+
+    # Shape: (batch_size, set_size, subset_size, embedding_size)
+    selected = flattened_selected.view(target.size(0), indices.size(0), indices.size(1), -1)
+    return selected
+
+
+def get_range_vector(size: int, is_cuda: bool) -> torch.Tensor:
+    """
+    Returns a range vector with the desired size, starting at 0. The CUDA implementation
+    is meant to avoid copy data from CPU to GPU.
+    """
+    if is_cuda:
+        indices = torch.cuda.LongTensor(size).fill_(1).cumsum(0) - 1
+    else:
+        indices = torch.arange(0, size).long()
+    return Variable(indices, requires_grad=False)
+
+
+def bucket_values(distances: torch.Tensor,
+                  num_identity_buckets: int = 4,
+                  num_total_buckets: int = 10) -> torch.Tensor:
+    """
+    Places the given values (designed for distances) into ``num_total_buckets``semi-logscale
+    buckets, with ``num_identity_buckets`` of these capturing single values.
+
+    The default settings will bucket values into the following buckets:
+    [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32-63, 64+].
+
+    Parameters
+    ----------
+    distances : ``torch.Tensor``, required.
+        A Tensor of any size, to be bucketed.
+    num_identity_buckets: int, optional (default = 4).
+        The number of identity buckets (those only holding a single value).
+    num_total_buckets : int, (default = 10)
+        The total number of buckets to bucket values into.
+
+    Returns
+    -------
+    A tensor of the same shape as the input, containing the indices of the buckets
+    the values were placed in.
+    """
+    # Chunk the values into semi-logscale buckets using .floor().
+    # This is a semi-logscale bucketing because we divide by log(2) after taking the log.
+    # We do this to make the buckets more granular in the initial range, where we expect
+    # most values to fall. We then add (num_identity_buckets - 1) because we want these indices
+    # to start _after_ the fixed number of buckets which we specified would only hold single values.
+    logspace_index = (distances.float().log()/math.log(2)).floor().long() + (num_identity_buckets - 1)
+    # create a mask for values which will go into single number buckets (i.e not a range).
+    use_identity_mask = (distances <= num_identity_buckets).long()
+    use_buckets_mask = 1 + (-1 * use_identity_mask)
+    # Use the original values if they are less than num_identity_buckets, otherwise
+    # use the logspace indices.
+    combined_index = use_identity_mask * distances + use_buckets_mask * logspace_index
+    # Clamp to put anything > num_total_buckets into the final bucket.
+    return combined_index.clamp(0, num_total_buckets - 1)
+
+def add_sentence_boundary_token_ids(tensor: torch.Tensor,
+                                    mask: torch.Tensor,
+                                    sentence_begin_token: Any,
+                                    sentence_end_token: Any) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Add begin/end of sentence tokens to the batch of sentences.
     Given a batch of sentences with size ``(batch_size, timesteps)`` or
@@ -584,33 +783,43 @@ def add_bos_eos(
 
     Parameters
     ----------
-    tensor : torch.Tensor
+    tensor : ``torch.Tensor``
         A tensor of shape ``(batch_size, timesteps)`` or ``(batch_size, timesteps, dim)``
-    mask : torch.Tensor
+    mask : ``torch.Tensor``
          A tensor of shape ``(batch_size, timesteps)``
-    bos: Any (anything that can be broadcast in torch for assignment)
+    sentence_begin_token: Any (anything that can be broadcast in torch for assignment)
         For 2D input, a scalar with the <S> id. For 3D input, a tensor with length dim.
-    eos: Any (anything that can be broadcast in torch for assignment)
+    sentence_end_token: Any (anything that can be broadcast in torch for assignment)
         For 2D input, a scalar with the </S> id. For 3D input, a tensor with length dim.
+
+    Returns
+    -------
+    tensor_with_boundary_tokens : ``torch.Tensor``
+        The tensor with the appended and prepended boundary tokens. If the input was 2D,
+        it has shape (batch_size, timesteps + 2) and if the input was 3D, it has shape
+        (batch_size, timesteps + 2, dim).
+    new_mask : ``torch.Tensor``
+        The new mask for the tensor, taking into account the appended tokens
+        marking the beginning and end of the sentence.
     """
     sequence_lengths = mask.sum(dim=1).data.numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
     new_shape[1] = tensor_shape[1] + 2
-    ret = Variable(tensor.data.new(*new_shape).fill_(0))
+    tensor_with_boundary_tokens = Variable(tensor.data.new(*new_shape).fill_(0))
     if len(tensor_shape) == 2:
-        ret[:, 1:-1] = tensor
-        ret[:, 0] = bos
+        tensor_with_boundary_tokens[:, 1:-1] = tensor
+        tensor_with_boundary_tokens[:, 0] = sentence_begin_token
         for i, j in enumerate(sequence_lengths):
-            ret[i, j + 1] = eos
-        new_mask = (ret != 0).long()
+            tensor_with_boundary_tokens[i, j + 1] = sentence_end_token
+        new_mask = (tensor_with_boundary_tokens != 0).long()
     elif len(tensor_shape) == 3:
-        ret[:, 1:-1, :] = tensor
+        tensor_with_boundary_tokens[:, 1:-1, :] = tensor
         for i, j in enumerate(sequence_lengths):
-            ret[i, 0, :] = bos
-            ret[i, j + 1, :] = eos
-        new_mask = ((ret > 0).sum(dim=-1) > 0).long()
+            tensor_with_boundary_tokens[i, 0, :] = sentence_begin_token
+            tensor_with_boundary_tokens[i, j + 1, :] = sentence_end_token
+        new_mask = ((tensor_with_boundary_tokens > 0).sum(dim=-1) > 0).long()
     else:
-        raise ValueError("add_bos_eos only accepts 2D and 3D input")
+        raise ValueError("add_sentence_boundary_token_ids only accepts 2D and 3D input")
 
-    return ret, new_mask
+    return tensor_with_boundary_tokens, new_mask

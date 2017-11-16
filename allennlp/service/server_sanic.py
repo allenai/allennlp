@@ -20,10 +20,9 @@ from sanic_cors import CORS
 import psycopg2
 
 from allennlp.common.util import JsonDict
-from allennlp.models.archival import load_archive
 from allennlp.service.db import DemoDatabase, PostgresDemoDatabase
 from allennlp.service.permalinks import int_to_slug, slug_to_int
-from allennlp.service.predictors import Predictor
+from allennlp.service.predictors import Predictor, DemoModel
 
 # Can override cache size with an environment variable. If it's 0 then disable caching altogether.
 CACHE_SIZE = os.environ.get("SANIC_CACHE_SIZE") or 128
@@ -31,7 +30,7 @@ CACHE_SIZE = os.environ.get("SANIC_CACHE_SIZE") or 128
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def run(port: int, workers: int,
-        trained_models: Dict[str, str],
+        trained_models: Dict[str, DemoModel],
         static_dir: str = None) -> None:
     """Run the server programatically"""
     print("Starting a sanic server on port {}.".format(port))
@@ -45,10 +44,9 @@ def run(port: int, workers: int,
     app = make_app(static_dir, demo_db)
     CORS(app)
 
-    for predictor_name, archive_file in trained_models.items():
-        archive = load_archive(archive_file)
-        predictor = Predictor.from_archive(archive, predictor_name)
-        app.predictors[predictor_name] = predictor
+    for name, demo_model in trained_models.items():
+        predictor = demo_model.predictor()
+        app.predictors[name] = predictor
 
     app.run(port=port, host="0.0.0.0", workers=workers)
 
@@ -171,8 +169,13 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
         # parts of them.
         if model_name == "machine-comprehension":
             log_blob["outputs"]["best_span_str"] = prediction["best_span_str"]
+        elif model_name == "coreference-resolution":
+            log_blob["outputs"]["clusters"] = prediction["clusters"]
+            log_blob["outputs"]["document"] = prediction["document"]
         elif model_name == "textual-entailment":
             log_blob["outputs"]["label_probs"] = prediction["label_probs"]
+        elif model_name == "named-entity-recognition":
+            log_blob["outputs"]["tags"] = prediction["tags"]
         elif model_name == "semantic-role-labeling":
             verbs = []
 
@@ -197,9 +200,13 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
     @app.route('/semantic-role-labeling')
     @app.route('/machine-comprehension')
     @app.route('/textual-entailment')
+    @app.route('/coreference-resolution')
+    @app.route('/named-entity-recognition')
     @app.route('/semantic-role-labeling/<permalink>')
     @app.route('/machine-comprehension/<permalink>')
     @app.route('/textual-entailment/<permalink>')
+    @app.route('/coreference-resolution/<permalink>')
+    @app.route('/named-entity-recognition/<permalink>')
     async def return_page(req: request.Request, permalink: str = None) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """return the page"""
         return await response.file(os.path.join(build_dir, 'index.html'))

@@ -32,9 +32,21 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
+# a mapping from model `type` to the default Predictor for that type
+DEFAULT_PREDICTORS = {
+        'srl': 'semantic-role-labeling',
+        'decomposable_attention': 'textual-entailment',
+        'bidaf': 'machine-comprehension',
+        'simple_tagger': 'sentence-tagger',
+        'crf_tagger': 'sentence-tagger',
+        'coref': 'coreference-resolution'
+}
+
+
 class Predict(Subcommand):
-    def __init__(self, predictors: Dict[str, str]) -> None:
-        self.predictors = predictors
+    def __init__(self, predictor_overrides: Dict[str, str] = {}) -> None:
+        # pylint: disable=dangerous-default-value
+        self.predictors = {**DEFAULT_PREDICTORS, **predictor_overrides}
 
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access

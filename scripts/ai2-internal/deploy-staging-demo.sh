@@ -1,20 +1,34 @@
+#!/bin/bash
+
+CONTAINER=$1
+
+USAGE="USAGE: ./deploy-staging-demo.sh [CONTAINER]"
+if [ ! -n "$CONTAINER" ] ; then
+  echo "$USAGE"
+  exit 1
+fi
+
+echo "Deploying container '$CONTAINER' to staging."
+
+
+kubectl apply -f - <<EOF
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: allennlp-webdemo
+  name: allennlp-demo-staging
   namespace: allennlp
   labels:
     contact: allennlp
 spec:
-  replicas: 4
+  replicas: 1
   template:
     metadata:
       labels:
-        app: allennlp-webdemo
+        app: allennlp-demo-staging
     spec:
       containers:
-        - name: allennlp-webdemo
-          image: "allennlp/webdemo:2017-11-13-2"
+        - name: allennlp
+          image: "$CONTAINER"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
           # for documentation on the resources section.
@@ -55,12 +69,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: allennlp-webdemo
+  name: allennlp-demo-staging
   namespace: allennlp
 spec:
   type: LoadBalancer
   selector:
-    app: allennlp-webdemo
+    app: allennlp-demo-staging
   ports:
     - port: 80
       targetPort: 8000
+EOF
