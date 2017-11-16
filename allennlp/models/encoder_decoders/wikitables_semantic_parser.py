@@ -9,6 +9,7 @@ from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 
 from allennlp.common import Params
+from allennlp.common import util as common_util
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
@@ -282,11 +283,14 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.encoder_output_mask = encoder_output_mask
         self.end_index = end_index
 
-    def get_output_mask(self) -> torch.Tensor:  # pylint: disable=no-self-use
-        return None
-
-    def get_valid_actions(self) -> List[Set[int]]:  # pylint: disable=no-self-use
-        return None
+    def get_valid_actions(self, num_actions: int) -> List[List[int]]:
+        """
+        Returns a list of valid actions for each element of the group.
+        """
+        # TODO(mattg): we're temporarily making all actions allowed at every state, to implement
+        # constrained decoding in pieces.  The `num_actions` argument here is going to be removed
+        # in the next step, where we actually use grammar constraints.
+        return [list(range(num_actions))] * len(self.batch_indices)
 
     # @overrides  - overrides can't handle the generics we're using here, apparently
     def is_finished(self) -> bool:
@@ -368,6 +372,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  attention_function: SimilarityFunction,
                  start_index: int) -> None:
         super(WikiTablesDecoderStep, self).__init__()
+        # TODO(mattg): This is unnecessary, and is just here temporarily.
+        self._num_actions = num_actions
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with that of the final hidden states of the encoder.
         self._action_embedder = Embedding(num_actions, action_embedding_dim)
@@ -383,7 +389,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # Before making a prediction, we'll compute an attention over the input given our updated
         # hidden state.  Then we concatenate that with the decoder state and project to
         # `num_actions` to make a prediction.
-        self._output_projection_layer = Linear(output_dim + output_dim, num_actions)
+        self._output_projection_layer = Linear(output_dim + output_dim, action_embedding_dim)
 
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
@@ -420,15 +426,34 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                     encoder_outputs,
                                                     encoder_output_mask)
 
-        # (group_size, num_actions)
-        logits = self._output_projection_layer(torch.cat([hidden_state, attended_question], -1))
-        output_mask = state.get_output_mask()
-        log_probs = util.masked_log_softmax(logits, output_mask)
+        # To predict an action, we'll use a concatenation of the hidden state and attention over
+        # the question.  We'll just predict an _embedding_, which we will compare to embedded
+        # representations of all valid actions to get a final output.
+        action_query = torch.cat([hidden_state, attended_question], dim=-1)
+
+        # (group_size, action_embedding_dim)
+        predicted_action_embedding = self._output_projection_layer(action_query)
+
+        # (group_size, num_actions), giving the index of each valid action for each item in the
+        # group.  This is actually just a list of lists, on the CPU, not a CUDA variable.
+        valid_actions = state.get_valid_actions(self._num_actions)
+
+        # action_embeddings: (group_size, num_actions, action_embedding_dim)
+        # action_mask: (group_size, num_actions)
+        action_embeddings, action_mask = self._embed_actions(valid_actions)
+
+        # We'll do a batch dot product here with `bmm`.  We want `dot(predicted_action_embedding,
+        # action_embedding)` for each `action_embedding`, and we can get that efficiently with
+        # `bmm` and some squeezing.
+        # Shape: (batch_size, num_actions)
+        action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+        log_probs = util.masked_log_softmax(action_logits, action_mask.float())
         return self._compute_new_states(state,
                                         log_probs,
                                         hidden_state,
                                         memory_cell,
                                         attended_question,
+                                        valid_actions,
                                         allowed_actions,
                                         max_actions)
 
@@ -452,24 +477,56 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # (group_size, encoder_output_dim)
         return util.weighted_sum(encoder_outputs, question_attention_weights)
 
+    def _embed_actions(self, actions: List[List[int]]) -> Tuple[Variable, Variable]:
+        """
+        Returns an embedded representation of the given actions.  The input is assumed to have
+        shape ``(group_size, num_actions)``, though the number of actions for each group element
+        need not be constant.  Because of this, we need to pad the number of actions so we have an
+        evenly-shaped tensor, and we additionally return a mask.
+
+        Parameters
+        ----------
+        actions : ``List[List[int]]``
+            The set of actions to embed.  This is typically a list of valid actions for each item
+            in the group of the current state.
+
+        Returns
+        -------
+        action_embeddings : float ``Variable``
+            An embedded representation of all of the given actions.  Shape is ``(group_size,
+            num_actions, action_embedding_dim)``, where ``num_actions`` is the maximum length of
+            the input ``actions`` lists.
+        action_mask : byte ``Variable``
+            A mask of shape ``(group_size, num_actions)`` indicating which ``(group_index,
+            action_index)`` pairs were merely added as padding.
+        """
+        num_actions = [len(action_list) for action_list in actions]
+        max_num_actions = max(num_actions)
+        padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
+                          for action_list in actions]
+        action_tensor = Variable(self._action_embedder.weight.data.new(padded_actions).long())
+        action_embeddings = self._action_embedder(action_tensor)
+        sequence_lengths = Variable(action_embeddings.data.new(num_actions))
+        action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
+        return action_embeddings, action_mask
+
     def _compute_new_states(self,  # pylint: disable=no-self-use
                             state: WikiTablesDecoderState,
                             log_probs: Variable,
                             hidden_state: Variable,
                             memory_cell: Variable,
                             attended_question: Variable,
+                            considered_actions: List[List[int]],
                             allowed_actions: List[Set[int]],
                             max_actions: int = None) -> List[WikiTablesDecoderState]:
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
         sorted_actions = sorted_actions.data.cpu().numpy().tolist()
-        valid_actions = state.get_valid_actions()
         best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)
         for group_index, (batch_index, group_actions) in enumerate(zip(state.batch_indices, sorted_actions)):
             for action_index, action in enumerate(group_actions):
-                if valid_actions is not None and action not in valid_actions[group_index]:
-                    # If we have a constrained decoder, we need to skip any actions that are not valid
-                    # in the current state.
-                    continue
+                # `action` is currently the index in `log_probs`, not the actual action ID.  To get
+                # the action ID, we need to go through `considered_actions`.
+                action = considered_actions[group_index][action]
                 if allowed_actions is not None and action not in allowed_actions[group_index]:
                     # This happens when our _decoder trainer_ wants us to only evaluate certain
                     # actions, likely because they are the gold actions in this state.  We just skip
