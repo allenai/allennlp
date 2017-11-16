@@ -62,25 +62,19 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             return self._module(inputs, hidden_state)[0]
 
         # In some circumstances you may have sequences of zero length.
-        # ``pack_padded_sequence`` requires all sequence lengths to be > 0, so here we
-        # adjust the ``mask`` so that every sequence has length at least 1. Then after
-        # running the RNN we zero out the corresponding rows in the result.
+        # ``pack_padded_sequence`` requires all sequence lengths to be > 0, so
+        # remove sequences of zero length before calling self._module, then fill with
+        # zeros.
 
         # First count how many sequences are empty.
         batch_size, total_sequence_length = mask.size()
         num_valid = torch.sum(mask[:, 0]).int().data[0]
 
-        # Force every sequence to be length at least one. Need to `.clone()` the mask
-        # to avoid a RuntimeError from shared storage.
-        if num_valid < batch_size:
-            mask = mask.clone()
-            mask[:, 0] = 1
-
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
-        packed_sequence_input = pack_padded_sequence(sorted_inputs,
-                                                     sorted_sequence_lengths.data.tolist(),
+        packed_sequence_input = pack_padded_sequence(sorted_inputs[:num_valid, :, :],
+                                                     sorted_sequence_lengths[:num_valid].data.tolist(),
                                                      batch_first=True)
 
         # Actually call the module on the sorted PackedSequence.
@@ -96,11 +90,12 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             num_layers = 1
             unpacked_sequence_tensor = [pad_packed_sequence(packed_sequence_output, batch_first=True)[0]]
 
-        # We sorted by length, so if there are invalid rows that need to be zeroed out
-        # they will be at the end.
+        # Add back invalid rows.
         if num_valid < batch_size:
-            for tensor in unpacked_sequence_tensor:
-                tensor[num_valid:, :, :] = 0.
+            _, length, dim = unpacked_sequence_tensor[0].size()
+            zeros = unpacked_sequence_tensor[0].data.new(batch_size - num_valid, length, dim).fill_(0)
+            for k in range(num_layers):
+                unpacked_sequence_tensor[k] = torch.cat([unpacked_sequence_tensor[k], zeros], 0)
 
         # It's possible to need to pass sequences which are padded to longer than the
         # max length of the sequence to a Seq2SeqEncoder. However, packing and unpacking
