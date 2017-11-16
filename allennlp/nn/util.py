@@ -33,6 +33,27 @@ def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     return mask.long().sum(-1)
 
 
+def get_mask_from_sequence_lengths(sequence_lengths: Variable, max_length: int) -> Variable:
+    """
+    Given a variable of shape ``(batch_size,)`` that represents the sequence lengths of each batch
+    element, this function returns a ``(batch_size, max_length)`` mask variable.  For example, if our
+    input was ``[2, 2, 3]``, with a ``max_length`` of 4, we'd return
+    ``[[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 1, 0]]``.
+
+    We require ``max_length`` here instead of just computing it from the input ``sequence_lengths``
+    because it lets us avoid finding the max, then copying that value from the GPU to the CPU so
+    that we can use it to construct a new tensor.
+
+    Some of our functions are agnostic as to whether they accept ``Tensors`` or ``Variables``, and
+    they just use ``Tensor`` for their type annotations.  We `require` ``Variables`` here, as we
+    call ``sequence_length.data.new()``.  The data type of ``sequence_lengths`` is assumed to be
+    ``long``, but really could be anything, and the data type of the returned mask is ``long``.
+    """
+    # (batch_size, max_length)
+    ones = Variable(sequence_lengths.data.new(sequence_lengths.size(0), max_length).fill_(1))
+    range_tensor = ones.cumsum(dim=1)
+    return (sequence_lengths.unsqueeze(1) >= range_tensor).long()
+
 def sort_batch_by_length(tensor: torch.autograd.Variable,
                          sequence_lengths: torch.autograd.Variable):
     """
