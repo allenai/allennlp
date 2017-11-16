@@ -29,10 +29,14 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     Note that we *require* you to pass sequence lengths when you call this module, to avoid subtle
     bugs around masking.  If you already have a ``PackedSequence`` you can pass ``None`` as the
     second parameter.
+
+    We also support stacked RNNs that return activations for each layer by passing ``stacked=True``
+    to the constructor.
     """
-    def __init__(self, module: torch.nn.modules.RNNBase) -> None:
+    def __init__(self, module: torch.nn.modules.RNNBase, stacked: bool=False) -> None:
         super(PytorchSeq2SeqWrapper, self).__init__()
         self._module = module
+        self._stacked = stacked
         try:
             if not self._module.batch_first:
                 raise ConfigurationError("Our encoder semantics assumes batch is always first!")
@@ -81,24 +85,38 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         # Actually call the module on the sorted PackedSequence.
         packed_sequence_output, _ = self._module(packed_sequence_input, hidden_state)
-        unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
+        if self._stacked:
+            # packed_sequence_output is shape (n_layers, batch_size, n_times, nx)
+            num_layers = packed_sequence_output.size()[0]
+            unpacked_sequence_tensor = [
+                    layer.squeeze(0) for layer in packed_sequence_output.chunk(num_layers, 0)
+            ]
+        else:
+            # just one layer
+            num_layers = 1
+            unpacked_sequence_tensor = [pad_packed_sequence(packed_sequence_output, batch_first=True)[0]]
 
         # We sorted by length, so if there are invalid rows that need to be zeroed out
         # they will be at the end.
         if num_valid < batch_size:
-            unpacked_sequence_tensor[num_valid:, :, :] = 0.
+            for tensor in unpacked_sequence_tensor:
+                tensor[num_valid:, :, :] = 0.
 
         # It's possible to need to pass sequences which are padded to longer than the
         # max length of the sequence to a Seq2SeqEncoder. However, packing and unpacking
         # the sequences mean that the returned tensor won't include these dimensions, because
         # the RNN did not need to process them. We add them back on in the form of zeros here.
-        sequence_length_difference = total_sequence_length - unpacked_sequence_tensor.size(1)
+        sequence_length_difference = total_sequence_length - unpacked_sequence_tensor[0].size(1)
         if sequence_length_difference > 0:
-            zeros = unpacked_sequence_tensor.data.new(batch_size, sequence_length_difference,
-                                                      unpacked_sequence_tensor.size(-1)).fill_(0)
+            zeros = unpacked_sequence_tensor[0].data.new(batch_size, sequence_length_difference,
+                                                         unpacked_sequence_tensor[0].size(-1)).fill_(0)
             zeros = torch.autograd.Variable(zeros)
-            unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
-
+            for k in range(num_layers):
+                unpacked_sequence_tensor[k] = torch.cat([unpacked_sequence_tensor[k], zeros], 1)
 
         # Restore the original indices and return the sequence.
-        return unpacked_sequence_tensor.index_select(0, restoration_indices)
+        if not self._stacked:
+            return unpacked_sequence_tensor[0].index_select(0, restoration_indices)
+        else:
+            return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)
+                              for tensor in unpacked_sequence_tensor], dim=0)
