@@ -130,7 +130,7 @@ const tagDescriptions = {
 class NerTagCell extends React.Component {
 
   render() {
-    const { tag, colorClass, colspan } = this.props;
+    const { tag, colorClass, colSpan } = this.props;
 
     // Don't show "O" tags, and slice off all the "B-" and "I-" prefixes.
     const tagText = tag === "O" ? "" : tag.slice(2);
@@ -139,7 +139,7 @@ class NerTagCell extends React.Component {
     const description = tagDescriptions[tagText] || null;
 
     return (
-      <td data-tooltip={description} colSpan={colspan} className={colorClass + ' ner-tag ner-tag-' + tagText.toLowerCase()}>
+      <td data-tooltip={description} colSpan={colSpan} className={colorClass + ' ner-tag ner-tag-' + tagText.toLowerCase()}>
         {tagText}
       </td>
     )
@@ -165,7 +165,8 @@ class NerOutput extends React.Component {
     var colorClasses = [];
     var currentColor = 1;
 
-    // Want to track the indexes where spans start.
+    // We want to merge consecutive identical tags and use `colspan=n`.
+    // In order to do that, we create a dictionary from starting indexes to span lengths.
     let spanLengths = {};
     let lastSpanStart;
 
@@ -173,23 +174,31 @@ class NerOutput extends React.Component {
       if (tag === "O") {
         // "O" tag, so append "" for "no color"
         colorClasses.push("");
+
+        // Add a span with length 1 and close it.
         spanLengths[i] = 1;
         lastSpanStart = undefined;
       } else if (tag[0] === "B") {
         // "B-" tag, so toggle the current color and then append
         currentColor = (currentColor + 1) % 2;
         colorClasses.push("color" + currentColor);
+
+        // Add a span with length 1, but don't "close it"
         lastSpanStart = i;
         spanLengths[i] = 1;
       } else if (tag[0] === "U") {
         // Single length span
         currentColor = (currentColor + 1) % 2;
         colorClasses.push("color" + currentColor);
-        lastSpanStart = undefined;
+
+        // Add a span with length 1 and close it.
         spanLengths[i] = 1;
+        lastSpanStart = undefined;
       } else /* (tag[0] == "I") */ {
         // "I-" tag, so append the current color
         colorClasses.push("color" + currentColor);
+
+        // Extend the length of the currently open span.
         spanLengths[lastSpanStart] = spanLengths[lastSpanStart] + 1;
       }
     })
@@ -202,9 +211,9 @@ class NerOutput extends React.Component {
               <tr>
                 {
                   tags.map((tag, i) => {
-                    const colspan = spanLengths[i];
-                    if (colspan) {
-                      return <NerTagCell tag={tag} key={i} colspan={colspan} colorClass={colorClasses[i]} />
+                    const colSpan = spanLengths[i];
+                    if (colSpan) {
+                      return <NerTagCell tag={tag} key={i} colSpan={colSpan} colorClass={colorClasses[i]} />
                     } else {
                       return null;
                     }
