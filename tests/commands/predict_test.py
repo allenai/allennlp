@@ -7,8 +7,8 @@ import tempfile
 from unittest import TestCase
 
 from allennlp.common.util import JsonDict
-from allennlp.commands import main, DEFAULT_PREDICTORS
-from allennlp.commands.predict import Predict
+from allennlp.commands import main
+from allennlp.commands.predict import Predict, DEFAULT_PREDICTORS
 from allennlp.service.predictors import Predictor, BidafPredictor
 
 

@@ -4,7 +4,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
-from allennlp.commands import DEFAULT_MODELS
+from allennlp.commands.serve import DEFAULT_MODELS
 from allennlp.common.file_utils import cached_path
 
 value = os.environ.get('CACHE_MODELS', 'false')

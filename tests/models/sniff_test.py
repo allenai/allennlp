@@ -1,9 +1,7 @@
 # pylint: disable=no-self-use,line-too-long
 
-from allennlp.commands import DEFAULT_MODELS
+from allennlp.commands.serve import DEFAULT_MODELS
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.models.archival import load_archive
-from allennlp.service.predictors import Predictor
 
 
 class SniffTest(AllenNlpTestCase):
@@ -19,10 +17,7 @@ class SniffTest(AllenNlpTestCase):
 
 
     def test_machine_comprehension(self):
-        predictor = Predictor.from_archive(
-                load_archive(DEFAULT_MODELS['machine-comprehension']),
-                'machine-comprehension'
-        )
+        predictor = DEFAULT_MODELS['machine-comprehension'].predictor()
 
         passage = """The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called "the Matrix", created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer Neo" learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the "dream world". """  # pylint: disable=line-too-long
         question = "Who stars in The Matrix?"
@@ -35,10 +30,7 @@ class SniffTest(AllenNlpTestCase):
 
 
     def test_semantic_role_labeling(self):
-        predictor = Predictor.from_archive(
-                load_archive(DEFAULT_MODELS['semantic-role-labeling']),
-                'semantic-role-labeling'
-        )
+        predictor = DEFAULT_MODELS['semantic-role-labeling'].predictor()
 
         sentence = "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!"
 
@@ -79,10 +71,7 @@ class SniffTest(AllenNlpTestCase):
         ]
 
     def test_textual_entailment(self):
-        predictor = Predictor.from_archive(
-                load_archive(DEFAULT_MODELS['textual-entailment']),
-                'textual-entailment'
-        )
+        predictor = DEFAULT_MODELS['textual-entailment'].predictor()
 
         result = predictor.predict_json({
                 "premise": "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
@@ -106,8 +95,8 @@ class SniffTest(AllenNlpTestCase):
         assert result["label_probs"][2] > 0.7  # neutral
 
     def test_coreference_resolution(self):
-        predictor = Predictor.from_archive(load_archive(DEFAULT_MODELS['coreference-resolution']),
-                                           'coreference-resolution')
+        predictor = DEFAULT_MODELS['coreference-resolution'].predictor()
+
         document = "We 're not going to skimp on quality , but we are very focused to make next year . The only problem is that some of the fabrics are wearing out - since I was a newbie I skimped on some of the fabric and the poor quality ones are developing holes . For some , an awareness of this exit strategy permeates the enterprise , allowing them to skimp on the niceties they would more or less have to extend toward a person they were likely to meet again ."
 
         result = predictor.predict_json({"document": document})
