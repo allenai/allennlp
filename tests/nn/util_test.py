@@ -92,6 +92,15 @@ class TestNnUtil(AllenNlpTestCase):
         lengths = util.get_lengths_from_binary_sequence_mask(binary_mask)
         numpy.testing.assert_array_equal(lengths.numpy(), numpy.array([3, 2, 6, 1]))
 
+    def test_get_mask_from_sequence_lengths(self):
+        sequence_lengths = Variable(torch.LongTensor([4, 3, 1, 4, 2]))
+        mask = util.get_mask_from_sequence_lengths(sequence_lengths, 5).data.numpy()
+        assert_almost_equal(mask, [[1, 1, 1, 1, 0],
+                                   [1, 1, 1, 0, 0],
+                                   [1, 0, 0, 0, 0],
+                                   [1, 1, 1, 1, 0],
+                                   [1, 1, 0, 0, 0]])
+
     def test_get_sequence_lengths_converts_to_long_tensor_and_avoids_variable_overflow(self):
         # Tests the following weird behaviour in Pytorch 0.1.12
         # doesn't happen for our sequence masks:
@@ -522,7 +531,6 @@ class TestNnUtil(AllenNlpTestCase):
         replaced = util.replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
         assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])
 
-
     def test_logsumexp(self):
         # First a simple example where we add probabilities in log space.
         tensor = Variable(torch.FloatTensor([[.4, .1, .2]]))
@@ -540,7 +548,6 @@ class TestNnUtil(AllenNlpTestCase):
         assert_almost_equal(util.logsumexp(tensor).data.numpy(), [20.0])
         tensor = Variable(torch.FloatTensor([[20.0, 20.0], [-200.0, 200.0]]))
         assert_almost_equal(util.logsumexp(tensor, dim=0).data.numpy(), [20.0, 200.0])
-
 
     def test_flatten_and_batch_shift_indices(self):
         indices = numpy.array([[[1, 2, 3, 4],
