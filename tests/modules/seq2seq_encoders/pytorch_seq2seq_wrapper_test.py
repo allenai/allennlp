@@ -22,19 +22,19 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         assert encoder.get_output_dim() == 7
         assert encoder.get_input_dim() == 2
 
-    def test_forward_works_even_with_empty_sequences(self):
+    def test_forward_works_even_with_empty_and_length_one_sequences(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
 
         tensor = torch.autograd.Variable(torch.rand([5, 7, 3]))
         tensor[1, 6:, :] = 0
         tensor[2, :, :] = 0
-        tensor[3, 2:, :] = 0
+        tensor[3, 1:, :] = 0
         tensor[4, :, :] = 0
         mask = torch.autograd.Variable(torch.ones(5, 7))
         mask[1, 6:] = 0
         mask[2, :] = 0
-        mask[3, 2:] = 0
+        mask[3, 1:] = 0
         mask[4, :] = 0
 
         results = encoder.forward(tensor, mask)
