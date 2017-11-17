@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Tuple, List, Union
 
 import torch
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
@@ -120,7 +120,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         # Actually call the module on the sorted PackedSequence.
         packed_sequence_output, final_states = self._module(packed_sequence_input, initial_states)
         if self._stacked:
-            # packed_sequence_output is shape (n_layers, batch_size, n_times, nx)
+            # packed_sequence_output is shape (num_layers, batch_size, timesteps, encoder_dim)
             num_layers = packed_sequence_output.size()[0]
             unpacked_sequence_tensor = [
                     layer.squeeze(0) for layer in packed_sequence_output.chunk(num_layers, 0)
@@ -150,6 +150,8 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
                 unpacked_sequence_tensor[k] = torch.cat([unpacked_sequence_tensor[k], zeros], 1)
 
         if self._stateful:
+            if not isinstance(final_states, (list, tuple)):
+                final_states = [final_states]
             self._update_states(final_states, num_valid)
 
         # Restore the original indices and return the sequence.
@@ -159,27 +161,31 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)
                               for tensor in unpacked_sequence_tensor], dim=0)
 
-    def _get_initial_states(self, num_valid):
+    def _get_initial_states(self, num_valid: int) -> Union[Tuple[torch.Tensor], torch.Tensor]:
         # We don't know the state sizes the first time calling forward.
         if self._states is None:
             initial_states = None
         else:
             # We have some previous states.
-            initial_states = (self._states[0][:, :num_valid, :],
-                              self._states[1][:, :num_valid, :])
-
+            if len(self._states) == 1:
+                initial_states = self._states[0][:, :num_valid, :]
+            else:
+                initial_states = tuple(
+                        [state[:, :num_valid, :] for state in self._states]
+                )
         return initial_states
 
-    def _update_states(self, final_states, num_valid):
+    def _update_states(self, final_states: Union[List[torch.Tensor], Tuple[torch.Tensor]],
+                       num_valid: int) -> None:
         if self._states is None:
             # First time through we allocate an array to hold the states.
             states = []
-            for k in range(2):
+            for k in range(len(final_states)):
                 states.append(torch.autograd.Variable(
                         final_states[k].data.new(final_states[k].size(0),
                                                  self._max_batch_size,
                                                  final_states[k].size(-1)).fill_(0)))
             self._states = states
 
-        for k in range(2):
+        for k in range(len(final_states)):
             self._states[k].data[:, :num_valid, :] = final_states[k].data

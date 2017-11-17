@@ -3,7 +3,7 @@ from numpy.testing import assert_almost_equal
 import pytest
 import torch
 from torch.autograd import Variable
-from torch.nn import LSTM
+from torch.nn import LSTM, GRU
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from allennlp.common.checks import ConfigurationError
@@ -165,10 +165,23 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
 
         assert list(encoder_output.size()) == [6, 7, 14]
 
-    def test_wrapper_stateful_too_large_batch(self):
+    def test_stateful_wrapper_raises_with_batch_size_greater_than_max(self):
         lstm = LSTM(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm, stateful=True, max_batch_size=10)
         tensor = Variable(torch.rand([15, 5, 3]))
         mask = Variable(torch.ones(15, 5))
         with self.assertRaises(ValueError):
             _ = encoder(tensor, mask)
+
+    def test_wrapper_stateful_single_state_gru(self):
+        gru = GRU(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
+        encoder = PytorchSeq2SeqWrapper(gru, stateful=True, max_batch_size=10)
+
+        for k in range(2):
+            batch_size = k + 3
+            tensor = Variable(torch.rand([batch_size, 5, 3]))
+            mask = Variable(torch.ones(batch_size, 5))
+            mask.data[0, 3:] = 0
+            encoder_output = encoder(tensor, mask)
+
+        assert list(encoder_output.size()) == [4, 5, 14]
