@@ -1,65 +1,97 @@
 """
 ``KnowledgeGraphField`` is a ``Field`` which stores a knowledge graph representation.
 """
-
 from typing import Dict, List
 
+import numpy
 from overrides import overrides
 
-from allennlp.common.checks import ConfigurationError
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.fields.field import Field, DataArray
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.fields.field import Field
 from allennlp.data.knowledge_graph import KnowledgeGraph
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
+from allennlp.data.tokenizers.token import Token
+from allennlp.data.vocabulary import Vocabulary
+
+TokenList = List[TokenType]  # pylint: disable=invalid-name
 
 
-class KnowledgeGraphField(Field[DataArray]):
+class KnowledgeGraphField(Field[Dict[str, numpy.ndarray]]):
     """
-    ``KnowledgeGraphField`` indexes entities and collects information necessary for embedding the knowledge
-    graph. Here we assume the token indexers will index all the information needed to embed entities
-    (say names and types).
+    A ``KnowledgeGraphField`` represents a ``KnowledgeGraph`` as a ``Field`` that can be used in a
+    ``Model``.  We take the (sorted) list of entities in the graph and output them as arrays using
+    ``TokenIndexers``, similar to how text tokens are treated by a ``TextField``.  We have
+    knowledge-graph-specific ``TokenIndexers`, however, that allow for more versatile treatment of
+    the knowledge graph entities than just treating them as text tokens.
 
     Parameters
     ----------
     knowledge_graph : ``KnowledgeGraph``
         The knowledge graph that this field stores.
     token_indexers : ``Dict[str, TokenIndexer]``
-        Token indexers for indexing various aspects of entities (say names and type of entities) for embedding
-        them.
+        Token indexers that convert entities into arrays, similar to how text tokens are treated in
+        a ``TextField``.  These might operate on the name of the entity itself, its type, its
+        neighbors in the graph, etc.
     """
     def __init__(self,
                  knowledge_graph: KnowledgeGraph,
                  token_indexers: Dict[str, TokenIndexer]) -> None:
-        self._knowledge_graph: KnowledgeGraph = knowledge_graph
+        self.knowledge_graph: KnowledgeGraph = knowledge_graph
+        self.entities = [Token(entity) for entity in sorted(self.knowledge_graph.get_all_entities())]
         self._token_indexers: Dict[str, TokenIndexer] = token_indexers
-        # {entity: {indexer: indexed_tokens}}
-        self._indexed_entities: Dict[str, Dict[str, List[int]]] = None
+        self._indexed_entities: Dict[str, TokenList] = None
+
+    @overrides
+    def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
+        for indexer in self._token_indexers.values():
+            for entity in self.entities:
+                indexer.count_vocab_items(entity, counter)
 
     @overrides
     def index(self, vocab: Vocabulary):
         entity_arrays = {}
-        for entity in self._knowledge_graph.get_all_entities():
-            indexed_entity = {indexer_name: indexer.token_to_indices(entity, vocab)
-                              for indexer_name, indexer in self._token_indexers.items()}
-            entity_arrays[entity] = indexed_entity
+        for indexer_name, indexer in self._token_indexers.items():
+            arrays = [indexer.token_to_indices(entity, vocab) for entity in self.entities]
+            entity_arrays[indexer_name] = arrays
         self._indexed_entities = entity_arrays
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        # TODO (pradeep): This may change after the actual entity token indexers are implemented.
-        if self._indexed_entities is None:
-            raise ConfigurationError("This field is not indexed yet. Call .index(vocabulary) before determining "
-                                     "padding lengths.")
-        padding_lengths = {"num_tokens": len(self._indexed_entities)}
-        for indexer_name in self._token_indexers:
-            padding_lengths[indexer_name] = max([len(index[indexer_name]) if indexer_name in index else 0
-                                                 for index in self._indexed_entities.values()])
+        lengths = []
+        assert self._indexed_entities is not None, ("This field is not indexed yet. Call "
+                                                    ".index(vocabulary) before determining padding "
+                                                    "lengths.")
+        for indexer_name, indexer in self._token_indexers.items():
+            indexer_lengths = {}
+
+            # This is a list of dicts, one for each token in the field.
+            entity_lengths = [indexer.get_padding_lengths(entity)
+                              for entity in self._indexed_entities[indexer_name]]
+            # Iterate over the keys in the first element of the list.  This is fine as for a given
+            # indexer, all entities will return the same keys, so we can just use the first one.
+            for key in entity_lengths[0].keys():
+                indexer_lengths[key] = max(x[key] if key in x else 0 for x in entity_lengths)
+            lengths.append(indexer_lengths)
+
+        any_indexed_entity_key = list(self._indexed_entities.keys())[0]
+        padding_lengths = {'num_entities': len(self._indexed_entities[any_indexed_entity_key])}
+
+        # Get all the keys which have been used for padding.
+        padding_keys = {key for d in lengths for key in d.keys()}
+        for padding_key in padding_keys:
+            padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
         return padding_lengths
 
     @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> DataArray:
-        # pylint: disable=unused-argument
-        return self._indexed_entities
+    def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.ndarray]:
+        arrays = {}
+        desired_num_entities = padding_lengths['num_entities']
+        for indexer_name, indexer in self._token_indexers.items():
+            padded_array = indexer.pad_token_sequence(self._indexed_entities[indexer_name],
+                                                      desired_num_entities, padding_lengths)
+            # Use the key of the indexer to recognise what the array corresponds to within the field
+            # (i.e. the result of word indexing, or the result of character indexing, for example).
+            arrays[indexer_name] = numpy.array(padded_array)
+        return arrays
 
     @overrides
     def empty_field(self) -> 'KnowledgeGraphField':
