@@ -31,8 +31,8 @@ class WikiTablesSemanticParser(Model):
     <https://www.semanticscholar.org/paper/Neural-Semantic-Parsing-with-Type-Constraints-for-Krishnamurthy-Dasigi/8c6f58ed0ebf379858c0bbe02c53ee51b3eb398a>`_,
     by Jayant Krishnamurthy, Pradeep Dasigi, and Matt Gardner (EMNLP 2017).
 
-    WORK STILL IN PROGRESS.  This is just copying the SimpleSeq2Seq model for now, and we'll
-    iteratively improve it until we've reproduced the performance of the original parser.
+    WORK STILL IN PROGRESS.  We'll iteratively improve it until we've reproduced the performance of
+    the original parser.
 
     Parameters
     ----------
@@ -77,21 +77,29 @@ class WikiTablesSemanticParser(Model):
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._action_namespace = action_namespace
+        self._action_padding_index = 0 if self.vocab.is_padded(self._action_namespace) else -1
 
         self._start_index = self.vocab.get_token_index(START_SYMBOL, self._action_namespace)
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._action_namespace)
-        num_actions = self.vocab.get_vocab_size(self._action_namespace)
-        self._decoder_step = WikiTablesDecoderStep(self._encoder.get_output_dim(),
-                                                   action_embedding_dim,
-                                                   num_actions,
-                                                   attention_function,
-                                                   self._start_index)
+        # This is a _global_ mapping because eventually we will have additional allowed actions for
+        # each instance (e.g., instance-specific entities or predicates), and for the current
+        # decoder state (e.g., you can only produce variables inside of a lambda expression).
+        # These are just the actions that are specified by the grammar.
+        self._global_type_productions = _get_type_productions(self.vocab, self._action_namespace)
+        self._decoder_step = WikiTablesDecoderStep(vocab=vocab,
+                                                   action_namespace=action_namespace,
+                                                   encoder_output_dim=self._encoder.get_output_dim(),
+                                                   action_embedding_dim=action_embedding_dim,
+                                                   attention_function=attention_function,
+                                                   start_index=self._start_index)
 
     @overrides
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
+                table: Dict[str, torch.LongTensor],
                 target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
+        # pylint: disable=unused-argument
         """
         Decoder logic for producing the entire target sequence.
 
@@ -100,6 +108,11 @@ class WikiTablesSemanticParser(Model):
         question : Dict[str, torch.LongTensor]
            The output of ``TextField.as_array()`` applied on the question ``TextField``. This will
            be passed through a ``TextFieldEmbedder`` and then through an encoder.
+        table : ``Dict[str, torch.LongTensor]``
+            The output of ``KnowledgeGraphField.as_array()`` applied on the table
+            ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
+            entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
+            get embeddings for each entity.
         target_action_sequences : torch.LongTensor, optional (default = None)
            A list of possibly valid action sequences, with shape ``(batch_size, num_sequences,
            sequence_length, 1)``.  The trailing dimension is because of how our ``ListFields``
@@ -120,8 +133,7 @@ class WikiTablesSemanticParser(Model):
         if target_action_sequences is not None:
             # Remove batch dimension and trailing dimension (from ListField[LabelField]]).
             target_action_sequences = target_action_sequences.squeeze(-1)
-            # TODO(mattg): might be better to not hard-code the 0 here.
-            target_mask = target_action_sequences > 0
+            target_mask = target_action_sequences != self._action_padding_index
         else:
             target_mask = None
 
@@ -141,14 +153,16 @@ class WikiTablesSemanticParser(Model):
         initial_attended_question = [attended_question[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
         question_mask_list = [question_mask[i] for i in range(batch_size)]
-        initial_state = WikiTablesDecoderState(list(range(batch_size)),
-                                               [[] for _ in range(batch_size)],
-                                               initial_score_list,
+        initial_state = WikiTablesDecoderState(batch_indices=list(range(batch_size)),
+                                               action_history=[[] for _ in range(batch_size)],
+                                               score=initial_score_list,
+                                               non_terminal_stack=[[START_SYMBOL] for _ in range(batch_size)],
                                                hidden_state=initial_hidden_state,
                                                memory_cell=initial_memory_cell,
                                                attended_question=initial_attended_question,
                                                encoder_outputs=encoder_output_list,
                                                encoder_output_mask=question_mask_list,
+                                               global_type_productions=self._global_type_productions,
                                                end_index=self._end_index)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
@@ -223,6 +237,38 @@ class WikiTablesSemanticParser(Model):
                    attention_function=attention_function)
 
 
+def _get_type_productions(vocab: Vocabulary, namespace: str) -> Dict[str, List[int]]:
+    """
+    Temporary method, until we get the type declaration (grammar) to build this for us.
+
+    This method takes all of the actions that we saw in the training data and constructs a
+    "grammar" from them, where here "grammar" means "valid productions for any type".  That is, if
+    we see the action "r -> [<e,r>, e]", we add "[<e,r>, e]" to the valid productions for type "r"
+    (in practice, we just add the action's ID in the vocabulary, which amounts to the same thing).
+    This is effectively making a context-free assumption, that any production rule we ever see used
+    is valid in any context.  This assumption isn't actually true, especially for terminal
+    productions, but it will do for now.
+
+    We return the list of productions for each type as a ``List[int]``, where the ``int`` is the
+    `id` of the production rule in the vocabulary.  This is another thing that needs to change, as
+    we will have production rules at test time that we've never seen at training time, and thus
+    won't be able to predict them.  But we'll worry about that later.
+    """
+    type_productions: Dict[str, List[int]] = defaultdict(list)
+    for action_index in range(vocab.get_vocab_size(namespace)):
+        action = vocab.get_token_from_index(action_index, namespace)
+        if ' -> ' in action:
+            non_terminal, _ = action.split(' -> ')
+            type_productions[non_terminal].append(action_index)
+        else:
+            # The first action we predict is the type of the logical form, not a production rule.
+            # These actions don't have ' -> ' in them, and are just the type.  They are only valid
+            # productions in the initial state of the decoder.
+            if action != START_SYMBOL and action != END_SYMBOL:
+                type_productions[START_SYMBOL].append(action_index)
+    return type_productions
+
+
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that
 # we've defined.  We're using generics to make the types of `combine_states` and `split_finished`
 # come out right.  See the note in `nn.decoding.decoder_state.py` for a little more detail.
@@ -236,6 +282,11 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         Passed to super class; see docs there.
     score : ``List[Variable]``
         Passed to super class; see docs there.
+    non_terminal_stack : ``List[List[str]]``
+        Holds the list of non-terminals that still need to be expanded for each element of the
+        group.  This starts out as [START_SYMBOL], and decoding ends when this is empty.  Every
+        time we take an action, we update the non-terminal stack, and we use what's on the stack to
+        decide which actions are valid in the current state.
     hidden_state : ``List[Variable]``
         This holds the LSTM hidden state for each element of the group.  Each variable has shape
         ``(decoder_output_dim,)``.
@@ -261,6 +312,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         A list of variables, each of shape ``(question_length,)``, containing a mask over question
         tokens for each batch instance.  This is a list over batch elements, for the same reasons
         as above.
+    global_type_productions : ``Dict[str, List[int]]``
+        A mapping from type strings to valid action indices.  The type strings correspond to the
+        non-terminals on the ``non_terminal_stack``, and the action indices (for now) correspond to
+        actions in the action vocabulary.
     end_index : ``int``
         This is the index of the stop symbol, which we need so we know if we've emitted a stop
         action and are thus finished.
@@ -269,34 +324,90 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  batch_indices: List[int],
                  action_history: List[List[int]],
                  score: Variable,
+                 non_terminal_stack: List[List[str]],
                  hidden_state: List[Variable],
                  memory_cell: List[Variable],
                  attended_question: List[Variable],
                  encoder_outputs: Variable,
                  encoder_output_mask: Variable,
+                 global_type_productions: Dict[str, List[int]],
                  end_index: int) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
+        self.non_terminal_stack = non_terminal_stack
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
         self.attended_question = attended_question
         self.encoder_outputs = encoder_outputs
         self.encoder_output_mask = encoder_output_mask
+        self.global_type_productions = global_type_productions
         self.end_index = end_index
 
-    def get_valid_actions(self, num_actions: int) -> List[List[int]]:
+    def get_valid_actions(self) -> List[List[int]]:
         """
         Returns a list of valid actions for each element of the group.
         """
-        # TODO(mattg): we're temporarily making all actions allowed at every state, to implement
-        # constrained decoding in pieces.  The `num_actions` argument here is going to be removed
-        # in the next step, where we actually use grammar constraints.
-        return [list(range(num_actions))] * len(self.batch_indices)
+        # TODO(matt): this is going to need to look at more than just the global type productions
+        # eventually - we'll need instance- and state-specific additions.  And we'll probably need
+        # to return strings, instead of integers, because instance-specific production rules won't
+        # be in a global vocabulary.
+        return [self.global_type_productions[stack[-1]] for stack in self.non_terminal_stack]
+
+    @staticmethod
+    def update_non_terminal_stack(stack: List[str], action: str) -> List[str]:
+        """
+        Given a single non-terminal stack (`not` a grouped one), and an action that was taken,
+        update the non-terminal stack.  This involves popping the non-terminal that was expanded
+        off of the stack, then pushing on any non-terminals in the production rule back on the
+        stack.  We push the non-terminals on in `reverse` order, so that the first non-terminal in
+        the production rule gets popped off the stack first.
+
+        For example, if ``stack`` is ``["r", "<e,r>", "d"]``, and ``action`` is ``d -> [<e,d>, e]``,
+        the result will be ``["r", "<e,r>", "e", "<e,d>"]``.
+        """
+        if ' -> ' in action:
+            # TODO(mattg,pradeep): we need to handle lambdas specially here, to update the valid
+            # productions for the type of the variable.
+            non_terminal, production_string = action.split(' -> ')
+            assert stack[-1] == non_terminal
+            new_stack = stack[:-1]
+            productions = WikiTablesDecoderState.get_productions_from_string(production_string)
+            for production in reversed(productions):
+                if WikiTablesDecoderState.is_non_terminal(production):
+                    new_stack.append(production)
+            return new_stack
+        else:
+            # The first action we take is just predicting a type, so doesn't have ' -> ' in it.  In
+            # this case, we had better be trying to expand the START_SYMBOL, and our next
+            # non-terminal stack is just the type that we predicted.
+            assert stack == [START_SYMBOL]
+            return [action]
+
+    @staticmethod
+    def get_productions_from_string(production_string: str) -> List[str]:
+        """
+        Takes a string like '[<d,d>, d]' and parses it into a list like ['<d,d>', 'd'].  For
+        production strings that are not lists, like '<e,d>', we return a single-element list:
+        ['<e,d>'].
+        """
+        if production_string[0] == '[':
+            return production_string[1:-1].split(', ')
+        else:
+            return [production_string]
+
+    @staticmethod
+    def is_non_terminal(production: str) -> bool:
+        # TODO(mattg): these static methods probably belong in some other class.
+        if production[0] == '<':
+            return True
+        if production.startswith('cell'):
+            return False
+        return production[0].islower()
 
     # @overrides  - overrides can't handle the generics we're using here, apparently
     def is_finished(self) -> bool:
         if len(self.batch_indices) != 1:
             raise RuntimeError("is_finished() is only defined with a group_size of 1")
-        return len(self.action_history[0]) > 0 and self.action_history[0][-1] == self.end_index
+        return not self.non_terminal_stack[0]
 
     # @overrides  - overrides can't handle the generics we're using here, apparently
     def split_finished(self) -> Tuple['WikiTablesDecoderState', 'WikiTablesDecoderState']:
@@ -304,11 +415,11 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         # all.
         finished_indices = []
         not_finished_indices = []
-        for i, action_history in enumerate(self.action_history):
-            if action_history and action_history[-1] == self.end_index:
-                finished_indices.append(i)
-            else:
+        for i, stack in enumerate(self.non_terminal_stack):
+            if stack:
                 not_finished_indices.append(i)
+            else:
+                finished_indices.append(i)
 
         # Return value is (finished, not_finished)
         if not finished_indices:
@@ -325,18 +436,21 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
         action_histories = [action_history for state in states for action_history in state.action_history]
         scores = [score for state in states for score in state.score]
+        non_terminal_stacks = [stack for state in states for stack in state.non_terminal_stack]
         hidden_states = [hidden_state for state in states for hidden_state in state.hidden_state]
         memory_cells = [memory_cell for state in states for memory_cell in state.memory_cell]
         attended_question = [attended for state in states for attended in state.attended_question]
-        return WikiTablesDecoderState(batch_indices,
-                                      action_histories,
-                                      scores,
-                                      hidden_states,
-                                      memory_cells,
-                                      attended_question,
-                                      states[0].encoder_outputs,
-                                      states[0].encoder_output_mask,
-                                      states[0].end_index)
+        return WikiTablesDecoderState(batch_indices=batch_indices,
+                                      action_history=action_histories,
+                                      score=scores,
+                                      non_terminal_stack=non_terminal_stacks,
+                                      hidden_state=hidden_states,
+                                      memory_cell=memory_cells,
+                                      attended_question=attended_question,
+                                      encoder_outputs=states[0].encoder_outputs,
+                                      encoder_output_mask=states[0].encoder_output_mask,
+                                      global_type_productions=states[0].global_type_productions,
+                                      end_index=states[0].end_index)
 
     def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'WikiTablesDecoderState':
         """
@@ -350,36 +464,41 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         group_batch_indices = [self.batch_indices[i] for i in group_indices]
         group_action_histories = [self.action_history[i] for i in group_indices]
         group_scores = [self.score[i] for i in group_indices]
+        group_non_terminal_stacks = [self.non_terminal_stack[i] for i in group_indices]
         group_hidden_states = [self.hidden_state[i] for i in group_indices]
         group_memory_cells = [self.memory_cell[i] for i in group_indices]
         group_attended_question = [self.attended_question[i] for i in group_indices]
-        return WikiTablesDecoderState(group_batch_indices,
-                                      group_action_histories,
-                                      group_scores,
-                                      group_hidden_states,
-                                      group_memory_cells,
-                                      group_attended_question,
-                                      self.encoder_outputs,
-                                      self.encoder_output_mask,
-                                      self.end_index)
+        return WikiTablesDecoderState(batch_indices=group_batch_indices,
+                                      action_history=group_action_histories,
+                                      score=group_scores,
+                                      non_terminal_stack=group_non_terminal_stacks,
+                                      hidden_state=group_hidden_states,
+                                      memory_cell=group_memory_cells,
+                                      attended_question=group_attended_question,
+                                      encoder_outputs=self.encoder_outputs,
+                                      encoder_output_mask=self.encoder_output_mask,
+                                      global_type_productions=self.global_type_productions,
+                                      end_index=self.end_index)
 
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     def __init__(self,
+                 vocab: Vocabulary,
+                 action_namespace: str,
                  encoder_output_dim: int,
                  action_embedding_dim: int,
-                 num_actions: int,
                  attention_function: SimilarityFunction,
                  start_index: int) -> None:
         super(WikiTablesDecoderStep, self).__init__()
-        # TODO(mattg): This is unnecessary, and is just here temporarily.
-        self._num_actions = num_actions
-        # Decoder output dim needs to be the same as the encoder output dim since we initialize the
-        # hidden state of the decoder with that of the final hidden states of the encoder.
+        self._vocab = vocab
+        self._action_namespace = action_namespace
+        num_actions = vocab.get_vocab_size(action_namespace)
         self._action_embedder = Embedding(num_actions, action_embedding_dim)
         self._input_attention = Attention(attention_function)
         self._start_index = start_index
 
+        # Decoder output dim needs to be the same as the encoder output dim since we initialize the
+        # hidden state of the decoder with the final hidden state of the encoder.
         output_dim = encoder_output_dim
         input_dim = output_dim
         # Our decoder input will be the concatenation of the decoder hidden state and the previous
@@ -388,8 +507,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         self._input_projection_layer = Linear(output_dim + action_embedding_dim, input_dim)
         # Before making a prediction, we'll compute an attention over the input given our updated
         # hidden state.  Then we concatenate that with the decoder state and project to
-        # `num_actions` to make a prediction.
-        self._output_projection_layer = Linear(output_dim + output_dim, action_embedding_dim)
+        # `action_embedding_dim` to make a prediction.
+        self._output_projection_layer = Linear(output_dim + encoder_output_dim, action_embedding_dim)
 
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
@@ -412,6 +531,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         actions = [action_history[-1] if action_history else self._start_index
                    for action_history in state.action_history]
         action_input = Variable(hidden_state.data.new(actions).long())
+        # TODO(mattg): probably makes sense to just put this in the state from the previous
+        # iteration, because we're embedding actions to predict things now.
         embedded_input = self._action_embedder(action_input)
 
         # (group_size, decoder_input_dim)
@@ -436,7 +557,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
         # (group_size, num_actions), giving the index of each valid action for each item in the
         # group.  This is actually just a list of lists, on the CPU, not a CUDA variable.
-        valid_actions = state.get_valid_actions(self._num_actions)
+        valid_actions = state.get_valid_actions()
 
         # action_embeddings: (group_size, num_actions, action_embedding_dim)
         # action_mask: (group_size, num_actions)
@@ -526,6 +647,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             for action_index, action in enumerate(group_actions):
                 # `action` is currently the index in `log_probs`, not the actual action ID.  To get
                 # the action ID, we need to go through `considered_actions`.
+                if action_index >= len(considered_actions[group_index]):
+                    # This was padding.  We can check either `action_index` or `action` here - it's
+                    # really `action` that we care about, but our masking should have sorted all of
+                    # the higher actions to the end, anyway.
+                    continue
                 action = considered_actions[group_index][action]
                 if allowed_actions is not None and action not in allowed_actions[group_index]:
                     # This happens when our _decoder trainer_ wants us to only evaluate certain
@@ -544,13 +670,19 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # regroup them later, as that's a really easy operation.
                 new_action_history = state.action_history[group_index] + [action]
                 new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
-                new_states.append(WikiTablesDecoderState([state.batch_indices[group_index]],
-                                                         [new_action_history],
-                                                         [new_score],
-                                                         [hidden_state[group_index]],
-                                                         [memory_cell[group_index]],
-                                                         [attended_question[group_index]],
-                                                         state.encoder_outputs,
-                                                         state.encoder_output_mask,
-                                                         state.end_index))
+                action_string = self._vocab.get_token_from_index(action, self._action_namespace)
+                new_non_terminal_stack = state.update_non_terminal_stack(
+                        state.non_terminal_stack[group_index], action_string)
+                new_state = WikiTablesDecoderState(batch_indices=[state.batch_indices[group_index]],
+                                                   action_history=[new_action_history],
+                                                   score=[new_score],
+                                                   non_terminal_stack=[new_non_terminal_stack],
+                                                   hidden_state=[hidden_state[group_index]],
+                                                   memory_cell=[memory_cell[group_index]],
+                                                   attended_question=[attended_question[group_index]],
+                                                   encoder_outputs=state.encoder_outputs,
+                                                   encoder_output_mask=state.encoder_output_mask,
+                                                   global_type_productions=state.global_type_productions,
+                                                   end_index=state.end_index)
+                new_states.append(new_state)
         return new_states
