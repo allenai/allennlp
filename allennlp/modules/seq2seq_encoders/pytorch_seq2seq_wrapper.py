@@ -62,15 +62,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         # adjust the ``mask`` so that every sequence has length at least 1. Then after
         # running the RNN we zero out the corresponding rows in the result.
 
-        # First count how many sequences are empty.
+        # Count how many sequences are empty so we can correct the lengths below.
         batch_size, total_sequence_length = mask.size()
         num_valid = torch.sum(mask[:, 0]).int().data[0]
-
-        # Force every sequence to be length at least one. Need to `.clone()` the mask
-        # to avoid a RuntimeError from shared storage.
-        if num_valid < batch_size:
-            mask = mask.clone()
-            mask[:, 0] = 1
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
@@ -78,15 +72,22 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         packed_sequence_input = pack_padded_sequence(sorted_inputs,
                                                      sorted_sequence_lengths.data.tolist(),
                                                      batch_first=True)
+        # In some circumstances you may have sequences of zero length.
+        # ``pack_padded_sequence`` requires all sequence lengths to be > 0, so here we
+        # adjust the ``mask`` so that every sequence has length at least 1. Then after
+        # running the RNN we zero out the corresponding rows in the result.
+        if num_valid < batch_size:
+            sorted_sequence_lengths[num_valid:] = 1
 
         # Actually call the module on the sorted PackedSequence.
         packed_sequence_output, _ = self._module(packed_sequence_input, hidden_state)
         unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
 
-        # We sorted by length, so if there are invalid rows that need to be zeroed out
-        # they will be at the end.
+        # ``pack_padded_sequence`` requires all sequence lengths to be > 0, so here we
+        # adjust the ``sorted_sequence_lengths`` so that every sequence has length at
+        # least 1. Then after running the RNN we zero out the corresponding rows in the result.
         if num_valid < batch_size:
-            unpacked_sequence_tensor[num_valid:, :, :] = 0.
+            sorted_sequence_lengths[num_valid:] = 1
 
         # It's possible to need to pass sequences which are padded to longer than the
         # max length of the sequence to a Seq2SeqEncoder. However, packing and unpacking

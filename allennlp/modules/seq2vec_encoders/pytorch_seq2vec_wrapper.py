@@ -68,31 +68,25 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             # at the end of the max sequence length, so we have to use the state of the RNN below.
             return self._module(inputs, hidden_state)[0][:, -1, :]
 
-        # In some circumstances you may have sequences of zero length. For example, if this is the
-        # embedding layer for a character-based encoding, the original input will have size
-        #   (batch_size, max_sentence_length, max_word_length, encoding_dim)
+        # In some circumstances you may have sequences of zero length. For example, if this
+        # is the embedding layer for a character-based encoding, the original input will
+        # have size (batch_size, max_sentence_length, max_word_length, encoding_dim)
         # and then ``TimeDistributed`` will reshape it to
         #   (batch_size * max_sentence_length, max_word_length, encoding_dim)
-        # in which case all the rows corresponding to word padding will be
-        # "empty character sequences".
-        #
-        # ``pack_padded_sequence`` requires all sequence lengths to be > 0, so here we
-        # adjust the ``mask`` so that every sequence has length at least 1. Then after
-        # running the RNN we zero out the corresponding rows in the result.
+        # in which case all the rows corresponding to word padding will be "empty character sequences".
 
-        # First count how many sequences are empty.
+        # Count how many sequences are empty so we can correct the lengths below.
         batch_size = mask.size()[0]
         num_valid = torch.sum(mask[:, 0]).int().data[0]
-
-        # Force every sequence to be length at least one. Need to `.clone()` the mask
-        # to avoid a RuntimeError from shared storage.
-        if num_valid < batch_size:
-            mask = mask.clone()
-            mask[:, 0] = 1
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
+        # ``pack_padded_sequence`` requires all sequence lengths to be > 0, so here we
+        # adjust the ``sorted_sequence_lengths`` so that every sequence has length at
+        # least 1. Then after running the RNN we zero out the corresponding rows in the result.
+        if num_valid < batch_size:
+            sorted_sequence_lengths[num_valid:] = 1
 
         packed_sequence_input = pack_padded_sequence(sorted_inputs,
                                                      sorted_sequence_lengths.data.tolist(),
