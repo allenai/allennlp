@@ -106,6 +106,11 @@ class SpanBasedF1Measure(Metric):
             sequence_prediction = argmax_predictions[i, :]
             sequence_gold_label = gold_labels[i, :]
             length = sequence_lengths[i]
+
+            if length == 0:
+                # It is possible to call this metric with sequences which are
+                # completely padded. These contribute nothing, so we skip these rows.
+                continue
             prediction_spans = self._extract_spans(sequence_prediction[:length].tolist())
             gold_spans = self._extract_spans(sequence_gold_label[:length].tolist())
 
