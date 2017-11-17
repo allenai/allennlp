@@ -1,4 +1,4 @@
-from typing import Tuple, List, Union, Any, Sequence
+from typing import Tuple, List, Union
 
 import torch
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
