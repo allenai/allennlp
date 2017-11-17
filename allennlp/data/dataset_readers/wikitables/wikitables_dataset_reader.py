@@ -18,7 +18,8 @@ from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.fields import TextField, KnowledgeGraphField, LabelField, ListField
-from allennlp.data.dataset_readers.wikitables import TableKnowledgeGraph, World
+from allennlp.data.semparse.knowledge_graphs.table_knowledge_graph import TableKnowledgeGraph
+from allennlp.data.semparse.worlds.wikitables_world import WikitablesWorld
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 
@@ -109,7 +110,7 @@ class WikitablesDatasetReader(DatasetReader):
             table_knowledge_graph = TableKnowledgeGraph.read_from_json(table_info)
         table_field = KnowledgeGraphField(table_knowledge_graph, self._utterance_token_indexers)
         if dpd_output:
-            world = World(table_knowledge_graph)
+            world = WikitablesWorld(table_knowledge_graph)
             expressions = world.process_sempre_forms(dpd_output)
             action_sequences = [world.get_action_sequence(expression) for expression in expressions]
             action_sequences_field = ListField([self._make_action_sequence_field(sequence)

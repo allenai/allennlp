@@ -10,7 +10,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields.field import Field, DataArray
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.knowledge_graph import KnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs import KnowledgeGraph
 
 
 class KnowledgeGraphField(Field[DataArray]):

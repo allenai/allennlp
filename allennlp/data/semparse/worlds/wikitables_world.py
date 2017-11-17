@@ -10,13 +10,13 @@ import pyparsing
 
 from nltk.sem.logic import Expression, LambdaExpression
 
-from allennlp.data.dataset_readers.wikitables import type_declaration as types
+from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
 
-from allennlp.data.dataset_readers.wikitables.type_declaration import DynamicTypeLogicParser
-from allennlp.data.dataset_readers.wikitables.table import TableKnowledgeGraph
+from allennlp.data.semparse.type_declarations.wikitables_type_declaration import DynamicTypeLogicParser
+from allennlp.data.semparse.knowledge_graphs.table_knowledge_graph import TableKnowledgeGraph
 
 
-class World:
+class WikitablesWorld:
     """
     World representation for the WikitableQuestions domain.
 
