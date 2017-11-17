@@ -15,12 +15,17 @@ class TestEvaluate(AllenNlpTestCase):
         subparsers = parser.add_subparsers(title='Commands', metavar='')
         Evaluate().add_subparser('evaluate', subparsers)
 
-        raw_args = ["evaluate",
-                    "--archive_file", "tests/fixtures/bidaf/serialization/model.tar.gz",
-                    "--evaluation_data_file", "tests/fixtures/data/squad.json"]
+        snake_args = ["evaluate",
+                      "--archive_file", "tests/fixtures/bidaf/serialization/model.tar.gz",
+                      "--evaluation_data_file", "tests/fixtures/data/squad.json",
+                      "--cuda_device", "-1"]
 
-        args = parser.parse_args(raw_args)
+        kebab_args = ["evaluate",
+                      "--archive-file", "tests/fixtures/bidaf/serialization/model.tar.gz",
+                      "--evaluation-data-file", "tests/fixtures/data/squad.json",
+                      "--cuda-device", "-1"]
 
-        metrics = evaluate_from_args(args)
-
-        assert metrics.keys() == {'span_acc', 'end_acc', 'start_acc', 'em', 'f1'}
+        for raw_args in [snake_args, kebab_args]:
+            args = parser.parse_args(raw_args)
+            metrics = evaluate_from_args(args)
+            assert metrics.keys() == {'span_acc', 'end_acc', 'start_acc', 'em', 'f1'}

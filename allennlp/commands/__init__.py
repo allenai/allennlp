@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 DEPRECATED_FLAGS = {
         '--serialization_dir': '--serialization-dir',
         '--archive_file': '--archive-file',
-        '--evaluation_data_set': '--evaluation_data_set',
+        '--evaluation_data_file': '--evaluation-data-file',
         '--cuda_device': '--cuda-device',
         '--batch_size': '--batch-size'
 }
