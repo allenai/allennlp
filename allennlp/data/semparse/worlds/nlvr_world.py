@@ -1,3 +1,8 @@
+"""
+This module defines three classes: Object and Box (the two entities in the NLVR domain) and a NLVRWorld,
+which mainly contains an execution method and related helper methods.
+"""
+
 from collections import defaultdict
 import operator
 
@@ -8,8 +13,20 @@ import pyparsing
 
 AttributeType = Union[int, str]  # pylint: disable=invalid-name
 
+
 class Object:
-    def __init__(self, object_dict: Dict) -> None:
+    """
+    ``Objects`` are the geometric shapes in the NLVR domain. They have values for attributes shape, color,
+    x_loc, y_loc and size. We take a dict read from the json file and store it here, and define a get method
+    for getting the attribute values. We need this to be hashable because need to make sets of ``Objects``
+    during execution, which get passed around between functions.
+
+    Parameters
+    ----------
+    object_dict : Dict[str: Union[str, int]]
+        The dict for each object from the json file.
+    """
+    def __init__(self, object_dict: Dict[str: AttributeType]) -> None:
         self._object_dict: Dict[str, AttributeType] = {}
         for key, value in object_dict.items():
             if isinstance(value, str):
@@ -39,6 +56,17 @@ class Object:
 
 
 class Box:
+    """
+    This class represents each box containing objects in NLVR.
+
+    Parameters
+    ----------
+    name : str
+        This is just so that we can define a string representation to hash each object. It could be any unique
+        string.
+    objects_list : List[Dict]
+        List of objects in the box, as given by the json file.
+    """
     def __init__(self, name: str, objects_list: List[Dict]) -> None:
         self._name = name
         self._objects_set = set([Object(object_dict) for object_dict in objects_list])
@@ -62,7 +90,13 @@ EntityType = TypeVar('EntityType', Object, Box)  # pylint: disable=invalid-name
 class NLVRWorld:
     # pylint: disable=too-many-public-methods
     """
-    Execution logic for logical forms in NLVR.
+    Class defining the world representation of NLVR. Defines an execution logic for logical forms in NLVR.
+    We just take the structured_rep from the json file to initialize this.
+
+    Parameters
+    ----------
+    world_representation : List[List[Dict]]
+        "structured_rep" from the json file.
     """
     def __init__(self, world_representation: List[List[Dict]]) -> None:
         self._boxes = set([Box("box%d" % index, object_list) for index, object_list in
