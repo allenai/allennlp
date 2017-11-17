@@ -108,6 +108,11 @@ class WikiTablesSemanticParser(Model):
         question : Dict[str, torch.LongTensor]
            The output of ``TextField.as_array()`` applied on the question ``TextField``. This will
            be passed through a ``TextFieldEmbedder`` and then through an encoder.
+        table : ``Dict[str, torch.LongTensor]``
+            The output of ``KnowledgeGraphField.as_array()`` applied on the table
+            ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
+            entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
+            get embeddings for each entity.
         target_action_sequences : torch.LongTensor, optional (default = None)
            A list of possibly valid action sequences, with shape ``(batch_size, num_sequences,
            sequence_length, 1)``.  The trailing dimension is because of how our ``ListFields``
@@ -238,7 +243,8 @@ def _get_type_productions(vocab: Vocabulary, namespace: str) -> Dict[str, List[i
 
     This method takes all of the actions that we saw in the training data and constructs a
     "grammar" from them, where here "grammar" means "valid productions for any type".  That is, if
-    we see the action "r -> [<e,r>, e]", we add "[<e,r>, e]" to the valid productions for type "r".
+    we see the action "r -> [<e,r>, e]", we add "[<e,r>, e]" to the valid productions for type "r"
+    (in practice, we just add the action's ID in the vocabulary, which amounts to the same thing).
     This is effectively making a context-free assumption, that any production rule we ever see used
     is valid in any context.  This assumption isn't actually true, especially for terminal
     productions, but it will do for now.
@@ -352,9 +358,15 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         Given a single non-terminal stack (`not` a grouped one), and an action that was taken,
         update the non-terminal stack.  This involves popping the non-terminal that was expanded
         off of the stack, then pushing on any non-terminals in the production rule back on the
-        stack.
+        stack.  We push the non-terminals on in `reverse` order, so that the first non-terminal in
+        the production rule gets popped off the stack first.
+
+        For example, if ``stack`` is ``["r", "<e,r>", "d"]``, and ``action`` is ``d -> [<e,d>, e]``,
+        the result will be ``["r", "<e,r>", "e", "<e,d>"]``.
         """
         if ' -> ' in action:
+            # TODO(mattg,pradeep): we need to handle lambdas specially here, to update the valid
+            # productions for the type of the variable.
             non_terminal, production_string = action.split(' -> ')
             assert stack[-1] == non_terminal
             new_stack = stack[:-1]

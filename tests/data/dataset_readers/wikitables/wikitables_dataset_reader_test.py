@@ -1,13 +1,13 @@
 # pylint: disable=no-self-use
-from allennlp.data.dataset_readers import WikitablesDatasetReader
+from allennlp.data.dataset_readers import WikiTablesDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestWikitablesDatasetReader(AllenNlpTestCase):
+class TestWikiTablesDatasetReader(AllenNlpTestCase):
     def test_reader_reads(self):
         tables_directory = "tests/fixtures/data/wikitables"
         dpd_output_directory = "tests/fixtures/data/wikitables/dpd_output"
-        reader = WikitablesDatasetReader(tables_directory, dpd_output_directory)
+        reader = WikiTablesDatasetReader(tables_directory, dpd_output_directory)
         dataset = reader.read("tests/fixtures/data/wikitables/sample_data.examples")
         assert len(dataset.instances) == 2
         instance = dataset.instances[0]

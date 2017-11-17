@@ -27,12 +27,19 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("wikitables")
-class WikitablesDatasetReader(DatasetReader):
+class WikiTablesDatasetReader(DatasetReader):
     """
-    Initialize the dataset reader with paths to the tables directory and the directory where DPD
+    This ``DatasetReader`` takes WikiTableQuestions example files and converts them into
+    ``Instances`` suitable for use with the ``WikiTablesSemanticParser``.  The example files have
+    pointers in them to two other files: a file that contains an associated table for each
+    question, and a file that has pre-computed, possible logical forms.  Because of how the
+    ``DatasetReader`` API works, we need to take base directories for those other files in the
+    constructor.
+
+    We initialize the dataset reader with paths to the tables directory and the directory where DPD
     output is stored if you are training. While testing, you can either provide existing table
-    filenames or if your question is about a new table, provide the contnet of the table as a dict
-    (See ``TableKnowledgeGraph.read_from_json`` for the expected format). If you are doing the
+    filenames or if your question is about a new table, provide the content of the table as a dict
+    (See :func:`TableKnowledgeGraph.read_from_json` for the expected format). If you are doing the
     former, you still need to provide a ``tables_directory`` path here.
 
     For training, we assume you are reading in ``data/*.examples`` files, and you have access to
@@ -167,14 +174,14 @@ class WikitablesDatasetReader(DatasetReader):
         return parsed_info
 
     @classmethod
-    def from_params(cls, params: Params) -> 'WikitablesDatasetReader':
+    def from_params(cls, params: Params) -> 'WikiTablesDatasetReader':
         tables_directory = params.pop('tables_directory')
         dpd_output_directory = params.pop('dpd_output_directory', None)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
         table_token_indexers = TokenIndexer.dict_from_params(params.pop('table_token_indexers', {}))
         params.assert_empty(cls.__name__)
-        return WikitablesDatasetReader(tables_directory=tables_directory,
+        return WikiTablesDatasetReader(tables_directory=tables_directory,
                                        dpd_output_directory=dpd_output_directory,
                                        tokenizer=tokenizer,
                                        question_token_indexers=question_token_indexers,

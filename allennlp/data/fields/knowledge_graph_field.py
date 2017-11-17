@@ -20,7 +20,7 @@ class KnowledgeGraphField(Field[Dict[str, numpy.ndarray]]):
     A ``KnowledgeGraphField`` represents a ``KnowledgeGraph`` as a ``Field`` that can be used in a
     ``Model``.  We take the (sorted) list of entities in the graph and output them as arrays using
     ``TokenIndexers``, similar to how text tokens are treated by a ``TextField``.  We have
-    knowledge-graph-specific ``TokenIndexers`, however, that allow for more versatile treatment of
+    knowledge-graph-specific ``TokenIndexers``, however, that allow for more versatile treatment of
     the knowledge graph entities than just treating them as text tokens.
 
     Parameters
