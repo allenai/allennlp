@@ -113,13 +113,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         if not self._stateful:
             initial_states = hidden_state
         else:
-            # We don't know the state sizes the first time calling forward.
-            if self._states is None:
-                initial_states = None
-            else:
-                # We have some previous states.
-                initial_states = (self._states[0][:, :num_valid, :],
-                                  self._states[1][:, :num_valid, :])
+            initial_states = self._get_initial_states(num_valid)
 
         # Actually call the module on the sorted PackedSequence.
         packed_sequence_output, final_states = self._module(packed_sequence_input, initial_states)
@@ -169,38 +163,21 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             initial_states = None
         else:
             # We have some previous states.
-            states = (self._states[0][:, :num_valid, :],
-                      self._states[1][:, :num_valid, :])
-
-            # Convert the states to the right shape.
+            initial_states = (self._states[0][:, :num_valid, :],
+                              self._states[1][:, :num_valid, :])
 
         return initial_states
 
     def _update_states(self, final_states, num_valid):
-        # Stacked RNNs return states of size (num_layers, batch_size, dim * num_directions).
-        # Unstacked RNNs return states of size (num_layers * num_directions, batch_size, dim).
-        # Convert them to canonical form (num_layers, batch_size, dim * num_directions).
-        if self._stacked or self._num_directions == 1:
-            canonical_states = final_states
-        else:
-            num_state_layers = final_states[0].size(0) // 2
-            canonical_states = []
-            for k in range(2):
-                state_layers = final_states[k].chunk(num_state_layers, 0)
-                canonical_states.append(torch.cat([torch.cat([state_layer[0, :, :],
-                                                              state_layer[1, :, :]],
-                                                             dim=1).unsqueeze(0)
-                                                  for state_layer in state_layers], dim=0))
-
         if self._states is None:
             # First time through we allocate an array to hold the states.
             states = []
             for k in range(2):
                 states.append(torch.autograd.Variable(
-                              canonical_states[k].data.new(canonical_states[k].size(0),
-                                                           self._max_batch_size,
-                                                           canonical_states[k].size(-1)).fill_(0)))
+                              final_states[k].data.new(final_states[k].size(0),
+                                                       self._max_batch_size,
+                                                       final_states[k].size(-1)).fill_(0)))
             self._states = states
 
         for k in range(2):
-            self._states[k][:, :num_valid, :] = canonical_states[k]
+            self._states[k].data[:, :num_valid, :] = final_states[k].data

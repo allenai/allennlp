@@ -165,3 +165,11 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
 
         assert list(encoder_output.size()) == [6, 7, 14]
 
+    def test_wrapper_stateful_too_large_batch(self):
+        lstm = LSTM(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
+        encoder = PytorchSeq2SeqWrapper(lstm, stateful=True, max_batch_size=10)
+        tensor = Variable(torch.rand([15, 5, 3]))
+        mask = Variable(torch.ones(15, 5))
+        with self.assertRaises(ValueError):
+            _ = encoder(tensor, mask)
+
