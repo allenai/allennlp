@@ -46,8 +46,8 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
           and ``(num_layers, batch_size, memory_dim)``
     """
     def __init__(self, module: Union[torch.nn.modules.RNNBase, torch.nn.Module],
-                 stacked: bool=False,
-                 stateful: bool=False, max_batch_size: int=128) -> None:
+                 stacked: bool = False,
+                 stateful: bool = False, max_batch_size: int = 128) -> None:
         super(PytorchSeq2SeqWrapper, self).__init__()
         self._module = module
         self._stacked = stacked
@@ -174,9 +174,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             states = []
             for k in range(2):
                 states.append(torch.autograd.Variable(
-                              final_states[k].data.new(final_states[k].size(0),
-                                                       self._max_batch_size,
-                                                       final_states[k].size(-1)).fill_(0)))
+                        final_states[k].data.new(final_states[k].size(0),
+                                                 self._max_batch_size,
+                                                 final_states[k].size(-1)).fill_(0)))
             self._states = states
 
         for k in range(2):
