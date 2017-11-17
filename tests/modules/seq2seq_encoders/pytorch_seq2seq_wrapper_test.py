@@ -129,16 +129,16 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
                 super(MockStackedLSTM, self).__init__()
                 self.lstms = [
                         LSTM(bidirectional=True, num_layers=1, input_size=3,
-                                  hidden_size=7, batch_first=True),
+                             hidden_size=7, batch_first=True),
                         LSTM(bidirectional=True, num_layers=1, input_size=14,
-                                  hidden_size=7, batch_first=True)
+                             hidden_size=7, batch_first=True)
                 ]
 
-            def forward(self, inputs, hidden_state):
+            def forward(self, inputs, hidden_state): # pylint: disable=arguments-differ
                 output1, _ = self.lstms[0](inputs, hidden_state)
                 output2, _ = self.lstms[1](output1, hidden_state)
                 output1 = pad_packed_sequence(output1, batch_first=True)[0]
-                output2 = pad_packed_sequence(output2, batch_first=True)[0] 
+                output2 = pad_packed_sequence(output2, batch_first=True)[0]
                 return torch.cat([output1.unsqueeze(0), output2.unsqueeze(0)], dim=0), None
 
         encoder = PytorchSeq2SeqWrapper(MockStackedLSTM(), stacked=True)
@@ -157,7 +157,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         # Different batch sizes further tests some of the logic.
         for k in range(3):
             batch_size = (k + 1) * 2
-            sequence_length = k + 5 
+            sequence_length = k + 5
             tensor = Variable(torch.rand([batch_size, sequence_length, 3]))
             mask = Variable(torch.ones(batch_size, sequence_length))
             mask.data[0, 3:] = 0
@@ -172,4 +172,3 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         mask = Variable(torch.ones(15, 5))
         with self.assertRaises(ValueError):
             _ = encoder(tensor, mask)
-
