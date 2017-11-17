@@ -183,11 +183,11 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         if self._states is None:
             # First time through we allocate an array to hold the states.
             states = []
-            for k in range(len(final_states)):
+            for k, state in enumerate(final_states):
                 states.append(torch.autograd.Variable(
-                        final_states[k].data.new(final_states[k].size(0),
-                                                 self._max_batch_size,
-                                                 final_states[k].size(-1)).fill_(0)))
+                        state.data.new(state.size(0),
+                                       self._max_batch_size,
+                                       state.size(-1)).fill_(0)))
             self._states = states
 
         # We may need to pad the final states for sequences of length 0.
@@ -200,7 +200,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         else:
             states_with_invalid_rows = final_states
 
-        for k in range(len(states_with_invalid_rows)):
-            self._states[k].data[:, :batch_size, :] = states_with_invalid_rows[k].index_select(
+        for k, state in enumerate(states_with_invalid_rows):
+            self._states[k].data[:, :batch_size, :] = state.index_select(
                     1, restoration_indices
             ).data
