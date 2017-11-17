@@ -380,6 +380,13 @@ class Vocabulary:
                                          pretrained_files=pretrained_files,
                                          only_include_pretrained_words=only_include_pretrained_words)
 
+    def is_padded(self, namespace: str) -> bool:
+        """
+        Returns whether or not there are padding and OOV tokens added to the given namepsace.
+        """
+        return self._index_to_token[namespace][0] == self._padding_token
+
+
     def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:
         """
         Adds ``token`` to the index, if it is not already present.  Either way, we return the index of
