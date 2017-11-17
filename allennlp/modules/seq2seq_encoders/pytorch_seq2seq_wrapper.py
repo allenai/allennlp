@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
@@ -30,10 +32,22 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     bugs around masking.  If you already have a ``PackedSequence`` you can pass ``None`` as the
     second parameter.
 
+    We support stateful RNNs where the final state from each batch is used as the initial
+    state for the subsequent batch by passing ``stateful=True`` to the constructor.  In this case,
+    ``max_batch_size`` is the maximum batch size allowed (although batches of any size less
+    then the maximum are also supported).  If ``stateful=True`` then ``max_batch_size``
+    is ignored.
+
     We also support stacked RNNs that return activations for each layer by passing ``stacked=True``
-    to the constructor.
+    to the constructor.  In this case, the ``module`` forward method has a slightly different
+    signature from ``torch.nn.modules.RNNBase``.  It returns:
+        - hidden states of size ``(num_layers, batch_size, timesteps, hidden_dim)``
+        - final states, a tuple of sizes ``(num_layers, batch_size, hidden_dim)``
+          and ``(num_layers, batch_size, memory_dim)``
     """
-    def __init__(self, module: torch.nn.modules.RNNBase, stacked: bool=False) -> None:
+    def __init__(self, module: Union[torch.nn.modules.RNNBase, torch.nn.Module],
+                 stacked: bool=False,
+                 stateful: bool=False, max_batch_size: int=128) -> None:
         super(PytorchSeq2SeqWrapper, self).__init__()
         self._module = module
         self._stacked = stacked
@@ -43,20 +57,34 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         except AttributeError:
             pass
 
-    def get_input_dim(self) -> int:
-        return self._module.input_size
+        self._stateful = stateful
+        self._max_batch_size = max_batch_size
+        self._states = None
 
-    def get_output_dim(self) -> int:
         try:
             is_bidirectional = self._module.bidirectional
         except AttributeError:
             is_bidirectional = False
-        return self._module.hidden_size * (2 if is_bidirectional else 1)
+        if is_bidirectional:
+            self._num_directions = 2
+        else:
+            self._num_directions = 1
+
+    def get_input_dim(self) -> int:
+        return self._module.input_size
+
+    def get_output_dim(self) -> int:
+        return self._module.hidden_size * self._num_directions
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
                 mask: torch.Tensor,
                 hidden_state: torch.Tensor = None) -> torch.Tensor:
+
+        if self._stateful and mask is None:
+            raise ValueError("Always pass a mask with stateful RNNs.")
+        if self._stateful and hidden_state is not None:
+            raise ValueError("Stateful RNNs provide their own initial hidden_state.")
 
         if mask is None:
             return self._module(inputs, hidden_state)[0]
@@ -70,6 +98,10 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         batch_size, total_sequence_length = mask.size()
         num_valid = torch.sum(mask[:, 0]).int().data[0]
 
+        if self._stateful and batch_size > self._max_batch_size:
+            raise ValueError("Got batch_size={0} but using a stateful RNN with max_batch_size={1}"
+                             "".format(batch_size, self._max_batch_size))
+
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
@@ -77,8 +109,20 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
                                                      sorted_sequence_lengths[:num_valid].data.tolist(),
                                                      batch_first=True)
 
+        # Prepare the initial states.
+        if not self._stateful:
+            initial_states = hidden_state
+        else:
+            # We don't know the state sizes the first time calling forward.
+            if self._states is None:
+                initial_states = None
+            else:
+                # We have some previous states.
+                initial_states = (self._states[0][:, :num_valid, :],
+                                  self._states[1][:, :num_valid, :])
+
         # Actually call the module on the sorted PackedSequence.
-        packed_sequence_output, _ = self._module(packed_sequence_input, hidden_state)
+        packed_sequence_output, final_states = self._module(packed_sequence_input, initial_states)
         if self._stacked:
             # packed_sequence_output is shape (n_layers, batch_size, n_times, nx)
             num_layers = packed_sequence_output.size()[0]
@@ -109,9 +153,54 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             for k in range(num_layers):
                 unpacked_sequence_tensor[k] = torch.cat([unpacked_sequence_tensor[k], zeros], 1)
 
+        if self._stateful:
+            self._update_states(final_states, num_valid)
+
         # Restore the original indices and return the sequence.
         if not self._stacked:
             return unpacked_sequence_tensor[0].index_select(0, restoration_indices)
         else:
             return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)
                               for tensor in unpacked_sequence_tensor], dim=0)
+
+    def _get_initial_states(self, num_valid):
+        # We don't know the state sizes the first time calling forward.
+        if self._states is None:
+            initial_states = None
+        else:
+            # We have some previous states.
+            states = (self._states[0][:, :num_valid, :],
+                      self._states[1][:, :num_valid, :])
+
+            # Convert the states to the right shape.
+
+        return initial_states
+
+    def _update_states(self, final_states, num_valid):
+        # Stacked RNNs return states of size (num_layers, batch_size, dim * num_directions).
+        # Unstacked RNNs return states of size (num_layers * num_directions, batch_size, dim).
+        # Convert them to canonical form (num_layers, batch_size, dim * num_directions).
+        if self._stacked or self._num_directions == 1:
+            canonical_states = final_states
+        else:
+            num_state_layers = final_states[0].size(0) // 2
+            canonical_states = []
+            for k in range(2):
+                state_layers = final_states[k].chunk(num_state_layers, 0)
+                canonical_states.append(torch.cat([torch.cat([state_layer[0, :, :],
+                                                              state_layer[1, :, :]],
+                                                             dim=1).unsqueeze(0)
+                                                  for state_layer in state_layers], dim=0))
+
+        if self._states is None:
+            # First time through we allocate an array to hold the states.
+            states = []
+            for k in range(2):
+                states.append(torch.autograd.Variable(
+                              canonical_states[k].data.new(canonical_states[k].size(0),
+                                                           self._max_batch_size,
+                                                           canonical_states[k].size(-1)).fill_(0)))
+            self._states = states
+
+        for k in range(2):
+            self._states[k][:, :num_valid, :] = canonical_states[k]
