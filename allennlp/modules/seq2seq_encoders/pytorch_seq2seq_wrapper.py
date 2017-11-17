@@ -130,6 +130,11 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             num_layers = 1
             unpacked_sequence_tensor = [pad_packed_sequence(packed_sequence_output, batch_first=True)[0]]
 
+        # Some RNNs (GRUs) only return one state as a Tensor.  Others (LSTMs) return two.
+        # If one state, use a single element list to handle in a consistent manner below.
+        if not isinstance(final_states, (list, tuple)):
+            final_states = [final_states]
+
         # Add back invalid rows.
         if num_valid < batch_size:
             _, length, dim = unpacked_sequence_tensor[0].size()
@@ -150,9 +155,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
                 unpacked_sequence_tensor[k] = torch.cat([unpacked_sequence_tensor[k], zeros], 1)
 
         if self._stateful:
-            if not isinstance(final_states, (list, tuple)):
-                final_states = [final_states]
-            self._update_states(final_states, num_valid)
+            self._update_states(final_states, num_valid, restoration_indices)
 
         # Restore the original indices and return the sequence.
         if not self._stacked:
@@ -176,7 +179,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         return initial_states
 
     def _update_states(self, final_states: Union[List[torch.Tensor], Tuple[torch.Tensor]],
-                       num_valid: int) -> None:
+                       num_valid: int, restoration_indices: torch.Tensor) -> None:
         if self._states is None:
             # First time through we allocate an array to hold the states.
             states = []
@@ -187,5 +190,17 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
                                                  final_states[k].size(-1)).fill_(0)))
             self._states = states
 
-        for k in range(len(final_states)):
-            self._states[k].data[:, :num_valid, :] = final_states[k].data
+        # We may need to pad the final states for sequences of length 0.
+        dim, batch_size, _ = final_states[0].size()
+        if num_valid < batch_size:
+            states_with_invalid_rows = []
+            for state in final_states:
+                zeros = state.data.new(dim, batch_size - num_valid, state.size(-1)).fill_(0)
+                states_with_invalid_rows.append(torch.cat([state, zeros], 1))
+        else:
+            states_with_invalid_rows = final_states
+
+        for k in range(len(states_with_invalid_rows)):
+            self._states[k].data[:, :batch_size, :] = states_with_invalid_rows[k].index_select(
+                    1, restoration_indices
+            ).data
