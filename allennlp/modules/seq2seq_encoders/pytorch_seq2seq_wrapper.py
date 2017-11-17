@@ -41,9 +41,11 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     We also support stacked RNNs that return activations for each layer by passing ``stacked=True``
     to the constructor.  In this case, the ``module`` forward method has a slightly different
     signature from ``torch.nn.modules.RNNBase``.  It returns:
+
         - hidden states of size ``(num_layers, batch_size, timesteps, hidden_dim)``
         - final states, a tuple of sizes ``(num_layers, batch_size, hidden_dim)``
           and ``(num_layers, batch_size, memory_dim)``
+
     """
     def __init__(self, module: Union[torch.nn.modules.RNNBase, torch.nn.Module],
                  stacked: bool = False,
