@@ -6,13 +6,13 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
 
     $ python -m allennlp.run predict --help
     usage: run [command] predict [-h] [--output-file OUTPUT_FILE] [--print]
-                                archive_file input-file
+                                archive_file input_file
 
     Run the specified model against a JSON-lines input file.
 
     positional arguments:
     archive_file          the archived model to make predictions with
-    input-file            path to input file
+    input_file            path to input file
 
     optional arguments:
     -h, --help            show this help message and exit
