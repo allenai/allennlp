@@ -1,4 +1,4 @@
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Any, Sequence
 
 import torch
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
@@ -61,7 +61,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         self._stateful = stateful
         self._max_batch_size = max_batch_size
-        self._states = None
+        self._states: Union[List[torch.Tensor], Tuple[torch.Tensor]] = None
 
         try:
             is_bidirectional = self._module.bidirectional
@@ -164,7 +164,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)
                               for tensor in unpacked_sequence_tensor], dim=0)
 
-    def _get_initial_states(self, num_valid: int) -> Union[Tuple[torch.Tensor], torch.Tensor]:
+    def _get_initial_states(self, num_valid: int) -> Union[None, Tuple[torch.Tensor], torch.Tensor]:
         # We don't know the state sizes the first time calling forward.
         if self._states is None:
             initial_states = None
@@ -198,7 +198,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
                 zeros = state.data.new(dim, batch_size - num_valid, state.size(-1)).fill_(0)
                 states_with_invalid_rows.append(torch.cat([state, zeros], 1))
         else:
-            states_with_invalid_rows = final_states
+            states_with_invalid_rows = list(final_states)
 
         for k, state in enumerate(states_with_invalid_rows):
             self._states[k].data[:, :batch_size, :] = state.index_select(
