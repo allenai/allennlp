@@ -1,5 +1,7 @@
 from typing import Dict
 import argparse
+import logging
+import sys
 
 from allennlp.commands.serve import Serve
 from allennlp.commands.predict import Predict
@@ -8,6 +10,20 @@ from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.service.predictors import DemoModel
 
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+# Originally we were inconsistent about using hyphens and underscores
+# in our flag names. We're switching to all-hyphens, but in the near-term
+# we're still allowing the underscore_versions too, so as not to break any
+# code. However, we'll use this lookup to log a warning if someone uses the
+# old names.
+DEPRECATED_FLAGS = {
+        '--serialization_dir': '--serialization-dir',
+        '--archive_file': '--archive-file',
+        '--evaluation_data_set': '--evaluation_data_set',
+        '--cuda_device': '--cuda-device',
+        '--batch_size': '--batch-size'
+}
 
 def main(prog: str = None,
          model_overrides: Dict[str, DemoModel] = {},
@@ -43,6 +59,14 @@ def main(prog: str = None,
 
     for name, subcommand in subcommands.items():
         subcommand.add_subparser(name, subparsers)
+
+    # Check and warn for deprecated args.
+    for arg in sys.argv[1:]:
+        if arg in DEPRECATED_FLAGS:
+            logger.warning("Argument name %s is deprecated (and will likely go away at some point), "
+                           "please use %s instead",
+                           arg,
+                           DEPRECATED_FLAGS[arg])
 
     args = parser.parse_args()
 
