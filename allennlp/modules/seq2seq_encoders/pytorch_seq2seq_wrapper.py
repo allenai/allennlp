@@ -35,7 +35,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     We support stateful RNNs where the final state from each batch is used as the initial
     state for the subsequent batch by passing ``stateful=True`` to the constructor.  In this case,
     ``max_batch_size`` is the maximum batch size allowed (although batches of any size less
-    then the maximum are also supported).  If ``stateful=True`` then ``max_batch_size``
+    then the maximum are also supported).  If ``stateful=False`` then ``max_batch_size``
     is ignored.
 
     We also support stacked RNNs that return activations for each layer by passing ``stacked=True``
@@ -47,7 +47,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
           and ``(num_layers, batch_size, memory_dim)``
 
     """
-    def __init__(self, module: Union[torch.nn.modules.RNNBase, torch.nn.Module],
+    def __init__(self, module: torch.nn.Module,
                  stacked: bool = False,
                  stateful: bool = False, max_batch_size: int = 128) -> None:
         super(PytorchSeq2SeqWrapper, self).__init__()
