@@ -13,7 +13,6 @@ These submodules contain various functionality for working with data.
    allennlp.data.token_indexers
    allennlp.data.tokenizers
    allennlp.data.vocabulary
-   allennlp.data.knowledge_graph
 
 .. automodule:: allennlp.data
    :members:
