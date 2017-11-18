@@ -16,9 +16,6 @@ their predictions.
     -h, --help            show this help message and exit
     --port PORT
     --workers WORKERS
-    --config-file CONFIG_FILE
-                            path to a JSON file specifying the configuration for
-                            the models
 """
 
 import argparse

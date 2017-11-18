@@ -39,10 +39,10 @@ this many epochs, training halts. And if you have a GPU you can change `cuda_dev
 Change any of those if you want to, and then run
 
 ```
-$ python -m allennlp.run train tutorials/getting_started/simple_tagger.json --serialization_dir /tmp/tutorials/getting_started
+$ python -m allennlp.run train tutorials/getting_started/simple_tagger.json --serialization-dir /tmp/tutorials/getting_started
 ```
 
-The `serialization_dir` argument specifies the directory where the model's vocabulary and checkpointed weights will be saved.
+The `serialization-dir` argument specifies the directory where the model's vocabulary and checkpointed weights will be saved.
 
 This command will download the datasets and cache them locally,
 log all of the parameters it's using,
@@ -100,7 +100,7 @@ is shared publicly on Amazon S3.
 We can use the `evaluate` command, giving it the archived model and the evaluation dataset:
 
 ```
-$ python -m allennlp.run evaluate --archive_file /tmp/tutorials/getting_started/model.tar.gz --evaluation_data_file https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
+$ python -m allennlp.run evaluate --archive-file /tmp/tutorials/getting_started/model.tar.gz --evaluation-data-file https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
 ```
 
 When you run this it will load the archived model, download and cache the evaluation dataset, and then make predictions:
