@@ -114,7 +114,38 @@ class NLVRWorld:
     def execute(self, logical_form: str) -> bool:
         """
         Execute the logical form.
+        The language we defined here contains five types of functions, three of which return sets, one returns
+        integers and one returns booleans.
+
+        1) Attribute functions: These are of the form `attribute(set_of_boxes_or_objects)`. They take sets and
+        return sets of attributes. `color` and `shape` (operating on objects) and `object_in_box` (operating on
+    boxes) are the attribute functions.
+
+        2) Count function: Takes a set of objects or boxes and returns its length.
+
+        3) Box filtering functions: These are of the form
+        `filter(set_of_boxes, attribute_function, target_attribute)`
+        The idea is that we take a set of boxes, an attribute function that extracts the relevant attribute from
+        a box, and a target attribute that we compare against. The logic is that we execute the attribute function
+        on _each_ of the given boxes and return only those whose attribute value, in comparison with the target
+        attribute, satisfies the filtering criterion (i.e., equal to the target, less than, greater than etc.). The
+        fitering function defines the comparison operator.
+        All the functions below with names `filter_*` belong to this category.
+
+        4) Object filtering functions: These are of the form `filter(set_of_objects)`. These are similar to the box
+        filtering functions, but they operate on objects instead. Also, note that they take just one argument
+        instead of three. This is because while box filtering functions typically query complex attributes, object
+        filtering functions query the properties of the objects alone. These are simple and finite in number. Thus,
+        we essentially let the filtering function defien the attribbute function, and the target attribute as well,
+        along with the comparison operator. That is, these are functions like `black` (which takes a set of
+        objects, and returns those whose "color" (attribute function) "equals" (comparison operator) "black"
+        (target attribute)), or "square" (which returns objects that are squares).
+
+        5) Assert operations: These typically occur only at the root node of the logical form trees. They take a
+        value (obtained from a filtering operation), compare it against a target and return True or False. All the
+        functions that have names like `assert_*` are assert functions.
         """
+        # Take a nested list and make it a flat list.
         def _flatten(nested_list, acc):
             if isinstance(nested_list, list):
                 for item in nested_list:
@@ -123,12 +154,14 @@ class NLVRWorld:
             acc.append(nested_list)
             return acc
 
+        # Take a flat list of functions and an argument and apply them iteratively in reverse order.
         def _apply_function_list(function_list, arg):
             return_value = getattr(self, function_list[-1])(arg)
             for function_name in reversed(function_list[:-1]):
                 return_value = getattr(self, function_name)(return_value)
             return return_value
 
+        # Primary recursive method for execution.
         def _execute_sub_expression(sub_expression):
             # pylint: disable=too-many-return-statements
             if isinstance(sub_expression, list) and len(sub_expression) == 1:
@@ -184,6 +217,7 @@ class NLVRWorld:
 
         return _execute_sub_expression(expression_as_list)
 
+    ## Attribute functions
     @staticmethod
     def color(objects_set: Set[Object]) -> Set[str]:
         """
@@ -229,6 +263,7 @@ class NLVRWorld:
                 returned_set.append(entity)
         return set(returned_set)
 
+    ## Box filtering functions
     @classmethod
     def filter_equals(cls,
                       set_to_filter: Set[Box],
@@ -257,6 +292,7 @@ class NLVRWorld:
                             target_attribute: AttributeType) -> Set[Box]:
         return cls._filter(set_to_filter, attribute_function, target_attribute, operator.le)
 
+    ## Object filtering functions
     @classmethod
     def black(cls, objects_set: Set[Object]) -> Set[Object]:
         return cls._filter(objects_set, cls._get_single_color, 'black', operator.eq)
@@ -362,6 +398,7 @@ class NLVRWorld:
                       objects_set: Set[EntityType]) -> Set[EntityType]:
         return objects_set.difference(filter_function(objects_set))
 
+    ## Assertion functions
     @staticmethod
     def assert_equals(actual_attribute: AttributeType, target_attribute: AttributeType) -> bool:
         return actual_attribute == target_attribute
