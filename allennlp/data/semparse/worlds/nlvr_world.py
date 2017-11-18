@@ -26,7 +26,7 @@ class Object:
     object_dict : Dict[str: Union[str, int]]
         The dict for each object from the json file.
     """
-    def __init__(self, object_dict: Dict[str: AttributeType]) -> None:
+    def __init__(self, object_dict: Dict[str, AttributeType]) -> None:
         self._object_dict: Dict[str, AttributeType] = {}
         for key, value in object_dict.items():
             if isinstance(value, str):
