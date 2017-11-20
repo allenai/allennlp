@@ -164,7 +164,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
             mask = Variable(torch.ones(batch_size, sequence_length))
             mask.data[0, 3:] = 0
             encoder_output = encoder(tensor, mask)
-            states.append(encoder._states)
+            states.append(encoder._states)  # pylint: disable=protected-access
 
         # Check that the output is masked properly.
         assert_almost_equal(encoder_output[0, 3:, :].data.numpy(), numpy.zeros((4, 14)))
@@ -185,7 +185,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
             mask = Variable(torch.ones(batch_size, 5))
             mask.data[0, 3:] = 0
             encoder_output = encoder(tensor, mask)
-            states.append(encoder._states)
+            states.append(encoder._states)   # pylint: disable=protected-access
 
         assert_almost_equal(encoder_output[0, 3:, :].data.numpy(), numpy.zeros((2, 14)))
         assert_almost_equal(
