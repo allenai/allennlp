@@ -1,8 +1,3 @@
-
-
-You can also install via the `pip` package manager or by cloning this repository into a Python 3.6 virtualenv.
-See below for more detailed instructions.
-
 ## What is AllenNLP?
 
 Built on PyTorch, AllenNLP makes it easy to design and evaluate new deep
