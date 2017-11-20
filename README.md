@@ -1,8 +1,7 @@
 ## What is AllenNLP?
 
 Built on PyTorch, AllenNLP makes it easy to design and evaluate new deep
-learning models for nearly any NLP problem, along with the infrastructure to
-following principles:
+\following principles:
 
 * *Hyper-modular and lightweight.* Use the parts which you like seamlessly with PyTorch.
 * *Extensively tested and easy to extend.* Test coverage is above 90% and the example
