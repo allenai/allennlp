@@ -37,7 +37,7 @@ metadata:
   labels:
     contact: allennlp
 spec:
-  replicas: 4
+  replicas: 3
   template:
     metadata:
       labels:
@@ -73,11 +73,11 @@ spec:
           resources:
             limits:
               cpu: 1000m
-              memory: 2000Mi
+              memory: 3000Mi
             # "requests" specify how much your container will be granted as a baseline.
             requests:
               cpu: 1000m
-              memory: 2000Mi
+              memory: 3000Mi
           command:
             - /bin/bash
             - -c
