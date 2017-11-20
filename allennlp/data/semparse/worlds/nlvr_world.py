@@ -1,5 +1,5 @@
 """
-This module defines three classes: Object and Box (the two entities in the NLVR domain) and a NLVRWorld,
+This module defines classes Object and Box (the two entities in the NLVR domain) and a NLVRWorld,
 which mainly contains an execution method and related helper methods.
 """
 
@@ -23,7 +23,7 @@ class Object:
 
     Parameters
     ----------
-    object_dict : Dict[str: Union[str, int]]
+    object_dict : Dict[str, Union[str, int]]
         The dict for each object from the json file.
     """
     def __init__(self, object_dict: Dict[str, AttributeType]) -> None:
@@ -96,7 +96,7 @@ class NLVRWorld:
     Parameters
     ----------
     world_representation : List[List[Dict]]
-        "structured_rep" from the json file.
+        structured_rep from the json file.
     """
     def __init__(self, world_representation: List[List[Dict]]) -> None:
         self._boxes = set([Box("box%d" % index, object_list) for index, object_list in
@@ -114,16 +114,16 @@ class NLVRWorld:
     def execute(self, logical_form: str) -> bool:
         """
         Execute the logical form.
-        The language we defined here contains five types of functions, three of which return sets, one returns
+        The language we defined here contains six types of functions, four of which return sets, one returns
         integers and one returns booleans.
 
-        1) Attribute functions: These are of the form `attribute(set_of_boxes_or_objects)`. They take sets and
+        1) Attribute functions - These are of the form `attribute(set_of_boxes_or_objects)`. They take sets and
         return sets of attributes. `color` and `shape` (operating on objects) and `object_in_box` (operating on
-    boxes) are the attribute functions.
+        boxes) are the attribute functions.
 
-        2) Count function: Takes a set of objects or boxes and returns its length.
+        2) Count function - Takes a set of objects or boxes and returns its length.
 
-        3) Box filtering functions: These are of the form
+        3) Box filtering functions - These are of the form
         `filter(set_of_boxes, attribute_function, target_attribute)`
         The idea is that we take a set of boxes, an attribute function that extracts the relevant attribute from
         a box, and a target attribute that we compare against. The logic is that we execute the attribute function
@@ -132,16 +132,19 @@ class NLVRWorld:
         fitering function defines the comparison operator.
         All the functions below with names `filter_*` belong to this category.
 
-        4) Object filtering functions: These are of the form `filter(set_of_objects)`. These are similar to the box
+        4) Object filtering functions - These are of the form `filter(set_of_objects)`. These are similar to box
         filtering functions, but they operate on objects instead. Also, note that they take just one argument
         instead of three. This is because while box filtering functions typically query complex attributes, object
         filtering functions query the properties of the objects alone. These are simple and finite in number. Thus,
-        we essentially let the filtering function defien the attribbute function, and the target attribute as well,
+        we essentially let the filtering function define the attribute function, and the target attribute as well,
         along with the comparison operator. That is, these are functions like `black` (which takes a set of
         objects, and returns those whose "color" (attribute function) "equals" (comparison operator) "black"
         (target attribute)), or "square" (which returns objects that are squares).
 
-        5) Assert operations: These typically occur only at the root node of the logical form trees. They take a
+        5) Negate object filter - Takes an object filter, and a set of objects and applies the negation of the
+        object filter on the set.
+
+        6) Assert operations - These typically occur only at the root node of the logical form trees. They take a
         value (obtained from a filtering operation), compare it against a target and return True or False. All the
         functions that have names like `assert_*` are assert functions.
         """
@@ -180,7 +183,7 @@ class NLVRWorld:
                     set_to_filter = _execute_sub_expression(arguments[0])
                     flattened_lambda_terms = _flatten(arguments[1:-1], [])
                     attribute_function = lambda x: _apply_function_list(flattened_lambda_terms, x)
-                    attribute = arguments[-1]
+                    attribute = _execute_sub_expression(arguments[-1])
                     return function(set_to_filter, attribute_function, attribute)
                 elif sub_expression[0].startswith('assert_'):
                     # assert functions are the highest level boolean functions. They take two arguments,
@@ -189,11 +192,16 @@ class NLVRWorld:
                     first_attribute = _execute_sub_expression(arguments[:2])
                     second_attribute = _execute_sub_expression(arguments[2])
                     return function(first_attribute, second_attribute)
+                elif sub_expression[0] == "negate_filter":
+                    arguments = sub_expression[1]
+                    original_filter = getattr(self, arguments[0])
+                    arguments = _execute_sub_expression(arguments[1:])
+                    return self.negate_filter(original_filter, arguments)
                 elif isinstance(sub_expression[0], str) and isinstance(sub_expression[1], list):
                     # These are the other kinds of function applications.
                     arguments = _execute_sub_expression(sub_expression[1])
                     if isinstance(arguments, set):
-                        # This means arguments is an execution of ``all_objects`` or ``all_boxes``
+                        # This means arguments is an execution of all_objects or all_boxes
                         return function(arguments)
                     # Or else, arguments are an actual list of executed arguments.
                     return function(*arguments)
@@ -227,8 +235,10 @@ class NLVRWorld:
 
     @classmethod
     def _get_single_color(cls, _object: Object) -> str:
-        # ``color`` takes a set of objects and returns a set of colors. We often want to get the color of a
-        # single object. This method does it.
+        """
+        ``color`` takes a set of objects and returns a set of colors. We often want to get the color of a
+        single object. This method does it.
+        """
         return list(cls.color(set([_object])))[0]
 
     @staticmethod
@@ -240,8 +250,10 @@ class NLVRWorld:
 
     @classmethod
     def _get_single_shape(cls, _object: Object) -> str:
-        # ``shape`` takes a set of objects and returns a set of shapes. We often want to get the shape of a
-        # single object. This method does it.
+        """
+        ``shape`` takes a set of objects and returns a set of shapes. We often want to get the shape of a
+        single object. This method does it.
+        """
         return list(cls.shape(set([_object])))[0]
 
     @staticmethod
@@ -394,11 +406,11 @@ class NLVRWorld:
         return cls._filter(objects_set, lambda x: x.get_attribute("size"), 30, operator.eq)
 
     @staticmethod
-    def negate_filter(filter_function: Callable[[Set[EntityType]], Set[EntityType]],
-                      objects_set: Set[EntityType]) -> Set[EntityType]:
+    def negate_filter(filter_function: Callable[[Set[Object]], Set[Object]],
+                      objects_set: Set[Object]) -> Set[Object]:
+        # Negate an object filter.
         return objects_set.difference(filter_function(objects_set))
 
-    ## Assertion functions
     @staticmethod
     def assert_equals(actual_attribute: AttributeType, target_attribute: AttributeType) -> bool:
         return actual_attribute == target_attribute
