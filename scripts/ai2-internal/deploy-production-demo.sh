@@ -1,3 +1,34 @@
+#!/bin/bash
+
+CONTAINER=$1
+FORCE=$2
+
+USAGE="USAGE: ./deploy-production-demo.sh [CONTAINER] [--force]"
+if [ ! -n "$CONTAINER" ] ; then
+  echo "$USAGE"
+  exit 1
+fi
+
+if [ "$#" -gt 2 ]; then
+  echo "Too many parameters"
+  echo "$USAGE"
+  exit 1
+fi
+
+DRYRUN="--dry-run"
+if [ ! -z $FORCE ] ; then
+  if [ $FORCE = "--force" ] ; then
+    DRYRUN=""
+    echo "Deploying container '$CONTAINER' to production."
+  else
+    echo "$USAGE"
+    exit 1
+  fi
+else
+  echo "Deploying container '$CONTAINER' to production. (dry run)"
+fi
+
+kubectl apply $DRYRUN -f - <<EOF
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -64,3 +95,4 @@ spec:
   ports:
     - port: 80
       targetPort: 8000
+EOF

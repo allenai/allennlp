@@ -8,6 +8,12 @@ if [ ! -n "$CONTAINER" ] ; then
   exit 1
 fi
 
+if [ "$#" -ne 1 ]; then
+  echo "Too many parameters"
+  echo "$USAGE"
+  exit 1
+fi
+
 echo "Deploying container '$CONTAINER' to staging."
 
 
