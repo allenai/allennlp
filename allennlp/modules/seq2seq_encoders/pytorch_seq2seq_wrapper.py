@@ -33,10 +33,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     second parameter.
 
     We support stateful RNNs where the final state from each batch is used as the initial
-    state for the subsequent batch by passing ``stateful=True`` to the constructor.  In this case,
-    ``max_batch_size`` is the maximum batch size allowed (although batches of any size less
-    then the maximum are also supported).  If ``stateful=False`` then ``max_batch_size``
-    is ignored.
+    state for the subsequent batch by passing ``stateful=True`` to the constructor.
 
     We also support stacked RNNs that return activations for each layer by passing ``stacked=True``
     to the constructor.  In this case, the ``module`` forward method has a slightly different
@@ -49,7 +46,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     """
     def __init__(self, module: torch.nn.Module,
                  stacked: bool = False,
-                 stateful: bool = False, max_batch_size: int = 128) -> None:
+                 stateful: bool = False) -> None:
         super(PytorchSeq2SeqWrapper, self).__init__()
         self._module = module
         self._stacked = stacked
@@ -60,7 +57,6 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             pass
 
         self._stateful = stateful
-        self._max_batch_size = max_batch_size
         self._states: Union[List[torch.Tensor], Tuple[torch.Tensor]] = None
 
         try:
@@ -100,10 +96,6 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         batch_size, total_sequence_length = mask.size()
         num_valid = torch.sum(mask[:, 0]).int().data[0]
 
-        if self._stateful and batch_size > self._max_batch_size:
-            raise ValueError("Got batch_size={0} but using a stateful RNN with max_batch_size={1}"
-                             "".format(batch_size, self._max_batch_size))
-
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
                                                                                            sequence_lengths)
@@ -115,7 +107,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         if not self._stateful:
             initial_states = hidden_state
         else:
-            initial_states = self._get_initial_states(num_valid)
+            initial_states = self._get_initial_states(num_valid, batch_size)
 
         # Actually call the module on the sorted PackedSequence.
         packed_sequence_output, final_states = self._module(packed_sequence_input, initial_states)
@@ -164,12 +156,23 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)
                               for tensor in unpacked_sequence_tensor], dim=0)
 
-    def _get_initial_states(self, num_valid: int) -> Union[None, Tuple[torch.Tensor], torch.Tensor]:
+    def _get_initial_states(self, num_valid: int,
+                            batch_size: int) -> Union[None, Tuple[torch.Tensor], torch.Tensor]:
         # We don't know the state sizes the first time calling forward.
         if self._states is None:
             initial_states = None
         else:
             # We have some previous states.
+            # It's possible this batch is larger then all previous ones.  If so, resize
+            # the states.
+            if batch_size > self._states[0].size(1):
+                num_states_to_concat = batch_size - self._states[0].size(1)
+                resized_states = []
+                for state in self._states:
+                    zeros = state.data.new(state.size(0), num_states_to_concat, state.size(2)).fill_(0)
+                    resized_states.append(torch.cat([state, zeros], 1))
+                self._states = resized_states
+
             if len(self._states) == 1:
                 initial_states = self._states[0][:, :num_valid, :]
             else:
@@ -186,7 +189,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             for k, state in enumerate(final_states):
                 states.append(torch.autograd.Variable(
                         state.data.new(state.size(0),
-                                       self._max_batch_size,
+                                       final_states[0].size(1),
                                        state.size(-1)).fill_(0)))
             self._states = states
 

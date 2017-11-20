@@ -151,7 +151,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
 
     def test_wrapper_stateful(self):
         lstm = LSTM(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
-        encoder = PytorchSeq2SeqWrapper(lstm, stateful=True, max_batch_size=10)
+        encoder = PytorchSeq2SeqWrapper(lstm, stateful=True)
 
         # To test the stateful functionality we need to call the encoder multiple times.
         # Different batch sizes further tests some of the logic.
@@ -165,17 +165,9 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
 
         assert list(encoder_output.size()) == [6, 7, 14]
 
-    def test_stateful_wrapper_raises_with_batch_size_greater_than_max(self):
-        lstm = LSTM(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
-        encoder = PytorchSeq2SeqWrapper(lstm, stateful=True, max_batch_size=10)
-        tensor = Variable(torch.rand([15, 5, 3]))
-        mask = Variable(torch.ones(15, 5))
-        with self.assertRaises(ValueError):
-            _ = encoder(tensor, mask)
-
     def test_wrapper_stateful_single_state_gru(self):
         gru = GRU(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
-        encoder = PytorchSeq2SeqWrapper(gru, stateful=True, max_batch_size=10)
+        encoder = PytorchSeq2SeqWrapper(gru, stateful=True)
 
         for k in range(2):
             batch_size = k + 3
