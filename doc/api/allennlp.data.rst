@@ -10,6 +10,7 @@ These submodules contain various functionality for working with data.
    allennlp.data.fields
    allennlp.data.instance
    allennlp.data.iterators
+   allennlp.data.semparse
    allennlp.data.token_indexers
    allennlp.data.tokenizers
    allennlp.data.vocabulary
