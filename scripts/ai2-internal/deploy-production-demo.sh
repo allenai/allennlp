@@ -32,20 +32,20 @@ kubectl apply $DRYRUN -f - <<EOF
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: allennlp-webdemo
+  name: allennlp-demo-prod
   namespace: allennlp
   labels:
     contact: allennlp
 spec:
-  replicas: 4
+  replicas: 3
   template:
     metadata:
       labels:
-        app: allennlp-webdemo
+        app: allennlp-demo-prod
     spec:
       containers:
-        - name: allennlp-webdemo
-          image: "allennlp/webdemo:2017-11-13-2"
+        - name: allennlp-demo-prod
+          image: "$CONTAINER"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
           # for documentation on the resources section.
@@ -73,11 +73,11 @@ spec:
           resources:
             limits:
               cpu: 1000m
-              memory: 2000Mi
+              memory: 3000Mi
             # "requests" specify how much your container will be granted as a baseline.
             requests:
               cpu: 1000m
-              memory: 2000Mi
+              memory: 3000Mi
           command:
             - /bin/bash
             - -c
@@ -86,12 +86,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: allennlp-webdemo
+  name: allennlp-demo-prod
   namespace: allennlp
 spec:
   type: LoadBalancer
   selector:
-    app: allennlp-webdemo
+    app: allennlp-demo-prod
   ports:
     - port: 80
       targetPort: 8000
