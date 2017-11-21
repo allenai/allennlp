@@ -51,6 +51,9 @@ COPY training_config training_config/
 ARG CACHE_MODELS=false
 RUN ./scripts/cache_models.py
 
+ARG SOURCE_COMMIT
+ENV SOURCE_COMMIT $SOURCE_COMMIT
+
 LABEL maintainer="allennlp-contact@allenai.org"
 
 EXPOSE 8000
