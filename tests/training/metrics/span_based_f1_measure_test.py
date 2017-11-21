@@ -128,15 +128,19 @@ class SpanBasedF1Test(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 0.6)
         numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 0.666666666)
 
-
-
     def test_span_metrics_are_computed_correctly(self):
         gold_labels = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "O", "O", "O"]
         gold_indices = [self.vocab.get_token_index(x, "tags") for x in gold_labels]
 
         gold_tensor = torch.Tensor([gold_indices])
 
-        prediction_tensor = torch.rand([1, 9, self.vocab.get_vocab_size("tags")])
+        prediction_tensor = torch.rand([2, 9, self.vocab.get_vocab_size("tags")])
+
+        # Test that the span measure ignores completely masked sequences by
+        # passing a mask with a fully masked row.
+        mask = torch.LongTensor([[1, 1, 1, 1, 1, 1, 1, 1, 1],
+                                 [0, 0, 0, 0, 0, 0, 0, 0, 0]])
+
         prediction_tensor[:, 0, 0] = 1
         prediction_tensor[:, 1, 1] = 1  # (True positive - ARG1
         prediction_tensor[:, 2, 2] = 1  # *)
@@ -148,7 +152,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
         prediction_tensor[:, 8, 2] = 1  # *)
 
         metric = SpanBasedF1Measure(self.vocab, "tags")
-        metric(prediction_tensor, gold_tensor)
+        metric(prediction_tensor, gold_tensor, mask)
 
         assert metric._true_positives["ARG1"] == 1
         assert metric._true_positives["ARG2"] == 0
@@ -161,7 +165,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
         assert "O" not in metric._false_positives.keys()
 
         # Check things are accumulating correctly.
-        metric(prediction_tensor, gold_tensor)
+        metric(prediction_tensor, gold_tensor, mask)
         assert metric._true_positives["ARG1"] == 2
         assert metric._true_positives["ARG2"] == 0
         assert "O" not in metric._true_positives.keys()

@@ -6,13 +6,13 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
 
     $ python -m allennlp.run predict --help
     usage: run [command] predict [-h] [--output-file OUTPUT_FILE] [--print]
-                                archive_file input-file
+                                archive_file input_file
 
     Run the specified model against a JSON-lines input file.
 
     positional arguments:
     archive_file          the archived model to make predictions with
-    input-file            path to input file
+    input_file            path to input file
 
     optional arguments:
     -h, --help            show this help message and exit
@@ -32,22 +32,43 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
+# a mapping from model `type` to the default Predictor for that type
+DEFAULT_PREDICTORS = {
+        'srl': 'semantic-role-labeling',
+        'decomposable_attention': 'textual-entailment',
+        'bidaf': 'machine-comprehension',
+        'simple_tagger': 'sentence-tagger',
+        'crf_tagger': 'sentence-tagger',
+        'coref': 'coreference-resolution'
+}
+
+
 class Predict(Subcommand):
-    def __init__(self, predictors: Dict[str, str]) -> None:
-        self.predictors = predictors
+    def __init__(self, predictor_overrides: Dict[str, str] = {}) -> None:
+        # pylint: disable=dangerous-default-value
+        self.predictors = {**DEFAULT_PREDICTORS, **predictor_overrides}
 
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Run the specified model against a JSON-lines input file.'''
         subparser = parser.add_parser(
                 name, description=description, help='Use a trained model to make predictions.')
+
         subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
-        subparser.add_argument('input_file', metavar='input-file', type=argparse.FileType('r'),
-                               help='path to input file')
+        subparser.add_argument('input_file', type=argparse.FileType('r'), help='path to input file')
+
         subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
-        subparser.add_argument('--batch_size', type=int, default=1, help='The batch size to use for processing')
+
+        batch_size = subparser.add_mutually_exclusive_group(required=False)
+        batch_size.add_argument('--batch-size', type=int, default=1, help='The batch size to use for processing')
+        batch_size.add_argument('--batch_size', type=int, help=argparse.SUPPRESS)
+
         subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
-        subparser.add_argument('--cuda_device', type=int, default=-1, help='id of GPU to use (if any)')
+
+        cuda_device = subparser.add_mutually_exclusive_group(required=False)
+        cuda_device.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
+        cuda_device.add_argument('--cuda_device', type=int, help=argparse.SUPPRESS)
+
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",

@@ -104,7 +104,8 @@ used for development along with all the dependencies needed to run AllenNLP.
     conda create -n allennlp python=3.6
     ```
 
-4.  Now activate the Conda environment.  You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
+4.  Now activate the Conda environment.  You will need to activate the Conda environment in each terminal in which you want 
+to use AllenNLP.
 
     ```
     source activate allennlp
@@ -194,5 +195,5 @@ The pod name will be your job name followed by some additional characters.
 
 AllenNLP is an open-source project backed by [the Allen Institute for Artificial Intelligence (AI2)](http://www.allenai.org).
 AI2 is a non-profit institute with the mission to contribute to humanity through high-impact AI research and engineering.
-To learn more about who specifically contributed to this codebase, see [our contributors](https://github.com/allenai/allennlp/graphs/contributors)
-page.
+To learn more about who specifically contributed to this codebase, see [our contributors]
+(https://github.com/allenai/allennlp/graphs/contributors) page.

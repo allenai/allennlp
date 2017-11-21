@@ -121,6 +121,21 @@ class CrfTagger(Model):
         return output
 
     @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Converts the tag ids to the actual tags.
+        ``output_dict["tags"]`` is a list of lists of tag_ids,
+        so we use an ugly nested list comprehension.
+        """
+        output_dict["tags"] = [
+                [self.vocab.get_token_from_index(tag, namespace="labels")
+                 for tag in instance_tags]
+                for instance_tags in output_dict["tags"]
+        ]
+
+        return output_dict
+
+    @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metric_dict = self.span_metric.get_metric(reset=reset)
         return {x: y for x, y in metric_dict.items() if "overall" in x}

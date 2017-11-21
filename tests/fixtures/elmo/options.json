@@ -1,0 +1,1 @@
+{"lstm": {"cell_clip": 3, "use_skip_connections": false, "n_layers": 2, "proj_clip": 3, "projection_dim": 16, "dim": 64}, "char_cnn": {"embedding": {"dim": 4}, "filters": [[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]], "n_highway": 2, "n_characters": 262, "max_characters_per_token": 50, "activation": "relu"}}

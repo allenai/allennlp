@@ -1,20 +1,51 @@
+#!/bin/bash
+
+CONTAINER=$1
+FORCE=$2
+
+USAGE="USAGE: ./deploy-production-demo.sh [CONTAINER] [--force]"
+if [ ! -n "$CONTAINER" ] ; then
+  echo "$USAGE"
+  exit 1
+fi
+
+if [ "$#" -gt 2 ]; then
+  echo "Too many parameters"
+  echo "$USAGE"
+  exit 1
+fi
+
+DRYRUN="--dry-run"
+if [ ! -z $FORCE ] ; then
+  if [ $FORCE = "--force" ] ; then
+    DRYRUN=""
+    echo "Deploying container '$CONTAINER' to production."
+  else
+    echo "$USAGE"
+    exit 1
+  fi
+else
+  echo "Deploying container '$CONTAINER' to production. (dry run)"
+fi
+
+kubectl apply $DRYRUN -f - <<EOF
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: allennlp-webdemo
+  name: allennlp-demo-prod
   namespace: allennlp
   labels:
     contact: allennlp
 spec:
-  replicas: 4
+  replicas: 3
   template:
     metadata:
       labels:
-        app: allennlp-webdemo
+        app: allennlp-demo-prod
     spec:
       containers:
-        - name: allennlp-webdemo
-          image: "allennlp/webdemo:2017-09-12-2"
+        - name: allennlp-demo-prod
+          image: "$CONTAINER"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
           # for documentation on the resources section.
@@ -42,25 +73,26 @@ spec:
           resources:
             limits:
               cpu: 1000m
-              memory: 2000Mi
+              memory: 3000Mi
             # "requests" specify how much your container will be granted as a baseline.
             requests:
               cpu: 1000m
-              memory: 2000Mi
+              memory: 3000Mi
           command:
             - /bin/bash
             - -c
-            - "source activate allennlp && allennlp/run serve"
+            - "allennlp/run serve"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: allennlp-webdemo
+  name: allennlp-demo-prod
   namespace: allennlp
 spec:
   type: LoadBalancer
   selector:
-    app: allennlp-webdemo
+    app: allennlp-demo-prod
   ports:
     - port: 80
       targetPort: 8000
+EOF

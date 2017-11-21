@@ -1,4 +1,5 @@
 import React from 'react';
+import { API_ROOT } from '../api-config';
 import { withRouter } from 'react-router-dom';
 import {PaneLeft, PaneRight} from './Pane'
 import Button from './Button'
@@ -197,8 +198,7 @@ class TeOutput extends React.Component {
               judgmentStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
               break;
             default:
-              // Can't happen, but let's make the linter happy.
-              break;
+              throw new Error("Unhandled case for judgement confidence.")
           }
           return (
             <div className="model__content__summary">It is <strong>{degree} likely</strong> that {judgmentStr}.</div>
@@ -217,8 +217,7 @@ class TeOutput extends React.Component {
               judgmentStr = (<span>there is <strong>no correlation</strong> between the premise and hypothesis</span>);
               break;
             default:
-              // Can't happen, but let's make the linter happy.
-              break;
+              throw new Error("Unhandled case for judgement correlation.")
           }
           return (
             <div className="model__content__summary">It is <strong>somewhat likely</strong> that {judgmentStr}.</div>
@@ -306,7 +305,7 @@ class _TeComponent extends React.Component {
         premise: inputs.premiseValue,
         hypothesis: inputs.hypothesisValue,
       };
-      fetch('http://localhost:8000/predict/textual-entailment', {
+      fetch(`${API_ROOT}/predict/textual-entailment`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',

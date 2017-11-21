@@ -47,9 +47,6 @@ COPY scripts/ scripts/
 COPY tutorials/ tutorials/
 COPY training_config training_config/
 
-# Run tests to verify the Docker build
-RUN PYTHONDONTWRITEBYTECODE=1 pytest
-
 # Add model caching
 ARG CACHE_MODELS=false
 RUN ./scripts/cache_models.py
