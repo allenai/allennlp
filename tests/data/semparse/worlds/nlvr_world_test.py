@@ -24,7 +24,7 @@ class TestNLVRWorldRepresentation(AllenNlpTestCase):
     def test_logical_form_with_filter_executes_correctly(self):
         nlvr_world = NLVRWorld(self.data[2]["structured_rep"])
         # Utterance is "There is a box without a blue item." and label is "False".
-        logical_form = "assert_greater_equals(count(filter_equals(all_boxes count(blue(object_in_box)) 1)) 1)"
+        logical_form = "assert_greater_equals(count(filter_equals(all_boxes count(blue(object_in_box)) 0)) 1)"
         # Should evaluate to False.
         assert not nlvr_world.execute(logical_form)
 

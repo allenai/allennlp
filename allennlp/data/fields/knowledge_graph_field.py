@@ -1,13 +1,14 @@
 """
 ``KnowledgeGraphField`` is a ``Field`` which stores a knowledge graph representation.
 """
+
 from typing import Dict, List
 
 import numpy
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
-from allennlp.data.semparse.knowledge_graphs import KnowledgeGraph
+from allennlp.data.semparse import KnowledgeGraph
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary

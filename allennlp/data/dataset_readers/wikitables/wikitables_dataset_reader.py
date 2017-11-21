@@ -1,6 +1,7 @@
 """
 Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/releases/tag/v1.0.2).
 """
+
 from typing import Dict, List, Union
 import gzip
 import logging
@@ -19,8 +20,8 @@ from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.fields import TextField, KnowledgeGraphField, LabelField, ListField
-from allennlp.data.semparse.knowledge_graphs.table_knowledge_graph import TableKnowledgeGraph
-from allennlp.data.semparse.worlds.wikitables_world import WikitablesWorld
+from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
+from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 
@@ -131,7 +132,7 @@ class WikiTablesDatasetReader(DatasetReader):
         table_field = KnowledgeGraphField(table_knowledge_graph, self._table_token_indexers)
         fields = {'question': question_field, 'table': table_field}
         if dpd_output:
-            world = WikitablesWorld(table_knowledge_graph)
+            world = WikiTablesWorld(table_knowledge_graph)
             expressions = world.process_sempre_forms(dpd_output)
             action_sequences = [world.get_action_sequence(expression) for expression in expressions]
             action_sequences_field = ListField([self._make_action_sequence_field(sequence)
