@@ -51,6 +51,7 @@ COPY training_config training_config/
 ARG CACHE_MODELS=false
 RUN ./scripts/cache_models.py
 
+# Optional argument to set an environment variable with the Git SHA
 ARG SOURCE_COMMIT
 ENV SOURCE_COMMIT $SOURCE_COMMIT
 
