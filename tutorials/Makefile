@@ -30,6 +30,11 @@ notebooks:
 	@mkdir -p $(TUTORIAL_OUTPUT_DIR)
 	@for file in notebooks/*.ipynb; do jupyter nbconvert --to markdown "$$file" --output-dir $(TUTORIAL_OUTPUT_DIR); done
 
+.PHONY: hyphenate
+hyphenate:
+	@echo "Hyphenating"
+	@for file in build/*.md; do mv "$$file" "$${file//_/-}"; done
+
 .PHONY: copy
 copy:
 	@echo "Copying from $(TUTORIAL_OUTPUT_DIR) to $(ALLENNLP_WEBSITE_DIR)"
@@ -40,4 +45,5 @@ build:
 	@make clean
 	@make getting-started
 	@make notebooks
+	@make hyphenate
 	@echo "Build finished. The md pages are in $(TUTORIAL_OUTPUT_DIR)."
