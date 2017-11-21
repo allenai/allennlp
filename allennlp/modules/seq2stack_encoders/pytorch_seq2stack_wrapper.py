@@ -1,12 +1,10 @@
-
 import torch
-from torch.nn.utils.rnn import pad_packed_sequence
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.modules.seq2stack_encoders.seq2stack_encoder import Seq2StackEncoder
 
 
-class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
+class PytorchSeq2StackWrapper(Seq2StackEncoder):
     """
     Pytorch's RNNs have two outputs: the hidden state for every time step, and the hidden state at
     the last time step for every layer.  We just want the first one as a single output.  This
@@ -42,9 +40,10 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
           and ``(num_layers, batch_size, memory_dim)``
 
     """
-    def __init__(self, module: torch.nn.Module,
+    def __init__(self,
+                 module: torch.nn.Module,
                  stateful: bool = False) -> None:
-        super(PytorchSeq2SeqWrapper, self).__init__(stateful)
+        super(PytorchSeq2StackWrapper, self).__init__(stateful)
         self._module = module
         try:
             if not self._module.batch_first:
@@ -82,10 +81,13 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         batch_size, total_sequence_length = mask.size()
 
-        packed_sequence_output, final_states, restoration_indices, num_valid = \
+        stacked_sequence_output, final_states, restoration_indices, num_valid = \
             self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
-        unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
+        # stacked_sequence_output is shape (num_layers, batch_size, timesteps, encoder_dim)
+        num_layers = stacked_sequence_output.size(0)
+        per_layer_sequence_outputs = [layer.squeeze(0) for layer in
+                                      stacked_sequence_output.chunk(num_layers, 0)]
 
         # Some RNNs (GRUs) only return one state as a Tensor.  Others (LSTMs) return two.
         # If one state, use a single element list to handle in a consistent manner below.
@@ -94,24 +96,27 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         # Add back invalid rows.
         if num_valid < batch_size:
-            _, length, dim = unpacked_sequence_tensor.size()
-            zeros = unpacked_sequence_tensor.data.new(batch_size - num_valid, length, dim).fill_(0)
-            unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 0)
+            _, length, dim = per_layer_sequence_outputs[0].size()
+            zeros = per_layer_sequence_outputs[0].data.new(batch_size - num_valid, length, dim).fill_(0)
+            for k in range(num_layers):
+                per_layer_sequence_outputs[k] = torch.cat([per_layer_sequence_outputs[k], zeros], 0)
 
         # It's possible to need to pass sequences which are padded to longer than the
         # max length of the sequence to a Seq2SeqEncoder. However, packing and unpacking
         # the sequences mean that the returned tensor won't include these dimensions, because
         # the RNN did not need to process them. We add them back on in the form of zeros here.
-        sequence_length_difference = total_sequence_length - unpacked_sequence_tensor.size(1)
+        sequence_length_difference = total_sequence_length - per_layer_sequence_outputs[0].size(1)
         if sequence_length_difference > 0:
-            zeros = unpacked_sequence_tensor.data.new(batch_size,
-                                                      sequence_length_difference,
-                                                      unpacked_sequence_tensor.size(-1)).fill_(0)
+            zeros = per_layer_sequence_outputs[0].data.new(batch_size,
+                                                           sequence_length_difference,
+                                                           per_layer_sequence_outputs[0].size(-1)).fill_(0)
             zeros = torch.autograd.Variable(zeros)
-            unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
+            for k in range(num_layers):
+                per_layer_sequence_outputs[k] = torch.cat([per_layer_sequence_outputs[k], zeros], 1)
 
         if self._stateful:
             self._update_states(final_states, num_valid, restoration_indices)
 
         # Restore the original indices and return the sequence.
-        return unpacked_sequence_tensor.index_select(0, restoration_indices)
+        return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)
+                          for tensor in per_layer_sequence_outputs], dim=0)

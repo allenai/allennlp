@@ -1,12 +1,14 @@
-from allennlp.modules.encoder_base import _EncoderBase
+
 from allennlp.common import Params, Registrable
+from allennlp.modules.encoder_base import _EncoderBase
 
 
-class Seq2SeqEncoder(_EncoderBase, Registrable):
+class Seq2StackEncoder(_EncoderBase, Registrable):
     """
-    A ``Seq2SeqEncoder`` is a ``Module`` that takes as input a sequence of vectors and returns a
-    modified sequence of vectors.  Input shape: ``(batch_size, sequence_length, input_dim)``; output
-    shape: ``(batch_size, sequence_length, output_dim)``.
+    A ``Seq2StackEncoder`` is a ``Module`` that takes as input a sequence of vectors and returns a
+    modified sequence of vectors.
+    Input shape: ``(num_layers ,batch_size, sequence_length, input_dim)``;
+    Output shape: ``(batch_size, sequence_length, output_dim)``.
 
     We add two methods to the basic ``Module`` API: :func:`get_input_dim()` and :func:`get_output_dim()`.
     You might need this if you want to construct a ``Linear`` layer using the output of this encoder,
@@ -28,6 +30,6 @@ class Seq2SeqEncoder(_EncoderBase, Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params) -> 'Seq2SeqEncoder':
+    def from_params(cls, params: Params) -> 'Seq2StackEncoder':
         choice = params.pop_choice('type', cls.list_available())
         return cls.by_name(choice).from_params(params)

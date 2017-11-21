@@ -1,9 +1,8 @@
-import torch
-
+from allennlp.modules.encoder_base import _EncoderBase
 from allennlp.common import Params, Registrable
 
 
-class Seq2VecEncoder(torch.nn.Module, Registrable):
+class Seq2VecEncoder(_EncoderBase, Registrable):
     """
     A ``Seq2VecEncoder`` is a ``Module`` that takes as input a sequence of vectors and returns a
     single vector.  Input shape: ``(batch_size, sequence_length, input_dim)``; output shape:

@@ -1,0 +1,2 @@
+from allennlp.modules.seq2stack_encoders.seq2stack_encoder import Seq2StackEncoder
+from allennlp.modules.seq2stack_encoders.pytorch_seq2stack_wrapper import PytorchSeq2StackWrapper
