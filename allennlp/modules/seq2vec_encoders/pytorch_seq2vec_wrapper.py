@@ -69,8 +69,6 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
 
         batch_size = mask.size(0)
 
-        print(inputs.size())
-        print(mask.size())
         _, state, restoration_indices, num_valid = \
             self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
