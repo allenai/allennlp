@@ -12,8 +12,6 @@ from allennlp.common.util import JsonDict
 
 
 AttributeType = Union[int, str]  # pylint: disable=invalid-name
-AttributeSetType = Union[Set[int], Set[str]]  # pylint: disable=invalid-name
-NestedListType = Union[str, List[Union[str, List[str]]]]  # pylint: disable=invalid-name
 
 
 class Object:
