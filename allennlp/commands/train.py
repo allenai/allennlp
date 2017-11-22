@@ -147,7 +147,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
 
     # powerset (all permutations of all lengths) of the 3 possible options
     # with the one containing the largest allowed set of keys given the datasets
-    # that were passed, which we use by default.
+    # that were passed in the first position, which we use by default.
     allowed_combinations = itertools.chain.from_iterable(itertools.permutations(all_datasets.keys(), i)
                                                          for i in [3, 2, 1])
 
