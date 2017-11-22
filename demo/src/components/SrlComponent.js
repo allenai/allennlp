@@ -62,10 +62,6 @@ function toHierplaneTrees(response) {
       return children;
     }, []);
 
-    if (verb === "needed") {
-      console.log(ignoredSpans);
-    }
-
     return {
       text,
       root: {
