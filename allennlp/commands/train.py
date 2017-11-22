@@ -20,6 +20,7 @@ which to write the results.
 """
 from typing import Dict
 import argparse
+import itertools
 import json
 import logging
 import os
@@ -144,8 +145,16 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     else:
         test_data = None
 
-    datasets_for_vocab_creation = params.pop("datasets_for_vocab_creation",
-                                             list(all_datasets.keys()))
+    # powerset (all permutations of all lengths) of the 3 possible options
+    # with the one containing the largest allowed set of keys given the datasets
+    # that were passed, which we use by default.
+    allowed_combinations = itertools.chain.from_iterable(itertools.permutations(all_datasets.keys(), i)
+                                                         for i in [3, 2, 1])
+
+    datasets_for_vocab_creation = params.pop_choice("datasets_for_vocab_creation",
+                                                    [list(x) for x in allowed_combinations],
+                                                    default_to_first_choice=True)
+
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
                                    Dataset([instance for key, dataset in all_datasets
