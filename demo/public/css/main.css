@@ -1551,17 +1551,22 @@ svg {
 
 /* THESE ARE HACKS PUT HERE BY CODEVIKING. */
 
-/* Properly center the controls in the toolbar */
+/*
+  Center the controls in the toolbar.
+ */
 .hierplane__visualization .hierplane .parse-tree-toolbar .parse-tree-toolbar__item .parse-tree-toolbar__item__label {
   top: 50%;
   margin-top: -13px;
 }
 
+/*
+  Make the toolbar background transparent, as it looks weird when it matches the color of the
+  tab / verb-select bars.
+ */
 .hierplane__visualization .hierplane--theme-light .parse-tree-toolbar {
   background: transparent;
   border: none;
 }
-
 .hierplane__visualization .hierplane--theme-light .parse-tree-toolbar:before {
   background: transparent;
   border: none;
@@ -1581,9 +1586,8 @@ svg {
   Set a max width so that nodes aren't too wide, since some of the nodes in the AllenNLP
   SRL output can contain large passages of text.
 */
-.hierplane__visualization .hierplane .node__word__label {
-  max-width: 20em;
-  margin: 0 auto;
+.hierplane__visualization .hierplane .node__word__label .node__word__label__siblings {
+  max-width: 15vw;
   white-space: normal;
 }
 
@@ -1595,4 +1599,11 @@ svg {
   max-height: initial;
   height: auto !important;
   flex: 1;
+}
+
+/*
+  Resolve wrapping issues.
+ */
+.hierplane__visualization .hierplane #passage p span {
+  display: inline;
 }
