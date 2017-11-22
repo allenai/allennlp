@@ -304,7 +304,9 @@ class HierplaneVisualization extends React.Component {
                 <use xlinkHref="#icon__disclosure"></use>
               </svg>
             </a>
-            Verb {selectedVerbIdxLabel} of {totalVerbCount}: <strong>{selectedVerb}</strong>
+            <span className="hierplane__visualization-verbs__label">
+              Verb {selectedVerbIdxLabel} of {totalVerbCount}: <strong>{selectedVerb}</strong>
+            </span>
           </div>
           <Tree tree={this.props.trees[this.state.selectedIdx]} theme="light" />
         </div>

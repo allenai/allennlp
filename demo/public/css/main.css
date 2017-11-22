@@ -1471,6 +1471,10 @@ svg {
   transform: rotateY(-180deg);
 }
 
+.hierplane__visualization-verbs__label {
+  user-select: none;
+}
+
 /* THESE ARE TERRIBLE HACKS PUT HERE BY CODEVIKING. */
 
 /* This hides the toolbar. Ideally hierplane would have an option to do this. */
