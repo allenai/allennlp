@@ -195,12 +195,12 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
 
         logger.info("prediction: %s", json.dumps(log_blob))
 
-        return response.json(prediction)
+        return response.json(prediction, headers=no_cache_headers)
 
     @app.route('/models')
     async def list_models(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """list the available models"""
-        return response.json({"models": list(app.predictors.keys())})
+        return response.json({"models": list(app.predictors.keys())}, headers=no_cache_headers)
 
     # As a SPA, we need to return index.html for /model-name and /model-name/permalink
     @app.route('/semantic-role-labeling')
