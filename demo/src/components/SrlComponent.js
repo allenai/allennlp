@@ -322,8 +322,8 @@ class HierplaneVisualization extends React.Component {
 *******************************************************************************/
 
 const VisualizationType = {
-  TABLE: 'Table',
-  TREE: 'Tree'
+  TREE: 'Tree',
+  TABLE: 'Table'
 };
 Object.freeze(VisualizationType);
 
@@ -338,7 +338,7 @@ class _SrlComponent extends React.Component {
       responseData: responseData,
       // valid values: "working", "empty", "received", "error",
       outputState: responseData ? "received" : "empty",
-      visualizationType: VisualizationType.TABLE
+      visualizationType: VisualizationType.TREE
     };
 
     this.runSrlModel = this.runSrlModel.bind(this);
@@ -387,12 +387,12 @@ class _SrlComponent extends React.Component {
 
     let viz = null;
     switch(visualizationType) {
-      case VisualizationType.TREE:
-        viz = <HierplaneVisualization trees={responseData ? toHierplaneTrees(responseData) : null} />
-        break;
-    case VisualizationType.TABLE:
-    default:
+      case VisualizationType.TABLE:
         viz = <SrlOutput words={words} verbs={verbs} />;
+        break;
+      case VisualizationType.TREE:
+      default:
+        viz = <HierplaneVisualization trees={responseData ? toHierplaneTrees(responseData) : null} />
         break;
     }
 
