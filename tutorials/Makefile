@@ -1,5 +1,6 @@
 # Makefile for Tutorials
 #
+SHELL := /bin/bash
 
 # You can set these variables from the command line.
 TUTORIAL_OUTPUT_DIR = build
@@ -33,7 +34,7 @@ notebooks:
 .PHONY: hyphenate
 hyphenate:
 	@echo "Hyphenating"
-	@for file in build/*.md; do mv "$$file" "$${file//_/-}"; done
+	@for f in build/*.md; do if [[ $$f == *"_"* ]]; then mv "$$f" "$${f//_/-}"; fi; done
 
 .PHONY: copy
 copy:
