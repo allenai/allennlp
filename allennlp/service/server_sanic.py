@@ -53,6 +53,12 @@ def run(port: int, workers: int,
 def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
 
+    no_cache_headers = {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": 0
+        }
+
     if build_dir is None:
         # Need path to static assets to be relative to this file.
         dir_path = os.path.dirname(os.path.realpath(__file__))
