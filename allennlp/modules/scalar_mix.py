@@ -13,7 +13,7 @@ class ScalarMix(torch.nn.Module):
     In addition, if ``do_layer_norm=True`` then apply layer normalization to each tensor
     before weighting.
     """
-    def __init__(self, mixture_size: int, do_layer_norm: bool = False):
+    def __init__(self, mixture_size: int, do_layer_norm: bool = False) -> None:
         super(ScalarMix, self).__init__()
 
         self.mixture_size = mixture_size
@@ -23,7 +23,8 @@ class ScalarMix(torch.nn.Module):
                                                 for _ in range(mixture_size)])
         self.gamma = Parameter(torch.FloatTensor([1.0]))
 
-    def forward(self, tensors: List[torch.Tensor], mask: torch.Tensor = None): # pylint: disable=arguments-differ
+    def forward(self, tensors: List[torch.Tensor],  # pylint: disable=arguments-differ
+                mask: torch.Tensor = None) -> torch.Tensor:
         if len(tensors) != self.mixture_size:
             raise ConfigurationError("{} tensors were passed, but the module was initialized to "
                                      "mix {} tensors.".format(len(tensors), self.mixture_size))
