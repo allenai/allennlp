@@ -55,12 +55,6 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
     app = Sanic(__name__)  # pylint: disable=invalid-name
     start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    no_cache_headers = {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": 0
-        }
-
     if build_dir is None:
         # Need path to static assets to be relative to this file.
         dir_path = os.path.dirname(os.path.realpath(__file__))
