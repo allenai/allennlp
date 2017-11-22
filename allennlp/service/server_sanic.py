@@ -5,6 +5,7 @@ AllenNLP models as well as our demo.
 Usually you would use :mod:`~allennlp.commands.serve`
 rather than instantiating an ``app`` yourself.
 """
+from datetime import datetime
 from typing import Dict, Optional
 import asyncio
 import json
@@ -52,6 +53,7 @@ def run(port: int, workers: int,
 
 def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
+    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if build_dir is None:
         # Need path to static assets to be relative to this file.
@@ -195,6 +197,15 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
     async def list_models(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """list the available models"""
         return response.json({"models": list(app.predictors.keys())})
+
+    @app.route('/info')
+    async def info(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
+        """List metadata about the running webserver"""
+        git_version = os.environ.get('SOURCE_COMMIT') or ""
+        return response.json({
+                "start_time": start_time,
+                "git_version": git_version,
+                "githubUrl": "http://github.com/allenai/allennlp/commit/" + git_version})
 
     # As a SPA, we need to return index.html for /model-name and /model-name/permalink
     @app.route('/semantic-role-labeling')
