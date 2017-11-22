@@ -1,29 +1,29 @@
 """
-This module defines classes Object and Box (the two entities in the NLVR domain) and a NLVRWorld,
+This module defines classes Object and Box (the two entities in the NLVR domain) and an NlvrWorld,
 which mainly contains an execution method and related helper methods.
 """
 
 from collections import defaultdict
 import operator
-from typing import Any, List, Dict, Set, Callable, Union
+from typing import Any, List, Dict, Set, Callable, TypeVar, Union
 import pyparsing
 
 from allennlp.common.util import JsonDict
 
 
-AttributeType = Union[int, str]  # pylint: disable=invalid-name
+AttributeType = TypeVar('AttributeType', str, int)  # pylint: disable=invalid-name
 
 
 class Object:
     """
-    ``Objects`` are the geometric shapes in the NLVR domain. They have values for attributes shape, color,
-    x_loc, y_loc and size. We take a dict read from the json file and store it here, and define a get method
-    for getting the attribute values. We need this to be hashable because need to make sets of ``Objects``
-    during execution, which get passed around between functions.
+    ``Objects`` are the geometric shapes in the NLVR domain. They have values for attributes shape,
+    color, x_loc, y_loc and size. We take a dict read from the JSON file and store it here, and
+    define a get method for getting the attribute values. We need this to be hashable because need
+    to make sets of ``Objects`` during execution, which get passed around between functions.
 
     Parameters
     ----------
-    object_dict : Dict[str, Union[str, int]]
+    object_dict : ``JsonDict``
         The dict for each object from the json file.
     """
     def __init__(self, object_dict: JsonDict) -> None:
@@ -59,11 +59,11 @@ class Box:
 
     Parameters
     ----------
-    objects_list : List[JsonDict]
+    objects_list : ``List[JsonDict]``
         List of objects in the box, as given by the json file.
-    name : str (optional)
-        Optionally specify a string representation. It could be any unique string. If not specified, we will use
-        the list of object names.
+    name : ``str`` (optional)
+        Optionally specify a string representation. It could be any unique string. If not
+        specified, we will use the list of object names.
     """
     def __init__(self,
                  objects_list: List[JsonDict],
@@ -84,13 +84,13 @@ class Box:
 class NlvrWorld:
     # pylint: disable=too-many-public-methods
     """
-    Class defining the world representation of NLVR. Defines an execution logic for logical forms in NLVR.
-    We just take the structured_rep from the json file to initialize this.
+    Class defining the world representation of NLVR. Defines an execution logic for logical forms
+    in NLVR.  We just take the structured_rep from the JSON file to initialize this.
 
     Parameters
     ----------
-    world_representation : JsonDict
-        structured_rep from the json file.
+    world_representation : ``JsonDict``
+        structured_rep from the JSON file.
     """
     def __init__(self, world_representation: List[List[JsonDict]]) -> None:
         self._boxes = set([Box(object_list, "box%d" % index)
@@ -132,54 +132,55 @@ class NlvrWorld:
 
     def execute(self, logical_form: str) -> bool:
         """
-        Execute the logical form. The top level function is an assertion function (see below). We just
-        parse the string into a list and pass the whote thing to ``_execute_assertion`` and let the method
-        deal with it.
+        Execute the logical form. The top level function is an assertion function (see below). We
+        just parse the string into a list and pass the whote thing to ``_execute_assertion`` and
+        let the method deal with it.
 
-        The language we defined here contains seven types of functions, five of which return sets, and one
-        returns integers, and one returns booleans.
+        The language we defined here contains seven types of functions, five of which return sets,
+        and one returns integers, and one returns booleans.
 
         1) Assertion Function : These occur only at the root node of the logical form trees. They
-        take a value obtained from an attribute function (see "Attribute Functions" below), compare it
-        against a target and return True or False. All the functions that have names like `assert_*`
-        are assert functions.
+        take a value obtained from an attribute function (see "Attribute Functions" below), compare
+        it against a target and return True or False. All the functions that have names like
+        `assert_*` are assert functions.
 
-        2) Attribute Functions : These are of the form `attribute(set_of_boxes_or_objects)`. There are two
-        types of attribute functions:
+        2) Attribute Functions : These are of the form `attribute(set_of_boxes_or_objects)`. There
+        are two types of attribute functions:
 
-            2a) Object Attribute Functions: They take sets of objects and return sets of attributes.
-            `color`, `shape` are the attribute functions.
+            2a) Object Attribute Functions: They take sets of objects and return sets of
+            attributes.  `color`, `shape` are the attribute functions.
 
             2b) Count Function : Takes a set of objects or boxes and returns its cardinality.
 
-        3) Box Membership Function : This takes a box as an argument and returns the objects in it. This
-        is a special kind of attribute function for two reasons. Firstly, it returns a set of objects
-        instead of attributes, and secondly it occurs only within the second argument of a box filtering
-        function (see below). It provides a way to query boxes based on the attributes of objects
-        contained within it. The function is called `object_in_box`, and it gets executed within
-        ``_execute_box_filter``.
+        3) Box Membership Function : This takes a box as an argument and returns the objects in it.
+        This is a special kind of attribute function for two reasons. Firstly, it returns a set of
+        objects instead of attributes, and secondly it occurs only within the second argument of a
+        box filtering function (see below). It provides a way to query boxes based on the
+        attributes of objects contained within it. The function is called `object_in_box`, and it
+        gets executed within ``_execute_box_filter``.
 
-        4) Box Filtering Functions : These are of the form
-        `filter(set_of_boxes, attribute_function, target_attribute)`
-        The idea is that we take a set of boxes, an attribute function that extracts the relevant
-        attribute from a box, and a target attribute that we compare against. The logic is that we execute
-        the attribute function on _each_ of the given boxes and return only those whose attribute value,
-        in comparison with the target attribute, satisfies the filtering criterion (i.e., equal to the
-        target, less than, greater than etc.). The fitering function defines the comparison operator.
-        All the functions in this class with names `filter_*` belong to this category.
+        4) Box Filtering Functions : These are of the form `filter(set_of_boxes,
+        attribute_function, target_attribute)` The idea is that we take a set of boxes, an
+        attribute function that extracts the relevant attribute from a box, and a target attribute
+        that we compare against. The logic is that we execute the attribute function on _each_ of
+        the given boxes and return only those whose attribute value, in comparison with the target
+        attribute, satisfies the filtering criterion (i.e., equal to the target, less than, greater
+        than etc.). The fitering function defines the comparison operator.  All the functions in
+        this class with names `filter_*` belong to this category.
 
         5) Object Filtering Functions : These are of the form `filter(set_of_objects)`. These are
-        similar to box filtering functions, but they operate on objects instead. Also, note that they
-        take just one argument instead of three. This is because while box filtering functions typically
-        query complex attributes, object filtering functions query the properties of the objects alone.
-        These are simple and finite in number. Thus, we essentially let the filtering function define the
-        attribute function, and the target attribute as well, along with the comparison operator.
-        That is, these are functions like `black` (which takes a set of objects, and returns those whose
-        "color" (attribute function) "equals" (comparison operator) "black" (target attribute)), or
-        "square" (which returns objects that are squares).
+        similar to box filtering functions, but they operate on objects instead. Also, note that
+        they take just one argument instead of three. This is because while box filtering functions
+        typically query complex attributes, object filtering functions query the properties of the
+        objects alone.  These are simple and finite in number. Thus, we essentially let the
+        filtering function define the attribute function, and the target attribute as well, along
+        with the comparison operator.  That is, these are functions like `black` (which takes a set
+        of objects, and returns those whose "color" (attribute function) "equals" (comparison
+        operator) "black" (target attribute)), or "square" (which returns objects that are
+        squares).
 
-        6) Negate Object Filter : Takes an object filter and a set of objects and applies the negation of
-        the object filter on the set.
+        6) Negate Object Filter : Takes an object filter and a set of objects and applies the
+        negation of the object filter on the set.
         """
         if not logical_form.startswith("("):
             logical_form = "(%s)" % logical_form
@@ -190,11 +191,11 @@ class NlvrWorld:
 
     def _execute_assertion(self, sub_expression: List) -> bool:
         """
-        Assertion functions are the highest level boolean functions. They take two arguments,
-        which evaluate to strings or integers, and compare them. The first element in the input list
+        Assertion functions are the highest level boolean functions. They take two arguments, which
+        evaluate to strings or integers, and compare them. The first element in the input list
         should be the assertion function name, all the remaining elements till the last should be
         executable as an attribute function, and the last element should be a constant.
-        TODO (pradeep): We may want to change the order of arguments here to make decoding easier.
+        TODO(pradeep): We may want to change the order of arguments here to make decoding easier.
 
         Syntax: assertion_function(attribute_function, constant)
         """
@@ -219,8 +220,8 @@ class NlvrWorld:
 
     def _execute_attribute_function(self, sub_expression: List) -> Set[str]:
         """
-        Attribute functions return a set of evaluated attributes. The function has to be `color`
-        or `shape`, and the only element in the nested list should evaluate to a set of objects.
+        Attribute functions return a set of evaluated attributes. The function has to be ``color``
+        or ``shape``, and the only element in the nested list should evaluate to a set of objects.
 
         Syntax: attribute_function(input_set)
         """
@@ -251,7 +252,7 @@ class NlvrWorld:
         The elements should evaluate to one of the following:
             box_filtering_function(set_to_filter, attribute_function, constant)
             all_boxes
-        TODO (pradeep): We may want to change the order of arguments here to make decoding easier.
+        TODO(pradeep): We may want to change the order of arguments here to make decoding easier.
         """
         if sub_expression[0].startswith('filter_'):
             # filter_* functions are box filtering functions, and have a lambda expression as the
@@ -294,7 +295,7 @@ class NlvrWorld:
             raise RuntimeError("Invalid object filter expression: %s" % sub_expression)
 
     @staticmethod
-    def _execute_constant(sub_expression: str) -> AttributeType:
+    def _execute_constant(sub_expression: str) -> Union[str, int]:
         """
         Acceptable constants are numbers or strings starting with `shape_` or `color_`
         """
@@ -359,15 +360,15 @@ class NlvrWorld:
     @classmethod
     def filter_greater_equal(cls,
                              set_to_filter: Set[Box],
-                             attribute_function: Callable[[Box], AttributeType],
-                             target_attribute: AttributeType) -> Set[Box]:
+                             attribute_function: Callable[[Box], int],
+                             target_attribute: int) -> Set[Box]:
         return cls._filter_boxes(set_to_filter, attribute_function, target_attribute, operator.ge)
 
     @classmethod
     def filter_lesser_equal(cls,
                             set_to_filter: Set[Box],
-                            attribute_function: Callable[[Box], AttributeType],
-                            target_attribute: AttributeType) -> Set[Box]:
+                            attribute_function: Callable[[Box], int],
+                            target_attribute: int) -> Set[Box]:
         return cls._filter_boxes(set_to_filter, attribute_function, target_attribute, operator.le)
 
     ## Object filtering functions
@@ -399,9 +400,9 @@ class NlvrWorld:
     def _get_objects_with_same_attribute(objects: Set[Object],
                                          attribute_function: Callable[[Object], str]) -> Set[Object]:
         """
-        Returns the set of objects for which the attribute function returns an attribute value that is most
-        frequent in the initial set, if the frequency is greater than 1. If not, all objects have different
-        attribute values, and this method returns an empty set.
+        Returns the set of objects for which the attribute function returns an attribute value that
+        is most frequent in the initial set, if the frequency is greater than 1. If not, all
+        objects have different attribute values, and this method returns an empty set.
         """
         objects_of_attribute: Dict[str, Set[Object]] = defaultdict(set)
         for entity in objects:
@@ -414,22 +415,24 @@ class NlvrWorld:
     @classmethod
     def same_color(cls, objects: Set[Object]) -> Set[Object]:
         """
-        Filters the set of objects, and returns those objects whose color is the most frequent color in the initial
-        set of objects, if the highest frequency is greater than 1, or an empty set otherwise.
+        Filters the set of objects, and returns those objects whose color is the most frequent
+        color in the initial set of objects, if the highest frequency is greater than 1, or an
+        empty set otherwise.
 
-        This is an unusual name for what the method does, but just as ``blue`` filters objects to those that are
-        blue, this filters objects to those that are of the same color.
+        This is an unusual name for what the method does, but just as ``blue`` filters objects to
+        those that are blue, this filters objects to those that are of the same color.
         """
         return cls._get_objects_with_same_attribute(objects, lambda x: x.color)
 
     @classmethod
     def same_shape(cls, objects: Set[Object]) -> Set[Object]:
         """
-        Filters the set of objects, and returns those objects whose color is the most frequent color in the initial
-        set of objects, if the highest frequency is greater than 1, or an empty set otherwise.
+        Filters the set of objects, and returns those objects whose color is the most frequent
+        color in the initial set of objects, if the highest frequency is greater than 1, or an
+        empty set otherwise.
 
-        This is an unusual name for what the method does, but just as ``triangle`` filters objects to
-        those that are triangles, this filters objects to those that are of the same shape.
+        This is an unusual name for what the method does, but just as ``triangle`` filters objects
+        to those that are triangles, this filters objects to those that are of the same shape.
         """
         return cls._get_objects_with_same_attribute(objects, lambda x: x.shape)
 
