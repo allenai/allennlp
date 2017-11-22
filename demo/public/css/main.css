@@ -1586,9 +1586,8 @@ svg {
   Set a max width so that nodes aren't too wide, since some of the nodes in the AllenNLP
   SRL output can contain large passages of text.
 */
-.hierplane__visualization .hierplane .node__word__label {
-  max-width: 20em;
-  margin: 0 auto;
+.hierplane__visualization .hierplane .node__word__label .node__word__label__siblings {
+  max-width: 15vw;
   white-space: normal;
 }
 
