@@ -217,7 +217,7 @@ class SrlInput extends React.Component {
             {srlSentences.map((sentence, index) => {
               const selected = sentence === srlSentenceValue;
               return (
-                <option value={index} key={index} defaultValue={selected}>{sentence}</option>
+                <option value={index} key={index} selected={selected}>{sentence}</option>
               );
             })}
           </select>
@@ -239,18 +239,92 @@ class SrlInput extends React.Component {
   <SrlOutput /> Component
 *******************************************************************************/
 
+// Render the SRL tag for a single word as a table cell
+class SrlTagCell extends React.Component {
+
+  render() {
+    const { tag, colorClass } = this.props;
+
+    // Don't show "O" tags, and slice off all the "B-" and "I-" prefixes.
+    const tagText = tag === "O" ? "" : tag.slice(2);
+
+    return (
+      <td className={colorClass + ' srl-tag srl-tag-' + tag.toLowerCase()}>
+        {tagText}
+      </td>
+    )
+  }
+}
+
+// Render a SRL-tagged word as a table cell
+class SrlWordCell extends React.Component {
+  render() {
+    const { word, colorClass } = this.props;
+
+    return (<td className={colorClass + ' srl-word'}>{word}</td>)
+  }
+}
+
+class SrlFrame extends React.Component {
+  render() {
+    const { verb, words } = this.props;
+    const tags = verb["tags"];
+
+
+    // Skip frames that have only one tag; these are typically helper verbs.
+    // In an ideal world we'd filter these out on the backend, but the POS
+    // tagger we're using right now doesn't seem up to the task.
+    const numTags = tags.filter(tag => tag !== "O").length
+    if (numTags <= 1) {
+      return (<div />)
+    }
+
+    // Create an array indicating what color to highlight each tag cell.
+    // For "O" tags this should be -1, indicating no color.
+    // Otherwise it should toggle between 0 and 1 every time a "B-" tag occurs.
+    var colorClasses = [];
+    var currentColor = 1;
+
+    tags.forEach(function (tag, i) {
+      if (tag === "O") {
+        // "O" tag, so append "" for "no color"
+        colorClasses.push("");
+      } else if (tag[0] === "B") {
+        // "B-" tag, so toggle the current color and then append
+        currentColor = (currentColor + 1) % 2;
+        colorClasses.push("color" + currentColor);
+      } else /* (tag[0] == "I") */ {
+        // "I-" tag, so append the current color
+        colorClasses.push("color" + currentColor);
+      }
+    })
+
+    return (
+      <div>
+        <label>{verb.verb}</label>
+        <table className="srl-table">
+          <tbody>
+            <tr>
+              {tags.map((tag, i) => <SrlTagCell tag={tag} key={i} colorClass={colorClasses[i]} />)}
+            </tr>
+            <tr>
+              {words.map((word, i) => <SrlWordCell word={word} key={i} colorClass={colorClasses[i]} />)}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+}
+
 class SrlOutput extends React.Component {
   render() {
-    const { verbs } = this.props;
+    const { words, verbs } = this.props;
 
     return (
       <div className="model__content model__content--srl-output">
-        <div>
-          {verbs.map((verb, i) => {
-              return (
-                  <p key={i}><b>{verb.verb}:</b> {verb.description}</p>
-              )
-          })}
+        <div className="form__field">
+          {verbs.map((verb, i) => (<SrlFrame verb={verb} words={words} key={i} />))}
         </div>
       </div>
     );
@@ -268,7 +342,7 @@ class HierplaneVisualization extends React.Component {
   selectPrevVerb() {
     const nextIdx =
         this.state.selectedIdx === 0 ? this.props.trees.length - 1 : this.state.selectedIdx - 1;
-    this.setState({ defaultValue: nextIdx });
+    this.setState({ selectedIdx: nextIdx });
   }
   selectNextVerb() {
     const nextIdx =
@@ -316,7 +390,7 @@ class HierplaneVisualization extends React.Component {
 
 const VisualizationType = {
   TREE: 'Tree',
-  TEXT: 'Text'
+  TABLE: 'Table'
 };
 Object.freeze(VisualizationType);
 
@@ -375,12 +449,13 @@ class _SrlComponent extends React.Component {
     const { visualizationType } = this.state;
 
     const sentence = requestData && requestData.sentence;
+    const words = responseData && responseData.words;
     const verbs = responseData && responseData.verbs;
 
     let viz = null;
     switch(visualizationType) {
-      case VisualizationType.TEXT:
-        viz = <SrlOutput verbs={verbs} />;
+      case VisualizationType.TABLE:
+        viz = <SrlOutput words={words} verbs={verbs} />;
         break;
       case VisualizationType.TREE:
       default:
