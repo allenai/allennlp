@@ -82,6 +82,12 @@ spec:
             - /bin/bash
             - -c
             - "allennlp/run serve"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 3
 ---
 apiVersion: v1
 kind: Service
