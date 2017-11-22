@@ -217,7 +217,7 @@ class SrlInput extends React.Component {
             {srlSentences.map((sentence, index) => {
               const selected = sentence === srlSentenceValue;
               return (
-                <option value={index} key={index} defaultValue={selected}>{sentence}</option>
+                <option value={index} key={index} selected={selected}>{sentence}</option>
               );
             })}
           </select>
@@ -268,7 +268,7 @@ class HierplaneVisualization extends React.Component {
   selectPrevVerb() {
     const nextIdx =
         this.state.selectedIdx === 0 ? this.props.trees.length - 1 : this.state.selectedIdx - 1;
-    this.setState({ defaultValue: nextIdx });
+    this.setState({ selectedIdx: nextIdx });
   }
   selectNextVerb() {
     const nextIdx =
