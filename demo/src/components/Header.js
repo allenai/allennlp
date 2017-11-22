@@ -30,6 +30,7 @@ class Header extends React.Component {
                 {buildLink("textual-entailment", "Textual Entailment")}
                 {buildLink("semantic-role-labeling", "Semantic Role Labeling")}
                 {buildLink("coreference-resolution", "Coreference Resolution")}
+                {buildLink("named-entity-recognition", "Named Entity Recognition")}
               </ul>
             </nav>
             <h1 className="header__content__logo">

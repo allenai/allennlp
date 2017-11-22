@@ -1,7 +1,7 @@
 ---
 layout: tutorial
-title: A Deeper Dive Into Configuring Experiments
-id: configuring-experiments
+title: Configuring Experiments
+id: configuration
 ---
 
 Now that we know how to train and evaluate models,
@@ -65,7 +65,7 @@ a wrapper around the `allennlp.commands.main` function,
 which means you just need to create your own script
 that imports all of your custom classes and then calls `allennlp.commands.main()`.
 
-## `Dataset`s and `Instance`s and `Field`s
+## Datasets and Instances and Fields
 
 We train and evaluate our models on `Dataset`s. A
 [`Dataset`](http://docs.allennlp.org/en/latest/api/allennlp.data.html#allennlp.data.dataset.Dataset)
@@ -88,7 +88,7 @@ How do we turn a text file full of sentences into a `Dataset`? With a
 [`DatasetReader`](http://docs.allennlp.org/en/latest/api/allennlp.data.dataset_readers.html#allennlp.data.dataset_readers.dataset_reader.DatasetReader)
 specified by our configuration file.
 
-## `dataset_reader`
+## DatasetReaders
 
 The first section of our configuration file defines the `dataset_reader`:
 
@@ -325,3 +325,8 @@ all we need to do is modify this config file and `train` another model.
 
 The training configuration is always saved as part of the model archive,
 which means that you can always see how a saved model was trained.
+
+
+### Next Steps
+
+Continue on to our [Creating a Model](creating-a-model) tutorial.

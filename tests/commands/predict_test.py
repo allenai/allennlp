@@ -7,8 +7,8 @@ import tempfile
 from unittest import TestCase
 
 from allennlp.common.util import JsonDict
-from allennlp.commands import main, DEFAULT_PREDICTORS
-from allennlp.commands.predict import Predict
+from allennlp.commands import main
+from allennlp.commands.predict import Predict, DEFAULT_PREDICTORS
 from allennlp.service.predictors import Predictor, BidafPredictor
 
 
@@ -19,17 +19,32 @@ class TestPredict(TestCase):
         subparsers = parser.add_subparsers(title='Commands', metavar='')
         Predict(DEFAULT_PREDICTORS).add_subparser('predict', subparsers)
 
-        raw_args = ["predict",          # command
-                    "/path/to/archive", # archive
-                    "/dev/null",    # input_file
-                    "--output-file", "/dev/null",
-                    "--silent"]
+        snake_args = ["predict",          # command
+                      "/path/to/archive", # archive
+                      "/dev/null",        # input_file
+                      "--output-file", "/dev/null",  # this one was always kebab-case
+                      "--batch_size", "10",
+                      "--cuda_device", "0",
+                      "--silent"]
 
-        args = parser.parse_args(raw_args)
+        kebab_args = ["predict",          # command
+                      "/path/to/archive", # archive
+                      "/dev/null",        # input_file
+                      "--output-file", "/dev/null",
+                      "--batch-size", "10",
+                      "--cuda-device", "0",
+                      "--silent"]
 
-        assert args.func.__name__ == 'predict_inner'
-        assert args.archive_file == "/path/to/archive"
-        assert args.silent
+        for raw_args in [snake_args, kebab_args]:
+            args = parser.parse_args(raw_args)
+
+            assert args.func.__name__ == 'predict_inner'
+            assert args.archive_file == "/path/to/archive"
+            assert args.output_file.name == "/dev/null"
+            assert args.batch_size == 10
+            assert args.cuda_device == 0
+            assert args.silent
+
 
     def test_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()
