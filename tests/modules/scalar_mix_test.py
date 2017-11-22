@@ -1,3 +1,4 @@
+# pylint: disable=no-self-use,invalid-name
 import torch
 from torch.autograd import Variable
 import pytest

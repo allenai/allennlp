@@ -1,6 +1,6 @@
 from typing import List
+
 import torch
-import numpy
 from torch.nn import ParameterList, Parameter
 
 from allennlp.common.checks import ConfigurationError
@@ -13,17 +13,17 @@ class ScalarMix(torch.nn.Module):
     In addition, if ``do_layer_norm=True`` then apply layer normalization to each tensor
     before weighting.
     """
-    def __init__(self, mixture_size: int, do_layer_norm: bool=False):
+    def __init__(self, mixture_size: int, do_layer_norm: bool = False):
         super(ScalarMix, self).__init__()
 
         self.mixture_size = mixture_size
         self.do_layer_norm = do_layer_norm
 
         self.scalar_parameters = ParameterList([Parameter(torch.FloatTensor([0.0]))
-                                               for _ in range(mixture_size)])
+                                                for _ in range(mixture_size)])
         self.gamma = Parameter(torch.FloatTensor([1.0]))
 
-    def forward(self, tensors: List[torch.Tensor], mask: torch.Tensor=None):
+    def forward(self, tensors: List[torch.Tensor], mask: torch.Tensor = None): # pylint: disable=arguments-differ
         if len(tensors) != self.mixture_size:
             raise ConfigurationError("{} tensors were passed, but the module was initialized to "
                                      "mix {} tensors.".format(len(tensors), self.mixture_size))
