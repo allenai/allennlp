@@ -53,7 +53,7 @@ def run(port: int, workers: int,
 
 def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
-    startTime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if build_dir is None:
         # Need path to static assets to be relative to this file.
@@ -201,11 +201,11 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
     @app.route('/info')
     async def info(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """List metadata about the running webserver"""
-        gitVersion = os.environ.get('SOURCE_COMMIT') or ""
+        git_version = os.environ.get('SOURCE_COMMIT') or ""
         return response.json({
-                    "startTime": startTime,
-                    "gitVersion": gitVersion,
-                    "githubUrl": "http://github.com/allenai/scholar/commit/" + gitVersion})
+                "start_time": start_time,
+                "git_version": git_version,
+                "githubUrl": "http://github.com/allenai/scholar/commit/" + git_version})
 
     # As a SPA, we need to return index.html for /model-name and /model-name/permalink
     @app.route('/semantic-role-labeling')
