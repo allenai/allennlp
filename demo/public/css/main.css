@@ -1491,3 +1491,23 @@ svg {
 .hierplane__visualization .hierplane #passage p .passage__readonly .span-slice__ignored {
   margin-left: 0 !important;
 }
+
+/*
+  Set a max width so that nodes aren't too wide, since some of the nodes in the AllenNLP
+  SRL output can contain large passages of text.
+*/
+.hierplane__visualization .hierplane .node__word__label {
+  max-width: 20em;
+  margin: 0 auto;
+  white-space: normal;
+}
+
+/*
+  Adjust the "passage" display so that it accomodates the entire sentence, if possible. This
+  prevents the user from having to scroll when the sentence is long.
+*/
+.hierplane__visualization .hierplane--theme-light #passage {
+  max-height: initial;
+  height: auto !important;
+  flex: 1;
+}
