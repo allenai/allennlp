@@ -11,7 +11,6 @@ import pyparsing
 from nltk.sem.logic import Expression, LambdaExpression
 
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
-
 from allennlp.data.semparse.type_declarations.wikitables_type_declaration import DynamicTypeLogicParser
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 

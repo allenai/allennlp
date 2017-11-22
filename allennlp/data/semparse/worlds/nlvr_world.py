@@ -12,6 +12,8 @@ from allennlp.common.util import JsonDict
 
 
 AttributeType = Union[int, str]  # pylint: disable=invalid-name
+AttributeSetType = Union[Set[int], Set[str]]  # pylint: disable=invalid-name
+NestedListType = Union[str, List[Union[str, List[str]]]]  # pylint: disable=invalid-name
 
 
 class Object:
@@ -81,7 +83,7 @@ class Box:
         return str(self) == str(other)
 
 
-class NLVRWorld:
+class NlvrWorld:
     # pylint: disable=too-many-public-methods
     """
     Class defining the world representation of NLVR. Defines an execution logic for logical forms in NLVR.
@@ -99,10 +101,10 @@ class NLVRWorld:
         for box in self._boxes:
             self._objects.update(box.objects)
 
-    def all_boxes(self) -> Set[Box]:
+    def _all_boxes(self) -> Set[Box]:
         return self._boxes
 
-    def all_objects(self) -> Set[Object]:
+    def _all_objects(self) -> Set[Object]:
         return self._objects
 
     @classmethod
@@ -132,103 +134,180 @@ class NLVRWorld:
 
     def execute(self, logical_form: str) -> bool:
         """
-        Execute the logical form.
-        The language we defined here contains six types of functions, four of which return sets, one returns
-        integers and one returns booleans.
+        Execute the logical form. The top level function is an assertion function (see below). We just
+        parse the string into a list and pass the whote thing to ``_execute_assertion`` and let the method
+        deal with it.
 
-        1) Attribute functions - These are of the form `attribute(set_of_boxes_or_objects)`. They take sets and
-        return sets of attributes. `color` and `shape` (operating on objects) and `object_in_box` (operating on
-        boxes) are the attribute functions.
+        The language we defined here contains seven types of functions, five of which return sets, and one
+        returns integers, and one returns booleans.
 
-        2) Count function - Takes a set of objects or boxes and returns its length.
+        1) Assertion Function : These occur only at the root node of the logical form trees. They
+        take a value obtained from an attribute function (see "Attribute Functions" below), compare it
+        against a target and return True or False. All the functions that have names like `assert_*`
+        are assert functions.
 
-        3) Box filtering functions - These are of the form
+        2) Attribute Functions : These are of the form `attribute(set_of_boxes_or_objects)`. There are two
+        types of attribute functions:
+
+            2a) Object Attribute Functions: They take sets of objects and return sets of attributes.
+            `color`, `shape` are the attribute functions.
+
+            2b) Count Function : Takes a set of objects or boxes and returns its cardinality.
+
+        3) Box Membership Function : This takes a box as an argument and returns the objects in it. This
+        is a special kind of attribute function for two reasons. Firstly, it returns a set of objects
+        instead of attributes, and secondly it occurs only within the second argument of a box filtering
+        function (see below). It provides a way to query boxes based on the attributes of objects
+        contained within it. The function is called `object_in_box`, and it gets executed within
+        ``_execute_box_filter``.
+
+        4) Box Filtering Functions : These are of the form
         `filter(set_of_boxes, attribute_function, target_attribute)`
-        The idea is that we take a set of boxes, an attribute function that extracts the relevant attribute from
-        a box, and a target attribute that we compare against. The logic is that we execute the attribute function
-        on _each_ of the given boxes and return only those whose attribute value, in comparison with the target
-        attribute, satisfies the filtering criterion (i.e., equal to the target, less than, greater than etc.). The
-        fitering function defines the comparison operator.
-        All the functions below with names `filter_*` belong to this category.
+        The idea is that we take a set of boxes, an attribute function that extracts the relevant
+        attribute from a box, and a target attribute that we compare against. The logic is that we execute
+        the attribute function on _each_ of the given boxes and return only those whose attribute value,
+        in comparison with the target attribute, satisfies the filtering criterion (i.e., equal to the
+        target, less than, greater than etc.). The fitering function defines the comparison operator.
+        All the functions in this class with names `filter_*` belong to this category.
 
-        4) Object filtering functions - These are of the form `filter(set_of_objects)`. These are similar to box
-        filtering functions, but they operate on objects instead. Also, note that they take just one argument
-        instead of three. This is because while box filtering functions typically query complex attributes, object
-        filtering functions query the properties of the objects alone. These are simple and finite in number. Thus,
-        we essentially let the filtering function define the attribute function, and the target attribute as well,
-        along with the comparison operator. That is, these are functions like `black` (which takes a set of
-        objects, and returns those whose "color" (attribute function) "equals" (comparison operator) "black"
-        (target attribute)), or "square" (which returns objects that are squares).
+        5) Object Filtering Functions : These are of the form `filter(set_of_objects)`. These are
+        similar to box filtering functions, but they operate on objects instead. Also, note that they
+        take just one argument instead of three. This is because while box filtering functions typically
+        query complex attributes, object filtering functions query the properties of the objects alone.
+        These are simple and finite in number. Thus, we essentially let the filtering function define the
+        attribute function, and the target attribute as well, along with the comparison operator.
+        That is, these are functions like `black` (which takes a set of objects, and returns those whose
+        "color" (attribute function) "equals" (comparison operator) "black" (target attribute)), or
+        "square" (which returns objects that are squares).
 
-        5) Negate object filter - Takes an object filter and a set of objects and applies the negation of the
-        object filter on the set.
-
-        6) Assert operations - These typically occur only at the root node of the logical form trees. They take a
-        value (obtained from a filtering operation), compare it against a target and return True or False. All the
-        functions that have names like `assert_*` are assert functions.
+        6) Negate Object Filter : Takes an object filter and a set of objects and applies the negation of
+        the object filter on the set.
         """
-        def _execute_sub_expression(sub_expression: Union[str, List[str]]) -> Union[int, str, bool, Set[Object]]:
-            """
-            Primary recursive method for execution.
-            """
-            # pylint: disable=too-many-return-statements
-            if isinstance(sub_expression, list) and len(sub_expression) == 1:
-                # List with a single item. We should just evaluate the item.
-                return _execute_sub_expression(sub_expression[0])
-
-            if isinstance(sub_expression, list):
-                # We have to specially deal with box filtering functions and assertion functions, each of which
-                # takes multiple arguments. Let's do that first
-                function = getattr(self, sub_expression[0])
-                if sub_expression[0].startswith('filter_'):
-                    # filter_* functions are box filtering functions, and have a lambda expression as the
-                    # second argument. We'll process the whole nested structure of the lambda expression
-                    # here.
-                    arguments = sub_expression[1]
-                    set_to_filter = _execute_sub_expression(arguments[0])
-                    flattened_lambda_terms = self._flatten(arguments[1:-1], [])
-                    attribute_function = lambda x: self._apply_function_list(flattened_lambda_terms, x)
-                    attribute = _execute_sub_expression(arguments[-1])
-                    return function(set_to_filter, attribute_function, attribute)
-                elif sub_expression[0].startswith('assert_'):
-                    # assert functions are the highest level boolean functions. They take two arguments,
-                    # that evaluate to strings or integers, and compare them.
-                    arguments = sub_expression[1]
-                    first_attribute = _execute_sub_expression(arguments[:2])
-                    second_attribute = _execute_sub_expression(arguments[2])
-                    return function(first_attribute, second_attribute)
-                elif sub_expression[0] == "negate_filter":
-                    arguments = sub_expression[1]
-                    original_filter = getattr(self, arguments[0])
-                    initial_set: Set[Object] = _execute_sub_expression(arguments[1:])
-                    return self.negate_filter(original_filter, initial_set)
-                elif isinstance(sub_expression[0], str) and isinstance(sub_expression[1], list):
-                    # These are the other kinds of function applications.
-                    arguments = _execute_sub_expression(sub_expression[1])
-                    if isinstance(arguments, set):
-                        # This means arguments is an execution of all_objects or all_boxes
-                        return function(arguments)
-                    # Or else, arguments are an actual list of executed arguments.
-                    return function(*arguments)
-                raise RuntimeError("Invalid subtree: %s" % sub_expression)
-
-            if isinstance(sub_expression, str):
-                # These can either be numbers, shapes, colors or the special sets (all_objects or all_boxes)
-                if str.isdigit(sub_expression):
-                    return int(sub_expression)
-                elif sub_expression.startswith('color_'):
-                    return sub_expression.replace('color_', '')
-                elif sub_expression.startswith('shape_'):
-                    return sub_expression.replace('shape_', '')
-                # This has to be all_objects or all_boxes
-                return getattr(self, sub_expression)()
-
         if not logical_form.startswith("("):
             logical_form = "(%s)" % logical_form
         logical_form = logical_form.replace(",", " ")
         expression_as_list = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(logical_form).asList()
+        # The whole expression has to be an assertion expression because it has to return a boolean.
+        return self._execute_assertion(expression_as_list)
 
-        return _execute_sub_expression(expression_as_list)
+    def _execute_assertion(self, sub_expression: List) -> bool:
+        """
+        Assertion functions are the highest level boolean functions. They take two arguments,
+        which evaluate to strings or integers, and compare them. The first element in the input list
+        should be the assertion function name, all the remaining elements till the last should be
+        executable as an attribute function, and the last element should be a constant.
+        TODO (pradeep): We may want to change the order of arguments here to make decoding easier.
+
+        Syntax: assertion_function(attribute_function, constant)
+        """
+        assert isinstance(sub_expression, list), "Invalid assertion expression: %s" % sub_expression
+        if len(sub_expression) == 1 and isinstance(sub_expression[0], list):
+            return self._execute_assertion(sub_expression[0])
+        assert isinstance(sub_expression[0], str) and sub_expression[0].startswith("assert_"),\
+               "Invalid assertion function: %s" % (sub_expression[0])
+        function = getattr(self, sub_expression[0])
+        arguments = sub_expression[1]
+        target_attribute = self._execute_constant(arguments[2])
+        if arguments[0] == "count":
+            counted_value = self._execute_count_function(arguments[:2])
+            return function(counted_value, target_attribute)
+        attribute_set = self._execute_attribute_function(arguments[:2])
+        # We defined attribute functions to always return sets. But when this assertion is being executed, for the
+        # assertion to be true, the returned set needs to be singleton. If not, the assertion should fail.
+        if len(attribute_set) != 1:
+            return False
+        (attribute,) = attribute_set
+        return function(attribute, target_attribute)
+
+    def _execute_attribute_function(self, sub_expression: List) -> Set[str]:
+        """
+        Attribute functions return a set of evaluated attributes. The function has to be `color`
+        or `shape`, and the only element in the nested list should evaluate to a set of objects.
+
+        Syntax: attribute_function(input_set)
+        """
+        assert isinstance(sub_expression, list), "Invalid attribute expression: %s" % sub_expression
+        function_name = sub_expression[0]
+        arguments_list = sub_expression[1]
+        input_set = self._execute_object_filter(arguments_list)
+        if function_name == "shape":
+            return self.shape(input_set)
+        elif function_name == "color":
+            return self.color(input_set)
+        else:
+            raise RuntimeError("Invalid attribute function: %s" % sub_expression[0])
+
+    def _execute_count_function(self, sub_expression: List) -> int:
+        """
+        Acceptable syntax is count(object_set).
+        """
+        arguments_list = sub_expression[1]
+        if arguments_list[0].startswith("filter_") or arguments_list[0] == "all_boxes":
+            return self.count(self._execute_box_filter(arguments_list))
+        else:
+            return self.count(self._execute_object_filter(arguments_list))
+
+    def _execute_box_filter(self, sub_expression: Union[str, List]) -> Set[Box]:
+        """
+        Box filtering functions either apply a filter on a set of boxes and return the filtered set.
+        The elements should evaluate to one of the following:
+            box_filtering_function(set_to_filter, attribute_function, constant)
+            all_boxes
+        TODO (pradeep): We may want to change the order of arguments here to make decoding easier.
+        """
+        if sub_expression[0].startswith('filter_'):
+            # filter_* functions are box filtering functions, and have a lambda expression as the
+            # second argument. We'll process the whole nested structure of the lambda expression
+            # here.
+            function = getattr(self, sub_expression[0])
+            arguments = sub_expression[1]
+            set_to_filter = self._execute_box_filter(arguments[0])
+            flattened_lambda_terms = self._flatten(arguments[1:-1], [])
+            attribute_function = lambda x: self._apply_function_list(flattened_lambda_terms, x)
+            attribute = self._execute_constant(arguments[-1])
+            return function(set_to_filter, attribute_function, attribute)
+        elif sub_expression == 'all_boxes' or sub_expression[0] == 'all_boxes':
+            return self._all_boxes()
+        else:
+            raise RuntimeError("Invalid box filter expression: %s" % sub_expression)
+
+    def _execute_object_filter(self, sub_expression: Union[str, List]) -> Set[Object]:
+        """
+        Object filtering functions should either be a string referring to all objects, or list which
+        executes to a filtering operation.
+        The elements should evaluate to one of the following:
+            object_filtering_function(object_set)
+            negate_filter(object_filtering_function, object_set)
+            all_objects
+        """
+        if sub_expression[0] == "negate_filter":
+            arguments = sub_expression[1]
+            original_filter = getattr(self, arguments[0])
+            initial_set = self._execute_object_filter(arguments[1:])
+            return self.negate_filter(original_filter, initial_set)
+        elif sub_expression == "all_objects" or sub_expression[0] == "all_objects":
+            return self._all_objects()
+        elif isinstance(sub_expression[0], str) and isinstance(sub_expression[1], list):
+            # These are functions like black, square, same_color etc.
+            function = getattr(self, sub_expression[0])
+            arguments = self._execute_object_filter(sub_expression[1])
+            return function(arguments)
+        else:
+            raise RuntimeError("Invalid object filter expression: %s" % sub_expression)
+
+    @staticmethod
+    def _execute_constant(sub_expression: str) -> AttributeType:
+        """
+        Acceptable constants are numbers or strings starting with `shape_` or `color_`
+        """
+        if str.isdigit(sub_expression):
+            return int(sub_expression)
+        elif sub_expression.startswith('color_'):
+            return sub_expression.replace('color_', '')
+        elif sub_expression.startswith('shape_'):
+            return sub_expression.replace('shape_', '')
+        else:
+            raise RuntimeError("Invalid constant: %s" % sub_expression)
 
     ## Attribute functions
     @staticmethod
@@ -246,7 +325,7 @@ class NLVRWorld:
         return set([obj.shape for obj in objects])
 
     @staticmethod
-    def count(entities_set: Set[Union[Object, Box]]) -> int:
+    def count(entities_set: Union[Set[Box], Set[Object]]) -> int:
         return len(entities_set)
 
     @staticmethod
