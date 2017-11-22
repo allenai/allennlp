@@ -1475,11 +1475,22 @@ svg {
   user-select: none;
 }
 
-/* THESE ARE TERRIBLE HACKS PUT HERE BY CODEVIKING. */
+/* THESE ARE HACKS PUT HERE BY CODEVIKING. */
 
-/* This hides the toolbar. Ideally hierplane would have an option to do this. */
-.hierplane .parse-tree-toolbar {
-  display: none !important;
+/* Properly center the controls in the toolbar */
+.hierplane__visualization .hierplane .parse-tree-toolbar .parse-tree-toolbar__item .parse-tree-toolbar__item__label {
+  top: 50%;
+  margin-top: -13px;
+}
+
+.hierplane__visualization .hierplane--theme-light .parse-tree-toolbar {
+  background: transparent;
+  border: none;
+}
+
+.hierplane__visualization .hierplane--theme-light .parse-tree-toolbar:before {
+  background: transparent;
+  border: none;
 }
 
 /*

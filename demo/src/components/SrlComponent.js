@@ -34,6 +34,28 @@ const description = (
   </div>
 );
 
+const attributeToDisplayLabel = {
+  "PRP": "Purpose",
+  "COM": "Comitative",
+  "LOC" : "Location",
+  "DIR" : "Direction",
+  "GOL": "Goal",
+  "MNR": "Manner",
+  "TMP": "Temporal",
+  "EXT": "Extent",
+  "REC": "Reciprocal",
+  "PRD": "Secondary Predication",
+  "CAU": "Cause",
+  "DIS": "Discourse",
+  "MOD": "Modal",
+  "NEG": "Negation",
+  "DSP": "Direct Speech",
+  "LVB": "Light Verb",
+  "ADV": "Adverbial",
+  "ADJ": "Adjectival",
+  "PNC": "Purpose not cause"
+};
+
 function getStrIndex(words, wordIdx) {
   if (wordIdx < 0) throw new Error(`Invalid word index: ${wordIdx}`);
   return words.slice(0, wordIdx).join(' ').length;
@@ -47,7 +69,7 @@ function toHierplaneTrees(response) {
     const verbTagIdx = tags.findIndex(tag => tag === 'B-V');
     const start = getStrIndex(response.words, verbTagIdx);
 
-    const ignoredSpans = tags.reduce((children, tag, idx) => {
+    const ignoredSpans = tags.reduce((allChildren, tag, idx) => {
       if (tag === 'O') {
         const word = response.words[idx];
         const start = getStrIndex(response.words, idx);
@@ -57,10 +79,78 @@ function toHierplaneTrees(response) {
           start,
           end
         };
-        children.push(child);
+        allChildren.push(child);
       }
-      return children;
+      return allChildren;
     }, []);
+
+    // Keep a map of each children, by it's parent, so that we can attach them in a single
+    // pass after building up the immediate children of this node
+    const childrenByArg = {};
+
+    const children = tags.reduce((allChildren, tag, idx) => {
+      if (tag !== 'B-V' && tag.startsWith('B-')) {
+        const word = response.words[idx];
+        const tagParts = tag.split('-').slice(1);
+
+        let [ tagLabel, attr ] = tagParts;
+
+        // Convert the tag label to a node type. In the long run this might make sense as
+        // a map / lookup table of some sort -- but for now this works.
+        let nodeType = tagLabel;
+        if (tagLabel === 'ARGM') {
+          nodeType = 'modifier';
+        } else if (tagLabel === 'ARGA') {
+          nodeType = 'argument';
+        } else if (/ARG\d+/.test(tagLabel)) {
+          nodeType = 'argument';
+        } else  if (tagLabel === 'R') {
+          nodeType = 'reference';
+        } else if (tagLabel === 'C') {
+          nodeType = 'continuation'
+        }
+
+        let attribute;
+        const isArg = nodeType === 'argument';
+        if (isArg) {
+          attribute = tagLabel;
+        } else if(attr) {
+          attribute = attributeToDisplayLabel[attr];
+        }
+
+        const start = getStrIndex(response.words, idx);
+        const newChild = {
+          word,
+          spans: [{
+            start,
+            end: start + word.length + 1
+          }],
+          nodeType,
+          link: nodeType,
+          attributes: attribute ? [ attribute ] : undefined
+        };
+
+        if (attr && (tagLabel === 'R' || tagLabel === 'C')) {
+          if (!childrenByArg[attribute]) {
+            childrenByArg[attr] = [];
+          }
+          childrenByArg[attr].push(newChild);
+        } else {
+          allChildren.push(newChild);
+        }
+      } else if (tag.startsWith('I-')) {
+        const word = response.words[idx];
+        const lastChild = allChildren[allChildren.length - 1];
+        lastChild.word += ` ${word}`;
+        lastChild.spans[0].end += word.length + 1;
+      }
+      return allChildren;
+    }, []);
+
+    children.filter(c => c.nodeType === 'argument').map(c => {
+      c.children = childrenByArg[c.attributes[0]];
+      return c;
+    });
 
     return {
       text,
@@ -72,30 +162,7 @@ function toHierplaneTrees(response) {
           start,
           end: start + verb.length + 1,
         }, ...ignoredSpans],
-        children: tags.reduce((children, tag, idx) => {
-          if (tag !== 'B-V' && tag.startsWith('B-')) {
-            const word = response.words[idx];
-            const link = tag.split('-').pop().replace(/\d+/g, '');
-            const start = getStrIndex(response.words, idx);
-            const newChild = {
-              word,
-              spans: [{
-                start,
-                end: start + word.length + 1
-              }],
-              nodeType: link,
-              link,
-              attributes: [ link ]
-            };
-            children.push(newChild);
-          } else if (tag.startsWith('I-')) {
-            const word = response.words[idx];
-            const lastChild = children[children.length - 1];
-            lastChild.word += ` ${word}`;
-            lastChild.spans[0].end += word.length + 1;
-          }
-          return children;
-        }, [])
+        children
       }
     };
   });
