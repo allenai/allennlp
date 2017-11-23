@@ -14,11 +14,11 @@ and report any metrics calculated by the model.
 
     optional arguments:
     -h, --help            show this help message and exit
-    --archive_file ARCHIVE_FILE
+    --archive-file ARCHIVE_FILE
                             path to an archived trained model
-    --evaluation_data_file EVALUATION_DATA_FILE
+    --evaluation-data-file EVALUATION_DATA_FILE
                             path to the file containing the evaluation data
-    --cuda_device CUDA_DEVICE
+    --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
 """
 from typing import Dict, Any
@@ -45,18 +45,27 @@ class Evaluate(Subcommand):
         description = '''Evaluate the specified model + dataset'''
         subparser = parser.add_parser(
                 name, description=description, help='Evaluate the specified model + dataset')
-        subparser.add_argument('--archive_file',
-                               type=str,
-                               required=True,
-                               help='path to an archived trained model')
-        subparser.add_argument('--evaluation_data_file',
-                               type=str,
-                               required=True,
-                               help='path to the file containing the evaluation data')
-        subparser.add_argument('--cuda_device',
-                               type=int,
-                               default=-1,
-                               help='id of GPU to use (if any)')
+
+        archive_file = subparser.add_mutually_exclusive_group(required=True)
+        archive_file.add_argument('--archive-file', type=str, help='path to an archived trained model')
+        archive_file.add_argument('--archive_file', type=str, help=argparse.SUPPRESS)
+
+
+        evaluation_data_file = subparser.add_mutually_exclusive_group(required=True)
+        evaluation_data_file.add_argument('--evaluation-data-file',
+                                          type=str,
+                                          help='path to the file containing the evaluation data')
+        evaluation_data_file.add_argument('--evaluation_data_file',
+                                          type=str,
+                                          help=argparse.SUPPRESS)
+
+        cuda_device = subparser.add_mutually_exclusive_group(required=False)
+        cuda_device.add_argument('--cuda-device',
+                                 type=int,
+                                 default=-1,
+                                 help='id of GPU to use (if any)')
+        cuda_device.add_argument('--cuda_device', type=int, help=argparse.SUPPRESS)
+
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",

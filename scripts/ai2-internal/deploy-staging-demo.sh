@@ -8,6 +8,12 @@ if [ ! -n "$CONTAINER" ] ; then
   exit 1
 fi
 
+if [ "$#" -ne 1 ]; then
+  echo "Too many parameters"
+  echo "$USAGE"
+  exit 1
+fi
+
 echo "Deploying container '$CONTAINER' to staging."
 
 
@@ -56,11 +62,11 @@ spec:
           resources:
             limits:
               cpu: 1000m
-              memory: 2000Mi
+              memory: 3000Mi
             # "requests" specify how much your container will be granted as a baseline.
             requests:
               cpu: 1000m
-              memory: 2000Mi
+              memory: 3000Mi
           command:
             - /bin/bash
             - -c

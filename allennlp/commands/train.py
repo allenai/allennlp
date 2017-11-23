@@ -15,7 +15,7 @@ which to write the results.
 
    optional arguments:
     -h, --help            show this help message and exit
-    -s SERIALIZATION_DIR, --serialization_dir SERIALIZATION_DIR
+    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                             directory in which to save the model and its logs
 """
 from typing import List
@@ -50,10 +50,16 @@ class Train(Subcommand):
         subparser.add_argument('param_path',
                                type=str,
                                help='path to parameter file describing the model to be trained')
-        subparser.add_argument('-s', '--serialization_dir',
-                               type=str,
-                               required=True,
-                               help='directory in which to save the model and its logs')
+
+        # This is necessary to preserve backward compatibility
+        serialization = subparser.add_mutually_exclusive_group(required=True)
+        serialization.add_argument('-s', '--serialization-dir',
+                                   type=str,
+                                   help='directory in which to save the model and its logs')
+        serialization.add_argument('--serialization_dir',
+                                   type=str,
+                                   help=argparse.SUPPRESS)
+
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser

@@ -72,13 +72,14 @@ class TestTrain(AllenNlpTestCase):
         subparsers = parser.add_subparsers(title='Commands', metavar='')
         Train().add_subparser('train', subparsers)
 
-        raw_args = ["train", "path/to/params", "-s", "serialization_dir"]
+        for serialization_arg in ["-s", "--serialization_dir", "--serialization-dir"]:
+            raw_args = ["train", "path/to/params", serialization_arg, "serialization_dir"]
 
-        args = parser.parse_args(raw_args)
+            args = parser.parse_args(raw_args)
 
-        assert args.func == train_model_from_args
-        assert args.param_path == "path/to/params"
-        assert args.serialization_dir == "serialization_dir"
+            assert args.func == train_model_from_args
+            assert args.param_path == "path/to/params"
+            assert args.serialization_dir == "serialization_dir"
 
         # config is required
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
