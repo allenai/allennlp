@@ -106,6 +106,17 @@ def pad_sequence_to_length(sequence: List,
 
 
 A = TypeVar('A')
+def flatten_list(nested_list: Union[A, List[A]]) -> List[A]:
+    def _flatten(_list_or_item: Union[A, List[A]], flat_list: List[A]) -> List[A]:
+        if isinstance(_list_or_item, list):
+            for item in _list_or_item:
+                flat_list = _flatten(item, flat_list)
+            return flat_list
+        flat_list.append(_list_or_item)
+        return flat_list
+    return _flatten(nested_list, [])
+
+
 def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> Dict[A, float]:
     """
     Returns a new dictionary with noise added to every key in ``dictionary``.  The noise is
