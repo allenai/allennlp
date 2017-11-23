@@ -9,7 +9,7 @@ import re
 from collections import defaultdict
 from typing import List, DefaultDict, Dict, Any
 
-from allennlp.data.knowledge_graph import KnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs.knowledge_graph import KnowledgeGraph
 
 
 class TableKnowledgeGraph(KnowledgeGraph):
