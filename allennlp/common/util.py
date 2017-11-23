@@ -3,7 +3,7 @@ Various utilities that don't fit anwhere else.
 """
 
 from itertools import zip_longest, islice
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Union
 import importlib
 import pkgutil
 import random
@@ -113,6 +113,17 @@ def pad_sequence_to_length(sequence: List,
         else:
             padded_sequence.insert(0, default_value())
     return padded_sequence
+
+
+def flatten_list(nested_list: Union[A, List[A]]) -> List[A]:
+    def _flatten(_list_or_item: Union[A, List[A]], flat_list: List[A]) -> List[A]:
+        if isinstance(_list_or_item, list):
+            for item in _list_or_item:
+                flat_list = _flatten(item, flat_list)
+            return flat_list
+        flat_list.append(_list_or_item)
+        return flat_list
+    return _flatten(nested_list, [])
 
 
 def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> Dict[A, float]:
