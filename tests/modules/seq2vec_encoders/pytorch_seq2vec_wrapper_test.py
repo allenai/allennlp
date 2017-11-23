@@ -99,8 +99,8 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         input_tensor = Variable(tensor)
         mask = Variable(mask)
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(input_tensor,
-                                                                                           sequence_lengths)
+        sorted_inputs, sorted_sequence_lengths, restoration_indices, _ = sort_batch_by_length(input_tensor,
+                                                                                              sequence_lengths)
         packed_sequence = pack_padded_sequence(sorted_inputs,
                                                sorted_sequence_lengths.data.tolist(),
                                                batch_first=True)
