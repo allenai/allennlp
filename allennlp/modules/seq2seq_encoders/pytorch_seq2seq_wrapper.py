@@ -94,9 +94,18 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         # Add back invalid rows.
         if num_valid < batch_size:
-            _, length, dim = unpacked_sequence_tensor.size()
-            zeros = unpacked_sequence_tensor.data.new(batch_size - num_valid, length, dim).fill_(0)
+            _, length, output_dim = unpacked_sequence_tensor.size()
+            zeros = unpacked_sequence_tensor.data.new(batch_size - num_valid, length, output_dim).fill_(0)
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 0)
+
+            # The states also need to have invalid rows added back.
+            if self._stateful:
+                new_states = []
+                for state in final_states:
+                    num_layers, _, state_dim = state.size()
+                    zeros = state.data.new(num_layers, batch_size - num_valid, state_dim).fill_(0)
+                    new_states.append(torch.cat([state, zeros], 1))
+                final_states = new_states
 
         # It's possible to need to pass sequences which are padded to longer than the
         # max length of the sequence to a Seq2SeqEncoder. However, packing and unpacking
@@ -111,7 +120,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
 
         if self._stateful:
-            self._update_states(final_states, num_valid, restoration_indices)
+            self._update_states(final_states, restoration_indices)
 
         # Restore the original indices and return the sequence.
         return unpacked_sequence_tensor.index_select(0, restoration_indices)

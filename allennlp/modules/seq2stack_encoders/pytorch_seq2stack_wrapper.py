@@ -96,6 +96,15 @@ class PytorchSeq2StackWrapper(Seq2StackEncoder):
                 per_layer_sequence_outputs[k] = torch.cat([per_layer_sequence_outputs[k],
                                                            zeros], 0)
 
+            # The states also need to have invalid rows added back.
+            if self._stateful:
+                new_states = []
+                for state in final_states:
+                    num_layers, _, state_dim = state.size()
+                    zeros = state.data.new(num_layers, batch_size - num_valid, state_dim).fill_(0)
+                    new_states.append(torch.cat([state, zeros], 1))
+                final_states = new_states
+
         # It's possible to need to pass sequences which are padded to longer than the
         # max length of the sequence to a Seq2StackEncoder. However, packing and unpacking
         # the sequences mean that the returned tensor won't include these dimensions, because
