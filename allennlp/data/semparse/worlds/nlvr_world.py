@@ -34,7 +34,7 @@ class Object:
             self.color = "blue"
         else:
             self.color = object_color.lower()
-        self.shape = attributes["type"]
+        self.shape = attributes["type"].lower()
         self.x_loc = attributes["x_loc"]
         self.y_loc = attributes["y_loc"]
         self.size = attributes["size"]
