@@ -8,6 +8,7 @@ import operator
 from typing import Any, List, Dict, Set, Callable, TypeVar, Union
 import pyparsing
 
+from allennlp.common import util
 from allennlp.common.util import JsonDict
 
 
@@ -23,25 +24,20 @@ class Object:
 
     Parameters
     ----------
-    object_dict : ``JsonDict``
+    attributes : ``JsonDict``
         The dict for each object from the json file.
     """
-    def __init__(self, object_dict: JsonDict) -> None:
-        for key, value in object_dict.items():
-            if key == "color":
-                # The dataset has a hex code only for blue for some reason.
-                if value.startswith("#"):
-                    self.color = "blue"
-                else:
-                    self.color = value.lower()
-            elif key == "type":
-                self.shape = value.lower()
-            elif key == "x_loc":
-                self.x_loc = int(value)
-            elif key == "y_loc":
-                self.y_loc = int(value)
-            elif key == "size":
-                self.size = int(value)
+    def __init__(self, attributes: JsonDict) -> None:
+        object_color = attributes["color"]
+        # The dataset has a hex code only for blue for some reason.
+        if object_color.startswith("#"):
+            self.color = "blue"
+        else:
+            self.color = object_color.lower()
+        self.shape = attributes["type"]
+        self.x_loc = attributes["x_loc"]
+        self.y_loc = attributes["y_loc"]
+        self.size = attributes["size"]
 
     def __str__(self):
         return "%s %s at (%d, %d)" % (self.color, self.shape, self.x_loc, self.y_loc)
@@ -82,7 +78,6 @@ class Box:
 
 
 class NlvrWorld:
-    # pylint: disable=too-many-public-methods
     """
     Class defining the world representation of NLVR. Defines an execution logic for logical forms
     in NLVR.  We just take the structured_rep from the JSON file to initialize this.
@@ -92,6 +87,7 @@ class NlvrWorld:
     world_representation : ``JsonDict``
         structured_rep from the JSON file.
     """
+    # pylint: disable=too-many-public-methods
     def __init__(self, world_representation: List[List[JsonDict]]) -> None:
         self._boxes = set([Box(object_list, "box%d" % index)
                            for index, object_list in enumerate(world_representation)])
@@ -99,42 +95,23 @@ class NlvrWorld:
         for box in self._boxes:
             self._objects.update(box.objects)
 
-    def _all_boxes(self) -> Set[Box]:
-        return self._boxes
-
-    def _all_objects(self) -> Set[Object]:
-        return self._objects
-
-    @classmethod
-    def _flatten(cls,
-                 nested_list: Union[str, Union[str, List[str]]],
-                 flat_list: List[str]) -> List[str]:
-        """
-        Take a nested list and make it a flat list.
-        """
-        if isinstance(nested_list, list):
-            for item in nested_list:
-                flat_list = cls._flatten(item, flat_list)
-            return flat_list
-        flat_list.append(nested_list)
-        return flat_list
-
     def _apply_function_list(self,
-                             function_list: List[str],
+                             functions: List[str],
                              argument: Any) -> Any:
         """
-        Take a flat list of functions and an argument and apply them iteratively in reverse order.
+        Take a flat list of functions in ``NlvrWorld`` and an argument and apply them iteratively in reverse order.
         """
         return_value = argument
-        for function_name in reversed(function_list):
+        for function_name in reversed(functions):
             return_value = getattr(self, function_name)(return_value)
         return return_value
 
     def execute(self, logical_form: str) -> bool:
         """
         Execute the logical form. The top level function is an assertion function (see below). We
-        just parse the string into a list and pass the whote thing to ``_execute_assertion`` and
-        let the method deal with it.
+        just parse the string into a list and pass the whole thing to ``_execute_assertion`` and
+        let the method deal with it. This is because the dataset contains sentences (instead of questions), and
+        they evaluate to either true or false.
 
         The language we defined here contains seven types of functions, five of which return sets,
         and one returns integers, and one returns booleans.
@@ -144,7 +121,7 @@ class NlvrWorld:
         it against a target and return True or False. All the functions that have names like
         `assert_*` are assert functions.
 
-        2) Attribute Functions : These are of the form `attribute(set_of_boxes_or_objects)`. There
+        2) Attribute Functions : These are of the form ``attribute(set_of_boxes_or_objects)``. There
         are two types of attribute functions:
 
             2a) Object Attribute Functions: They take sets of objects and return sets of
@@ -156,19 +133,19 @@ class NlvrWorld:
         This is a special kind of attribute function for two reasons. Firstly, it returns a set of
         objects instead of attributes, and secondly it occurs only within the second argument of a
         box filtering function (see below). It provides a way to query boxes based on the
-        attributes of objects contained within it. The function is called `object_in_box`, and it
+        attributes of objects contained within it. The function is called ``object_in_box``, and it
         gets executed within ``_execute_box_filter``.
 
         4) Box Filtering Functions : These are of the form `filter(set_of_boxes,
         attribute_function, target_attribute)` The idea is that we take a set of boxes, an
         attribute function that extracts the relevant attribute from a box, and a target attribute
-        that we compare against. The logic is that we execute the attribute function on _each_ of
+        that we compare against. The logic is that we execute the attribute function on `each` of
         the given boxes and return only those whose attribute value, in comparison with the target
         attribute, satisfies the filtering criterion (i.e., equal to the target, less than, greater
         than etc.). The fitering function defines the comparison operator.  All the functions in
-        this class with names `filter_*` belong to this category.
+        this class with names ``filter_*`` belong to this category.
 
-        5) Object Filtering Functions : These are of the form `filter(set_of_objects)`. These are
+        5) Object Filtering Functions : These are of the form ``filter(set_of_objects)``. These are
         similar to box filtering functions, but they operate on objects instead. Also, note that
         they take just one argument instead of three. This is because while box filtering functions
         typically query complex attributes, object filtering functions query the properties of the
@@ -187,18 +164,19 @@ class NlvrWorld:
         logical_form = logical_form.replace(",", " ")
         expression_as_list = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(logical_form).asList()
         # The whole expression has to be an assertion expression because it has to return a boolean.
+        # TODO(pradeep): May want to make this more general and let the executor deal with questions.
         return self._execute_assertion(expression_as_list)
 
     def _execute_assertion(self, sub_expression: List) -> bool:
         """
-        Assertion functions are the highest level boolean functions. They take two arguments, which
+        Assertion functions are boolean functions. They take two arguments, which
         evaluate to strings or integers, and compare them. The first element in the input list
-        should be the assertion function name, all the remaining elements till the last should be
-        executable as an attribute function, and the last element should be a constant.
-        TODO(pradeep): We may want to change the order of arguments here to make decoding easier.
+        should be the assertion function name, the second as an attribute function, and the
+        last element should be a constant.
 
         Syntax: assertion_function(attribute_function, constant)
         """
+        # TODO(pradeep): We may want to change the order of arguments here to make decoding easier.
         assert isinstance(sub_expression, list), "Invalid assertion expression: %s" % sub_expression
         if len(sub_expression) == 1 and isinstance(sub_expression[0], list):
             return self._execute_assertion(sub_expression[0])
@@ -248,12 +226,13 @@ class NlvrWorld:
 
     def _execute_box_filter(self, sub_expression: Union[str, List]) -> Set[Box]:
         """
-        Box filtering functions either apply a filter on a set of boxes and return the filtered set.
+        Box filtering functions either apply a filter on a set of boxes and return the filtered set,
+        or return all the boxes.
         The elements should evaluate to one of the following:
             box_filtering_function(set_to_filter, attribute_function, constant)
             all_boxes
-        TODO(pradeep): We may want to change the order of arguments here to make decoding easier.
         """
+        # TODO(pradeep): We may want to change the order of arguments here to make decoding easier.
         if sub_expression[0].startswith('filter_'):
             # filter_* functions are box filtering functions, and have a lambda expression as the
             # second argument. We'll process the whole nested structure of the lambda expression
@@ -261,12 +240,12 @@ class NlvrWorld:
             function = getattr(self, sub_expression[0])
             arguments = sub_expression[1]
             set_to_filter = self._execute_box_filter(arguments[0])
-            flattened_lambda_terms = self._flatten(arguments[1:-1], [])
+            flattened_lambda_terms = util.flatten_list(arguments[1:-1])
             attribute_function = lambda x: self._apply_function_list(flattened_lambda_terms, x)
             attribute = self._execute_constant(arguments[-1])
             return function(set_to_filter, attribute_function, attribute)
         elif sub_expression == 'all_boxes' or sub_expression[0] == 'all_boxes':
-            return self._all_boxes()
+            return self._boxes
         else:
             raise RuntimeError("Invalid box filter expression: %s" % sub_expression)
 
@@ -285,7 +264,7 @@ class NlvrWorld:
             initial_set = self._execute_object_filter(arguments[1:])
             return self.negate_filter(original_filter, initial_set)
         elif sub_expression == "all_objects" or sub_expression[0] == "all_objects":
-            return self._all_objects()
+            return self._objects
         elif isinstance(sub_expression[0], str) and isinstance(sub_expression[1], list):
             # These are functions like black, square, same_color etc.
             function = getattr(self, sub_expression[0])
