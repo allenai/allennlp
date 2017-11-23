@@ -89,7 +89,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         # Some RNNs (GRUs) only return one state as a Tensor.  Others (LSTMs) return two.
         # If one state, use a single element list to handle in a consistent manner below.
-        if not isinstance(final_states, (list, tuple)):
+        if not isinstance(final_states, (list, tuple)) and self._stateful:
             final_states = [final_states]
 
         # Add back invalid rows.
@@ -120,7 +120,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
 
         if self._stateful:
-            self._update_states(final_states, restoration_indices)
+            self._update_states(final_states, num_valid, restoration_indices)
 
         # Restore the original indices and return the sequence.
         return unpacked_sequence_tensor.index_select(0, restoration_indices)

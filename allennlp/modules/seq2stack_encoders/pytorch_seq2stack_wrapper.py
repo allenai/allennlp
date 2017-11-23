@@ -84,7 +84,7 @@ class PytorchSeq2StackWrapper(Seq2StackEncoder):
 
         # Some RNNs (GRUs) only return one state as a Tensor.  Others (LSTMs) return two.
         # If one state, use a single element list to handle in a consistent manner below.
-        if not isinstance(final_states, (list, tuple)):
+        if not isinstance(final_states, (list, tuple)) and self._stateful:
             final_states = [final_states]
 
         # Add back invalid rows which were removed in the call to sort_and_run_forward.
