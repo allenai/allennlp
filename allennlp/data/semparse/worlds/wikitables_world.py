@@ -10,8 +10,9 @@ import pyparsing
 
 from nltk.sem.logic import Expression, LambdaExpression
 
+from allennlp.data.semparse.type_declarations.type_declaration import (COMMON_NAME_MAPPING, COMMON_TYPE_SIGNATURE,
+                                                                       DynamicTypeLogicParser)
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
-from allennlp.data.semparse.type_declarations.wikitables_type_declaration import DynamicTypeLogicParser
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 
 
@@ -29,12 +30,15 @@ class WikiTablesWorld:
         # NLTK has a naming convention for variable types (see ``_map_name`` for more details).
         # We initialize this dict with common predicate names and update it as we process logical forms.
         # TODO (pradeep): Should we do updates while reading tables instead?
-        self.name_mapping = types.COMMON_NAME_MAPPING.copy()
+        # TODO (pradeep): It may be inefficient to copy the mappings for each world. Keep separate local
+        # and global mappings?
+        self.local_name_mapping = {}
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
         # Initial type signature. Will update when we see more predicates.
-        self.type_signature = types.COMMON_TYPE_SIGNATURE.copy()
-        self._logic_parser = DynamicTypeLogicParser(type_check=True)
+        self.local_type_signature = {}
+        self._logic_parser = DynamicTypeLogicParser(constant_type_prefixes={"part": types.PART_TYPE,
+                                                                            "cell": types.CELL_TYPE})
 
     def process_sempre_forms(self, sempre_forms: List[str]) -> List[Expression]:
         """
@@ -46,7 +50,9 @@ class WikiTablesWorld:
         for sempre_form in sempre_forms:
             parsed_lisp = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(sempre_form).asList()
             translated_string = self._process_nested_expression(parsed_lisp)
-            expression = self._logic_parser.parse(translated_string, signature=self.type_signature)
+            type_signature = self.local_type_signature.copy()
+            type_signature.update(COMMON_TYPE_SIGNATURE)
+            expression = self._logic_parser.parse(translated_string, signature=type_signature)
             expressions.append(expression)
         return expressions
 
@@ -90,23 +96,23 @@ class WikiTablesWorld:
         sempre_name : str
             Token from Sempre's logical form.
         """
-        if sempre_name not in self.name_mapping:
+        if sempre_name not in COMMON_NAME_MAPPING and sempre_name not in self.local_name_mapping:
             if sempre_name.startswith("fb:row.row"):
                 # Column name
                 translated_name = "C%d" % self._column_counter
                 self._column_counter += 1
-                self.type_signature[translated_name] = types.COLUMN_TYPE
-                self.name_mapping[sempre_name] = translated_name
+                self.local_type_signature[translated_name] = types.COLUMN_TYPE
+                self.local_name_mapping[sempre_name] = translated_name
             elif sempre_name.startswith("fb:cell"):
                 # Cell name
                 translated_name = "cell:%s" % sempre_name.split(".")[-1]
-                self.type_signature[translated_name] = types.CELL_TYPE
-                self.name_mapping[sempre_name] = translated_name
+                self.local_type_signature[translated_name] = types.CELL_TYPE
+                self.local_name_mapping[sempre_name] = translated_name
             elif sempre_name.startswith("fb:part"):
                 # part name
                 translated_name = "part:%s" % sempre_name.split(".")[-1]
-                self.type_signature[translated_name] = types.PART_TYPE
-                self.name_mapping[sempre_name] = translated_name
+                self.local_type_signature[translated_name] = types.PART_TYPE
+                self.local_name_mapping[sempre_name] = translated_name
             else:
                 # NLTK throws an error if it sees a "." in constants, which will most likely happen within
                 # numbers as a decimal point. We're changing those to underscores.
@@ -116,7 +122,10 @@ class WikiTablesWorld:
                     # and force its type to be TRUTH_VALUE (t).
                     translated_name = translated_name.replace("-", "~")
         else:
-            translated_name = self.name_mapping[sempre_name]
+            if sempre_name in COMMON_NAME_MAPPING:
+                translated_name = COMMON_NAME_MAPPING[sempre_name]
+            else:
+                translated_name = self.local_name_mapping[sempre_name]
         return translated_name
 
     @staticmethod
