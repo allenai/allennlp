@@ -10,6 +10,7 @@ import pyparsing
 
 from allennlp.common import util
 from allennlp.common.util import JsonDict
+from allennlp.data.semparse.worlds import World
 
 
 AttributeType = TypeVar('AttributeType', str, int)  # pylint: disable=invalid-name
@@ -77,7 +78,7 @@ class Box:
         return str(self) == str(other)
 
 
-class NlvrWorld:
+class NlvrWorld(World):
     """
     Class defining the world representation of NLVR. Defines an execution logic for logical forms
     in NLVR.  We just take the structured_rep from the JSON file to initialize this.
@@ -89,6 +90,7 @@ class NlvrWorld:
     """
     # pylint: disable=too-many-public-methods
     def __init__(self, world_representation: List[List[JsonDict]]) -> None:
+        super(NlvrWorld, self).__init__()
         self._boxes = set([Box(object_list, "box%d" % index)
                            for index, object_list in enumerate(world_representation)])
         self._objects: Set[Object] = set()
@@ -444,6 +446,28 @@ class NlvrWorld:
                                 cls.touch_top(objects).intersection(cls.touch_left(objects)),
                                 cls.touch_bottom(objects).intersection(cls.touch_right(objects)),
                                 cls.touch_bottom(objects).intersection(cls.touch_left(objects)))
+
+    @classmethod
+    def top(cls, objects: Set[Object]) -> Set[Object]:
+        """
+        Return the topmost objects (i.e. maximum y_loc).
+        """
+        max_y_loc = max([obj.y_loc for obj in objects])
+        return set([obj for obj in objects if obj.y_loc == max_y_loc])
+
+    @classmethod
+    def bottom(cls, objects: Set[Object]) -> Set[Object]:
+        """
+        Return the bottom most objects(i.e. minimum y_loc).
+        """
+        min_y_loc = min([obj.y_loc for obj in objects])
+        return set([obj for obj in objects if obj.y_loc == min_y_loc])
+
+    def above(self, objects: Set[Object]) -> Set[Object]:
+        """
+        Return the set of objects in the world that are directly above the objects given.
+        """
+        raise NotImplementedError
 
     @classmethod
     def small(cls, objects: Set[Object]) -> Set[Object]:

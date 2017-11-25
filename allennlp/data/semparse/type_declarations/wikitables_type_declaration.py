@@ -6,7 +6,6 @@ from overrides import overrides
 
 from nltk.sem.logic import Type, ComplexType, EntityType, ANY_TYPE
 
-from allennlp.data.semparse.type_declarations import type_declaration
 from allennlp.data.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType
 
 
@@ -227,31 +226,42 @@ CONJUNCTION_TYPE = ConjunctionType(ANY_TYPE, ANY_TYPE)
 # argmax, argmin
 ARG_EXTREME_TYPE = ArgExtremeType(ANY_TYPE, ANY_TYPE)
 
-type_declaration.add_common_name_with_type("reverse", "R", REVERSE_TYPE)
-type_declaration.add_common_name_with_type("argmax", "A0", ARG_EXTREME_TYPE)
-type_declaration.add_common_name_with_type("argmin", "A1", ARG_EXTREME_TYPE)
-type_declaration.add_common_name_with_type("max", "M0", UNARY_NUM_OP_TYPE)
-type_declaration.add_common_name_with_type("min", "M1", UNARY_NUM_OP_TYPE)
-type_declaration.add_common_name_with_type("and", "A", CONJUNCTION_TYPE)
-type_declaration.add_common_name_with_type("or", "O", CONJUNCTION_TYPE)
-type_declaration.add_common_name_with_type("fb:row.row.next", "N", NEXT_ROW_TYPE)
-type_declaration.add_common_name_with_type("number", "I", NUMBER_FUNCTION_TYPE)
-type_declaration.add_common_name_with_type("date", "D0", DATE_FUNCTION_TYPE)
-type_declaration.add_common_name_with_type("var", "V", IDENTITY_TYPE)
-type_declaration.add_common_name_with_type("fb:cell.cell.part", "P", PART2CELL_TYPE)
-type_declaration.add_common_name_with_type("fb:cell.cell.date", "D1", CELL2DATE_NUM_TYPE)
-type_declaration.add_common_name_with_type("fb:cell.cell.number", "I1", CELL2DATE_NUM_TYPE)
-type_declaration.add_common_name_with_type("fb:cell.cell.num2", "I2", CELL2DATE_NUM_TYPE)
-type_declaration.add_common_name_with_type("fb:row.row.index", "W", ROW_INDEX_TYPE)
-type_declaration.add_common_name_with_type("fb:type.row", "T0", ROW_TYPE)
-type_declaration.add_common_name_with_type("fb:type.object.type", "T", IDENTITY_TYPE)
-type_declaration.add_common_name_with_type("count", "C", COUNT_TYPE)
-type_declaration.add_common_name_with_type("!=", "Q", IDENTITY_TYPE)
-type_declaration.add_common_name_with_type(">", "G0", UNARY_NUM_OP_TYPE)
-type_declaration.add_common_name_with_type(">=", "G1", UNARY_NUM_OP_TYPE)
-type_declaration.add_common_name_with_type("<", "L0", UNARY_NUM_OP_TYPE)
-type_declaration.add_common_name_with_type("<=", "L1", UNARY_NUM_OP_TYPE)
-type_declaration.add_common_name_with_type("sum", "S0", UNARY_NUM_OP_TYPE)
-type_declaration.add_common_name_with_type("avg", "S1", UNARY_NUM_OP_TYPE)
-type_declaration.add_common_name_with_type("-", "F", BINARY_NUM_OP_TYPE)  # subtraction
-type_declaration.add_common_name_with_type("x", "X", ANY_TYPE)
+
+COMMON_NAME_MAPPING = {"lambda": "\\"}
+
+
+COMMON_TYPE_SIGNATURE = {}
+
+
+def add_common_name_with_type(name, mapping, type_signature):
+    COMMON_NAME_MAPPING[name] = mapping
+    COMMON_TYPE_SIGNATURE[mapping] = type_signature
+
+add_common_name_with_type("reverse", "R", REVERSE_TYPE)
+add_common_name_with_type("argmax", "A0", ARG_EXTREME_TYPE)
+add_common_name_with_type("argmin", "A1", ARG_EXTREME_TYPE)
+add_common_name_with_type("max", "M0", UNARY_NUM_OP_TYPE)
+add_common_name_with_type("min", "M1", UNARY_NUM_OP_TYPE)
+add_common_name_with_type("and", "A", CONJUNCTION_TYPE)
+add_common_name_with_type("or", "O", CONJUNCTION_TYPE)
+add_common_name_with_type("fb:row.row.next", "N", NEXT_ROW_TYPE)
+add_common_name_with_type("number", "I", NUMBER_FUNCTION_TYPE)
+add_common_name_with_type("date", "D0", DATE_FUNCTION_TYPE)
+add_common_name_with_type("var", "V", IDENTITY_TYPE)
+add_common_name_with_type("fb:cell.cell.part", "P", PART2CELL_TYPE)
+add_common_name_with_type("fb:cell.cell.date", "D1", CELL2DATE_NUM_TYPE)
+add_common_name_with_type("fb:cell.cell.number", "I1", CELL2DATE_NUM_TYPE)
+add_common_name_with_type("fb:cell.cell.num2", "I2", CELL2DATE_NUM_TYPE)
+add_common_name_with_type("fb:row.row.index", "W", ROW_INDEX_TYPE)
+add_common_name_with_type("fb:type.row", "T0", ROW_TYPE)
+add_common_name_with_type("fb:type.object.type", "T", IDENTITY_TYPE)
+add_common_name_with_type("count", "C", COUNT_TYPE)
+add_common_name_with_type("!=", "Q", IDENTITY_TYPE)
+add_common_name_with_type(">", "G0", UNARY_NUM_OP_TYPE)
+add_common_name_with_type(">=", "G1", UNARY_NUM_OP_TYPE)
+add_common_name_with_type("<", "L0", UNARY_NUM_OP_TYPE)
+add_common_name_with_type("<=", "L1", UNARY_NUM_OP_TYPE)
+add_common_name_with_type("sum", "S0", UNARY_NUM_OP_TYPE)
+add_common_name_with_type("avg", "S1", UNARY_NUM_OP_TYPE)
+add_common_name_with_type("-", "F", BINARY_NUM_OP_TYPE)  # subtraction
+add_common_name_with_type("x", "X", ANY_TYPE)

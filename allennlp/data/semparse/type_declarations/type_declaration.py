@@ -7,10 +7,10 @@ improvements:
 We also extend NLTK's ``LogicParser`` to define a ``DynamicTypeLogicParser`` that knows how to deal with the
 two improvements above.
 """
-from typing import Dict, Optional
+from typing import Dict, Set, Optional
 from overrides import overrides
 
-from nltk.sem.logic import ApplicationExpression, ConstantExpression, LogicParser, Variable
+from nltk.sem.logic import Expression, ApplicationExpression, ConstantExpression, LogicParser, Variable
 from nltk.sem.logic import Type, BasicType, ComplexType, ANY_TYPE
 
 
@@ -150,19 +150,23 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
     gets resolved based on the type signature of the function whose scope the variable appears in. This
     variable binding operation is implemented by overriding ``_set_type`` below.
     """
+    def __init__(self, function: Expression, argument: Expression, variables_with_placeholders: Set[str]) -> None:
+        super(DynamicTypeApplicationExpression, self).__init__(function, argument)
+        self._variables_with_placeholders = variables_with_placeholders
+
     @property
     def type(self):
         # This gets called when the tree is being built by ``LogicParser.parse``. So, we do not
         # have access to the type signatures yet. Thus, we need to look at the name of the function
         # to return the type.
-        if not self._has_placeholder(str(self.function)):
+        if not str(self.function) in self._variables_with_placeholders:
             return super(DynamicTypeApplicationExpression, self).type
         if self.function.type == ANY_TYPE:
             return ANY_TYPE
         argument_type = self.argument.type
         return self.function.type.get_application_type(argument_type)
 
-    def _set_type(self, other_type=ANY_TYPE, signature=None):
+    def _set_type(self, other_type: Type = ANY_TYPE, signature=None) -> None:
         """
         We override this method to do just one thing on top of ``ApplicationExpression._set_type``. In
         lambda expressions of the form /x F(x), where the function is F and the argument is x, we can use
@@ -181,12 +185,6 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
             # pylint: disable=protected-access
             self.argument.argument._set_type(self.function.type.first)
 
-    @staticmethod
-    def _has_placeholder(variable_name):
-        if variable_name not in COMMON_TYPE_SIGNATURE:
-            return False
-        return isinstance(COMMON_TYPE_SIGNATURE[variable_name], PlaceholderType)
-
 
 class DynamicTypeLogicParser(LogicParser):
     """
@@ -203,13 +201,16 @@ class DynamicTypeLogicParser(LogicParser):
     """
     def __init__(self,
                  type_check: bool = True,
-                 constant_type_prefixes: Dict[str, BasicType] = None) -> None:
+                 constant_type_prefixes: Dict[str, BasicType] = None,
+                 type_signatures: Dict[str, Type] = None) -> None:
         super(DynamicTypeLogicParser, self).__init__(type_check)
         self._constant_type_prefixes = constant_type_prefixes or {}
+        self._variables_with_placeholders = set([name for name, _type in type_signatures.items()
+                                                 if isinstance(_type, PlaceholderType)])
 
     @overrides
     def make_ApplicationExpression(self, function, argument):
-        return DynamicTypeApplicationExpression(function, argument)
+        return DynamicTypeApplicationExpression(function, argument, self._variables_with_placeholders)
 
     @overrides
     def make_VariableExpression(self, name):
@@ -220,14 +221,3 @@ class DynamicTypeLogicParser(LogicParser):
             else:
                 raise RuntimeError("Unknown prefix: %s. Did you forget to pass it to the constructor?" % prefix)
         return super(DynamicTypeLogicParser, self).make_VariableExpression(name)
-
-
-COMMON_NAME_MAPPING = {"lambda": "\\"}
-
-
-COMMON_TYPE_SIGNATURE = {}
-
-
-def add_common_name_with_type(name, mapping, type_signature):
-    COMMON_NAME_MAPPING[name] = mapping
-    COMMON_TYPE_SIGNATURE[mapping] = type_signature

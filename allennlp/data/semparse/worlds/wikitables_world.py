@@ -4,19 +4,19 @@ executed) here. For WikiTableQuestions, this includes a representation of a tabl
 Sempre variables in all logical forms to NLTK variables, and the types of all predicates and entities.
 """
 import re
-
 from typing import List
-import pyparsing
+from overrides import overrides
 
-from nltk.sem.logic import Expression, LambdaExpression
+from nltk.sem.logic import Expression
 
-from allennlp.data.semparse.type_declarations.type_declaration import (COMMON_NAME_MAPPING, COMMON_TYPE_SIGNATURE,
-                                                                       DynamicTypeLogicParser)
+from allennlp.data.semparse.worlds.world import World
+from allennlp.data.semparse.type_declarations.wikitables_type_declaration import (COMMON_NAME_MAPPING,
+                                                                                  COMMON_TYPE_SIGNATURE)
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 
 
-class WikiTablesWorld:
+class WikiTablesWorld(World):
     """
     World representation for the WikitableQuestions domain.
 
@@ -26,19 +26,12 @@ class WikiTablesWorld:
         Context associated with this world.
     """
     def __init__(self, table_graph: TableKnowledgeGraph) -> None:
+        super(WikiTablesWorld, self).__init__(constant_type_prefixes={"part": types.PART_TYPE,
+                                                                      "cell": types.CELL_TYPE},
+                                              global_type_signatures=COMMON_TYPE_SIGNATURE)
         self.table_graph = table_graph
-        # NLTK has a naming convention for variable types (see ``_map_name`` for more details).
-        # We initialize this dict with common predicate names and update it as we process logical forms.
-        # TODO (pradeep): Should we do updates while reading tables instead?
-        # TODO (pradeep): It may be inefficient to copy the mappings for each world. Keep separate local
-        # and global mappings?
-        self.local_name_mapping = {}
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
-        # Initial type signature. Will update when we see more predicates.
-        self.local_type_signature = {}
-        self._logic_parser = DynamicTypeLogicParser(constant_type_prefixes={"part": types.PART_TYPE,
-                                                                            "cell": types.CELL_TYPE})
 
     def process_sempre_forms(self, sempre_forms: List[str]) -> List[Expression]:
         """
@@ -48,42 +41,11 @@ class WikiTablesWorld:
         """
         expressions = []
         for sempre_form in sempre_forms:
-            parsed_lisp = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(sempre_form).asList()
-            translated_string = self._process_nested_expression(parsed_lisp)
-            type_signature = self.local_type_signature.copy()
-            type_signature.update(COMMON_TYPE_SIGNATURE)
-            expression = self._logic_parser.parse(translated_string, signature=type_signature)
-            expressions.append(expression)
+            expressions.append(self.parse_logical_form(sempre_form))
         return expressions
 
-    def _process_nested_expression(self, nested_expression):
-        """
-        ``nested_expression`` is the result of parsing a Lambda-DCS expression in Lisp format. We process it
-        recursively and return a string in the format that NLTK's ``LogicParser`` would understand.
-        """
-        expression_is_list = isinstance(nested_expression, list)
-        expression_size = len(nested_expression)
-        if expression_is_list and expression_size == 1 and isinstance(nested_expression[0], list):
-            return self._process_nested_expression(nested_expression[0])
-        elements_are_leaves = [isinstance(element, str) for element in nested_expression]
-        if all(elements_are_leaves):
-            mapped_names = [self._map_name(name) for name in nested_expression]
-        else:
-            mapped_names = []
-            for element, is_leaf in zip(nested_expression, elements_are_leaves):
-                if is_leaf:
-                    mapped_names.append(self._map_name(element))
-                else:
-                    mapped_names.append(self._process_nested_expression(element))
-        if mapped_names[0] == "\\":
-            # This means the predicate is lambda. NLTK wants the variable name to not be within parantheses.
-            # Adding parentheses after the variable.
-            arguments = [mapped_names[1]] + ["(%s)" % name for name in mapped_names[2:]]
-        else:
-            arguments = ["(%s)" % name for name in mapped_names[1:]]
-        return "(%s %s)" % (mapped_names[0], " ".join(arguments))
-
-    def _map_name(self, sempre_name: str) -> str:
+    @overrides
+    def _map_name(self, name: str) -> str:
         """
         Takes the name of a predicate or a constant as used by Sempre, maps it to a unique string such that
         NLTK processes it appropriately. This is needed because NLTK has a naming convention for variables:
@@ -93,68 +55,37 @@ class WikiTablesWorld:
 
         Parameters
         ----------
-        sempre_name : str
+        name : str
             Token from Sempre's logical form.
         """
-        if sempre_name not in COMMON_NAME_MAPPING and sempre_name not in self.local_name_mapping:
-            if sempre_name.startswith("fb:row.row"):
+        if name not in COMMON_NAME_MAPPING and name not in self.local_name_mapping:
+            if name.startswith("fb:row.row"):
                 # Column name
                 translated_name = "C%d" % self._column_counter
                 self._column_counter += 1
-                self.local_type_signature[translated_name] = types.COLUMN_TYPE
-                self.local_name_mapping[sempre_name] = translated_name
-            elif sempre_name.startswith("fb:cell"):
+                self.local_type_signatures[translated_name] = types.COLUMN_TYPE
+                self.local_name_mapping[name] = translated_name
+            elif name.startswith("fb:cell"):
                 # Cell name
-                translated_name = "cell:%s" % sempre_name.split(".")[-1]
-                self.local_type_signature[translated_name] = types.CELL_TYPE
-                self.local_name_mapping[sempre_name] = translated_name
-            elif sempre_name.startswith("fb:part"):
+                translated_name = "cell:%s" % name.split(".")[-1]
+                self.local_type_signatures[translated_name] = types.CELL_TYPE
+                self.local_name_mapping[name] = translated_name
+            elif name.startswith("fb:part"):
                 # part name
-                translated_name = "part:%s" % sempre_name.split(".")[-1]
-                self.local_type_signature[translated_name] = types.PART_TYPE
-                self.local_name_mapping[sempre_name] = translated_name
+                translated_name = "part:%s" % name.split(".")[-1]
+                self.local_type_signatures[translated_name] = types.PART_TYPE
+                self.local_name_mapping[name] = translated_name
             else:
                 # NLTK throws an error if it sees a "." in constants, which will most likely happen within
                 # numbers as a decimal point. We're changing those to underscores.
-                translated_name = sempre_name.replace(".", "_")
+                translated_name = name.replace(".", "_")
                 if re.match("-[0-9_]+", translated_name):
                     # The string is a negative number. This makes NLTK interpret this as a negated expression
                     # and force its type to be TRUTH_VALUE (t).
                     translated_name = translated_name.replace("-", "~")
         else:
-            if sempre_name in COMMON_NAME_MAPPING:
-                translated_name = COMMON_NAME_MAPPING[sempre_name]
+            if name in COMMON_NAME_MAPPING:
+                translated_name = COMMON_NAME_MAPPING[name]
             else:
-                translated_name = self.local_name_mapping[sempre_name]
+                translated_name = self.local_name_mapping[name]
         return translated_name
-
-    @staticmethod
-    def get_action_sequence(expression: Expression) -> List[str]:
-        """
-        Returns the sequence of actions (as strings) that resulted in the given expression.
-        """
-        def _get_transitions(expression: Expression,
-                             current_transitions: List[str]) -> List[str]:
-            expression_type = expression.type
-            try:
-                # ``Expression.visit()`` takes two arguments: the first one is a function applied on each
-                # sub-expression and the second is a combinator that is applied to the list of values returned
-                # from the function applications. We just want the list of all sub-expressions here.
-                sub_expressions = expression.visit(lambda x: x, lambda x: x)
-                transformed_types = [sub_exp.type for sub_exp in sub_expressions]
-                if isinstance(expression, LambdaExpression):
-                    # If the expression is a lambda expression, the list of sub expressions does not include
-                    # the "lambda x" term. We're adding it here so that we will see transitions like
-                    #   <e,d> -> [\x, d] instead of
-                    #   <e,d> -> [d]
-                    transformed_types = ["/X"] + transformed_types
-                current_transitions.append("%s -> %s" % (expression_type,
-                                                         str(transformed_types)))
-                for sub_expression in sub_expressions:
-                    _get_transitions(sub_expression, current_transitions)
-            except NotImplementedError:
-                # This means that the expression is a leaf. We simply make a transition from its type to itself.
-                current_transitions.append("%s -> %s" % (expression_type, expression))
-            return current_transitions
-        # Starting with the type of the whole expression
-        return _get_transitions(expression, [str(expression.type)])
