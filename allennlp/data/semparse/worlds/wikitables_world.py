@@ -36,7 +36,7 @@ class WikiTablesWorld(World):
         """
         Takes the name of a predicate or a constant as used by Sempre, maps it to a unique string such that
         NLTK processes it appropriately. This is needed because NLTK has a naming convention for variables:
-            Function variables: Single upper case letter optionally foolowed by digits
+            Function variables: Single upper case letter optionally followed by digits
             Individual variables: Single lower case letter (except e for events) optionally followed by digits
             Constants: Everything else
 

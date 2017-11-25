@@ -1,7 +1,7 @@
-from typing import List, Dict, Union
+from typing import List, Dict
 import pyparsing
 
-from nltk.sem.logic import Expression, LambdaExpression, Type
+from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
 
 from allennlp.data.semparse.type_declarations.type_declaration import DynamicTypeLogicParser
 
@@ -11,18 +11,29 @@ class World:
     Base class for defining a world in a new domain. This class defines a method to translate a logical form
     as per a naming convention that works with NLTK's ``LogicParser``. The sub-classes can decide on the
     convention by overriding the ``_map_name`` method that does token level mapping. This class also defines
-    a method for transforming ``Expressions`` into action sequences.
+    methods for transforming logical form strings into parsed ``Expressions``, and ``Expressions`` into
+    action sequences.
+
+    Parameters
+    ----------
+    constant_type_prefixes : ``Dict[str, BasicType]`` (optional)
+        If you have an unbounded number of constants in your domain, you are required to add prefixes to their
+        names to denote their types. This is the mapping from prefixes to types.
+    global_type_signatures : ``Dict[str, Type]`` (optional)
+        A mapping from translated names to their types.
+    global_name_mapping : ``Dict[str, str]`` (optional)
+        A name mapping from the original names in the domain to the translated names.
     """
     def __init__(self,
-                 constant_type_prefixes: Dict[str, str] = None,
+                 constant_type_prefixes: Dict[str, BasicType] = None,
                  global_type_signatures: Dict[str, Type] = None,
-                 global_name_mapping: Dict[str, str] = None):
+                 global_name_mapping: Dict[str, str] = None) -> None:
         # NLTK has a naming convention for variable types. If the world has predicate or entity names beyond
         # what's defined in the COMMON_NAME_MAPPING, they need to be added to this dict.
         # We initialize this dict with common predicate names and update it as we process logical forms.
-        self.local_name_mapping = {}
+        self.local_name_mapping: Dict[str, str] = {}
         # Similarly, these are the type signatures not in the COMMON_TYPE_SIGNATURE.
-        self.local_type_signatures = {}
+        self.local_type_signatures: Dict[str, Type] = {}
         self.global_name_mapping = global_name_mapping or {}
         self.global_type_signatures = global_type_signatures or {}
         # We keep a reverse map as well to put the terminals back in action sequences.
@@ -31,14 +42,11 @@ class World:
         self._logic_parser = DynamicTypeLogicParser(constant_type_prefixes=type_prefixes,
                                                     type_signatures=self.global_type_signatures)
 
-    def _add_name_mapping(self, name: str, translated_name: str, name_type: Type = None):
-        self.local_name_mapping[name] = translated_name
-        self.reverse_name_mapping[translated_name] = name
-        if name_type:
-            self.local_type_signatures[translated_name] = name_type
-
     def parse_logical_form(self, logical_form: str) -> Expression:
-        def _process_nested_expression(nested_expression: List[Union[str, List[str]]]) -> str:
+        """
+        Takes a logical form as a string, maps its tokens using the mapping and returns a parsed expression.
+        """
+        def _process_nested_expression(nested_expression) -> str:
             """
             ``nested_expression`` is the result of parsing a Lambda-DCS expression in Lisp format.
             We process it recursively and return a string in the format that NLTK's ``LogicParser``
@@ -65,6 +73,8 @@ class World:
             else:
                 arguments = ["(%s)" % name for name in mapped_names[1:]]
             return "(%s %s)" % (mapped_names[0], " ".join(arguments))
+        if not logical_form.startswith("("):
+            logical_form = "(%s)" % logical_form
         parsed_lisp = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(logical_form).asList()
         translated_string = _process_nested_expression(parsed_lisp)
         type_signature = self.local_type_signatures.copy()
@@ -73,6 +83,17 @@ class World:
 
     def _map_name(self, name: str) -> str:
         raise NotImplementedError
+
+    def _add_name_mapping(self, name: str, translated_name: str, name_type: Type = None):
+        """
+        Utility method to add a name and its translation to the local name mapping, and the corresponding
+        signature, if available to the local type signatures. This method also updates the reverse name
+        mapping.
+        """
+        self.local_name_mapping[name] = translated_name
+        self.reverse_name_mapping[translated_name] = name
+        if name_type:
+            self.local_type_signatures[translated_name] = name_type
 
     def get_action_sequence(self, expression: Expression) -> List[str]:
         """

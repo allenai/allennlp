@@ -6,7 +6,7 @@ from overrides import overrides
 
 from nltk.sem.logic import Type, ComplexType, EntityType, ANY_TYPE
 
-from allennlp.data.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType
+from allennlp.data.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType, IdentityType
 
 
 class ReverseType(PlaceholderType):
@@ -47,33 +47,6 @@ class ReverseType(PlaceholderType):
     @overrides
     def get_application_type(self, argument_type: Type) -> Type:
         return ComplexType(argument_type.second, argument_type.first)
-
-
-class IdentityType(PlaceholderType):
-    """
-    ``IdentityType`` is a kind of ``PlaceholderType`` that takes an argument of any type and returns
-    an expression of the same type. That is, type signature is <#1, #1>.
-    """
-    @property
-    def _signature(self) -> str:
-        return "<#1,#1>"
-
-    @overrides
-    def resolve(self, other) -> Optional[Type]:
-        """See ``PlaceholderType.resolve``"""
-        if not isinstance(other, ComplexType):
-            return None
-        other_first = other.first.resolve(other.second)
-        if not other_first:
-            return None
-        other_second = other.second.resolve(other_first)
-        if not other_second:
-            return None
-        return IdentityType(other_first, other_second)
-
-    @overrides
-    def get_application_type(self, argument_type: Type) -> Type:
-        return argument_type
 
 
 class ConjunctionType(PlaceholderType):
@@ -227,10 +200,10 @@ CONJUNCTION_TYPE = ConjunctionType(ANY_TYPE, ANY_TYPE)
 ARG_EXTREME_TYPE = ArgExtremeType(ANY_TYPE, ANY_TYPE)
 
 
-COMMON_NAME_MAPPING = {"lambda": "\\", "var": "V"}
+COMMON_NAME_MAPPING = {"lambda": "\\", "var": "V", "x": "X"}
 
 
-COMMON_TYPE_SIGNATURE = {"V": IDENTITY_TYPE}
+COMMON_TYPE_SIGNATURE = {"V": IDENTITY_TYPE, "X": ANY_TYPE}
 
 
 def add_common_name_with_type(name, mapping, type_signature):
@@ -263,4 +236,3 @@ add_common_name_with_type("<=", "L1", UNARY_NUM_OP_TYPE)
 add_common_name_with_type("sum", "S0", UNARY_NUM_OP_TYPE)
 add_common_name_with_type("avg", "S1", UNARY_NUM_OP_TYPE)
 add_common_name_with_type("-", "F", BINARY_NUM_OP_TYPE)  # subtraction
-add_common_name_with_type("x", "X", ANY_TYPE)

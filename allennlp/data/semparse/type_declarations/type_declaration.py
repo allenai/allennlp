@@ -118,6 +118,36 @@ class PlaceholderType(ComplexType):
             return self._signature
 
 
+class IdentityType(PlaceholderType):
+    """
+    ``IdentityType`` is a kind of ``PlaceholderType`` that takes an argument of any type and returns
+    an expression of the same type. That is, type signature is <#1, #1>. This is in this module because it is
+    a commonly needed ``PlaceholderType`` in many domains. For example, if your logical form language has
+    lambda expressions, it is quite convenient to specify the variable's usage as "(var x)", and you can make
+    "var" a function of this type.
+    """
+    @property
+    def _signature(self) -> str:
+        return "<#1,#1>"
+
+    @overrides
+    def resolve(self, other) -> Optional[Type]:
+        """See ``PlaceholderType.resolve``"""
+        if not isinstance(other, ComplexType):
+            return None
+        other_first = other.first.resolve(other.second)
+        if not other_first:
+            return None
+        other_second = other.second.resolve(other_first)
+        if not other_second:
+            return None
+        return IdentityType(other_first, other_second)
+
+    @overrides
+    def get_application_type(self, argument_type: Type) -> Type:
+        return argument_type
+
+
 class TypedConstantExpression(ConstantExpression):
     # pylint: disable=abstract-method
     """
@@ -181,6 +211,7 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
         type when we have the information about F. Hence this method.
         """
         super(DynamicTypeApplicationExpression, self)._set_type(other_type, signature)
+        # TODO(pradeep): Assuming the mapping of "var" function is "V". Do something better.
         if isinstance(self.argument, ApplicationExpression) and str(self.argument.function) == "V":
             # pylint: disable=protected-access
             self.argument.argument._set_type(self.function.type.first)

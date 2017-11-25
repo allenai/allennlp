@@ -3,7 +3,7 @@ from overrides import overrides
 
 from nltk.sem.logic import TRUTH_TYPE, EntityType, Type, ComplexType, ANY_TYPE
 
-from allennlp.data.semparse.type_declarations.type_declaration import NamedBasicType, PlaceholderType
+from allennlp.data.semparse.type_declarations.type_declaration import NamedBasicType, PlaceholderType, IdentityType
 
 
 class BoxFilterType(PlaceholderType):
@@ -70,6 +70,32 @@ class AssertType(PlaceholderType):
         return ComplexType(argument_type, TRUTH_TYPE)
 
 
+class CountType(PlaceholderType):
+    """
+    This is the type of the count function. Corresponding Python function looks like ``count(entities)`` ,
+    where entities are either objects or boxes. Type signature is <#1,e>.
+    """
+    @property
+    def _signature(self) -> str:
+        return "<#1,e>"
+
+    @overrides
+    def resolve(self, other: Type) -> Optional[Type]:
+        if not isinstance(other, ComplexType):
+            return None
+        resolved_type = other.resolve(ComplexType(ANY_TYPE, NUM_TYPE))
+        if not resolved_type:
+            return None
+        resolved_placeholder = resolved_type.first
+        if not resolved_placeholder:
+            return None
+        return CountType(resolved_placeholder, NUM_TYPE)
+
+    @overrides
+    def get_application_type(self, argument_type: Type) -> Type:
+        return NUM_TYPE
+
+
 NUM_TYPE = EntityType()
 BOX_TYPE = NamedBasicType("BOX")
 OBJECT_TYPE = NamedBasicType("OBJECT")
@@ -81,13 +107,15 @@ NEGATE_FILTER_TYPE = ComplexType(ComplexType(OBJECT_TYPE, OBJECT_TYPE),
 BOX_MEMBERSHIP_TYPE = ComplexType(BOX_TYPE, OBJECT_TYPE)
 COLOR_FUNCTION_TYPE = ComplexType(OBJECT_TYPE, COLOR_TYPE)
 SHAPE_FUNCTION_TYPE = ComplexType(OBJECT_TYPE, SHAPE_TYPE)
+COUNT_FUNCTION_TYPE = CountType(ANY_TYPE, NUM_TYPE)
 BOX_FILTER_TYPE = BoxFilterType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, ANY_TYPE),
                                                       ComplexType(ANY_TYPE, BOX_TYPE)))
 ASSERT_TYPE = AssertType(ANY_TYPE, ComplexType(ANY_TYPE, TRUTH_TYPE))
+IDENTITY_TYPE = IdentityType(ANY_TYPE, ANY_TYPE)
 
 
-COMMON_NAME_MAPPING = {}
-COMMON_TYPE_SIGNATURE = {}
+COMMON_NAME_MAPPING = {"lambda": "\\", "var": "V", "x": "X"}
+COMMON_TYPE_SIGNATURE = {"V": IDENTITY_TYPE, "X": ANY_TYPE}
 
 
 def add_common_name_with_type(name, mapping, type_signature):
@@ -95,13 +123,21 @@ def add_common_name_with_type(name, mapping, type_signature):
     COMMON_TYPE_SIGNATURE[mapping] = type_signature
 
 
+# Entities
 add_common_name_with_type("all_objects", "O", OBJECT_TYPE)
 add_common_name_with_type("all_boxes", "B", BOX_TYPE)
+add_common_name_with_type("color_black", "C0", COLOR_TYPE)
+add_common_name_with_type("color_blue", "C1", COLOR_TYPE)
+add_common_name_with_type("color_yellow", "C2", COLOR_TYPE)
+add_common_name_with_type("shape_triangle", "S0", SHAPE_TYPE)
+add_common_name_with_type("shape_square", "S1", SHAPE_TYPE)
+add_common_name_with_type("shape_circle", "S2", SHAPE_TYPE)
 
 
 # Attribute functions
 add_common_name_with_type("color", "C", COLOR_FUNCTION_TYPE)
 add_common_name_with_type("shape", "S", SHAPE_FUNCTION_TYPE)
+add_common_name_with_type("count", "L", COUNT_FUNCTION_TYPE)
 add_common_name_with_type("object_in_box", "I", BOX_MEMBERSHIP_TYPE)
 
 
@@ -124,14 +160,14 @@ add_common_name_with_type("filter_lesser_equals", "F5", BOX_FILTER_TYPE)
 
 
 # Object filter functions
-add_common_name_with_type("black", "C0", OBJECT_FILTER_TYPE)
-add_common_name_with_type("blue", "C1", OBJECT_FILTER_TYPE)
-add_common_name_with_type("yellow", "C2", OBJECT_FILTER_TYPE)
-add_common_name_with_type("same_color", "C3", OBJECT_FILTER_TYPE)
-add_common_name_with_type("triangle", "S0", OBJECT_FILTER_TYPE)
-add_common_name_with_type("square", "S1", OBJECT_FILTER_TYPE)
-add_common_name_with_type("circle", "S2", OBJECT_FILTER_TYPE)
-add_common_name_with_type("same_shape", "S3", OBJECT_FILTER_TYPE)
+add_common_name_with_type("black", "C3", OBJECT_FILTER_TYPE)
+add_common_name_with_type("blue", "C4", OBJECT_FILTER_TYPE)
+add_common_name_with_type("yellow", "C5", OBJECT_FILTER_TYPE)
+add_common_name_with_type("same_color", "C6", OBJECT_FILTER_TYPE)
+add_common_name_with_type("triangle", "S3", OBJECT_FILTER_TYPE)
+add_common_name_with_type("square", "S4", OBJECT_FILTER_TYPE)
+add_common_name_with_type("circle", "S5", OBJECT_FILTER_TYPE)
+add_common_name_with_type("same_shape", "S6", OBJECT_FILTER_TYPE)
 add_common_name_with_type("touch_wall", "T0", OBJECT_FILTER_TYPE)
 add_common_name_with_type("touch_corner", "T1", OBJECT_FILTER_TYPE)
 add_common_name_with_type("touch_top", "T2", OBJECT_FILTER_TYPE)
