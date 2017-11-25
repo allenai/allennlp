@@ -227,10 +227,10 @@ CONJUNCTION_TYPE = ConjunctionType(ANY_TYPE, ANY_TYPE)
 ARG_EXTREME_TYPE = ArgExtremeType(ANY_TYPE, ANY_TYPE)
 
 
-COMMON_NAME_MAPPING = {"lambda": "\\"}
+COMMON_NAME_MAPPING = {"lambda": "\\", "var": "V"}
 
 
-COMMON_TYPE_SIGNATURE = {}
+COMMON_TYPE_SIGNATURE = {"V": IDENTITY_TYPE}
 
 
 def add_common_name_with_type(name, mapping, type_signature):
@@ -247,7 +247,6 @@ add_common_name_with_type("or", "O", CONJUNCTION_TYPE)
 add_common_name_with_type("fb:row.row.next", "N", NEXT_ROW_TYPE)
 add_common_name_with_type("number", "I", NUMBER_FUNCTION_TYPE)
 add_common_name_with_type("date", "D0", DATE_FUNCTION_TYPE)
-add_common_name_with_type("var", "V", IDENTITY_TYPE)
 add_common_name_with_type("fb:cell.cell.part", "P", PART2CELL_TYPE)
 add_common_name_with_type("fb:cell.cell.date", "D1", CELL2DATE_NUM_TYPE)
 add_common_name_with_type("fb:cell.cell.number", "I1", CELL2DATE_NUM_TYPE)

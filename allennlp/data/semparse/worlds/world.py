@@ -15,17 +15,27 @@ class World:
     """
     def __init__(self,
                  constant_type_prefixes: Dict[str, str] = None,
-                 global_type_signatures: Dict[str, Type] = None):
+                 global_type_signatures: Dict[str, Type] = None,
+                 global_name_mapping: Dict[str, str] = None):
         # NLTK has a naming convention for variable types. If the world has predicate or entity names beyond
         # what's defined in the COMMON_NAME_MAPPING, they need to be added to this dict.
         # We initialize this dict with common predicate names and update it as we process logical forms.
         self.local_name_mapping = {}
         # Similarly, these are the type signatures not in the COMMON_TYPE_SIGNATURE.
         self.local_type_signatures = {}
-        type_prefixes = constant_type_prefixes or {}
+        self.global_name_mapping = global_name_mapping or {}
         self.global_type_signatures = global_type_signatures or {}
+        # We keep a reverse map as well to put the terminals back in action sequences.
+        self.reverse_name_mapping = {mapped_name: name for name, mapped_name in self.global_name_mapping.items()}
+        type_prefixes = constant_type_prefixes or {}
         self._logic_parser = DynamicTypeLogicParser(constant_type_prefixes=type_prefixes,
                                                     type_signatures=self.global_type_signatures)
+
+    def _add_name_mapping(self, name: str, translated_name: str, name_type: Type = None):
+        self.local_name_mapping[name] = translated_name
+        self.reverse_name_mapping[translated_name] = name
+        if name_type:
+            self.local_type_signatures[translated_name] = name_type
 
     def parse_logical_form(self, logical_form: str) -> Expression:
         def _process_nested_expression(nested_expression: List[Union[str, List[str]]]) -> str:
@@ -64,8 +74,7 @@ class World:
     def _map_name(self, name: str) -> str:
         raise NotImplementedError
 
-    @staticmethod
-    def get_action_sequence(expression: Expression) -> List[str]:
+    def get_action_sequence(self, expression: Expression) -> List[str]:
         """
         Returns the sequence of actions (as strings) that resulted in the given expression.
         """
@@ -83,14 +92,17 @@ class World:
                     # the "lambda x" term. We're adding it here so that we will see transitions like
                     #   <e,d> -> [\x, d] instead of
                     #   <e,d> -> [d]
-                    transformed_types = ["/X"] + transformed_types
+                    transformed_types = ["lambda x"] + transformed_types
                 current_transitions.append("%s -> %s" % (expression_type,
                                                          str(transformed_types)))
                 for sub_expression in sub_expressions:
                     _get_transitions(sub_expression, current_transitions)
             except NotImplementedError:
                 # This means that the expression is a leaf. We simply make a transition from its type to itself.
-                current_transitions.append("%s -> %s" % (expression_type, expression))
+                original_name = str(expression)
+                if original_name in self.reverse_name_mapping:
+                    original_name = self.reverse_name_mapping[original_name]
+                current_transitions.append("%s -> %s" % (expression_type, original_name))
             return current_transitions
         # Starting with the type of the whole expression
         return _get_transitions(expression, [str(expression.type)])
