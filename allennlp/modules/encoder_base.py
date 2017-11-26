@@ -205,6 +205,8 @@ class _EncoderBase(torch.nn.Module):
             to order the states with respect to the lengths of the sequences in
             the batch.
         """
+        # TODO(Mark): seems weird to sort here, but append zeros in the subclasses.
+        # which way around is best?
         new_sorted_states = [state.index_select(1, restoration_indices)
                              for state in final_states]
         # Now we've sorted the states back so that they correspond to the original indices,
