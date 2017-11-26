@@ -401,6 +401,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
             return True
         if production.startswith('cell'):
             return False
+        if len(production) > 1 or production == "x":
+            return False
         return production[0].islower()
 
     # @overrides  - overrides can't handle the generics we're using here, apparently

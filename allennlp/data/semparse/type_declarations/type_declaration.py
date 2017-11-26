@@ -2,8 +2,8 @@
 This module defines some classes that are generally useful for defining a type system for a new domain. We
 inherit the type logic in ``nltk.sem.logic`` and add some functionality on top of it here. There are two main
 improvements:
-    1) Firstly, we allow defining multiple basic types with their own names (see ``NamedBasicType``).
-    2) Secondly, we allow defining function types that have placeholders in them (see ``PlaceholderType``).
+1) Firstly, we allow defining multiple basic types with their own names (see ``NamedBasicType``).
+2) Secondly, we allow defining function types that have placeholders in them (see ``PlaceholderType``).
 We also extend NLTK's ``LogicParser`` to define a ``DynamicTypeLogicParser`` that knows how to deal with the
 two improvements above.
 """
