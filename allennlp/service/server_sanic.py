@@ -20,6 +20,8 @@ from sanic_cors import CORS
 
 import psycopg2
 
+import pytz
+
 from allennlp.common.util import JsonDict
 from allennlp.service.db import DemoDatabase, PostgresDemoDatabase
 from allennlp.service.permalinks import int_to_slug, slug_to_int
@@ -39,7 +41,8 @@ def run(port: int, workers: int,
     if port != 8000:
         logger.warning("The demo requires the API to be run on port 8000.")
 
-    # This will be ``None`` if all the relevant environment variables are not defined.
+    # This will be ``None`` if all the relevant environment variables are not defined or if
+    # there is an exception when connecting to the database.
     demo_db = PostgresDemoDatabase.from_environment()
 
     app = make_app(static_dir, demo_db)
@@ -53,7 +56,8 @@ def run(port: int, workers: int,
 
 def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
-    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    start_time = datetime.now(pytz.utc)
+    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S %Z")
 
     if build_dir is None:
         # Need path to static assets to be relative to this file.
@@ -154,9 +158,10 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
                                               model_name=model_name,
                                               inputs=data,
                                               outputs=prediction)
-                slug = int_to_slug(perma_id)
-                prediction["slug"] = slug
-                log_blob["slug"] = slug
+                if perma_id is not None:
+                    slug = int_to_slug(perma_id)
+                    prediction["slug"] = slug
+                    log_blob["slug"] = slug
 
             except Exception:  # pylint: disable=broad-except
                 # TODO(joelgrus): catch more specific errors
@@ -201,9 +206,11 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
     @app.route('/info')
     async def info(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """List metadata about the running webserver"""
+        uptime = str(datetime.now(pytz.utc) - start_time)
         git_version = os.environ.get('SOURCE_COMMIT') or ""
         return response.json({
-                "start_time": start_time,
+                "start_time": start_time_str,
+                "uptime": uptime,
                 "git_version": git_version,
                 "githubUrl": "http://github.com/allenai/allennlp/commit/" + git_version})
 
