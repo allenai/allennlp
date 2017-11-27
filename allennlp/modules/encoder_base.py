@@ -1,7 +1,7 @@
-from typing import Tuple, Union, Optional
+from typing import Tuple, Union, Optional, Callable
 import torch
 
-from torch.nn.utils.rnn import pack_padded_sequence
+from torch.nn.utils.rnn import pack_padded_sequence, PackedSequence
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_by_length
 
 # We have two types here for the state, because storing the state in something
@@ -34,7 +34,8 @@ class _EncoderBase(torch.nn.Module):
         self._states: Optional[RnnStateStorage] = None
 
     def sort_and_run_forward(self,
-                             module: torch.nn.Module,
+                             module: Callable[[PackedSequence, Optional[RnnState]],
+                                              Tuple[Union[PackedSequence, torch.Tensor], RnnState]],
                              inputs: torch.Tensor,
                              mask: torch.Tensor,
                              hidden_state: Optional[RnnState] = None):
@@ -55,8 +56,9 @@ class _EncoderBase(torch.nn.Module):
 
         Parameters
         ----------
-        module : ``torch.nn.Module``, required.
-            The module to run on the inputs.
+        module : ``Callable[[PackedSequence, Optional[RnnState]],
+                            Tuple[Union[PackedSequence, torch.Tensor], RnnState]]``, required.
+            A function to run on the inputs. In most cases, this is a ``torch.nn.Module``.
         inputs : ``torch.Tensor``, required.
             A tensor of shape ``(batch_size, sequence_length, embedding_size)`` representing
             the inputs to the Encoder.
