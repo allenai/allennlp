@@ -114,7 +114,7 @@ class PostgresDemoDatabase(DemoDatabase):
     @classmethod
     def from_environment(cls) -> Optional['PostgresDemoDatabase']:
         host = os.environ.get("DEMO_POSTGRES_HOST")
-        port = os.environ.get("DEMO_POSTGRES_PORT") or 5432
+        port = int(os.environ.get("DEMO_POSTGRES_PORT") or 5432)
         dbname = os.environ.get("DEMO_POSTGRES_DBNAME")
         user = os.environ.get("DEMO_POSTGRES_USER")
         password = os.environ.get("DEMO_POSTGRES_PASSWORD")
