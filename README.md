@@ -1,34 +1,7 @@
-<p align="center"><img width="40%" src="doc/static/allennlp-logo-dark.png" /></p>
-
-
-[![Build Status](https://travis-ci.org/allenai/allennlp.svg?branch=master)](https://travis-ci.org/allenai/allennlp)
-[![codecov](https://codecov.io/gh/allenai/allennlp/branch/master/graph/badge.svg)](https://codecov.io/gh/allenai/allennlp)
-[![docs](https://readthedocs.org/projects/allennlp/badge/?version=latest)](https://readthedocs.org/projects/allennlp/)
-[![docker](https://images.microbadger.com/badges/image/allennlp/allennlp.svg)](https://microbadger.com/images/allennlp/allennlp)
-
-An [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) NLP research library, built on PyTorch,
-for developing state-of-the-art deep learning models on a wide variety of linguistic tasks.
-
-## Quickstart
-
-The fastest way to get an environment to run AllenNLP is with Docker.  Once you have [installed Docker](https://docs.docker.com/engine/installation/)
-just run `docker run -it --rm allennlp/allennlp` to get an environment that will run on either the cpu or gpu.
-
-Now you can do any of the following:
-
-* Run a model on example sentences with `allennlp/run bulk`.
-* Start a web service to host our models with `allennlp/run serve`.
-* Interactively code against AllenNLP from the Python interpreter with `python`.
-
-You can also install via the `pip` package manager or by cloning this repository into a Python 3.6 virtualenv.
-See below for more detailed instructions.
-
 ## What is AllenNLP?
 
 Built on PyTorch, AllenNLP makes it easy to design and evaluate new deep
-learning models for nearly any NLP problem, along with the infrastructure to
-easily run them in the cloud or on your laptop.  AllenNLP was designed with the
-following principles:
+\following principles:
 
 * *Hyper-modular and lightweight.* Use the parts which you like seamlessly with PyTorch.
 * *Extensively tested and easy to extend.* Test coverage is above 90% and the example
