@@ -18,6 +18,11 @@ class ElmoLstm(_EncoderBase):
     The inputs to the forward and backward directions are independent - forward and backward
     states are not concatenated between layers.
 
+    Additionally, this LSTM maintains its `own` state, which is updated every time
+    ``forward`` is called. It is dynamically resized for different batch sizes and is
+    designed for use with non-continuous inputs. This is non-standard, but can be thought
+    of as having a "end of sentence" state, which is carried across different sentences.
+
     Parameters
     ----------
     input_size : ``int``, required
@@ -85,13 +90,24 @@ class ElmoLstm(_EncoderBase):
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
-                mask: torch.Tensor,
-                hidden_state: torch.Tensor) -> torch.Tensor:
+                mask: torch.LongTensor) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        inputs : ``torch.Tensor``, required.
+            A Tensor of shape ``(batch_size, sequence_length, hidden_size)``.
+        mask : ``torch.LongTensor``, required.
+            A binary mask of shape ``(batch_size, sequence_length)`` representing the
+            non-padded elements in each sequence in the batch.
 
+        Returns
+        -------
+        A ``torch.Tensor`` of shape (num_layers, batch_size, sequence_length, hidden_size),
+        where the num_layers dimension represents the LSTM output from that layer.
+        """
         batch_size, total_sequence_length = mask.size()
-
         stacked_sequence_output, final_states, restoration_indices, num_valid = \
-            self.sort_and_run_forward(self.lstm_forward, inputs, mask, hidden_state)
+            self.sort_and_run_forward(self.lstm_forward, inputs, mask)
 
         # stacked_sequence_output is shape (num_layers, batch_size, timesteps, encoder_dim)
         num_layers = stacked_sequence_output.size(0)
@@ -131,6 +147,7 @@ class ElmoLstm(_EncoderBase):
         self._update_states(final_states, restoration_indices)
 
         # Restore the original indices and return the sequence.
+        # Has shape (num_layers, batch_size, sequence_length, hidden_size)
         return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)
                           for tensor in per_layer_sequence_outputs], dim=0)
 
@@ -143,7 +160,7 @@ class ElmoLstm(_EncoderBase):
         ----------
         inputs : ``PackedSequence``, required.
             A batch first ``PackedSequence`` to run the stacked LSTM over.
-        initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
+        initial_state : ``Tuple[torch.Tensor, torch.Tensor]``, optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM, with shape (num_layers, batch_size, 2 * hidden_size) and
             (num_layers, batch_size, 2 * cell_size) respectively.
