@@ -7,9 +7,10 @@ import torch
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
 from allennlp.modules.lstm_cell_with_projection import LSTMCellWithProjection
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.encoder_base import _EncoderBase
 
 
-class ElmoLstm(torch.nn.Module):
+class ElmoLstm(_EncoderBase):
     """
     A stacked, bidirectional LSTM which uses
     :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`'s
@@ -45,7 +46,7 @@ class ElmoLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  memory_cell_clip_value: Optional[float] = None,
                  state_projection_clip_value: Optional[float] = None) -> None:
-        super(ElmoLstm, self).__init__()
+        super(ElmoLstm, self).__init__(stateful=True)
 
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
@@ -83,10 +84,62 @@ class ElmoLstm(torch.nn.Module):
         self.backward_layers = backward_layers
 
     def forward(self,  # pylint: disable=arguments-differ
-                inputs: PackedSequence,
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Tuple[torch.Tensor,
-                                                                                            Tuple[torch.Tensor,
-                                                                                                  torch.Tensor]]:
+                inputs: torch.Tensor,
+                mask: torch.Tensor,
+                hidden_state: torch.Tensor) -> torch.Tensor:
+
+        batch_size, total_sequence_length = mask.size()
+
+        stacked_sequence_output, final_states, restoration_indices, num_valid = \
+            self.sort_and_run_forward(self.lstm_forward, inputs, mask, hidden_state)
+
+        # stacked_sequence_output is shape (num_layers, batch_size, timesteps, encoder_dim)
+        num_layers = stacked_sequence_output.size(0)
+        per_layer_sequence_outputs = [layer.squeeze(0) for layer in
+                                      stacked_sequence_output.chunk(num_layers, 0)]
+
+        # Add back invalid rows which were removed in the call to sort_and_run_forward.
+        if num_valid < batch_size:
+            _, length, dim = per_layer_sequence_outputs[0].size()
+            zeros = per_layer_sequence_outputs[0].data.new(batch_size - num_valid,
+                                                           length, dim).fill_(0)
+            for k in range(num_layers):
+                per_layer_sequence_outputs[k] = torch.cat([per_layer_sequence_outputs[k],
+                                                           zeros], 0)
+
+            # The states also need to have invalid rows added back.
+            new_states = []
+            for state in final_states:
+                num_layers, _, state_dim = state.size()
+                zeros = state.data.new(num_layers, batch_size - num_valid, state_dim).fill_(0)
+                new_states.append(torch.cat([state, zeros], 1))
+            final_states = new_states
+
+        # It's possible to need to pass sequences which are padded to longer than the
+        # max length of the sequence to a Seq2StackEncoder. However, packing and unpacking
+        # the sequences mean that the returned tensor won't include these dimensions, because
+        # the RNN did not need to process them. We add them back on in the form of zeros here.
+        sequence_length_difference = total_sequence_length - per_layer_sequence_outputs[0].size(1)
+        if sequence_length_difference > 0:
+            zeros = per_layer_sequence_outputs[0].data.new(batch_size,
+                                                           sequence_length_difference,
+                                                           per_layer_sequence_outputs[0].size(-1)).fill_(0)
+            zeros = torch.autograd.Variable(zeros)
+            for k in range(num_layers):
+                per_layer_sequence_outputs[k] = torch.cat([per_layer_sequence_outputs[k], zeros], 1)
+
+        self._update_states(final_states, restoration_indices)
+
+        # Restore the original indices and return the sequence.
+        return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)
+                          for tensor in per_layer_sequence_outputs], dim=0)
+
+    def lstm_forward(self,
+                     inputs: PackedSequence,
+                     initial_state: Optional[Tuple[torch.Tensor,
+                                                   torch.Tensor]] = None) -> Tuple[torch.Tensor,
+                                                                                   Tuple[torch.Tensor,
+                                                                                   torch.Tensor]]:
         """
         Parameters
         ----------

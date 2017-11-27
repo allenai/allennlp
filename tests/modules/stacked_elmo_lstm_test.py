@@ -24,8 +24,8 @@ class TestElmoLstmCell(AllenNlpTestCase):
                         cell_size=7,
                         memory_cell_clip_value=2,
                         state_projection_clip_value=1)
-        output_sequence, lstm_state = lstm(input_tensor, (initial_hidden_state,
-                                                          initial_memory_state))
+        output_sequence, lstm_state = lstm.lstm_forward(input_tensor, (initial_hidden_state,
+                                                                       initial_memory_state))
         # Check all the layer outputs are masked properly.
         numpy.testing.assert_array_equal(output_sequence.data[:, 1, 4:, :].numpy(), 0.0)
         numpy.testing.assert_array_equal(output_sequence.data[:, 2, 2:, :].numpy(), 0.0)
