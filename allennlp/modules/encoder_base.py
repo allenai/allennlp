@@ -9,7 +9,7 @@ from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_b
 # - however, the states are consumed as either Tensors or a Tuple of Tensors, so
 # returning them in this format is unhelpful.
 RnnState = Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]  # pylint: disable=invalid-name
-RnnStateStorage = Union[Tuple[torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]  # pylint: disable=invalid-name
+RnnStateStorage = Tuple[torch.Tensor, ...]  # pylint: disable=invalid-name
 
 
 class _EncoderBase(torch.nn.Module):
@@ -181,8 +181,8 @@ class _EncoderBase(torch.nn.Module):
         if len(self._states) == 1:
             # GRUs only have a single state. This `unpacks` it from the
             # tuple and returns the tensor directly.
-            correctly_shaped_states = correctly_shaped_states[0]
-            sorted_state = correctly_shaped_states.index_select(1, sorting_indices)
+            correctly_shaped_state = correctly_shaped_states[0]
+            sorted_state = correctly_shaped_state.index_select(1, sorting_indices)
             return sorted_state[:, :num_valid, :]
         else:
             # LSTMs have a state tuple of (state, memory).

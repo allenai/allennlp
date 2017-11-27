@@ -136,10 +136,8 @@ class ElmoLstm(_EncoderBase):
 
     def lstm_forward(self,
                      inputs: PackedSequence,
-                     initial_state: Optional[Tuple[torch.Tensor,
-                                                   torch.Tensor]] = None) -> Tuple[torch.Tensor,
-                                                                                   Tuple[torch.Tensor,
-                                                                                   torch.Tensor]]:
+                     initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
+            Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Parameters
         ----------

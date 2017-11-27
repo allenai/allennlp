@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,protected-access
 import numpy
 import torch
 from torch.autograd import Variable
@@ -32,8 +32,7 @@ class TestEncoderBase(AllenNlpTestCase):
         self.batch_size = 5
         self.num_valid = 4
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        sorted_inputs, sorted_sequence_lengths, restoration_indices, sorting_indices =\
-            sort_batch_by_length(tensor, sequence_lengths)
+        _, _, restoration_indices, sorting_indices = sort_batch_by_length(tensor, sequence_lengths)
         self.sorting_indices = sorting_indices
         self.restoration_indices = restoration_indices
 
@@ -44,7 +43,9 @@ class TestEncoderBase(AllenNlpTestCase):
         # First test the case that the previous state is _smaller_ than the current state input.
         self.encoder_base._states = (Variable(torch.ones([1, 3, 7])), Variable(torch.ones([1, 3, 7])))
         # sorting indices are: [0, 1, 3, 2, 4]
-        returned_states = self.encoder_base._get_initial_states(self.batch_size, self.num_valid, self.sorting_indices)
+        returned_states = self.encoder_base._get_initial_states(self.batch_size,
+                                                                self.num_valid,
+                                                                self.sorting_indices)
 
         correct_expanded_state = torch.cat([torch.ones([1, 3, 7]), torch.zeros([1, 2, 7])], 1)
         # State should have been expanded with zeros to have shape (1, batch_size, hidden_size).
@@ -68,7 +69,9 @@ class TestEncoderBase(AllenNlpTestCase):
         original_states = (Variable(torch.randn([1, 10, 7])), Variable(torch.randn([1, 10, 7])))
         self.encoder_base._states = original_states
         # sorting indices are: [0, 1, 3, 2, 4]
-        returned_states = self.encoder_base._get_initial_states(self.batch_size, self.num_valid, self.sorting_indices)
+        returned_states = self.encoder_base._get_initial_states(self.batch_size,
+                                                                self.num_valid,
+                                                                self.sorting_indices)
         # State should not have changed, as they were larger
         # than the batch size of the requested states.
         numpy.testing.assert_array_equal(self.encoder_base._states[0].data.numpy(),
@@ -88,7 +91,7 @@ class TestEncoderBase(AllenNlpTestCase):
     def test_update_states(self):
         assert self.encoder_base._states is None
         initial_states = (Variable(torch.randn([1, 5, 7])),
-                      Variable(torch.randn([1, 5, 7])))
+                          Variable(torch.randn([1, 5, 7])))
 
         index_selected_initial_states = (initial_states[0].index_select(1, self.restoration_indices),
                                          initial_states[1].index_select(1, self.restoration_indices))
