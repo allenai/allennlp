@@ -69,7 +69,7 @@ class PostgresDemoDatabase(DemoDatabase):
     """
     Concrete Postgres implementation.
     """
-    def __init__(self, dbname: str, host: str, port: int, user: str, password: str) -> None:
+    def __init__(self, dbname: str, host: str, port: str, user: str, password: str) -> None:
         self.dbname = dbname
         self.host = host
         self.port = port
@@ -114,7 +114,7 @@ class PostgresDemoDatabase(DemoDatabase):
     @classmethod
     def from_environment(cls) -> Optional['PostgresDemoDatabase']:
         host = os.environ.get("DEMO_POSTGRES_HOST")
-        port = int(os.environ.get("DEMO_POSTGRES_PORT") or 5432)
+        port = os.environ.get("DEMO_POSTGRES_PORT") or "5432"
         dbname = os.environ.get("DEMO_POSTGRES_DBNAME")
         user = os.environ.get("DEMO_POSTGRES_USER")
         password = os.environ.get("DEMO_POSTGRES_PASSWORD")
