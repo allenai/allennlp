@@ -33,10 +33,6 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     We support stateful RNNs where the final state from each batch is used as the initial
     state for the subsequent batch by passing ``stateful=True`` to the constructor.
 
-    We also support stacked RNNs that return activations for each layer by passing ``stacked=True``
-    to the constructor.  In this case, the ``module`` forward method has a slightly different
-    signature from ``torch.nn.modules.RNNBase``.  It returns:
-
         - hidden states of size ``(num_layers, batch_size, timesteps, hidden_dim)``
         - final states, a tuple of sizes ``(num_layers, batch_size, hidden_dim)``
           and ``(num_layers, batch_size, memory_dim)``
