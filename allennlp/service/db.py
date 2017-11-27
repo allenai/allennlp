@@ -69,7 +69,7 @@ class PostgresDemoDatabase(DemoDatabase):
     """
     Concrete Postgres implementation.
     """
-    def __init__(self, dbname: str, host: str, port: str, user: str, password: str) -> None:
+    def __init__(self, dbname: str, host: str, port: int, user: str, password: str) -> None:
         self.dbname = dbname
         self.host = host
         self.port = port
