@@ -41,7 +41,8 @@ def run(port: int, workers: int,
     if port != 8000:
         logger.warning("The demo requires the API to be run on port 8000.")
 
-    # This will be ``None`` if all the relevant environment variables are not defined.
+    # This will be ``None`` if all the relevant environment variables are not defined or if
+    # there is an exception when connecting to the database.
     demo_db = PostgresDemoDatabase.from_environment()
 
     app = make_app(static_dir, demo_db)
@@ -157,9 +158,10 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
                                               model_name=model_name,
                                               inputs=data,
                                               outputs=prediction)
-                slug = int_to_slug(perma_id)
-                prediction["slug"] = slug
-                log_blob["slug"] = slug
+                if perma_id is not None:
+                    slug = int_to_slug(perma_id)
+                    prediction["slug"] = slug
+                    log_blob["slug"] = slug
 
             except Exception:  # pylint: disable=broad-except
                 # TODO(joelgrus): catch more specific errors
