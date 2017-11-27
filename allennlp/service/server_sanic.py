@@ -20,6 +20,8 @@ from sanic_cors import CORS
 
 import psycopg2
 
+import pytz
+
 from allennlp.common.util import JsonDict
 from allennlp.service.db import DemoDatabase, PostgresDemoDatabase
 from allennlp.service.permalinks import int_to_slug, slug_to_int
@@ -53,7 +55,8 @@ def run(port: int, workers: int,
 
 def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Sanic:
     app = Sanic(__name__)  # pylint: disable=invalid-name
-    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    start_time = datetime.now(pytz.utc)
+    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S %Z")
 
     if build_dir is None:
         # Need path to static assets to be relative to this file.
@@ -201,9 +204,11 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
     @app.route('/info')
     async def info(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
         """List metadata about the running webserver"""
+        uptime = str(datetime.now(pytz.utc) - start_time)
         git_version = os.environ.get('SOURCE_COMMIT') or ""
         return response.json({
-                "start_time": start_time,
+                "start_time": start_time_str,
+                "uptime": uptime,
                 "git_version": git_version,
                 "githubUrl": "http://github.com/allenai/allennlp/commit/" + git_version})
 
