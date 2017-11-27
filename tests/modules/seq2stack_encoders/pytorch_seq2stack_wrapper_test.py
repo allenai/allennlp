@@ -25,7 +25,7 @@ class MockStackedLSTM(torch.nn.Module):
         return torch.cat([output1.unsqueeze(0), output2.unsqueeze(0)], dim=0), None
 
 
-class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
+class TestPytorchSeq2StackWrapper(AllenNlpTestCase):
     def test_wrapper_stacked_rnns(self):
         encoder = PytorchSeq2StackWrapper(MockStackedLSTM(), stateful=False)
         tensor = Variable(torch.rand([5, 8, 3]))

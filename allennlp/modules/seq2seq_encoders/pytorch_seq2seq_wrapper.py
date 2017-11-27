@@ -42,8 +42,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
           and ``(num_layers, batch_size, memory_dim)``
 
     """
-    def __init__(self, module: torch.nn.Module,
-                 stateful: bool = False) -> None:
+    def __init__(self, module: torch.nn.Module, stateful: bool = False) -> None:
         super(PytorchSeq2SeqWrapper, self).__init__(stateful)
         self._module = module
         try:
@@ -120,7 +119,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
 
         if self._stateful:
-            self._update_states(final_states, num_valid, restoration_indices)
+            self._update_states(final_states, restoration_indices)
 
         # Restore the original indices and return the sequence.
         return unpacked_sequence_tensor.index_select(0, restoration_indices)

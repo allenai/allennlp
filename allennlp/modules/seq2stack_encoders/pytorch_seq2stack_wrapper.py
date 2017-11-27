@@ -119,7 +119,7 @@ class PytorchSeq2StackWrapper(Seq2StackEncoder):
                 per_layer_sequence_outputs[k] = torch.cat([per_layer_sequence_outputs[k], zeros], 1)
 
         if self._stateful:
-            self._update_states(final_states, num_valid, restoration_indices)
+            self._update_states(final_states, restoration_indices)
 
         # Restore the original indices and return the sequence.
         return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)

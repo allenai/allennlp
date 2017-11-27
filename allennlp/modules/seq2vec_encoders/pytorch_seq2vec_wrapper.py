@@ -95,7 +95,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         # and return them as a single (batch_size, self.get_output_dim()) tensor.
 
         # now of shape: (batch_size, num_layers * num_directions, hidden_size).
-        unsorted_state = state.index_select(1, restoration_indices)
+        unsorted_state = state.transpose(0, 1).index_select(0, restoration_indices)
 
         # Extract the last hidden vector, including both forward and backward states
         # if the cell is bidirectional. Then reshape by concatenation (in the case

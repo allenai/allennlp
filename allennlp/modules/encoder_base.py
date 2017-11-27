@@ -156,6 +156,8 @@ class _EncoderBase(torch.nn.Module):
             resized_states = []
             # state has shape (num_layers, batch_size, hidden_size)
             for state in self._states:
+                # This _must_ be inside the loop. because some
+                # RNNs have states with different last dimension sizes.
                 zeros = state.data.new(state.size(0),
                                        num_states_to_concat,
                                        state.size(2)).fill_(0)
@@ -165,7 +167,7 @@ class _EncoderBase(torch.nn.Module):
 
         elif batch_size < self._states[0].size(1):
             # This batch is smaller than the previous one.
-            correctly_shaped_states = [state[:, :batch_size, :] for state in self._states]
+            correctly_shaped_states = tuple(state[:, :batch_size, :] for state in self._states)
         else:
             correctly_shaped_states = self._states
 
@@ -184,7 +186,7 @@ class _EncoderBase(torch.nn.Module):
             # LSTMs have a state tuple of (state, memory).
             sorted_states = [state.index_select(1, sorting_indices)
                              for state in correctly_shaped_states]
-            return (state[:, :num_valid, :] for state in sorted_states)
+            return tuple(state[:, :num_valid, :] for state in sorted_states)
 
     def _update_states(self,
                        final_states: RnnStateStorage,
@@ -209,24 +211,24 @@ class _EncoderBase(torch.nn.Module):
         # which way around is best?
         new_sorted_states = [state.index_select(1, restoration_indices)
                              for state in final_states]
-        # Now we've sorted the states back so that they correspond to the original indices,
-        # we need to figure out what states we need to update, because if didn't use a state
-        # for a particular row, we want to preserve it's state. Thankfully, the rows which
-        # are all zero in the state correspond exactly to those which aren't used, so we create
-        # masks of shape (new_batch_size,), denoting which states were used in the RNN computation.
-
-        current_state_batch_size = self._states[0].size(1)
-        new_state_batch_size = final_states[0].size(1)
-        # Masks for the unused states of shape (1, new_batch_size, 1)
-        used_new_rows_mask = [(state[0, :, :].sum(-1) != 0.0).long().resize(1, -1 ,1)
-                              for state in new_sorted_states]
 
         if self._states is None:
             # We don't already have states, so just set the
             # ones we receive to be the current state.
-            self._states = [torch.autograd.Variable(state.data)
-                            for state in new_sorted_states]
+            self._states = tuple([torch.autograd.Variable(state.data)
+                                  for state in new_sorted_states])
         else:
+            # Now we've sorted the states back so that they correspond to the original
+            # indices, we need to figure out what states we need to update, because if
+            # didn't use a state for a particular row, we want to preserve it's state.
+            # Thankfully, the rows which are all zero in the state correspond exactly
+            # to those which aren't used, so we create masks of shape (new_batch_size,),
+            # denoting which states were used in the RNN computation.
+            current_state_batch_size = self._states[0].size(1)
+            new_state_batch_size = final_states[0].size(1)
+            # Masks for the unused states of shape (1, new_batch_size, 1)
+            used_new_rows_mask = [(state[0, :, :].sum(-1) != 0.0).float().view(1, -1, 1)
+                                  for state in new_sorted_states]
             new_states = []
             if current_state_batch_size > new_state_batch_size:
                 # The new state is smaller than the old one,
@@ -236,7 +238,7 @@ class _EncoderBase(torch.nn.Module):
                                                            used_new_rows_mask):
                     # zero out all rows in the previous state
                     # which _were_ used in the current state.
-                    masked_old_state = old_state[:, :new_state_batch_size, :] * (-used_mask + 1)
+                    masked_old_state = old_state[:, :new_state_batch_size, :] * (1 - used_mask)
                     # The old state is larger, so update the relevant parts of it.
                     old_state[:, :new_state_batch_size, :] = new_state + masked_old_state
                     # Detatch the Variable.
@@ -249,7 +251,7 @@ class _EncoderBase(torch.nn.Module):
                                                            new_sorted_states,
                                                            used_new_rows_mask):
                     # zero out all rows which _were_ used in the current state.
-                    masked_old_state = old_state * (-used_mask + 1)
+                    masked_old_state = old_state * (1 - used_mask)
                     # The old state is larger, so update the relevant parts of it.
                     new_state += masked_old_state
                     # Detatch the Variable.
