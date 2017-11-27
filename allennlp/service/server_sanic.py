@@ -11,7 +11,6 @@ import asyncio
 import json
 import logging
 import os
-import pytz
 import sys
 from functools import lru_cache
 
@@ -20,6 +19,8 @@ from sanic.exceptions import ServerError
 from sanic_cors import CORS
 
 import psycopg2
+
+import pytz
 
 from allennlp.common.util import JsonDict
 from allennlp.service.db import DemoDatabase, PostgresDemoDatabase
