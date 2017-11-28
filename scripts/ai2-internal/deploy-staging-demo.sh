@@ -67,6 +67,12 @@ spec:
             - /bin/bash
             - -c
             - "allennlp/run serve"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 3
         - name: cloudsql-proxy
           image: gcr.io/cloudsql-docker/gce-proxy:1.11
           command: ["/cloud_sql_proxy", "--dir=/cloudsql",
