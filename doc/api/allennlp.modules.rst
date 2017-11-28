@@ -23,5 +23,5 @@ allennlp.modules
    allennlp.modules.text_field_embedders
    allennlp.modules.time_distributed
    allennlp.modules.token_embedders
-
+   allennlp.modules.scalar_mix
 
