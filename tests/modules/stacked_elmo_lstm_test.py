@@ -8,7 +8,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestElmoLstmCell(AllenNlpTestCase):
-    def test_stacked_elmo_lstm(self):
+    def test_elmo_lstm(self):
         input_tensor = Variable(torch.rand(4, 5, 3))
         input_tensor[1, 4:, :] = 0.
         input_tensor[2, 2:, :] = 0.
