@@ -49,3 +49,19 @@ class TestELMoTokenEmbedder(AllenNlpTestCase):
             expected_embeddings = fin['embedding'][...]
 
         assert numpy.allclose(actual_embeddings[:len(tokens)], expected_embeddings, atol=1e-6)
+
+    def test_elmo_token_embedder_bos_eos(self):
+        # The additional <S> and </S> embeddings added by the embedder should be as expected.
+        indexer = ELMoTokenCharactersIndexer()
+
+        options_file = os.path.join(FIXTURES, 'options.json')
+        weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
+
+        elmo_token_embedder = ELMoTokenEmbedder(options_file, weight_file)
+
+        # First <S>
+        for correct_index, token in [[0, '<S>'], [2, '</S>']]:
+            indices = indexer.token_to_indices(Token(token), Vocabulary())
+            indices = Variable(torch.from_numpy(numpy.array(indices))).view(1, 1, -1)
+            embeddings = elmo_token_embedder(indices)['token_embedding']
+            assert numpy.allclose(embeddings[0, correct_index, :].data.numpy(), embeddings[0, 1, :].data.numpy())

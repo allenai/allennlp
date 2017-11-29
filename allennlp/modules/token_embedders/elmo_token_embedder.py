@@ -78,6 +78,14 @@ class ELMoTokenEmbedder(TokenEmbedder):
 
         self._load_weights()
 
+        # Cache the arrays for use in forward -- +1 due to masking.
+        self._beginning_of_sentence_characters = Variable(torch.from_numpy(
+                numpy.array(ELMoCharacterMapper.beginning_of_sentence_characters) + 1
+        ))
+        self._end_of_sentence_characters = Variable(torch.from_numpy(
+                numpy.array(ELMoCharacterMapper.end_of_sentence_characters) + 1
+        ))
+
     @overrides
     def get_output_dim(self) -> int:
         return self.output_dim
@@ -108,8 +116,8 @@ class ELMoTokenEmbedder(TokenEmbedder):
         character_ids_with_bos_eos, mask_with_bos_eos = add_sentence_boundary_token_ids(
                 inputs,
                 mask,
-                Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.beginning_of_sentence_characters))),
-                Variable(torch.from_numpy(numpy.array(ELMoCharacterMapper.end_of_sentence_characters)))
+                self._beginning_of_sentence_characters,
+                self._end_of_sentence_characters
         )
 
         # the character id embedding
