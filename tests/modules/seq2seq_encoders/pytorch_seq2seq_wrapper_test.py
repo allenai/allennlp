@@ -1,9 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
+import numpy
 from numpy.testing import assert_almost_equal
 import pytest
 import torch
 from torch.autograd import Variable
-from torch.nn import LSTM
+from torch.nn import LSTM, GRU
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from allennlp.common.checks import ConfigurationError
@@ -92,8 +93,8 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         input_tensor = Variable(tensor)
         mask = Variable(mask)
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(input_tensor,
-                                                                                           sequence_lengths)
+        sorted_inputs, sorted_sequence_lengths, restoration_indices, _ = sort_batch_by_length(input_tensor,
+                                                                                              sequence_lengths)
         packed_sequence = pack_padded_sequence(sorted_inputs,
                                                sorted_sequence_lengths.data.tolist(),
                                                batch_first=True)
@@ -122,3 +123,46 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7)
             _ = PytorchSeq2SeqWrapper(lstm)
+
+
+    def test_wrapper_stateful(self):
+        lstm = LSTM(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
+        encoder = PytorchSeq2SeqWrapper(lstm, stateful=True)
+
+        # To test the stateful functionality we need to call the encoder multiple times.
+        # Different batch sizes further tests some of the logic.
+        batch_sizes = [5, 10, 8]
+        sequence_lengths = [4, 6, 7]
+        states = []
+        for batch_size, sequence_length in zip(batch_sizes, sequence_lengths):
+            tensor = Variable(torch.rand([batch_size, sequence_length, 3]))
+            mask = Variable(torch.ones(batch_size, sequence_length))
+            mask.data[0, 3:] = 0
+            encoder_output = encoder(tensor, mask)
+            states.append(encoder._states)  # pylint: disable=protected-access
+
+        # Check that the output is masked properly.
+        assert_almost_equal(encoder_output[0, 3:, :].data.numpy(), numpy.zeros((4, 14)))
+
+        for k in range(2):
+            assert_almost_equal(
+                    states[-1][k][:, -2:, :].data.numpy(), states[-2][k][:, -2:, :].data.numpy()
+            )
+
+    def test_wrapper_stateful_single_state_gru(self):
+        gru = GRU(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
+        encoder = PytorchSeq2SeqWrapper(gru, stateful=True)
+
+        batch_sizes = [10, 5]
+        states = []
+        for batch_size in batch_sizes:
+            tensor = Variable(torch.rand([batch_size, 5, 3]))
+            mask = Variable(torch.ones(batch_size, 5))
+            mask.data[0, 3:] = 0
+            encoder_output = encoder(tensor, mask)
+            states.append(encoder._states)   # pylint: disable=protected-access
+
+        assert_almost_equal(encoder_output[0, 3:, :].data.numpy(), numpy.zeros((2, 14)))
+        assert_almost_equal(
+                states[-1][0][:, -5:, :].data.numpy(), states[-2][0][:, -5:, :].data.numpy()
+        )

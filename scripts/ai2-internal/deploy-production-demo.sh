@@ -44,31 +44,27 @@ spec:
         app: allennlp-demo-prod
     spec:
       containers:
-        - name: allennlp-demo-prod
+        - name: allennlp
           image: "$CONTAINER"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
           # for documentation on the resources section.
           env:
             - name: DEMO_POSTGRES_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: allennlp-demo-postgres
-                  key: host
+              value: "127.0.0.1"
+            - name: DEMO_POSTGRES_PORT
+              value: "5432"
             - name: DEMO_POSTGRES_DBNAME
-              valueFrom:
-                secretKeyRef:
-                  name: allennlp-demo-postgres
-                  key: dbname
+              value: "demo"
             - name: DEMO_POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: allennlp-demo-postgres
-                  key: user
+                  name: cloudsql-db-credentials
+                  key: username
             - name: DEMO_POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: allennlp-demo-postgres
+                  name: cloudsql-db-credentials
                   key: password
           resources:
             limits:
@@ -88,6 +84,28 @@ spec:
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 3
+        - name: cloudsql-proxy
+          image: gcr.io/cloudsql-docker/gce-proxy:1.11
+          command: ["/cloud_sql_proxy", "--dir=/cloudsql",
+                    "-instances=ai2-general:us-central1:allennlp-demo=tcp:5432",
+                    "-credential_file=/secrets/cloudsql/credentials.json"]
+          volumeMounts:
+            - name: cloudsql-instance-credentials
+              mountPath: /secrets/cloudsql
+              readOnly: true
+            - name: ssl-certs
+              mountPath: /etc/ssl/certs
+            - name: cloudsql
+              mountPath: /cloudsql
+      volumes:
+        - name: cloudsql-instance-credentials
+          secret:
+            secretName: cloudsql-instance-credentials
+        - name: cloudsql
+          emptyDir:
+        - name: ssl-certs
+          hostPath:
+            path: /etc/ssl/certs
 ---
 apiVersion: v1
 kind: Service
