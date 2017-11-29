@@ -3,7 +3,7 @@ import numpy
 import torch
 from torch.autograd import Variable
 
-from allennlp.modules.stacked_elmo_lstm import ElmoLstm
+from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.common.testing import AllenNlpTestCase
 
 

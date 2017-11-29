@@ -26,17 +26,12 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     This is what pytorch's RNN's look like - just make sure your class looks like those, and it
     should work.
 
-    Note that we *require* you to pass sequence lengths when you call this module, to avoid subtle
-    bugs around masking.  If you already have a ``PackedSequence`` you can pass ``None`` as the
-    second parameter.
+    Note that we *require* you to pass a binary mask of shape (batch_size, sequence_length)
+    when you call this module, to avoid subtle bugs around masking.  If you already have a
+    ``PackedSequence`` you can pass ``None`` as the second parameter.
 
     We support stateful RNNs where the final state from each batch is used as the initial
     state for the subsequent batch by passing ``stateful=True`` to the constructor.
-
-        - hidden states of size ``(num_layers, batch_size, timesteps, hidden_dim)``
-        - final states, a tuple of sizes ``(num_layers, batch_size, hidden_dim)``
-          and ``(num_layers, batch_size, memory_dim)``
-
     """
     def __init__(self, module: torch.nn.Module, stateful: bool = False) -> None:
         super(PytorchSeq2SeqWrapper, self).__init__(stateful)

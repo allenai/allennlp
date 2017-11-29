@@ -88,7 +88,7 @@ class _EncoderBase(torch.nn.Module):
         # calling self._module, then fill with zeros.
 
         # First count how many sequences are empty.
-        batch_size, _ = mask.size()
+        batch_size = mask.size(0)
         num_valid = torch.sum(mask[:, 0]).int().data[0]
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
@@ -205,7 +205,9 @@ class _EncoderBase(torch.nn.Module):
         This method just sets the state to the updated new state, performing
         several pieces of book-keeping along the way - namely, unsorting the
         states and ensuring that the states of completely padded sequences are
-        not updated.
+        not updated. Finally, it also detatches the state variable from the
+        computational graph, such that the graph can be garbage collected after
+        each batch iteration.
 
         Parameters
         ----------

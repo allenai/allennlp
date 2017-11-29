@@ -18,15 +18,13 @@ class TestEncoderBase(AllenNlpTestCase):
 
         tensor = Variable(torch.rand([5, 7, 3]))
         tensor[1, 6:, :] = 0
-        tensor[2, :, :] = 0  # <= completely masked
         tensor[3, 2:, :] = 0
-        tensor[4, :, :] = 0  # <= completely masked
         self.tensor = tensor
         mask = Variable(torch.ones(5, 7))
         mask[1, 6:] = 0
-        mask[2, :] = 0
+        mask[2, :] = 0  # <= completely masked
         mask[3, 2:] = 0
-        mask[4, :] = 0
+        mask[4, :] = 0  # <= completely masked
         self.mask = mask
 
         self.batch_size = 5

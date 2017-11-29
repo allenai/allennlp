@@ -20,8 +20,10 @@ class ElmoLstm(_EncoderBase):
 
     Additionally, this LSTM maintains its `own` state, which is updated every time
     ``forward`` is called. It is dynamically resized for different batch sizes and is
-    designed for use with non-continuous inputs. This is non-standard, but can be thought
-    of as having an "end of sentence" state, which is carried across different sentences.
+    designed for use with non-continuous inputs (i.e inputs which aren't formatted as a stream,
+    such as text used for a language modelling task, which is how stateful RNNs are typically used).
+    This is non-standard, but can be thought of as having an "end of sentence" state, which is
+    carried across different sentences.
 
     Parameters
     ----------
