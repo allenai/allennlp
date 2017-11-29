@@ -30,7 +30,7 @@ class TestEncoderBase(AllenNlpTestCase):
         self.mask = mask
 
         self.batch_size = 5
-        self.num_valid = 4
+        self.num_valid = 3
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         _, _, restoration_indices, sorting_indices = sort_batch_by_length(tensor, sequence_lengths)
         self.sorting_indices = sorting_indices
@@ -41,29 +41,32 @@ class TestEncoderBase(AllenNlpTestCase):
         assert self.encoder_base._get_initial_states(self.batch_size, self.num_valid, self.sorting_indices) is None
 
         # First test the case that the previous state is _smaller_ than the current state input.
-        self.encoder_base._states = (Variable(torch.ones([1, 3, 7])), Variable(torch.ones([1, 3, 7])))
+        initial_states = (Variable(torch.randn([1, 3, 7])), Variable(torch.randn([1, 3, 7])))
+        self.encoder_base._states = initial_states
         # sorting indices are: [0, 1, 3, 2, 4]
         returned_states = self.encoder_base._get_initial_states(self.batch_size,
                                                                 self.num_valid,
                                                                 self.sorting_indices)
 
-        correct_expanded_state = torch.cat([torch.ones([1, 3, 7]), torch.zeros([1, 2, 7])], 1)
+        correct_expanded_states = [torch.cat([state, torch.zeros([1, 2, 7])], 1)
+                                   for state in initial_states]
         # State should have been expanded with zeros to have shape (1, batch_size, hidden_size).
         numpy.testing.assert_array_equal(self.encoder_base._states[0].data.numpy(),
-                                         correct_expanded_state.numpy())
+                                         correct_expanded_states[0].data.numpy())
         numpy.testing.assert_array_equal(self.encoder_base._states[1].data.numpy(),
-                                         correct_expanded_state.numpy())
+                                         correct_expanded_states[1].data.numpy())
 
-        # The returned states should be of shape (1, num_valid, hidden_size) and they also should
-        # have been sorted with respect to the indices.
+        # The returned states should be of shape (1, num_valid, hidden_size) and
+        # they also should have been sorted with respect to the indices.
         # sorting indices are: [0, 1, 3, 2, 4]
-        correct_returned_state = torch.ones([1, 4, 7])
-        correct_returned_state[:, 2, :] = 0
+
+        correct_returned_states = [state.index_select(1, self.sorting_indices)[:, :self.num_valid, :]
+                                   for state in correct_expanded_states]
 
         numpy.testing.assert_array_equal(returned_states[0].data.numpy(),
-                                         correct_returned_state.numpy())
+                                         correct_returned_states[0].data.numpy())
         numpy.testing.assert_array_equal(returned_states[1].data.numpy(),
-                                         correct_returned_state.numpy())
+                                         correct_returned_states[1].data.numpy())
 
         # Now test the case that the previous state is larger:
         original_states = (Variable(torch.randn([1, 10, 7])), Variable(torch.randn([1, 10, 7])))
