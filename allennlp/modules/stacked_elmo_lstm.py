@@ -5,7 +5,7 @@ A stacked bidirectional LSTM with skip connections between layers.
 from typing import Optional, Tuple, List
 import torch
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
-from allennlp.modules.lstm_cell_with_projection import LSTMCellWithProjection
+from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.encoder_base import _EncoderBase
 
@@ -21,7 +21,7 @@ class ElmoLstm(_EncoderBase):
     Additionally, this LSTM maintains its `own` state, which is updated every time
     ``forward`` is called. It is dynamically resized for different batch sizes and is
     designed for use with non-continuous inputs. This is non-standard, but can be thought
-    of as having a "end of sentence" state, which is carried across different sentences.
+    of as having an "end of sentence" state, which is carried across different sentences.
 
     Parameters
     ----------
@@ -65,14 +65,14 @@ class ElmoLstm(_EncoderBase):
         lstm_input_size = input_size
         go_forward = True
         for layer_index in range(num_layers):
-            forward_layer = LSTMCellWithProjection(lstm_input_size,
+            forward_layer = LstmCellWithProjection(lstm_input_size,
                                                    hidden_size,
                                                    cell_size,
                                                    go_forward,
                                                    recurrent_dropout_probability,
                                                    memory_cell_clip_value,
                                                    state_projection_clip_value)
-            backward_layer = LSTMCellWithProjection(lstm_input_size,
+            backward_layer = LstmCellWithProjection(lstm_input_size,
                                                     hidden_size,
                                                     cell_size,
                                                     not go_forward,
@@ -106,11 +106,11 @@ class ElmoLstm(_EncoderBase):
         where the num_layers dimension represents the LSTM output from that layer.
         """
         batch_size, total_sequence_length = mask.size()
-        stacked_sequence_output, final_states, restoration_indices, num_valid = \
-            self.sort_and_run_forward(self.lstm_forward, inputs, mask)
+        stacked_sequence_output, final_states, restoration_indices = \
+            self.sort_and_run_forward(self._lstm_forward, inputs, mask)
 
         # stacked_sequence_output is shape (num_layers, batch_size, timesteps, encoder_dim)
-        num_layers = stacked_sequence_output.size(0)
+        num_layers, num_valid, *_ = stacked_sequence_output.size()
         per_layer_sequence_outputs = [layer.squeeze(0) for layer in
                                       stacked_sequence_output.chunk(num_layers, 0)]
 
@@ -148,12 +148,13 @@ class ElmoLstm(_EncoderBase):
 
         # Restore the original indices and return the sequence.
         # Has shape (num_layers, batch_size, sequence_length, hidden_size)
+
         return torch.cat([tensor.index_select(0, restoration_indices).unsqueeze(0)
                           for tensor in per_layer_sequence_outputs], dim=0)
 
-    def lstm_forward(self,
-                     inputs: PackedSequence,
-                     initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
+    def _lstm_forward(self,
+                      inputs: PackedSequence,
+                      initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
             Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Parameters

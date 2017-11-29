@@ -69,19 +69,19 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
 
         batch_size = mask.size(0)
 
-        _, state, restoration_indices, num_valid = \
+        _, state, restoration_indices, = \
             self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
         # Deal with the fact the LSTM state is a tuple of (state, memory).
         if isinstance(state, tuple):
             state = state[0]
 
+        num_layers_times_directions, num_valid, encoding_dim = state.size()
         # Add back invalid rows.
         if num_valid < batch_size:
             # batch size is the second dimension here, because pytorch
             # returns RNN state as a tensor of shape (num_layers * num_directions,
             # batch_size, hidden_size)
-            num_layers_times_directions, _, encoding_dim = state.size()
             zeros = state.data.new(num_layers_times_directions,
                                    batch_size - num_valid,
                                    encoding_dim).fill_(0)

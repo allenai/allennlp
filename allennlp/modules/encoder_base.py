@@ -18,10 +18,6 @@ class _EncoderBase(torch.nn.Module):
     This abstract class serves as a base for the 3 ``Encoder`` abstractions in AllenNLP.
     - :class:`~allennlp.modules.seq2seq_encoders.Seq2SeqEncoders`
     - :class:`~allennlp.modules.seq2vec_encoders.Seq2VecEncoders`
-    - :class:`~allennlp.modules.seq2stack_encoders.Seq2StackEncoders`
-
-    These classes can be inherited by any :class:`~torch.nn.Module` which implements
-    one of these APIs.
 
     Additionally, this class provides functionality for sorting sequences by length
     so they can be consumed by Pytorch RNN classes, which require their inputs to be
@@ -40,14 +36,14 @@ class _EncoderBase(torch.nn.Module):
                              mask: torch.Tensor,
                              hidden_state: Optional[RnnState] = None):
         """
-        This function exists because Pytorch RNNs require that their inputs are sorted
+        This function exists because Pytorch RNNs require that their inputs be sorted
         before being passed as input. As all of our Seq2xxxEncoders use this functionality,
         it is provided in a base class. This method can be called on any module which
-        takes as input a ``PackedSequence`` and some hidden_state, which can either be a
+        takes as input a ``PackedSequence`` and some ``hidden_state``, which can either be a
         tuple of tensors or a tensor.
 
         As all of our Seq2xxxEncoders have different return types, we return `sorted`
-        outputs from the module which is called directly. Additionally, we return the
+        outputs from the module, which is called directly. Additionally, we return the
         indices into the batch dimension required to restore the tensor to it's correct,
         unsorted order and the number of valid batch elements (i.e the number of elements
         in the batch which are not completely masked). This un-sorting and re-padding
@@ -66,22 +62,26 @@ class _EncoderBase(torch.nn.Module):
             A tensor of shape ``(batch_size, sequence_length)``, representing masked and
             non-masked elements of the sequence for each element in the batch.
         hidden_state : ``Optional[RnnState]``, (default = None).
+            A single tensor of shape (num_layers, batch_size, hidden_size) representing the
+            state of an RNN with or a tuple of
+            tensors of shapes (num_layers, batch_size, hidden_size) and
+            (num_layers, batch_size, memory_size), representing the hidden state and memory
+            state of an LSTM-like RNN.
 
         Returns
         -------
         module_output : ``Union[torch.Tensor, PackedSequence]``.
             A Tensor or PackedSequence representing the output of the Pytorch Module.
+            The batch size dimension will be equal to ``num_valid``, as sequences of zero
+            length are clipped off before the module is called, as Pytorch cannot handle
+            zero length sequences.
         final_states : ``Optional[RnnState]``
             A Tensor representing the hidden state of the Pytorch Module. This can either
-            be a single tensor of shape (num_layers, batch_size, encoding_size), for instance in
+            be a single tensor of shape (num_layers, num_valid, hidden_size), for instance in
             the case of a GRU, or a tuple of tensors, such as those required for an LSTM.
         restoration_indices : ``torch.LongTensor``
             A tensor of shape ``(batch_size,)``, describing the re-indexing required to transform
             the outputs back to their original batch order.
-        num_valid : ``int``
-            The number of valid batches used in the call to the module. This is returned so
-            that the outputs of the module can be padded back to their original batch shape,
-            if we altered it due to fully padded batch elements.
         """
         # In some circumstances you may have sequences of zero length. ``pack_padded_sequence``
         # requires all sequence lengths to be > 0, so remove sequences of zero length before
@@ -108,13 +108,20 @@ class _EncoderBase(torch.nn.Module):
         # Actually call the module on the sorted PackedSequence.
         module_output, final_states = module(packed_sequence_input, initial_states)
 
-        return module_output, final_states, restoration_indices, num_valid
+        return module_output, final_states, restoration_indices
 
     def _get_initial_states(self,
                             batch_size: int,
                             num_valid: int,
                             sorting_indices: torch.LongTensor) -> Optional[RnnState]:
         """
+        Returns an initial state for use in an RNN. Additionally, this method handles
+        the batch size changing across calls by mutating the state to append initial states
+        for new elements in the batch. Finally, it also handles sorting the states
+        with respect to the sequence lengths of elements in the batch and removing rows
+        which are completely padded. Importantly, this `mutates` the state if the
+        current batch size is larger than when it was previously called.
+
         Parameters
         ----------
         batch_size : ``int``, required.
@@ -158,7 +165,7 @@ class _EncoderBase(torch.nn.Module):
             resized_states = []
             # state has shape (num_layers, batch_size, hidden_size)
             for state in self._states:
-                # This _must_ be inside the loop. because some
+                # This _must_ be inside the loop because some
                 # RNNs have states with different last dimension sizes.
                 zeros = state.data.new(state.size(0),
                                        num_states_to_concat,
@@ -211,32 +218,33 @@ class _EncoderBase(torch.nn.Module):
         """
         # TODO(Mark): seems weird to sort here, but append zeros in the subclasses.
         # which way around is best?
-        new_sorted_states = [state.index_select(1, restoration_indices)
-                             for state in final_states]
+        new_unsorted_states = [state.index_select(1, restoration_indices)
+                               for state in final_states]
 
         if self._states is None:
             # We don't already have states, so just set the
             # ones we receive to be the current state.
             self._states = tuple([torch.autograd.Variable(state.data)
-                                  for state in new_sorted_states])
+                                  for state in new_unsorted_states])
         else:
             # Now we've sorted the states back so that they correspond to the original
-            # indices, we need to figure out what states we need to update, because if
-            # didn't use a state for a particular row, we want to preserve it's state.
+            # indices, we need to figure out what states we need to update, because if we
+            # didn't use a state for a particular row, we want to preserve its state.
             # Thankfully, the rows which are all zero in the state correspond exactly
             # to those which aren't used, so we create masks of shape (new_batch_size,),
             # denoting which states were used in the RNN computation.
             current_state_batch_size = self._states[0].size(1)
             new_state_batch_size = final_states[0].size(1)
             # Masks for the unused states of shape (1, new_batch_size, 1)
-            used_new_rows_mask = [(state[0, :, :].sum(-1) != 0.0).float().view(1, -1, 1)
-                                  for state in new_sorted_states]
+            used_new_rows_mask = [(state[0, :, :].sum(-1)
+                                   != 0.0).float().view(1, new_state_batch_size, 1)
+                                  for state in new_unsorted_states]
             new_states = []
             if current_state_batch_size > new_state_batch_size:
                 # The new state is smaller than the old one,
                 # so just update the indices which we used.
                 for old_state, new_state, used_mask in zip(self._states,
-                                                           new_sorted_states,
+                                                           new_unsorted_states,
                                                            used_new_rows_mask):
                     # zero out all rows in the previous state
                     # which _were_ used in the current state.
@@ -250,7 +258,7 @@ class _EncoderBase(torch.nn.Module):
                 # deal with the possibility that some rows weren't used.
                 new_states = []
                 for old_state, new_state, used_mask in zip(self._states,
-                                                           new_sorted_states,
+                                                           new_unsorted_states,
                                                            used_new_rows_mask):
                     # zero out all rows which _were_ used in the current state.
                     masked_old_state = old_state * (1 - used_mask)

@@ -77,11 +77,12 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         batch_size, total_sequence_length = mask.size()
 
-        packed_sequence_output, final_states, restoration_indices, num_valid = \
+        packed_sequence_output, final_states, restoration_indices = \
             self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
         unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
 
+        num_valid = unpacked_sequence_tensor.size(0)
         # Some RNNs (GRUs) only return one state as a Tensor.  Others (LSTMs) return two.
         # If one state, use a single element list to handle in a consistent manner below.
         if not isinstance(final_states, (list, tuple)) and self._stateful:
