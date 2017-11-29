@@ -11,7 +11,7 @@ allennlp.modules
    allennlp.modules.attention
    allennlp.modules.augmented_lstm
    allennlp.modules.lstm_cell_with_projection
-   allennlp.modules.stacked_elmo_lstm
+   allennlp.modules.elmo_lstm
    allennlp.modules.conditional_random_field
    allennlp.modules.feedforward
    allennlp.modules.highway

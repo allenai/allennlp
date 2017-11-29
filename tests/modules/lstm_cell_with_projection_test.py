@@ -2,7 +2,7 @@
 import numpy
 import torch
 from torch.autograd import Variable
-from allennlp.modules.lstm_cell_with_projection import LSTMCellWithProjection
+from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -16,7 +16,7 @@ class TestLstmCellWithProjection(AllenNlpTestCase):
         initial_hidden_state = Variable(torch.ones([1, 4, 5]))
         initial_memory_state = Variable(torch.ones([1, 4, 7]))
 
-        lstm = LSTMCellWithProjection(input_size=3,
+        lstm = LstmCellWithProjection(input_size=3,
                                       hidden_size=5,
                                       cell_size=7,
                                       memory_cell_clip_value=2,

@@ -113,7 +113,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         tensor = Variable(tensor)
         sequence_lengths = Variable(torch.LongTensor([3, 4, 1, 5, 7]))
-        sorted_tensor, sorted_lengths, reverse_indices = util.sort_batch_by_length(tensor, sequence_lengths)
+        sorted_tensor, sorted_lengths, reverse_indices, _ = util.sort_batch_by_length(tensor, sequence_lengths)
 
         # Test sorted indices are padded correctly.
         numpy.testing.assert_array_equal(sorted_tensor[1, 5:, :].data.numpy(), 0.0)

@@ -5,17 +5,25 @@ A stacked bidirectional LSTM with skip connections between layers.
 from typing import Optional, Tuple, List
 import torch
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
-from allennlp.modules.lstm_cell_with_projection import LSTMCellWithProjection
+from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.encoder_base import _EncoderBase
 
 
-class ElmoLstm(torch.nn.Module):
+class ElmoLstm(_EncoderBase):
     """
     A stacked, bidirectional LSTM which uses
     :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`'s
     with highway layers between the inputs to layers.
     The inputs to the forward and backward directions are independent - forward and backward
     states are not concatenated between layers.
+
+    Additionally, this LSTM maintains its `own` state, which is updated every time
+    ``forward`` is called. It is dynamically resized for different batch sizes and is
+    designed for use with non-continuous inputs (i.e inputs which aren't formatted as a stream,
+    such as text used for a language modelling task, which is how stateful RNNs are typically used).
+    This is non-standard, but can be thought of as having an "end of sentence" state, which is
+    carried across different sentences.
 
     Parameters
     ----------
@@ -45,7 +53,7 @@ class ElmoLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  memory_cell_clip_value: Optional[float] = None,
                  state_projection_clip_value: Optional[float] = None) -> None:
-        super(ElmoLstm, self).__init__()
+        super(ElmoLstm, self).__init__(stateful=True)
 
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
@@ -59,14 +67,14 @@ class ElmoLstm(torch.nn.Module):
         lstm_input_size = input_size
         go_forward = True
         for layer_index in range(num_layers):
-            forward_layer = LSTMCellWithProjection(lstm_input_size,
+            forward_layer = LstmCellWithProjection(lstm_input_size,
                                                    hidden_size,
                                                    cell_size,
                                                    go_forward,
                                                    recurrent_dropout_probability,
                                                    memory_cell_clip_value,
                                                    state_projection_clip_value)
-            backward_layer = LSTMCellWithProjection(lstm_input_size,
+            backward_layer = LstmCellWithProjection(lstm_input_size,
                                                     hidden_size,
                                                     cell_size,
                                                     not go_forward,
@@ -83,16 +91,72 @@ class ElmoLstm(torch.nn.Module):
         self.backward_layers = backward_layers
 
     def forward(self,  # pylint: disable=arguments-differ
-                inputs: PackedSequence,
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Tuple[torch.Tensor,
-                                                                                            Tuple[torch.Tensor,
-                                                                                                  torch.Tensor]]:
+                inputs: torch.Tensor,
+                mask: torch.LongTensor) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        inputs : ``torch.Tensor``, required.
+            A Tensor of shape ``(batch_size, sequence_length, hidden_size)``.
+        mask : ``torch.LongTensor``, required.
+            A binary mask of shape ``(batch_size, sequence_length)`` representing the
+            non-padded elements in each sequence in the batch.
+
+        Returns
+        -------
+        A ``torch.Tensor`` of shape (num_layers, batch_size, sequence_length, hidden_size),
+        where the num_layers dimension represents the LSTM output from that layer.
+        """
+        batch_size, total_sequence_length = mask.size()
+        stacked_sequence_output, final_states, restoration_indices = \
+            self.sort_and_run_forward(self._lstm_forward, inputs, mask)
+
+        num_layers, num_valid, returned_timesteps, encoder_dim = stacked_sequence_output.size()
+        # Add back invalid rows which were removed in the call to sort_and_run_forward.
+        if num_valid < batch_size:
+            zeros = stacked_sequence_output.data.new(num_layers,
+                                                     batch_size - num_valid,
+                                                     returned_timesteps,
+                                                     encoder_dim).fill_(0)
+            stacked_sequence_output = torch.cat([stacked_sequence_output, zeros], 1)
+
+            # The states also need to have invalid rows added back.
+            new_states = []
+            for state in final_states:
+                state_dim = state.size(-1)
+                zeros = state.data.new(num_layers, batch_size - num_valid, state_dim).fill_(0)
+                new_states.append(torch.cat([state, zeros], 1))
+            final_states = new_states
+
+        # It's possible to need to pass sequences which are padded to longer than the
+        # max length of the sequence to a Seq2StackEncoder. However, packing and unpacking
+        # the sequences mean that the returned tensor won't include these dimensions, because
+        # the RNN did not need to process them. We add them back on in the form of zeros here.
+        sequence_length_difference = total_sequence_length - returned_timesteps
+        if sequence_length_difference > 0:
+            zeros = stacked_sequence_output.data.new(num_layers,
+                                                     batch_size,
+                                                     sequence_length_difference,
+                                                     stacked_sequence_output[0].size(-1)).fill_(0)
+            zeros = torch.autograd.Variable(zeros)
+            stacked_sequence_output = torch.cat([stacked_sequence_output, zeros], 2)
+
+        self._update_states(final_states, restoration_indices)
+
+        # Restore the original indices and return the sequence.
+        # Has shape (num_layers, batch_size, sequence_length, hidden_size)
+        return stacked_sequence_output.index_select(1, restoration_indices)
+
+    def _lstm_forward(self,
+                      inputs: PackedSequence,
+                      initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
+            Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Parameters
         ----------
         inputs : ``PackedSequence``, required.
             A batch first ``PackedSequence`` to run the stacked LSTM over.
-        initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
+        initial_state : ``Tuple[torch.Tensor, torch.Tensor]``, optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM, with shape (num_layers, batch_size, 2 * hidden_size) and
             (num_layers, batch_size, 2 * cell_size) respectively.

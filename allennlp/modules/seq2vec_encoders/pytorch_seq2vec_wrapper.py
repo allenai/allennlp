@@ -1,9 +1,7 @@
 import torch
-from torch.nn.utils.rnn import pack_padded_sequence
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
 
 
 class PytorchSeq2VecWrapper(Seq2VecEncoder):
@@ -38,7 +36,8 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     second parameter.
     """
     def __init__(self, module: torch.nn.modules.RNNBase) -> None:
-        super(PytorchSeq2VecWrapper, self).__init__()
+        # Seq2VecEncoders cannot be stateful.
+        super(PytorchSeq2VecWrapper, self).__init__(stateful=False)
         self._module = module
         try:
             if not self._module.batch_first:
@@ -68,48 +67,25 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             # at the end of the max sequence length, so we have to use the state of the RNN below.
             return self._module(inputs, hidden_state)[0][:, -1, :]
 
-        # In some circumstances you may have sequences of zero length. For example, if this is the
-        # embedding layer for a character-based encoding, the original input will have size
-        #   (batch_size, max_sentence_length, max_word_length, encoding_dim)
-        # and then ``TimeDistributed`` will reshape it to
-        #   (batch_size * max_sentence_length, max_word_length, encoding_dim)
-        # in which case all the rows corresponding to word padding will be
-        # "empty character sequences".
-        #
-        # ``pack_padded_sequence`` requires all sequence lengths to be > 0, so here we
-        # adjust the ``mask`` so that every sequence has length at least 1. Then after
-        # running the RNN we zero out the corresponding rows in the result.
+        batch_size = mask.size(0)
 
-        # First count how many sequences are empty.
-        batch_size = mask.size()[0]
-        num_valid = torch.sum(mask[:, 0]).int().data[0]
-
-        # Force every sequence to be length at least one. Need to `.clone()` the mask
-        # to avoid a RuntimeError from shared storage.
-        if num_valid < batch_size:
-            mask = mask.clone()
-            mask[:, 0] = 1
-
-        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        sorted_inputs, sorted_sequence_lengths, restoration_indices = sort_batch_by_length(inputs,
-                                                                                           sequence_lengths)
-
-        packed_sequence_input = pack_padded_sequence(sorted_inputs,
-                                                     sorted_sequence_lengths.data.tolist(),
-                                                     batch_first=True)
-
-        # Actually call the module on the sorted PackedSequence.
-        _, state = self._module(packed_sequence_input, hidden_state)
+        _, state, restoration_indices, = \
+            self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
         # Deal with the fact the LSTM state is a tuple of (state, memory).
         if isinstance(state, tuple):
             state = state[0]
 
-        # We sorted by length, so if there are invalid rows that need to be zeroed out
-        # they will be at the end. Note that at this point batch_size is the second
-        # dimension of state.
+        num_layers_times_directions, num_valid, encoding_dim = state.size()
+        # Add back invalid rows.
         if num_valid < batch_size:
-            state[:, num_valid:, :] = 0.
+            # batch size is the second dimension here, because pytorch
+            # returns RNN state as a tensor of shape (num_layers * num_directions,
+            # batch_size, hidden_size)
+            zeros = state.data.new(num_layers_times_directions,
+                                   batch_size - num_valid,
+                                   encoding_dim).fill_(0)
+            state = torch.cat([state, zeros], 1)
 
         # Restore the original indices and return the final state of the
         # top layer. Pytorch's recurrent layers return state in the form
