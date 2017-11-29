@@ -39,3 +39,10 @@ python -m allennlp.run serve
 ```
 
 You may need to force refresh your web browser.
+
+If you are developing the Javascript, then you will want to run that portion
+through npm itself.  This way the browser will refresh after each code change.
+
+```
+npm start
+```
