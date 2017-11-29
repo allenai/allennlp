@@ -44,7 +44,7 @@ spec:
         app: allennlp-demo-prod
     spec:
       containers:
-        - name: allennlp-demo-prod
+        - name: allennlp
           image: "$CONTAINER"
           # See
           # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
