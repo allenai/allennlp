@@ -57,7 +57,7 @@ def main(serialization_directory, device):
         sentence = fields["tokens"].tokens
 
         write_to_conll_eval_file(prediction_file, gold_file,
-                                 verb_index, sentence, gold_tags, predicted_tags)
+                                 verb_index, sentence, predicted_tags, gold_tags)
     prediction_file.close()
     gold_file.close()
 

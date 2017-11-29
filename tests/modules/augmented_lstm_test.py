@@ -27,7 +27,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         self.sequence_lengths = sequence_lengths
 
     def test_variable_length_sequences_return_correctly_padded_outputs(self):
-        sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
+        sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
         tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
         lstm = AugmentedLstm(10, 11)
         output, _ = lstm(tensor)
@@ -39,7 +39,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         numpy.testing.assert_array_equal(output_sequence.data[4, 2:, :].numpy(), 0.0)
 
     def test_variable_length_sequences_run_backward_return_correctly_padded_outputs(self):
-        sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
+        sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
         tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
         lstm = AugmentedLstm(10, 11, go_forward=False)
         output, _ = lstm(tensor)
@@ -62,7 +62,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         initial_memory = torch.autograd.Variable(torch.zeros([1, 5, 11]))
 
         # Use bigger numbers to avoid floating point instability.
-        sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor * 5., self.sequence_lengths)
+        sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(self.random_tensor * 5., self.sequence_lengths)
         lstm_input = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
 
         augmented_output, augmented_state = augmented_lstm(lstm_input, (initial_state, initial_memory))
@@ -79,7 +79,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
 
     def test_augmented_lstm_works_with_highway_connections(self):
         augmented_lstm = AugmentedLstm(10, 11, use_highway=True)
-        sorted_tensor, sorted_sequence, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
+        sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
         lstm_input = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
         augmented_lstm(lstm_input)
 

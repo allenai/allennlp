@@ -12,7 +12,7 @@ from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
 
 
-class LSTMCellWithProjection(torch.nn.Module):
+class LstmCellWithProjection(torch.nn.Module):
     """
     An LSTM with Recurrent Dropout and a projected and clipped hidden state and
     memory. Note: this implementation is slower than the native Pytorch LSTM because
@@ -62,7 +62,7 @@ class LSTMCellWithProjection(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  memory_cell_clip_value: Optional[float] = None,
                  state_projection_clip_value: Optional[float] = None) -> None:
-        super(LSTMCellWithProjection, self).__init__()
+        super(LstmCellWithProjection, self).__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
