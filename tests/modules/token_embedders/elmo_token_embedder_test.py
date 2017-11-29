@@ -24,12 +24,12 @@ class TestELMoTokenEmbedder(AllenNlpTestCase):
 
         indexer = ELMoTokenCharactersIndexer()
         indices = [indexer.token_to_indices(Token(token), Vocabulary()) for token in tokens]
-        # There are 448 tokens. Reshape into 10 batches of 45 tokens.
+        # There are 457 tokens. Reshape into 10 batches of 50 tokens.
         sentences = []
         for k in range(10):
             sentences.append(
                     indexer.pad_token_sequence(
-                            indices[(k * 45):((k + 1) * 45)], desired_num_tokens=45, padding_lengths={}
+                            indices[(k * 50):((k + 1) * 50)], desired_num_tokens=50, padding_lengths={}
                     )
             )
         batch = Variable(torch.from_numpy(numpy.array(sentences)))
