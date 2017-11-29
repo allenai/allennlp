@@ -90,6 +90,7 @@ class PostgresDemoDatabase(DemoDatabase):
                                          password=self.password,
                                          dbname=self.dbname,
                                          connect_timeout=5)
+            self.conn.set_session(autocommit=True)
             logger.info("successfully initialized database connection")
         except psycopg2.Error as error:
             logger.exception("unable to connect to database")
