@@ -20,7 +20,6 @@ which to write the results.
 """
 from typing import Dict
 import argparse
-import itertools
 import json
 import logging
 import os
@@ -29,6 +28,7 @@ from copy import deepcopy
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.common.util import prepare_environment
@@ -145,15 +145,11 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     else:
         test_data = None
 
-    # powerset (all permutations of all lengths) of the 3 possible options
-    # with the one containing the largest allowed set of keys given the datasets
-    # that were passed in the first position, which we use by default.
-    allowed_combinations = itertools.chain.from_iterable(itertools.permutations(all_datasets.keys(), i)
-                                                         for i in [3, 2, 1])
+    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
-    datasets_for_vocab_creation = params.pop_choice("datasets_for_vocab_creation",
-                                                    [list(x) for x in allowed_combinations],
-                                                    default_to_first_choice=True)
+    for dataset in datasets_for_vocab_creation:
+        if dataset not in all_datasets:
+            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
