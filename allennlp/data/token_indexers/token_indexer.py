@@ -63,7 +63,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         input text.  If the input token list is longer than ``desired_num_tokens`` then it will be
         truncated.
 
-        ``padding_lengths`` is used to provide supplemental padding parameters which is needed
+        ``padding_lengths`` is used to provide supplemental padding parameters which are needed
         in some cases.  For example, it contains the widths to pad characters to when doing
         character-level padding.
         """
