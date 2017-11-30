@@ -29,8 +29,8 @@ DTYPE = 'float32'
 # pylint: disable=attribute-defined-outside-init
 
 
-@TokenEmbedder.register("elmo_token_embedder")
-class ELMoTokenEmbedder(TokenEmbedder):
+@TokenEmbedder.register("_private_elmo_token_representation")
+class _ElmoTokenRepresentation(TokenEmbedder):
     """
     Compute context sensitive token representation using pretrained biLM.
 
@@ -40,6 +40,9 @@ class ELMoTokenEmbedder(TokenEmbedder):
 
     We add special entries at the beginning and end of each sequence corresponding
     to <S> and </S>, the beginning and end of sentence tokens.
+
+    Note: this is a lower level class useful for advanced usage.  Most users should
+    use ``ElmoTokenEmbedder`` or ``allennlp.modules.Elmo`` instead.
 
     Parameters
     ----------
@@ -68,7 +71,7 @@ class ELMoTokenEmbedder(TokenEmbedder):
     def __init__(self,
                  options_file: str,
                  weight_file: str) -> None:
-        super(ELMoTokenEmbedder, self).__init__()
+        super(_ElmoTokenRepresentation, self).__init__()
 
         with open(cached_path(options_file), 'r') as fin:
             self._options = json.load(fin)
@@ -260,7 +263,7 @@ class ELMoTokenEmbedder(TokenEmbedder):
             self._projection.bias.requires_grad = False
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'ELMoTokenEmbedder':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> '_ElmoTokenRepresentation':
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
         params.assert_empty(cls.__name__)

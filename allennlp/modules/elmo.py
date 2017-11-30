@@ -7,7 +7,7 @@ import numpy
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Registrable, Params
-from allennlp.modules.token_embedders.elmo_token_embedder import ELMoTokenEmbedder
+from allennlp.modules.token_embedders.elmo_token_embedder import _ElmoTokenRepresentation
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries
@@ -117,7 +117,7 @@ class _ElmoBiLm(torch.nn.Module):
                  weight_file: str) -> None:
         super(_ElmoBiLm, self).__init__()
 
-        self._token_embedder = ELMoTokenEmbedder(options_file, weight_file)
+        self._token_embedder = _ElmoTokenRepresentation(options_file, weight_file)
         self.add_module('elmo_token_embedder', self._token_embedder)
 
         with open(cached_path(options_file), 'r') as fin:
