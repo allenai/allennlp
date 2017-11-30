@@ -8,11 +8,14 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import ModelTestCase
+from allennlp.common.checks import ConfigurationError
+from allennlp.nn.util import arrays_to_variables
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
-from allennlp.modules.elmo import _ElmoBiLm, Elmo
-from allennlp.data.fields import TextField
 from allennlp.data import Token, Vocabulary, Dataset, Instance
 from allennlp.data.iterators import BasicIterator
+from allennlp.modules.elmo import _ElmoBiLm, Elmo
+from allennlp.data.fields import TextField
 
 FIXTURES = os.path.join('tests', 'fixtures', 'elmo')
 
@@ -127,3 +130,25 @@ class TestElmo(AllenNlpTestCase):
         assert list(elmo_representations[0].size()) == [2, 7, 32]
         assert list(elmo_representations[1].size()) == [2, 7, 32]
         assert list(mask.size()) == [2, 7]
+
+
+class TestElmoTokenEmbedder(ModelTestCase):
+    def setUp(self):
+        super().setUp()
+        self.set_up_model('tests/fixtures/elmo/config/characters_token_embedder.json',
+                          'tests/fixtures/data/conll2003.txt')
+
+    def test_tagger_with_elmo_token_embedder_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(self.param_file)
+
+    def test_tagger_with_elmo_token_embedder_forward_pass_runs_correctly(self):
+        training_arrays = self.dataset.as_array_dict()
+        output_dict = self.model.forward(**arrays_to_variables(training_arrays))
+        tags = output_dict['tags']
+        assert len(tags) == 2
+        assert len(tags[0]) == 7
+        assert len(tags[1]) == 7
+        for example_tags in tags:
+            for tag_id in example_tags:
+                tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
+                assert tag in {'O', 'I-ORG', 'I-PER', 'I-LOC'}

@@ -8,9 +8,11 @@ from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Registrable, Params
 from allennlp.modules.token_embedders.elmo_token_embedder import _ElmoTokenRepresentation
+from allennlp.modules.token_embedders import TokenEmbedder
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries
+from allennlp.data import Vocabulary
 
 
 @Registrable.register('elmo')
@@ -48,7 +50,7 @@ class Elmo(torch.nn.Module, Registrable):
         super(Elmo, self).__init__()
 
         self._elmo_lstm = _ElmoBiLm(options_file, weight_file)
-        self.add_module('elmo_lstm', self._elmo_lstm)
+        #self.add_module('elmo_lstm', self._elmo_lstm)
 
         self._scalar_mixes = []
         for k in range(num_elmo_layers):
@@ -97,6 +99,60 @@ class Elmo(torch.nn.Module, Registrable):
         return cls(options_file, weight_file, num_elmo_layers, do_layer_norm)
 
 
+@TokenEmbedder.register("elmo_token_embedder")
+class ElmoTokenEmbedder(TokenEmbedder):
+    """
+    Compute a single layer of ELMo representations.
+
+    This class servers as a convenience when you only want to use one layer of
+    ELMo representations at the input of your network.  It's essentially a wrapper
+    around Elmo(num_elmo_layers=1, ...)
+
+    Parameters
+    ----------
+    options_file : str
+        ELMo JSON options file
+    weight_file : str
+        ELMo hdf5 weight file
+    do_layer_norm: bool
+        Should we apply layer normalization (passed to ``ScalarMix``)?
+    """
+    def __init__(self,
+                 options_file: str,
+                 weight_file: str,
+                 do_layer_norm: bool=False) -> None:
+        super(ElmoTokenEmbedder, self).__init__()
+
+        self._elmo = Elmo(options_file, weight_file, 1, do_layer_norm=do_layer_norm)
+        #self.add_module('elmo', self._elmo)
+
+    def get_output_dim(self):
+        return 2 * self._elmo._elmo_lstm._token_embedder.get_output_dim()
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        inputs: ``torch.autograd.Variable``
+            Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
+
+        Returns
+        -------
+        The ELMo representations for the input sequence, shape
+        ``(batch_size, timesteps, embedding_dim)``
+        """
+        elmo_output = self._elmo(inputs)
+        return elmo_output['elmo'][0]
+
+    @classmethod
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'ElmoTokenEmbedder':
+        options_file = params.pop('options_file')
+        weight_file = params.pop('weight_file')
+        do_layer_norm = params.pop('do_layer_norm', False)
+        params.assert_empty(cls.__name__)
+        return cls(options_file, weight_file, do_layer_norm)
+
+
 class _ElmoBiLm(torch.nn.Module):
     """
     Run a pre-trained bidirectional language model, outputing the activations at each
@@ -118,7 +174,7 @@ class _ElmoBiLm(torch.nn.Module):
         super(_ElmoBiLm, self).__init__()
 
         self._token_embedder = _ElmoTokenRepresentation(options_file, weight_file)
-        self.add_module('elmo_token_embedder', self._token_embedder)
+        #self.add_module('elmo_token_embedder', self._token_embedder)
 
         with open(cached_path(options_file), 'r') as fin:
             options = json.load(fin)
@@ -131,7 +187,7 @@ class _ElmoBiLm(torch.nn.Module):
                                 memory_cell_clip_value=options['lstm']['cell_clip'],
                                 state_projection_clip_value=options['lstm']['proj_clip'])
         self._elmo_lstm._load_weights(weight_file)
-        self.add_module('elmo_lstm', self._elmo_lstm)
+        #self.add_module('elmo_lstm', self._elmo_lstm)
         # Number of representation layers including context independent layer
         self.num_layers = options['lstm']['n_layers'] + 1
 

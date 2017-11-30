@@ -276,3 +276,10 @@ class _EncoderBase(torch.nn.Module):
             # the new states are either of equal size, or smaller, in the case
             # that there are some unused elements (zero-length) for the RNN computation.
             self._states = tuple(new_states)
+
+    @property
+    def stateful(self):
+        return self._stateful
+
+    def reset_states(self):
+        self._states = None
