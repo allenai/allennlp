@@ -47,10 +47,10 @@ class TokenIndexer(Generic[TokenType], Registrable):
 
     def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
         """
-        This method returns a padding dictionary for the given token which provides additional
-        information during pad_token_sequence.  For example, for single ID tokens the returned
-        dictionary will be empty, but for a token characters representation, this will return the
-        number of characters in the token.
+        This method returns a padding dictionary for the given token that specifies lengths for 
+        all arrays that need padding.  For example, for single ID tokens the returned dictionary
+        will be empty, but for a token characters representation, this will return the number 
+        of characters in the token.
         """
         raise NotImplementedError
 
