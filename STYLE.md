@@ -10,6 +10,21 @@ In code that manipulates tensors, most lines that compute a tensor have a commen
 tensor's shape.  When there's an interesting or important modeling decision in the code, we write
 a comment about it (either in-line or in an appropriate docstring).
 
+## Docstrings
+
+All reasonably complex public methods should have docstrings describing their basic function, their
+inputs and their outputs.  Private methods should also most often have docstrings, so that people
+who read your code know what the method is supposed to do.  The basic outline we use for docstrings
+is: (1) a brief description of what the method does, sometimes also including how or why the method
+does it, (2) the parameters / arguments to the method, (3) the return value of the method, if any.
+If the method is particularly simple or the arguments are obvious, (2) and (3) can be omitted.  We
+use [numpydoc](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt) to produce
+our documentation, so function arguments and return values should be formatted as shown in the link
+(or as seen in just about any model or module in the codebase).  We treat the class docstring as
+the documentation for `__init__` methods, giving parameters there and omitting any docstring on the
+constructor itself.  For model / module constructors and methods like `forward`, _always_ include
+the parameters and return values (when there is one) in the docstring.
+
 ## Code format
 
 We use pylint to enforce some basic consistency in formatting.  Those formatting guidelines roughly
