@@ -399,7 +399,9 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         # TODO(mattg): these static methods probably belong in some other class.
         if production[0] == '<':
             return True
-        if production.startswith('cell'):
+        if production.startswith('fb:'):
+            return False
+        if len(production) > 1 or production == "x":
             return False
         return production[0].islower()
 

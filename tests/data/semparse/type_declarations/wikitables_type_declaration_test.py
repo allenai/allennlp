@@ -1,15 +1,9 @@
 # pylint: disable=no-self-use
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
-
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestPlaceholderTypeResolution(AllenNlpTestCase):
-    def test_basic_types_conflict_on_names(self):
-        type_a = types.NamedBasicType("A")
-        type_b = types.NamedBasicType("B")
-        assert type_a.resolve(type_b) is None
-
     def test_reverse_resolves_correctly(self):
         assert types.REVERSE_TYPE.resolve(types.CELL_TYPE) is None
 
