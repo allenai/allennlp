@@ -1,16 +1,13 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import os
-import h5py
 import json
 
+import h5py
 import numpy
 import torch
 from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.testing import ModelTestCase
-from allennlp.common.checks import ConfigurationError
-from allennlp.nn.util import arrays_to_variables
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data import Token, Vocabulary, Dataset, Instance
 from allennlp.data.iterators import BasicIterator
@@ -26,23 +23,23 @@ class TestElmoBiLm(AllenNlpTestCase):
             # load the test sentences and the expected LM embeddings
             with open(os.path.join(FIXTURES, 'sentences.json')) as fin:
                 sentences = json.load(fin)
-        
+
             # the expected embeddings
             expected_lm_embeddings = []
             for k in range(len(sentences)):
                 embed_fname = os.path.join(
-                    FIXTURES, 'lm_embeddings_{}.hdf5'.format(k)
+                        FIXTURES, 'lm_embeddings_{}.hdf5'.format(k)
                 )
                 expected_lm_embeddings.append([])
                 with h5py.File(embed_fname, 'r') as fin:
                     for i in range(10):
                         sent_embeds = fin['%s' % i][...]
                         sent_embeds_concat = numpy.concatenate(
-                            (sent_embeds[0, :, :], sent_embeds[1, :, :]),
-                            axis=-1
+                                (sent_embeds[0, :, :], sent_embeds[1, :, :]),
+                                axis=-1
                         )
                         expected_lm_embeddings[-1].append(sent_embeds_concat)
-        
+
             return sentences, expected_lm_embeddings
 
         # get the raw data
@@ -68,7 +65,7 @@ class TestElmoBiLm(AllenNlpTestCase):
         dataset = Dataset(instances)
         vocab = Vocabulary()
         dataset.index_instances(vocab)
-    
+
         # Now finally we can iterate through batches.
         iterator = BasicIterator(3)
         for i, batch in enumerate(iterator(dataset, num_epochs=1, shuffle=False)):
@@ -89,11 +86,11 @@ class TestElmoBiLm(AllenNlpTestCase):
             expected_top_layer = [expected_lm_embeddings[k][i] for k in range(3)]
             for k in range(3):
                 self.assertTrue(
-                    numpy.allclose(
-                        top_layer_embeddings[k, 1:(lengths[k] - 1), :],
-                        expected_top_layer[k],
-                        atol=1.0e-6
-                    )
+                        numpy.allclose(
+                                top_layer_embeddings[k, 1:(lengths[k] - 1), :],
+                                expected_top_layer[k],
+                                atol=1.0e-6
+                        )
                 )
 
 class TestElmo(AllenNlpTestCase):
