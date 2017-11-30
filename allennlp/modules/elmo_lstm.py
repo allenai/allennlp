@@ -3,10 +3,12 @@ A stacked bidirectional LSTM with skip connections between layers.
 """
 
 from typing import Optional, Tuple, List
+
 import torch
+from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
 import h5py
 import numpy
-from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
+
 from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.encoder_base import _EncoderBase
