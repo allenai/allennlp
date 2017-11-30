@@ -16,11 +16,12 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
         question_tokens = ["what", "was", "the", "last", "year", "where", "this", "team", "was",
                            "a", "part", "of", "the", "usl", "a", "-", "league", "?"]
         assert [t.text for t in instance.fields["question"].tokens] == question_tokens
-        assert actions == ['@@START@@', 'd', 'd -> [<d,d>, d]', '<d,d> -> M0', 'd -> [<e,d>, e]',
-                           '<e,d> -> [<<#1,#2>,<#2,#1>>, <d,e>]', '<<#1,#2>,<#2,#1>> -> R',
-                           '<d,e> -> D1', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
-                           '<<#1,#2>,<#2,#1>> -> R', '<e,r> -> C0', 'r -> [<e,r>, e]', '<e,r> -> C1',
-                           'e -> cell:usl_a_league', '@@END@@']
+        assert actions == ['@@START@@', 'd', 'd -> [<d,d>, d]', '<d,d> -> max', 'd -> [<e,d>, e]',
+                           '<e,d> -> [<<#1,#2>,<#2,#1>>, <d,e>]', '<<#1,#2>,<#2,#1>> -> reverse',
+                           '<d,e> -> fb:cell.cell.date', 'e -> [<r,e>, r]',
+                           '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]', '<<#1,#2>,<#2,#1>> -> reverse',
+                           '<e,r> -> fb:row.row.year', 'r -> [<e,r>, e]', '<e,r> -> fb:row.row.league',
+                           'e -> fb:cell.usl_a_league', '@@END@@']
         entities = instance.fields['table'].knowledge_graph.get_all_entities()
         assert len(entities) == 47
         assert 'fb:row.row.year' in entities
