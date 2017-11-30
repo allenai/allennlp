@@ -6,13 +6,15 @@ import numpy
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
+from allennlp.common import Registrable, Params
 from allennlp.modules.token_embedders.elmo_token_embedder import ELMoTokenEmbedder
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries
 
 
-class Elmo(torch.nn.Module):
+@Registrable.register('elmo')
+class Elmo(torch.nn.Module, Registrable):
     """
     Compute ELMo representations using a pre-trained bidirectional language model.
 
@@ -84,6 +86,15 @@ class Elmo(torch.nn.Module):
             elmo_representations.append(representation_without_bos_eos)
 
         return {'elmo': elmo_representations, 'mask': mask_without_bos_eos}
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'Elmo':
+        options_file = params.pop('options_file')
+        weight_file = params.pop('weight_file')
+        num_elmo_layers = params.pop('num_elmo_layers')
+        do_layer_norm = params.pop('do_layer_norm', False)
+        params.assert_empty(cls.__name__)
+        return cls(options_file, weight_file, num_elmo_layers, do_layer_norm)
 
 
 class _ElmoBiLm(torch.nn.Module):
