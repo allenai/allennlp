@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use
+# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import ModelTestCase
 from allennlp.nn.util import arrays_to_variables
 
@@ -22,4 +22,3 @@ class TestElmoTokenEmbedder(ModelTestCase):
             for tag_id in example_tags:
                 tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
                 assert tag in {'O', 'I-ORG', 'I-PER', 'I-LOC'}
-
