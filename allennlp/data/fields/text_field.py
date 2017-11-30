@@ -57,11 +57,11 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-    """
-    The ``TextField`` has a list of ``Tokens``, and each ``Token`` gets converted into arrays by
-    (potentially) several ``TokenIndexers``.  This method gets the max length (over tokens)
-    associated with each of these arrays.
-    """
+        """
+        The ``TextField`` has a list of ``Tokens``, and each ``Token`` gets converted into arrays by
+        (potentially) several ``TokenIndexers``.  This method gets the max length (over tokens)
+        associated with each of these arrays.
+        """
         # Our basic outline: we will iterate over `TokenIndexers`, and aggregate lengths over tokens
         # for each indexer separately.  Then we will combine the results for each indexer into a single
         # dictionary, resolving any (unlikely) key conflicts by taking a max.
