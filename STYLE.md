@@ -1,9 +1,9 @@
 # AllenNLP Style Guide
 
-Our highest priority in writing code (other than correctness) is that our code be easily readable
-to someone new to the codebase.  Deep learning is easy to get wrong, and we want our code to be
-easy enough to read that someone looking at it can be thinking about our modeling decisions, not
-trying to understand what is going on.
+Our highest priority for code style is that our code be easily readable to someone new to the
+codebase.  Deep learning is easy to get wrong, and we want our code to be easy enough to read that
+someone looking at it can be thinking about our modeling decisions, not trying to understand what
+is going on.
 
 To that end, we use descriptive names, we use type annotations, and we write coherent docstrings.
 In code that manipulates tensors, most lines that compute a tensor have a comment describing the
