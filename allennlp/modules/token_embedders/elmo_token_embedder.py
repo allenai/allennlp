@@ -33,9 +33,10 @@ class ElmoTokenEmbedder(TokenEmbedder):
         self._elmo = Elmo(options_file, weight_file, 1, do_layer_norm=do_layer_norm)
 
     def get_output_dim(self):
+        # pylint: disable=protected-access
         return 2 * self._elmo._elmo_lstm._token_embedder.get_output_dim()
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor: # pylint: disable=arguments-differ
         """
         Parameters
         ----------
