@@ -7,13 +7,11 @@ from allennlp.data.fields.field import Field
 
 
 class ArrayField(Field[numpy.ndarray]):
-
     """
     A class representing an array, which could have arbitrary dimensions.
     A batch of these arrays are padded to the max dimension length in the batch
     for each dimension.
     """
-
     def __init__(self, array: numpy.ndarray, padding_value: int = 0) -> None:
         self.array = array
         self.padding_value = padding_value
@@ -41,6 +39,5 @@ class ArrayField(Field[numpy.ndarray]):
         return return_array
 
     @overrides
-    def empty_field(self):
+    def empty_field(self):  # pylint: disable=no-self-use
         return ArrayField(numpy.array([], dtype="float32"))
-

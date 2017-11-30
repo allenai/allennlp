@@ -1,7 +1,9 @@
+# pylint: disable=no-self-use,invalid-name
 import numpy
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data.fields import ArrayField, ListField
+
 
 class TestArrayField(AllenNlpTestCase):
 
