@@ -78,7 +78,8 @@ def pad_sequence_to_length(sequence: List,
 
     default_value: Callable, default=lambda: 0
         Callable that outputs a default value (of any type) to use as padding values.  This is
-        a lambda to allow for repeated object creation.
+        a lambda to avoid using the same object when the default value is more complex, like a
+        list.
 
     padding_on_right : bool, default=True
         When we add padding tokens (or truncate the sequence), should we do it on the right or
