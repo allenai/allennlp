@@ -89,12 +89,12 @@ def pad_sequence_to_length(sequence: List,
     -------
     padded_sequence : List
     """
-    # Truncate the sequence to the desired length
+    # Truncates the sequence to the desired length.
     if padding_on_right:
         padded_sequence = sequence[:desired_length]
     else:
         padded_sequence = sequence[-desired_length:]
-    # Keep padding with default_value() until we reach the desired length.
+    # Continues to pad with default_value() until we reach the desired length.
     for _ in range(desired_length - len(padded_sequence)):
         if padding_on_right:
             padded_sequence.append(default_value())
