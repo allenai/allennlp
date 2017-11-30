@@ -60,7 +60,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
                            padding_lengths: Dict[str, int]) -> List[TokenType]:
         """
         This method pads a list of tokens to ``desired_num_tokens`` and returns a padded copy of the
-        input text.  If the input token list is longer than ``desired_num_tokens`` then it will be
+        input tokens.  If the input token list is longer than ``desired_num_tokens`` then it will be
         truncated.
 
         ``padding_lengths`` is used to provide supplemental padding parameters which are needed
