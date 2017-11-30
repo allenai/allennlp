@@ -231,7 +231,7 @@ class ElmoLstm(_EncoderBase):
                                                        torch.cat(final_memory_states, 0))
         return stacked_sequence_outputs, final_state_tuple
 
-    def _load_weights(self, weight_file: str) -> None:
+    def load_weights(self, weight_file: str) -> None:
         """
         Load the pre-trained weights from the file.
         """

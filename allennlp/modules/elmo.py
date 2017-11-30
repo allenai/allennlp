@@ -1,8 +1,10 @@
 import json
+
 from typing import Union, List, Dict
 
 import torch
 from torch.autograd import Variable
+
 import numpy
 import h5py
 
@@ -63,7 +65,8 @@ class Elmo(torch.nn.Module, Registrable):
             self.add_module('scalar_mix_{}'.format(k), scalar_mix)
             self._scalar_mixes.append(scalar_mix)
 
-    def forward(self, inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
+    def forward(self,    # pylint: disable=arguments-differ
+                inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
         Parameters
         ----------
@@ -337,6 +340,7 @@ class _ElmoTokenRepresentation(torch.nn.Module):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> '_ElmoTokenRepresentation':
+        # pylint: disable=unused-argument
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
         params.assert_empty(cls.__name__)
@@ -375,7 +379,7 @@ class _ElmoBiLm(torch.nn.Module):
                                    num_layers=options['lstm']['n_layers'],
                                    memory_cell_clip_value=options['lstm']['cell_clip'],
                                    state_projection_clip_value=options['lstm']['proj_clip'])
-        self._elmo_lstm._load_weights(weight_file)
+        self._elmo_lstm.load_weights(weight_file)
         # Number of representation layers including context independent layer
         self.num_layers = options['lstm']['n_layers'] + 1
 
