@@ -7,7 +7,8 @@ improvements:
 We also extend NLTK's ``LogicParser`` to define a ``DynamicTypeLogicParser`` that knows how to deal with the
 two improvements above.
 """
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, List, Tuple, Union
+from collections import defaultdict
 from overrides import overrides
 
 from nltk.sem.logic import Expression, ApplicationExpression, ConstantExpression, LogicParser, Variable
@@ -118,6 +119,8 @@ class PlaceholderType(ComplexType):
             return ANY_TYPE.str()
         else:
             return self._signature
+
+    __hash__ = ComplexType.__hash__
 
 
 class IdentityType(PlaceholderType):
@@ -254,3 +257,108 @@ class DynamicTypeLogicParser(LogicParser):
             else:
                 raise RuntimeError("Unknown prefix: %s. Did you forget to pass it to the constructor?" % prefix)
         return super(DynamicTypeLogicParser, self).make_VariableExpression(name)
+
+
+def _substitute_any_type(_type: Type, basic_types: Set[BasicType]) -> Set[Type]:
+    """
+    Takes a type, and a set of basic types and substitutes all instances of ANY_TYPE with all possible basic
+    types, and returns a set with all possible combinations.
+    Note that this substitution is unconstrained. That is, If you have a type with placeholders,
+    <#1,#1> for example, this may substitute the placeholders with different basic types. In that case, you'd
+    want to use ``_substitute_placeholder_type`` instead.
+    """
+    if _type == ANY_TYPE:
+        return basic_types
+    if isinstance(_type, (BasicType, PlaceholderType)):
+        return set([_type])
+    if isinstance(_type, ComplexType):
+        substitutions = set()
+        for first_type in _substitute_any_type(_type.first, basic_types):
+            for second_type in _substitute_any_type(_type.second, basic_types):
+                substitutions.add(ComplexType(first_type, second_type))
+        return substitutions
+
+
+def _substitute_placeholder_type(_type: Type, basic_type: BasicType) -> Type:
+    """
+    Takes a type with placeholders, and a basic type and substitutes all occurrences of the placeholder with
+    that type.
+    """
+    # TODO (pradeep): This assumes there's just one placeholder in the type. So this doesn't work with
+    # ``reverse`` yet, which has two placeholders.
+    if _type == ANY_TYPE:
+        return basic_type
+    if isinstance(_type, BasicType):
+        return _type
+    if isinstance(_type, ComplexType):
+        return ComplexType(_substitute_placeholder_type(_type.first, basic_type),
+                           _substitute_placeholder_type(_type.second, basic_type))
+
+
+def _make_production_string(source: Type, target: Union[List[Type], Type]) -> str:
+    return "%s -> %s" % (str(source), str(target))
+
+
+def _get_complex_type_productions(complex_type: ComplexType) -> List[Tuple[str, str]]:
+    """
+    Takes a complex type without any placeholders and returns all productions that lead to it, starting
+    from the most basic return type. For example, if the complex is `<a,<<b,c>,d>>`, this gives the
+    following tuples
+    ('<<b,c>,d>', '<<b,c>,d> -> [<a,<<b,c>,d>>, a]')
+    ('d', 'd -> [<<b,c>,d>, <b,c>]')
+    """
+    all_productions = []
+    while isinstance(complex_type, ComplexType) and not complex_type == ANY_TYPE:
+        all_productions.append((str(complex_type.second), _make_production_string(complex_type.second,
+                                                                                  [complex_type,
+                                                                                   complex_type.first])))
+        complex_type = complex_type.second
+    return all_productions
+
+
+def get_valid_actions(name_mapping: Dict[str, str],
+                      type_signatures: Dict[str, Type],
+                      basic_types: Set[Type]) -> Dict[str, Set[str]]:
+    """
+    Generates all the valid actions starting from each non-terminal.
+    """
+    valid_actions = defaultdict(set)
+
+    complex_types = set()
+    for name, alias in name_mapping.items():
+        if not alias in type_signatures:
+            continue
+        name_type = type_signatures[alias]
+        for substituted_type in _substitute_any_type(name_type, basic_types):
+            valid_actions[str(substituted_type)].add(_make_production_string(substituted_type, name))
+        if isinstance(name_type, ComplexType) and name_type != ANY_TYPE:
+            complex_types.add(name_type)
+
+    for complex_type in complex_types:
+        if isinstance(complex_type, PlaceholderType):
+            if complex_type.first == ANY_TYPE:
+                for basic_type in basic_types:
+                    try:
+                        application_type = complex_type.get_application_type(basic_type)
+                    except AttributeError:
+                        # TODO (pradeep): This means this is a reversetype, which we do not deal with yet.
+                        pass
+                    valid_actions[str(application_type)].add(_make_production_string(application_type,
+                                                                                     [complex_type, basic_type]))
+                    for head, production in _get_complex_type_productions(application_type):
+                        valid_actions[head].add(production)
+            else:
+                for basic_type in basic_types:
+                    second_type = _substitute_placeholder_type(complex_type.second, basic_type)
+                    production_string = _make_production_string(second_type, [complex_type, complex_type.first])
+                    valid_actions[str(second_type)].add(production_string)
+                    for head, production in _get_complex_type_productions(second_type):
+                        valid_actions[head].add(production)
+        else:
+            for substituted_type in _substitute_any_type(complex_type, basic_types):
+                production_string = _make_production_string(substituted_type.second,
+                                                            [substituted_type, substituted_type.first])
+                valid_actions[str(substituted_type.second)].add(production_string)
+                for head, production in _get_complex_type_productions(substituted_type.second):
+                    valid_actions[head].add(production)
+    return valid_actions

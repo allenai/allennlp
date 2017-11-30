@@ -168,6 +168,8 @@ PART_TYPE = NamedBasicType("PART")
 ROW_TYPE = NamedBasicType("ROW")
 # TODO (pradeep): Merging dates and nums. Can define a hierarchy instead.
 DATE_NUM_TYPE = NamedBasicType("DATENUM")
+
+BASIC_TYPES = {CELL_TYPE, PART_TYPE, ROW_TYPE, DATE_NUM_TYPE}
 # Functions like fb:row.row.year.
 COLUMN_TYPE = ComplexType(CELL_TYPE, ROW_TYPE)
 # fb:cell.cell.part
