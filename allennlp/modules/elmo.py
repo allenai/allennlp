@@ -5,12 +5,88 @@ import torch
 import numpy
 
 from allennlp.common.file_utils import cached_path
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules.token_embedders.elmo_token_embedder import ELMoTokenEmbedder
 from allennlp.modules.elmo_lstm import ElmoLstm
-from allennlp.common.checks import ConfigurationError
+from allennlp.modules import ScalarMix
+from allennlp.nn.util import remove_sentence_boundaries
 
 
-class ElmoBiLm(torch.nn.Module):
+class Elmo(torch.nn.Module):
+    """
+    Compute ELMo representations using a pre-trained bidirectional language model.
+
+    See "Deep contextualized word representations", Peters et al. for details.
+
+    This module takes character id input and computes ``num_elmo_layers`` different layers
+    of ELMo representations.  Typically ``num_elmo_layers`` is 1 or 2.  For example, in
+    the case of the SRL model in the above paper, ``num_elmo_layers=1`` where ELMo was included at
+    the input token representation layer.  In the case of the SQuAD model, ``num_elmo_layers=2``
+    as ELMo was also included at the GRU output layer.
+
+    In the implementation below, we learn separate scalar weights for each output layer,
+    but only run the biLM once on each input sequence for efficiency.
+
+    Parameters
+    ----------
+    options_file : str
+        ELMo JSON options file
+    weight_file : str
+        ELMo hdf5 weight file
+    num_elmo_layers: int
+        The number of ELMo representation layers to output.
+    do_layer_norm: bool
+        Should we apply layer normalization (passed to ``ScalarMix``)?
+    """
+    def __init__(self,
+                 options_file: str,
+                 weight_file: str,
+                 num_elmo_layers: int,
+                 do_layer_norm: bool=False) -> None:
+        super(Elmo, self).__init__()
+
+        self._elmo_lstm = _ElmoBiLm(options_file, weight_file)
+        self.add_module('elmo_lstm', self._elmo_lstm)
+
+        self._scalar_mixes = []
+        for k in range(num_elmo_layers):
+            scalar_mix = ScalarMix(self._elmo_lstm.num_layers, do_layer_norm=do_layer_norm)
+            self.add_module('scalar_mix_{}'.format(k), scalar_mix)
+            self._scalar_mixes.append(scalar_mix)
+
+    def forward(self, inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
+        """
+        Parameters
+        ----------
+        inputs: ``torch.autograd.Variable``
+            Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
+
+        Returns
+        -------
+        Dict with keys:
+
+        ``'elmo'``: ``List[torch.autograd.Variable]``
+            A ``num_elmo_layers`` list of ELMo representations for the input sequence.
+            Each representation is shape ``(batch_size, timesteps, embedding_dim)``
+        ``'mask'``:  ``torch.autograd.Variable``
+            Shape ``(batch_size, timesteps)`` long tensor with sequence mask.
+        """
+        bilm_output = self._elmo_lstm(inputs)
+        layer_activations = bilm_output['activations']
+        mask_with_bos_eos = bilm_output['mask']
+
+        elmo_representations = []
+        for scalar_mix in self._scalar_mixes:
+            representation_with_bos_eos = scalar_mix.forward(layer_activations, mask_with_bos_eos)
+            representation_without_bos_eos, mask_without_bos_eos = remove_sentence_boundaries(
+                    representation_with_bos_eos, mask_with_bos_eos
+            )
+            elmo_representations.append(representation_without_bos_eos)
+
+        return {'elmo': elmo_representations, 'mask': mask_without_bos_eos}
+
+
+class _ElmoBiLm(torch.nn.Module):
     """
     Run a pre-trained bidirectional language model, outputing the activations at each
     layer for weighting together into an ELMo representation (with
@@ -28,7 +104,7 @@ class ElmoBiLm(torch.nn.Module):
     def __init__(self,
                  options_file: str,
                  weight_file: str) -> None:
-        super(ElmoBiLm, self).__init__()
+        super(_ElmoBiLm, self).__init__()
 
         self._token_embedder = ELMoTokenEmbedder(options_file, weight_file)
         self.add_module('elmo_token_embedder', self._token_embedder)
@@ -45,6 +121,8 @@ class ElmoBiLm(torch.nn.Module):
                                 state_projection_clip_value=options['lstm']['proj_clip'])
         self._elmo_lstm._load_weights(weight_file)
         self.add_module('elmo_lstm', self._elmo_lstm)
+        # Number of representation layers including context independent layer
+        self.num_layers = options['lstm']['n_layers'] + 1
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:

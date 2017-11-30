@@ -268,9 +268,6 @@ class ElmoLstm(_EncoderBase):
 
                     lstm.input_linearity.weight.data.copy_(torch.FloatTensor(input_weights))
                     lstm.state_linearity.weight.data.copy_(torch.FloatTensor(recurrent_weights))
-                    print("----")
-                    print(lstm.input_linearity.weight.size(), input_weights.shape)
-                    print(lstm.state_linearity.weight.size(), recurrent_weights.shape)
                     lstm.input_linearity.weight.requires_grad = False
                     lstm.state_linearity.weight.requires_grad = False
 
@@ -286,7 +283,6 @@ class ElmoLstm(_EncoderBase):
                               ] = tf_bias[(1 * cell_size):(2 * cell_size)]
                     lstm.state_linearity.bias.data.copy_(torch.FloatTensor(torch_bias))
                     lstm.state_linearity.bias.requires_grad = False
-                    print(lstm.state_linearity.bias.size(), torch_bias.shape)
 
                     # the projection weights
                     proj_weights = numpy.transpose(dataset['W_P_0'][...])
