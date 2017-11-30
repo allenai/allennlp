@@ -35,7 +35,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         Takes a string token and converts it into indices.  This could rerturn an ID for the token
         from the vocabulary, or it could be split the token into characters and return a list of
         IDs for each character from the vocabulary, or something else.
-        """ 
+        """
         raise NotImplementedError
 
     def get_padding_token(self) -> TokenType:
@@ -64,7 +64,8 @@ class TokenIndexer(Generic[TokenType], Registrable):
         truncated.
 
         ``padding_lengths`` is used to provide supplemental padding parameters which is needed
-        in some cases.  get_padding_lengths is applied to each token and returns a dictionary.
+        in some cases.  For example, it contains the widths to pad characters to when doing
+        character-level padding.
         """
         raise NotImplementedError
 
