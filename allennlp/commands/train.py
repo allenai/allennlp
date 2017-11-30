@@ -18,7 +18,7 @@ which to write the results.
     -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                             directory in which to save the model and its logs
 """
-from typing import List
+from typing import Dict
 import argparse
 import json
 import logging
@@ -28,6 +28,7 @@ from copy import deepcopy
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.common.util import prepare_environment
@@ -126,15 +127,13 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     logger.info("Reading training data from %s", train_data_path)
     train_data = dataset_reader.read(train_data_path)
 
-    all_datasets: List[Dataset] = [train_data]
-    datasets_in_vocab = ["train"]
+    all_datasets: Dict[str, Dataset] = {"train": train_data}
 
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
         validation_data = dataset_reader.read(validation_data_path)
-        all_datasets.append(validation_data)
-        datasets_in_vocab.append("validation")
+        all_datasets["validation"] = validation_data
     else:
         validation_data = None
 
@@ -142,15 +141,21 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     if test_data_path is not None:
         logger.info("Reading test data from %s", test_data_path)
         test_data = dataset_reader.read(test_data_path)
-        all_datasets.append(test_data)
-        datasets_in_vocab.append("test")
+        all_datasets["test"] = test_data
     else:
         test_data = None
 
-    logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_in_vocab))
+    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+    for dataset in datasets_for_vocab_creation:
+        if dataset not in all_datasets:
+            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+    logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
-                                   Dataset([instance for dataset in all_datasets
-                                            for instance in dataset.instances]))
+                                   Dataset([instance for key, dataset in all_datasets.items()
+                                            for instance in dataset.instances
+                                            if key in datasets_for_vocab_creation]))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))
