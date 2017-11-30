@@ -133,7 +133,7 @@ class WikiTablesDatasetReader(DatasetReader):
         fields = {'question': question_field, 'table': table_field}
         if dpd_output:
             world = WikiTablesWorld(table_knowledge_graph)
-            expressions = world.process_sempre_forms(dpd_output)
+            expressions = [world.parse_logical_form(form) for form in dpd_output]
             action_sequences = [world.get_action_sequence(expression) for expression in expressions]
             action_sequences_field = ListField([self._make_action_sequence_field(sequence)
                                                 for sequence in action_sequences])

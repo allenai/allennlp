@@ -6,6 +6,11 @@ allennlp.data.semparse.worlds
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.data.semparse.worlds.world
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.data.semparse.worlds.wikitables_world
    :members:
    :undoc-members:

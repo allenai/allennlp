@@ -6,7 +6,17 @@ allennlp.data.semparse.type_declarations
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.data.semparse.type_declarations.type_declaration
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.data.semparse.type_declarations.wikitables_type_declaration
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.data.semparse.type_declarations.nlvr_type_declaration
    :members:
    :undoc-members:
    :show-inheritance:

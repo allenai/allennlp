@@ -6,10 +6,14 @@ which mainly contains an execution method and related helper methods.
 from collections import defaultdict
 import operator
 from typing import Any, List, Dict, Set, Callable, TypeVar, Union
+from overrides import overrides
 import pyparsing
 
 from allennlp.common import util
 from allennlp.common.util import JsonDict
+from allennlp.data.semparse.type_declarations.nlvr_type_declaration import (COMMON_NAME_MAPPING,
+                                                                            COMMON_TYPE_SIGNATURE)
+from allennlp.data.semparse.worlds.world import World
 
 
 AttributeType = TypeVar('AttributeType', str, int)  # pylint: disable=invalid-name
@@ -77,7 +81,7 @@ class Box:
         return str(self) == str(other)
 
 
-class NlvrWorld:
+class NlvrWorld(World):
     """
     Class defining the world representation of NLVR. Defines an execution logic for logical forms
     in NLVR.  We just take the structured_rep from the JSON file to initialize this.
@@ -88,12 +92,19 @@ class NlvrWorld:
         structured_rep from the JSON file.
     """
     # pylint: disable=too-many-public-methods
+    # TODO(pradeep): Define more spatial relationship methods: above, below, left_of, right_of..
     def __init__(self, world_representation: List[List[JsonDict]]) -> None:
+        super(NlvrWorld, self).__init__(global_type_signatures=COMMON_TYPE_SIGNATURE,
+                                        global_name_mapping=COMMON_NAME_MAPPING)
         self._boxes = set([Box(object_list, "box%d" % index)
                            for index, object_list in enumerate(world_representation)])
         self._objects: Set[Object] = set()
         for box in self._boxes:
             self._objects.update(box.objects)
+
+    @overrides
+    def _map_name(self, name: str) -> str:
+        return COMMON_NAME_MAPPING[name] if name in COMMON_NAME_MAPPING else name
 
     def _apply_function_list(self,
                              functions: List[str],
@@ -183,12 +194,12 @@ class NlvrWorld:
         assert isinstance(sub_expression[0], str) and sub_expression[0].startswith("assert_"),\
                "Invalid assertion function: %s" % (sub_expression[0])
         function = getattr(self, sub_expression[0])
-        arguments = sub_expression[1]
-        target_attribute = self._execute_constant(arguments[2])
-        if arguments[0] == "count":
-            counted_value = self._execute_count_function(arguments[:2])
+        attribute_function = sub_expression[1]
+        target_attribute = self._execute_constant(sub_expression[2])
+        if attribute_function[0] == "count":
+            counted_value = self._execute_count_function(attribute_function)
             return function(counted_value, target_attribute)
-        attribute_set = self._execute_attribute_function(arguments[:2])
+        attribute_set = self._execute_attribute_function(attribute_function)
         # We defined attribute functions to always return sets. But when this assertion is being executed, for the
         # assertion to be true, the returned set needs to be singleton. If not, the assertion should fail.
         if len(attribute_set) != 1:
@@ -238,11 +249,16 @@ class NlvrWorld:
             # second argument. We'll process the whole nested structure of the lambda expression
             # here.
             function = getattr(self, sub_expression[0])
-            arguments = sub_expression[1]
-            set_to_filter = self._execute_box_filter(arguments[0])
-            flattened_lambda_terms = util.flatten_list(arguments[1:-1])
-            attribute_function = lambda x: self._apply_function_list(flattened_lambda_terms, x)
-            attribute = self._execute_constant(arguments[-1])
+            set_to_filter = self._execute_box_filter(sub_expression[1])
+            attribute_function_list = sub_expression[2]
+            assert attribute_function_list[:2] == ['lambda', 'x'], ("Invalid lambda expression: %s" %
+                                                                    attribute_function_list)
+            # The list looks like ['lambda' 'x' ['f' ['g' ['x']]]]. We're flattening the nested list.
+            flattened_lambda_terms = util.flatten_list(attribute_function_list[2])
+            assert flattened_lambda_terms[-2:] == ['var', 'x'], ("Invalid lambda expression: %s" %
+                                                                 attribute_function_list)
+            attribute_function = lambda x: self._apply_function_list(flattened_lambda_terms[:-2], x)
+            attribute = self._execute_constant(sub_expression[-1])
             return function(set_to_filter, attribute_function, attribute)
         elif sub_expression == 'all_boxes' or sub_expression[0] == 'all_boxes':
             return self._boxes
@@ -259,9 +275,11 @@ class NlvrWorld:
             all_objects
         """
         if sub_expression[0] == "negate_filter":
-            arguments = sub_expression[1]
-            original_filter = getattr(self, arguments[0])
-            initial_set = self._execute_object_filter(arguments[1:])
+            original_filter_name = sub_expression[1]
+            if isinstance(original_filter_name, list):
+                original_filter_name = original_filter_name[0]
+            original_filter = getattr(self, original_filter_name)
+            initial_set = self._execute_object_filter(sub_expression[2])
             return self.negate_filter(original_filter, initial_set)
         elif sub_expression == "all_objects" or sub_expression[0] == "all_objects":
             return self._objects
@@ -444,6 +462,22 @@ class NlvrWorld:
                                 cls.touch_top(objects).intersection(cls.touch_left(objects)),
                                 cls.touch_bottom(objects).intersection(cls.touch_right(objects)),
                                 cls.touch_bottom(objects).intersection(cls.touch_left(objects)))
+
+    @classmethod
+    def top(cls, objects: Set[Object]) -> Set[Object]:
+        """
+        Return the topmost objects (i.e. maximum y_loc).
+        """
+        max_y_loc = max([obj.y_loc for obj in objects])
+        return set([obj for obj in objects if obj.y_loc == max_y_loc])
+
+    @classmethod
+    def bottom(cls, objects: Set[Object]) -> Set[Object]:
+        """
+        Return the bottom most objects(i.e. minimum y_loc).
+        """
+        min_y_loc = min([obj.y_loc for obj in objects])
+        return set([obj for obj in objects if obj.y_loc == min_y_loc])
 
     @classmethod
     def small(cls, objects: Set[Object]) -> Set[Object]:
