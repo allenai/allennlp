@@ -87,9 +87,9 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         # pad the list of lists to the longest sublist, appending 0's
         padded_tokens = list(zip(*itertools.zip_longest(*padded_tokens, fillvalue=padding_value)))
         if desired_token_length > len(longest_token):
-            # Remove the "dummy token".
+            # Removes the "dummy token".
             padded_tokens.pop()
-        # Now truncate all the tokens to the desired length, and return the result.
+        # Truncates all the tokens to the desired length, and return the result.
         return [list(token[:desired_token_length]) for token in padded_tokens]
 
     @classmethod
