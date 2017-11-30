@@ -61,7 +61,7 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
 
 def pad_sequence_to_length(sequence: List,
                            desired_length: int,
-                           default_value: Callable[[], Any] = lambda: 0,
+                           pad_value: Callable[[], Any] = lambda: 0,
                            padding_on_right: bool = True) -> List:
     """
     Take a list of objects and pads it to the desired length, returning the padded list.  The
@@ -76,8 +76,8 @@ def pad_sequence_to_length(sequence: List,
         Maximum length of each sequence. Longer sequences are truncated to this length, and
         shorter ones are padded to it.
 
-    default_value: Callable, default=lambda: 0
-        Callable that outputs a default value (of any type) to use as padding values.
+    pad_value: Callable, default=lambda: 0
+        Callable that outputs the next value to use (of any type) for padding.
 
     padding_on_right : bool, default=True
         When we add padding tokens (or truncate the sequence), should we do it on the right or
@@ -87,15 +87,17 @@ def pad_sequence_to_length(sequence: List,
     -------
     padded_sequence : List
     """
+    # Truncate the sequence to the desired length
     if padding_on_right:
         padded_sequence = sequence[:desired_length]
     else:
         padded_sequence = sequence[-desired_length:]
+    # Keep padding with the next result from pad_value() until we reach our desired length.
     for _ in range(desired_length - len(padded_sequence)):
         if padding_on_right:
-            padded_sequence.append(default_value())
+            padded_sequence.append(pad_value())
         else:
-            padded_sequence.insert(0, default_value())
+            padded_sequence.insert(0, pad_value())
     return padded_sequence
 
 
