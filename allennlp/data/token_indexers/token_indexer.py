@@ -32,7 +32,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
 
     def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> TokenType:
         """
-        Takes a string token and converts it into indices.  This could rerturn an ID for the token
+        Takes a string token and converts it into indices.  This could return an ID for the token
         from the vocabulary, or it could be split the token into characters and return a list of
         IDs for each character from the vocabulary, or something else.
         """
