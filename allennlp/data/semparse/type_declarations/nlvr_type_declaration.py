@@ -96,6 +96,10 @@ class CountType(PlaceholderType):
         return NUM_TYPE
 
 
+# All constants default to ``EntityType`` in NLTK. For domains where constants of different types appear in the
+# logical forms, we have a way of specifying ``constant_type_prefixes`` and passing them to the constructor
+# of ``World``. However, in the NLVR language we defined, we see constants of just one type, number. So we
+# let them default to ``EntityType``.
 NUM_TYPE = EntityType()
 BOX_TYPE = NamedBasicType("BOX")
 OBJECT_TYPE = NamedBasicType("OBJECT")

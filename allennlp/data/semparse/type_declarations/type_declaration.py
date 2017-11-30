@@ -29,6 +29,8 @@ class NamedBasicType(BasicType):
         self._string_rep = string_rep
 
     def __str__(self):
+        # TODO (pradeep): This limits the number of basic types we can have to 26. We may want to change this
+        # in the future if we extend to domains where we have more than 26 basic types.
         return self._string_rep.lower()[0]
 
     def str(self):

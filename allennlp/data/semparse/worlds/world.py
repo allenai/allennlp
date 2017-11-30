@@ -42,41 +42,42 @@ class World:
         self._logic_parser = DynamicTypeLogicParser(constant_type_prefixes=type_prefixes,
                                                     type_signatures=self.global_type_signatures)
 
+    def _process_nested_expression(self, nested_expression) -> str:
+        """
+        ``nested_expression`` is the result of parsing a logical form in Lisp format.
+        We process it recursively and return a string in the format that NLTK's ``LogicParser``
+        would understand.
+        """
+        expression_is_list = isinstance(nested_expression, list)
+        expression_size = len(nested_expression)
+        if expression_is_list and expression_size == 1 and isinstance(nested_expression[0], list):
+            return self._process_nested_expression(nested_expression[0])
+        elements_are_leaves = [isinstance(element, str) for element in nested_expression]
+        if all(elements_are_leaves):
+            mapped_names = [self._map_name(name) for name in nested_expression]
+        else:
+            mapped_names = []
+            for element, is_leaf in zip(nested_expression, elements_are_leaves):
+                if is_leaf:
+                    mapped_names.append(self._map_name(element))
+                else:
+                    mapped_names.append(self._process_nested_expression(element))
+        if mapped_names[0] == "\\":
+            # This means the predicate is lambda. NLTK wants the variable name to not be within parantheses.
+            # Adding parentheses after the variable.
+            arguments = [mapped_names[1]] + ["(%s)" % name for name in mapped_names[2:]]
+        else:
+            arguments = ["(%s)" % name for name in mapped_names[1:]]
+        return "(%s %s)" % (mapped_names[0], " ".join(arguments))
+
     def parse_logical_form(self, logical_form: str) -> Expression:
         """
         Takes a logical form as a string, maps its tokens using the mapping and returns a parsed expression.
         """
-        def _process_nested_expression(nested_expression) -> str:
-            """
-            ``nested_expression`` is the result of parsing a Lambda-DCS expression in Lisp format.
-            We process it recursively and return a string in the format that NLTK's ``LogicParser``
-            would understand.
-            """
-            expression_is_list = isinstance(nested_expression, list)
-            expression_size = len(nested_expression)
-            if expression_is_list and expression_size == 1 and isinstance(nested_expression[0], list):
-                return _process_nested_expression(nested_expression[0])
-            elements_are_leaves = [isinstance(element, str) for element in nested_expression]
-            if all(elements_are_leaves):
-                mapped_names = [self._map_name(name) for name in nested_expression]
-            else:
-                mapped_names = []
-                for element, is_leaf in zip(nested_expression, elements_are_leaves):
-                    if is_leaf:
-                        mapped_names.append(self._map_name(element))
-                    else:
-                        mapped_names.append(_process_nested_expression(element))
-            if mapped_names[0] == "\\":
-                # This means the predicate is lambda. NLTK wants the variable name to not be within parantheses.
-                # Adding parentheses after the variable.
-                arguments = [mapped_names[1]] + ["(%s)" % name for name in mapped_names[2:]]
-            else:
-                arguments = ["(%s)" % name for name in mapped_names[1:]]
-            return "(%s %s)" % (mapped_names[0], " ".join(arguments))
         if not logical_form.startswith("("):
             logical_form = "(%s)" % logical_form
         parsed_lisp = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(logical_form).asList()
-        translated_string = _process_nested_expression(parsed_lisp)
+        translated_string = self._process_nested_expression(parsed_lisp)
         type_signature = self.local_type_signatures.copy()
         type_signature.update(self.global_type_signatures)
         return self._logic_parser.parse(translated_string, signature=type_signature)
