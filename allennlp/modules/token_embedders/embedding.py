@@ -189,7 +189,7 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
     ----------
     embeddings_filename : str, required.
         The path to a file containing pretrained embeddings. We support two file formats,
-        gzipped-word2vec and hdf5.  If the filename ends with '.hdf5' or '.h5' when we load from 
+        gzipped-word2vec and hdf5.  If the filename ends with '.hdf5' or '.h5' when we load from
         hdf5, otherwise assume gzipped-word2vec format.
 
          The embeddings
@@ -216,7 +216,7 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
                                                                vocab, namespace)
 
 
-def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str,
+def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # pylint: disable=invalid-name
                                                     embedding_dim: int,
                                                     vocab: Vocabulary,
                                                     namespace: str = "tokens") -> torch.FloatTensor:
@@ -279,7 +279,7 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str,
     return embedding_matrix
 
 
-def _read_pretrained_hdf5_format_embedding_file(embeddings_filename: str,
+def _read_pretrained_hdf5_format_embedding_file(embeddings_filename: str, # pylint: disable=invalid-name
                                                 embedding_dim: int,
                                                 vocab: Vocabulary,
                                                 namespace: str = "tokens") -> torch.FloatTensor:
@@ -292,9 +292,9 @@ def _read_pretrained_hdf5_format_embedding_file(embeddings_filename: str,
 
     if embeddings.shape[0] != vocab.get_vocab_size(namespace):
         ConfigurationError("Read {0} embeddings from the file, but expected {1}".format(
-                           embeddings.shape[0], vocab.get_vocab_size(namespace)))
+                embeddings.shape[0], vocab.get_vocab_size(namespace)))
     if embeddings.shape[1] != embedding_dim:
         ConfigurationError("Read {0} dimension embeddings from the file, but expected {1}".format(
-                           embeddings.shape[1], embedding_dim))
+                embeddings.shape[1], embedding_dim))
 
     return torch.FloatTensor(embeddings)

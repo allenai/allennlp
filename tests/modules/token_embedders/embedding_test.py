@@ -12,7 +12,6 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.embedding import Embedding, _read_pretrained_embedding_file
-from allennlp.modules.token_embedders.embedding import _read_pretrained_hdf5_format_embedding_file
 
 
 class TestEmbedding(AllenNlpTestCase):
