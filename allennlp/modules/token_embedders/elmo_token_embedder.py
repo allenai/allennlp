@@ -13,7 +13,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
 
     This class serves as a convenience when you only want to use one layer of
     ELMo representations at the input of your network.  It's essentially a wrapper
-    around Elmo(num_elmo_layers=1, ...)
+    around Elmo(num_output_representations=1, ...)
 
     Parameters
     ----------

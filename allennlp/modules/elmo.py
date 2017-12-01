@@ -27,10 +27,10 @@ class Elmo(torch.nn.Module, Registrable):
 
     See "Deep contextualized word representations", Peters et al. for details.
 
-    This module takes character id input and computes ``num_elmo_layers`` different layers
-    of ELMo representations.  Typically ``num_elmo_layers`` is 1 or 2.  For example, in
-    the case of the SRL model in the above paper, ``num_elmo_layers=1`` where ELMo was included at
-    the input token representation layer.  In the case of the SQuAD model, ``num_elmo_layers=2``
+    This module takes character id input and computes ``num_output_representations`` different layers
+    of ELMo representations.  Typically ``num_output_representations`` is 1 or 2.  For example, in
+    the case of the SRL model in the above paper, ``num_output_representations=1`` where ELMo was included at
+    the input token representation layer.  In the case of the SQuAD model, ``num_output_representations=2``
     as ELMo was also included at the GRU output layer.
 
     In the implementation below, we learn separate scalar weights for each output layer,
@@ -42,7 +42,7 @@ class Elmo(torch.nn.Module, Registrable):
         ELMo JSON options file
     weight_file : ``str``
         ELMo hdf5 weight file
-    num_elmo_layers: ``int``
+    num_output_representations: ``int``
         The number of ELMo representation layers to output.
     do_layer_norm: ``bool``
         Should we apply layer normalization (passed to ``ScalarMix``)?
@@ -50,14 +50,14 @@ class Elmo(torch.nn.Module, Registrable):
     def __init__(self,
                  options_file: str,
                  weight_file: str,
-                 num_elmo_layers: int,
+                 num_output_representations: int,
                  do_layer_norm: bool = False) -> None:
         super(Elmo, self).__init__()
 
         self._elmo_lstm = _ElmoBiLm(options_file, weight_file)
 
         self._scalar_mixes: Any = []
-        for k in range(num_elmo_layers):
+        for k in range(num_output_representations):
             scalar_mix = ScalarMix(self._elmo_lstm.num_layers, do_layer_norm=do_layer_norm)
             self.add_module('scalar_mix_{}'.format(k), scalar_mix)
             self._scalar_mixes.append(scalar_mix)
@@ -75,7 +75,7 @@ class Elmo(torch.nn.Module, Registrable):
         Dict with keys:
 
         ``'elmo_representations'``: ``List[torch.autograd.Variable]``
-            A ``num_elmo_layers`` list of ELMo representations for the input sequence.
+            A ``num_output_representations`` list of ELMo representations for the input sequence.
             Each representation is shape ``(batch_size, timesteps, embedding_dim)``
         ``'mask'``:  ``torch.autograd.Variable``
             Shape ``(batch_size, timesteps)`` long tensor with sequence mask.
@@ -98,10 +98,10 @@ class Elmo(torch.nn.Module, Registrable):
     def from_params(cls, params: Params) -> 'Elmo':
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
-        num_elmo_layers = params.pop('num_elmo_layers')
+        num_output_representations = params.pop('num_output_representations')
         do_layer_norm = params.pop('do_layer_norm', False)
         params.assert_empty(cls.__name__)
-        return cls(options_file, weight_file, num_elmo_layers, do_layer_norm)
+        return cls(options_file, weight_file, num_output_representations, do_layer_norm)
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
