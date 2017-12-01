@@ -189,11 +189,8 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
     ----------
     embeddings_filename : str, required.
         The path to a file containing pretrained embeddings. We support two file formats,
-        gzipped-word2vec and hdf5.  If the filename ends with '.hdf5' or '.h5' when we load from
+        gzipped-word2vec and hdf5.  If the filename ends with '.hdf5' or '.h5' then we load from
         hdf5, otherwise assume gzipped-word2vec format.
-
-         The embeddings
-        file is assumed to be gzipped and space delimited, e.g. [word] [dim 1] [dim 2] ...
     vocab : Vocabulary, required.
         A Vocabulary object.
     namespace : str, (optional, default=tokens)
