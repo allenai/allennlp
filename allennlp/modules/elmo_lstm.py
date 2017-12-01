@@ -236,6 +236,8 @@ class ElmoLstm(_EncoderBase):
     def load_weights(self, weight_file: str) -> None:
         """
         Load the pre-trained weights from the file.
+
+        Note that this method also sets ``requires_grad=False`` to all class parameters.
         """
         with h5py.File(weight_file, 'r') as fin:
             for i_layer, lstms in enumerate(

@@ -62,9 +62,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
                 mask: torch.Tensor,
                 hidden_state: torch.Tensor = None) -> torch.Tensor:
 
-        if self._stateful and mask is None:
+        if self.stateful and mask is None:
             raise ValueError("Always pass a mask with stateful RNNs.")
-        if self._stateful and hidden_state is not None:
+        if self.stateful and hidden_state is not None:
             raise ValueError("Stateful RNNs provide their own initial hidden_state.")
 
         if mask is None:
@@ -80,7 +80,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         num_valid = unpacked_sequence_tensor.size(0)
         # Some RNNs (GRUs) only return one state as a Tensor.  Others (LSTMs) return two.
         # If one state, use a single element list to handle in a consistent manner below.
-        if not isinstance(final_states, (list, tuple)) and self._stateful:
+        if not isinstance(final_states, (list, tuple)) and self.stateful:
             final_states = [final_states]
 
         # Add back invalid rows.
@@ -90,7 +90,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 0)
 
             # The states also need to have invalid rows added back.
-            if self._stateful:
+            if self.stateful:
                 new_states = []
                 for state in final_states:
                     num_layers, _, state_dim = state.size()
@@ -110,7 +110,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             zeros = torch.autograd.Variable(zeros)
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
 
-        if self._stateful:
+        if self.stateful:
             self._update_states(final_states, restoration_indices)
 
         # Restore the original indices and return the sequence.

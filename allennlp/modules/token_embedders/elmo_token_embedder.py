@@ -11,7 +11,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
     """
     Compute a single layer of ELMo representations.
 
-    This class servers as a convenience when you only want to use one layer of
+    This class serves as a convenience when you only want to use one layer of
     ELMo representations at the input of your network.  It's essentially a wrapper
     around Elmo(num_elmo_layers=1, ...)
 
@@ -49,7 +49,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         ``(batch_size, timesteps, embedding_dim)``
         """
         elmo_output = self._elmo(inputs)
-        return elmo_output['elmo'][0]
+        return elmo_output['elmo_representations'][0]
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'ElmoTokenEmbedder':

@@ -1,13 +1,10 @@
 import json
-
 from typing import Union, List, Dict, Any
 
 import torch
 from torch.autograd import Variable
-
 import numpy
 import h5py
-
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
@@ -41,13 +38,13 @@ class Elmo(torch.nn.Module, Registrable):
 
     Parameters
     ----------
-    options_file : str
+    options_file : ``str``
         ELMo JSON options file
-    weight_file : str
+    weight_file : ``str``
         ELMo hdf5 weight file
-    num_elmo_layers: int
+    num_elmo_layers: ``int``
         The number of ELMo representation layers to output.
-    do_layer_norm: bool
+    do_layer_norm: ``bool``
         Should we apply layer normalization (passed to ``ScalarMix``)?
     """
     def __init__(self,
@@ -77,7 +74,7 @@ class Elmo(torch.nn.Module, Registrable):
         -------
         Dict with keys:
 
-        ``'elmo'``: ``List[torch.autograd.Variable]``
+        ``'elmo_representations'``: ``List[torch.autograd.Variable]``
             A ``num_elmo_layers`` list of ELMo representations for the input sequence.
             Each representation is shape ``(batch_size, timesteps, embedding_dim)``
         ``'mask'``:  ``torch.autograd.Variable``
@@ -95,7 +92,7 @@ class Elmo(torch.nn.Module, Registrable):
             )
             elmo_representations.append(representation_without_bos_eos)
 
-        return {'elmo': elmo_representations, 'mask': mask_without_bos_eos}
+        return {'elmo_representations': elmo_representations, 'mask': mask_without_bos_eos}
 
     @classmethod
     def from_params(cls, params: Params) -> 'Elmo':
@@ -107,7 +104,7 @@ class Elmo(torch.nn.Module, Registrable):
         return cls(options_file, weight_file, num_elmo_layers, do_layer_norm)
 
 
-class _ElmoTokenRepresentation(torch.nn.Module):
+class _ElmoCharacterEncoder(torch.nn.Module):
     """
     Compute context sensitive token representation using pretrained biLM.
 
@@ -123,9 +120,9 @@ class _ElmoTokenRepresentation(torch.nn.Module):
 
     Parameters
     ----------
-    options_file : str
+    options_file : ``str``
         ELMo JSON options file
-    weight_file : str
+    weight_file : ``str``
         ELMo hdf5 weight file
 
     The relevant section of the options file is something like:
@@ -142,13 +139,11 @@ class _ElmoTokenRepresentation(torch.nn.Module):
                 'n_highway': 2
                 }
             }
-
-    something
     """
     def __init__(self,
                  options_file: str,
                  weight_file: str) -> None:
-        super(_ElmoTokenRepresentation, self).__init__()
+        super(_ElmoCharacterEncoder, self).__init__()
 
         with open(cached_path(options_file), 'r') as fin:
             self._options = json.load(fin)
@@ -183,7 +178,6 @@ class _ElmoTokenRepresentation(torch.nn.Module):
         Returns
         -------
         Dict with keys:
-
         ``'token_embedding'``: ``torch.autograd.Variable``
             Shape ``(batch_size, sequence_length + 2, embedding_dim)`` tensor with context
             insensitive token representations.
@@ -339,7 +333,7 @@ class _ElmoTokenRepresentation(torch.nn.Module):
             self._projection.bias.requires_grad = False
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> '_ElmoTokenRepresentation':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> '_ElmoCharacterEncoder':
         # pylint: disable=unused-argument
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
@@ -357,9 +351,9 @@ class _ElmoBiLm(torch.nn.Module):
 
     Parameters
     ----------
-    options_file : str
+    options_file : ``str``
         ELMo JSON options file
-    weight_file : str
+    weight_file : ``str``
         ELMo hdf5 weight file
     """
     def __init__(self,
@@ -367,7 +361,7 @@ class _ElmoBiLm(torch.nn.Module):
                  weight_file: str) -> None:
         super(_ElmoBiLm, self).__init__()
 
-        self._token_embedder = _ElmoTokenRepresentation(options_file, weight_file)
+        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file)
 
         with open(cached_path(options_file), 'r') as fin:
             options = json.load(fin)

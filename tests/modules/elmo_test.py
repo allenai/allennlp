@@ -11,7 +11,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data import Token, Vocabulary, Dataset, Instance
 from allennlp.data.iterators import BasicIterator
-from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoTokenRepresentation
+from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
 from allennlp.data.fields import TextField
 
 FIXTURES = os.path.join('tests', 'fixtures', 'elmo')
@@ -120,7 +120,7 @@ class TestElmo(AllenNlpTestCase):
         character_ids = dataset.as_array_dict()['elmo']['character_ids']
 
         output = elmo(Variable(torch.from_numpy(character_ids)))
-        elmo_representations = output['elmo']
+        elmo_representations = output['elmo_representations']
         mask = output['mask']
 
         assert len(elmo_representations) == 2
@@ -150,7 +150,7 @@ class TestElmoTokenRepresentation(AllenNlpTestCase):
         options_file = os.path.join(FIXTURES, 'options.json')
         weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
 
-        elmo_token_embedder = _ElmoTokenRepresentation(options_file, weight_file)
+        elmo_token_embedder = _ElmoCharacterEncoder(options_file, weight_file)
         token_embedding = elmo_token_embedder(batch)['token_embedding'].data.numpy()
 
         # Reshape back to a list of words and compare with ground truth.  Need to also
@@ -170,7 +170,7 @@ class TestElmoTokenRepresentation(AllenNlpTestCase):
         options_file = os.path.join(FIXTURES, 'options.json')
         weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
 
-        elmo_token_embedder = _ElmoTokenRepresentation(options_file, weight_file)
+        elmo_token_embedder = _ElmoCharacterEncoder(options_file, weight_file)
 
         # First <S>
         for correct_index, token in [[0, '<S>'], [2, '</S>']]:

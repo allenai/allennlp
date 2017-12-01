@@ -26,7 +26,7 @@ class _EncoderBase(torch.nn.Module):
     """
     def __init__(self, stateful: bool = False) -> None:
         super(_EncoderBase, self).__init__()
-        self._stateful = stateful
+        self.stateful = stateful
         self._states: Optional[RnnStateStorage] = None
 
     def sort_and_run_forward(self,
@@ -100,7 +100,7 @@ class _EncoderBase(torch.nn.Module):
                                                      sorted_sequence_lengths[:num_valid].data.tolist(),
                                                      batch_first=True)
         # Prepare the initial states.
-        if not self._stateful:
+        if not self.stateful:
             initial_states = hidden_state
         else:
             initial_states = self._get_initial_states(batch_size, num_valid, sorting_indices)
@@ -276,10 +276,6 @@ class _EncoderBase(torch.nn.Module):
             # the new states are either of equal size, or smaller, in the case
             # that there are some unused elements (zero-length) for the RNN computation.
             self._states = tuple(new_states)
-
-    @property
-    def stateful(self):
-        return self._stateful
 
     def reset_states(self):
         self._states = None
