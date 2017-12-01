@@ -156,7 +156,6 @@ class TestElmoTokenRepresentation(AllenNlpTestCase):
 
         elmo_token_embedder = _ElmoCharacterEncoder(options_file, weight_file)
         elmo_token_embedder_output = elmo_token_embedder(batch)
-        token_embedding = elmo_token_embedder(batch)['token_embedding'].data.numpy()
 
         # Reshape back to a list of words and compare with ground truth.  Need to also
         # remove <S>, </S>
