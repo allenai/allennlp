@@ -13,37 +13,15 @@ from allennlp.data import Token, Vocabulary, Dataset, Instance
 from allennlp.data.iterators import BasicIterator
 from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
 from allennlp.data.fields import TextField
+from allennlp.nn.util import remove_sentence_boundaries
 
 FIXTURES = os.path.join('tests', 'fixtures', 'elmo')
 
 
 class TestElmoBiLm(AllenNlpTestCase):
     def test_elmo_bilm(self):
-        def _load_sentences_embeddings():
-            # load the test sentences and the expected LM embeddings
-            with open(os.path.join(FIXTURES, 'sentences.json')) as fin:
-                sentences = json.load(fin)
-
-            # the expected embeddings
-            expected_lm_embeddings = []
-            for k in range(len(sentences)):
-                embed_fname = os.path.join(
-                        FIXTURES, 'lm_embeddings_{}.hdf5'.format(k)
-                )
-                expected_lm_embeddings.append([])
-                with h5py.File(embed_fname, 'r') as fin:
-                    for i in range(10):
-                        sent_embeds = fin['%s' % i][...]
-                        sent_embeds_concat = numpy.concatenate(
-                                (sent_embeds[0, :, :], sent_embeds[1, :, :]),
-                                axis=-1
-                        )
-                        expected_lm_embeddings[-1].append(sent_embeds_concat)
-
-            return sentences, expected_lm_embeddings
-
         # get the raw data
-        sentences, expected_lm_embeddings = _load_sentences_embeddings()
+        sentences, expected_lm_embeddings = self._load_sentences_embeddings()
 
         # load the test model
         options_file = os.path.join(FIXTURES, 'options.json')
@@ -71,14 +49,16 @@ class TestElmoBiLm(AllenNlpTestCase):
         for i, batch in enumerate(iterator(dataset, num_epochs=1, shuffle=False)):
             batch_tensor = Variable(torch.from_numpy(batch['elmo']['character_ids']))
             lm_embeddings = elmo_bilm(batch_tensor)
-            top_layer_embeddings = lm_embeddings['activations'][2].data.numpy()
+            top_layer_embeddings, mask = remove_sentence_boundaries(
+                    lm_embeddings['activations'][2],
+                    lm_embeddings['mask']
+            )
 
             # check the mask lengths
-            lengths = lm_embeddings['mask'].data.numpy().sum(axis=1)
+            lengths = mask.data.numpy().sum(axis=1)
             batch_sentences = [sentences[k][i] for k in range(3)]
             expected_lengths = [
-                    # + 2 for <S> and </S>
-                    len(sentence.split()) + 2 for sentence in batch_sentences
+                    len(sentence.split()) for sentence in batch_sentences
             ]
             self.assertEqual(lengths.tolist(), expected_lengths)
 
@@ -87,11 +67,35 @@ class TestElmoBiLm(AllenNlpTestCase):
             for k in range(3):
                 self.assertTrue(
                         numpy.allclose(
-                                top_layer_embeddings[k, 1:(lengths[k] - 1), :],
+                                top_layer_embeddings[k, :lengths[k], :].data.numpy(),
                                 expected_top_layer[k],
                                 atol=1.0e-6
                         )
                 )
+
+    def _load_sentences_embeddings(self):
+        # load the test sentences and the expected LM embeddings
+        with open(os.path.join(FIXTURES, 'sentences.json')) as fin:
+            sentences = json.load(fin)
+
+        # the expected embeddings
+        expected_lm_embeddings = []
+        for k in range(len(sentences)):
+            embed_fname = os.path.join(
+                    FIXTURES, 'lm_embeddings_{}.hdf5'.format(k)
+            )
+            expected_lm_embeddings.append([])
+            with h5py.File(embed_fname, 'r') as fin:
+                for i in range(10):
+                    sent_embeds = fin['%s' % i][...]
+                    sent_embeds_concat = numpy.concatenate(
+                            (sent_embeds[0, :, :], sent_embeds[1, :, :]),
+                            axis=-1
+                    )
+                    expected_lm_embeddings[-1].append(sent_embeds_concat)
+
+        return sentences, expected_lm_embeddings
+
 
 class TestElmo(AllenNlpTestCase):
     def test_elmo(self):
@@ -100,7 +104,7 @@ class TestElmo(AllenNlpTestCase):
         weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
         elmo = Elmo(options_file, weight_file, 2)
 
-        # Correctness checks are elsewhere, here we just add a shallow test
+        # Correctness checks are in ElmoBiLm and ScalarMix, here we just add a shallow test
         # to ensure things execute.
         indexer = ELMoTokenCharactersIndexer()
         sentences = [['The', 'sentence', '.'],
@@ -151,11 +155,16 @@ class TestElmoTokenRepresentation(AllenNlpTestCase):
         weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
 
         elmo_token_embedder = _ElmoCharacterEncoder(options_file, weight_file)
+        elmo_token_embedder_output = elmo_token_embedder(batch)
         token_embedding = elmo_token_embedder(batch)['token_embedding'].data.numpy()
 
         # Reshape back to a list of words and compare with ground truth.  Need to also
         # remove <S>, </S>
-        actual_embeddings = token_embedding[:, 1:-1, :].reshape(-1, token_embedding.shape[-1])
+        actual_embeddings = remove_sentence_boundaries(
+                elmo_token_embedder_output['token_embedding'],
+                elmo_token_embedder_output['mask']
+        )[0].data.numpy()
+        actual_embeddings = actual_embeddings.reshape(-1, actual_embeddings.shape[-1])
 
         embedding_file = os.path.join(FIXTURES, 'elmo_token_embeddings.hdf5')
         with h5py.File(embedding_file, 'r') as fin:
@@ -172,7 +181,6 @@ class TestElmoTokenRepresentation(AllenNlpTestCase):
 
         elmo_token_embedder = _ElmoCharacterEncoder(options_file, weight_file)
 
-        # First <S>
         for correct_index, token in [[0, '<S>'], [2, '</S>']]:
             indices = indexer.token_to_indices(Token(token), Vocabulary())
             indices = Variable(torch.from_numpy(numpy.array(indices))).view(1, 1, -1)
