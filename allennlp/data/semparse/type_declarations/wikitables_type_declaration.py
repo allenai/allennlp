@@ -199,7 +199,13 @@ COUNT_TYPE = CountType(ANY_TYPE, DATE_NUM_TYPE)
 # and, or
 CONJUNCTION_TYPE = ConjunctionType(ANY_TYPE, ANY_TYPE)
 # argmax, argmin
-ARG_EXTREME_TYPE = ArgExtremeType(ANY_TYPE, ANY_TYPE)
+ARG_EXTREME_TYPE = ArgExtremeType(DATE_NUM_TYPE,
+                                  ComplexType(DATE_NUM_TYPE,
+                                              ComplexType(ANY_TYPE,
+                                                          ComplexType(ComplexType(DATE_NUM_TYPE,
+                                                                                  ANY_TYPE),
+                                                                      ANY_TYPE))))
+
 
 
 COMMON_NAME_MAPPING = {"lambda": "\\", "var": "V", "x": "X"}

@@ -271,12 +271,11 @@ def _substitute_any_type(_type: Type, basic_types: Set[BasicType]) -> Set[Type]:
         return basic_types
     if isinstance(_type, (BasicType, PlaceholderType)):
         return set([_type])
-    if isinstance(_type, ComplexType):
-        substitutions = set()
-        for first_type in _substitute_any_type(_type.first, basic_types):
-            for second_type in _substitute_any_type(_type.second, basic_types):
-                substitutions.add(ComplexType(first_type, second_type))
-        return substitutions
+    substitutions = set()
+    for first_type in _substitute_any_type(_type.first, basic_types):
+        for second_type in _substitute_any_type(_type.second, basic_types):
+            substitutions.add(ComplexType(first_type, second_type))
+    return substitutions
 
 
 def _substitute_placeholder_type(_type: Type, basic_type: BasicType) -> Type:
@@ -290,9 +289,8 @@ def _substitute_placeholder_type(_type: Type, basic_type: BasicType) -> Type:
         return basic_type
     if isinstance(_type, BasicType):
         return _type
-    if isinstance(_type, ComplexType):
-        return ComplexType(_substitute_placeholder_type(_type.first, basic_type),
-                           _substitute_placeholder_type(_type.second, basic_type))
+    return ComplexType(_substitute_placeholder_type(_type.first, basic_type),
+                       _substitute_placeholder_type(_type.second, basic_type))
 
 
 def _make_production_string(source: Type, target: Union[List[Type], Type]) -> str:
@@ -320,33 +318,55 @@ def get_valid_actions(name_mapping: Dict[str, str],
                       type_signatures: Dict[str, Type],
                       basic_types: Set[Type]) -> Dict[str, Set[str]]:
     """
-    Generates all the valid actions starting from each non-terminal.
+    Generates all the valid actions starting from each non-terminal. For terminals of a specific type, we
+    simply add to valid actions, productions from thee types to the terminals. Among those types, we keep
+    track of all the non-basic types (i.e., function types). For those types, we infer the list of productions
+    that start from a basic type leading to them.
+    For complex types that do not contain ANY_TYPE or placeholder
+    types, this is straight-forward. For example, if the complex type is <e,<r,<d,r>>>, the productions should
+    be [r -> [<d,r>, r], <d,r> -> [<r,<d,r>>, r], <r,<d,r>> -> [<e,<r,<d,r>>>, e]].
+    However, if the complex type contains ANY_TYPE, we substitute it with all possible basic types. If it
+    contains placeholders, the substituyions need to be constrained. For example, for <#1,#1>, <e,r> is not a
+    valid substitution.
     """
-    valid_actions = defaultdict(set)
+    valid_actions: Dict[str, Set[str]] = defaultdict(set)
 
     complex_types = set()
     for name, alias in name_mapping.items():
         if not alias in type_signatures:
             continue
         name_type = type_signatures[alias]
+        # Type to terminal productions.
         for substituted_type in _substitute_any_type(name_type, basic_types):
             valid_actions[str(substituted_type)].add(_make_production_string(substituted_type, name))
+        # Keeping track of complex types.
         if isinstance(name_type, ComplexType) and name_type != ANY_TYPE:
             complex_types.add(name_type)
 
     for complex_type in complex_types:
         if isinstance(complex_type, PlaceholderType):
             if complex_type.first == ANY_TYPE:
-                for basic_type in basic_types:
-                    try:
+                if isinstance(complex_type.first, BasicType):
+                    for basic_type in basic_types:
                         application_type = complex_type.get_application_type(basic_type)
-                    except AttributeError:
-                        # TODO (pradeep): This means this is a reversetype, which we do not deal with yet.
-                        pass
-                    valid_actions[str(application_type)].add(_make_production_string(application_type,
-                                                                                     [complex_type, basic_type]))
-                    for head, production in _get_complex_type_productions(application_type):
-                        valid_actions[head].add(production)
+                        valid_actions[str(application_type)].add(_make_production_string(application_type,
+                                                                                         [complex_type,
+                                                                                          basic_type]))
+                        for head, production in _get_complex_type_productions(application_type):
+                            valid_actions[head].add(production)
+                else:
+                    # This means complex_type.first is ComplexType(ANY_TYPE, ANY_TYPE)
+                    # TODO(pradeep): Assuming this is a reverse type. That is the only type where the
+                    # input type is a ComplexType for now. But this needs to be more general later.
+                    for first_type in basic_types:
+                        for second_type in basic_types:
+                            input_type = ComplexType(first_type, second_type)
+                            application_type = complex_type.get_application_type(input_type)
+                            valid_actions[str(application_type)].add(_make_production_string(application_type,
+                                                                                             [complex_type,
+                                                                                              input_type]))
+                            for head, production in _get_complex_type_productions(application_type):
+                                valid_actions[head].add(production)
             else:
                 for basic_type in basic_types:
                     second_type = _substitute_placeholder_type(complex_type.second, basic_type)
