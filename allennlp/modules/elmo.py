@@ -1,6 +1,6 @@
 import json
 
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Any
 
 import torch
 from torch.autograd import Variable
@@ -59,7 +59,7 @@ class Elmo(torch.nn.Module, Registrable):
 
         self._elmo_lstm = _ElmoBiLm(options_file, weight_file)
 
-        self._scalar_mixes = []
+        self._scalar_mixes: Any = []
         for k in range(num_elmo_layers):
             scalar_mix = ScalarMix(self._elmo_lstm.num_layers, do_layer_norm=do_layer_norm)
             self.add_module('scalar_mix_{}'.format(k), scalar_mix)
