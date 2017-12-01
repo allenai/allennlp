@@ -5,12 +5,14 @@ import numpy
 import pytest
 import torch
 from torch.autograd import Variable
+import h5py
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.embedding import Embedding, _read_pretrained_embedding_file
+from allennlp.modules.token_embedders.embedding import _read_pretrained_hdf5_format_embedding_file
 
 
 class TestEmbedding(AllenNlpTestCase):
@@ -77,3 +79,21 @@ class TestEmbedding(AllenNlpTestCase):
         embedding_layer = Embedding.from_params(vocab, params)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
         assert not numpy.allclose(word_vector.numpy(), numpy.array([0.0, 0.0, 0.0]))
+
+    def test_read_hdf5_format_file(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace("word")
+        vocab.add_token_to_namespace("word2")
+        embeddings_filename = self.TEST_DIR + "embeddings.hdf5"
+        embeddings = numpy.random.rand(vocab.get_vocab_size(), 5)
+        with h5py.File(embeddings_filename, 'w') as fout:
+            _ = fout.create_dataset(
+                    'embedding', embeddings.shape, dtype='float32', data=embeddings
+            )
+
+        params = Params({
+                'pretrained_file': embeddings_filename,
+                'embedding_dim': 5,
+                })
+        embedding_layer = Embedding.from_params(vocab, params)
+        assert numpy.allclose(embedding_layer.weight.data.numpy(), embeddings)
