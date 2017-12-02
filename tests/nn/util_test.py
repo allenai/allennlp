@@ -113,7 +113,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         tensor = Variable(tensor)
         sequence_lengths = Variable(torch.LongTensor([3, 4, 1, 5, 7]))
-        sorted_tensor, sorted_lengths, reverse_indices = util.sort_batch_by_length(tensor, sequence_lengths)
+        sorted_tensor, sorted_lengths, reverse_indices, _ = util.sort_batch_by_length(tensor, sequence_lengths)
 
         # Test sorted indices are padded correctly.
         numpy.testing.assert_array_equal(sorted_tensor[1, 5:, :].data.numpy(), 0.0)
@@ -650,3 +650,23 @@ class TestNnUtil(AllenNlpTestCase):
                                             [0, 0, 0, 0]]])
         assert (new_tensor.data.numpy() == expected_new_tensor).all()
         assert (new_mask.data.numpy() == ((expected_new_tensor > 0).sum(axis=-1) > 0)).all()
+
+    def test_remove_sentence_boundaries(self):
+        tensor = Variable(torch.from_numpy(numpy.random.rand(3, 5, 7)))
+        mask = Variable(torch.from_numpy(
+                numpy.array([[1, 1, 1, 0, 0],
+                             [1, 1, 1, 1, 1],
+                             [1, 1, 1, 1, 0]]))).long()
+        new_tensor, new_mask = util.remove_sentence_boundaries(tensor, mask)
+
+        expected_new_tensor = Variable(torch.zeros(3, 3, 7))
+        expected_new_tensor[0, 0, :] = tensor[0, 1, :]
+        expected_new_tensor[1, 0:3, :] = tensor[1, 1:4, :]
+        expected_new_tensor[2, 0:2, :] = tensor[2, 1:3, :]
+        assert_array_almost_equal(new_tensor.data.numpy(), expected_new_tensor.data.numpy())
+
+        expected_new_mask = Variable(torch.from_numpy(
+                numpy.array([[1, 0, 0],
+                             [1, 1, 1],
+                             [1, 1, 0]]))).long()
+        assert (new_mask.data.numpy() == expected_new_mask.data.numpy()).all()

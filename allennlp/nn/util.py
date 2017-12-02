@@ -34,7 +34,8 @@ def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     return mask.long().sum(-1)
 
 
-def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torch.autograd.Variable):
+def sort_batch_by_length(tensor: torch.autograd.Variable,
+                         sequence_lengths: torch.autograd.Variable):
     """
     Sort a batch first tensor by some specified lengths.
 
@@ -55,6 +56,9 @@ def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torc
     restoration_indices : Variable(torch.LongTensor)
         Indices into the sorted_tensor such that
         ``sorted_tensor.index_select(0, restoration_indices) == original_tensor``
+    permuation_index : Variable(torch.LongTensor)
+        The indices used to sort the tensor. This is useful if you want to sort many
+        tensors using the same ordering.
     """
 
     if not isinstance(tensor, Variable) or not isinstance(sequence_lengths, Variable):
@@ -72,7 +76,7 @@ def sort_batch_by_length(tensor: torch.autograd.Variable, sequence_lengths: torc
     index_range = Variable(index_range.long())
     _, reverse_mapping = permutation_index.sort(0, descending=False)
     restoration_indices = index_range.index_select(0, reverse_mapping)
-    return sorted_tensor, sorted_sequence_lengths, restoration_indices
+    return sorted_tensor, sorted_sequence_lengths, restoration_indices, permutation_index
 
 
 def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autograd.Variable):
@@ -818,8 +822,48 @@ def add_sentence_boundary_token_ids(tensor: torch.Tensor,
         for i, j in enumerate(sequence_lengths):
             tensor_with_boundary_tokens[i, 0, :] = sentence_begin_token
             tensor_with_boundary_tokens[i, j + 1, :] = sentence_end_token
-        new_mask = ((tensor_with_boundary_tokens > 0).sum(dim=-1) > 0).long()
+        new_mask = ((tensor_with_boundary_tokens > 0).long().sum(dim=-1) > 0).long()
     else:
         raise ValueError("add_sentence_boundary_token_ids only accepts 2D and 3D input")
 
     return tensor_with_boundary_tokens, new_mask
+
+def remove_sentence_boundaries(tensor: torch.Tensor,
+                               mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Remove begin/end of sentence embeddings from the batch of sentences.
+    Given a batch of sentences with size ``(batch_size, timesteps, dim)``
+    this returns a tensor of shape ``(batch_size, timesteps - 2, dim)`` after removing
+    the beginning and end sentence markers.  The sentences are assumed to be padded on the right,
+    with the beginning of each sentence assumed to occur at index 0 (i.e., ``mask[:, 0]`` is assumed
+    to be 1).
+
+    Returns both the new tensor and updated mask.
+
+    This function is the inverse of ``add_sentence_boundary_token_ids``.
+
+    Parameters
+    ----------
+    tensor : ``torch.Tensor``
+        A tensor of shape ``(batch_size, timesteps, dim)``
+    mask : ``torch.Tensor``
+         A tensor of shape ``(batch_size, timesteps)``
+
+    Returns
+    -------
+    tensor_without_boundary_tokens : ``torch.Tensor``
+        The tensor after removing the boundary tokens of shape ``(batch_size, timesteps - 2, dim)``
+    new_mask : ``torch.Tensor``
+        The new mask for the tensor of shape ``(batch_size, timesteps - 2)``.
+    """
+    sequence_lengths = mask.sum(dim=1).data.numpy()
+    tensor_shape = list(tensor.data.shape)
+    new_shape = list(tensor_shape)
+    new_shape[1] = tensor_shape[1] - 2
+    tensor_without_boundary_tokens = Variable(tensor.data.new(*new_shape).fill_(0))
+    new_mask = Variable(tensor.data.new(new_shape[0], new_shape[1]).fill_(0)).long()
+    for i, j in enumerate(sequence_lengths):
+        tensor_without_boundary_tokens.data[i, :(j - 2), :] = tensor.data[i, 1:(j - 1), :]
+        new_mask[i, :(j - 2)] = 1
+
+    return tensor_without_boundary_tokens, new_mask
