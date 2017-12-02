@@ -1,0 +1,48 @@
+{
+    "dataset_reader": {
+      "type": "conll2003",
+      "tag_label": "ner",
+      "token_indexers": {
+        "tokens": {
+          "type": "single_id",
+          "lowercase_tokens": true
+        },
+        "elmo": {
+          "type": "elmo_characters"
+        }
+      }
+    },
+    "train_data_path": "tests/fixtures/data/conll2003.txt",
+    "validation_data_path": "tests/fixtures/data/conll2003.txt",
+    "model": {
+      "type": "crf_tagger",
+      "text_field_embedder": {
+              "tokens": {
+                "type": "embedding",
+                "embedding_dim": 50
+              },
+              "elmo": {
+                "type": "elmo_token_embedder",
+                "options_file": "tests/fixtures/elmo/options.json",
+                "weight_file": "tests/fixtures/elmo/lm_weights.hdf5",
+              },
+      },
+      "encoder": {
+              "type": "gru",
+              "input_size": 82,
+              "hidden_size": 25,
+              "num_layers": 2,
+              "dropout": 0.5,
+              "bidirectional": true
+      },
+      "regularizer": [
+        ["transitions$", {"type": "l2", "alpha": 0.01}]
+      ]
+    },
+    "iterator": {"type": "basic", "batch_size": 32},
+    "trainer": {
+      "optimizer": "adam",
+      "num_epochs": 5,
+      "cuda_device": -1
+    }
+  }
