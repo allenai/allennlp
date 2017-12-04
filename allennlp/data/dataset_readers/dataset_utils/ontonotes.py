@@ -1,4 +1,4 @@
-from typing import Dict, DefaultDict, List, Optional, Iterator, Set, Tuple
+from typing import Dict, DefaultDict, List, Optional, Iterator, Set, Tuple, Union
 from collections import defaultdict
 import codecs
 import os
@@ -12,10 +12,12 @@ from allennlp.common import Params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-TypedSpan = Tuple[str, Tuple[int, int]] # pylint: disable=invalid-name
+TypedSpan = Tuple[Union[int, str], Tuple[int, int]]  # pylint: disable=invalid-name
+
 
 class OntonotesSentence:
     """
+    A class representing the annotations available for a single CONLL formatted sentence.
 
     Parameters
     ----------
@@ -48,9 +50,10 @@ class OntonotesSentence:
     srl_frames : ``Dict[str, List[str]]``
         A dictionary keyed by the verb in the sentence for the given
         Propbank frame labels, in a BIO format.
-    coreference_clusters : str
-        Co-reference chain information encoded in a parenthesis structure. For documents that do
-        not have co-reference annotations, each line is represented with a "-".
+    coref_spans : ``Set[TypedSpan]``
+        The spans for entity mentions involved in coreference resolution within the sentence.
+        Each element is a tuple composed of (cluster_id, (start_index, end_index)). Indices
+        are `inclusive`.
     """
     def __init__(self,
                  document_id: str,
@@ -64,7 +67,7 @@ class OntonotesSentence:
                  speakers: List[Optional[str]],
                  named_entities: List[str],
                  srl_frames: Dict[str, List[str]],
-                 coref_spans: Set[Tuple[int, Tuple[int, int]]]):
+                 coref_spans: Set[TypedSpan]):
 
         self.document_id = document_id
         self.sentence_id = sentence_id
@@ -78,9 +81,6 @@ class OntonotesSentence:
         self.named_entities = named_entities
         self.srl_frames = srl_frames
         self.coref_spans = coref_spans
-
-    def bio_to_typed_spans(self, bio_labels: List[str]) -> Set[Tuple[str, Tuple[int, int]]]:
-        pass
 
 
 class Ontonotes:
@@ -179,8 +179,7 @@ class Ontonotes:
          not have co-reference annotations, each line is represented with a "-".
 
     """
-    def __init__(self, tagging_type: str = "bio") -> None:
-        self.tagging_type = tagging_type
+    def __init__(self) -> None:
 
     def datset_iterator(self, file_path) -> Iterator[OntonotesSentence]:
         """
@@ -220,10 +219,10 @@ class Ontonotes:
                     if not conll_rows:
                         continue
                     else:
-                        yield self.conll_rows_to_sentence(conll_rows)
+                        yield self._conll_rows_to_sentence(conll_rows)
                         conll_rows = []
 
-    def conll_rows_to_sentence(self, conll_rows: List[str]) -> OntonotesSentence:
+    def _conll_rows_to_sentence(self, conll_rows: List[str]) -> OntonotesSentence:
 
         document_id: str = None
         sentence_id: str = None
@@ -283,9 +282,9 @@ class Ontonotes:
                 # sequence we are collecting.
                 current_span_labels = [None for _ in conll_components[10:-1]]
 
-            current_span_labels, span_labels = self.process_span_annotations_for_word(conll_components[10:-1],
-                                                       span_labels,
-                                                       current_span_labels)
+            self._process_span_annotations_for_word(conll_components[10:-1],
+                                                    span_labels,
+                                                    current_span_labels)
 
             # If any annotation contains this word as a verb predicate,
             # we need to record its index. This also has the side effect
@@ -295,10 +294,10 @@ class Ontonotes:
             if word_is_verbal_predicate:
                 verbal_predicates.append(word)
 
-            self.process_coref_span_annotations_for_word(conll_components[-1],
-                                                         index,
-                                                         clusters,
-                                                         coref_stacks)
+            self._process_coref_span_annotations_for_word(conll_components[-1],
+                                                          index,
+                                                          clusters,
+                                                          coref_stacks)
             coreference.append(conll_components[-1])
 
             sentence.append(word)
@@ -331,10 +330,32 @@ class Ontonotes:
                                  coref_span_tuples)
 
     @staticmethod
-    def process_coref_span_annotations_for_word(label: str,
+    def _process_coref_span_annotations_for_word(label: str,
                                                 word_index: int,
                                                 clusters: DefaultDict[int, List[Tuple[int, int]]],
-                                                coref_stacks: DefaultDict[int, List[int]]):
+                                                coref_stacks: DefaultDict[int, List[int]]) -> None:
+        """
+        For a given coref label, add it to a currently open span/s, complete a span/s or
+        ignore it, if it is outside of all spans. This method mutates the clusters and coref_stacks
+        dictionaries.
+
+        Parameters
+        ----------
+        label : ``str``
+            The coref label for this word.
+        word_index : ``int``
+            The word index into the sentence.
+        clusters : ``DefaultDict[int, List[Tuple[int, int]]]``
+            A dictionary mapping cluster ids to lists of inclusive spans into the
+            sentence.
+        coref_stacks: ``DefaultDict[int, List[int]]``
+            Stacks for each cluster id to hold the start indices of active spans (spans
+            which we are inside of when processing a given word). Spans with the same id
+            can be nested, which is why we collect these opening spans on a stack, e.g:
+
+            [Greg, the baker who referred to [himself]_ID1 as 'the bread man']_ID1
+        """
+
         if label != "-":
             for segment in label.split("|"):
                 # The conll representation of coref spans allows spans to
@@ -359,9 +380,21 @@ class Ontonotes:
                     clusters[cluster_id].append((start, word_index))
 
     @staticmethod
-    def process_span_annotations_for_word(annotations: List[str],
-                                          predicate_argument_labels: List[List[str]],
+    def _process_span_annotations_for_word(annotations: List[str],
+                                          span_labels: List[List[str]],
                                           current_span_labels: List[Optional[str]]):
+
+        """
+        Given a sequence of different label types for a single word and the same labels
+        for the previous word, compute the BIO tag for each label and append to a list.
+        annotations: ``List[str]``
+            A list of labels to compute BIO tags for.
+        span_labels : ``List[List[str]]``
+            A list of lists, one for each annotation, to incrementally collect
+            the BIO tags for a sequence.
+        current_span_labels : ``List[Optional[str]]``
+            The currently open span per annotation type, or ``None`` if there is no open span.
+        """
 
         for annotation_index in range(len(annotations)):
             annotation = annotations[annotation_index]
@@ -371,25 +404,23 @@ class Ontonotes:
                 # Entering into a span for a particular semantic role label.
                 # We append the label and set the current span for this annotation.
                 bio_label = "B-" + label
-                predicate_argument_labels[annotation_index].append(bio_label)
+                span_labels[annotation_index].append(bio_label)
                 current_span_labels[annotation_index] = label
 
             elif current_span_labels[annotation_index] is not None:
                 # If there's no '(' token, but the current_span_label is not None,
                 # then we are inside a span.
                 bio_label = "I-" + current_span_labels[annotation_index]
-                predicate_argument_labels[annotation_index].append(bio_label)
+                span_labels[annotation_index].append(bio_label)
             else:
                 # We're outside a span.
-                predicate_argument_labels[annotation_index].append("O")
+                span_labels[annotation_index].append("O")
 
             # Exiting a span, so we reset the current span label for this annotation.
             if ")" in annotation:
                 current_span_labels[annotation_index] = None
-        return current_span_labels, predicate_argument_labels
 
     @classmethod
     def from_params(cls, params: Params) -> 'Ontonotes':
-        tagging_type = params.pop("tagging_type", "bio")
         params.assert_empty(cls.__name__)
-        return Ontonotes(tagging_type=tagging_type)
+        return Ontonotes()
