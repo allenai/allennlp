@@ -7,7 +7,6 @@ import logging
 from nltk import Tree
 import tqdm
 
-
 from allennlp.common import Params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -221,7 +220,6 @@ class Ontonotes:
                         conll_rows = []
 
     def _conll_rows_to_sentence(self, conll_rows: List[str]) -> OntonotesSentence:
-
         document_id: str = None
         sentence_id: int = None
         # The words in the sentence.
