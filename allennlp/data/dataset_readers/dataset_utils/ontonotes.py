@@ -67,7 +67,7 @@ class OntonotesSentence:
                  speakers: List[Optional[str]],
                  named_entities: List[str],
                  srl_frames: Dict[str, List[str]],
-                 coref_spans: Set[TypedSpan]):
+                 coref_spans: Set[TypedSpan]) -> None:
 
         self.document_id = document_id
         self.sentence_id = sentence_id
@@ -179,8 +179,6 @@ class Ontonotes:
          not have co-reference annotations, each line is represented with a "-".
 
     """
-    def __init__(self) -> None:
-
     def datset_iterator(self, file_path) -> Iterator[OntonotesSentence]:
         """
         An iterator over the entire dataset, yielding all sentences processed.
@@ -225,7 +223,7 @@ class Ontonotes:
     def _conll_rows_to_sentence(self, conll_rows: List[str]) -> OntonotesSentence:
 
         document_id: str = None
-        sentence_id: str = None
+        sentence_id: int = None
         # The words in the sentence.
         sentence: List[str] = []
         # The pos tags of the words in the sentence.
@@ -313,9 +311,9 @@ class Ontonotes:
                       in zip(verbal_predicates, span_labels[1:])}
 
         parse_tree = Tree.fromstring("".join(parse_pieces))
-        coref_span_tuples = {(cluster_id, span)
-                             for cluster_id, span_list in clusters.items()
-                             for span in span_list}
+        coref_span_tuples: Set[TypedSpan] = {(cluster_id, span)
+                                             for cluster_id, span_list in clusters.items()
+                                             for span in span_list}
         return OntonotesSentence(document_id,
                                  sentence_id,
                                  sentence,
@@ -331,9 +329,9 @@ class Ontonotes:
 
     @staticmethod
     def _process_coref_span_annotations_for_word(label: str,
-                                                word_index: int,
-                                                clusters: DefaultDict[int, List[Tuple[int, int]]],
-                                                coref_stacks: DefaultDict[int, List[int]]) -> None:
+                                                 word_index: int,
+                                                 clusters: DefaultDict[int, List[Tuple[int, int]]],
+                                                 coref_stacks: DefaultDict[int, List[int]]) -> None:
         """
         For a given coref label, add it to a currently open span/s, complete a span/s or
         ignore it, if it is outside of all spans. This method mutates the clusters and coref_stacks
@@ -381,9 +379,8 @@ class Ontonotes:
 
     @staticmethod
     def _process_span_annotations_for_word(annotations: List[str],
-                                          span_labels: List[List[str]],
-                                          current_span_labels: List[Optional[str]]):
-
+                                           span_labels: List[List[str]],
+                                           current_span_labels: List[Optional[str]]):
         """
         Given a sequence of different label types for a single word and the same labels
         for the previous word, compute the BIO tag for each label and append to a list.
@@ -395,9 +392,7 @@ class Ontonotes:
         current_span_labels : ``List[Optional[str]]``
             The currently open span per annotation type, or ``None`` if there is no open span.
         """
-
-        for annotation_index in range(len(annotations)):
-            annotation = annotations[annotation_index]
+        for annotation_index, annotation in enumerate(annotations):
             label = annotation.strip("()*")
 
             if "(" in annotation:

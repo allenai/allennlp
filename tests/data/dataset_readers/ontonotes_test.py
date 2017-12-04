@@ -2,7 +2,7 @@
 
 from nltk import Tree
 
-from allennlp.data.dataset_readers.dataset_utils import OntonotesSentence, Ontonotes
+from allennlp.data.dataset_readers.dataset_utils import Ontonotes
 from allennlp.common.testing import AllenNlpTestCase
 
 
