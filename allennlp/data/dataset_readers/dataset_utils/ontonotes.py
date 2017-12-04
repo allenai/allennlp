@@ -1,42 +1,70 @@
-from typing import Dict, List, Optional, Iterator, Tuple
+from typing import Dict, DefaultDict, List, Optional, Iterator, Set, Tuple
+from collections import defaultdict
 import codecs
 import os
 import logging
 
-from overrides import overrides
 from nltk import Tree
 import tqdm
 
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset import Dataset
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, SequenceLabelField
-from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import TokenIndexer
-from allennlp.data.tokenizers import Token
-
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 TypedSpan = Tuple[str, Tuple[int, int]] # pylint: disable=invalid-name
 
 class OntonotesSentence:
+    """
 
+    Parameters
+    ----------
+    document_id : ``str``
+        This is a variation on the document filename
+    sentence_id : ``int``
+        Some files are divided into multiple parts numbered as 000, 001, 002, ... etc.
+    words : ``List[str]``
+        This is the token as segmented/tokenized in the Treebank.
+    pos_tags : ``List[str]``
+        This is the Penn Treebank style part of speech. When parse information is missing,
+        all part of speeches except the one for which there is some sense or proposition
+        annotation are marked with a XX tag. The verb is marked with just a VERB tag.
+    parse_tree : ``nltk.Tree``
+        An nltk Tree representing the parse. It does not include POS tags. When the parse information
+        is missing, the parse will have a single node, e.g ``(TOP all of the words ...)``.
+    predicate_lemmas : ``List[Optional[str]]``
+        The predicate lemma of the words for which we have semantic role
+        information or word sense information. All other indices are ``None``.
+    predicate_framenet_ids : ``List[int]``
+        The PropBank frameset ID of the lemmas in ``predicate_lemmas``, or ``None``.
+    word_senses : ``List[int]``
+        The word senses for the words in the sentence, or ``None``.
+    speakers : ``List[str]``
+        The speaker information for the word, if present, or ``None``
+        This is the speaker or author name where available. Mostly in Broadcast Conversation
+        and Web Log data. When not available the rows are marked with an "-".
+    named_entities : ``List[str]``
+        The BIO tags for named entities in the sentence.
+    srl_frames : ``Dict[str, List[str]]``
+        A dictionary keyed by the verb in the sentence for the given
+        Propbank frame labels, in a BIO format.
+    coreference_clusters : str
+        Co-reference chain information encoded in a parenthesis structure. For documents that do
+        not have co-reference annotations, each line is represented with a "-".
+    """
     def __init__(self,
                  document_id: str,
-                 sentence_id: str,
+                 sentence_id: int,
                  words: List[str],
                  pos_tags: List[str],
                  parse_tree: Tree,
-                 predicate_lemmas: List[str],
-                 predicate_framenet_ids: List[str],
-                 word_senses: List[int],
-                 speakers: List[str],
+                 predicate_lemmas: List[Optional[str]],
+                 predicate_framenet_ids: List[Optional[str]],
+                 word_senses: List[Optional[int]],
+                 speakers: List[Optional[str]],
                  named_entities: List[str],
-                 srl_frames: List[List[str]]):
+                 srl_frames: Dict[str, List[str]],
+                 coref_spans: Set[Tuple[int, Tuple[int, int]]]):
 
         self.document_id = document_id
         self.sentence_id = sentence_id
@@ -49,6 +77,10 @@ class OntonotesSentence:
         self.speakers = speakers
         self.named_entities = named_entities
         self.srl_frames = srl_frames
+        self.coref_spans = coref_spans
+
+    def bio_to_typed_spans(self, bio_labels: List[str]) -> Set[Tuple[str, Tuple[int, int]]]:
+        pass
 
 
 class Ontonotes:
@@ -146,28 +178,23 @@ class Ontonotes:
         Co-reference chain information encoded in a parenthesis structure. For documents that do
          not have co-reference annotations, each line is represented with a "-".
 
-    Parameters
-    ----------
-
-    Returns
-    -------
-    A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
-
     """
     def __init__(self, tagging_type: str = "bio") -> None:
         self.tagging_type = tagging_type
 
     def datset_iterator(self, file_path) -> Iterator[OntonotesSentence]:
-
+        """
+        An iterator over the entire dataset, yielding all sentences processed.
+        """
         for conll_file in self.dataset_path_iterator(file_path):
             yield from self.sentence_iterator(conll_file)
 
-    def dataset_path_iterator(self, file_path: str) -> Iterator[str]:
+    @staticmethod
+    def dataset_path_iterator(file_path: str) -> Iterator[str]:
         """
         An iterator containing file_paths in a directory
         containing CONLL-formatted files.
         """
-
         logger.info("Reading CONLL sentences from dataset files at: %s", file_path)
         for root, _, files in tqdm.tqdm(list(os.walk(file_path))):
             for data_file in files:
@@ -194,9 +221,12 @@ class Ontonotes:
                         continue
                     else:
                         yield self.conll_rows_to_sentence(conll_rows)
+                        conll_rows = []
 
     def conll_rows_to_sentence(self, conll_rows: List[str]) -> OntonotesSentence:
 
+        document_id: str = None
+        sentence_id: str = None
         # The words in the sentence.
         sentence: List[str] = []
         # The pos tags of the words in the sentence.
@@ -213,16 +243,21 @@ class Ontonotes:
         # The current speaker, if available.
         speakers: List[str] = []
 
-        coreference = List[str] = []
+        coreference: List[str] = []
         verbal_predicates: List[str] = []
         span_labels: List[List[str]] = []
         current_span_labels: List[str] = []
 
-        for row in conll_rows:
+        # Cluster id -> List of (start_index, end_index) spans.
+        clusters: DefaultDict[int, List[Tuple[int, int]]] = defaultdict(list)
+        # Cluster id -> List of start_indices which are open for this id.
+        coref_stacks: DefaultDict[int, List[int]] = defaultdict(list)
+
+        for index, row in enumerate(conll_rows):
             conll_components = row.split()
 
             document_id = conll_components[0]
-            sentence_id = conll_components[1]
+            sentence_id = int(conll_components[1])
             word = conll_components[3]
             pos_tag = conll_components[4]
             parse_piece = conll_components[5]
@@ -235,7 +270,7 @@ class Ontonotes:
                 parse_word = "-RRB-"
             else:
                 parse_word = word
-            parse_piece.replace("*", f" {parse_word}")
+            parse_piece = parse_piece.replace("*", f" {parse_word}")
             lemmatised_word = conll_components[6]
             framenet_id = conll_components[7]
             word_sense = conll_components[8]
@@ -256,25 +291,32 @@ class Ontonotes:
             # we need to record its index. This also has the side effect
             # of ordering the verbal predicates by their location in the
             # sentence, automatically aligning them with the annotations.
-            word_is_verbal_predicate = any(["(V" in x for x in
-                                           [labels[-1] for labels in span_labels[1:]]])
+            word_is_verbal_predicate = any(["(V" in x for x in conll_components[11:-1]])
             if word_is_verbal_predicate:
                 verbal_predicates.append(word)
 
+            self.process_coref_span_annotations_for_word(conll_components[-1],
+                                                         index,
+                                                         clusters,
+                                                         coref_stacks)
             coreference.append(conll_components[-1])
 
             sentence.append(word)
             pos_tags.append(pos_tag)
             parse_pieces.append(parse_piece)
-            predicate_lemmas.append(lemmatised_word)
-            predicate_framenet_ids.append(framenet_id)
-            word_senses.append(word_sense)
-            speakers.append(speaker)
+            predicate_lemmas.append(lemmatised_word if lemmatised_word != "-" else None)
+            predicate_framenet_ids.append(framenet_id if framenet_id != "-" else None)
+            word_senses.append(int(word_sense) if word_sense != "-" else None)
+            speakers.append(speaker if speaker != "-" else None)
 
         named_entities = span_labels[0]
-        srl_frames = span_labels[1:]
-        parse_tree = Tree.fromstring(" ".join(parse_pieces))
+        srl_frames = {predicate: labels for predicate, labels
+                      in zip(verbal_predicates, span_labels[1:])}
 
+        parse_tree = Tree.fromstring("".join(parse_pieces))
+        coref_span_tuples = {(cluster_id, span)
+                             for cluster_id, span_list in clusters.items()
+                             for span in span_list}
         return OntonotesSentence(document_id,
                                  sentence_id,
                                  sentence,
@@ -285,7 +327,36 @@ class Ontonotes:
                                  word_senses,
                                  speakers,
                                  named_entities,
-                                 srl_frames)
+                                 srl_frames,
+                                 coref_span_tuples)
+
+    @staticmethod
+    def process_coref_span_annotations_for_word(label: str,
+                                                word_index: int,
+                                                clusters: DefaultDict[int, List[Tuple[int, int]]],
+                                                coref_stacks: DefaultDict[int, List[int]]):
+        if label != "-":
+            for segment in label.split("|"):
+                # The conll representation of coref spans allows spans to
+                # overlap. If spans end or begin at the same word, they are
+                # separated by a "|".
+                if segment[0] == "(":
+                    # The span begins at this word.
+                    if segment[-1] == ")":
+                        # The span begins and ends at this word (single word span).
+                        cluster_id = int(segment[1:-1])
+                        clusters[cluster_id].append((word_index, word_index))
+                    else:
+                        # The span is starting, so we record the index of the word.
+                        cluster_id = int(segment[1:])
+                        coref_stacks[cluster_id].append(word_index)
+                else:
+                    # The span for this id is ending, but didn't start at this word.
+                    # Retrieve the start index from the document state and
+                    # add the span to the clusters for this id.
+                    cluster_id = int(segment[:-1])
+                    start = coref_stacks[cluster_id].pop()
+                    clusters[cluster_id].append((start, word_index))
 
     @staticmethod
     def process_span_annotations_for_word(annotations: List[str],
@@ -315,7 +386,6 @@ class Ontonotes:
             # Exiting a span, so we reset the current span label for this annotation.
             if ")" in annotation:
                 current_span_labels[annotation_index] = None
-
         return current_span_labels, predicate_argument_labels
 
     @classmethod
