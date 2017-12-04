@@ -290,6 +290,6 @@ def _read_pretrained_hdf5_format_embedding_file(embeddings_filename: str, # pyli
     if list(embeddings.shape) != [vocab.get_vocab_size(namespace), embedding_dim]:
         raise ConfigurationError(
                 "Read shape {0} embeddings from the file, but expected {1}".format(
-                list(embeddings.shape), [vocab.get_vocab_size(namespace), embedding_dim]))
+                        list(embeddings.shape), [vocab.get_vocab_size(namespace), embedding_dim]))
 
     return torch.FloatTensor(embeddings)
