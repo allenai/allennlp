@@ -57,6 +57,14 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
+        """
+        The ``TextField`` has a list of ``Tokens``, and each ``Token`` gets converted into arrays by
+        (potentially) several ``TokenIndexers``.  This method gets the max length (over tokens)
+        associated with each of these arrays.
+        """
+        # Our basic outline: we will iterate over `TokenIndexers`, and aggregate lengths over tokens
+        # for each indexer separately.  Then we will combine the results for each indexer into a single
+        # dictionary, resolving any (unlikely) key conflicts by taking a max.
         lengths = []
         if self._indexed_tokens is None:
             raise ConfigurationError("You must call .index(vocabulary) on a "
@@ -72,15 +80,14 @@ class TextField(SequenceField[Dict[str, numpy.ndarray]]):
                 # _empty_ TextField, but if this is the case, token_lengths will be an empty
                 # list, so we add the default empty padding dictionary to the list instead.
                 token_lengths = [{}]
-            # Iterate over the keys in the first element of the list.
-            # This is fine as for a given indexer, all tokens will return the same keys,
-            # so we can just use the first one.
+            # Iterate over the keys and find the maximum token length.
+            # It's fine to iterate over the keys of the first token since all tokens have the same keys.
             for key in token_lengths[0].keys():
                 indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
             lengths.append(indexer_lengths)
         any_indexed_token_key = list(self._indexed_tokens.keys())[0]
         padding_lengths = {'num_tokens': len(self._indexed_tokens[any_indexed_token_key])}
-        # Get all the keys which have been used for padding.
+        # Get all keys which have been used for padding for each indexer and take the max if there are duplicates.
         padding_keys = {key for d in lengths for key in d.keys()}
         for padding_key in padding_keys:
             padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
