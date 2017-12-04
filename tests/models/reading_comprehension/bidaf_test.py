@@ -46,7 +46,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
     # `masked_softmax`...) have made this _very_ flaky...
     @flaky(max_runs=5)
     def test_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
+        self.ensure_model_can_train_save_and_load(self.param_file, 2e-5)
 
     @flaky
     def test_batch_predictions_are_consistent(self):

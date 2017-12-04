@@ -29,7 +29,7 @@ class ModelTestCase(AllenNlpTestCase):
         self.dataset = dataset
         self.model = Model.from_params(self.vocab, params['model'])
 
-    def ensure_model_can_train_save_and_load(self, param_file: str):
+    def ensure_model_can_train_save_and_load(self, param_file: str, tolerance: int = 1e-6):
         save_dir = os.path.join(self.TEST_DIR, "save_and_load_test")
         archive_file = os.path.join(save_dir, "model.tar.gz")
         model = train_model_from_file(param_file, save_dir)
@@ -64,7 +64,7 @@ class ModelTestCase(AllenNlpTestCase):
                 for subfield in field:
                     self.assert_fields_equal(model_batch[key][subfield],
                                              loaded_batch[key][subfield],
-                                             tolerance=1e-6,
+                                             tolerance=tolerance,
                                              name=key + '.' + subfield)
             else:
                 self.assert_fields_equal(model_batch[key], loaded_batch[key], 1e-6, key)
