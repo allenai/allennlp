@@ -72,6 +72,12 @@ class ModelTestCase(AllenNlpTestCase):
         # Set eval mode, to turn off things like dropout, then get predictions.
         model.eval()
         loaded_model.eval()
+        # Models with stateful RNNs need their states reset to have consistent
+        # behavior after loading.
+        for model_ in [model, loaded_model]:
+            for module in model_.modules():
+                if hasattr(module, 'stateful') and module.stateful:
+                    module.reset_states()
         model_predictions = model.forward(**model_batch)
         loaded_model_predictions = loaded_model.forward(**loaded_batch)
 

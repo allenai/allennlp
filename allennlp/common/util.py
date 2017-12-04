@@ -77,7 +77,9 @@ def pad_sequence_to_length(sequence: List,
         shorter ones are padded to it.
 
     default_value: Callable, default=lambda: 0
-        Callable that outputs a default value (of any type) to use as padding values.
+        Callable that outputs a default value (of any type) to use as padding values.  This is
+        a lambda to avoid using the same object when the default value is more complex, like a
+        list.
 
     padding_on_right : bool, default=True
         When we add padding tokens (or truncate the sequence), should we do it on the right or
@@ -87,10 +89,12 @@ def pad_sequence_to_length(sequence: List,
     -------
     padded_sequence : List
     """
+    # Truncates the sequence to the desired length.
     if padding_on_right:
         padded_sequence = sequence[:desired_length]
     else:
         padded_sequence = sequence[-desired_length:]
+    # Continues to pad with default_value() until we reach the desired length.
     for _ in range(desired_length - len(padded_sequence)):
         if padding_on_right:
             padded_sequence.append(default_value())
@@ -162,7 +166,7 @@ def prepare_environment(params: Union[Params, Dict[str, Any]]):
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
-def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool) -> Any:
+def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
     keyed by the options we used to create the spacy model, so any particular configuration only

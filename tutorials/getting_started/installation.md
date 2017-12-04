@@ -22,23 +22,22 @@ and shuts down the container when you exit the interactive shell.
 
 ## Installing using pip
 
-You can install `allennlp` using pip. Create a Python 3.6 virtual environment, and run
+You can install `allennlp` using pip in three easy steps.
 
-```bash
-$ pip install allennlp
-```
+1.  Create a Python 3.6 virtual environment, and run
 
-You'll also need to install PyTorch 0.2, following the appropriate instructions
-for your platform from [their website](http://pytorch.org/).
+    ```bash
+    $ pip install allennlp
+    ```
 
-Finally, you'll need to download spaCy's English models:
+2.  You'll also need to install PyTorch 0.2, following the appropriate instructions
+    for your platform from [their website](http://pytorch.org/).
 
-```bash
-$ python -m spacy download en
-```
+3.  Finally, you'll need to download spaCy's English models:
 
-This is the least-battle-tested method of installation,
-so please let us know if anything doesn't work right.
+    ```bash
+    $ python -m spacy download en
+    ```
 
 ## Installing from source
 
