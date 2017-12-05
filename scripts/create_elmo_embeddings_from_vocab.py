@@ -1,9 +1,12 @@
 # pylint: disable=no-self-use
 
 import os
-import gzip
 import argparse
+import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+
+import h5py
 import numpy
 import torch
 from torch.autograd import Variable
@@ -28,15 +31,13 @@ def main(vocab_path: str,
 
     indexer = ELMoTokenCharactersIndexer()
     indices = [indexer.token_to_indices(Token(token), Vocabulary()) for token in tokens]
-    # There are 457 tokens. Reshape into 10 batches of 50 tokens.
     sentences = []
-    for k in range(len((indices // 50) + 1)):
+    for k in range((len(indices) // 50) + 1):
         sentences.append(indexer.pad_token_sequence(indices[(k * 50):((k + 1) * 50)],
                                                     desired_num_tokens=50,
                                                     padding_lengths={}))
 
-    last_batch_remainder = len(indices) // 50
-
+    last_batch_remainder = 50 - (len(indices) % 50)
     if device != -1:
         elmo_token_embedder = _ElmoCharacterEncoder(options_file, weight_file).cuda(device_id=device)
     else:
@@ -45,32 +46,30 @@ def main(vocab_path: str,
     all_embeddings = []
     for i in range((len(sentences) // batch_size) + 1):
         if device != -1:
-            batch = Variable(torch.from_numpy(numpy.array(sentences)).cuda(device_id=device))
+            batch = Variable(torch.from_numpy(numpy.array(sentences[i * batch_size: (i + 1) * batch_size])).cuda(device_id=device))
         else:
-            batch = Variable(torch.from_numpy(numpy.array(sentences)))
+            batch = Variable(torch.from_numpy(numpy.array(sentences[i * batch_size: (i + 1) * batch_size])))
 
-        token_embedding = elmo_token_embedder(batch)['token_embedding'].data.numpy()
+        token_embedding = elmo_token_embedder(batch)['token_embedding'].data
+        print(token_embedding.shape)
 
         # Reshape back to a list of words of shape (batch_size * 50, encoding_dim)
         # We also need to remove the <S>, </S> tokens appended by the encoder.
-        per_word_embeddings = token_embedding[:, 1:-1, :].reshape(-1, token_embedding.shape[-1])
+        per_word_embeddings = token_embedding[:, 1:-1, :].contiguous().view(-1, token_embedding.size(-1))
+        print(per_word_embeddings.size())
 
         all_embeddings.append(per_word_embeddings)
 
-    # Remove the embeddings associated with padding.
+    # Remove the embeddings associated with padding in the last batch.
     all_embeddings[-1] = all_embeddings[-1][:-last_batch_remainder, :]
 
-    with gzip.open(os.path.join(output_dir, "elmo_embeddings.tar.gz"), 'wb') as embeddings_file:
-
-        for id, vector in zip(indices, numpy.stack())
-
-
-        embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
-
-
-
-
-
+    embedding_weight = torch.cat(all_embeddings, 0).numpy()
+    print(embedding_weight.shape)
+    with h5py.File(os.path.join(output_dir, "elmo_embeddings.hdf5"), 'w') as embeddings_file:
+        embeddings_file.create_dataset('embedding',
+                                       embedding_weight.shape,
+                                       dtype='float32',
+                                       data=embedding_weight)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate CNN representations for a vocabulary '
@@ -85,4 +84,4 @@ if __name__ == "__main__":
     parser.add_argument('--device', type=int, default=-1, help='The device to run on.')
 
     args = parser.parse_args()
-    main(args.vocab_path, args.elmo_model_dir, args.output_path, args.device)
+    main(args.vocab_path, args.elmo_model_dir, args.output_dir, args.batch_size, args.device)
