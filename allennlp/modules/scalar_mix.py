@@ -47,7 +47,7 @@ class ScalarMix(torch.nn.Module):
             return (tensor - mean) / torch.sqrt(variance + 1E-12)
 
         normed_weights = torch.split(
-                torch.nn.functional.softmax(torch.cat(self.scalar_parameters)),
+                torch.nn.functional.softmax(torch.cat([parameter for parameter in self.scalar_parameters])),
                 split_size=1
         )
 
