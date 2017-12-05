@@ -281,16 +281,24 @@ def viterbi_decode(tag_sequence: torch.Tensor,
     return viterbi_path, viterbi_score
 
 
-def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.LongTensor:
+def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
+                        num_wrapping_dims: int = 0) -> torch.LongTensor:
     """
-    Takes the dictionary of tensors produced by a ``TextField`` and returns a mask of shape
-    ``(batch_size, num_tokens)``.  This mask will be 0 where the tokens are padding, and 1
-    otherwise.
+    Takes the dictionary of tensors produced by a ``TextField`` and returns a mask
+    with 0 where the tokens are padding, and 1 otherwise.
+
+    If ``num_wrapping_dims=0``, then the return mask is shape
+    ``(batch_size, num_tokens)``.  If ``num_wrapping_dims>0`` then the return mask has
+    the same shape as the tensor with the smallest dimension in the input.
 
     There could be several entries in the tensor dictionary with different shapes (e.g., one for
     word ids, one for character ids).  In order to get a token mask, we assume that the tensor in
-    the dictionary with the lowest number of dimensions has plain token ids.  This allows us to
-    also handle cases where the input is actually a ``ListField[TextField]``.
+    the dictionary with the lowest number of dimensions defines the mask.  If
+    ``num_wrapping_dims=0`` and the tensor with the lowest number of dimensions 2D we assume
+    it is a token tensor.  If it is 3D we assume it is a character id tensor.
+
+    If ``num_wrapping_dims>0`` then we assume the tensor with the lowest number of dimensions
+    is a `ListField` that wraps ``num_wrapping_dims`` other ``TextField``.
 
     NOTE: Our functions for generating masks create torch.LongTensors, because using
     torch.byteTensors inside Variables makes it easy to run into overflow errors
@@ -303,7 +311,7 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Lo
     tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
     tensor_dims.sort(key=lambda x: x[0])
 
-    smallest_dim = tensor_dims[0][0]
+    smallest_dim = tensor_dims[0][0] - num_wrapping_dims
     if smallest_dim == 2:
         token_tensor = tensor_dims[0][1]
         return (token_tensor != 0).long()
