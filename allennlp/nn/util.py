@@ -297,7 +297,7 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     word ids, one for character ids).  In order to get a token mask, we use the tensor in
     the dictionary with the lowest number of dimensions.  After subtracting ``num_wrapping_dims``,
     if this tensor has two dimensions we assume it has shape ``(batch_size, ..., num_tokens)``,
-    and use it for the mask.  If instead it has three dimensions, we assume it has shape 
+    and use it for the mask.  If instead it has three dimensions, we assume it has shape
     ``(batch_size, ..., num_tokens, num_features)``, and sum over the last dimension to produce
     the mask.  Most frequently this will be a character id tensor, but it could also be a
     featurized representation of each token, etc.
