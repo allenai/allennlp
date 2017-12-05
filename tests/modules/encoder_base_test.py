@@ -34,6 +34,30 @@ class TestEncoderBase(AllenNlpTestCase):
         self.sorting_indices = sorting_indices
         self.restoration_indices = restoration_indices
 
+    def test_non_stateful_states_are_sorted_correctly(self):
+
+        encoder_base = _EncoderBase(stateful=False)
+        initial_states = (Variable(torch.randn(6, 5, 7)),
+                          Variable(torch.randn(6, 5, 7)))
+
+        # Check that we sort the state for non-stateful encoders. To test
+        # we'll just use a "pass through" encoder, as we aren't actually testing
+        # the functionality of the encoder here anyway.
+        sequence, states, restoration_indices = encoder_base.sort_and_run_forward(lambda *x: x,
+                                                                                  self.tensor,
+                                                                                  self.mask,
+                                                                                  initial_states)
+        zeros = torch.zeros([6, 2, 7])
+        for state, original in zip(states, initial_states):
+            assert list(state.size()) == [6, 3, 7]
+            state_with_zeros = torch.cat([state, zeros], 1)
+
+            unsorted_state = state_with_zeros.index_select(1, restoration_indices)
+
+            for index in [0, 1, 3]:
+                numpy.testing.assert_array_equal(unsorted_state[:, index, :].data.numpy(),
+                                                 original[:, index, :].data.numpy())
+
     def test_get_initial_states(self):
         # First time we call it, there should be no state, so we should return None.
         assert self.encoder_base._get_initial_states(self.batch_size, self.num_valid, self.sorting_indices) is None

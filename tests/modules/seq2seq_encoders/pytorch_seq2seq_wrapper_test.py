@@ -124,6 +124,46 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
             lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7)
             _ = PytorchSeq2SeqWrapper(lstm)
 
+    def test_wrapper_works_when_passed_state_with_zero_length_sequences(self):
+        lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
+        encoder = PytorchSeq2SeqWrapper(lstm)
+        tensor = torch.rand([5, 7, 3])
+        tensor[0, 3:, :] = 0
+        tensor[1, 4:, :] = 0
+        tensor[2, 0:, :] = 0
+        tensor[3, 6:, :] = 0
+        mask = torch.ones(5, 7)
+        mask[0, 3:] = 0
+        mask[1, 4:] = 0
+        mask[2, 0:] = 0
+        mask[3, 6:] = 0
+
+        initial_states = (Variable(torch.randn(6, 5, 7)),
+                          Variable(torch.randn(6, 5, 7)))
+
+        input_tensor = Variable(tensor)
+        mask = Variable(mask)
+        _ = encoder(input_tensor, mask, initial_states)
+
+    def test_wrapper_can_call_backward_with_zero_length_sequences(self):
+        lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
+        encoder = PytorchSeq2SeqWrapper(lstm)
+        tensor = torch.rand([5, 7, 3])
+        tensor[0, 3:, :] = 0
+        tensor[1, 4:, :] = 0
+        tensor[2, 0:, :] = 0
+        tensor[3, 6:, :] = 0
+        mask = torch.ones(5, 7)
+        mask[0, 3:] = 0
+        mask[1, 4:] = 0
+        mask[2, 0:] = 0  # zero length sequence
+        mask[3, 6:] = 0
+
+        input_tensor = Variable(tensor)
+        mask = Variable(mask)
+        output = encoder(input_tensor, mask)
+
+        output.sum().backward()
 
     def test_wrapper_stateful(self):
         lstm = LSTM(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
