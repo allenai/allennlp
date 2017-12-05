@@ -133,7 +133,7 @@ class TestEncoderBase(AllenNlpTestCase):
         small_new_states = (Variable(torch.randn([1, 3, 7])),
                             Variable(torch.randn([1, 3, 7])))
         # pretend the 2nd sequence in the batch was fully masked.
-        small_restoration_indices = torch.LongTensor([2, 0, 1])
+        small_restoration_indices = Variable(torch.LongTensor([2, 0, 1]))
         small_new_states[0][:, 0, :] = 0
         small_new_states[1][:, 0, :] = 0
 
