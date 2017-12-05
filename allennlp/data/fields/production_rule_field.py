@@ -1,14 +1,20 @@
-from typing import Dict, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
+import numpy
 from overrides import overrides
 
+from allennlp.data.fields.field import Field
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.vocabulary import Vocabulary
 
-ProductionRuleArray = Dict[str, Tuple[str, bool, Dict[str, numpy.ndarray]]]
+ProductionRuleArray = Dict[str, Tuple[str, bool, Dict[str, numpy.ndarray]]]  # pylint: disable=invalid-name
 
-class ProductionRuleField(Field[ProductionRuleArray]):
+# mypy doesn't like that we're using a crazy data type - the data type we use here is _supposed_ to
+# be in the bounds of DataArray, but ProductionRuleArray definitely isn't.  TODO(mattg): maybe we
+# should find a better way to loosen those bounds, or let people extend them.  E.g., we could have
+# DataArray be a class, and let people subclass it, or something.
+class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
     """
     This ``Field`` represents a production rule from a grammar, like "S -> [NP, VP]", "N -> John",
     or "<b,c> -> [<a,<b,c>>, a]".
@@ -69,47 +75,55 @@ class ProductionRuleField(Field[ProductionRuleArray]):
                  nonterminal_types: Set[str],
                  context: Any = None) -> None:
         self.rule = rule
-        self._left_side, self._right_side = [Token(side) for side in rule.split(' -> ')]
-        self._right_is_nonterminal = self._is_nonterminal(self._right_side)
         self._terminal_indexers = terminal_indexers
         self._nonterminal_indexers = nonterminal_indexers
-        self._right_side_indexers = nonterminal_indexers if self._right_is_nonterminal else terminal_indexers
         self._nonterminal_types = nonterminal_types
         self._context = context
-        self._indexed_left_side: Dict[str, TokenType] = None
-        self._indexed_right_side: Dict[str, TokenType] = None
+
+        self._left_side, self._right_side = rule.split(' -> ')
+        self._left_side_token, self._right_side_token = (Token(self._left_side), Token(self._right_side))
+        self._right_is_nonterminal = self._is_nonterminal(self._right_side)
+        self._right_side_indexers = nonterminal_indexers if self._right_is_nonterminal else terminal_indexers
+
+        # mypy isn't happy with the correct annotation of Dict[str, TokenType] here, probably
+        # because TokenType is a TypeVar - probably it's not valid to use TypeVars on variable
+        # annotations like this?
+        self._indexed_left_side: Dict = None
+        self._indexed_right_side: Dict = None
 
     def _is_nonterminal(self, right_side: str) -> bool:
         if right_side[0] == '[' or right_side[0] == '<':
             return True
-        return right_side in nonterminal_types
+        return right_side in self._nonterminal_types
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         for indexer in self._nonterminal_indexers.values():
-            indexer.count_vocab_items(self._left_side, counter)
+            indexer.count_vocab_items(self._left_side_token, counter)
         for indexer in self._right_side_indexers.values():
-            indexer.count_vocab_items(self._right_side, counter)
+            indexer.count_vocab_items(self._right_side_token, counter)
 
     @overrides
     def index(self, vocab: Vocabulary):
         self._indexed_left_side = {}
         self._indexed_right_side = {}
         for indexer_name, indexer in self._nonterminal_indexers.items():
-            self._indexed_left_side[indexer_name] = indexer.token_to_indices(self._left_side, vocab)
+            self._indexed_left_side[indexer_name] = indexer.token_to_indices(self._left_side_token, vocab)
         for indexer_name, indexer in self._right_side_indexers.items():
-            self._indexed_right_side[indexer_name] = indexer.token_to_indices(self._right_side, vocab)
+            self._indexed_right_side[indexer_name] = indexer.token_to_indices(self._right_side_token, vocab)
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = {}
+        padding_lengths: Dict[str, int] = {}
         if self._indexed_left_side is None:
             raise RuntimeError("You must call .index(vocab) on a field before determining padding lengths.")
         for indexer_name, indexer in self._nonterminal_indexers.items():
-            for padding_key, length in indexer.get_padding_lengths(self._left_side).items()
+            indexer_lengths = indexer.get_padding_lengths(self._indexed_left_side[indexer_name])
+            for padding_key, length in indexer_lengths.items():
                 padding_lengths[padding_key] = max(length, padding_lengths.get(padding_key, 0))
         for indexer_name, indexer in self._right_side_indexers.items():
-            for padding_key, length in indexer.get_padding_lengths(self._right_side).items()
+            indexer_lengths = indexer.get_padding_lengths(self._indexed_right_side[indexer_name])
+            for padding_key, length in indexer_lengths.items():
                 padding_lengths[padding_key] = max(length, padding_lengths.get(padding_key, 0))
         return padding_lengths
 
@@ -129,13 +143,13 @@ class ProductionRuleField(Field[ProductionRuleArray]):
             padded_left_side = indexer.pad_token_sequence([self._indexed_left_side[indexer_name]],
                                                           1,
                                                           padding_lengths)[0]
-            left_side_arrays[indexer_name] = numpy.array(padded_array)
+            left_side_arrays[indexer_name] = numpy.array(padded_left_side)
         right_side_arrays = {}
         for indexer_name, indexer in self._right_side_indexers.items():
             padded_right_side = indexer.pad_token_sequence([self._indexed_right_side[indexer_name]],
-                                                          1,
-                                                          padding_lengths)[0]
-            right_side_arrays[indexer_name] = numpy.array(padded_array)
+                                                           1,
+                                                           padding_lengths)[0]
+            right_side_arrays[indexer_name] = numpy.array(padded_right_side)
         return {"left": (self._left_side, True, left_side_arrays),
                 "right": (self._right_side, self._right_is_nonterminal, right_side_arrays)}
 
