@@ -285,23 +285,25 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
                         num_wrapping_dims: int = 0) -> torch.LongTensor:
     """
     Takes the dictionary of tensors produced by a ``TextField`` and returns a mask
-    with 0 where the tokens are padding, and 1 otherwise.
+    with 0 where the tokens are padding, and 1 otherwise.  We also handle ``TextFields``
+    wrapped by an arbitrary number of ``ListFields``, where the number of wrapping ``ListFields``
+    is given by ``num_wrapping_dims``.
 
-    If ``num_wrapping_dims=0``, then the return mask is shape
-    ``(batch_size, num_tokens)``.  If ``num_wrapping_dims>0`` then the return mask has
-    the same shape as the tensor with the smallest dimension in the input.
+    If ``num_wrapping_dims == 0``, the returned mask has shape ``(batch_size, num_tokens)``.
+    If ``num_wrapping_dims > 0`` then the returned mask has ``num_wrapping_dims`` extra
+    dimensions, so the shape will be ``(batch_size, ..., num_tokens)``.
 
     There could be several entries in the tensor dictionary with different shapes (e.g., one for
-    word ids, one for character ids).  In order to get a token mask, we assume that the tensor in
-    the dictionary with the lowest number of dimensions defines the mask.  If
-    ``num_wrapping_dims=0`` and the tensor with the lowest number of dimensions 2D we assume
-    it is a token tensor.  If it is 3D we assume it is a character id tensor.
-
-    If ``num_wrapping_dims>0`` then we assume the tensor with the lowest number of dimensions
-    is a `ListField` that wraps ``num_wrapping_dims`` other ``TextField``.
+    word ids, one for character ids).  In order to get a token mask, we use the tensor in
+    the dictionary with the lowest number of dimensions.  After subtracting ``num_wrapping_dims``,
+    if this tensor has two dimensions we assume it has shape ``(batch_size, ..., num_tokens)``,
+    and use it for the mask.  If instead it has three dimensions, we assume it has shape 
+    ``(batch_size, ..., num_tokens, num_features)``, and sum over the last dimension to produce
+    the mask.  Most frequently this will be a character id tensor, but it could also be a
+    featurized representation of each token, etc.
 
     NOTE: Our functions for generating masks create torch.LongTensors, because using
-    torch.byteTensors inside Variables makes it easy to run into overflow errors
+    torch.ByteTensors inside Variables makes it easy to run into overflow errors
     when doing mask manipulation, such as summing to get the lengths of sequences - see below.
     >>> mask = torch.ones([260]).byte()
     >>> mask.sum() # equals 260.
