@@ -300,7 +300,7 @@ class TestNnUtil(AllenNlpTestCase):
     def test_get_text_field_mask_returns_a_correct_mask_list_field(self):
         text_field_arrays = {
                 "list_tokens": numpy.asarray([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
-                                                   [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
+                                              [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
                 }
         text_field_tensors = util.arrays_to_variables(text_field_arrays)
         actual_mask = util.get_text_field_mask(text_field_tensors, num_wrapping_dims=1).data.numpy()
