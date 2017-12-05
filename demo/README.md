@@ -6,6 +6,10 @@ tools.
 
 ## Building and running the demo
 
+Make sure that you have installed the `demo_requirements.txt` in the root of this
+repository - these contain some python packages which are required for running the
+web demo.
+
 First, make sure you have a relatively new version of `npm` installed on your
 system.  If you are on a Mac, you can install `npm` with `brew install node`.
 

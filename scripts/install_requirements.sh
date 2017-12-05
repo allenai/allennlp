@@ -10,3 +10,8 @@ spacy download en_core_web_sm
 if [[ "$INSTALL_TEST_REQUIREMENTS" == "true" ]]; then
     pip install -r requirements_test.txt
 fi
+
+# only install demo requirements if explicitly specified
+if [[ "$INSTALL_DEMO_REQUIREMENTS" == "true" ]]; then
+    pip install -r requirements_demo.txt
+fi

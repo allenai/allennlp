@@ -114,6 +114,9 @@ to use AllenNLP.
 5.  Install the required dependencies.
 
     ```
+    # If you also want to run our web demo locally, 
+    # also export INSTALL_DEMO_REQUIREMENTS="true" before
+    # running the install script.
     INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
     ```
 
