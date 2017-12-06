@@ -1,6 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import ModelTestCase
-from allennlp.nn.util import arrays_to_variables
 
 class TestElmoTokenEmbedder(ModelTestCase):
     def setUp(self):
@@ -12,8 +11,8 @@ class TestElmoTokenEmbedder(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_tagger_with_elmo_token_embedder_forward_pass_runs_correctly(self):
-        training_arrays = self.dataset.as_array_dict()
-        output_dict = self.model.forward(**arrays_to_variables(training_arrays))
+        training_tensors = self.dataset.as_tensor_dict()
+        output_dict = self.model.forward(**training_tensors)
         tags = output_dict['tags']
         assert len(tags) == 2
         assert len(tags[0]) == 7
