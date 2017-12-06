@@ -99,7 +99,7 @@ class ConllCorefReader(DatasetReader):
                     # basis, so we need to adjust them to be relative
                     # to the length of the document.
                     span_id, (start, end) = typed_span
-                    clusters[span_id].append((start + total_tokens,
+                    clusters[int(span_id)].append((start + total_tokens,
                                               end + total_tokens))
                 total_tokens += len(sentence.words)
 

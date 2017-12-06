@@ -62,9 +62,9 @@ class SrlReader(DatasetReader):
                 verb_label = [0 for _ in tokens]
                 instances.append(self.text_to_instance(tokens, verb_label, tags))
             else:
-                for verb, tags in sentence.srl_frames.items():
-                    verb_label = [1 if "-V" == label[-2:] else 0 for label in tags]
-                    instances.append(self.text_to_instance(tokens, verb_label, tags))
+                for tags in sentence.srl_frames.values():
+                    verb_indicator = [1 if label[-2:] == "-V" else 0 for label in tags]
+                    instances.append(self.text_to_instance(tokens, verb_indicator, tags))
 
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
