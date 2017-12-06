@@ -28,18 +28,19 @@ class ModelTestCase(AllenNlpTestCase):
         self.dataset = dataset
         self.model = Model.from_params(self.vocab, params['model'])
 
-    def ensure_model_can_train_save_and_load(self, param_file: str, tolerance: float = 1e-6):
+    def ensure_model_can_train_save_and_load(self, param_file: str, tolerance: float = 1e-6,
+                                             cuda_device: int = -1):
         save_dir = os.path.join(self.TEST_DIR, "save_and_load_test")
         archive_file = os.path.join(save_dir, "model.tar.gz")
         model = train_model_from_file(param_file, save_dir)
-        loaded_model = load_archive(archive_file).model
+        loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
         state_keys = model.state_dict().keys()
         loaded_state_keys = loaded_model.state_dict().keys()
         assert state_keys == loaded_state_keys
         # First we make sure that the state dict (the parameters) are the same for both models.
         for key in state_keys:
-            assert_allclose(model.state_dict()[key].numpy(),
-                            loaded_model.state_dict()[key].numpy(),
+            assert_allclose(model.state_dict()[key].cpu().numpy(),
+                            loaded_model.state_dict()[key].cpu().numpy(),
                             err_msg=key)
         params = Params.from_file(self.param_file)
         reader = DatasetReader.from_params(params['dataset_reader'])
@@ -49,10 +50,10 @@ class ModelTestCase(AllenNlpTestCase):
         # the same result out.
         model_dataset = reader.read(params['validation_data_path'])
         model_dataset.index_instances(model.vocab)
-        model_batch = next(iterator(model_dataset, shuffle=False))
+        model_batch = next(iterator(model_dataset, shuffle=False, cuda_device=cuda_device))
         loaded_dataset = reader.read(params['validation_data_path'])
         loaded_dataset.index_instances(loaded_model.vocab)
-        loaded_batch = next(iterator(loaded_dataset, shuffle=False))
+        loaded_batch = next(iterator(loaded_dataset, shuffle=False, cuda_device=cuda_device))
 
         # The datasets themselves should be identical.
         for key in model_batch.keys():
@@ -95,8 +96,8 @@ class ModelTestCase(AllenNlpTestCase):
     @staticmethod
     def assert_fields_equal(field1, field2, tolerance: float = 1e-6, name: str = None) -> None:
         if isinstance(field1, torch.autograd.Variable):
-            assert_allclose(field1.data.numpy(),
-                            field2.data.numpy(),
+            assert_allclose(field1.data.cpu().numpy(),
+                            field2.data.cpu().numpy(),
                             rtol=tolerance,
                             err_msg=name)
         else:
