@@ -34,8 +34,8 @@ class TestOntonotes(AllenNlpTestCase):
 
         assert annotation.parse_tree == Tree.fromstring("(TOP(S(NP(NML (NNP Mali)  (NN government) )"
                                                         " (NNS officials) )(VP (VBP say) (SBAR(S(NP(NP"
-                                                        " (DT the)  (NN woman)  (POS 's) ) (NN"
-                                                        "confession) )(VP (VBD was) (ADJP (JJ"
+                                                        " (DT the)  (NN woman)  (POS 's) ) (NN "
+                                                        "confession) )(VP (VBD was) (ADJP (JJ "
                                                         "forced) ))))) (. .) ))")
         assert annotation.coref_spans == {(1, (4, 6)), (3, (4, 7))}
 
@@ -62,9 +62,9 @@ class TestOntonotes(AllenNlpTestCase):
                                                None, None, None, None, 'month', None, 'hearing', None]
         assert annotation.speakers == [None, None, None, None, None, None,
                                        None, None, None, None, None, None, None]
-        assert annotation.parse_tree == Tree.fromstring("(TOP(S(NP (DT The)  (NN prosecution) )(VP"
+        assert annotation.parse_tree == Tree.fromstring("(TOP(S(NP (DT The)  (NN prosecution) )(VP "
                                                         "(VBD rested) (NP (PRP$ its)  (NN case) )"
-                                                        "(NP (JJ last)  (NN month) )(PP (IN after)"
+                                                        "(NP (JJ last)  (NN month) )(PP (IN after) "
                                                         "(NP(NP (CD four)  (NNS months) )(PP (IN"
                                                         " of) (NP (NNS hearings) ))))) (. .) ))")
         assert annotation.coref_spans == {(2, (0, 1)), (2, (3, 3))}
@@ -81,8 +81,8 @@ class TestOntonotes(AllenNlpTestCase):
                                              'B-WORK_OF_ART', 'I-WORK_OF_ART', 'O']
         assert annotation.predicate_lemmas == [None, None, None, None, None]
         assert annotation.speakers == [None, None, None, None, None]
-        assert annotation.parse_tree == Tree.fromstring("(TOP(FRAG(NP (NNP Denise)"
-                                                        " (NNP Dillon) )(NP (NNP Headline)"
+        assert annotation.parse_tree == Tree.fromstring("(TOP(FRAG(NP (NNP Denise) "
+                                                        " (NNP Dillon) )(NP (NNP Headline)  "
                                                         "(NNP News) ) (. .) ))")
         assert annotation.coref_spans == {(2, (0, 1))}
 
