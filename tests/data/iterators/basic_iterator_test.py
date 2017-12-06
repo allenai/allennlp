@@ -51,7 +51,9 @@ class TestBasicIterator(IteratorTest):
         iterator = BasicIterator(batch_size=2)
         batches = list(iterator(self.dataset, num_epochs=1))
         # We just want to get the single-token array for the text field in the instance.
-        instances = [tuple(instance) for batch in batches for instance in batch['text']["tokens"]]
+        instances = [tuple(instance.data.cpu().numpy())
+                     for batch in batches
+                     for instance in batch['text']["tokens"]]
         assert len(instances) == 5
         self.assert_instances_are_correct(instances)
 
@@ -59,7 +61,9 @@ class TestBasicIterator(IteratorTest):
         generator = BasicIterator(batch_size=2)(self.dataset)
         batches = [next(generator) for _ in range(18)]  # going over the data 6 times
         # We just want to get the single-token array for the text field in the instance.
-        instances = [tuple(instance) for batch in batches for instance in batch['text']["tokens"]]
+        instances = [tuple(instance.data.cpu().numpy())
+                     for batch in batches
+                     for instance in batch['text']["tokens"]]
         assert len(instances) == 5 * 6
         self.assert_instances_are_correct(instances)
 

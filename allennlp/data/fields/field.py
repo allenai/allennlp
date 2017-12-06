@@ -1,27 +1,27 @@
 from collections import defaultdict
 from typing import Dict, Generic, List, TypeVar
 
-import numpy
+import torch
 
 from allennlp.data.vocabulary import Vocabulary
 
-DataArray = TypeVar("DataArray", numpy.ndarray, Dict[str, numpy.ndarray])  # pylint: disable=invalid-name
+DataArray = TypeVar("DataArray", torch.Tensor, Dict[str, torch.Tensor])  # pylint: disable=invalid-name
 
 
 class Field(Generic[DataArray]):
     """
-    A ``Field`` is some piece of a data instance that ends up as an array in a model (either as an
+    A ``Field`` is some piece of a data instance that ends up as an tensor in a model (either as an
     input or an output).  Data instances are just collections of fields.
 
     Fields go through up to two steps of processing: (1) tokenized fields are converted into token
     ids, (2) fields containing token ids (or any other numeric data) are padded (if necessary) and
-    converted into data arrays.  The ``Field`` API has methods around both of these steps,
-    though they may not be needed for some concrete ``Field`` classes - if your field doesn't have
-    any strings that need indexing, you don't need to implement ``count_vocab_items`` or ``index``.
-    These methods ``pass`` by default.
+    converted into tensors.  The ``Field`` API has methods around both of these steps, though they
+    may not be needed for some concrete ``Field`` classes - if your field doesn't have any strings
+    that need indexing, you don't need to implement ``count_vocab_items`` or ``index``.  These
+    methods ``pass`` by default.
 
     Once a vocabulary is computed and all fields are indexed, we will determine padding lengths,
-    then intelligently batch together instances and pad them into actual arrays.
+    then intelligently batch together instances and pad them into actual tensors.
     """
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
@@ -69,12 +69,28 @@ class Field(Generic[DataArray]):
         """
         raise NotImplementedError
 
-    def as_array(self, padding_lengths: Dict[str, int]) -> DataArray:
+    def as_tensor(self,
+                  padding_lengths: Dict[str, int],
+                  cuda_device: int = -1,
+                  for_training: bool = True) -> DataArray:
         """
         Given a set of specified padding lengths, actually pad the data in this field and return a
-        numpy array of the correct shape.  This actually returns a list instead of a single array,
-        in case there are several related arrays for this field (e.g., a ``TextField`` might have a
-        word array and a characters-per-word array).
+        torch Tensor (or a more complex data structure) of the correct shape.  We also take a
+        couple of parameters that are important when constructing torch Tensors.
+
+        Parameters
+        ----------
+        padding_lengths : ``Dict[str, int]``
+            This dictionary will have the same keys that were produced in
+            :func:`get_padding_lengths`.  The values specify the lengths to use when padding each
+            relevant dimension, aggregated across all instances in a batch.
+        cuda_device : ``int``
+            If cuda_device >= 0, GPUs are available and Pytorch was compiled with CUDA support, we
+            will allocate tensors on this device instead of on the CPU.
+        for_training : ``bool``, optional (default=``True``)
+            If ``False``, we will pass the ``volatile=True`` flag when constructing variables,
+            which disables gradient computations in the graph.  This makes inference more efficient
+            (particularly in memory usage), but is incompatible with training models.
         """
         raise NotImplementedError
 
@@ -83,7 +99,7 @@ class Field(Generic[DataArray]):
         So that ``ListField`` can pad the number of fields in a list (e.g., the number of answer
         option ``TextFields``), we need a representation of an empty field of each type.  This
         returns that.  This will only ever be called when we're to the point of calling
-        :func:`as_array`, so you don't need to worry about ``get_padding_lengths``,
+        :func:`as_tensor`, so you don't need to worry about ``get_padding_lengths``,
         ``count_vocab_items``, etc., being called on this empty field.
 
         We make this an instance method instead of a static method so that if there is any state
@@ -92,22 +108,22 @@ class Field(Generic[DataArray]):
         raise NotImplementedError
 
     @classmethod
-    def batch_arrays(cls, array_list: List[DataArray]) -> DataArray:  # type: ignore
+    def batch_tensors(cls, tensor_list: List[DataArray]) -> DataArray:  # type: ignore
         """
-        Takes the output of ``Field.as_array()`` from a list of ``Instances`` and merges it into
-        one batched array for this ``Field``.  The default implementation here in the base class
-        handles cases where ``as_array`` returns a single numpy array per instance, or a dictionary
-        of single arrays.  If your subclass returns something other than this, you need to
-        override this method.
+        Takes the output of ``Field.as_tensor()`` from a list of ``Instances`` and merges it into
+        one batched tensor for this ``Field``.  The default implementation here in the base class
+        handles cases where ``as_tensor`` returns a single torch tensor per instance, or a
+        dictionary of single tensors.  If your subclass returns something other than this, you need
+        to override this method.
         """
-        if isinstance(array_list[0], dict):
-            # This is creating a dict of {token_indexer_key: batch_array} for each
+        if isinstance(tensor_list[0], dict):
+            # This is creating a dict of {token_indexer_key: batch_tensor} for each
             # token indexer used to index this field. This is mostly utilised by TextFields.
-            token_indexer_key_to_batch_dict: Dict[str, List[numpy.ndarray]] = defaultdict(list)
-            for encoding_name_dict in array_list:
-                for indexer_name, array in encoding_name_dict.items():
-                    token_indexer_key_to_batch_dict[indexer_name].append(array)
-            return {indexer_name: numpy.asarray(array_list)
-                    for indexer_name, array_list in token_indexer_key_to_batch_dict.items()}
+            token_indexer_key_to_batch_dict: Dict[str, List[torch.Tensor]] = defaultdict(list)
+            for encoding_name_dict in tensor_list:
+                for indexer_name, tensor in encoding_name_dict.items():
+                    token_indexer_key_to_batch_dict[indexer_name].append(tensor)
+            return {indexer_name: torch.stack(tensor_list)
+                    for indexer_name, tensor_list in token_indexer_key_to_batch_dict.items()}
         else:
-            return numpy.asarray(array_list)
+            return torch.stack(tensor_list)

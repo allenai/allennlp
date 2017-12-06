@@ -34,7 +34,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
-from allennlp.nn.util import arrays_to_variables
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -82,12 +81,11 @@ def evaluate(model: Model,
              cuda_device: int) -> Dict[str, Any]:
     model.eval()
 
-    generator = iterator(dataset, num_epochs=1)
+    generator = iterator(dataset, num_epochs=1, cuda_device=cuda_device, for_training=False)
     logger.info("Iterating over dataset")
     generator_tqdm = tqdm.tqdm(generator, total=iterator.get_num_batches(dataset))
     for batch in generator_tqdm:
-        tensor_batch = arrays_to_variables(batch, cuda_device, for_training=False)
-        model.forward(**tensor_batch)
+        model.forward(**batch)
         metrics = model.get_metrics()
         description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
         generator_tqdm.set_description(description)

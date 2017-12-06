@@ -137,37 +137,40 @@ class TestTextField(AllenNlpTestCase):
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {"num_tokens": 5, "num_token_characters": 8}
 
-    def test_as_array_handles_words(self):
+    def test_as_tensor_handles_words(self):
         field = TextField([Token(t) for t in ["This", "is", "a", "sentence", "."]],
                           token_indexers={"words": SingleIdTokenIndexer("words")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
-        array_dict = field.as_array(padding_lengths)
-        numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 1, 1, 2, 1]))
+        tensor_dict = field.as_tensor(padding_lengths)
+        numpy.testing.assert_array_almost_equal(tensor_dict["words"].data.cpu().numpy(),
+                                                numpy.array([1, 1, 1, 2, 1]))
 
-    def test_as_array_handles_longer_lengths(self):
+    def test_as_tensor_handles_longer_lengths(self):
         field = TextField([Token(t) for t in ["This", "is", "a", "sentence", "."]],
                           token_indexers={"words": SingleIdTokenIndexer("words")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         padding_lengths["num_tokens"] = 10
-        array_dict = field.as_array(padding_lengths)
-        numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 1, 1, 2, 1, 0, 0, 0, 0, 0]))
+        tensor_dict = field.as_tensor(padding_lengths)
+        numpy.testing.assert_array_almost_equal(tensor_dict["words"].data.cpu().numpy(),
+                                                numpy.array([1, 1, 1, 2, 1, 0, 0, 0, 0, 0]))
 
-    def test_as_array_handles_characters(self):
+    def test_as_tensor_handles_characters(self):
         field = TextField([Token(t) for t in ["This", "is", "a", "sentence", "."]],
                           token_indexers={"characters": TokenCharactersIndexer("characters")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
-        array_dict = field.as_array(padding_lengths)
+        tensor_dict = field.as_tensor(padding_lengths)
         expected_character_array = numpy.array([[1, 1, 1, 3, 0, 0, 0, 0],
                                                 [1, 3, 0, 0, 0, 0, 0, 0],
                                                 [1, 0, 0, 0, 0, 0, 0, 0],
                                                 [3, 4, 5, 6, 4, 5, 7, 4],
                                                 [1, 0, 0, 0, 0, 0, 0, 0]])
-        numpy.testing.assert_array_almost_equal(array_dict["characters"], expected_character_array)
+        numpy.testing.assert_array_almost_equal(tensor_dict["characters"].data.cpu().numpy(),
+                                                expected_character_array)
 
-    def test_as_array_handles_words_and_characters_with_longer_lengths(self):
+    def test_as_tensor_handles_words_and_characters_with_longer_lengths(self):
         field = TextField([Token(t) for t in ["a", "sentence", "."]],
                           token_indexers={"words": SingleIdTokenIndexer("words"),
                                           "characters": TokenCharactersIndexer("characters")})
@@ -175,10 +178,11 @@ class TestTextField(AllenNlpTestCase):
         padding_lengths = field.get_padding_lengths()
         padding_lengths["num_tokens"] = 5
         padding_lengths["num_token_characters"] = 10
-        array_dict = field.as_array(padding_lengths)
+        tensor_dict = field.as_tensor(padding_lengths)
 
-        numpy.testing.assert_array_almost_equal(array_dict["words"], numpy.array([1, 2, 1, 0, 0]))
-        numpy.testing.assert_array_almost_equal(array_dict["characters"],
+        numpy.testing.assert_array_almost_equal(tensor_dict["words"].data.cpu().numpy(),
+                                                numpy.array([1, 2, 1, 0, 0]))
+        numpy.testing.assert_array_almost_equal(tensor_dict["characters"].data.cpu().numpy(),
                                                 numpy.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                                              [3, 4, 5, 6, 4, 5, 7, 4, 0, 0],
                                                              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],

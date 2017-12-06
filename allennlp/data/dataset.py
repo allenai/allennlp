@@ -7,7 +7,7 @@ import logging
 from collections import defaultdict
 from typing import Dict, List, Union
 
-import numpy
+import torch
 import tqdm
 
 from allennlp.data.instance import Instance
@@ -83,17 +83,19 @@ class Dataset:
                 padding_lengths[field_name][padding_key] = max_value
         return {**padding_lengths}
 
-    def as_array_dict(self,
-                      padding_lengths: Dict[str, Dict[str, int]] = None,
-                      verbose: bool = True) ->Dict[str, Union[numpy.ndarray, Dict[str, numpy.ndarray]]]:
+    def as_tensor_dict(self,
+                       padding_lengths: Dict[str, Dict[str, int]] = None,
+                       cuda_device: int = -1,
+                       for_training: bool = True,
+                       verbose: bool = False) -> Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]:
         # This complex return type is actually predefined elsewhere as a DataArray,
         # but we can't use it because mypy doesn't like it.
         """
-        This method converts this ``Dataset`` into a set of numpy arrays that can be passed through
-        a model.  In order for the numpy arrays to be valid arrays, all ``Instances`` in this
+        This method converts this ``Dataset`` into a set of pytorch Tensors that can be passed
+        through a model.  In order for the tensors to be valid tensors, all ``Instances`` in this
         dataset need to be padded to the same lengths wherever padding is necessary, so we do that
-        first, then we combine all of the arrays for each field in each instance into a set of
-        batched arrays for each field.
+        first, then we combine all of the tensors for each field in each instance into a set of
+        batched tensors for each field.
 
         Parameters
         ----------
@@ -104,24 +106,32 @@ class Dataset:
 
             Entries in this dictionary are keyed first by field name (e.g., "question"), then by
             padding key (e.g., "num_tokens").
-        verbose : ``bool``, optional (default=``True``)
+        cuda_device : ``int``
+            If cuda_device >= 0, GPUs are available and Pytorch was compiled with CUDA support, the
+            tensor will be copied to the cuda_device specified.
+        for_training : ``bool``, optional (default=``True``)
+            If ``False``, we will pass the ``volatile=True`` flag when constructing variables,
+            which disables gradient computations in the graph.  This makes inference more efficient
+            (particularly in memory usage), but is incompatible with training models.
+        verbose : ``bool``, optional (default=``False``)
             Should we output logging information when we're doing this padding?  If the dataset is
             large, this is nice to have, because padding a large dataset could take a long time.
             But if you're doing this inside of a data generator, having all of this output per
-            batch is a bit obnoxious.
+            batch is a bit obnoxious (and really slow).
 
         Returns
         -------
-        data_arrays : ``Dict[str, DataArray]``
-            A dictionary of data arrays, keyed by field name, suitable for passing as input to a
-            model.  This is a `batch` of instances, so, e.g., if the instances have a "question"
-            field and an "answer" field, the "question" fields for all of the instances will be
-            grouped together into a single array, and the "answer" fields for all instances will be
-            similarly grouped in a parallel set of arrays, for batched computation. Additionally,
-            for TextFields, the value of the dictionary key is no longer a single array, but another
-            dictionary mapping TokenIndexer keys to arrays. The number of elements in this
-            sub-dictionary therefore corresponds to the number of ``TokenIndexers`` used to index
-            the Field.
+        tensors : ``Dict[str, DataArray]``
+            A dictionary of tensors, keyed by field name, suitable for passing as input to a model.
+            This is a `batch` of instances, so, e.g., if the instances have a "question" field and
+            an "answer" field, the "question" fields for all of the instances will be grouped
+            together into a single tensor, and the "answer" fields for all instances will be
+            similarly grouped in a parallel set of tensors, for batched computation. Additionally,
+            for complex ``Fields``, the value of the dictionary key is not necessarily a single
+            tensor.  For example, with the ``TextField``, the output is a dictionary mapping
+            ``TokenIndexer`` keys to tensors. The number of elements in this sub-dictionary
+            therefore corresponds to the number of ``TokenIndexers`` used to index the
+            ``TextField``.  Each ``Field`` class is responsible for batching its own output.
         """
         if padding_lengths is None:
             padding_lengths = defaultdict(dict)
@@ -143,20 +153,20 @@ class Dataset:
                 else:
                     lengths_to_use[field_name][padding_key] = instance_field_lengths[padding_key]
 
-        # Now we actually pad the instances to numpy arrays.
-        field_arrays: Dict[str, list] = defaultdict(list)
+        # Now we actually pad the instances to tensors.
+        field_tensors: Dict[str, list] = defaultdict(list)
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
         for instance in self.instances:
-            for field, arrays in instance.as_array_dict(lengths_to_use).items():
-                field_arrays[field].append(arrays)
+            for field, tensors in instance.as_tensor_dict(lengths_to_use, cuda_device, for_training).items():
+                field_tensors[field].append(tensors)
 
-        # Finally, we combine the arrays that we got for each instance into one big array (or set
-        # of arrays) per field.  The `Field` classes themselves have the logic for batching the
-        # arrays together, so we grab a dictionary of field_name -> field class from the first
+        # Finally, we combine the tensors that we got for each instance into one big tensor (or set
+        # of tensors) per field.  The `Field` classes themselves have the logic for batching the
+        # tensors together, so we grab a dictionary of field_name -> field class from the first
         # instance in the dataset.
         field_classes = self.instances[0].fields
         final_fields = {}
-        for field_name, field_array_list in field_arrays.items():
-            final_fields[field_name] = field_classes[field_name].batch_arrays(field_array_list)
+        for field_name, field_tensor_list in field_tensors.items():
+            final_fields[field_name] = field_classes[field_name].batch_tensors(field_tensor_list)
         return final_fields
