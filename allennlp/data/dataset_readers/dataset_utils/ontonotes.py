@@ -7,12 +7,10 @@ import logging
 from nltk import Tree
 import tqdm
 
-from allennlp.common import Params
-
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 TypedSpan = Tuple[Union[int, str], Tuple[int, int]]  # pylint: disable=invalid-name
-from nltk.corpus.reader.conll import ConllCorpusReader
+
 
 class OntonotesSentence:
     """
