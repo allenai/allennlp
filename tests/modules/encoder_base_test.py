@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,protected-access
+# pylint: disable=no-self-use,protected-access,invalid-name
 import numpy
 import torch
 from torch.autograd import Variable
@@ -33,6 +33,34 @@ class TestEncoderBase(AllenNlpTestCase):
         _, _, restoration_indices, sorting_indices = sort_batch_by_length(tensor, sequence_lengths)
         self.sorting_indices = sorting_indices
         self.restoration_indices = restoration_indices
+
+    def test_non_stateful_states_are_sorted_correctly(self):
+        encoder_base = _EncoderBase(stateful=False)
+        initial_states = (Variable(torch.randn(6, 5, 7)),
+                          Variable(torch.randn(6, 5, 7)))
+        # Check that we sort the state for non-stateful encoders. To test
+        # we'll just use a "pass through" encoder, as we aren't actually testing
+        # the functionality of the encoder here anyway.
+        _, states, restoration_indices = encoder_base.sort_and_run_forward(lambda *x: x,
+                                                                           self.tensor,
+                                                                           self.mask,
+                                                                           initial_states)
+        # Our input tensor had 2 zero length sequences, so we need
+        # to concat a tensor of shape
+        # (num_layers * num_directions, batch_size - num_valid, hidden_dim),
+        # to the output before unsorting it.
+        zeros = torch.zeros([6, 2, 7])
+
+        # sort_and_run_forward strips fully-padded instances from the batch;
+        # in order to use the restoration_indices we need to add back the two
+        #  that got stripped. What we get back should match what we started with.
+        for state, original in zip(states, initial_states):
+            assert list(state.size()) == [6, 3, 7]
+            state_with_zeros = torch.cat([state, zeros], 1)
+            unsorted_state = state_with_zeros.index_select(1, restoration_indices)
+            for index in [0, 1, 3]:
+                numpy.testing.assert_array_equal(unsorted_state[:, index, :].data.numpy(),
+                                                 original[:, index, :].data.numpy())
 
     def test_get_initial_states(self):
         # First time we call it, there should be no state, so we should return None.

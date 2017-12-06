@@ -11,79 +11,6 @@ from allennlp.nn import util
 
 
 class TestNnUtil(AllenNlpTestCase):
-    def test_arrays_to_variables_handles_recursion(self):
-
-        array_dict = {
-                "sentence": {
-                        "words": numpy.zeros([3, 4]),
-                        "characters": numpy.ones([2, 5])
-                        },
-                "tags": numpy.ones([2, 3])
-        }
-        torch_array_dict = util.arrays_to_variables(array_dict)
-
-        assert torch_array_dict["sentence"]["words"].data.equal(
-                torch.DoubleTensor(numpy.zeros([3, 4])))
-        assert torch_array_dict["sentence"]["characters"].data.equal(
-                torch.DoubleTensor(numpy.ones([2, 5])))
-        assert torch_array_dict["tags"].data.equal(
-                torch.DoubleTensor(numpy.ones([2, 3])))
-
-    def test_arrays_to_variables_can_expand_batch_dimensions(self):
-
-        array_dict = {
-                "sentence": {
-                        "words": numpy.zeros([4]),
-                        "characters": numpy.ones([5])
-                        },
-                "tags": numpy.ones([3])
-        }
-        torch_array_dict = util.arrays_to_variables(array_dict, add_batch_dimension=True)
-
-        assert torch_array_dict["sentence"]["words"].data.equal(
-                torch.DoubleTensor(numpy.zeros([1, 4])))
-        assert torch_array_dict["sentence"]["characters"].data.equal(
-                torch.DoubleTensor(numpy.ones([1, 5])))
-        assert torch_array_dict["tags"].data.equal(
-                torch.DoubleTensor(numpy.ones([1, 3])))
-
-    def test_arrays_to_variables_correctly_converts_mixed_types(self):
-
-        array_dict = {
-                "sentence": {
-                        "words": numpy.zeros([3, 4], dtype="float32"),
-                        "characters": numpy.ones([2, 5], dtype="int32")
-                        },
-                "tags": numpy.ones([2, 3], dtype="uint8")
-        }
-        torch_array_dict = util.arrays_to_variables(array_dict)
-
-        assert torch_array_dict["sentence"]["words"].data.equal(
-                torch.FloatTensor(numpy.zeros([3, 4])))
-        assert torch_array_dict["sentence"]["characters"].data.equal(
-                torch.IntTensor(numpy.ones([2, 5], dtype="int32")))
-        assert torch_array_dict["tags"].data.equal(torch.ByteTensor(
-                numpy.ones([2, 3], dtype="uint8")))
-
-    @pytest.mark.skip
-    def test_data_structure_as_variables_correctly_allocates_cuda_tensors(self):
-        # TODO(Mark): Work out if we can test this somehow without actual GPUs.
-        array_dict = {
-                "sentence": {
-                        "words": numpy.zeros([3, 4], dtype="float32"),
-                        "characters": numpy.ones([2, 5], dtype="int32")
-                        },
-                "tags": numpy.ones([2, 3], dtype="uint8")
-        }
-        torch_array_dict = util.arrays_to_variables(array_dict, cuda_device=1)
-
-        assert torch_array_dict["sentence"]["words"].data.equal(
-                torch.cuda.FloatTensor(numpy.zeros([3, 4])))
-        assert torch_array_dict["sentence"]["characters"].data.equal(
-                torch.cuda.IntTensor(numpy.ones([2, 5], dtype="int32")))
-        assert torch_array_dict["tags"].data.equal(
-                torch.cuda.ByteTensor(numpy.ones([2, 3], dtype="uint8")))
-
     def test_get_sequence_lengths_from_binary_mask(self):
         binary_mask = torch.ByteTensor([[1, 1, 1, 0, 0, 0],
                                         [1, 1, 0, 0, 0, 0],
@@ -279,32 +206,29 @@ class TestNnUtil(AllenNlpTestCase):
                                   numpy.array([[1.0, 1.0, 1.0, 1.0]]))
 
     def test_get_text_field_mask_returns_a_correct_mask(self):
-        text_field_arrays = {
-                "tokens": numpy.asarray([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
-                "token_characters": numpy.asarray([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
-                                                   [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
+        text_field_tensors = {
+                "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
+                "token_characters": torch.LongTensor([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
+                                                      [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
                 }
-        text_field_tensors = util.arrays_to_variables(text_field_arrays)
-        assert_almost_equal(util.get_text_field_mask(text_field_tensors).data.numpy(),
+        assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]])
 
     def test_get_text_field_mask_returns_a_correct_mask_character_only_input(self):
-        text_field_arrays = {
-                "token_characters": numpy.asarray([[[1, 2, 3], [3, 0, 1], [2, 1, 0], [0, 0, 0]],
-                                                   [[5, 5, 5], [4, 6, 0], [0, 0, 0], [0, 0, 0]]])
+        text_field_tensors = {
+                "token_characters": torch.LongTensor([[[1, 2, 3], [3, 0, 1], [2, 1, 0], [0, 0, 0]],
+                                                      [[5, 5, 5], [4, 6, 0], [0, 0, 0], [0, 0, 0]]])
                 }
-        text_field_tensors = util.arrays_to_variables(text_field_arrays)
-        assert_almost_equal(util.get_text_field_mask(text_field_tensors).data.numpy(),
+        assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[1, 1, 1, 0], [1, 1, 0, 0]])
 
     def test_get_text_field_mask_returns_a_correct_mask_list_field(self):
-        text_field_arrays = {
-                "list_tokens": numpy.asarray([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
-                                              [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
+        text_field_tensors = {
+                "list_tokens": torch.LongTensor([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
+                                                 [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
                 }
-        text_field_tensors = util.arrays_to_variables(text_field_arrays)
-        actual_mask = util.get_text_field_mask(text_field_tensors, num_wrapping_dims=1).data.numpy()
-        expected_mask = (text_field_tensors['list_tokens'].data.numpy() > 0).astype('int32')
+        actual_mask = util.get_text_field_mask(text_field_tensors, num_wrapping_dims=1).numpy()
+        expected_mask = (text_field_tensors['list_tokens'].numpy() > 0).astype('int32')
         assert_almost_equal(actual_mask, expected_mask)
 
     def test_last_dim_softmax_does_softmax_on_last_dim(self):
@@ -541,7 +465,6 @@ class TestNnUtil(AllenNlpTestCase):
         replaced = util.replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
         assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])
 
-
     def test_logsumexp(self):
         # First a simple example where we add probabilities in log space.
         tensor = Variable(torch.FloatTensor([[.4, .1, .2]]))
@@ -559,7 +482,6 @@ class TestNnUtil(AllenNlpTestCase):
         assert_almost_equal(util.logsumexp(tensor).data.numpy(), [20.0])
         tensor = Variable(torch.FloatTensor([[20.0, 20.0], [-200.0, 200.0]]))
         assert_almost_equal(util.logsumexp(tensor, dim=0).data.numpy(), [20.0, 200.0])
-
 
     def test_flatten_and_batch_shift_indices(self):
         indices = numpy.array([[[1, 2, 3, 4],
