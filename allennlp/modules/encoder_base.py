@@ -1,7 +1,8 @@
 from typing import Tuple, Union, Optional, Callable
 import torch
-
+from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, PackedSequence
+
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_by_length
 
 # We have two types here for the state, because storing the state in something
@@ -101,7 +102,14 @@ class _EncoderBase(torch.nn.Module):
                                                      batch_first=True)
         # Prepare the initial states.
         if not self.stateful:
-            initial_states = hidden_state
+            if hidden_state is None:
+                initial_states = hidden_state
+            elif isinstance(hidden_state, tuple):
+                initial_states = (state.index_select(1, sorting_indices)[:, :num_valid, :]
+                                  for state in hidden_state)
+            else:
+                initial_states = hidden_state.index_select(1, sorting_indices)[:, :num_valid, :]
+
         else:
             initial_states = self._get_initial_states(batch_size, num_valid, sorting_indices)
 
@@ -170,6 +178,7 @@ class _EncoderBase(torch.nn.Module):
                 zeros = state.data.new(state.size(0),
                                        num_states_to_concat,
                                        state.size(2)).fill_(0)
+                zeros = Variable(zeros)
                 resized_states.append(torch.cat([state, zeros], 1))
             self._states = tuple(resized_states)
             correctly_shaped_states = self._states
