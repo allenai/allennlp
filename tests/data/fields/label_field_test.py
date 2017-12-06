@@ -9,10 +9,10 @@ from allennlp.data.vocabulary import Vocabulary
 
 
 class TestLabelField(AllenNlpTestCase):
-    def test_as_array_returns_integer_array(self):
+    def test_as_tensor_returns_integer_tensor(self):
         label = LabelField(5, skip_indexing=True)
-        array = label.as_array(label.get_padding_lengths())
-        numpy.testing.assert_array_almost_equal(array, numpy.array([5]))
+        tensor = label.as_tensor(label.get_padding_lengths()).data.cpu().numpy()
+        numpy.testing.assert_array_almost_equal(tensor, numpy.array([5]))
 
     def test_label_field_can_index_with_vocab(self):
         vocab = Vocabulary()
@@ -22,8 +22,8 @@ class TestLabelField(AllenNlpTestCase):
 
         label = LabelField("entailment")
         label.index(vocab)
-        array = label.as_array(label.get_padding_lengths())
-        numpy.testing.assert_array_almost_equal(array, numpy.array([0]))
+        tensor = label.as_tensor(label.get_padding_lengths()).data.cpu().numpy()
+        numpy.testing.assert_array_almost_equal(tensor, numpy.array([0]))
 
     def test_label_field_raises_with_non_integer_labels_and_no_indexing(self):
         with pytest.raises(ConfigurationError):

@@ -51,17 +51,22 @@ class Instance:
             lengths[field_name] = field.get_padding_lengths()
         return lengths
 
-    def as_array_dict(self, padding_lengths: Dict[str, Dict[str, int]] = None) -> Dict[str, DataArray]:
+    def as_tensor_dict(self,
+                       padding_lengths: Dict[str, Dict[str, int]] = None,
+                       cuda_device: int = -1,
+                       for_training: bool = True) -> Dict[str, DataArray]:
         """
         Pads each ``Field`` in this instance to the lengths given in ``padding_lengths`` (which is
         keyed by field name, then by padding key, the same as the return value in
-        :func:`get_padding_lengths`), returning a list of numpy arrays for each field.
+        :func:`get_padding_lengths`), returning a list of torch tensors for each field.
 
         If ``padding_lengths`` is omitted, we will call ``self.get_padding_lengths()`` to get the
-        sizes of the arrays to create.
+        sizes of the tensors to create.
         """
         padding_lengths = padding_lengths or self.get_padding_lengths()
-        arrays = {}
+        tensors = {}
         for field_name, field in self.fields.items():
-            arrays[field_name] = field.as_array(padding_lengths[field_name])
-        return arrays
+            tensors[field_name] = field.as_tensor(padding_lengths[field_name],
+                                                  cuda_device=cuda_device,
+                                                  for_training=for_training)
+        return tensors
