@@ -87,6 +87,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         if num_valid < batch_size:
             _, length, output_dim = unpacked_sequence_tensor.size()
             zeros = unpacked_sequence_tensor.data.new(batch_size - num_valid, length, output_dim).fill_(0)
+            zeros = torch.autograd.Variable(zeros)
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 0)
 
             # The states also need to have invalid rows added back.
@@ -95,6 +96,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
                 for state in final_states:
                     num_layers, _, state_dim = state.size()
                     zeros = state.data.new(num_layers, batch_size - num_valid, state_dim).fill_(0)
+                    zeros = torch.autograd.Variable(zeros)
                     new_states.append(torch.cat([state, zeros], 1))
                 final_states = new_states
 
