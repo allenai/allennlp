@@ -66,7 +66,7 @@ from setuptools import setup, find_packages
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
-VERSION = '0.2.1'
+VERSION = '0.2.2'
 
 
 setup(name='allennlp',
@@ -92,8 +92,7 @@ setup(name='allennlp',
           'nltk',
           'spacy>=2.0,<2.1',
           'numpy',
-          'pillow',
-          'tensorboard-pytorch',
+          'tensorboard',
           'cffi==1.11.2',
           'awscli>=1.11.91',
           'sanic==0.6.0',
@@ -104,7 +103,9 @@ setup(name='allennlp',
           'tqdm',
           'editdistance',
           'jupyter',
-          'h5py'
+          'h5py',
+          'scikit-learn',
+          'scipy'
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
