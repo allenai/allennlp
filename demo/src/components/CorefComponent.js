@@ -143,7 +143,7 @@ class CorefOutput extends React.Component {
         var clusters = clusteredWord['clusters'];
 
         if (clusters.includes(this.state.selectedCluster)) {
-          return "passage__answer";
+          return "coref__span";
         }
         else {
           return "unselected";
