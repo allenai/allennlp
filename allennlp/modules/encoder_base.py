@@ -165,11 +165,13 @@ class _EncoderBase(torch.nn.Module):
             resized_states = []
             # state has shape (num_layers, batch_size, hidden_size)
             for state in self._states:
+                print(state)
                 # This _must_ be inside the loop because some
                 # RNNs have states with different last dimension sizes.
                 zeros = state.data.new(state.size(0),
                                        num_states_to_concat,
                                        state.size(2)).fill_(0)
+                zeros = torch.autograd.Variable(zeros)
                 resized_states.append(torch.cat([state, zeros], 1))
             self._states = tuple(resized_states)
             correctly_shaped_states = self._states

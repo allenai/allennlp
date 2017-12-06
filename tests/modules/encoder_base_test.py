@@ -46,7 +46,7 @@ class TestEncoderBase(AllenNlpTestCase):
                                                                 self.num_valid,
                                                                 self.sorting_indices)
 
-        correct_expanded_states = [torch.cat([state, torch.zeros([1, 2, 7])], 1)
+        correct_expanded_states = [torch.cat([state, Variable(torch.zeros([1, 2, 7]))], 1)
                                    for state in initial_states]
         # State should have been expanded with zeros to have shape (1, batch_size, hidden_size).
         numpy.testing.assert_array_equal(self.encoder_base._states[0].data.numpy(),
