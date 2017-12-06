@@ -288,6 +288,25 @@ class TestNnUtil(AllenNlpTestCase):
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).data.numpy(),
                             [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]])
 
+    def test_get_text_field_mask_returns_a_correct_mask_character_only_input(self):
+        text_field_arrays = {
+                "token_characters": numpy.asarray([[[1, 2, 3], [3, 0, 1], [2, 1, 0], [0, 0, 0]],
+                                                   [[5, 5, 5], [4, 6, 0], [0, 0, 0], [0, 0, 0]]])
+                }
+        text_field_tensors = util.arrays_to_variables(text_field_arrays)
+        assert_almost_equal(util.get_text_field_mask(text_field_tensors).data.numpy(),
+                            [[1, 1, 1, 0], [1, 1, 0, 0]])
+
+    def test_get_text_field_mask_returns_a_correct_mask_list_field(self):
+        text_field_arrays = {
+                "list_tokens": numpy.asarray([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
+                                              [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
+                }
+        text_field_tensors = util.arrays_to_variables(text_field_arrays)
+        actual_mask = util.get_text_field_mask(text_field_tensors, num_wrapping_dims=1).data.numpy()
+        expected_mask = (text_field_tensors['list_tokens'].data.numpy() > 0).astype('int32')
+        assert_almost_equal(actual_mask, expected_mask)
+
     def test_last_dim_softmax_does_softmax_on_last_dim(self):
         batch_size = 1
         length_1 = 5
