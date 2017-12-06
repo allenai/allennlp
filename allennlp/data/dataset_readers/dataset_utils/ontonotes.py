@@ -12,7 +12,7 @@ from allennlp.common import Params
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 TypedSpan = Tuple[Union[int, str], Tuple[int, int]]  # pylint: disable=invalid-name
-
+from nltk.corpus.reader.conll import ConllCorpusReader
 
 class OntonotesSentence:
     """
@@ -23,12 +23,12 @@ class OntonotesSentence:
     document_id : ``str``
         This is a variation on the document filename
     sentence_id : ``int``
-        Some files are divided into multiple parts numbered as 000, 001, 002, ... etc.
+        The integer ID of the sentence within a document.
     words : ``List[str]``
-        This is the token as segmented/tokenized in the Treebank.
+        This is the tokens as segmented/tokenized in the Treebank.
     pos_tags : ``List[str]``
-        This is the Penn Treebank style part of speech. When parse information is missing,
-        all part of speeches except the one for which there is some sense or proposition
+        This is the Penn-Treebank-style part of speech. When parse information is missing,
+        all parts of speech except the one for which there is some sense or proposition
         annotation are marked with a XX tag. The verb is marked with just a VERB tag.
     parse_tree : ``nltk.Tree``
         An nltk Tree representing the parse. It does not include POS tags. When the parse information
@@ -36,12 +36,12 @@ class OntonotesSentence:
     predicate_lemmas : ``List[Optional[str]]``
         The predicate lemma of the words for which we have semantic role
         information or word sense information. All other indices are ``None``.
-    predicate_framenet_ids : ``List[int]``
+    predicate_framenet_ids : ``List[Optional[int]]``
         The PropBank frameset ID of the lemmas in ``predicate_lemmas``, or ``None``.
     word_senses : ``List[int]``
         The word senses for the words in the sentence, or ``None``.
-    speakers : ``List[str]``
-        The speaker information for the word, if present, or ``None``
+    speakers : ``List[Optional[str]]``
+        The speaker information for the words in the sentence, if present, or ``None``
         This is the speaker or author name where available. Mostly in Broadcast Conversation
         and Web Log data. When not available the rows are marked with an "-".
     named_entities : ``List[str]``
@@ -151,11 +151,9 @@ class Ontonotes:
         annotation are marked with a XX tag. The verb is marked with just a VERB tag.
     6 Parse bit: ``str``
         This is the bracketed structure broken before the first open parenthesis in the parse,
-        and the word/part-of-speech leaf replaced with a ``*``. The full parse can be created by
-        substituting the asterisk with the "([pos] [word])" string (or leaf) and concatenating
-        the items in the rows of that column. When the parse information is missing, the
-        first word of a sentence is tagged as ``(TOP*`` and the last word is tagged as ``*)``
-        and all intermediate words are tagged with a ``*``.
+        and the word/part-of-speech leaf replaced with a ``*``. When the parse information is
+        missing, the first word of a sentence is tagged as ``(TOP*`` and the last word is tagged
+        as ``*)`` and all intermediate words are tagged with a ``*``.
     7 Predicate lemma: ``str``
         The predicate lemma is mentioned for the rows for which we have semantic role
         information or word sense information. All other rows are marked with a "-".
@@ -177,7 +175,7 @@ class Ontonotes:
         Co-reference chain information encoded in a parenthesis structure. For documents that do
          not have co-reference annotations, each line is represented with a "-".
     """
-    def datset_iterator(self, file_path) -> Iterator[OntonotesSentence]:
+    def dataset_iterator(self, file_path) -> Iterator[OntonotesSentence]:
         """
         An iterator over the entire dataset, yielding all sentences processed.
         """
@@ -187,7 +185,7 @@ class Ontonotes:
     @staticmethod
     def dataset_path_iterator(file_path: str) -> Iterator[str]:
         """
-        An iterator containing file_paths in a directory
+        An iterator returning file_paths in a directory
         containing CONLL-formatted files.
         """
         logger.info("Reading CONLL sentences from dataset files at: %s", file_path)
@@ -237,7 +235,6 @@ class Ontonotes:
         # The current speaker, if available.
         speakers: List[str] = []
 
-        coreference: List[str] = []
         verbal_predicates: List[str] = []
         span_labels: List[List[str]] = []
         current_span_labels: List[str] = []
@@ -271,7 +268,11 @@ class Ontonotes:
             speaker = conll_components[9]
 
             if not span_labels:
-                # Create empty lists to collect the NER and SRL BIO labels.
+                # If this is the first word in the sentence, create
+                # empty lists to collect the NER and SRL BIO labels.
+                # We can't do this upfront, because we don't know how many
+                # components we are collecting, as a sentence can have
+                # variable numbers of SRL frames.
                 span_labels = [[] for _ in conll_components[10:-1]]
                 # Create variables representing the current label for each label
                 # sequence we are collecting.
@@ -281,7 +282,7 @@ class Ontonotes:
                                                     span_labels,
                                                     current_span_labels)
 
-            # If any annotation contains this word as a verb predicate,
+            # If any annotation marks this word as a verb predicate,
             # we need to record its index. This also has the side effect
             # of ordering the verbal predicates by their location in the
             # sentence, automatically aligning them with the annotations.
@@ -293,7 +294,6 @@ class Ontonotes:
                                                           index,
                                                           clusters,
                                                           coref_stacks)
-            coreference.append(conll_components[-1])
 
             sentence.append(word)
             pos_tags.append(pos_tag)
@@ -330,7 +330,7 @@ class Ontonotes:
                                                  clusters: DefaultDict[int, List[Tuple[int, int]]],
                                                  coref_stacks: DefaultDict[int, List[int]]) -> None:
         """
-        For a given coref label, add it to a currently open span/s, complete a span/s or
+        For a given coref label, add it to a currently open span(s), complete a span(s) or
         ignore it, if it is outside of all spans. This method mutates the clusters and coref_stacks
         dictionaries.
 
@@ -350,7 +350,6 @@ class Ontonotes:
 
             [Greg, the baker who referred to [himself]_ID1 as 'the bread man']_ID1
         """
-
         if label != "-":
             for segment in label.split("|"):
                 # The conll representation of coref spans allows spans to
@@ -377,10 +376,13 @@ class Ontonotes:
     @staticmethod
     def _process_span_annotations_for_word(annotations: List[str],
                                            span_labels: List[List[str]],
-                                           current_span_labels: List[Optional[str]]):
+                                           current_span_labels: List[Optional[str]]) -> None:
         """
-        Given a sequence of different label types for a single word and the same labels
-        for the previous word, compute the BIO tag for each label and append to a list.
+        Given a sequence of different label types for a single word and the current
+        span label we are inside, compute the BIO tag for each label and append to a list.
+
+        Parameters
+        ----------
         annotations: ``List[str]``
             A list of labels to compute BIO tags for.
         span_labels : ``List[List[str]]``
@@ -390,6 +392,8 @@ class Ontonotes:
             The currently open span per annotation type, or ``None`` if there is no open span.
         """
         for annotation_index, annotation in enumerate(annotations):
+            # strip all bracketing information to
+            # get the actual propbank label.
             label = annotation.strip("()*")
 
             if "(" in annotation:
@@ -398,7 +402,6 @@ class Ontonotes:
                 bio_label = "B-" + label
                 span_labels[annotation_index].append(bio_label)
                 current_span_labels[annotation_index] = label
-
             elif current_span_labels[annotation_index] is not None:
                 # If there's no '(' token, but the current_span_label is not None,
                 # then we are inside a span.
@@ -407,12 +410,6 @@ class Ontonotes:
             else:
                 # We're outside a span.
                 span_labels[annotation_index].append("O")
-
             # Exiting a span, so we reset the current span label for this annotation.
             if ")" in annotation:
                 current_span_labels[annotation_index] = None
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'Ontonotes':
-        params.assert_empty(cls.__name__)
-        return Ontonotes()

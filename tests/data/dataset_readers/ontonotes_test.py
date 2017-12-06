@@ -10,7 +10,7 @@ class TestOntonotes(AllenNlpTestCase):
 
     def test_dataset_iterator(self):
         reader = Ontonotes()
-        annotated_sentences = list(reader.datset_iterator('tests/fixtures/conll_2012/'))
+        annotated_sentences = list(reader.dataset_iterator('tests/fixtures/conll_2012/'))
         annotation = annotated_sentences[0]
         assert annotation.document_id == "test/test/01/test_001"
         assert annotation.sentence_id == 0
