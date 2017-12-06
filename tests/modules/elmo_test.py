@@ -47,8 +47,7 @@ class TestElmoBiLm(AllenNlpTestCase):
         # Now finally we can iterate through batches.
         iterator = BasicIterator(3)
         for i, batch in enumerate(iterator(dataset, num_epochs=1, shuffle=False)):
-            batch_tensor = Variable(torch.from_numpy(batch['elmo']['character_ids']))
-            lm_embeddings = elmo_bilm(batch_tensor)
+            lm_embeddings = elmo_bilm(batch['elmo']['character_ids'])
             top_layer_embeddings, mask = remove_sentence_boundaries(
                     lm_embeddings['activations'][2],
                     lm_embeddings['mask']
@@ -121,9 +120,9 @@ class TestElmo(AllenNlpTestCase):
         dataset = Dataset(instances)
         vocab = Vocabulary()
         dataset.index_instances(vocab)
-        character_ids = dataset.as_array_dict()['elmo']['character_ids']
+        character_ids = dataset.as_tensor_dict()['elmo']['character_ids']
 
-        output = elmo(Variable(torch.from_numpy(character_ids)))
+        output = elmo(character_ids)
         elmo_representations = output['elmo_representations']
         mask = output['mask']
 

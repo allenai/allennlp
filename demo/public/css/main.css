@@ -1588,15 +1588,6 @@ svg {
 }
 
 /*
-  Set a max width so that nodes aren't too wide, since some of the nodes in the AllenNLP
-  SRL output can contain large passages of text.
-*/
-.hierplane__visualization .hierplane .node__word__label .node__word__label__siblings {
-  max-width: 15vw;
-  white-space: normal;
-}
-
-/*
   Adjust the "passage" display so that it accomodates the entire sentence, if possible. This
   prevents the user from having to scroll when the sentence is long.
 */
