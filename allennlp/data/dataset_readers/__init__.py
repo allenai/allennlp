@@ -18,3 +18,4 @@ from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.dataset_readers.seq2seq import Seq2SeqDatasetReader
 from allennlp.data.dataset_readers.wikitables.wikitables_dataset_reader import WikiTablesDatasetReader
 from allennlp.data.dataset_readers.wikitables.wikitables_preprocessed_dataset_reader import WikiTablesPreprocessedDatasetReader
+from allennlp.data.dataset_readers.nlvr import NlvrDatasetReader
