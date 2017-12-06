@@ -103,7 +103,9 @@ setup(name='allennlp',
           'tqdm',
           'editdistance',
           'jupyter',
-          'h5py'
+          'h5py',
+          'scikit-learn',
+          'scipy'
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
