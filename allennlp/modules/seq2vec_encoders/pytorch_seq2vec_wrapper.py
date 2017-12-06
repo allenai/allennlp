@@ -1,4 +1,5 @@
 import torch
+from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
@@ -85,6 +86,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             zeros = state.data.new(num_layers_times_directions,
                                    batch_size - num_valid,
                                    encoding_dim).fill_(0)
+            zeros = Variable(zeros)
             state = torch.cat([state, zeros], 1)
 
         # Restore the original indices and return the final state of the
