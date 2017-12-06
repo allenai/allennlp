@@ -24,7 +24,8 @@ commit](https://github.com/allenai/allennlp-as-a-library-example/tree/43b7dac809
 we just add a `requirements.txt` file specifying `allennlp` as a dependency.  We referenced a
 particular commit on github, but you can just give a version number, like `allennlp==0.3`.  Then,
 after creating a python 3.6 environment, you install AllenNLP by running `pip install -r
-requirements.txt`.
+requirements.txt`.  You also need to install pytorch and the spacy model, as described in [the
+installation tutorial](installation).
 
 ## Step two: organize your modules
 
@@ -86,13 +87,12 @@ class TestSemanticScholarDatasetReader(AllenNlpTestCase):
         dataset = reader.read('tests/fixtures/s2_papers.jsonl')
 ```
 
-Then we just want to make sure that the resulting dataset looks like we expect.  We'll refer you
-to the [dataset tutorial](TODO - how do I link this??) for a deeper dive on the `Dataset`,
-`Instance`, and `Field` classes; for now, just remember that we want each paper to have a title,
-an abstract, and a venue.  The paper itself is an `Instance` inside of the `Dataset`, and the
-title, abstract and venue are all `Fields` inside the `Instance`.  We can make sure that the
-dataset got read correctly by giving expected values for the first few instances in our test
-fixture:
+Then we just want to make sure that the resulting dataset looks like we expect.  We'll refer you to
+the [dataset tutorial](data-pipeline) for a deeper dive on the `Dataset`, `Instance`, and `Field`
+classes; for now, just remember that we want each paper to have a title, an abstract, and a venue.
+The paper itself is an `Instance` inside of the `Dataset`, and the title, abstract and venue are
+all `Fields` inside the `Instance`.  We can make sure that the dataset got read correctly by giving
+expected values for the first few instances in our test fixture:
 
 ```python
         instance1 = {"title": ["Interferring", "Discourse", "Relations", "in", "Context"],
@@ -458,10 +458,9 @@ pieces of code is the `decode` method:
         return output_dict
 ```
 
-The name here is a little misleading; originally, we were using this for doing things like viterbi
-decoding or beam search for more complex models, but we now do that in `forward`, typically.
-`decode` is currently just used for making a model's output human-readable (e.g., for the demo).
-We use the vocabulary and translate ids that we see to strings.
+`decode` has two functions: it takes the output of `forward` and does any necessary inference or
+decoding on it, and it converts integers into strings to make things human-readable (e.g., for the
+demo).  This is a simple model, so we only need to worry about the second function here.
 
 Alright, we've got ourselves a model.  We can run the tests again using `pytest`, and confirm that
 our model can indeed be trained on our tiny dataset, and that saving and loading works correctly.
@@ -477,7 +476,7 @@ Our [getting started tutorial](training_and_evaluating.md) says to use `python -
 train CONFIG_FILE` to train a model.  That's not going to work for us, however, because
 `allennlp.run` doesn't know about the `DatasetReader` and `Model` classes that we added to the
 registry, so it will fail to load our configuration files.  Instead, we need to write our own
-`run.py` script ([link to the fifith
+`run.py` script ([link to the fifth
 commit](https://github.com/allenai/allennlp-as-a-library-example/commit/521d554c26681b6931169492900de6690fdd0cee)):
 
 ```python
@@ -598,8 +597,8 @@ I would need to add a `TokenCharactersIndexer` to the `TokenIndexers` in the `Da
 a corresponding entry to the `TextFieldEmbedder` parameters specifying a `TokenCharactersEncoder`.
 
 The title and abstract encoders are both bi-directional LSTMs.  The actual LSTM implementation
-here is a thin wrapper around pytorch's built-in LSTMs that make them conform to the
-`Seq2VecEncoder` API.  All of the parameters except for "type" get passed directly to pytorch code.
+here is a wrapper around pytorch's built-in LSTMs that make them conform to the `Seq2VecEncoder`
+API.  All of the parameters except for "type" get passed directly to pytorch code.
 
 The feed-forward network has a configurable depth, width, and activation.  You can look at the
 [documentation](https://allenai.github.io/allennlp-docs/api/allennlp.modules.feedforward.html) of
