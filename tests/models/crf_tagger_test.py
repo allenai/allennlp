@@ -6,7 +6,6 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.models import Model
-from allennlp.nn.util import arrays_to_variables
 
 
 class CrfTaggerTest(ModelTestCase):
@@ -23,8 +22,8 @@ class CrfTaggerTest(ModelTestCase):
         self.ensure_batch_predictions_are_consistent()
 
     def test_forward_pass_runs_correctly(self):
-        training_arrays = self.dataset.as_array_dict()
-        output_dict = self.model.forward(**arrays_to_variables(training_arrays))
+        training_tensors = self.dataset.as_tensor_dict()
+        output_dict = self.model.forward(**training_tensors)
         tags = output_dict['tags']
         assert len(tags) == 2
         assert len(tags[0]) == 7

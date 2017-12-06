@@ -10,7 +10,7 @@ import logging
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary, Dataset
-from allennlp.nn.util import arrays_to_variables, device_mapping
+from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
 
 import numpy
@@ -109,21 +109,7 @@ class Model(torch.nn.Module, Registrable):
         and returns the result.  Before returning the result, we convert any ``torch.autograd.Variables``
         or ``torch.Tensors`` into numpy arrays and remove the batch dimension.
         """
-        instance.index_fields(self.vocab)
-        model_input = arrays_to_variables(instance.as_array_dict(),
-                                          add_batch_dimension=True,
-                                          cuda_device=cuda_device,
-                                          for_training=False)
-        outputs = self.decode(self.forward(**model_input))
-
-        for name, output in list(outputs.items()):
-            # We are predicting on a single instance and we added a batch
-            # dimension, so here we remove it.
-            output = output[0]
-            if isinstance(output, torch.autograd.Variable):
-                output = output.data.cpu().numpy()
-            outputs[name] = output
-        return outputs
+        return self.forward_on_instances([instance], cuda_device)[0]
 
     def forward_on_instances(self,
                              instances: List[Instance],
@@ -141,9 +127,7 @@ class Model(torch.nn.Module, Registrable):
 
         dataset = Dataset(instances)
         dataset.index_instances(self.vocab)
-        model_input = arrays_to_variables(dataset.as_array_dict(),
-                                          cuda_device=cuda_device,
-                                          for_training=False)
+        model_input = dataset.as_tensor_dict(cuda_device=cuda_device, for_training=False)
         outputs = self.decode(self.forward(**model_input))
 
         instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
@@ -240,7 +224,7 @@ class Model(torch.nn.Module, Registrable):
         # want the code to look for it, so we remove it from the parameters here.
         _remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab, model_params)
-        model_state = torch.load(weights_file, map_location=device_mapping(cuda_device))
+        model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are

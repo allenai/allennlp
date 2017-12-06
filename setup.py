@@ -50,7 +50,6 @@ run chmod 600 ./pypirc so only you can read/write.
 7. Copy the release notes from RELEASE.md to the tag in github once everything is looking hunky-dory.
 
 """
-import os
 from setuptools import setup, find_packages
 
 # PEP0440 compatible formatted version, see:
@@ -66,7 +65,7 @@ from setuptools import setup, find_packages
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
-VERSION = '0.2.2'
+VERSION = '0.2.3'
 
 
 setup(name='allennlp',
