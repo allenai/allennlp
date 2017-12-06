@@ -31,9 +31,12 @@ class TestOntonotes(AllenNlpTestCase):
                                                'man', None, None, 'be', None, None]
         assert annotation.speakers == [None, None, None, None, None, None,
                                        None, None, None, None, None]
-        assert annotation.parse_tree == Tree.fromstring("(TOP(S(NP(NML Mali government) officials)"
-                                                        "(VP say(SBAR(S(NP(NP the woman 's)"
-                                                        " confession)(VP was(ADJP forced))))) .))")
+
+        assert annotation.parse_tree == Tree.fromstring("(TOP(S(NP(NML (NNP Mali)  (NN government) )"
+                                                        " (NNS officials) )(VP (VBP say) (SBAR(S(NP(NP"
+                                                        " (DT the)  (NN woman)  (POS 's) ) (NN"
+                                                        "confession) )(VP (VBD was) (ADJP (JJ"
+                                                        "forced) ))))) (. .) ))")
         assert annotation.coref_spans == {(1, (4, 6)), (3, (4, 7))}
 
         annotation = annotated_sentences[1]
@@ -59,10 +62,11 @@ class TestOntonotes(AllenNlpTestCase):
                                                None, None, None, None, 'month', None, 'hearing', None]
         assert annotation.speakers == [None, None, None, None, None, None,
                                        None, None, None, None, None, None, None]
-        assert annotation.parse_tree == Tree.fromstring("(TOP (S (NP The prosecution)"
-                                                        " (VP rested (NP its case) (NP last month)"
-                                                        " (PP after (NP (NP four months) (PP of "
-                                                        "(NP hearings))))) .)) ")
+        assert annotation.parse_tree == Tree.fromstring("(TOP(S(NP (DT The)  (NN prosecution) )(VP"
+                                                        "(VBD rested) (NP (PRP$ its)  (NN case) )"
+                                                        "(NP (JJ last)  (NN month) )(PP (IN after)"
+                                                        "(NP(NP (CD four)  (NNS months) )(PP (IN"
+                                                        " of) (NP (NNS hearings) ))))) (. .) ))")
         assert annotation.coref_spans == {(2, (0, 1)), (2, (3, 3))}
 
         annotation = annotated_sentences[2]
@@ -77,8 +81,9 @@ class TestOntonotes(AllenNlpTestCase):
                                              'B-WORK_OF_ART', 'I-WORK_OF_ART', 'O']
         assert annotation.predicate_lemmas == [None, None, None, None, None]
         assert annotation.speakers == [None, None, None, None, None]
-        assert annotation.parse_tree == Tree.fromstring('(TOP (FRAG (NP Denise Dillon)'
-                                                        ' (NP Headline News) .))')
+        assert annotation.parse_tree == Tree.fromstring("(TOP(FRAG(NP (NNP Denise)"
+                                                        " (NNP Dillon) )(NP (NNP Headline)"
+                                                        "(NNP News) ) (. .) ))")
         assert annotation.coref_spans == {(2, (0, 1))}
 
     def test_dataset_path_iterator(self):
