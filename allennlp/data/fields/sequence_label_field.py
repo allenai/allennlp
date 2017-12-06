@@ -2,7 +2,8 @@ from typing import Dict, List, Union, Set
 import logging
 
 from overrides import overrides
-import numpy
+import torch
+from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
@@ -13,7 +14,7 @@ from allennlp.data.vocabulary import Vocabulary
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class SequenceLabelField(Field[numpy.ndarray]):
+class SequenceLabelField(Field[torch.Tensor]):
     """
     A ``SequenceLabelField`` assigns a categorical label to each element in a
     :class:`~allennlp.data.fields.sequence_field.SequenceField`.
@@ -91,10 +92,14 @@ class SequenceLabelField(Field[numpy.ndarray]):
         return {'num_tokens': self.sequence_field.sequence_length()}
 
     @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.ndarray:
+    def as_tensor(self,
+                  padding_lengths: Dict[str, int],
+                  cuda_device: int = -1,
+                  for_training: bool = True) -> torch.Tensor:
         desired_num_tokens = padding_lengths['num_tokens']
         padded_tags = pad_sequence_to_length(self._indexed_labels, desired_num_tokens)
-        return numpy.asarray(padded_tags)
+        tensor = Variable(torch.LongTensor(padded_tags), volatile=not for_training)
+        return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides
     def empty_field(self):  # pylint: disable=no-self-use

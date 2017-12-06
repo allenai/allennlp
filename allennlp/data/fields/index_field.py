@@ -2,14 +2,15 @@
 from typing import Dict
 
 from overrides import overrides
-import numpy
+import torch
+from torch.autograd import Variable
 
 from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.common.checks import ConfigurationError
 
 
-class IndexField(Field[numpy.ndarray]):
+class IndexField(Field[torch.Tensor]):
     """
     An ``IndexField`` is an index into a
     :class:`~allennlp.data.fields.sequence_field.SequenceField`, as might be used for representing
@@ -40,8 +41,13 @@ class IndexField(Field[numpy.ndarray]):
         return {'num_options': self.sequence_field.sequence_length()}
 
     @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> numpy.array:  # pylint: disable=unused-argument
-        return numpy.asarray([self.sequence_index])
+    def as_tensor(self,
+                  padding_lengths: Dict[str, int],
+                  cuda_device: int = -1,
+                  for_training: bool = True) -> torch.Tensor:
+        # pylint: disable=unused-argument
+        tensor = Variable(torch.LongTensor([self.sequence_index]), volatile=not for_training)
+        return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides
     def empty_field(self):

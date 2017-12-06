@@ -8,7 +8,6 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import ModelTestCase
 from allennlp.models import DecomposableAttention, Model
-from allennlp.nn.util import arrays_to_variables
 
 
 class TestDecomposableAttention(ModelTestCase):
@@ -18,8 +17,8 @@ class TestDecomposableAttention(ModelTestCase):
                           'tests/fixtures/data/snli.jsonl')
 
     def test_forward_pass_runs_correctly(self):
-        training_arrays = arrays_to_variables(self.dataset.as_array_dict())
-        output_dict = self.model.forward(**training_arrays)
+        training_tensors = self.dataset.as_tensor_dict()
+        output_dict = self.model.forward(**training_tensors)
         assert_almost_equal(numpy.sum(output_dict["label_probs"][0].data.numpy(), -1), 1, decimal=6)
 
     @flaky

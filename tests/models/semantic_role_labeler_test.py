@@ -12,7 +12,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
 from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
-from allennlp.nn.util import arrays_to_variables, get_lengths_from_binary_sequence_mask
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 
 
 class SemanticRoleLabelerTest(ModelTestCase):
@@ -28,15 +28,15 @@ class SemanticRoleLabelerTest(ModelTestCase):
         self.ensure_batch_predictions_are_consistent()
 
     def test_forward_pass_runs_correctly(self):
-        training_arrays = arrays_to_variables(self.dataset.as_array_dict())
-        output_dict = self.model.forward(**training_arrays)
+        training_tensors = self.dataset.as_tensor_dict()
+        output_dict = self.model.forward(**training_tensors)
         class_probs = output_dict['class_probabilities'][0].data.numpy()
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1),
                                           numpy.ones(class_probs.shape[0]))
 
     def test_decode_runs_correctly(self):
-        training_arrays = arrays_to_variables(self.dataset.as_array_dict())
-        output_dict = self.model.forward(**training_arrays)
+        training_tensors = self.dataset.as_tensor_dict()
+        output_dict = self.model.forward(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
         lengths = get_lengths_from_binary_sequence_mask(decode_output_dict["mask"]).data.tolist()
         # Hard to check anything concrete which we haven't checked in the above
