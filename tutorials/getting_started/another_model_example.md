@@ -22,7 +22,7 @@ lines of code to get a very flexible classifier for academic papers.
 In our [first
 commit](https://github.com/allenai/allennlp-as-a-library-example/tree/43b7dac8097a0c4a50c0b25594daa123f3889b75),
 we just add a `requirements.txt` file specifying `allennlp` as a dependency.  We referenced a
-particular commit on github, but you can just give a version number, like `allennlp==0.3`.  Then,
+particular commit on github, but you can just give a version number, like `allennlp==0.2.3`.  Then,
 after creating a python 3.6 environment, you install AllenNLP by running `pip install -r
 requirements.txt`.  You also need to install pytorch and the spacy model, as described in [the
 installation tutorial](installation).
@@ -30,8 +30,8 @@ installation tutorial](installation).
 ## Step two: organize your modules
 
 As explained in the [first tutorial](creating_a_model.md), there are two pieces of code that you
-have to write when you're building a model in AllenNLP: you need a `DatasetReader` and a `Model`.
-In the [second
+have to write when you're building a model in AllenNLP: a `DatasetReader` and a `Model`.  In the
+[second
 commit](https://github.com/allenai/allennlp-as-a-library-example/tree/e4aa7b17a41ed1ff5169bea3fd1ad73bca0c89ec)
 in our example repository, we set up our library to hold this code.  We called the base module
 `my_library` - you'll probably want to choose a different name - and included two submodules:
@@ -42,7 +42,7 @@ allows the repository to grow naturally.
 
 ## Step three: write your DatasetReader
 
-Ok, now that our repository is set up, we'll start actually writing code ([link to the third
+Now that our repository is set up, we'll start actually writing code ([link to the third
 commit](https://github.com/allenai/allennlp-as-a-library-example/commit/6be5e0b876325588803171a514f30da349542674)).
 The first thing we need is some data - what are we trying to build a model to predict?  In this
 example, we'll try to predict the "venue" of academic papers.  That is, given the title and
@@ -158,13 +158,13 @@ To understand what's going on in this class, let's look at the `read` method fir
         return Dataset(instances)
 ```
 
-We're just going through every line in the input file, reading it as a JSON object, pulling out
-the fields we want, and passing them to `self.text_to_instance`.  `text_to_instance` takes text
-untokenized text strings and does whatever is necessary to create an `Instance` for this data.
-When you see how simple this method is, you might think it's unnecessary to have this bit of
-redirection, instead of just putting that logic inside of `read()` directly.  The reason we have
+We're just going through every line in the input file, reading it as a JSON object, pulling out the
+fields we want, and passing them to `self.text_to_instance`.  `text_to_instance` takes untokenized
+text strings and does whatever is necessary to create an `Instance` for this data.  When you see
+how simple this method is, you might think it's unnecessary to have this bit of redirection,
+instead of just putting that logic inside of `read()` directly.  The reason we have
 `text_to_instance` is to make it easy to hook up a demo to your model - the demo needs to process
-data in the same way as the model's training data was processed, and this redirection makes that
+data in the same way that the model's training data was processed, and this redirection makes that
 possible.  Here's `text_to_instance`:
 
 ```python
@@ -221,25 +221,24 @@ class SemanticScholarDatasetReader(DatasetReader):
 ```
 
 The constructor takes these dependencies as inputs, where by default we're splitting text into
-words, and representing them as single word ids (as opposed to, say, sequences of character ids).
+words and representing them as single word ids (as opposed to, say, sequences of character ids).
 To get different tokenization behavior or different word representations, you just need to pass in
 different objects when you construct the `DatasetReader`.
 
-But where do I construct the `DatasetReader`, you ask?  Well, you don't, at least not if you're
-following the recommended approach to using AllenNLP.  Instead, you specify a [JSON configuration
-file](configuration.md), and AllenNLP uses that configuration file to construct your
-`DatasetReader` and your `Model` for you (among other things).  In order for the library to be
-able to construct your objects from the JSON in your configuration, you need to do two things.
-First, you need to _register_ your objects with our library, so that our code can find your class
-when it tries to instantiate a `DatasetReader`.  That is what the first line in the code above is
-doing; we register `SemanticScholarDatasetReader` as a `DatasetReader` with the name `s2_papers`,
-which will let us use that name in our JSON configuration file.  Then, when AllenNLP is trying to
-construct a `DatasetReader`, it will take the parameters you specify and pass them to the
-`from_params` method.  This method takes a `Params` object, which is just a JSON dictionary with
-some added functionality, and constructs the `SemanticScholarDatasetReader`.  All of the
-`DatasetReader`'s dependencies that we want to be able to configure from the JSON file need to be
-constructed here.  In this case, we just create a `Tokenizer` and a `TokenIndexer` dictionary,
-using methods that are built in to the library.
+Typically, though, you would not be constructing the `SemanticScholarDatasetReader` yourself.
+Instead, you specify a [JSON configuration file](configuration.md), and AllenNLP uses that
+configuration file to construct your `DatasetReader` and your `Model` for you (among other things).
+In order for the library to be able to construct your objects from the JSON in your configuration,
+you need to do two things.  First, you need to _register_ your objects with our library, so that
+our code can find your class when it tries to instantiate a `DatasetReader`.  That is what the
+first line in the code above is doing; we register `SemanticScholarDatasetReader` as a
+`DatasetReader` with the name `s2_papers`, which will let us use that name in our JSON
+configuration file.  Then, when AllenNLP is trying to construct a `DatasetReader`, it will take the
+parameters you specify and pass them to the `from_params` method.  This method takes a `Params`
+object, which is just a JSON dictionary with some added functionality, and constructs the
+`SemanticScholarDatasetReader`.  All of the `DatasetReader`'s dependencies that we want to be able
+to configure from the JSON file need to be constructed here.  In this case, we just create a
+`Tokenizer` and a `TokenIndexer` dictionary, using methods that are built in to the library.
 
 And that's it!  In just a few lines of code, we have a flexible `DatasetReader` that will get us
 data for our `Model`.  We can run the test we wrote with `pytest` and see that it passes.
@@ -275,8 +274,8 @@ your large dataset.
 
 In order to make use of these tests, you need to provide two things: a [JSON configuration
 file](configuration.md) like what you use for training, just with smaller parameters, and a tiny
-dataset.  We'll examine the configuration file that we're using here later; it'll make more sense
-to look at the model code first.
+dataset.  We've already seen the dataset, and we'll examine the configuration file that we're using
+here later; it'll make more sense to look at the model code first.
 
 But before we write any model code, let's decide on the basic structure of the model.  We have two
 inputs (a title and an abstract) and an output label.  What if we just embed the words in the title
@@ -284,7 +283,7 @@ and the abstract, pass them each through a function that converts the sequence o
 single vector, and then run a simple feed-forward network on those two vectors to get a label?
 Seems like a reasonable first thing to try.
 
-Ok, that model structure means we are going to have a few things that we'll want to be able to
+That model structure means we are going to have a few things that we'll want to be able to
 configure later - how exactly do I embed the words in the title and the abstract?  How do I combine
 the vector sequences into a single vector?  How deep and wide should my feed-forward network be?
 Luckily, AllenNLP provides abstractions that encapsulate exactly these operations (and a few more
@@ -360,7 +359,7 @@ RNNs and CNNs can also be used to perform this operation.  AllenNLP has concrete
 implementations for all of these options.
 
 `FeedForward` is a simple configurable `Module` that allows specifying the width, depth, and inner
-activations of the network.  The `InitializerApplicator` contains a mapping from parameters to
+activations of the network.  The `InitializerApplicator` contains a mapping from parameter names to
 initialization methods, if you want to use non-default initialization for any of your model's
 parameters, and the `RegularizerApplicator` contains a similar mapping for parameter
 regularization.
@@ -370,9 +369,9 @@ a `Metric` that calculates and accumulates the model's accuracy in predicting a 
 show a running value for these metrics after each batch during training and validation, reseting
 the values every epoch.
 
-Alright, now that we understand all of the components that go into this model, the computation
-performed by the model is pretty straightforward.  In pytorch, the method that we need to
-implement for our `Model` (which is just a pytorch `Module`) is `forward`:
+Now that we understand all of the components that go into this model, the computation performed by
+the model is pretty straightforward.  In pytorch, the method that we need to implement for our
+`Model` (which is just a pytorch `Module`) is `forward`:
 
 ```python
     def forward(self,
@@ -428,9 +427,10 @@ as a constructor parameter.  You need to be sure that the `TextFieldEmbedder` is
 thing that your `DatasetReader` is producing, but that happens in the configuration file, and we'll
 talk about it later.
 
-Ok, so the first thing that the model does is embed the title and the abstract, then encode them as
-single vectors.  In order to encode the title and abstract, we need to get masks representing which
-elements of the token sequences are merely there for padding.
+Now that we understand the inputs to `forward`, let's look at its logic.  The first thing that the
+model does is embed the title and the abstract, then encode them as single vectors.  In order to
+encode the title and abstract, we need to get masks representing which elements of the token
+sequences are merely there for padding.
 
 Once we have a (batched) single vector for the title and the abstract, we concatenate the two
 vectors and pass them through a feed-forward network to get class logits.  We pass the logits
@@ -462,13 +462,9 @@ pieces of code is the `decode` method:
 decoding on it, and it converts integers into strings to make things human-readable (e.g., for the
 demo).  This is a simple model, so we only need to worry about the second function here.
 
-Alright, we've got ourselves a model.  We can run the tests again using `pytest`, and confirm that
+Alright, we've got ourselves a model.  We can run the tests again using `pytest` and confirm that
 our model can indeed be trained on our tiny dataset, and that saving and loading works correctly.
 Now let's train it on some real data!
-
-But wait, you say, you never explained the JSON configuration file that you used in the test!
-Well, that file is basically identical to a file that we'll use to train the model on real data,
-so let's just look at that one instead.
 
 ## Step five: train the model
 
