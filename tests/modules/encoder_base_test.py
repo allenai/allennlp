@@ -45,7 +45,15 @@ class TestEncoderBase(AllenNlpTestCase):
                                                                            self.tensor,
                                                                            self.mask,
                                                                            initial_states)
+        # Our input tensor had 2 zero length sequences, so we need
+        # to concat a tensor of shape
+        # (num_layers * num_directions, batch_size - num_valid, hidden_dim),
+        # to the output before unsorting it.
         zeros = torch.zeros([6, 2, 7])
+
+        # sort_and_run_forward strips fully-padded instances from the batch;
+        # in order to use the restoration_indices we need to add back the two
+        #  that got stripped. What we get back should match what we started with.
         for state, original in zip(states, initial_states):
             assert list(state.size()) == [6, 3, 7]
             state_with_zeros = torch.cat([state, zeros], 1)
