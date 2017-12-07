@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def canonicalize_clusters(clusters: DefaultDict[int, List[Tuple[int, int]]]) -> List[List[Tuple[int, int]]]:
     """
     The CONLL 2012 data includes 2 annotatated spans which are identical,
-    but different ids. This checks all clusters for spans which are
+    but have different ids. This checks all clusters for spans which are
     identical, and if it finds any, merges the clusters containing the
     identical spans.
     """
@@ -144,9 +144,9 @@ class ConllCorefReader(DatasetReader):
                  how many spans we are considering), we represent this a as a ``SequenceLabelField``
                  with respect to the ``span_starts`` ``ListField``.
         """
-        flattened_sentences = [self._normalize_word(token)
+        flattened_sentences = [self._normalize_word(word)
                                for sentence in sentences
-                               for token in sentence]
+                               for word in sentence]
 
         metadata: Dict[str, Any] = {"original_text": flattened_sentences}
         if gold_clusters is not None:

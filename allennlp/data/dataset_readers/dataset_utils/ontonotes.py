@@ -36,7 +36,8 @@ class OntonotesSentence:
     predicate_framenet_ids : ``List[Optional[int]]``
         The PropBank frameset ID of the lemmas in ``predicate_lemmas``, or ``None``.
     word_senses : ``List[Optional[float]]``
-        The word senses for the words in the sentence, or ``None``.
+        The word senses for the words in the sentence, or ``None``. These are floats
+        because the word sense can have values after the decimal, like ``1.1``.
     speakers : ``List[Optional[str]]``
         The speaker information for the words in the sentence, if present, or ``None``
         This is the speaker or author name where available. Mostly in Broadcast Conversation
