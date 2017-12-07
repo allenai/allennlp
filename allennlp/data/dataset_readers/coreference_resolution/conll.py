@@ -98,10 +98,9 @@ class ConllCorefReader(DatasetReader):
                     # Coref annotations are on a _per sentence_
                     # basis, so we need to adjust them to be relative
                     # to the length of the document.
-                    span_id: int = typed_span[0]
-                    (start, end) = typed_span[1]
+                    span_id, (start, end) = typed_span
                     clusters[span_id].append((start + total_tokens,
-                                                   end + total_tokens))
+                                              end + total_tokens))
                 total_tokens += len(sentence.words)
 
             canonical_clusters = canonicalize_clusters(clusters)
