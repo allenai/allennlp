@@ -31,7 +31,7 @@ class NlvrSemanticParser(Model):
     of actions instead of complete target action sequences, and accordingly the score in this parser is based
     on how many of the agenda actions are covered.
 
-    This is still WORK IN PROGRESS. We still need to incorporate other linds of losses, including atleast a
+    This is still WORK IN PROGRESS. We still need to incorporate other kinds of losses, including atleast a
     denotation based loss.
     """
     def __init__(self,
@@ -79,7 +79,9 @@ class NlvrSemanticParser(Model):
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
         """
-        Decoder logic for producing type constrained target sequence, that maximize coverage of an agenda.
+        Decoder logic for producing type constrained target sequences, that maximize coverage of their
+        respective agendas. This will change soon, to include a denotation based score as well, once we have
+        a way to transform action sequences into logical forms that can be executed to produce denotations.
         """
         # TODO(pradeep): Use labels.
         embedded_input = self._sentence_embedder(sentence)
@@ -89,12 +91,13 @@ class NlvrSemanticParser(Model):
         encoder_outputs = self._encoder(embedded_input, sentence_mask)
 
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
-        memory_cell = nn_util.new_variable_with_shape(encoder_outputs,
-                                                      (batch_size, self._encoder.get_output_dim()), 0)
+        memory_cell = nn_util.new_variable_with_size(encoder_outputs,
+                                                     torch.Size((batch_size,
+                                                                 self._encoder.get_output_dim())), 0)
         attended_sentence = self._decoder_step.attend_on_question(final_encoder_output, encoder_outputs,
                                                                   sentence_mask)
         # (batch_size, agenda_size)
-        initial_checklist = nn_util.new_variable_with_shape(agenda, agenda.size(), 0).type(torch.FloatTensor)
+        initial_checklist = nn_util.new_variable_with_size(agenda, agenda.size(), 0).float()
         agenda_list = [agenda[i] for i in range(batch_size)]
         initial_checklist_list = [initial_checklist[i] for i in range(batch_size)]
         initial_score_list = [NlvrDecoderStep.score_instance_checklist(checklist) for checklist in
@@ -118,19 +121,20 @@ class NlvrSemanticParser(Model):
                                          self._global_type_productions,
                                          self._end_index)
 
-        if self.training:
-            # Passing values for target_action_sequences and mask to be able to use MaxMarginalLikelihood
-            # trainer. Doesn't matter since we do not use allowed_actions in NlvrDecodeStep anyway. But this
-            # is a hack!
-            # TODO(pradeep): Change this.
-            return self._decoder_trainer.decode(initial_state,
-                                                self._decoder_step,
-                                                nn_util.new_variable_with_shape(initial_hidden_state[0],
-                                                                                torch.Size([1, 1, 1]), 0),
-                                                nn_util.new_variable_with_shape(initial_hidden_state[0],
-                                                                                torch.Size([1, 1, 1]), 0))
-        else:
-            raise NotImplementedError
+        outputs = self._decoder_trainer.decode(initial_state, self._decoder_step, self._max_decoding_steps)
+        if not self.training:
+            best_final_states = self._beam_search.search(self._max_decoding_steps, initial_state,
+                                                         self._decoder_step)
+            best_action_sequences = []
+            for i in range(batch_size):
+                action_sequence = [self.vocab.get_token_from_index(a, self._action_namespace) for a in
+                                   best_final_states[i][0].action_history[0]]
+                best_action_sequences.append(action_sequence)
+            outputs['best_action_sequence'] = best_action_sequences
+            #for action_sequence in best_action_sequences:
+            #    print(action_sequence, file=self.log_file)
+            #print("\n-----------", file=self.log_file)
+        return outputs
 
     @classmethod
     def from_params(cls, vocab, params: Params) -> 'NlvrSemanticParser':
@@ -246,7 +250,7 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
                 action = considered_actions[group_index][action_index]
                 # If action is not in instance_agenda, mask_variable, and checklist_addition will be all 0s.
                 mask_variable = instance_agenda.eq(action)
-                checklist_addition = mask_variable.type(torch.FloatTensor) * action_prob
+                checklist_addition = mask_variable.float() * action_prob
                 new_checklist = instance_checklist + checklist_addition
                 new_score = self.score_instance_checklist(new_checklist)
                 next_states_info[batch_index].append((group_index, action, new_checklist, new_score))

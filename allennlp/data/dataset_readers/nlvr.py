@@ -1,6 +1,7 @@
 from typing import Dict, List
 import json
 import logging
+from collections import defaultdict
 
 from overrides import overrides
 import tqdm
@@ -14,6 +15,7 @@ from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.semparse.type_declarations import type_declaration as types
 from allennlp.data.semparse.type_declarations import nlvr_type_declaration as nlvr_types
 
 
@@ -30,14 +32,13 @@ class NlvrDatasetReader(DatasetReader):
                  sentence_token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._tokenizer = tokenizer or WordTokenizer()
         self._sentence_token_indexers = sentence_token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self._agenda_mapping = {}
+        self._agenda_mapping = defaultdict(list)
         for constant in nlvr_types.COMMON_NAME_MAPPING:
             alias = nlvr_types.COMMON_NAME_MAPPING[constant]
-            if alias not in nlvr_types.COMMON_TYPE_SIGNATURE:
-                continue
             if alias in nlvr_types.COMMON_TYPE_SIGNATURE:
                 constant_type = nlvr_types.COMMON_TYPE_SIGNATURE[alias]
-                self._agenda_mapping[constant] = "%s -> %s" % (constant_type, constant)
+                if constant_type != types.ANY_TYPE:
+                    self._agenda_mapping[constant] = "%s -> %s" % (constant_type, constant)
 
     @overrides
     def read(self, file_path):
@@ -83,7 +84,7 @@ class NlvrDatasetReader(DatasetReader):
         of these actions in the decoded sequences as possible.
         """
         # TODO(pradeep): Use approximate and substring matching as well.
-        agenda = []
+        agenda = ['t']
         # This takes care of shapes, colors, top, bottom, big small etc.
         for constant, production in self._agenda_mapping.items():
             if constant in sentence:

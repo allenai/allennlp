@@ -23,7 +23,8 @@
       "num_layers": 1
     },
     "decoder_trainer": {
-      "type": "max_marginal_likelihood"
+      "type": "beam_search",
+      "beam_size": 20
     },
     "decoder_beam_search": {
       "beam_size": 3

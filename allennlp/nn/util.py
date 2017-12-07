@@ -504,12 +504,12 @@ def new_variable_with_data(original: Variable, data: torch.Tensor) -> Variable:
     return Variable(original.type(data_type).data.new(data))
 
 
-def new_variable_with_shape(original: Variable, shape, value) -> Variable:
+def new_variable_with_size(original: Variable, size: torch.Size, value) -> Variable:
     """
     Returns a new variable on the same device as the ``original``, but containing a tensor of provided
-    ``shape``, filled with the given ``value``.
+    ``size``, filled with the given ``value``.
     """
-    return Variable(original.data.new(shape).fill_(value))
+    return Variable(original.data.new(size).fill_(value))
 
 
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
