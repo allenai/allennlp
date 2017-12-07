@@ -114,12 +114,17 @@ SHAPE_FUNCTION_TYPE = ComplexType(OBJECT_TYPE, SHAPE_TYPE)
 COUNT_FUNCTION_TYPE = CountType(ANY_TYPE, NUM_TYPE)
 BOX_FILTER_TYPE = BoxFilterType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, ANY_TYPE),
                                                       ComplexType(ANY_TYPE, BOX_TYPE)))
+BOX_FILTER_NUM_TYPE = ComplexType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, NUM_TYPE),
+                                                        ComplexType(NUM_TYPE, BOX_TYPE)))
 ASSERT_TYPE = AssertType(ANY_TYPE, ComplexType(ANY_TYPE, TRUTH_TYPE))
+ASSERT_NUM_TYPE = ComplexType(NUM_TYPE, ComplexType(NUM_TYPE, TRUTH_TYPE))
 IDENTITY_TYPE = IdentityType(ANY_TYPE, ANY_TYPE)
 
 
 COMMON_NAME_MAPPING = {"lambda": "\\", "var": "V", "x": "X"}
 COMMON_TYPE_SIGNATURE = {"V": IDENTITY_TYPE, "X": ANY_TYPE}
+
+BASIC_TYPES = {NUM_TYPE, BOX_TYPE, OBJECT_TYPE, COLOR_TYPE, SHAPE_TYPE}
 
 
 def add_common_name_with_type(name, mapping, type_signature):
@@ -148,19 +153,19 @@ add_common_name_with_type("object_in_box", "I", BOX_MEMBERSHIP_TYPE)
 # Assert functions
 add_common_name_with_type("assert_equals", "A0", ASSERT_TYPE)
 add_common_name_with_type("assert_not_equals", "A1", ASSERT_TYPE)
-add_common_name_with_type("assert_greater", "A2", ASSERT_TYPE)
-add_common_name_with_type("assert_greater_equals", "A3", ASSERT_TYPE)
-add_common_name_with_type("assert_lesser", "A4", ASSERT_TYPE)
-add_common_name_with_type("assert_lesser_equals", "A5", ASSERT_TYPE)
+add_common_name_with_type("assert_greater", "A2", ASSERT_NUM_TYPE)
+add_common_name_with_type("assert_greater_equals", "A3", ASSERT_NUM_TYPE)
+add_common_name_with_type("assert_lesser", "A4", ASSERT_NUM_TYPE)
+add_common_name_with_type("assert_lesser_equals", "A5", ASSERT_NUM_TYPE)
 
 
 # Box filter functions
 add_common_name_with_type("filter_equals", "F0", BOX_FILTER_TYPE)
 add_common_name_with_type("filter_not_equals", "F1", BOX_FILTER_TYPE)
-add_common_name_with_type("filter_greater", "F2", BOX_FILTER_TYPE)
-add_common_name_with_type("filter_greater_equals", "F3", BOX_FILTER_TYPE)
-add_common_name_with_type("filter_lesser", "F4", BOX_FILTER_TYPE)
-add_common_name_with_type("filter_lesser_equals", "F5", BOX_FILTER_TYPE)
+add_common_name_with_type("filter_greater", "F2", BOX_FILTER_NUM_TYPE)
+add_common_name_with_type("filter_greater_equals", "F3", BOX_FILTER_NUM_TYPE)
+add_common_name_with_type("filter_lesser", "F4", BOX_FILTER_NUM_TYPE)
+add_common_name_with_type("filter_lesser_equals", "F5", BOX_FILTER_NUM_TYPE)
 
 
 # Object filter functions

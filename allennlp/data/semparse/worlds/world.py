@@ -42,6 +42,18 @@ class World:
         self._logic_parser = DynamicTypeLogicParser(constant_type_prefixes=type_prefixes,
                                                     type_signatures=self.global_type_signatures)
 
+    def parse_logical_form(self, logical_form: str) -> Expression:
+        """
+        Takes a logical form as a string, maps its tokens using the mapping and returns a parsed expression.
+        """
+        if not logical_form.startswith("("):
+            logical_form = "(%s)" % logical_form
+        parsed_lisp = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(logical_form).asList()
+        translated_string = self._process_nested_expression(parsed_lisp)
+        type_signature = self.local_type_signatures.copy()
+        type_signature.update(self.global_type_signatures)
+        return self._logic_parser.parse(translated_string, signature=type_signature)
+
     def _process_nested_expression(self, nested_expression) -> str:
         """
         ``nested_expression`` is the result of parsing a logical form in Lisp format.
@@ -69,18 +81,6 @@ class World:
         else:
             arguments = ["(%s)" % name for name in mapped_names[1:]]
         return "(%s %s)" % (mapped_names[0], " ".join(arguments))
-
-    def parse_logical_form(self, logical_form: str) -> Expression:
-        """
-        Takes a logical form as a string, maps its tokens using the mapping and returns a parsed expression.
-        """
-        if not logical_form.startswith("("):
-            logical_form = "(%s)" % logical_form
-        parsed_lisp = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(logical_form).asList()
-        translated_string = self._process_nested_expression(parsed_lisp)
-        type_signature = self.local_type_signatures.copy()
-        type_signature.update(self.global_type_signatures)
-        return self._logic_parser.parse(translated_string, signature=type_signature)
 
     def _map_name(self, name: str) -> str:
         raise NotImplementedError
