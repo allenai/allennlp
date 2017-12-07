@@ -164,7 +164,7 @@ class DecomposableAttention(Model):
 
         aggregate_input = torch.cat([compared_premise, compared_hypothesis], dim=-1)
         label_logits = self._aggregate_feedforward(aggregate_input)
-        label_probs = torch.nn.functional.softmax(label_logits)
+        label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
 
         output_dict = {"label_logits": label_logits, "label_probs": label_probs}
 

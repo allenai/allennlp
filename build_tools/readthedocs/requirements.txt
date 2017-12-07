@@ -7,7 +7,7 @@
 # your OS. We're including the linux version here so that our tests can run and docs can build
 # correctly using cloud platforms.  Remove this line and visit http://pytorch.org/ for installation
 # instructions if you are using an operating system other than linux.
-http://download.pytorch.org/whl/cu80/torch-0.2.0.post3-cp35-cp35m-manylinux1_x86_64.whl
+http://download.pytorch.org/whl/cu80/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl
 
 # Neural net and related libraries.
 h5py
