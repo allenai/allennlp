@@ -118,10 +118,10 @@ def masked_softmax(vector, mask):
     that uses categorical cross-entropy loss.
     """
     if mask is None:
-        result = torch.nn.functional.softmax(vector)
+        result = torch.nn.functional.softmax(vector, dim=-1)
     else:
         # To limit numerical errors from large vector elements outside mask, we zero these out
-        result = torch.nn.functional.softmax(vector * mask)
+        result = torch.nn.functional.softmax(vector * mask, dim=-1)
         result = result * mask
         result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
     return result
@@ -141,7 +141,7 @@ def masked_log_softmax(vector, mask):
     """
     if mask is not None:
         vector = vector + mask.log()
-    return torch.nn.functional.log_softmax(vector)
+    return torch.nn.functional.log_softmax(vector, dim=1)
 
 
 def viterbi_decode(tag_sequence: torch.Tensor,
@@ -385,7 +385,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     # shape : (batch * sequence_length, num_classes)
     logits_flat = logits.view(-1, logits.size(-1))
     # shape : (batch * sequence_length, num_classes)
-    log_probs_flat = torch.nn.functional.log_softmax(logits_flat)
+    log_probs_flat = torch.nn.functional.log_softmax(logits_flat, dim=-1)
     # shape : (batch * max_len, 1)
     targets_flat = targets.view(-1, 1).long()
 

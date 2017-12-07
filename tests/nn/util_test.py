@@ -338,7 +338,7 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_viterbi_decode(self):
         # Test Viterbi decoding is equal to greedy decoding with no pairwise potentials.
-        sequence_logits = torch.nn.functional.softmax(Variable(torch.rand([5, 9])))
+        sequence_logits = torch.nn.functional.softmax(Variable(torch.rand([5, 9])), dim=-1)
         transition_matrix = torch.zeros([9, 9])
         indices, _ = util.viterbi_decode(sequence_logits.data, transition_matrix)
         _, argmax_indices = torch.max(sequence_logits, 1)

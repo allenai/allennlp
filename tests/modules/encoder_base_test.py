@@ -49,7 +49,7 @@ class TestEncoderBase(AllenNlpTestCase):
         # to concat a tensor of shape
         # (num_layers * num_directions, batch_size - num_valid, hidden_dim),
         # to the output before unsorting it.
-        zeros = torch.zeros([6, 2, 7])
+        zeros = Variable(torch.zeros([6, 2, 7]))
 
         # sort_and_run_forward strips fully-padded instances from the batch;
         # in order to use the restoration_indices we need to add back the two
