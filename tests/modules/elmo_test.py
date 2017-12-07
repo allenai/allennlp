@@ -97,17 +97,15 @@ class TestElmoBiLm(AllenNlpTestCase):
 
 
 class TestElmo(AllenNlpTestCase):
-    def test_elmo(self):
-        # load the test model
+    def setUp(self):
+        super(TestElmo, self).setUp()
+
         options_file = os.path.join(FIXTURES, 'options.json')
         weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
-        elmo = Elmo(options_file, weight_file, 2)
+        self.elmo = Elmo(options_file, weight_file, 2)
 
-        # Correctness checks are in ElmoBiLm and ScalarMix, here we just add a shallow test
-        # to ensure things execute.
+    def _sentences_to_ids(self, sentences):
         indexer = ELMoTokenCharactersIndexer()
-        sentences = [['The', 'sentence', '.'],
-                     ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']]
 
         # For each sentence, first create a TextField, then create an instance
         instances = []
@@ -120,9 +118,16 @@ class TestElmo(AllenNlpTestCase):
         dataset = Dataset(instances)
         vocab = Vocabulary()
         dataset.index_instances(vocab)
-        character_ids = dataset.as_tensor_dict()['elmo']['character_ids']
+        return dataset.as_tensor_dict()['elmo']['character_ids']
 
-        output = elmo(character_ids)
+    def test_elmo(self):
+        # Correctness checks are in ElmoBiLm and ScalarMix, here we just add a shallow test
+        # to ensure things execute.
+        sentences = [['The', 'sentence', '.'],
+                     ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']]
+
+        character_ids = self._sentences_to_ids(sentences)
+        output = self.elmo(character_ids)
         elmo_representations = output['elmo_representations']
         mask = output['mask']
 
@@ -131,6 +136,31 @@ class TestElmo(AllenNlpTestCase):
         assert list(elmo_representations[1].size()) == [2, 7, 32]
         assert list(mask.size()) == [2, 7]
 
+    def test_elmo_4D_input(self):
+        sentences = [[['The', 'sentence', '.'],
+                      ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']],
+                     [['1', '2'], ['1', '2', '3', '4', '5', '6', '7']],
+                     [['1', '2', '3', '4', '50', '60', '70'], ['The']]]
+
+        all_character_ids = []
+        for batch_sentences in sentences:
+            all_character_ids.append(self._sentences_to_ids(batch_sentences))
+
+        # (2, 3, 7, 50)
+        character_ids = torch.cat([ids.unsqueeze(1) for ids in all_character_ids], dim=1)
+        embeddings_4d = self.elmo(character_ids)
+
+        # Run the individual batches.
+        embeddings_3d = []
+        for char_ids in all_character_ids:
+            self.elmo._elmo_lstm._elmo_lstm.reset_states()
+            embeddings_3d.append(self.elmo(char_ids))
+
+        for k in range(3):
+            numpy.testing.assert_array_almost_equal(
+                    embeddings_4d['elmo_representations'][0][:, k, :, :].data.numpy(),
+                    embeddings_3d[k]['elmo_representations'][0].data.numpy()
+            )
 
 class TestElmoTokenRepresentation(AllenNlpTestCase):
     def test_elmo_token_representation(self):
