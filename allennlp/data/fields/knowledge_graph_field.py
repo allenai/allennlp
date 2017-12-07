@@ -1,10 +1,11 @@
 """
 ``KnowledgeGraphField`` is a ``Field`` which stores a knowledge graph representation.
 """
-
+from collections import defaultdict
 from typing import Dict, List
 
-import numpy
+import torch
+from torch.autograd import Variable
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
@@ -16,7 +17,7 @@ from allennlp.data.vocabulary import Vocabulary
 TokenList = List[TokenType]  # pylint: disable=invalid-name
 
 
-class KnowledgeGraphField(Field[Dict[str, numpy.ndarray]]):
+class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
     """
     A ``KnowledgeGraphField`` represents a ``KnowledgeGraph`` as a ``Field`` that can be used in a
     ``Model``.  We take the (sorted) list of entities in the graph and output them as arrays using
@@ -83,17 +84,33 @@ class KnowledgeGraphField(Field[Dict[str, numpy.ndarray]]):
         return padding_lengths
 
     @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> Dict[str, numpy.ndarray]:
-        arrays = {}
+    def as_tensor(self,
+                  padding_lengths: Dict[str, int],
+                  cuda_device: int = -1,
+                  for_training: bool = True) -> Dict[str, torch.Tensor]:
+        tensors = {}
         desired_num_entities = padding_lengths['num_entities']
         for indexer_name, indexer in self._token_indexers.items():
             padded_array = indexer.pad_token_sequence(self._indexed_entities[indexer_name],
                                                       desired_num_entities, padding_lengths)
             # Use the key of the indexer to recognise what the array corresponds to within the field
             # (i.e. the result of word indexing, or the result of character indexing, for example).
-            arrays[indexer_name] = numpy.array(padded_array)
-        return arrays
+            tensor = Variable(torch.LongTensor(padded_array), volatile=not for_training)
+            tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+        return tensors
 
     @overrides
     def empty_field(self) -> 'KnowledgeGraphField':
         return KnowledgeGraphField(KnowledgeGraph({}), self._token_indexers)
+
+    @overrides
+    def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
+        # pylint: disable=no-self-use
+        # This is creating a dict of {token_indexer_key: batch_tensor} for each token indexer used
+        # to index this field.
+        token_indexer_key_to_batch_dict: Dict[str, List[torch.Tensor]] = defaultdict(list)
+        for encoding_name_dict in tensor_list:
+            for indexer_name, tensor in encoding_name_dict.items():
+                token_indexer_key_to_batch_dict[indexer_name].append(tensor)
+        return {indexer_name: torch.stack(tensor_list)
+                for indexer_name, tensor_list in token_indexer_key_to_batch_dict.items()}

@@ -168,5 +168,6 @@ class Dataset:
         field_classes = self.instances[0].fields
         final_fields = {}
         for field_name, field_tensor_list in field_tensors.items():
+            print(field_name, field_classes[field_name])
             final_fields[field_name] = field_classes[field_name].batch_tensors(field_tensor_list)
         return final_fields

@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Set, Tuple
 
-import numpy
+import torch
+from torch.autograd import Variable
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
@@ -8,7 +9,7 @@ from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.vocabulary import Vocabulary
 
-ProductionRuleArray = Dict[str, Tuple[str, bool, Dict[str, numpy.ndarray]]]  # pylint: disable=invalid-name
+ProductionRuleArray = Dict[str, Tuple[str, bool, Dict[str, torch.Tensor]]]  # pylint: disable=invalid-name
 
 # mypy doesn't like that we're using a crazy data type - the data type we use here is _supposed_ to
 # be in the bounds of DataArray, but ProductionRuleArray definitely isn't.  TODO(mattg): maybe we
@@ -48,12 +49,14 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
     well to batching its arrays, even in a sequence for a single training instance.  You will have
     to handle batching differently in models that use ``ProductionRuleFields``.
 
-    In a model, this will get represented as a ``Dict[str, Tuple[str, bool, numpy.ndarray]]``.
+    In a model, this will get represented as a ``ProductionRuleArray``, which is defined above as
+    ``Dict[str, Tuple[str, bool, Dict[str, torch.Tensor]]]``.
 
     Parameters
     ----------
     rule : ``str``
-        The production rule, formatted as described above.
+        The production rule, formatted as described above.  If this field is just padding, ``rule``
+        will be the empty string.
     terminal_indexers : ``Dict[str, TokenIndexer]``
         The ``TokenIndexers`` that we will use to convert terminal strings into arrays.
     nonterminal_indexers : ``Dict[str, TokenIndexer]``
@@ -80,9 +83,16 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         self._nonterminal_types = nonterminal_types
         self._context = context
 
-        self._left_side, self._right_side = rule.split(' -> ')
-        self._left_side_token, self._right_side_token = (Token(self._left_side), Token(self._right_side))
-        self._right_is_nonterminal = self._is_nonterminal(self._right_side)
+        if rule:
+            self._left_side, self._right_side = rule.split(' -> ')
+            self._left_side_token, self._right_side_token = (Token(self._left_side), Token(self._right_side))
+            self._right_is_nonterminal = self._is_nonterminal(self._right_side)
+        else:
+            # This rule is just padding; we just need to make sure we return empty strings and that
+            # we set `_right_is_nonterminal` to _something_.
+            self._left_side = ''
+            self._right_side = ''
+            self._right_is_nonterminal = False
         self._right_side_indexers = nonterminal_indexers if self._right_is_nonterminal else terminal_indexers
 
         # mypy isn't happy with the correct annotation of Dict[str, TokenType] here, probably
@@ -128,32 +138,59 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         return padding_lengths
 
     @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> ProductionRuleArray:
+    def as_tensor(self,
+                  padding_lengths: Dict[str, int],
+                  cuda_device: int = -1,
+                  for_training: bool = True) -> ProductionRuleArray:
         """
         Here we pad the LHS and RHS representations as necessary, but return a dictionary like:
-        {"left": (self._left_side, is_nonterminal, padded_array),
-        "right": (self._right_side, is_nonterminal, padded_array)}.
+        {"left": (self._left_side, is_nonterminal, padded_tensor),
+        "right": (self._right_side, is_nonterminal, padded_tensor)}.
         This is so that you have access to the information you need to embed these representations,
         or look up valid actions given your current state.
         """
-        left_side_arrays = {}
+        left_side_tensors = {}
         # Because the TokenIndexers were designed to work on token sequences, and we're just giving
         # them single tokens, we need to put them into lists and then pull them out again.
         for indexer_name, indexer in self._nonterminal_indexers.items():
             padded_left_side = indexer.pad_token_sequence([self._indexed_left_side[indexer_name]],
                                                           1,
                                                           padding_lengths)[0]
-            left_side_arrays[indexer_name] = numpy.array(padded_left_side)
-        right_side_arrays = {}
+            if isinstance(padded_left_side, int):
+                # torch.Tensor(int) creates a tensor with shape (int,), not a tensor of shape (1,)
+                # with _value_ int.  We need to force the latter.
+                padded_left_side = [padded_left_side]
+            tensor = Variable(torch.LongTensor(padded_left_side), volatile=not for_training)
+            left_side_tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+        right_side_tensors = {}
         for indexer_name, indexer in self._right_side_indexers.items():
             padded_right_side = indexer.pad_token_sequence([self._indexed_right_side[indexer_name]],
                                                            1,
                                                            padding_lengths)[0]
-            right_side_arrays[indexer_name] = numpy.array(padded_right_side)
-        return {"left": (self._left_side, True, left_side_arrays),
-                "right": (self._right_side, self._right_is_nonterminal, right_side_arrays)}
+            if isinstance(padded_right_side, int):
+                # torch.Tensor(int) creates a tensor with shape (int,), not a tensor of shape (1,)
+                # with _value_ int.  We need to force the latter.
+                padded_right_side = [padded_right_side]
+            tensor = Variable(torch.LongTensor(padded_right_side), volatile=not for_training)
+            right_side_tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+        return {"left": (self._left_side, True, left_side_tensors),
+                "right": (self._right_side, self._right_is_nonterminal, right_side_tensors)}
 
-    @classmethod
     @overrides
-    def batch_arrays(cls, array_list: List[ProductionRuleArray]) -> ProductionRuleArray:
-        return array_list  # type: ignore
+    def empty_field(self): # pylint: disable=no-self-use
+        # Because we're not actually batching anything here, we don't need to worry about passing
+        # along any of the indexers or anything, because those would only be used for padding.
+        # This _does_ get called, because we don't want to bother with modifying the ListField to
+        # ignore padding for these, but we don't need to do any internal padding here.  We just
+        # make sure the rule is the empty string, which the model will use to know that this rule
+        # is just padding.
+        return ProductionRuleField(rule='',
+                                   terminal_indexers={},
+                                   nonterminal_indexers={},
+                                   nonterminal_types=set(),
+                                   context=None)
+
+    @overrides
+    def batch_tensors(self, tensor_list: List[ProductionRuleArray]) -> ProductionRuleArray:
+        # pylint: disable=no-self-use
+        return tensor_list  # type: ignore
