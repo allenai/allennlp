@@ -30,7 +30,7 @@ class SimpleSeq2Seq(Model):
 
     This ``SimpleSeq2Seq`` model takes an encoder (:class:`Seq2SeqEncoder`) as an input, and
     implements the functionality of the decoder.  In this implementation, the decoder uses the
-    encoder's outputs in two ways. The hidden state of the decoder is intialized with the output
+    encoder's outputs in two ways. The hidden state of the decoder is initialized with the output
     from the final time-step of the encoder, and when using attention, a weighted average of the
     outputs from the encoder is concatenated to the inputs of the decoder at every timestep.
 
@@ -161,7 +161,7 @@ class SimpleSeq2Seq(Model):
             output_projections = self._output_projection_layer(decoder_hidden)
             # list of (batch_size, 1, num_classes)
             step_logits.append(output_projections.unsqueeze(1))
-            class_probabilities = F.softmax(output_projections)
+            class_probabilities = F.softmax(output_projections, dim=-1)
             _, predicted_classes = torch.max(class_probabilities, 1)
             step_probabilities.append(class_probabilities.unsqueeze(1))
             last_predictions = predicted_classes
@@ -216,7 +216,7 @@ class SimpleSeq2Seq(Model):
             # encoder_outputs : (batch_size, input_sequence_length, encoder_output_dim)
             # Ensuring mask is also a FloatTensor. Or else the multiplication within attention will
             # complain.
-            encoder_outputs_mask = encoder_outputs_mask.type(torch.FloatTensor)
+            encoder_outputs_mask = encoder_outputs_mask.float()
             # (batch_size, input_sequence_length)
             input_weights = self._decoder_attention(decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
             # (batch_size, encoder_output_dim)
@@ -280,8 +280,6 @@ class SimpleSeq2Seq(Model):
             predicted_tokens = [self.vocab.get_token_from_index(x, namespace="target_tokens")
                                 for x in indices]
             all_predicted_tokens.append(predicted_tokens)
-        if len(all_predicted_tokens) == 1:
-            all_predicted_tokens = all_predicted_tokens[0]  # type: ignore
         output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict
 
