@@ -107,3 +107,21 @@ class TestTrainer(AllenNlpTestCase):
             epochs = [int(re.search(r"_([0-9])\.th", fname).group(1))
                       for fname in file_names]
             assert sorted(epochs) == [2, 3, 4]
+
+    def test_trainer_saves_models_at_specified_interval(self):
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.dataset, num_epochs=2,
+                          serialization_dir=self.TEST_DIR,
+                          model_save_interval=0.0001)
+        trainer.train()
+
+        # Now check the serialized files for models saved during the epoch.
+        prefix = 'model_state_epoch_*'
+        file_names = sorted(glob.glob(os.path.join(self.TEST_DIR, prefix)))
+        epochs = [re.search(r"_([0-9\.]+)\.th", fname).group(1)
+                  for fname in file_names]
+        # We should have checkpoints at the end of each epoch and during each, e.g.
+        # [0.timestamp, 0, 1.timestamp, 1]
+        assert len(epochs) == 4
+        assert epochs[3] == '1'
+        assert '.' in epochs[0]

@@ -11,7 +11,8 @@ import logging
 import os
 import shutil
 import time
-from typing import Dict, Optional, List, Tuple, Iterable
+import re
+from typing import Dict, Optional, List, Tuple, Union, Iterable
 
 import torch
 import torch.optim.lr_scheduler
@@ -62,6 +63,7 @@ class Trainer:
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = None,
+                 model_save_interval: float = None,
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
@@ -96,6 +98,10 @@ class Trainer:
             this parameter is not passed.
         num_serialized_models_to_keep: int, optional (default=None)
             Number of previous model checpoints to retain.  Default is to keep all epochs.
+        model_save_interval : float, optional (default=None)
+            If provided, then serialize models every ``model_save_interval``
+            seconds within single epochs.  In all cases, models are also saved
+            at the end of every epoch if ``serialization_dir`` is provided.
         cuda_device : int, optional (default = -1)
             An integer specifying the CUDA device to use. If -1, the CPU is used.
             Multi-gpu training is not currently supported, but will be once the
@@ -124,6 +130,7 @@ class Trainer:
         self._serialization_dir = serialization_dir
         self._num_serialized_models_to_keep = num_serialized_models_to_keep
         self._serialized_paths = []
+        self._model_save_interval = model_save_interval
 
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
@@ -215,6 +222,8 @@ class Trainer:
         self._last_log = time.time()
         batch_num = 0
 
+        last_save_time = time.time()
+
         logger.info("Training")
         for batch in train_generator_tqdm:
             batch_num += 1
@@ -255,6 +264,15 @@ class Trainer:
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
                 self._metrics_to_tensorboard(batch_num_total,
                                              {"epoch_metrics/" + k: v for k, v in metrics.items()})
+
+            # Save model if needed.
+            if self._model_save_interval is not None and (
+                    time.time() - last_save_time > self._model_save_interval
+            ):
+                last_save_time = time.time()
+                self._save_checkpoint(
+                        '{0}.{1}'.format(epoch, int(last_save_time)), [], is_best=False
+                )
 
         return self._get_metrics(train_loss, batch_num, reset=True)
 
@@ -421,7 +439,7 @@ class Trainer:
         return ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
 
     def _save_checkpoint(self,
-                         epoch: int,
+                         epoch: Union[int, str],
                          val_metric_per_epoch: List[float],
                          is_best: Optional[bool] = None) -> None:
         """
@@ -430,7 +448,7 @@ class Trainer:
 
         Parameters
         ----------
-        epoch : int, required.
+        epoch : Union[int, str], required.
             The epoch of training.
         is_best: bool, optional (default = None)
             A flag which causes the model weights at the given epoch to
@@ -487,7 +505,27 @@ class Trainer:
 
         serialization_files = os.listdir(self._serialization_dir)
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
-        epoch_to_load = max([int(x.split("model_state_epoch_")[-1].strip(".th")) for x in model_checkpoints])
+        # Get the last checkpoint file.  Epochs are specified as either an
+        # int (for end of epoch files) or with epoch and timestamp for 
+        # within epoch checkpoints.  5.1512684016
+        found_epochs = [
+                re.search("model_state_epoch_([0-9\.])+\.th", x).group(1)
+                for x in model_checkpoints
+        ]
+        int_epochs = []
+        for epoch in found_epochs:
+            pieces = [int(piece) for piece in epoch.split('.')]
+            if len(pieces) == 1:
+                # Just a single epoch without timestamp
+                int_epochs.append([pieces[0], 0])
+            else:
+                # has a timestamp
+                int_epochs.append(pieces)
+        last_epoch = sorted(int_epochs, reverse=True)[0]
+        if last_epoch[1] == 0:
+            epoch_to_load = last_epoch[0]
+        else:
+            epoch_to_load = '{0}.{1}'.format(last_epoch[0], last_epoch[1])
 
         model_path = os.path.join(self._serialization_dir,
                                   "model_state_epoch_{}.th".format(epoch_to_load))
@@ -508,7 +546,12 @@ class Trainer:
         else:
             val_metric_per_epoch = training_state["val_metric_per_epoch"]
 
-        return training_state["epoch"] + 1, val_metric_per_epoch
+        if isinstance(training_state["epoch"], int):
+            epoch_to_return = training_state["epoch"] + 1
+        else:
+            epoch_to_return = int(training_state["epoch"].split('.')[0]) + 1
+
+        return epoch_to_return, val_metric_per_epoch
 
     @classmethod
     def from_params(cls,
