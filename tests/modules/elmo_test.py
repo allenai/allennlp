@@ -138,7 +138,7 @@ class TestElmo(AllenNlpTestCase):
 
     def test_elmo_4D_input(self):
         sentences = [[['The', 'sentence', '.'],
-                     ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']],
+                      ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']],
                      [['1', '2'], ['1', '2', '3', '4', '5', '6', '7']],
                      [['1', '2', '3', '4', '50', '60', '70'], ['The']]]
 
