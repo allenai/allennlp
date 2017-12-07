@@ -25,13 +25,19 @@ def main(vocab_path: str,
     """
     Creates ELMo word representations from a vocabulary file.
     ELMo requires 2 additional tokens: <S> and </S>. The first token
-    in this file is assumed to be an unknown token
+    in this file is assumed to be an unknown token.
+
+    This script produces two artifacts: A new vocabulary file
+    with the <S> and </S> tokens inserted and a glove formatted embedding
+    file containing word : vector pairs, one per line, with all values
+    separated by a space.
     """
 
     # Load the vocabulary words and convert to char ids
     with open(vocab_path, 'r') as vocab_file:
         tokens = vocab_file.read().strip().split('\n')
 
+    # Insert the sentence boundary tokens which elmo uses at positions 1 and 2.
     tokens = [tokens[0]] + ["<S>", "</S>"] + tokens[1:]
 
     indexer = ELMoTokenCharactersIndexer()
@@ -52,10 +58,11 @@ def main(vocab_path: str,
 
     all_embeddings = []
     for i in range((len(sentences) // batch_size) + 1):
+        array = numpy.array(sentences[i * batch_size: (i + 1) * batch_size])
         if device != -1:
-            batch = Variable(torch.from_numpy(numpy.array(sentences[i * batch_size: (i + 1) * batch_size])).cuda(device))
+            batch = Variable(torch.from_numpy(array).cuda(device))
         else:
-            batch = Variable(torch.from_numpy(numpy.array(sentences[i * batch_size: (i + 1) * batch_size])))
+            batch = Variable(torch.from_numpy(array))
 
         token_embedding = elmo_token_embedder(batch)['token_embedding'].data
 
@@ -73,15 +80,14 @@ def main(vocab_path: str,
     # Write out the embedding in a glove format.
     with gzip.open(os.path.join(output_dir, "elmo_embeddings.tar.gz"), 'wb') as embeddings_file:
         for i, word in enumerate(tokens):
-            embeddings_file.write(f"{word} {' '.join([str(x) for x in list(embedding_weight[i, :])])}\n".encode('utf-8'))
+            string_array = " ".join([str(x) for x in list(embedding_weight[i, :])])
+            embeddings_file.write(f"{word} {string_array}\n".encode('utf-8'))
 
     # Write out the new vocab with the <S> and </S> tokens.
     _, vocab_file_name = os.path.split(vocab_path)
     with open(os.path.join(output_dir, vocab_file_name), "w") as new_vocab_file:
-
         for word in tokens:
             new_vocab_file.write(f"{word}\n")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate CNN representations for a vocabulary '
