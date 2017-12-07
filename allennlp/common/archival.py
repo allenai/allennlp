@@ -1,12 +1,10 @@
 """
-We want to allow components to serialize (and retrieve) arbitrary objects.
-This module enables this using Python's ``shelve`` library
-(which uses ``pickle`` under the hood).
-
 If a class (e.g. a ``Model`` or a ``DatasetReader``) inherits from ``Archivable``
-then it can be used in ``add_to_archives`` or ``populate_from_archives``, which will
-recursively archive any member elements (including ``List`` and ``Dict`` values)
-that themselves implement ``Archivable``.
+then we can ``collect()`` a dictionary of arbitrary data to be serialized
+from the class instance itself as well as recursively from any member elements
+(including ``List`` and ``Dict`` values) that themselves implement ``Archivable``.
+
+Conversely, we can use ``populate_from_collection()``
 
 Note that this chain must be unbroken. That is, if we had
 
@@ -48,16 +46,25 @@ class Archivable:
         """
         pass
 
+    def collect(self, prefix: str = '') -> Dict[str, Any]:
+        return {name: obj.stuff_to_archive()
+                for name, obj in _archivables(self, prefix)}
 
-def _archivables(instance: Archivable, prefix: str = '') -> Iterable[Tuple[str, Archivable]]:
+    def populate_from_collection(self, collection: Dict[str, Any], prefix: str) -> None:
+        for name, obj in _archivables(self, prefix):
+            obj.populate_stuff_from_archive(collection[name])
+
+
+def _archivables(instance: Any, prefix: str = '') -> Iterable[Tuple[str, Archivable]]:
     """
-    Given an instance of ``Archivable`` and a prefix, recursively explores and yields
+    Given an object and a prefix, recursively explores and yields
     all ``Archivable`` members along with unique "paths" to them. It will explore
     list elements, dict values, and instances of classes that themselves implement
     ``Archivable``.
     """
     # Start by yielding this instance
-    yield prefix, instance
+    if isinstance(instance, Archivable):
+        yield prefix, instance
 
     # ``dir`` gets way too many properties, so filter intelligently.
     for name in dir(instance):
@@ -80,11 +87,3 @@ def _archivables(instance: Archivable, prefix: str = '') -> Iterable[Tuple[str, 
         # For an instance of ``Archivable``, make a recursive call.
         elif isinstance(prop, Archivable):
             yield from _archivables(prop, f"{prefix}.{name}")
-
-def collect(instance: Archivable, prefix: str = '') -> Dict[str, Any]:
-    return {name: obj.stuff_to_archive()
-            for name, obj in _archivables(instance, prefix)}
-
-def populate_from_collection(collection: Dict[str, Any], instance: Archivable, prefix: str) -> None:
-    for name, obj in _archivables(instance, prefix):
-        obj.populate_stuff_from_archive(collection[name])

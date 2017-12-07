@@ -1,7 +1,7 @@
 import os
 import shelve
 
-from allennlp.common.archival import Archivable, collect, populate_from_collection
+from allennlp.common.archival import Archivable
 from allennlp.common.testing import AllenNlpTestCase
 
 class A(Archivable):
@@ -36,7 +36,11 @@ class TestArchival(AllenNlpTestCase):
         a = A(b_name = "b-allennlp")
         a.score = 100
 
-        collection = collect(a, prefix='a')
+        collection = a.collect(prefix='a')
+        assert collection == {
+                "a": {"name": "a-allennlp", "score": 100},
+                "a.b": {"name": "b-allennlp"}
+        }
 
         with shelve.open(shelf_file) as db:
             for k, v in collection.items():
@@ -50,7 +54,7 @@ class TestArchival(AllenNlpTestCase):
         with shelve.open(shelf_file) as db:
             collection = dict(db)
 
-        populate_from_collection(collection, a2, prefix='a')
+        a2.populate_from_collection(collection, prefix='a')
 
         assert a2.score == 100
         assert a2.b.name == "b-allennlp"
