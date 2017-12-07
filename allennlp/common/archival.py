@@ -72,31 +72,19 @@ def _archivables(instance: Archivable, prefix: str = '') -> Iterable[Tuple[str, 
         # For a dictionary, explore all the values
         if isinstance(prop, dict):
             for k, v in prop.items():
-                yield from _archivables(v, f"{prefix}.{name}..{k}")
+                yield from _archivables(v, f"{prefix}.{name}.{k}")
         # For a list, explore all the items
         elif isinstance(prop, list):
             for i, v in enumerate(prop):
-                yield from _archivables(v, f"{prefix}.{name}..{i}")
+                yield from _archivables(v, f"{prefix}.{name}.{i}")
         # For an instance of ``Archivable``, make a recursive call.
         elif isinstance(prop, Archivable):
             yield from _archivables(prop, f"{prefix}.{name}")
 
+def collect(instance: Archivable, prefix: str = '') -> Dict[str, Any]:
+    return {name: obj.stuff_to_archive()
+            for name, obj in _archivables(instance, prefix)}
 
-def add_to_archives(shelf_file: str, instance: Archivable, prefix: str = '') -> None:
-    with shelve.open(shelf_file) as shelf:
-        for name, obj in _archivables(instance, prefix):
-            for key, value in obj.stuff_to_archive().items():
-                shelf[f"{name}###{key}"] = value
-
-def populate_from_archives(shelf_file: str, instance: Archivable, prefix: str = '') -> None:
-    with shelve.open(shelf_file) as shelf:
-        keys = list(shelf.keys())
-        for name, obj in _archivables(instance, prefix):
-            stuff = {}
-
-            for key in keys:
-                if key.startswith(f"{name}###"):
-                    inner_key = key.split("###")[-1]
-                    stuff[inner_key] = shelf[key]
-
-            obj.populate_stuff_from_archive(stuff)
+def populate_from_collection(collection: Dict[str, Any], instance: Archivable, prefix: str) -> None:
+    for name, obj in _archivables(instance, prefix):
+        obj.populate_stuff_from_archive(collection[name])
