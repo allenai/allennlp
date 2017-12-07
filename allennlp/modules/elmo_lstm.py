@@ -13,6 +13,7 @@ import numpy
 from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.encoder_base import _EncoderBase
+from allennlp.common.file_utils import cached_path
 
 
 class ElmoLstm(_EncoderBase):
@@ -242,7 +243,7 @@ class ElmoLstm(_EncoderBase):
 
         Note that this method also sets ``requires_grad=False`` to all class parameters.
         """
-        with h5py.File(weight_file, 'r') as fin:
+        with h5py.File(cached_path(weight_file), 'r') as fin:
             for i_layer, lstms in enumerate(
                     zip(self.forward_layers, self.backward_layers)
             ):
