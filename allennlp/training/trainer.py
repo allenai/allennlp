@@ -129,7 +129,7 @@ class Trainer:
 
         self._serialization_dir = serialization_dir
         self._num_serialized_models_to_keep = num_serialized_models_to_keep
-        self._serialized_paths = []
+        self._serialized_paths: List[List[str]] = []
         self._model_save_interval = model_save_interval
 
         self._cuda_device = cuda_device
@@ -506,9 +506,10 @@ class Trainer:
         serialization_files = os.listdir(self._serialization_dir)
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
         # Get the last checkpoint file.  Epochs are specified as either an
-        # int (for end of epoch files) or with epoch and timestamp for 
+        # int (for end of epoch files) or with epoch and timestamp for
         # within epoch checkpoints.  5.1512684016
         found_epochs = [
+                # pylint: disable=anomalous-backslash-in-string
                 re.search("model_state_epoch_([0-9\.])+\.th", x).group(1)
                 for x in model_checkpoints
         ]
@@ -523,7 +524,7 @@ class Trainer:
                 int_epochs.append(pieces)
         last_epoch = sorted(int_epochs, reverse=True)[0]
         if last_epoch[1] == 0:
-            epoch_to_load = last_epoch[0]
+            epoch_to_load = str(last_epoch[0])
         else:
             epoch_to_load = '{0}.{1}'.format(last_epoch[0], last_epoch[1])
 
