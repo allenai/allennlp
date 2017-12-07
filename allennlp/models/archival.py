@@ -2,11 +2,12 @@
 Helper functions for archiving models and restoring archived models.
 """
 
-from typing import NamedTuple
+from typing import NamedTuple, Dict, Any
 import logging
 import os
 import tempfile
 import tarfile
+import shelve
 import shutil
 
 from allennlp.common import Params
@@ -16,12 +17,14 @@ from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # An archive comprises a Model and its experimental config
-Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
+Archive = NamedTuple("Archive", [("model", Model), ("config", Params), ("shelf", Dict[str, Any])])
 
 # We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
-# These are the *known names* under which we archive the config and weights.
+# In addition, we may create a "shelve" file that contains auxiliary serialized data.
+# These are the *known names* under which we archive them.
 _CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
+_SHELF_NAME = "shelf"
 
 def archive_model(serialization_dir: str,
                   weights: str = _DEFAULT_WEIGHTS) -> None:
@@ -45,6 +48,8 @@ def archive_model(serialization_dir: str,
     if not os.path.exists(config_file):
         logger.error("config file %s does not exist, unable to archive model", config_file)
 
+    shelf_file = os.path.join(serialization_dir, _SHELF_NAME)
+
     archive_file = os.path.join(serialization_dir, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
     with tarfile.open(archive_file, 'w:gz') as archive:
@@ -52,6 +57,10 @@ def archive_model(serialization_dir: str,
         archive.add(weights_file, arcname=_WEIGHTS_NAME)
         archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
+
+        # Add shelf file if it exists
+        if os.path.exists(shelf_file):
+            archive.add(shelf_file, arcname=_SHELF_NAME)
 
 def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") -> Archive:
     """
@@ -83,7 +92,15 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
                        serialization_dir=tempdir,
                        cuda_device=cuda_device)
 
+    # Load shelf
+    shelf_file = os.path.join(tempdir, _SHELF_NAME)
+    if os.path.exists(shelf_file):
+        with shelve.open(shelf_file) as db:
+            shelf = dict(db)
+    else:
+        shelf = {}
+
     # Clean up temp dir
     shutil.rmtree(tempdir)
 
-    return Archive(model=model, config=config)
+    return Archive(model=model, config=config, shelf=shelf)

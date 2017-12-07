@@ -7,6 +7,7 @@ from typing import Dict, Union, List
 import os
 import logging
 
+from allennlp.common.archival import Archivable
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary, Dataset
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 _DEFAULT_WEIGHTS = "best.th"
 
 
-class Model(torch.nn.Module, Registrable):
+class Model(torch.nn.Module, Registrable, Archivable):
     """
     This abstract class represents a model to be trained. Rather than relying completely
     on the Pytorch Module, we modify the output spec of ``forward`` to be a dictionary.
