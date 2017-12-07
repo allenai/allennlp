@@ -6,7 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
-import h5py
+import gzip
 import numpy
 import torch
 from torch.autograd import Variable
@@ -22,12 +22,17 @@ def main(vocab_path: str,
          output_dir: str,
          batch_size: int,
          device: int):
-
-
+    """
+    Creates ELMo word representations from a vocabulary file.
+    ELMo requires 2 additional tokens: <S> and </S>. The first token
+    in this file is assumed to be an unknown token
+    """
 
     # Load the vocabulary words and convert to char ids
     with open(vocab_path, 'r') as vocab_file:
         tokens = vocab_file.read().strip().split('\n')
+
+    tokens = [tokens[0]] + ["<S>", "</S>"] + tokens[1:]
 
     indexer = ELMoTokenCharactersIndexer()
     indices = [indexer.token_to_indices(Token(token), Vocabulary()) for token in tokens]
@@ -64,11 +69,19 @@ def main(vocab_path: str,
     all_embeddings[-1] = all_embeddings[-1][:-last_batch_remainder, :]
 
     embedding_weight = torch.cat(all_embeddings, 0).numpy()
-    with h5py.File(os.path.join(output_dir, "elmo_embeddings.hdf5"), 'w') as embeddings_file:
-        embeddings_file.create_dataset('embedding',
-                                       embedding_weight.shape,
-                                       dtype='float32',
-                                       data=embedding_weight)
+
+    # Write out the embedding in a glove format.
+    with gzip.open(os.path.join(output_dir, "elmo_embeddings.tar.gz"), 'wb') as embeddings_file:
+        for i, word in enumerate(tokens):
+            embeddings_file.write(f"{word} {' '.join([str(x) for x in list(embedding_weight[i, :])])}\n".encode('utf-8'))
+
+    # Write out the new vocab with the <S> and </S> tokens.
+    _, vocab_file_name = os.path.split(vocab_path)
+    with open(os.path.join(output_dir, vocab_file_name), "w") as new_vocab_file:
+
+        for word in tokens:
+            new_vocab_file.write(f"{word}\n")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate CNN representations for a vocabulary '
