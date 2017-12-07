@@ -97,14 +97,13 @@ class TestElmoBiLm(AllenNlpTestCase):
 
 
 class TestElmo(AllenNlpTestCase):
-    def test_elmo(self):
-        # load the test model
+    def setUp(self):
+        super(TestElmo, self).setUp()
+
         options_file = os.path.join(FIXTURES, 'options.json')
         weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
-        elmo = Elmo(options_file, weight_file, 2)
+        self.elmo = Elmo(options_file, weight_file, 2)
 
-        # Correctness checks are in ElmoBiLm and ScalarMix, here we just add a shallow test
-        # to ensure things execute.
         indexer = ELMoTokenCharactersIndexer()
         sentences = [['The', 'sentence', '.'],
                      ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']]
@@ -120,9 +119,12 @@ class TestElmo(AllenNlpTestCase):
         dataset = Dataset(instances)
         vocab = Vocabulary()
         dataset.index_instances(vocab)
-        character_ids = dataset.as_tensor_dict()['elmo']['character_ids']
+        self.character_ids = dataset.as_tensor_dict()['elmo']['character_ids']
 
-        output = elmo(character_ids)
+    def test_elmo(self):
+        # Correctness checks are in ElmoBiLm and ScalarMix, here we just add a shallow test
+        # to ensure things execute.
+        output = self.elmo(self.character_ids)
         elmo_representations = output['elmo_representations']
         mask = output['mask']
 
@@ -131,6 +133,18 @@ class TestElmo(AllenNlpTestCase):
         assert list(elmo_representations[1].size()) == [2, 7, 32]
         assert list(mask.size()) == [2, 7]
 
+    def test_elmo_4D_input(self):
+        # Add an extra dimension to character_ids
+        character_ids = self.character_ids.unsqueeze(1)
+        print(character_ids.size())
+
+        output = self.elmo(character_ids)
+        elmo_representations = output['elmo_representations']
+        mask = output['mask']
+
+        assert list(elmo_representations[0].size()) == [2, 1, 7, 32]
+        assert list(elmo_representations[1].size()) == [2, 1, 7, 32]
+        assert list(mask.size()) == [2, 1, 7]
 
 class TestElmoTokenRepresentation(AllenNlpTestCase):
     def test_elmo_token_representation(self):
