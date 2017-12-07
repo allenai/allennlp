@@ -595,6 +595,9 @@ class TestNnUtil(AllenNlpTestCase):
     def test_remove_sentence_boundaries(self):
         tensor = Variable(torch.from_numpy(numpy.random.rand(3, 5, 7)))
         mask = Variable(torch.from_numpy(
+                # The mask with two elements is to test the corner case
+                # of an empty sequence, so here we are removing boundaries
+                # from  "<S> </S>"
                 numpy.array([[1, 1, 0, 0, 0],
                              [1, 1, 1, 1, 1],
                              [1, 1, 1, 1, 0]]))).long()
