@@ -61,6 +61,7 @@ class Trainer:
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
+                 num_serialized_models_to_keep: int = None,
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
@@ -93,6 +94,8 @@ class Trainer:
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
+        num_serialized_models_to_keep: int, optional (default=None)
+            Number of previous model checpoints to retain.  Default is to keep all epochs.
         cuda_device : int, optional (default = -1)
             An integer specifying the CUDA device to use. If -1, the CPU is used.
             Multi-gpu training is not currently supported, but will be once the
@@ -117,7 +120,11 @@ class Trainer:
 
         self._patience = patience
         self._num_epochs = num_epochs
+
         self._serialization_dir = serialization_dir
+        self._num_serialized_models_to_keep = num_serialized_models_to_keep
+        self._serialized_paths = []
+
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
@@ -438,12 +445,20 @@ class Trainer:
             training_state = {'epoch': epoch,
                               'val_metric_per_epoch': val_metric_per_epoch,
                               'optimizer': self._optimizer.state_dict()}
-            torch.save(training_state, os.path.join(self._serialization_dir,
-                                                    "training_state_epoch_{}.th".format(epoch)))
+            training_path = os.path.join(self._serialization_dir,
+                                         "training_state_epoch_{}.th".format(epoch))
+            torch.save(training_state, training_path)
             if is_best:
                 logger.info("Best validation performance so far. "
                             "Copying weights to '%s/best.th'.", self._serialization_dir)
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
+
+            if self._num_serialized_models_to_keep:
+                self._serialized_paths.append([model_path, training_path])
+                if len(self._serialized_paths) > self._num_serialized_models_to_keep:
+                    paths_to_remove = self._serialized_paths.pop(0)
+                    for fname in paths_to_remove:
+                        os.remove(fname)
 
     def _restore_checkpoint(self) -> Tuple[int, List[float]]:
         """

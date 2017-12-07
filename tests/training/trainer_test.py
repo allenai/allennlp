@@ -1,4 +1,8 @@
 # pylint: disable=invalid-name
+import glob
+import os
+import re
+
 import torch
 import pytest
 
@@ -89,3 +93,17 @@ class TestTrainer(AllenNlpTestCase):
                               self.iterator, self.instances,
                               num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
+
+    def test_trainer_respects_num_serialized_models_to_keep(self):
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.dataset, num_epochs=5,
+                          serialization_dir=self.TEST_DIR,
+                          num_serialized_models_to_keep=3)
+        trainer.train()
+
+        # Now check the serialized files
+        for prefix in ['model_state_epoch_*', 'training_state_epoch_*']:
+            file_names = glob.glob(os.path.join(self.TEST_DIR, prefix))
+            epochs = [int(re.search(r"_([0-9])\.th", fname).group(1))
+                      for fname in file_names]
+            assert sorted(epochs) == [2, 3, 4]
