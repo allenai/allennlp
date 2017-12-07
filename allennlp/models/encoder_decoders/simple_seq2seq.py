@@ -280,8 +280,6 @@ class SimpleSeq2Seq(Model):
             predicted_tokens = [self.vocab.get_token_from_index(x, namespace="target_tokens")
                                 for x in indices]
             all_predicted_tokens.append(predicted_tokens)
-        if len(all_predicted_tokens) == 1:
-            all_predicted_tokens = all_predicted_tokens[0]  # type: ignore
         output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict
 
