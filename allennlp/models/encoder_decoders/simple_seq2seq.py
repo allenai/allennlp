@@ -30,7 +30,7 @@ class SimpleSeq2Seq(Model):
 
     This ``SimpleSeq2Seq`` model takes an encoder (:class:`Seq2SeqEncoder`) as an input, and
     implements the functionality of the decoder.  In this implementation, the decoder uses the
-    encoder's outputs in two ways. The hidden state of the decoder is intialized with the output
+    encoder's outputs in two ways. The hidden state of the decoder is initialized with the output
     from the final time-step of the encoder, and when using attention, a weighted average of the
     outputs from the encoder is concatenated to the inputs of the decoder at every timestep.
 
