@@ -30,7 +30,7 @@ class SimpleSeq2Seq(Model):
 
     This ``SimpleSeq2Seq`` model takes an encoder (:class:`Seq2SeqEncoder`) as an input, and
     implements the functionality of the decoder.  In this implementation, the decoder uses the
-    encoder's outputs in two ways. The hidden state of the decoder is intialized with the output
+    encoder's outputs in two ways. The hidden state of the decoder is initialized with the output
     from the final time-step of the encoder, and when using attention, a weighted average of the
     outputs from the encoder is concatenated to the inputs of the decoder at every timestep.
 
@@ -216,7 +216,7 @@ class SimpleSeq2Seq(Model):
             # encoder_outputs : (batch_size, input_sequence_length, encoder_output_dim)
             # Ensuring mask is also a FloatTensor. Or else the multiplication within attention will
             # complain.
-            encoder_outputs_mask = encoder_outputs_mask.type(torch.FloatTensor)
+            encoder_outputs_mask = encoder_outputs_mask.float()
             # (batch_size, input_sequence_length)
             input_weights = self._decoder_attention(decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
             # (batch_size, encoder_output_dim)
