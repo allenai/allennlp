@@ -1,16 +1,18 @@
 ---
 layout: tutorial
-title: Another Model Example
-id: another-model-example
+title: Using AllenNLP in Your Repo
+id: using-allennlp-in-your-repo
 ---
 
-Our [first tutorial](creating_a_model.md) on building your own model goes through the code you need
-to write to build a named entity tagger.  In this tutorial, we'll do something very similar,
-because, hey, who doesn't like another example?  This time, we'll build a model for classifying
-academic papers, and we'll do it using a [separate
+In this tutorial, we take you step-by-step through the process you need to go through to get up
+and running with your own models on your own data in your own repository, using AllenNLP as an
+imported library.  There is naturally some overlap with things we covered in previous tutorials,
+but, hey, some repetition is good, right?
+
+We'll build a model for classifying academic papers, and we'll do it using a [separate
 repository](https://github.com/allenai/allennlp-as-a-library-example), showing how to include
-AllenNLP as a dependency in your project.  We'll step through the commits in that repository,
-detailing all of the steps you need to do in order to get up and running writing your own models.
+AllenNLP as a dependency in your project, what classes you need to implement, and how to train your
+model.  We'll step through the commits in that repository, explaining the code we write as we go.
 
 In the end, there are only about 110 lines of actual implementation code in the `DatasetReader`
 and `Model` classes that we implement.  This tutorial is long because we're explaining what goes
@@ -24,7 +26,7 @@ commit](https://github.com/allenai/allennlp-as-a-library-example/tree/43b7dac809
 we just add a `requirements.txt` file specifying `allennlp` as a dependency.  We referenced a
 particular commit on github, but you can just give a version number, like `allennlp==0.2.3`.  Then,
 after creating a python 3.6 environment, you install AllenNLP by running `pip install -r
-requirements.txt`.  You also need to install pytorch and the spacy model, as described in [the
+requirements.txt`.  You also need to install pytorch and a spacy model, as described in [the
 installation tutorial](installation).
 
 ## Step two: organize your modules
