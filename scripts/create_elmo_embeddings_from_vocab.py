@@ -14,6 +14,8 @@ from torch.autograd import Variable
 from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
 from allennlp.modules.elmo import _ElmoCharacterEncoder
 from allennlp.data import Token, Vocabulary
+from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN
+from allennlp.common.checks import ConfigurationError
 
 
 def main(vocab_path: str,
@@ -21,9 +23,12 @@ def main(vocab_path: str,
          elmo_weights_path: str,
          output_dir: str,
          batch_size: int,
-         device: int):
+         device: int,
+         use_custom_oov_token: bool = False):
     """
-    Creates ELMo word representations from a vocabulary file.
+    Creates ELMo word representations from a vocabulary file. These
+    word representations are _independent_ - they are the result of running
+    the CNN and Highway layers of the ELMo model, but not the Bidirectional LSTM.
     ELMo requires 2 additional tokens: <S> and </S>. The first token
     in this file is assumed to be an unknown token.
 
@@ -38,6 +43,9 @@ def main(vocab_path: str,
         tokens = vocab_file.read().strip().split('\n')
 
     # Insert the sentence boundary tokens which elmo uses at positions 1 and 2.
+    if tokens[0] != DEFAULT_OOV_TOKEN and not use_custom_oov_token:
+        raise ConfigurationError("ELMo embeddings require the use of a OOV token.")
+
     tokens = [tokens[0]] + ["<S>", "</S>"] + tokens[1:]
 
     indexer = ELMoTokenCharactersIndexer()
@@ -78,7 +86,7 @@ def main(vocab_path: str,
     embedding_weight = torch.cat(all_embeddings, 0).numpy()
 
     # Write out the embedding in a glove format.
-    with gzip.open(os.path.join(output_dir, "elmo_embeddings.tar.gz"), 'wb') as embeddings_file:
+    with gzip.open(os.path.join(output_dir, "elmo_embeddings.txt.gz"), 'wb') as embeddings_file:
         for i, word in enumerate(tokens):
             string_array = " ".join([str(x) for x in list(embedding_weight[i, :])])
             embeddings_file.write(f"{word} {string_array}\n".encode('utf-8'))
@@ -102,6 +110,12 @@ if __name__ == "__main__":
                                                        'serialised embeddings.')
     parser.add_argument('--batch_size', type=int, default=64, help='The batch size to use.')
     parser.add_argument('--device', type=int, default=-1, help='The device to run on.')
+    parser.add_argument('--use_custom_oov_token',
+                        type=bool,
+                        default=False,
+                        help='AllenNLP requires a particular OOV token.'
+                        'To generate embeddings with a custom OOV token,'
+                        'add this flag.')
 
     args = parser.parse_args()
     main(args.vocab_path,
@@ -109,4 +123,5 @@ if __name__ == "__main__":
          args.elmo_weights,
          args.output_dir,
          args.batch_size,
-         args.device)
+         args.device,
+         args.use_custom_oov_token)
