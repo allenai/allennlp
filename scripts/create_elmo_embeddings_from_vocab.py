@@ -22,6 +22,9 @@ def main(vocab_path: str,
          output_dir: str,
          batch_size: int,
          device: int):
+
+
+
     # Load the vocabulary words and convert to char ids
     with open(vocab_path, 'r') as vocab_file:
         tokens = vocab_file.read().strip().split('\n')
@@ -37,7 +40,7 @@ def main(vocab_path: str,
     last_batch_remainder = 50 - (len(indices) % 50)
     if device != -1:
         elmo_token_embedder = _ElmoCharacterEncoder(elmo_config_path,
-                                                    elmo_weights_path).cuda(device_id=device)
+                                                    elmo_weights_path).cuda(device)
     else:
         elmo_token_embedder = _ElmoCharacterEncoder(elmo_config_path,
                                                     elmo_weights_path)
@@ -45,7 +48,7 @@ def main(vocab_path: str,
     all_embeddings = []
     for i in range((len(sentences) // batch_size) + 1):
         if device != -1:
-            batch = Variable(torch.from_numpy(numpy.array(sentences[i * batch_size: (i + 1) * batch_size])).cuda(device_id=device))
+            batch = Variable(torch.from_numpy(numpy.array(sentences[i * batch_size: (i + 1) * batch_size])).cuda(device))
         else:
             batch = Variable(torch.from_numpy(numpy.array(sentences[i * batch_size: (i + 1) * batch_size])))
 
