@@ -1,13 +1,13 @@
 ---
 layout: tutorial
-title: Using AllenNLP in Your Repo
-id: using-allennlp-in-your-repo
+title: Using AllenNLP in Your Project
+id: using-allennlp-in-your-project
 ---
 
-In this tutorial, we take you step-by-step through the process you need to go through to get up
-and running with your own models on your own data in your own repository, using AllenNLP as an
-imported library.  There is naturally some overlap with things we covered in previous tutorials,
-but, hey, some repetition is good, right?
+In this tutorial, we take you step-by-step through the process you need to go through to get up and
+running with your own models on your own data in your own repository, using AllenNLP as an imported
+library.  There is naturally some overlap with things we covered in previous tutorials, but, hey,
+some repetition is good, right?
 
 We'll build a model for classifying academic papers, and we'll do it using a [separate
 repository](https://github.com/allenai/allennlp-as-a-library-example), showing how to include
@@ -31,9 +31,9 @@ installation tutorial](installation).
 
 ## Step two: organize your modules
 
-As explained in the [first tutorial](creating_a_model.md), there are two pieces of code that you
-have to write when you're building a model in AllenNLP: a `DatasetReader` and a `Model`.  In the
-[second
+As explained in the [tutorial on creating models](creating_a_model.md), there are two pieces of
+code that you have to write when you're building a model in AllenNLP: a `DatasetReader` and a
+`Model`.  In the [second
 commit](https://github.com/allenai/allennlp-as-a-library-example/tree/e4aa7b17a41ed1ff5169bea3fd1ad73bca0c89ec)
 in our example repository, we set up our library to hold this code.  We called the base module
 `my_library` - you'll probably want to choose a different name - and included two submodules:
