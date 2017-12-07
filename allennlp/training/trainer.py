@@ -25,7 +25,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data import Dataset
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
-from allennlp.nn.util import arrays_to_variables, device_mapping
+from allennlp.nn import util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.optimizers import Optimizer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -173,7 +173,7 @@ class Trainer:
         Does a forward pass on the given batch and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
         """
-        output_dict = self._forward(batch, for_training=for_training)
+        output_dict = self._model.forward(**batch)
 
         try:
             loss = output_dict["loss"]
@@ -205,7 +205,9 @@ class Trainer:
         self._model.train()
 
         # Get tqdm for the training batches
-        train_generator = self._iterator(self._train_dataset, num_epochs=1)
+        train_generator = self._iterator(self._train_dataset,
+                                         num_epochs=1,
+                                         cuda_device=self._cuda_device)
         num_training_batches = self._iterator.get_num_batches(self._train_dataset)
         train_generator_tqdm = tqdm.tqdm(train_generator,
                                          disable=self._no_tqdm,
@@ -326,11 +328,14 @@ class Trainer:
         Computes the validation loss. Returns it and the number of batches.
         """
         logger.info("Validating")
-        num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
 
         self._model.eval()
 
-        val_generator = self._iterator(self._validation_dataset, num_epochs=1)
+        val_generator = self._iterator(self._validation_dataset,
+                                       num_epochs=1,
+                                       cuda_device=self._cuda_device,
+                                       for_training=False)
+        num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
         val_generator_tqdm = tqdm.tqdm(val_generator,
                                        disable=self._no_tqdm,
                                        total=num_validation_batches)
@@ -405,10 +410,6 @@ class Trainer:
                 formatted_time = time.strftime("%H:%M:%S", time.gmtime(estimated_time_remaining))
                 logger.info("Estimated training time remaining: " + formatted_time)
 
-    def _forward(self, batch: dict, for_training: bool) -> dict:
-        tensor_batch = arrays_to_variables(batch, self._cuda_device, for_training=for_training)
-        return self._model.forward(**tensor_batch)
-
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
         return ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
@@ -479,8 +480,8 @@ class Trainer:
         training_state_path = os.path.join(self._serialization_dir,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
 
-        model_state = torch.load(model_path, map_location=device_mapping(self._cuda_device))
-        training_state = torch.load(training_state_path, map_location=device_mapping(self._cuda_device))
+        model_state = torch.load(model_path, map_location=util.device_mapping(self._cuda_device))
+        training_state = torch.load(training_state_path, map_location=util.device_mapping(self._cuda_device))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
 

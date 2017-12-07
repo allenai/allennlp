@@ -1521,6 +1521,11 @@ svg {
   color: #1c2f3a;
 }
 
+.coref__span {
+  background-color: #40affd;
+  color: #fff;
+}
+
 .hierplane__visualization-verbs {
   background: #f9fafc;
   padding: 1em 1.25em;
@@ -1580,15 +1585,6 @@ svg {
 */
 .hierplane__visualization .hierplane #passage p .passage__readonly .span-slice__ignored {
   margin-left: 0 !important;
-}
-
-/*
-  Set a max width so that nodes aren't too wide, since some of the nodes in the AllenNLP
-  SRL output can contain large passages of text.
-*/
-.hierplane__visualization .hierplane .node__word__label .node__word__label__siblings {
-  max-width: 15vw;
-  white-space: normal;
 }
 
 /*

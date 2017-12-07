@@ -2,11 +2,10 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
-from typing import Dict, List, Optional, Union, Any, Tuple, Callable
+from typing import Dict, List, Optional, Any, Tuple, Callable
 import logging
 
 import math
-import numpy
 import torch
 from torch.autograd import Variable
 
@@ -104,56 +103,6 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autog
     # Scale mask by 1/keep_prob to preserve output statistics.
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask
-
-
-def arrays_to_variables(data_structure: Dict[str, Union[dict, numpy.ndarray]],
-                        cuda_device: int = -1,
-                        add_batch_dimension: bool = False,
-                        for_training: bool = True):
-    """
-    Convert an (optionally) nested dictionary of arrays to Pytorch ``Variables``,
-    suitable for use in a computation graph.
-
-    Parameters
-    ----------
-    data_structure : Dict[str, Union[dict, numpy.ndarray]], required.
-        The nested dictionary of arrays to convert to Pytorch ``Variables``.
-    cuda_device : int, optional (default = -1)
-        If cuda_device <= 0, GPUs are available and Pytorch was compiled with
-        CUDA support, the tensor will be copied to the cuda_device specified.
-    add_batch_dimension : bool, optional (default = False).
-        Optionally add a batch dimension to tensors converted to ``Variables``
-        using this function. This is useful during inference for passing
-        tensors representing a single example to a Pytorch model which
-        would otherwise not have a batch dimension.
-    for_training : ``bool``, optional (default = ``True``)
-        If ``False``, we will pass the ``volatile=True`` flag when constructing variables, which
-        disables gradient computations in the graph.  This makes inference more efficient
-        (particularly in memory usage), but is incompatible with training models.
-
-    Returns
-    -------
-    The original data structure or tensor converted to a Pytorch ``Variable``.
-    """
-    if isinstance(data_structure, dict):
-        for key, value in data_structure.items():
-            # This check is a bit hacky, but I'm not sure how else to handle this.  By this point,
-            # we've lost all reference to the original `Field` object.
-            if 'metadata' in key:
-                if add_batch_dimension:
-                    data_structure[key] = [value]
-            else:
-                data_structure[key] = arrays_to_variables(value, cuda_device, add_batch_dimension)
-        return data_structure
-    else:
-        tensor = torch.from_numpy(data_structure)
-        if add_batch_dimension:
-            tensor.unsqueeze_(0)
-        torch_variable = Variable(tensor, volatile=not for_training)
-        if cuda_device == -1:
-            return torch_variable
-        else:
-            return torch_variable.cuda(cuda_device)
 
 
 def masked_softmax(vector, mask):
@@ -281,19 +230,29 @@ def viterbi_decode(tag_sequence: torch.Tensor,
     return viterbi_path, viterbi_score
 
 
-def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.LongTensor:
+def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
+                        num_wrapping_dims: int = 0) -> torch.LongTensor:
     """
-    Takes the dictionary of tensors produced by a ``TextField`` and returns a mask of shape
-    ``(batch_size, num_tokens)``.  This mask will be 0 where the tokens are padding, and 1
-    otherwise.
+    Takes the dictionary of tensors produced by a ``TextField`` and returns a mask
+    with 0 where the tokens are padding, and 1 otherwise.  We also handle ``TextFields``
+    wrapped by an arbitrary number of ``ListFields``, where the number of wrapping ``ListFields``
+    is given by ``num_wrapping_dims``.
+
+    If ``num_wrapping_dims == 0``, the returned mask has shape ``(batch_size, num_tokens)``.
+    If ``num_wrapping_dims > 0`` then the returned mask has ``num_wrapping_dims`` extra
+    dimensions, so the shape will be ``(batch_size, ..., num_tokens)``.
 
     There could be several entries in the tensor dictionary with different shapes (e.g., one for
-    word ids, one for character ids).  In order to get a token mask, we assume that the tensor in
-    the dictionary with the lowest number of dimensions has plain token ids.  This allows us to
-    also handle cases where the input is actually a ``ListField[TextField]``.
+    word ids, one for character ids).  In order to get a token mask, we use the tensor in
+    the dictionary with the lowest number of dimensions.  After subtracting ``num_wrapping_dims``,
+    if this tensor has two dimensions we assume it has shape ``(batch_size, ..., num_tokens)``,
+    and use it for the mask.  If instead it has three dimensions, we assume it has shape
+    ``(batch_size, ..., num_tokens, num_features)``, and sum over the last dimension to produce
+    the mask.  Most frequently this will be a character id tensor, but it could also be a
+    featurized representation of each token, etc.
 
     NOTE: Our functions for generating masks create torch.LongTensors, because using
-    torch.byteTensors inside Variables makes it easy to run into overflow errors
+    torch.ByteTensors inside Variables makes it easy to run into overflow errors
     when doing mask manipulation, such as summing to get the lengths of sequences - see below.
     >>> mask = torch.ones([260]).byte()
     >>> mask.sum() # equals 260.
@@ -302,10 +261,16 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor]) -> torch.Lo
     """
     tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
     tensor_dims.sort(key=lambda x: x[0])
-    token_tensor = tensor_dims[0][1]
 
-    return (token_tensor != 0).long()
-
+    smallest_dim = tensor_dims[0][0] - num_wrapping_dims
+    if smallest_dim == 2:
+        token_tensor = tensor_dims[0][1]
+        return (token_tensor != 0).long()
+    elif smallest_dim == 3:
+        character_tensor = tensor_dims[0][1]
+        return ((character_tensor > 0).long().sum(dim=-1) > 0).long()
+    else:
+        raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 
 def _last_dimension_applicator(function_to_apply: Callable[[torch.Tensor, Optional[torch.Tensor]], torch.Tensor],
                                tensor: torch.Tensor,
@@ -806,7 +771,8 @@ def add_sentence_boundary_token_ids(tensor: torch.Tensor,
         The new mask for the tensor, taking into account the appended tokens
         marking the beginning and end of the sentence.
     """
-    sequence_lengths = mask.sum(dim=1).data.numpy()
+    # TODO: matthewp, profile this transfer
+    sequence_lengths = mask.sum(dim=1).data.cpu().numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
     new_shape[1] = tensor_shape[1] + 2
@@ -856,7 +822,8 @@ def remove_sentence_boundaries(tensor: torch.Tensor,
     new_mask : ``torch.Tensor``
         The new mask for the tensor of shape ``(batch_size, timesteps - 2)``.
     """
-    sequence_lengths = mask.sum(dim=1).data.numpy()
+    # TODO: matthewp, profile this transfer
+    sequence_lengths = mask.sum(dim=1).data.cpu().numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
     new_shape[1] = tensor_shape[1] - 2

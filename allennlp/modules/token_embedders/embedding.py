@@ -5,6 +5,7 @@ from overrides import overrides
 import numpy
 import torch
 from torch.nn.functional import embedding
+import h5py
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -187,8 +188,9 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
     Parameters
     ----------
     embeddings_filename : str, required.
-        The path to a file containing pretrined embeddings. The embeddings
-        file is assumed to be gzipped and space delimited, e.g. [word] [dim 1] [dim 2] ...
+        The path to a file containing pretrained embeddings. We support two file formats,
+        gzipped-word2vec and hdf5.  If the filename ends with '.hdf5' or '.h5' then we load from
+        hdf5, otherwise assume gzipped-word2vec format.
     vocab : Vocabulary, required.
         A Vocabulary object.
     namespace : str, (optional, default=tokens)
@@ -201,6 +203,25 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
     A weight matrix with embeddings initialized from the read file.  The matrix has shape
     ``(vocab.get_vocab_size(namespace), embedding_dim)``, where the indices of words appearing in
     the pretrained embedding file are initialized to the pretrained embedding value.
+    """
+    if embeddings_filename[-3:] == '.h5' or embeddings_filename[-5:] == '.hdf5':
+        return _read_pretrained_hdf5_format_embedding_file(embeddings_filename, embedding_dim,
+                                                           vocab, namespace)
+    else:
+        # default to word2vec
+        return _read_pretrained_word2vec_format_embedding_file(embeddings_filename, embedding_dim,
+                                                               vocab, namespace)
+
+
+def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # pylint: disable=invalid-name
+                                                    embedding_dim: int,
+                                                    vocab: Vocabulary,
+                                                    namespace: str = "tokens") -> torch.FloatTensor:
+    """
+    Read from a gzipped-word2vec format file.  The embeddings file is assumed to be gzipped and
+    space delimited, e.g. [word] [dim 1] [dim 2] ...
+
+    The remainder of the docstring is identical to ``_read_pretrained_embedding_file``.
     """
     words_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
     vocab_size = vocab.get_vocab_size(namespace)
@@ -253,3 +274,22 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
 
     # The weight matrix is initialized, so we construct and return the actual Embedding.
     return embedding_matrix
+
+
+def _read_pretrained_hdf5_format_embedding_file(embeddings_filename: str, # pylint: disable=invalid-name
+                                                embedding_dim: int,
+                                                vocab: Vocabulary,
+                                                namespace: str = "tokens") -> torch.FloatTensor:
+    """
+    Reads from a hdf5 formatted file.  The embedding matrix is assumed to
+    be keyed by 'embedding' and of size ``(num_tokens, embedding_dim)``.
+    """
+    with h5py.File(embeddings_filename, 'r') as fin:
+        embeddings = fin['embedding'][...]
+
+    if list(embeddings.shape) != [vocab.get_vocab_size(namespace), embedding_dim]:
+        raise ConfigurationError(
+                "Read shape {0} embeddings from the file, but expected {1}".format(
+                        list(embeddings.shape), [vocab.get_vocab_size(namespace), embedding_dim]))
+
+    return torch.FloatTensor(embeddings)

@@ -11,7 +11,6 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.models import BidirectionalAttentionFlow, Model
-from allennlp.nn.util import arrays_to_variables
 
 
 class BidirectionalAttentionFlowTest(ModelTestCase):
@@ -20,8 +19,8 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         self.set_up_model('tests/fixtures/bidaf/experiment.json', 'tests/fixtures/data/squad.json')
 
     def test_forward_pass_runs_correctly(self):
-        training_arrays = arrays_to_variables(self.dataset.as_array_dict())
-        output_dict = self.model.forward(**training_arrays)
+        training_tensors = self.dataset.as_tensor_dict()
+        output_dict = self.model.forward(**training_tensors)
 
         metrics = self.model.get_metrics(reset=True)
         # We've set up the data such that there's a fake answer that consists of the whole
@@ -46,7 +45,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
     # `masked_softmax`...) have made this _very_ flaky...
     @flaky(max_runs=5)
     def test_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
+        self.ensure_model_can_train_save_and_load(self.param_file, tolerance=2e-5)
 
     @flaky
     def test_batch_predictions_are_consistent(self):

@@ -73,21 +73,23 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                            tokens: List[List[int]],
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[List[int]]:
-        padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=lambda: [])
+        # Pad the tokens.
+        padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=self.get_padding_token)
+
+        # Pad the characters within the tokens.
         desired_token_length = padding_lengths['num_token_characters']
         longest_token: List[int] = max(tokens, key=len, default=[])
-        padding_index = 0
+        padding_value = 0
         if desired_token_length > len(longest_token):
             # Since we want to pad to greater than the longest token, we add a
-            # "dummy token" to get the speed of itertools.zip_longest.
-            padded_tokens.append([padding_index] * desired_token_length)
+            # "dummy token" so we can take advantage of the fast implementation of itertools.zip_longest.
+            padded_tokens.append([padding_value] * desired_token_length)
         # pad the list of lists to the longest sublist, appending 0's
-        padded_tokens = list(zip(*itertools.zip_longest(*padded_tokens, fillvalue=padding_index)))
+        padded_tokens = list(zip(*itertools.zip_longest(*padded_tokens, fillvalue=padding_value)))
         if desired_token_length > len(longest_token):
-            # now we remove the "dummy token" if we appended one.
+            # Removes the "dummy token".
             padded_tokens.pop()
-
-        # Now we need to truncate all of them to our desired length, and return the result.
+        # Truncates all the tokens to the desired length, and return the result.
         return [list(token[:desired_token_length]) for token in padded_tokens]
 
     @classmethod

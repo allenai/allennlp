@@ -8,7 +8,7 @@ from allennlp.data.fields.field import DataArray, Field
 
 class MetadataField(Field[DataArray]):
     """
-    A ``MetadataField`` is a ``Field`` that does not get converted into arrays.  It just carries
+    A ``MetadataField`` is a ``Field`` that does not get converted into tensors.  It just carries
     side information that might be needed later on, for computing some third-party metric, or
     outputting debugging information, or whatever else you need.  We use this in the BiDAF model,
     for instance, to keep track of question IDs and passage token offsets, so we can more easily
@@ -17,10 +17,6 @@ class MetadataField(Field[DataArray]):
     We don't try to do any kind of smart combination of this field for batched input - when you use
     this ``Field`` in a model, you'll get a list of metadata objects, one for each instance in the
     batch.
-
-    Note that if you use this field, you are `required` to include ``metadata`` in the field name
-    used as a key in ``Instance``.  Otherwise we won't know to treat the output of this field
-    specially in :func:`~allennlp.nn.util.arrays_to_variables`.
 
     Parameters
     ----------
@@ -36,7 +32,10 @@ class MetadataField(Field[DataArray]):
         return {}
 
     @overrides
-    def as_array(self, padding_lengths: Dict[str, int]) -> DataArray:
+    def as_tensor(self,
+                  padding_lengths: Dict[str, int],
+                  cuda_device: int = -1,
+                  for_training: bool = True) -> DataArray:
         # pylint: disable=unused-argument
         return self.metadata  # type: ignore
 
@@ -46,5 +45,5 @@ class MetadataField(Field[DataArray]):
 
     @classmethod
     @overrides
-    def batch_arrays(cls, array_list: List[DataArray]) -> DataArray:  # type: ignore
-        return array_list  # type: ignore
+    def batch_tensors(cls, tensor_list: List[DataArray]) -> DataArray:  # type: ignore
+        return tensor_list  # type: ignore

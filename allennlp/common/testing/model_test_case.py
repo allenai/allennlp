@@ -8,7 +8,6 @@ from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data import DataIterator, Dataset, DatasetReader, Vocabulary
 from allennlp.models import Model, load_archive
-from allennlp.nn.util import arrays_to_variables
 
 
 class ModelTestCase(AllenNlpTestCase):
@@ -29,18 +28,19 @@ class ModelTestCase(AllenNlpTestCase):
         self.dataset = dataset
         self.model = Model.from_params(self.vocab, params['model'])
 
-    def ensure_model_can_train_save_and_load(self, param_file: str):
+    def ensure_model_can_train_save_and_load(self, param_file: str, tolerance: float = 1e-6,
+                                             cuda_device: int = -1):
         save_dir = os.path.join(self.TEST_DIR, "save_and_load_test")
         archive_file = os.path.join(save_dir, "model.tar.gz")
         model = train_model_from_file(param_file, save_dir)
-        loaded_model = load_archive(archive_file).model
+        loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
         state_keys = model.state_dict().keys()
         loaded_state_keys = loaded_model.state_dict().keys()
         assert state_keys == loaded_state_keys
         # First we make sure that the state dict (the parameters) are the same for both models.
         for key in state_keys:
-            assert_allclose(model.state_dict()[key].numpy(),
-                            loaded_model.state_dict()[key].numpy(),
+            assert_allclose(model.state_dict()[key].cpu().numpy(),
+                            loaded_model.state_dict()[key].cpu().numpy(),
                             err_msg=key)
         params = Params.from_file(self.param_file)
         reader = DatasetReader.from_params(params['dataset_reader'])
@@ -50,12 +50,10 @@ class ModelTestCase(AllenNlpTestCase):
         # the same result out.
         model_dataset = reader.read(params['validation_data_path'])
         model_dataset.index_instances(model.vocab)
-        model_batch_arrays = next(iterator(model_dataset, shuffle=False))
-        model_batch = arrays_to_variables(model_batch_arrays, for_training=False)
+        model_batch = next(iterator(model_dataset, shuffle=False, cuda_device=cuda_device))
         loaded_dataset = reader.read(params['validation_data_path'])
         loaded_dataset.index_instances(loaded_model.vocab)
-        loaded_batch_arrays = next(iterator(loaded_dataset, shuffle=False))
-        loaded_batch = arrays_to_variables(loaded_batch_arrays, for_training=False)
+        loaded_batch = next(iterator(loaded_dataset, shuffle=False, cuda_device=cuda_device))
 
         # The datasets themselves should be identical.
         for key in model_batch.keys():
@@ -64,7 +62,7 @@ class ModelTestCase(AllenNlpTestCase):
                 for subfield in field:
                     self.assert_fields_equal(model_batch[key][subfield],
                                              loaded_batch[key][subfield],
-                                             tolerance=1e-6,
+                                             tolerance=tolerance,
                                              name=key + '.' + subfield)
             else:
                 self.assert_fields_equal(model_batch[key], loaded_batch[key], 1e-6, key)
@@ -98,8 +96,8 @@ class ModelTestCase(AllenNlpTestCase):
     @staticmethod
     def assert_fields_equal(field1, field2, tolerance: float = 1e-6, name: str = None) -> None:
         if isinstance(field1, torch.autograd.Variable):
-            assert_allclose(field1.data.numpy(),
-                            field2.data.numpy(),
+            assert_allclose(field1.data.cpu().numpy(),
+                            field2.data.cpu().numpy(),
                             rtol=tolerance,
                             err_msg=name)
         else:
@@ -110,13 +108,11 @@ class ModelTestCase(AllenNlpTestCase):
         single_predictions = []
         for i, instance in enumerate(self.dataset.instances):
             dataset = Dataset([instance])
-            arrays = dataset.as_array_dict(dataset.get_padding_lengths(), verbose=False)
-            variables = arrays_to_variables(arrays, for_training=False)
-            result = self.model.forward(**variables)
+            tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
+            result = self.model.forward(**tensors)
             single_predictions.append(result)
-        batch_arrays = self.dataset.as_array_dict(self.dataset.get_padding_lengths(), verbose=False)
-        batch_variables = arrays_to_variables(batch_arrays, for_training=False)
-        batch_predictions = self.model.forward(**batch_variables)
+        batch_tensors = self.dataset.as_tensor_dict(self.dataset.get_padding_lengths(), for_training=False)
+        batch_predictions = self.model.forward(**batch_tensors)
         for i, instance_predictions in enumerate(single_predictions):
             for key, single_predicted in instance_predictions.items():
                 tolerance = 1e-6

@@ -30,8 +30,7 @@ scipy
 scikit-learn
 
 # Training visualisation using tensorboard.
-pillow # A dependency of tensorboard-pytorch which is not recorded.
-tensorboard-pytorch
+tensorboard
 
 # Required by torch.utils.ffi
 cffi==1.11.2

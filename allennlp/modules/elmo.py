@@ -285,6 +285,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
             conv.bias.requires_grad = False
 
             convolutions.append(conv)
+            self.add_module('char_conv_{}'.format(i), conv)
 
         self._convolutions = convolutions
 
