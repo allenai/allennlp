@@ -82,8 +82,8 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
                           1)")
         expression = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(expression)
-        assert action_sequence == ['t', 't -> [<e,t>, e]', '<e,t> -> [<#1,<#1,t>>, e]',
-                                   '<#1,<#1,t>> -> assert_greater_equals', 'e -> [<#1,e>, b]', '<#1,e> -> count',
+        assert action_sequence == ['t', 't -> [<e,t>, e]', '<e,t> -> [<e,<e,t>>, e]',
+                                   '<e,<e,t>> -> assert_greater_equals', 'e -> [<#1,e>, b]', '<#1,e> -> count',
                                    'b -> [<e,b>, e]', '<e,b> -> [<<b,e>,<e,b>>, <b,e>]',
                                    '<<b,e>,<e,b>> -> [<b,<<b,#1>,<#1,b>>>, b]',
                                    '<b,<<b,#1>,<#1,b>>> -> filter_equals', 'b -> all_boxes',
