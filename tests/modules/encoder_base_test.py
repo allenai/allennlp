@@ -49,7 +49,7 @@ class TestEncoderBase(AllenNlpTestCase):
         # to concat a tensor of shape
         # (num_layers * num_directions, batch_size - num_valid, hidden_dim),
         # to the output before unsorting it.
-        zeros = torch.zeros([6, 2, 7])
+        zeros = Variable(torch.zeros([6, 2, 7]))
 
         # sort_and_run_forward strips fully-padded instances from the batch;
         # in order to use the restoration_indices we need to add back the two
@@ -74,7 +74,7 @@ class TestEncoderBase(AllenNlpTestCase):
                                                                 self.num_valid,
                                                                 self.sorting_indices)
 
-        correct_expanded_states = [torch.cat([state, torch.zeros([1, 2, 7])], 1)
+        correct_expanded_states = [torch.cat([state, Variable(torch.zeros([1, 2, 7]))], 1)
                                    for state in initial_states]
         # State should have been expanded with zeros to have shape (1, batch_size, hidden_size).
         numpy.testing.assert_array_equal(self.encoder_base._states[0].data.numpy(),
@@ -161,7 +161,7 @@ class TestEncoderBase(AllenNlpTestCase):
         small_new_states = (Variable(torch.randn([1, 3, 7])),
                             Variable(torch.randn([1, 3, 7])))
         # pretend the 2nd sequence in the batch was fully masked.
-        small_restoration_indices = torch.LongTensor([2, 0, 1])
+        small_restoration_indices = Variable(torch.LongTensor([2, 0, 1]))
         small_new_states[0][:, 0, :] = 0
         small_new_states[1][:, 0, :] = 0
 

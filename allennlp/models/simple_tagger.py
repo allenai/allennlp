@@ -103,7 +103,9 @@ class SimpleTagger(Model):
 
         logits = self.tag_projection_layer(encoded_text)
         reshaped_log_probs = logits.view(-1, self.num_classes)
-        class_probabilities = F.softmax(reshaped_log_probs).view([batch_size, sequence_length, self.num_classes])
+        class_probabilities = F.softmax(reshaped_log_probs, dim=-1).view([batch_size,
+                                                                          sequence_length,
+                                                                          self.num_classes])
 
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 

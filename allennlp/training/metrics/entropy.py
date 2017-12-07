@@ -3,6 +3,8 @@ from typing import Optional
 from overrides import overrides
 import torch
 
+from torch.autograd import Variable
+
 from allennlp.training.metrics.metric import Metric
 
 
@@ -31,7 +33,7 @@ class Entropy(Metric):
         if mask is None:
             mask = torch.ones(logits.size()[:-1])
 
-        log_probs = torch.nn.functional.log_softmax(logits).data
+        log_probs = torch.nn.functional.log_softmax(Variable(logits), dim=-1).data
         probabilities = torch.exp(log_probs) * mask.unsqueeze(-1)
         weighted_negative_likelihood = - log_probs * probabilities
         entropy = weighted_negative_likelihood.sum(-1)

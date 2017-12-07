@@ -46,10 +46,9 @@ class ScalarMix(torch.nn.Module):
             variance = torch.sum(((tensor_masked - mean) * broadcast_mask)**2) / num_elements_not_masked
             return (tensor - mean) / torch.sqrt(variance + 1E-12)
 
-        normed_weights = torch.split(
-                torch.nn.functional.softmax(torch.cat(self.scalar_parameters)),
-                split_size=1
-        )
+        normed_weights = torch.nn.functional.softmax(torch.cat([parameter for parameter
+                                                                in self.scalar_parameters]), dim=0)
+        normed_weights = torch.split(normed_weights, split_size=1)
 
         if not self.do_layer_norm:
             pieces = []
