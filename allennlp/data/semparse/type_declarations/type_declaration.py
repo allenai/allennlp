@@ -319,7 +319,9 @@ def _get_complex_type_productions(complex_type: ComplexType) -> List[Tuple[str, 
     return all_productions
 
 
-def _get_placeholder_actions(complex_type, basic_types, valid_actions) -> None:
+def _get_placeholder_actions(complex_type: ComplexType,
+                             basic_types: Set[Type],
+                             valid_actions: Dict[str, Set[str]]) -> None:
     """
     Takes a ``complex_type`` with placeholders and a set of ``basic_types``, infers the valid actions
     starting at all non-terminals, by substituting placeholders with basic types, and adds them to
@@ -379,7 +381,7 @@ def get_valid_actions(name_mapping: Dict[str, str],
         If you are getting all valid actions for a type declaration, this can be the
         ``COMMON_NAME_MAPPING``.
     type_signatures : ``Dict[str, Type]``
-        The ampping from name aliases to their types. If you are getting all valid actions for a
+        The mapping from name aliases to their types. If you are getting all valid actions for a
         type declaration, this can be the ``COMMON_TYPE_SIGNATURE``.
     basic_types : ``Set[Type]``
         Set of all basic types in the type declaration.
