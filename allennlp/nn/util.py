@@ -830,7 +830,8 @@ def remove_sentence_boundaries(tensor: torch.Tensor,
     tensor_without_boundary_tokens = Variable(tensor.data.new(*new_shape).fill_(0))
     new_mask = Variable(tensor.data.new(new_shape[0], new_shape[1]).fill_(0)).long()
     for i, j in enumerate(sequence_lengths):
-        tensor_without_boundary_tokens.data[i, :(j - 2), :] = tensor.data[i, 1:(j - 1), :]
-        new_mask[i, :(j - 2)] = 1
+        if j > 2:
+            tensor_without_boundary_tokens.data[i, :(j - 2), :] = tensor.data[i, 1:(j - 1), :]
+            new_mask[i, :(j - 2)] = 1
 
     return tensor_without_boundary_tokens, new_mask
