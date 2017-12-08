@@ -1,61 +1,75 @@
+# pylint: disable=invalid-name,protected-access
+
 import os
 import shelve
+from typing import Dict
 
-from allennlp.common.archival import Archivable
+from allennlp.common import Params
+from allennlp.common.archival import Archivable, collect
 from allennlp.common.testing import AllenNlpTestCase
 
-class A(Archivable):
-    def __init__(self, b_name: str):
-        self.b = B(b_name)
-        self.name = "a-allennlp"
-        self.score = 0
+PARAMS = Params({
+        "a": {
+                "b": {
+                        "filename": "my-file",
+                        "c": {
+                                "c_file": "my-other-file"
+                        }
+                }
+        }
+})
 
-    def stuff_to_archive(self):
-        return {"name": self.name, "score": self.score}
 
-    def populate_stuff_from_archive(self, stuff):
-        self.name = stuff["name"]
-        self.score = stuff["score"]
+class A:
+    def __init__(self, b: 'B') -> None:
+        self.b = b
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'A':
+        b_params = params.pop("b")
+        return cls(B.from_params(b_params))
 
 
 class B(Archivable):
-    def __init__(self, name: str = None):
-        self.name = name
+    def __init__(self, filename: str, c: 'C') -> None:
+        self.filename = filename
+        self.c = c
 
-    def stuff_to_archive(self):
-        return {"name": self.name}
+    @classmethod
+    def from_params(cls, params: Params) -> 'B':
+        filename = params.pop("filename")
+        c_params = params.pop("c")
+        c = C.from_params(c_params)
 
-    def populate_stuff_from_archive(self, stuff):
-        self.name = stuff["name"]
+        instance = cls(filename, c)
+        instance._param_history = params.history
+        return instance
+
+    def files_to_archive(self) -> Dict[str, str]:
+        return {"filename": self.filename}
+
+class C(Archivable):
+    def __init__(self, c_file: str) -> None:
+        self.c_file = c_file
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'C':
+        c_file = params.pop("c_file")
+        instance = cls(c_file)
+        instance._param_history = params.history
+        return instance
+
+    def files_to_archive(self) -> Dict[str, str]:
+        return {"c_file": self.c_file}
 
 
 class TestArchival(AllenNlpTestCase):
     def test_archival(self):
-        shelf_file = os.path.join(self.TEST_DIR, "shelf")
+        a = A.from_params(PARAMS.pop("a"))
 
-        a = A(b_name = "b-allennlp")
-        a.score = 100
+        collection = collect(a)
 
-        collection = a.collect(prefix='a')
         assert collection == {
-                "a": {"name": "a-allennlp", "score": 100},
-                "a.b": {"name": "b-allennlp"}
+                "a.b.filename": "my-file",
+                "a.b.c.c_file": "my-other-file"
         }
-
-        with shelve.open(shelf_file) as db:
-            for k, v in collection.items():
-                db[k] = v
-
-        a2 = A(b_name = "junk")
-
-        assert a2.score == 0
-        assert a2.b.name == "junk"
-
-        with shelve.open(shelf_file) as db:
-            collection = dict(db)
-
-        a2.populate_from_collection(collection, prefix='a')
-
-        assert a2.score == 100
-        assert a2.b.name == "b-allennlp"
-

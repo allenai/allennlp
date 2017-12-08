@@ -3,12 +3,14 @@ Helper functions for archiving models and restoring archived models.
 """
 
 from typing import NamedTuple, Dict, Any
+import json
 import logging
 import os
 import tempfile
 import tarfile
-import shelve
 import shutil
+
+import pyhocon
 
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
@@ -17,17 +19,18 @@ from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # An archive comprises a Model and its experimental config
-Archive = NamedTuple("Archive", [("model", Model), ("config", Params), ("shelf", Dict[str, Any])])
+Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
 
 # We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
 # In addition, we may create a "shelve" file that contains auxiliary serialized data.
 # These are the *known names* under which we archive them.
 _CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
-_SHELF_NAME = "shelf"
+_FTA_NAME = "files_to_archive.json"
 
 def archive_model(serialization_dir: str,
-                  weights: str = _DEFAULT_WEIGHTS) -> None:
+                  weights: str = _DEFAULT_WEIGHTS,
+                  files_to_archive: Dict[str, str] = None) -> None:
     """
     Archives the model weights, its training configuration, and its
     vocabulary to `model.tar.gz`
@@ -48,7 +51,11 @@ def archive_model(serialization_dir: str,
     if not os.path.exists(config_file):
         logger.error("config file %s does not exist, unable to archive model", config_file)
 
-    shelf_file = os.path.join(serialization_dir, _SHELF_NAME)
+    if files_to_archive:
+        fta_file = os.path.join(serialization_dir, _FTA_NAME)
+        with open(fta_file, 'w') as f:
+            f.write(json.dumps(files_to_archive))
+
 
     archive_file = os.path.join(serialization_dir, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
@@ -58,9 +65,10 @@ def archive_model(serialization_dir: str,
         archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
 
-        # Add shelf file if it exists
-        if os.path.exists(shelf_file):
-            archive.add(shelf_file, arcname=_SHELF_NAME)
+        if files_to_archive:
+            archive.add(fta_file, arcname=_FTA_NAME)
+            for key, filename in files_to_archive.items():
+                archive.add(filename, arcname=f"fta/{key}")
 
 def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") -> Archive:
     """
@@ -83,6 +91,23 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
     with tarfile.open(archive_file, 'r:gz') as archive:
         archive.extractall(tempdir)
 
+    fta_file = os.path.join(tempdir, _FTA_NAME)
+    if os.path.exists(fta_file):
+        with open(fta_file, 'r') as f:
+            files_to_archive = json.loads(f.read())
+
+        replacements = {}
+
+        for key, _ in files_to_archive.items():
+            replacement_filename = os.path.join(tempdir, f"fta/{key}")
+            replacements[key] = replacement_filename
+
+        # Add these replacements to overrides
+        overrides = json.dumps(
+                pyhocon.ConfigFactory
+                .from_dict(replacements)
+                .with_fallback(pyhocon.ConfigFactory.parse_string(overrides)))
+
     # Load config
     config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME), overrides)
 
@@ -92,15 +117,7 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
                        serialization_dir=tempdir,
                        cuda_device=cuda_device)
 
-    # Load shelf
-    shelf_file = os.path.join(tempdir, _SHELF_NAME)
-    if os.path.exists(shelf_file):
-        with shelve.open(shelf_file) as db:
-            shelf = dict(db)
-    else:
-        shelf = {}
-
     # Clean up temp dir
     shutil.rmtree(tempdir)
 
-    return Archive(model=model, config=config, shelf=shelf)
+    return Archive(model=model, config=config)
