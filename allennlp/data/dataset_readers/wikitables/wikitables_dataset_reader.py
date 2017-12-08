@@ -19,8 +19,9 @@ from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.fields import TextField, KnowledgeGraphField, LabelField, ListField
+from allennlp.data.fields import KnowledgeGraphField, ListField, ProductionRuleField, TextField
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
+from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
@@ -76,6 +77,7 @@ class WikiTablesDatasetReader(DatasetReader):
         self._tokenizer = tokenizer or WordTokenizer()
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
+        self._basic_types = set(str(type_) for type_ in wt_types.BASIC_TYPES)
 
     @overrides
     def read(self, file_path):
@@ -135,16 +137,19 @@ class WikiTablesDatasetReader(DatasetReader):
             world = WikiTablesWorld(table_knowledge_graph)
             expressions = [world.parse_logical_form(form) for form in dpd_output]
             action_sequences = [world.get_action_sequence(expression) for expression in expressions]
-            action_sequences_field = ListField([self._make_action_sequence_field(sequence)
-                                                for sequence in action_sequences])
-            fields['target_action_sequences'] = action_sequences_field
+            action_sequence_fields: List[ListField[ProductionRuleField]] = []
+            for sequence in action_sequences:
+                production_rule_fields: List[ProductionRuleField] = []
+                for production_rule in sequence:
+                    field = ProductionRuleField(production_rule,
+                                                terminal_indexers=self._terminal_indexers,
+                                                nonterminal_indexers=self._non_terminal_indexers,
+                                                nonterminal_types=self._basic_types,
+                                                context=tokenized_question)
+                    production_rule_fields.append(field)
+                action_sequence_fields.append(ListField(production_rule_fields))
+            fields['target_action_sequences'] = ListField(action_sequence_fields)
         return Instance(fields)
-
-    @staticmethod
-    def _make_action_sequence_field(action_sequence: List[str]) -> ListField:
-        action_sequence.insert(0, START_SYMBOL)
-        action_sequence.append(END_SYMBOL)
-        return ListField([LabelField(action, label_namespace='actions') for action in action_sequence])
 
     @staticmethod
     def _parse_line_as_lisp(lisp_string: str) -> Dict[str, Union[str, List[str], None]]:

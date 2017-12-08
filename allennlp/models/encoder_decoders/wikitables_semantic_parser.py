@@ -12,6 +12,7 @@ from allennlp.common import Params
 from allennlp.common import util as common_util
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
+from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
@@ -97,7 +98,7 @@ class WikiTablesSemanticParser(Model):
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 table: Dict[str, torch.LongTensor],
-                target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                target_action_sequences: List[List[ProductionRuleArray]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
         """
@@ -113,10 +114,9 @@ class WikiTablesSemanticParser(Model):
             ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
             entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
             get embeddings for each entity.
-        target_action_sequences : torch.LongTensor, optional (default = None)
-           A list of possibly valid action sequences, with shape ``(batch_size, num_sequences,
-           sequence_length, 1)``.  The trailing dimension is because of how our ``ListFields``
-           work, and will be stripped in this method with a ``squeeze``.
+        target_action_sequences : List[List[ProductionRuleArray]], optional (default = None)
+           A list of possibly valid action sequences, where each action is a production rule from a
+           grammar, represented by a ``ProductionRuleField``.
         """
         # (batch_size, question_length, embedding_dim)
         embedded_input = self._question_embedder(question)
@@ -130,17 +130,15 @@ class WikiTablesSemanticParser(Model):
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
         memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
 
-        if target_action_sequences is not None:
-            # Remove batch dimension and trailing dimension (from ListField[LabelField]]).
-            target_action_sequences = target_action_sequences.squeeze(-1)
-            target_mask = target_action_sequences != self._action_padding_index
-        else:
-            target_mask = None
 
         initial_score = Variable(embedded_input.data.new(batch_size).fill_(0))
         attended_question = self._decoder_step.attend_on_question(final_encoder_output,
                                                                   encoder_outputs,
                                                                   question_mask)
+
+        if target_action_sequences is not None:
+            # TODO(mattg): fix this
+            target_action_sequences = target_action_sequences.squeeze(-1)
 
         # To make grouping states together in the decoder easier, we convert the batch dimension in
         # all of our tensors into an outer list.  For instance, the encoder outputs have shape
@@ -167,16 +165,14 @@ class WikiTablesSemanticParser(Model):
         if self.training:
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
-                                                target_action_sequences,
-                                                target_mask)
+                                                target_action_sequences)
         else:
             outputs = {}
             if target_action_sequences is not None:
-                num_steps = target_action_sequences.size(-1) - 1
+                num_steps = max(len(action_sequence) for action_sequence in target_action_sequences)
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
-                                                               target_action_sequences,
-                                                               target_mask)['loss']
+                                                               target_action_sequences)['loss']
             else:
                 num_steps = self._max_decoding_steps
             best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)

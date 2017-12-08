@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Set
 import pyparsing
 
 from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
