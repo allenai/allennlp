@@ -1,26 +1,5 @@
 """
-If a class (e.g. a ``Model`` or a ``DatasetReader``) inherits from ``Archivable``
-then we can ``collect()`` a dictionary of arbitrary data to be serialized
-from the class instance itself as well as recursively from any member elements
-(including ``List`` and ``Dict`` values) that themselves implement ``Archivable``.
-
-Conversely, we can use ``populate_from_collection()``
-
-Note that this chain must be unbroken. That is, if we had
-
-```
-class A(Archivable):
-    b: B
-
-class B:
-    c: C
-
-class C(Archivable):
-    pass
-```
-
-then calling ``add_to_archives`` on an instance of ``A`` would not archive the ``C``
-contained in the intermediate ``B`` (whereas it would if ``B`` implemented ``Archivable``).
+Add arbitrary files to the model archive.
 """
 from typing import Any, Iterable, Dict, Set
 import inspect
