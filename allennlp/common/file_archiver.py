@@ -42,19 +42,24 @@ class FileArchiver:
         return {}
 
 def collect(obj: Any) -> Dict[str, str]:
+    """
+    Given some object which may be a ``FileArchiver`` and may have members
+    that contain other ``FileArchiver`` s, collects all the files to archive
+    in a dict { hocon_configuration_path -> filename }.
+    """
     result = {}
-    for archivable in _archivables(obj):
-        param_history = archivable._param_history  # pylint: disable=protected-access
-        for name, filename in archivable.files_to_archive().items():
+    for file_archiver in _find_all_file_archivers(obj):
+        param_history = file_archiver._param_history  # pylint: disable=protected-access
+        for name, filename in file_archiver.files_to_archive().items():
             if param_history is None:
-                raise RuntimeError("`Archivable` subclasses must set `_param_history` "
+                raise RuntimeError("`FileArchiver` subclasses must set `_param_history` "
                                    "in their `from_params` method")
             result[f"{param_history}{name}"] = filename
 
     return result
 
 
-def _archivables(obj: Any, seen: Set[int] = None) -> Iterable[FileArchiver]:
+def _find_all_file_archivers(obj: Any, seen: Set[int] = None) -> Iterable[FileArchiver]:
     """
     Given an object and a prefix, recursively explores and yields
     all ``Archivable`` members along with unique "paths" to them. It will explore
@@ -93,11 +98,11 @@ def _archivables(obj: Any, seen: Set[int] = None) -> Iterable[FileArchiver]:
         # For a dictionary, explore all the values
         if isinstance(prop, dict):
             for subobj in prop.values():
-                yield from _archivables(subobj, seen)
+                yield from _find_all_file_archivers(subobj, seen)
         # For a list, explore all the items
         elif isinstance(prop, list):
             for subobj in prop:
-                yield from _archivables(subobj, seen)
+                yield from _find_all_file_archivers(subobj, seen)
         # For a class, recurse
         else:
-            yield from _archivables(prop, seen)
+            yield from _find_all_file_archivers(prop, seen)
