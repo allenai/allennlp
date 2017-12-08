@@ -173,7 +173,7 @@ class Trainer:
         Does a forward pass on the given batch and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
         """
-        output_dict = self._model.forward(**batch)
+        output_dict = self._model(**batch)
 
         try:
             loss = output_dict["loss"]

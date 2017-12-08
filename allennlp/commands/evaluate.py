@@ -85,7 +85,7 @@ def evaluate(model: Model,
     logger.info("Iterating over dataset")
     generator_tqdm = tqdm.tqdm(generator, total=iterator.get_num_batches(dataset))
     for batch in generator_tqdm:
-        model.forward(**batch)
+        model(**batch)
         metrics = model.get_metrics()
         description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
         generator_tqdm.set_description(description)

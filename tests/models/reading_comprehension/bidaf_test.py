@@ -20,7 +20,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
-        output_dict = self.model.forward(**training_tensors)
+        output_dict = self.model(**training_tensors)
 
         metrics = self.model.get_metrics(reset=True)
         # We've set up the data such that there's a fake answer that consists of the whole

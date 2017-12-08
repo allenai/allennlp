@@ -38,7 +38,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         mask[3, 2:] = 0
         mask[4, :] = 0
 
-        results = encoder.forward(tensor, mask)
+        results = encoder(tensor, mask)
 
         for i in (0, 1, 3):
             assert not (results[i] == 0.).data.all()
