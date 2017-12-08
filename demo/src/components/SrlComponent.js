@@ -167,9 +167,10 @@ function toHierplaneTrees(response) {
     };
   });
 
-  // Filter out the trees with only a single child (AllenNLP's SRL output includes a node
-  // for each verb with a single child, the verb itself).
-  return trees.filter(t => t.root.children.length > 1);
+  // Filter out the trees without any children, as Hierplane can't render something that isn't
+  // a tree of at least one level. We can remove this once this bug is fixed:
+  // https://github.com/allenai/hierplane/issues/74
+  return trees.filter(t => t.root.children.length > 0);
 }
 
 class SrlInput extends React.Component {
