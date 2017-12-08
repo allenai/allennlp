@@ -102,7 +102,7 @@ class TestElmo(AllenNlpTestCase):
 
         options_file = os.path.join(FIXTURES, 'options.json')
         weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
-        self.elmo = Elmo(options_file, weight_file, 2)
+        self.elmo = Elmo(options_file, weight_file, 2, dropout=0.0)
 
     def _sentences_to_ids(self, sentences):
         indexer = ELMoTokenCharactersIndexer()
