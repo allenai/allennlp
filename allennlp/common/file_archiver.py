@@ -4,7 +4,7 @@ Add arbitrary files to the model archive.
 from typing import Any, Iterable, Dict, Set
 import inspect
 
-class Archivable:
+class FileArchiver:
     """
     If a class inherits from this, some of the files it depends on
     in its ``from_params`` method will be included in the ``model.tar.gz`` archive.
@@ -54,7 +54,7 @@ def collect(obj: Any) -> Dict[str, str]:
     return result
 
 
-def _archivables(obj: Any, seen: Set[int] = None) -> Iterable[Archivable]:
+def _archivables(obj: Any, seen: Set[int] = None) -> Iterable[FileArchiver]:
     """
     Given an object and a prefix, recursively explores and yields
     all ``Archivable`` members along with unique "paths" to them. It will explore
@@ -71,7 +71,7 @@ def _archivables(obj: Any, seen: Set[int] = None) -> Iterable[Archivable]:
         seen = (seen or set()) | {this_id}
 
     # Start by yielding this instance
-    if isinstance(obj, Archivable):
+    if isinstance(obj, FileArchiver):
         yield obj
 
     # ``dir`` gets way too many properties, so filter intelligently.

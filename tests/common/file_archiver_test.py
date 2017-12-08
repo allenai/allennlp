@@ -3,7 +3,7 @@
 from typing import Dict
 
 from allennlp.common import Params
-from allennlp.common.archival import Archivable, collect
+from allennlp.common.file_archiver import FileArchiver, collect
 from allennlp.common.testing import AllenNlpTestCase
 
 PARAMS = Params({
@@ -28,7 +28,7 @@ class A:
         return cls(B.from_params(b_params))
 
 
-class B(Archivable):
+class B(FileArchiver):
     def __init__(self, filename: str, c: 'C') -> None:
         self.filename = filename
         self.c_dict = {"here": c}
@@ -46,7 +46,7 @@ class B(Archivable):
     def files_to_archive(self) -> Dict[str, str]:
         return {"filename": self.filename}
 
-class C(Archivable):
+class C(FileArchiver):
     def __init__(self, c_file: str) -> None:
         self.c_file = c_file
 
@@ -61,8 +61,8 @@ class C(Archivable):
         return {"c_file": self.c_file}
 
 
-class TestArchival(AllenNlpTestCase):
-    def test_archival(self):
+class TestFileArchiver(AllenNlpTestCase):
+    def test_file_archiver(self):
         a = A.from_params(PARAMS.pop("a"))
 
         collection = collect(a)

@@ -7,7 +7,7 @@ import numpy
 import h5py
 from overrides import overrides
 
-from allennlp.common.archival import Archivable
+from allennlp.common.file_archiver import FileArchiver
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Registrable, Params
@@ -22,7 +22,7 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
 
 
 @Registrable.register('elmo')
-class Elmo(torch.nn.Module, Registrable, Archivable):
+class Elmo(torch.nn.Module, Registrable, FileArchiver):
     """
     Compute ELMo representations using a pre-trained bidirectional language model.
 
