@@ -46,14 +46,6 @@ class ModelTestCase(AllenNlpTestCase):
         reader = DatasetReader.from_params(params['dataset_reader'])
         iterator = DataIterator.from_params(params['iterator'])
 
-        model_dataset = reader.read(params['validation_data_path'])
-        model_dataset.index_instances(model.vocab)
-        model_batch = next(iterator(model_dataset, shuffle=False, cuda_device=cuda_device))
-
-        # Check gradients are None for non-trainable parameters and check that
-        # trainable parameters receive some gradient if they are trainable.
-        self.check_model_computes_gradients_correctly(model, model_batch)
-
         # We'll check that even if we index the dataset with each model separately, we still get
         # the same result out.
         model_dataset = reader.read(params['validation_data_path'])
@@ -62,6 +54,10 @@ class ModelTestCase(AllenNlpTestCase):
         loaded_dataset = reader.read(params['validation_data_path'])
         loaded_dataset.index_instances(loaded_model.vocab)
         loaded_batch = next(iterator(loaded_dataset, shuffle=False, cuda_device=cuda_device))
+
+        # Check gradients are None for non-trainable parameters and check that
+        # trainable parameters receive some gradient if they are trainable.
+        self.check_model_computes_gradients_correctly(model, model_batch)
 
         # The datasets themselves should be identical.
         for key in model_batch.keys():
@@ -117,11 +113,9 @@ class ModelTestCase(AllenNlpTestCase):
         result = model(**model_batch)
         result["loss"].backward()
 
-        for name, parameter in model.named_parameters():
+        for parameter in model.parameters():
             zeros = torch.zeros(parameter.size())
             if parameter.requires_grad:
-                print(parameter)
-                print(name)
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
                 assert (parameter.grad.data.cpu() != zeros).any()
