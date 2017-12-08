@@ -29,9 +29,9 @@ class Archivable:
         and corresponding filename. The archiving process will then include this
         file in the ``model.tar.gz`` and likewise use it when restoring the archived model.
     """
-    _param_history = None
+    _param_history: str = None
 
-    def files_to_archive(self) -> Dict[str, str]:
+    def files_to_archive(self) -> Dict[str, str]:  # pylint: disable=no-self-use
         """
         A class that implements ``Archivable`` should override this method which simply
         returns a ``dict`` {name -> filename} of files it wants archived.
@@ -44,10 +44,11 @@ class Archivable:
 def collect(obj: Any) -> Dict[str, str]:
     result = {}
     for archivable in _archivables(obj):
-        param_history = archivable._param_history
+        param_history = archivable._param_history  # pylint: disable=protected-access
         for name, filename in archivable.files_to_archive().items():
             if param_history is None:
-                raise RuntimeError("`Archivable` subclasses must set `_param_history` in their `from_params` method")
+                raise RuntimeError("`Archivable` subclasses must set `_param_history` "
+                                   "in their `from_params` method")
             result[f"{param_history}{name}"] = filename
 
     return result

@@ -1,7 +1,5 @@
-# pylint: disable=invalid-name,protected-access
+# pylint: disable=invalid-name,protected-access,no-self-use
 
-import os
-import shelve
 from typing import Dict
 
 from allennlp.common import Params

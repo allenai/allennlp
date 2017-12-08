@@ -2,7 +2,7 @@
 Helper functions for archiving models and restoring archived models.
 """
 
-from typing import NamedTuple, Dict, Any
+from typing import NamedTuple, Dict
 import json
 import logging
 import os
@@ -52,9 +52,9 @@ def archive_model(serialization_dir: str,
         logger.error("config file %s does not exist, unable to archive model", config_file)
 
     if files_to_archive:
-        fta_file = os.path.join(serialization_dir, _FTA_NAME)
-        with open(fta_file, 'w') as f:
-            f.write(json.dumps(files_to_archive))
+        fta_filename = os.path.join(serialization_dir, _FTA_NAME)
+        with open(fta_filename, 'w') as fta_file:
+            fta_file.write(json.dumps(files_to_archive))
 
 
     archive_file = os.path.join(serialization_dir, "model.tar.gz")
@@ -66,7 +66,7 @@ def archive_model(serialization_dir: str,
                     arcname="vocabulary")
 
         if files_to_archive:
-            archive.add(fta_file, arcname=_FTA_NAME)
+            archive.add(fta_filename, arcname=_FTA_NAME)
             for key, filename in files_to_archive.items():
                 archive.add(filename, arcname=f"fta/{key}")
 
@@ -91,10 +91,10 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
     with tarfile.open(archive_file, 'r:gz') as archive:
         archive.extractall(tempdir)
 
-    fta_file = os.path.join(tempdir, _FTA_NAME)
-    if os.path.exists(fta_file):
-        with open(fta_file, 'r') as f:
-            files_to_archive = json.loads(f.read())
+    fta_filename = os.path.join(tempdir, _FTA_NAME)
+    if os.path.exists(fta_filename):
+        with open(fta_filename, 'r') as fta_file:
+            files_to_archive = json.loads(fta_file.read())
 
         # Add these replacements to overrides
         replacement_hocon = pyhocon.ConfigTree(root=True)
