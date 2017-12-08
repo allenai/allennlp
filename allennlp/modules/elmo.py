@@ -7,6 +7,7 @@ import numpy
 import h5py
 from overrides import overrides
 
+from allennlp.common.archival import Archivable
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Registrable, Params
@@ -21,7 +22,7 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
 
 
 @Registrable.register('elmo')
-class Elmo(torch.nn.Module, Registrable):
+class Elmo(torch.nn.Module, Registrable, Archivable):
     """
     Compute ELMo representations using a pre-trained bidirectional language model.
 
@@ -53,6 +54,10 @@ class Elmo(torch.nn.Module, Registrable):
                  num_output_representations: int,
                  do_layer_norm: bool = False) -> None:
         super(Elmo, self).__init__()
+
+        # Save these so we can add them to the archive later
+        self.options_file = options_file
+        self.weight_file = weight_file
 
         self._elmo_lstm = _ElmoBiLm(options_file, weight_file)
 
@@ -101,7 +106,15 @@ class Elmo(torch.nn.Module, Registrable):
         num_output_representations = params.pop('num_output_representations')
         do_layer_norm = params.pop('do_layer_norm', False)
         params.assert_empty(cls.__name__)
-        return cls(options_file, weight_file, num_output_representations, do_layer_norm)
+
+        instance = cls(options_file, weight_file, num_output_representations, do_layer_norm)
+        instance._param_history = params.history
+        return instance
+
+    @overrides
+    def files_to_archive(self) -> Dict[str, str]:
+        return {'options_file': self.options_file,
+                'weight_file': self.weight_file}
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
