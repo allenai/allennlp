@@ -96,17 +96,15 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
         with open(fta_file, 'r') as f:
             files_to_archive = json.loads(f.read())
 
-        replacements = {}
-
+        # Add these replacements to overrides
+        replacement_hocon = pyhocon.ConfigTree(root=True)
         for key, _ in files_to_archive.items():
             replacement_filename = os.path.join(tempdir, f"fta/{key}")
-            replacements[key] = replacement_filename
+            replacement_hocon.put(key, replacement_filename)
 
-        # Add these replacements to overrides
-        overrides = json.dumps(
-                pyhocon.ConfigFactory
-                .from_dict(replacements)
-                .with_fallback(pyhocon.ConfigFactory.parse_string(overrides)))
+        overrides_hocon = pyhocon.ConfigFactory.parse_string(overrides)
+        combined_hocon = replacement_hocon.with_fallback(overrides_hocon)
+        overrides = json.dumps(combined_hocon)
 
     # Load config
     config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME), overrides)
