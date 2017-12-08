@@ -134,6 +134,7 @@ class Trainer:
 
         self._cuda_device = cuda_device
         self._grad_norm = grad_norm
+        self._batch_grad_norm = None
         self._grad_clipping = grad_clipping
         self._learning_rate_scheduler = learning_rate_scheduler
 
@@ -173,7 +174,7 @@ class Trainer:
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
         """
         if self._grad_norm:
-            clip_grad_norm(self._model.parameters(), self._grad_norm)
+            self._batch_grad_norm = clip_grad_norm(self._model.parameters(), self._grad_norm)
 
     def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
         """
@@ -264,6 +265,11 @@ class Trainer:
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
                 self._metrics_to_tensorboard(batch_num_total,
                                              {"epoch_metrics/" + k: v for k, v in metrics.items()})
+                # norm of gradients
+                if self._batch_grad_norm is not None:
+                    self._tensorboard.add_train_scalar("gradient_norm",
+                                                       self._batch_grad_norm,
+                                                       batch_num_total)
 
             # Save model if needed.
             if self._model_save_interval is not None and (
