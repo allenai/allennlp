@@ -150,6 +150,7 @@ class Trainer:
 
         self._log_interval = 10  # seconds
         self._summary_interval = 100  # num batches between logging to tensorboard
+        self._histogram_interval = 500 # num batches between logging histogram
 
         self._last_log = 0.0  # time of last logging
 
@@ -239,7 +240,19 @@ class Trainer:
 
             self._rescale_gradients()
 
-            self._optimizer.step()
+            batch_num_total = num_training_batches * epoch + batch_num
+            if batch_num_total % self._histogram_interval == 0:
+                # get the magnitude of parameter updates for logging
+                param_updates = {name: param.clone()
+                                 for name, param in self._model.named_parameters()}
+                self._optimizer.step()
+                for name, param in self._model.named_parameters():
+                    param_updates[name].sub_(param)
+                    self._tensorboard.add_train_scalar("gradient_update/" + name,
+                                                       param_updates[name].abs().mean(),
+                                                       batch_num_total)
+            else:
+                self._optimizer.step()
 
             # Update the description with the latest metrics
             metrics = self._get_metrics(train_loss, batch_num)
@@ -248,7 +261,6 @@ class Trainer:
             train_generator_tqdm.set_description(description, refresh=False)
 
             # Log parameter values to Tensorboard
-            batch_num_total = num_training_batches * epoch + batch_num
             if batch_num_total % self._summary_interval == 0:
                 for name, param in self._model.named_parameters():
                     self._tensorboard.add_train_scalar("parameter_mean/" + name,
