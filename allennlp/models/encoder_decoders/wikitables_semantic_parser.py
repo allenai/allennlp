@@ -11,8 +11,9 @@ from torch.nn.modules.linear import Linear
 from allennlp.common import Params
 from allennlp.common import util as common_util
 from allennlp.data import Vocabulary
-from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.semparse.type_declarations.type_declaration import START_TYPE
+from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
@@ -80,8 +81,6 @@ class WikiTablesSemanticParser(Model):
         self._action_namespace = action_namespace
         self._action_padding_index = 0 if self.vocab.is_padded(self._action_namespace) else -1
 
-        self._start_index = self.vocab.get_token_index(START_SYMBOL, self._action_namespace)
-        self._end_index = self.vocab.get_token_index(END_SYMBOL, self._action_namespace)
         # This is a _global_ mapping because eventually we will have additional allowed actions for
         # each instance (e.g., instance-specific entities or predicates), and for the current
         # decoder state (e.g., you can only produce variables inside of a lambda expression).
@@ -91,13 +90,13 @@ class WikiTablesSemanticParser(Model):
                                                    action_namespace=action_namespace,
                                                    encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
-                                                   attention_function=attention_function,
-                                                   start_index=self._start_index)
+                                                   attention_function=attention_function)
 
     @overrides
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 table: Dict[str, torch.LongTensor],
+                world: List[WikiTablesWorld],
                 target_action_sequences: List[List[ProductionRuleArray]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
@@ -114,6 +113,9 @@ class WikiTablesSemanticParser(Model):
             ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
             entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
             get embeddings for each entity.
+        world : ``ListWikiTablesWorld``
+            We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
+            how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
         target_action_sequences : List[List[ProductionRuleArray]], optional (default = None)
            A list of possibly valid action sequences, where each action is a production rule from a
            grammar, represented by a ``ProductionRuleField``.
@@ -160,8 +162,7 @@ class WikiTablesSemanticParser(Model):
                                                attended_question=initial_attended_question,
                                                encoder_outputs=encoder_output_list,
                                                encoder_output_mask=question_mask_list,
-                                               global_type_productions=self._global_type_productions,
-                                               end_index=self._end_index)
+                                               global_type_productions=self._global_type_productions)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
@@ -194,12 +195,8 @@ class WikiTablesSemanticParser(Model):
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
         best_action_indices = output_dict["best_action_sequence"][0]
-        end_index = self.vocab.get_token_index(END_SYMBOL, self._action_namespace)
         action_strings = []
         for action_index in best_action_indices:
-            # Collect indices till the first end_symbol
-            if action_index == end_index:
-                break
             action_strings.append(self.vocab.get_token_from_index(action_index,
                                                                   namespace=self._action_namespace))
         output_dict["predicted_actions"] = [action_strings]
@@ -260,8 +257,7 @@ def _get_type_productions(vocab: Vocabulary, namespace: str) -> Dict[str, List[i
             # The first action we predict is the type of the logical form, not a production rule.
             # These actions don't have ' -> ' in them, and are just the type.  They are only valid
             # productions in the initial state of the decoder.
-            if action != START_SYMBOL and action != END_SYMBOL:
-                type_productions[START_SYMBOL].append(action_index)
+            type_productions[START_SYMBOL].append(action_index)
     return type_productions
 
 
@@ -312,9 +308,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         A mapping from type strings to valid action indices.  The type strings correspond to the
         non-terminals on the ``non_terminal_stack``, and the action indices (for now) correspond to
         actions in the action vocabulary.
-    end_index : ``int``
-        This is the index of the stop symbol, which we need so we know if we've emitted a stop
-        action and are thus finished.
     """
     def __init__(self,
                  batch_indices: List[int],
@@ -326,8 +319,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  attended_question: List[Variable],
                  encoder_outputs: Variable,
                  encoder_output_mask: Variable,
-                 global_type_productions: Dict[str, List[int]],
-                 end_index: int) -> None:
+                 global_type_productions: Dict[str, List[int]]) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
         self.non_terminal_stack = non_terminal_stack
         self.hidden_state = hidden_state
@@ -336,7 +328,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.encoder_outputs = encoder_outputs
         self.encoder_output_mask = encoder_output_mask
         self.global_type_productions = global_type_productions
-        self.end_index = end_index
 
     def get_valid_actions(self) -> List[List[int]]:
         """
@@ -447,8 +438,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       attended_question=attended_question,
                                       encoder_outputs=states[0].encoder_outputs,
                                       encoder_output_mask=states[0].encoder_output_mask,
-                                      global_type_productions=states[0].global_type_productions,
-                                      end_index=states[0].end_index)
+                                      global_type_productions=states[0].global_type_productions)
 
     def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'WikiTablesDecoderState':
         """
@@ -475,8 +465,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       attended_question=group_attended_question,
                                       encoder_outputs=self.encoder_outputs,
                                       encoder_output_mask=self.encoder_output_mask,
-                                      global_type_productions=self.global_type_productions,
-                                      end_index=self.end_index)
+                                      global_type_productions=self.global_type_productions)
 
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
@@ -485,15 +474,13 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  action_namespace: str,
                  encoder_output_dim: int,
                  action_embedding_dim: int,
-                 attention_function: SimilarityFunction,
-                 start_index: int) -> None:
+                 attention_function: SimilarityFunction) -> None:
         super(WikiTablesDecoderStep, self).__init__()
         self._vocab = vocab
         self._action_namespace = action_namespace
         num_actions = vocab.get_vocab_size(action_namespace)
         self._action_embedder = Embedding(num_actions, action_embedding_dim)
         self._input_attention = Attention(attention_function)
-        self._start_index = start_index
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
@@ -529,8 +516,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         actions = [action_history[-1] if action_history else self._start_index
                    for action_history in state.action_history]
         action_input = Variable(hidden_state.data.new(actions).long())
-        # TODO(mattg): probably makes sense to just put this in the state from the previous
-        # iteration, because we're embedding actions to predict things now.
+        # TODO(mattg): the action embedding will live in `model.forward`, and this just needs to be
+        # an `index_select` after a `torch.cat`.
         embedded_input = self._action_embedder(action_input)
 
         # (group_size, decoder_input_dim)
@@ -680,7 +667,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    attended_question=[attended_question[group_index]],
                                                    encoder_outputs=state.encoder_outputs,
                                                    encoder_output_mask=state.encoder_output_mask,
-                                                   global_type_productions=state.global_type_productions,
-                                                   end_index=state.end_index)
+                                                   global_type_productions=state.global_type_productions)
                 new_states.append(new_state)
         return new_states

@@ -32,8 +32,8 @@ class MaximumMarginalLikelihood(DecoderTrainer):
     def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               targets: torch.Tensor,
-               target_mask: torch.Tensor) -> Dict[str, torch.Tensor]:
+               targets: Union[torch.Tensor, List[List[List[Action]]]],
+               target_mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         allowed_transitions = self._create_allowed_transitions(targets, target_mask)
         finished_states = []
         states = [initial_state]
@@ -63,8 +63,9 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         return {'loss': loss / len(batch_scores)}
 
     @staticmethod
-    def _create_allowed_transitions(targets: torch.Tensor,
-                                    target_mask: torch.Tensor) -> List[Dict[Tuple[int, ...], Set[int]]]:
+    def _create_allowed_transitions(targets: Union[torch.Tensor, List[List[List[int]]]],
+                                    target_mask: Optional[torch.Tensor] = None) -> List[Dict[Tuple[int, ...],
+                                                                                             Set[int]]]:
         """
         Takes a list of valid target action sequences and creates a mapping from all possible
         (valid) action prefixes to allowed actions given that prefix.  ``targets`` is assumed to be
@@ -85,16 +86,22 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         We use this to prune the set of actions we consider during decoding, because we only need
         to score the sequences in ``targets``.
         """
-        assert targets.dim() == 3, "targets tensor needs to be batched!"
-        batched_allowed_transitions: List[Dict[Tuple[int, ...], Set[int]]] = []
-        targets = targets.data.cpu().numpy().tolist()
-        target_mask = target_mask.data.cpu().numpy().tolist()
+        batched_allowed_transitions: List[Dict[Tuple[Action, ...], Set[Action]]] = []
+
+        if not isinstance(targets, list):
+            assert targets.dim() == 3, "targets tensor needs to be batched!"
+            targets = targets.data.cpu().numpy().tolist()
+        if target_mask is not None:
+            target_mask = target_mask.data.cpu().numpy().tolist()
+        else:
+            target_mask = [None for _ in targets]
+
         for instance_targets, instance_mask in zip(targets, target_mask):
             allowed_transitions: Dict[Tuple[int, ...], Set[int]] = defaultdict(set)
             for i, target_sequence in enumerate(instance_targets):
                 history: Tuple[int, ...] = ()
                 for j, action in enumerate(target_sequence[1:]):
-                    if instance_mask[i][j + 1] == 0:  # +1 because we're starting at index 1, not 0
+                    if instance_mask and instance_mask[i][j + 1] == 0:  # +1 because we start at index 1, not 0
                         break
                     allowed_transitions[history].add(action)
                     history = history + (action,)

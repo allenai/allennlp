@@ -411,3 +411,6 @@ def get_valid_actions(name_mapping: Dict[str, str],
                 for head, production in _get_complex_type_productions(substituted_type.second):
                     valid_actions[head].add(production)
     return valid_actions
+
+
+START_TYPE = NamedBasicType('@START@')

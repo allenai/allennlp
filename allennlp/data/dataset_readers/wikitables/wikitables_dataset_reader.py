@@ -132,9 +132,10 @@ class WikiTablesDatasetReader(DatasetReader):
         else:
             table_knowledge_graph = TableKnowledgeGraph.read_from_json(table_info)
         table_field = KnowledgeGraphField(table_knowledge_graph, self._table_token_indexers)
-        fields = {'question': question_field, 'table': table_field}
+        world = WikiTablesWorld(table_knowledge_graph)
+        world_field = MetadataField(world)
+        fields = {'question': question_field, 'table': table_field, 'world': world_field}
         if dpd_output:
-            world = WikiTablesWorld(table_knowledge_graph)
             expressions = [world.parse_logical_form(form) for form in dpd_output]
             action_sequences = [world.get_action_sequence(expression) for expression in expressions]
             action_sequence_fields: List[ListField[ProductionRuleField]] = []
