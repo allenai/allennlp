@@ -12,7 +12,6 @@ import gzip
 
 import tqdm
 
-from allennlp.common.archival import Archivable
 from allennlp.common.util import namespace_match
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
@@ -100,7 +99,7 @@ def _read_pretrained_words(embeddings_filename: str)-> Set[str]:
             words.add(word)
     return words
 
-class Vocabulary(Archivable):
+class Vocabulary:
     """
     A Vocabulary maps strings to integers, allowing for strings to be mapped to an
     out-of-vocabulary token.

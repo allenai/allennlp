@@ -1,8 +1,7 @@
 from allennlp.modules.encoder_base import _EncoderBase
 from allennlp.common import Params, Registrable
-from allennlp.common.archival import Archivable
 
-class Seq2SeqEncoder(_EncoderBase, Registrable, Archivable):
+class Seq2SeqEncoder(_EncoderBase, Registrable):
     """
     A ``Seq2SeqEncoder`` is a ``Module`` that takes as input a sequence of vectors and returns a
     modified sequence of vectors.  Input shape: ``(batch_size, sequence_length, input_dim)``; output
