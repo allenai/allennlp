@@ -31,7 +31,7 @@ class A:
 class B(Archivable):
     def __init__(self, filename: str, c: 'C') -> None:
         self.filename = filename
-        self.c = c
+        self.c_dict = {"here": c}
 
     @classmethod
     def from_params(cls, params: Params) -> 'B':
