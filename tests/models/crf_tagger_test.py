@@ -23,7 +23,7 @@ class CrfTaggerTest(ModelTestCase):
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
-        output_dict = self.model.forward(**training_tensors)
+        output_dict = self.model(**training_tensors)
         tags = output_dict['tags']
         assert len(tags) == 2
         assert len(tags[0]) == 7

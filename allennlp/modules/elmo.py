@@ -102,7 +102,7 @@ class Elmo(torch.nn.Module, Registrable):
         # compute the elmo representations
         representations = []
         for scalar_mix in self._scalar_mixes:
-            representation_with_bos_eos = scalar_mix.forward(layer_activations, mask_with_bos_eos)
+            representation_with_bos_eos = scalar_mix(layer_activations, mask_with_bos_eos)
             representation_without_bos_eos, mask_without_bos_eos = remove_sentence_boundaries(
                     representation_with_bos_eos, mask_with_bos_eos
             )

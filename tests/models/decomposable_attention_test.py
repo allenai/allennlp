@@ -18,7 +18,7 @@ class TestDecomposableAttention(ModelTestCase):
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
-        output_dict = self.model.forward(**training_tensors)
+        output_dict = self.model(**training_tensors)
         assert_almost_equal(numpy.sum(output_dict["label_probs"][0].data.numpy(), -1), 1, decimal=6)
 
     @flaky
