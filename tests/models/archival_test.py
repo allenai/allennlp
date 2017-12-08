@@ -90,3 +90,6 @@ class ArchivalTest(AllenNlpTestCase):
         # The param in the data should have been replaced with a temporary path
         # (which we don't know, but we know what it ends with).
         assert params.get('train_data_path').endswith('/fta/train_data_path')
+
+        # The validation data path should be the same though.
+        assert params.get('validation_data_path') == 'tests/fixtures/data/sequence_tagging.tsv'
