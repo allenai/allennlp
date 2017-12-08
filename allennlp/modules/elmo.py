@@ -74,6 +74,8 @@ class Elmo(torch.nn.Module, Registrable, Archivable):
         ----------
         inputs: ``torch.autograd.Variable``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
+            We also accept tensors with additional optional dimensions:
+            ``(batch_size, dim0, dim1, ..., dimn, timesteps, 50)``
 
         Returns
         -------
@@ -85,19 +87,38 @@ class Elmo(torch.nn.Module, Registrable, Archivable):
         ``'mask'``:  ``torch.autograd.Variable``
             Shape ``(batch_size, timesteps)`` long tensor with sequence mask.
         """
-        bilm_output = self._elmo_lstm(inputs)
+        # reshape the input if needed
+        original_shape = inputs.size()
+        timesteps, num_characters = original_shape[-2:]
+        if len(original_shape) > 3:
+            reshaped_inputs = inputs.view(-1, timesteps, num_characters)
+        else:
+            reshaped_inputs = inputs
+
+        # run the biLM
+        bilm_output = self._elmo_lstm(reshaped_inputs)
         layer_activations = bilm_output['activations']
         mask_with_bos_eos = bilm_output['mask']
 
-        elmo_representations = []
+        # compute the elmo representations
+        representations = []
         for scalar_mix in self._scalar_mixes:
             representation_with_bos_eos = scalar_mix.forward(layer_activations, mask_with_bos_eos)
             representation_without_bos_eos, mask_without_bos_eos = remove_sentence_boundaries(
                     representation_with_bos_eos, mask_with_bos_eos
             )
-            elmo_representations.append(representation_without_bos_eos)
+            representations.append(representation_without_bos_eos)
 
-        return {'elmo_representations': elmo_representations, 'mask': mask_without_bos_eos}
+        # reshape if necessary
+        if len(original_shape) > 3:
+            mask = mask_without_bos_eos.view(original_shape[:-1])
+            elmo_representations = [representation.view(original_shape[:-1] + (-1, ))
+                                    for representation in representations]
+        else:
+            mask = mask_without_bos_eos
+            elmo_representations = representations
+
+        return {'elmo_representations': elmo_representations, 'mask': mask}
 
     @classmethod
     def from_params(cls, params: Params) -> 'Elmo':

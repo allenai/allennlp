@@ -161,7 +161,7 @@ class SimpleSeq2Seq(Model):
             output_projections = self._output_projection_layer(decoder_hidden)
             # list of (batch_size, 1, num_classes)
             step_logits.append(output_projections.unsqueeze(1))
-            class_probabilities = F.softmax(output_projections)
+            class_probabilities = F.softmax(output_projections, dim=-1)
             _, predicted_classes = torch.max(class_probabilities, 1)
             step_probabilities.append(class_probabilities.unsqueeze(1))
             last_predictions = predicted_classes
