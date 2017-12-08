@@ -11,10 +11,10 @@ from allennlp.models.archival import load_archive
 
 
 class ArchivalTest(AllenNlpTestCase):
-    def test_archiving(self):
-        super(ArchivalTest, self).setUp()
+    def setUp(self):
+        super().setUp()
 
-        params = Params({
+        self.params = Params({
                 "model": {
                         "type": "simple_tagger",
                         "text_field_embedder": {
@@ -40,11 +40,12 @@ class ArchivalTest(AllenNlpTestCase):
                 }
         })
 
+    def test_archiving(self):
         # copy params, since they'll get consumed during training
-        params_copy = copy.deepcopy(params.as_dict())
+        params_copy = copy.deepcopy(self.params.as_dict())
 
         # `train_model` should create an archive
-        model = train_model(params, serialization_dir=self.TEST_DIR)
+        model = train_model(self.params, serialization_dir=self.TEST_DIR)
 
         archive_path = os.path.join(self.TEST_DIR, "model.tar.gz")
 

@@ -129,7 +129,7 @@ class Elmo(torch.nn.Module, Registrable, Archivable):
         params.assert_empty(cls.__name__)
 
         instance = cls(options_file, weight_file, num_output_representations, do_layer_norm)
-        instance._param_history = params.history
+        instance._param_history = params.history  # pylint: disable=protected-access
         return instance
 
     @overrides
