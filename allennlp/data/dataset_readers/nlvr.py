@@ -8,7 +8,6 @@ import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import JsonDict
 from allennlp.data.instance import Instance
 from allennlp.data.fields import TextField, ListField, LabelField
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
@@ -25,7 +24,15 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("nlvr")
 class NlvrDatasetReader(DatasetReader):
     """
-    ``DatasetReader`` for the NLVR domain.
+    ``DatasetReader`` for the NLVR domain. In addition to the usual methods for reading files and instances
+    from text, this class contains a method for creating an agenda of actions that each sentence triggers.
+
+    Parameters
+    ----------
+    tokenizer : ``Tokenizer``
+        The tokenizer used for sentences in NLVR.
+    token_indexers : ``Dict[str, TokenIndexer]``
+        Token indexers for tokens in input sentences.
     """
     def __init__(self,
                  tokenizer: Tokenizer = None,
@@ -49,28 +56,24 @@ class NlvrDatasetReader(DatasetReader):
                 line = line.strip("\n")
                 if not line:
                     continue
-                data = json.loads(line)
-                sentence = data["sentence"]
-                label = data["label"]
-                structured_rep = data["structured_rep"]
-                instances.append(self.text_to_instance(sentence, structured_rep, label))
+                instances.append(self.text_to_instance(line))
         if not instances:
             raise ConfigurationError("No instances read!")
         return Dataset(instances)
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         sentence: str,
-                         structured_rep: JsonDict,
-                         label: str = None) -> Instance:
-        """
-        TODO
-        """
-        # pylint: disable=arguments-differ,unused-argument
-        # TODO(pradeep): Use a knowledgegraph field or a new field for the structured rep.
+    def text_to_instance(self, json_line: str) -> Instance:
+        # pylint: disable=arguments-differ
+        # TODO(pradeep): Use a ``KnowledgeGraphField`` or a new field for the structured rep, for an
+        # interface with ``NlvrWorld`` to execute logical forms.
+        data = json.loads(json_line)
+        sentence = data["sentence"]
+        label = data["label"] if "label" in data else None
+        structured_rep = data["structured_rep"]  # pylint: disable=unused-variable
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)
         agenda = self._get_agenda_for_sentence(sentence)
+        assert agenda, "No agenda found for sentence: %s" % sentence
         agenda_field = ListField([LabelField(action, label_namespace='actions') for action in agenda])
         fields = {"sentence": sentence_field, "agenda": agenda_field}
         if label:

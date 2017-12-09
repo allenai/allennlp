@@ -32,6 +32,7 @@ class BeamSearchTrainer(DecoderTrainer):
         while states and num_steps < max_num_steps:
             next_states = []
             grouped_state = states[0].combine_states(states)
+            # These states already come sorted.
             for next_state in decode_step.take_step(grouped_state):
                 finished, not_finished = next_state.split_finished()
                 if finished is not None:
@@ -40,7 +41,6 @@ class BeamSearchTrainer(DecoderTrainer):
                     next_states.append(not_finished)
             states = next_states[:self._beam_size]
             num_steps += 1
-
 
         batch_scores = self._group_scores_by_batch(finished_states)
         loss = 0

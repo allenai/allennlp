@@ -70,14 +70,12 @@ class NlvrSemanticParser(Model):
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function,
                                              start_index=self._start_index)
-
     @overrides
     def forward(self,
                 sentence: Dict[str, torch.LongTensor],
                 agenda: torch.LongTensor,
                 label: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-        # pylint: disable=unused-argument
+        # pylint: disable=arguments-differ,unused-argument
         """
         Decoder logic for producing type constrained target sequences, that maximize coverage of their
         respective agendas. This will change soon, to include a denotation based score as well, once we have
@@ -131,9 +129,6 @@ class NlvrSemanticParser(Model):
                                    best_final_states[i][0].action_history[0]]
                 best_action_sequences.append(action_sequence)
             outputs['best_action_sequence'] = best_action_sequences
-            #for action_sequence in best_action_sequences:
-            #    print(action_sequence, file=self.log_file)
-            #print("\n-----------", file=self.log_file)
         return outputs
 
     @classmethod
@@ -235,6 +230,7 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
                             max_actions: int = None) -> List[NlvrDecoderState]:
         # TODO(pradeep): We do not have a notion of ``allowed_actions`` for NLVR for now, but this may be
         # applicable in the future.
+        # TODO(pradeep): log_probs contains NaNs sometimes. Find out why and fix it.
         probs = torch.exp(log_probs)
         # batch_index -> [(group_index, action, checklist, score)]
         next_states_info: Dict[int, List[Tuple[int, int, Variable, Variable]]] = defaultdict(list)
