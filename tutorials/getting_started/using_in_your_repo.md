@@ -53,7 +53,7 @@ processing" venue, a "machine learning" venue, or an "artificial intelligence" v
 scare quotes are because this is a totally artificial task, and there aren't solid lines between
 these fields).
 
-We'll use the [open research corpus](labs.semanticscholar.org/corpus/) provided by the academic
+We'll use the [open research corpus](http://labs.semanticscholar.org/corpus/) provided by the academic
 search engine [Semantic Scholar](http://semanticscholar.org), with a heuristically-edited "venue"
 field.  You can follow the link to see the full specification of this data, but it's provided as a
 JSON-lines file, where each JSON blob has at least these fields:
