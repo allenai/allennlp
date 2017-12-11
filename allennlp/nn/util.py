@@ -870,13 +870,14 @@ def add_positional_features(tensor: torch.Tensor,
     """
     _, timesteps, hidden_dim = tensor.size()
 
-    timestep_range = torch.arange(0, timesteps)
+    timestep_range = get_range_vector(timesteps, tensor.is_cuda).data.float()
     # We're generating both cos and sin frequencies,
     # so half for each.
     num_timescales = hidden_dim // 2
+    timescale_range = get_range_vector(num_timescales, tensor.is_cuda).data.float()
 
     log_timescale_increments = math.log(float(max_timescale) / float(min_timescale)) / (num_timescales - 1)
-    inverse_timescales = min_timescale * torch.exp(torch.arange(0, num_timescales)) * -log_timescale_increments
+    inverse_timescales = min_timescale * torch.exp(timescale_range) * -log_timescale_increments
 
     # Broadcasted multiplication - shape (timesteps, num_timescales)
     scaled_time = timestep_range.unsqueeze(1) * inverse_timescales.unsqueeze(0)
