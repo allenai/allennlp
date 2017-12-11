@@ -24,10 +24,13 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
 
         - There is a left-hand side (LHS) and a right-hand side (RHS), where the LHS is always a
           non-terminal, and the RHS is either a terminal, a non-terminal, or a sequence of
-          non-terminals (for now, you can't mix terminals and non-terminals in the RHS).
-        - The LHS and the RHS are joined by " -> ".
-        - Non-terminal sequences in the RHS are formatted as "[NT1, NT2, ...]".
-        - There are no spaces in terminals or non-terminals.
+          non-terminals (for now, you can't mix terminals and non-terminals in the RHS, because we
+          treat a sequence of non-terminals as if it's a `single` non-terminal for indexing
+          purposes).
+        - The LHS and the RHS are joined by " -> ", and this sequence of characters appears nowhere
+          else in the rule.
+        - Non-terminal sequences in the RHS are formatted as "[NT1, NT2, ...]" (not used here, but
+          it required by some models that consume this ``Field``).
         - Terminals never begin with '<' (which indicates a functional type) or '[' (which
           indicates a non-terminal sequence).
 
@@ -38,6 +41,14 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
     likely will be able to just use an embedding for non-terminals.  Using ``TokenIndexers`` here
     lets us be flexible about these decisions, so you can represent and then embed the rules
     however you want to.
+
+    While we split indexing decisions here on terminals vs. nonterminals, another reasonable way to
+    split the indexing decision is on "built-in" vs. instance-specific.  That is, if you have a
+    terminal production that is part of your grammar, like "<#1,#1> -> identity", you might want to
+    just learn an embedding for the terminal "identity", instead of treating it like you might
+    treat a terminal like "my_instance_specific_function".  You can accomplish this by just adding
+    all built-in terminals to the set of ``nonterminal_types`` passed in to this ``Field`` 's
+    constructor, and they will get indexed with the ``nonterminal_indexers``.
 
     We currently treat non-terminal sequences as a single non-terminal token from the
     ``TokenIndexers`` point of view.  The alternative here would be to represent each non-terminal
@@ -50,7 +61,9 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
     to handle batching differently in models that use ``ProductionRuleFields``.
 
     In a model, this will get represented as a ``ProductionRuleArray``, which is defined above as
-    ``Dict[str, Tuple[str, bool, Dict[str, torch.Tensor]]]``.
+    ``Dict[str, Tuple[str, bool, Dict[str, torch.Tensor]]]``.  In practice, this dictionary will
+    look like: ``{"left": (LHS_string, left_is_nonterminal, padded_LHS_tensor_dict),
+    "right": (RHS_string, right_is_nonterminal, padded_RHS_tensor_dict)}``.
 
     Parameters
     ----------
