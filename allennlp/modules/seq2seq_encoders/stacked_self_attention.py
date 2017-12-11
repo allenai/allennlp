@@ -1,18 +1,21 @@
+from typing import List
 from overrides import overrides
 import torch
 from torch.nn.modules import Dropout
 
 from allennlp.common import Params
 from allennlp.nn.util import add_positional_features
+from allennlp.nn.activations import Activation
 from allennlp.modules.similarity_functions import MultiHeadedSimilarity, SimilarityFunction, DotProductSimilarity
-from allennlp.modules import FeedForward, LayerNorm
+from allennlp.modules.feedforward import FeedForward
+from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
 
 
 @Seq2SeqEncoder.register("stacked_self_attention")
 class StackedSelfAttentionEncoder(Seq2SeqEncoder):
-
+    # pylint: disable=line-too-long
     """
     Implements a stacked self-attention encoder similar to the Transformer
     architecture in `Attention is all you Need
@@ -65,16 +68,17 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         super(StackedSelfAttentionEncoder, self).__init__()
 
         self._use_positional_encoding = use_positional_encoding
-        self._attention_layers = []
-        self._feedfoward_layers = []
-        self._layer_norm_layers = []
+        self._attention_layers: List[IntraSentenceAttentionEncoder] = []
+        self._feedfoward_layers: List[FeedForward] = []
+        self._layer_norm_layers: List[LayerNorm] = []
 
         feedfoward_input_dim = input_dim
         for i in range(num_layers):
             # Project output of attention encoder through a feedforward network
             # and back to the input size for the next layer.
             feedfoward = FeedForward(feedfoward_input_dim,
-                                     activations=[torch.nn.ReLU(), lambda x: x],
+                                     activations=[Activation.by_name('relu')(),
+                                                  Activation.by_name('linear')()],
                                      hidden_dims=[non_linear_hidden_dim, hidden_dim],
                                      num_layers=2)
 
@@ -112,7 +116,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor):
+    def forward(self, inputs: torch.Tensor, mask: torch.Tensor): # pylint: disable=arguments-differ
         if self._use_positional_encoding:
             output = add_positional_features(inputs)
         else:
@@ -121,8 +125,6 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                                                                          self._feedfoward_layers,
                                                                          self._layer_norm_layers)):
             cached_input = output
-            # highway layers for all steps.
-
             # shape (batch_size, timesteps, input_size)
             non_linear_output = feedforward(output)
             if index != 0:
@@ -137,26 +139,21 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
     @classmethod
     def from_params(cls, params: Params):
         input_dim = params.pop('input_dim')
+        hidden_dim = params.pop('hidden_dim')
         projection_dim = params.pop('projection_dim', None)
         non_linear_hidden_dim = params.pop("non_linear_hidden_dim")
         num_layers = params.pop("num_layers", 2)
         num_attention_heads = params.pop('num_attention_heads', 3)
         internal_similarity = SimilarityFunction.from_params(params.pop('internal_similarity', {}))
+        use_positional_encoding = params.pop('use_positional_encoding', True)
         dropout_prob = params.pop("dropout_prob", 0.2)
 
         return cls(input_dim=input_dim,
+                   hidden_dim=hidden_dim,
                    non_linear_hidden_dim=non_linear_hidden_dim,
                    projection_dim=projection_dim,
                    num_layers=num_layers,
                    num_attention_heads=num_attention_heads,
                    internal_similarity=internal_similarity,
+                   use_positional_encoding=use_positional_encoding,
                    dropout_prob=dropout_prob)
-
-
-
-
-
-
-
-
-

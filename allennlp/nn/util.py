@@ -840,6 +840,7 @@ def remove_sentence_boundaries(tensor: torch.Tensor,
 def add_positional_features(tensor: torch.Tensor,
                             min_timescale: float = 1.0,
                             max_timescale: float = 1.0e4):
+    # pylint: disable=line-too-long
     """
     Implements the frequency based positional encoding described
     in `Attention is all you Need
