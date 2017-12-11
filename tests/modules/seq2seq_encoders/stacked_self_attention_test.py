@@ -7,9 +7,7 @@ from allennlp.modules.seq2seq_encoders import StackedSelfAttentionEncoder
 
 
 class TestStackedSelfAttention(AllenNlpTestCase):
-
     def test_get_dimension_is_correct(self):
-
         encoder = StackedSelfAttentionEncoder(input_dim=9,
                                               hidden_dim=12,
                                               projection_dim=7,
