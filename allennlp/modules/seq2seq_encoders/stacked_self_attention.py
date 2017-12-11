@@ -31,6 +31,8 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
     ----------
     input_dim : ``int``, required.
         The input dimension of the encoder.
+    hidden_dim : ``int``, required.
+        The hidden dimension used for the self attention layers.
     projection_dim : ``int``, required.
         The dimension of the linear projections for the self-attention layers.
     non_linear_hidden_dim : ``int``, required.
@@ -52,6 +54,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
     def __init__(self,
                  input_dim: int,
+                 hidden_dim: int,
                  projection_dim: int,
                  non_linear_hidden_dim: int,
                  num_layers: int,
@@ -66,41 +69,40 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         self._feedfoward_layers = []
         self._layer_norm_layers = []
 
+        feedfoward_input_dim = input_dim
         for i in range(num_layers):
             # Project output of attention encoder through a feedforward network
             # and back to the input size for the next layer.
-            feedfoward = FeedForward(input_dim,
+            feedfoward = FeedForward(feedfoward_input_dim,
                                      activations=[torch.nn.ReLU(), lambda x: x],
-                                     hidden_dims=[non_linear_hidden_dim, input_dim],
+                                     hidden_dims=[non_linear_hidden_dim, hidden_dim],
                                      num_layers=2)
 
             self.add_module(f"feedforward_{i}", feedfoward)
             self._feedfoward_layers.append(feedfoward)
 
             similarity_function = MultiHeadedSimilarity(num_attention_heads,
-                                                        tensor_1_dim=input_dim,
+                                                        tensor_1_dim=hidden_dim,
                                                         internal_similarity=internal_similarity)
-            self_attention = IntraSentenceAttentionEncoder(input_dim,
+            self_attention = IntraSentenceAttentionEncoder(hidden_dim,
                                                            projection_dim,
                                                            similarity_function,
                                                            num_attention_heads,
                                                            combination='1,2',
-                                                           output_projection_dim=input_dim)
+                                                           output_projection_dim=hidden_dim)
 
             self.add_module(f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 
             layer_norm = LayerNorm(self_attention.get_output_dim())
-            self.add_module(f"layer_norm_{i}", feedfoward)
+            self.add_module(f"layer_norm_{i}", layer_norm)
             self._layer_norm_layers.append(layer_norm)
 
-        self._input_dim = input_dim
-        # This is equal to projection_dim + hidden_dim, because the output of the self
-        # attention layer is the concatenation of the projected attention
-        # representation and the representation of the input token from the feedfoward
-        # network.
-        self._output_dim = self._attention_layers[-1].get_output_dim()
+            feedfoward_input_dim = hidden_dim
+
         self._dropout = Dropout(p=dropout_prob)
+        self._input_dim = input_dim
+        self._output_dim = self._attention_layers[-1].get_output_dim()
 
     @overrides
     def get_input_dim(self) -> int:
@@ -115,15 +117,19 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             output = add_positional_features(inputs)
         else:
             output = inputs
-        for attention, feedforward, layer_norm in zip(self._attention_layers,
-                                                      self._feedfoward_layers,
-                                                      self._layer_norm_layers):
+        for index, (attention, feedforward, layer_norm) in enumerate(zip(self._attention_layers,
+                                                                         self._feedfoward_layers,
+                                                                         self._layer_norm_layers)):
             cached_input = output
             # highway layers for all steps.
 
             # shape (batch_size, timesteps, input_size)
-            non_linear_output = feedforward(output) + cached_input
-            # shape (batch_size, )
+            non_linear_output = feedforward(output)
+            if index != 0:
+                # First layer might have the wrong size for highway
+                # layers, so we exclude it here.
+                non_linear_output += cached_input
+            # shape (batch_size, hidden_dim)
             attention_output = attention(non_linear_output, mask) + non_linear_output
             output = layer_norm(attention_output)
         return output
