@@ -2,6 +2,7 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
+from collections import defaultdict
 from typing import Dict, List, Optional
 
 from overrides import overrides
@@ -127,3 +128,15 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         # for padding reasons in ListField.
         text_field._indexed_tokens = {name: [] for name in self._token_indexers.keys()}
         return text_field
+
+    @overrides
+    def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
+        # pylint: disable=no-self-use
+        # This is creating a dict of {token_indexer_key: batch_tensor} for each token indexer used
+        # to index this field.
+        token_indexer_key_to_batch_dict: Dict[str, List[torch.Tensor]] = defaultdict(list)
+        for encoding_name_dict in tensor_list:
+            for indexer_name, tensor in encoding_name_dict.items():
+                token_indexer_key_to_batch_dict[indexer_name].append(tensor)
+        return {indexer_name: torch.stack(tensor_list)
+                for indexer_name, tensor_list in token_indexer_key_to_batch_dict.items()}
