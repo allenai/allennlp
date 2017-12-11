@@ -2,6 +2,7 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
+from collections import defaultdict
 from typing import Dict, List, Optional
 
 from overrides import overrides
