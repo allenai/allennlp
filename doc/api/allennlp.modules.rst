@@ -25,4 +25,5 @@ allennlp.modules
    allennlp.modules.time_distributed
    allennlp.modules.token_embedders
    allennlp.modules.scalar_mix
+   allennlp.modules.layer_norm
 
