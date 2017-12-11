@@ -24,8 +24,8 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
     This encoder combines 3 layers in a 'block':
     1. A 2 layer FeedForward network.
     2. Multi-headed self attention, which uses 2 learnt linear projections
-     to perform a dot-product similarity between every pair of elements
-     scaled by the square root of the sequence length.
+       to perform a dot-product similarity between every pair of elements
+       scaled by the square root of the sequence length.
     3. Layer Normalisation.
 
     These are then stacked into ``num_layers`` layers.
