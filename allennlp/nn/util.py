@@ -875,14 +875,12 @@ def add_positional_features(tensor: torch.Tensor,
     # so half for each.
     num_timescales = hidden_dim // 2
     timescale_range = get_range_vector(num_timescales, tensor.is_cuda).data.float()
-    print(timescale_range)
 
     log_timescale_increments = math.log(float(max_timescale) / float(min_timescale)) / float(num_timescales - 1)
     inverse_timescales = min_timescale * torch.exp(timescale_range * -log_timescale_increments)
 
     # Broadcasted multiplication - shape (timesteps, num_timescales)
     scaled_time = timestep_range.unsqueeze(1) * inverse_timescales.unsqueeze(0)
-    print(scaled_time)
     # shape (timesteps, 2 * num_timescales)
     sinusoids = Variable(torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)], 1))
     if hidden_dim % 2 != 0:
