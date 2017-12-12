@@ -108,6 +108,7 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
 
     # Load config
     config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME), overrides)
+    config.loading_from_archive = True
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),
