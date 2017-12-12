@@ -3,7 +3,7 @@ A ``KnowledgeGraph`` is a graphical representation of some structured knowledge 
 table, figure or an explicit knowledge base.
 """
 
-from typing import Dict, List, Set
+from typing import Dict, List
 
 
 class KnowledgeGraph:
@@ -37,6 +37,8 @@ class KnowledgeGraph:
         """
         return self._neighbors[entity]
 
-    def get_all_entities(self) -> Set[str]:
-        # This is technically a KeysView, not a Set, but it's close enough.
-        return self._neighbors.keys()  # type: ignore
+    def get_all_entities(self) -> List[str]:
+        # We return a sorted list here so we get guaranteed consistent ordering, for
+        # reproducibility's sake.  The ordering will affect the name mapping that we do, which
+        # affects the intermediate nltk logical forms.
+        return sorted(self._neighbors.keys())

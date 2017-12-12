@@ -2,7 +2,7 @@
 Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/releases/tag/v1.0.2).
 """
 
-from typing import Any, Dict, List, Union
+from typing import Dict, List, Union
 import gzip
 import logging
 import os
@@ -23,7 +23,6 @@ from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListFie
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
-from allennlp.data.semparse.type_declarations import type_declaration as types
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 
@@ -135,7 +134,7 @@ class WikiTablesDatasetReader(DatasetReader):
         ----------
         question : ``str``
             Input question
-        table_info : ``str`` or ``Dict[str, Any]``
+        table_info : ``str`` or ``JsonDict``
             Table filename or the table content itself, as a dict. See
             ``TableKnowledgeGraph.read_from_json`` for the expected format.
         dpd_output : List[str] (optional)
@@ -178,11 +177,8 @@ class WikiTablesDatasetReader(DatasetReader):
             # ProductionRuleFields.
             action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
             action_sequence_fields: List[Field] = []
-            for form, expression, sequence in zip(dpd_output, expressions, action_sequences):
+            for sequence in action_sequences:
                 index_fields: List[Field] = []
-                print(form)
-                print(expression)
-                print(sequence)
                 for production_rule in sequence:
                     index_fields.append(IndexField(action_map[production_rule], action_field))
                 action_sequence_fields.append(ListField(index_fields))

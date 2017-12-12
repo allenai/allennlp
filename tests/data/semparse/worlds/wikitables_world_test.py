@@ -1,19 +1,23 @@
 # pylint: disable=no-self-use,invalid-name
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.semparse.knowledge_graphs.table_knowledge_graph import TableKnowledgeGraph
 from allennlp.data.semparse.worlds import WikiTablesWorld
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.tokenizers import Token
 
 
 class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         table_kg = TableKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/sample_table.tsv")
-        self.world = WikiTablesWorld(table_kg)
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '?']]
+        self.world = WikiTablesWorld(table_kg, question_tokens)
 
     def test_world_processes_sempre_forms_correctly(self):
         sempre_form = "((reverse fb:row.row.year) (fb:row.row.league fb:cell.usl_a_league))"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "R(C0,C1(cell:usl_a_league))"
+        # We add columns to the name mapping in sorted order, so "league" and "year" end up as C2
+        # and C6.
+        assert str(expression) == "R(C6,C2(cell:usl_a_league))"
 
     def test_world_returns_correct_actions_with_reverse(self):
         sempre_form = "((reverse fb:row.row.year) (fb:row.row.league fb:cell.usl_a_league))"

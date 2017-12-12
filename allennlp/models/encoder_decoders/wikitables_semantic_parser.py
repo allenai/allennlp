@@ -12,7 +12,7 @@ from allennlp.common import Params
 from allennlp.common import util as common_util
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.data.semparse.type_declarations.type_declaration import START_TYPE
+from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
@@ -242,37 +242,6 @@ class WikiTablesSemanticParser(Model):
                    action_namespace=action_namespace,
                    action_embedding_dim=action_embedding_dim,
                    attention_function=attention_function)
-
-
-def _get_type_productions(vocab: Vocabulary, namespace: str) -> Dict[str, List[int]]:
-    """
-    Temporary method, until we get the type declaration (grammar) to build this for us.
-
-    This method takes all of the actions that we saw in the training data and constructs a
-    "grammar" from them, where here "grammar" means "valid productions for any type".  That is, if
-    we see the action "r -> [<e,r>, e]", we add "[<e,r>, e]" to the valid productions for type "r"
-    (in practice, we just add the action's ID in the vocabulary, which amounts to the same thing).
-    This is effectively making a context-free assumption, that any production rule we ever see used
-    is valid in any context.  This assumption isn't actually true, especially for terminal
-    productions, but it will do for now.
-
-    We return the list of productions for each type as a ``List[int]``, where the ``int`` is the
-    `id` of the production rule in the vocabulary.  This is another thing that needs to change, as
-    we will have production rules at test time that we've never seen at training time, and thus
-    won't be able to predict them.  But we'll worry about that later.
-    """
-    type_productions: Dict[str, List[int]] = defaultdict(list)
-    for action_index in range(vocab.get_vocab_size(namespace)):
-        action = vocab.get_token_from_index(action_index, namespace)
-        if ' -> ' in action:
-            non_terminal, _ = action.split(' -> ')
-            type_productions[non_terminal].append(action_index)
-        else:
-            # The first action we predict is the type of the logical form, not a production rule.
-            # These actions don't have ' -> ' in them, and are just the type.  They are only valid
-            # productions in the initial state of the decoder.
-            type_productions[START_SYMBOL].append(action_index)
-    return type_productions
 
 
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that

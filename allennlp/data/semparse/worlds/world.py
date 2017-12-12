@@ -59,15 +59,17 @@ class World:
         # Python 3.5 syntax for merging two dictionaries.
         return {**self.global_type_signatures, **self.local_type_signatures}
 
-    def all_possible_actions(self) -> Set[str]:
-        valid_actions_dict = types.get_valid_actions(self.get_name_mapping(),
-                                                     self.get_type_signatures(),
-                                                     self.get_basic_types(),
-                                                     num_nested_lambdas=self._num_nested_lambdas)
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        return types.get_valid_actions(self.get_name_mapping(),
+                                       self.get_type_signatures(),
+                                       self.get_basic_types(),
+                                       num_nested_lambdas=self._num_nested_lambdas)
+
+    def all_possible_actions(self) -> List[str]:
         all_actions = set()
-        for key, action_set in valid_actions_dict.items():
+        for action_set in self.get_valid_actions().values():
             all_actions.update(action_set)
-        return all_actions
+        return sorted(all_actions)
 
     def get_basic_types(self) -> Set[Type]:
         raise NotImplementedError

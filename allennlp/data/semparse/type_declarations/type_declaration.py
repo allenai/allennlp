@@ -7,7 +7,7 @@ improvements:
 We also extend NLTK's ``LogicParser`` to define a ``DynamicTypeLogicParser`` that knows how to deal with the
 two improvements above.
 """
-from typing import Dict, Set, Optional, List, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 from collections import defaultdict
 import re
 
@@ -355,8 +355,8 @@ def _get_placeholder_actions(complex_type: ComplexType,
                     application_type = complex_type.get_application_type(input_type)
                     production = _make_production_string(application_type, [complex_type, input_type])
                     valid_actions[application_type].add(production)
-            for head, production in _get_complex_type_productions(application_type):
-                valid_actions[head].add(production)
+                    for head, production in _get_complex_type_productions(application_type):
+                        valid_actions[head].add(production)
     else:
         for basic_type in basic_types:
             second_type = _substitute_placeholder_type(complex_type.second, basic_type)
@@ -370,7 +370,7 @@ def get_valid_actions(name_mapping: Dict[str, str],
                       type_signatures: Dict[str, Type],
                       basic_types: Set[Type],
                       valid_starting_types: Set[Type] = None,
-                      num_nested_lambdas: int = 0) -> Dict[str, Set[str]]:
+                      num_nested_lambdas: int = 0) -> Dict[str, List[str]]:
     """
     Generates all the valid actions starting from each non-terminal. For terminals of a specific
     type, we simply add a production from the type to the terminal. Among those types, we keep
@@ -421,12 +421,10 @@ def get_valid_actions(name_mapping: Dict[str, str],
         # Type to terminal productions.
         for substituted_type in _substitute_any_type(name_type, basic_types):
             valid_actions[substituted_type].add(_make_production_string(substituted_type, name))
-            print(str(substituted_type), substituted_type, name)
         # Keeping track of complex types.
         if isinstance(name_type, ComplexType) and name_type != ANY_TYPE:
             complex_types.add(name_type)
 
-    print('COMPLEX TYPES')
     for complex_type in complex_types:
         if isinstance(complex_type, PlaceholderType):
             _get_placeholder_actions(complex_type, basic_types, valid_actions)
@@ -443,15 +441,11 @@ def get_valid_actions(name_mapping: Dict[str, str],
     for i in range(num_nested_lambdas):
         lambda_var = chr(ord('x') + i)
         for key, values in valid_actions.items():
-            if str(key) == 'e':
-                print('e:', values)
             if isinstance(key, ComplexType) and not isinstance(key, PlaceholderType):
-                production_string = _make_production_string(key.first,
-                                                            ['lambda ' + lambda_var, key.second])
+                production_string = _make_production_string(key, ['lambda ' + lambda_var, key.second])
                 values.add(production_string)
-                print(str(key), production_string)
 
-    valid_action_strings = {str(key): value for key, value in valid_actions.items()}
+    valid_action_strings = {str(key): sorted(value) for key, value in valid_actions.items()}
     return valid_action_strings
 
 

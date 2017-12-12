@@ -11,7 +11,6 @@ from overrides import overrides
 
 from allennlp.data.tokenizers import Token
 from allennlp.data.semparse.worlds.world import World
-from allennlp.data.semparse.type_declarations import type_declaration as base_types
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 
@@ -58,6 +57,7 @@ class WikiTablesWorld(World):
         ("one", "two"), but for now we just look for literal digits, and make up for missing
         ordinals and cardinals by adding all single-digit numbers as possible numbers to output.
         """
+        # pylint: disable=no-self-use
         numbers = []
         for token in tokens:
             # We'll use a check for float(text) to find numbers, because text.isdigit() doesn't
