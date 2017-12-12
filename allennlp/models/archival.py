@@ -106,6 +106,7 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
     with tarfile.open(archive_file, 'r:gz') as archive:
         archive.extractall(tempdir)
 
+    # Check for supplemental files in archive
     fta_filename = os.path.join(tempdir, _FTA_NAME)
     if os.path.exists(fta_filename):
         with open(fta_filename, 'r') as fta_file:
