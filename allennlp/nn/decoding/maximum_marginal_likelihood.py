@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import torch
 from torch.autograd import Variable
@@ -32,7 +32,7 @@ class MaximumMarginalLikelihood(DecoderTrainer):
     def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               targets: Union[torch.Tensor, List[List[List[Action]]]],
+               targets: Union[torch.Tensor, List[List[List[int]]]],
                target_mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         allowed_transitions = self._create_allowed_transitions(targets, target_mask)
         finished_states = []
@@ -86,7 +86,7 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         We use this to prune the set of actions we consider during decoding, because we only need
         to score the sequences in ``targets``.
         """
-        batched_allowed_transitions: List[Dict[Tuple[Action, ...], Set[Action]]] = []
+        batched_allowed_transitions: List[Dict[Tuple[int, ...], Set[int]]] = []
 
         if not isinstance(targets, list):
             assert targets.dim() == 3, "targets tensor needs to be batched!"

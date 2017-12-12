@@ -3,7 +3,7 @@ A ``KnowledgeGraph`` is a graphical representation of some structured knowledge 
 table, figure or an explicit knowledge base.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Set
 
 
 class KnowledgeGraph:
@@ -37,5 +37,5 @@ class KnowledgeGraph:
         """
         return self._neighbors[entity]
 
-    def get_all_entities(self):
+    def get_all_entities(self) -> Set[str]:
         return self._neighbors.keys()

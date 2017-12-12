@@ -3,31 +3,36 @@ import pyparsing
 
 from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
 
-from allennlp.data.semparse.type_declarations.type_declaration import DynamicTypeLogicParser
+from allennlp.data.semparse.type_declarations import type_declaration as types
 
 
 class World:
     """
-    Base class for defining a world in a new domain. This class defines a method to translate a logical form
-    as per a naming convention that works with NLTK's ``LogicParser``. The sub-classes can decide on the
-    convention by overriding the ``_map_name`` method that does token level mapping. This class also defines
-    methods for transforming logical form strings into parsed ``Expressions``, and ``Expressions`` into
-    action sequences.
+    Base class for defining a world in a new domain. This class defines a method to translate a
+    logical form as per a naming convention that works with NLTK's ``LogicParser``. The sub-classes
+    can decide on the convention by overriding the ``_map_name`` method that does token level
+    mapping. This class also defines methods for transforming logical form strings into parsed
+    ``Expressions``, and ``Expressions`` into action sequences.
 
     Parameters
     ----------
     constant_type_prefixes : ``Dict[str, BasicType]`` (optional)
-        If you have an unbounded number of constants in your domain, you are required to add prefixes to their
-        names to denote their types. This is the mapping from prefixes to types.
+        If you have an unbounded number of constants in your domain, you are required to add
+        prefixes to their names to denote their types. This is the mapping from prefixes to types.
     global_type_signatures : ``Dict[str, Type]`` (optional)
         A mapping from translated names to their types.
     global_name_mapping : ``Dict[str, str]`` (optional)
         A name mapping from the original names in the domain to the translated names.
+    num_nested_lambdas : ``int`` (optional)
+        Does the language used in this ``World`` permit lambda expressions?  And if so, how many
+        nested lambdas do we need to worry about?  This is important when considering the space of
+        all possible actions, which we need to enumerate a priori for the parser.
     """
     def __init__(self,
                  constant_type_prefixes: Dict[str, BasicType] = None,
                  global_type_signatures: Dict[str, Type] = None,
-                 global_name_mapping: Dict[str, str] = None) -> None:
+                 global_name_mapping: Dict[str, str] = None,
+                 num_nested_lambdas: int = 0) -> None:
         # NLTK has a naming convention for variable types. If the world has predicate or entity names beyond
         # what's defined in the COMMON_NAME_MAPPING, they need to be added to this dict.
         # We initialize this dict with common predicate names and update it as we process logical forms.
@@ -39,8 +44,33 @@ class World:
         # We keep a reverse map as well to put the terminals back in action sequences.
         self.reverse_name_mapping = {mapped_name: name for name, mapped_name in self.global_name_mapping.items()}
         type_prefixes = constant_type_prefixes or {}
-        self._logic_parser = DynamicTypeLogicParser(constant_type_prefixes=type_prefixes,
-                                                    type_signatures=self.global_type_signatures)
+        self._num_nested_lambdas = num_nested_lambdas
+        if num_nested_lambdas > 3:
+            raise NotImplementedError("For ease of implementation, we currently only handle at "
+                                      "most three nested lambda expressions")
+        self._logic_parser = types.DynamicTypeLogicParser(constant_type_prefixes=type_prefixes,
+                                                          type_signatures=self.global_type_signatures)
+
+    def get_name_mapping(self) -> Dict[str, str]:
+        # Python 3.5 syntax for merging two dictionaries.
+        return {**self.global_name_mapping, **self.local_name_mapping}
+
+    def get_type_signatures(self) -> Dict[str, str]:
+        # Python 3.5 syntax for merging two dictionaries.
+        return {**self.global_type_signatures, **self.local_type_signatures}
+
+    def all_possible_actions(self) -> Set[str]:
+        valid_actions_dict = types.get_valid_actions(self.get_name_mapping(),
+                                                     self.get_type_signatures(),
+                                                     self.get_basic_types(),
+                                                     num_nested_lambdas=self._num_nested_lambdas)
+        all_actions = set()
+        for key, action_set in valid_actions_dict.items():
+            all_actions.update(action_set)
+        return all_actions
+
+    def get_basic_types(self) -> Set[Type]:
+        raise NotImplementedError
 
     def parse_logical_form(self, logical_form: str) -> Expression:
         """
@@ -53,6 +83,13 @@ class World:
         type_signature = self.local_type_signatures.copy()
         type_signature.update(self.global_type_signatures)
         return self._logic_parser.parse(translated_string, signature=type_signature)
+
+    def get_action_sequence(self, expression: Expression) -> List[str]:
+        """
+        Returns the sequence of actions (as strings) that resulted in the given expression.
+        """
+        # Starting with the type of the whole expression
+        return self._get_transitions(expression, ["%s -> %s" % (types.START_TYPE, expression.type)])
 
     def _process_nested_expression(self, nested_expression) -> str:
         """
@@ -96,35 +133,30 @@ class World:
         if name_type:
             self.local_type_signatures[translated_name] = name_type
 
-    def get_action_sequence(self, expression: Expression) -> List[str]:
-        """
-        Returns the sequence of actions (as strings) that resulted in the given expression.
-        """
-        def _get_transitions(expression: Expression,
-                             current_transitions: List[str]) -> List[str]:
-            expression_type = expression.type
-            try:
-                # ``Expression.visit()`` takes two arguments: the first one is a function applied on each
-                # sub-expression and the second is a combinator that is applied to the list of values returned
-                # from the function applications. We just want the list of all sub-expressions here.
-                sub_expressions = expression.visit(lambda x: x, lambda x: x)
-                transformed_types = [sub_exp.type for sub_exp in sub_expressions]
-                if isinstance(expression, LambdaExpression):
-                    # If the expression is a lambda expression, the list of sub expressions does not include
-                    # the "lambda x" term. We're adding it here so that we will see transitions like
-                    #   <e,d> -> [\x, d] instead of
-                    #   <e,d> -> [d]
-                    transformed_types = ["lambda x"] + transformed_types
-                current_transitions.append("%s -> %s" % (expression_type,
-                                                         str(transformed_types)))
-                for sub_expression in sub_expressions:
-                    _get_transitions(sub_expression, current_transitions)
-            except NotImplementedError:
-                # This means that the expression is a leaf. We simply make a transition from its type to itself.
-                original_name = str(expression)
-                if original_name in self.reverse_name_mapping:
-                    original_name = self.reverse_name_mapping[original_name]
-                current_transitions.append("%s -> %s" % (expression_type, original_name))
-            return current_transitions
-        # Starting with the type of the whole expression
-        return _get_transitions(expression, [str(expression.type)])
+    def _get_transitions(self,
+                         expression: Expression,
+                         current_transitions: List[str]) -> List[str]:
+        expression_type = expression.type
+        try:
+            # ``Expression.visit()`` takes two arguments: the first one is a function applied on each
+            # sub-expression and the second is a combinator that is applied to the list of values returned
+            # from the function applications. We just want the list of all sub-expressions here.
+            sub_expressions = expression.visit(lambda x: x, lambda x: x)
+            transformed_types = [sub_exp.type for sub_exp in sub_expressions]
+            if isinstance(expression, LambdaExpression):
+                # If the expression is a lambda expression, the list of sub expressions does not include
+                # the "lambda x" term. We're adding it here so that we will see transitions like
+                #   <e,d> -> [\x, d] instead of
+                #   <e,d> -> [d]
+                transformed_types = ["lambda x"] + transformed_types
+            current_transitions.append("%s -> %s" % (expression_type,
+                                                     str(transformed_types)))
+            for sub_expression in sub_expressions:
+                self._get_transitions(sub_expression, current_transitions)
+        except NotImplementedError:
+            # This means that the expression is a leaf. We simply make a transition from its type to itself.
+            original_name = str(expression)
+            if original_name in self.reverse_name_mapping:
+                original_name = self.reverse_name_mapping[original_name]
+            current_transitions.append("%s -> %s" % (expression_type, original_name))
+        return current_transitions

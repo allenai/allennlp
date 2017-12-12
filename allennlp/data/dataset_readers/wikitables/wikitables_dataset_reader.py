@@ -2,7 +2,7 @@
 Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/releases/tag/v1.0.2).
 """
 
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 import gzip
 import logging
 import os
@@ -18,13 +18,14 @@ from allennlp.common.util import JsonDict
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.fields import KnowledgeGraphField, ListField, ProductionRuleField, TextField
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListField
+from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
+from allennlp.data.semparse.type_declarations import type_declaration as types
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -65,18 +66,35 @@ class WikiTablesDatasetReader(DatasetReader):
         Token indexers for table entities. Will default to ``question_token_indexers`` (though you
         very likely want to use something different for these, as you can't rely on having an
         embedding for every table entity at test time).
+    nonterminal_indexers : ``Dict[str, TokenIndexer]`` (optional)
+        How should we represent non-terminals in production rules when we're computing action
+        embeddings?  We use ``TokenIndexers`` for this.  Default is to use a
+        ``SingleIdTokenIndexer`` with the ``rule_labels`` namespace, keyed by ``tokens``:
+        ``{"tokens": SingleIdTokenIndexer("rule_labels")}``.  We use the namespace ``rule_labels``
+        so that we don't get padding or OOV tokens for nonterminals.
+    terminal_indexers : ``Dict[str, TokenIndexer]`` (optional)
+        How should we represent terminals in production rules when we're computing action
+        embeddings?  We also use ``TokenIndexers`` for this.  The default is to use a
+        ``TokenCharactersIndexer`` keyed by ``token_characters``: ``{"token_characters":
+        TokenCharactersIndexer()}``.  We use this indexer by default because WikiTables has plenty
+        of terminals that are unseen at training time, so we need to use a representation for them
+        that is not just a vocabulary lookup.
     """
     def __init__(self,
                  tables_directory: str = None,
                  dpd_output_directory: str = None,
                  tokenizer: Tokenizer = None,
                  question_token_indexers: Dict[str, TokenIndexer] = None,
-                 table_token_indexers: Dict[str, TokenIndexer] = None) -> None:
+                 table_token_indexers: Dict[str, TokenIndexer] = None,
+                 nonterminal_indexers: Dict[str, TokenIndexer] = None,
+                 terminal_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._tables_directory = tables_directory
         self._dpd_output_directory = dpd_output_directory
         self._tokenizer = tokenizer or WordTokenizer()
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
+        self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
+        self._terminal_indexers = terminal_indexers or {"token_characters": TokenCharactersIndexer()}
         self._basic_types = set(str(type_) for type_ in wt_types.BASIC_TYPES)
 
     @overrides
@@ -132,23 +150,43 @@ class WikiTablesDatasetReader(DatasetReader):
         else:
             table_knowledge_graph = TableKnowledgeGraph.read_from_json(table_info)
         table_field = KnowledgeGraphField(table_knowledge_graph, self._table_token_indexers)
-        world = WikiTablesWorld(table_knowledge_graph)
+        world = WikiTablesWorld(table_knowledge_graph, tokenized_question)
         world_field = MetadataField(world)
-        fields = {'question': question_field, 'table': table_field, 'world': world_field}
+
+        production_rule_fields: List[Field] = []
+        for production_rule in world.all_possible_actions():
+            field = ProductionRuleField(production_rule,
+                                        terminal_indexers=self._terminal_indexers,
+                                        nonterminal_indexers=self._nonterminal_indexers,
+                                        nonterminal_types=self._basic_types,
+                                        context=tokenized_question)
+            production_rule_fields.append(field)
+        action_field = ListField(production_rule_fields)
+
+        fields = {'question': question_field,
+                  'table': table_field,
+                  'world': world_field,
+                  'actions': action_field}
+
         if dpd_output:
             expressions = [world.parse_logical_form(form) for form in dpd_output]
             action_sequences = [world.get_action_sequence(expression) for expression in expressions]
-            action_sequence_fields: List[ListField[ProductionRuleField]] = []
-            for sequence in action_sequences:
-                production_rule_fields: List[ProductionRuleField] = []
+
+            # We'll make each target action sequence a List[IndexField], where the index is into
+            # the action list we made above.  We need to ignore the type here because mypy doesn't
+            # like `action.rule` - it's hard to tell mypy that the ListField is made up of
+            # ProductionRuleFields.
+            action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
+            action_sequence_fields: List[Field] = []
+            for form, expression, sequence in zip(dpd_output, expressions, action_sequences):
+                index_fields: List[Field] = []
+                print(form)
+                print(expression)
+                print(sequence)
                 for production_rule in sequence:
-                    field = ProductionRuleField(production_rule,
-                                                terminal_indexers=self._terminal_indexers,
-                                                nonterminal_indexers=self._non_terminal_indexers,
-                                                nonterminal_types=self._basic_types,
-                                                context=tokenized_question)
-                    production_rule_fields.append(field)
-                action_sequence_fields.append(ListField(production_rule_fields))
+                    field = IndexField(action_map[production_rule], action_field)
+                    index_fields.append(field)
+                action_sequence_fields.append(ListField(index_fields))
             fields['target_action_sequences'] = ListField(action_sequence_fields)
         return Instance(fields)
 

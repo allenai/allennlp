@@ -97,7 +97,8 @@ class WikiTablesSemanticParser(Model):
                 question: Dict[str, torch.LongTensor],
                 table: Dict[str, torch.LongTensor],
                 world: List[WikiTablesWorld],
-                target_action_sequences: List[List[ProductionRuleArray]] = None) -> Dict[str, torch.Tensor]:
+                actions: List[List[ProductionRuleArray]],
+                target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
         """
@@ -116,9 +117,15 @@ class WikiTablesSemanticParser(Model):
         world : ``ListWikiTablesWorld``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
             how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
-        target_action_sequences : List[List[ProductionRuleArray]], optional (default = None)
-           A list of possibly valid action sequences, where each action is a production rule from a
-           grammar, represented by a ``ProductionRuleField``.
+        actions : ``List[List[ProductionRuleArray]]``
+            A list of all possible actions for each ``World`` in the batch, indexed into a
+            ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
+            and use the embeddings to determine which action to take at each timestep in the
+            decoder.n
+        target_action_sequences : torch.Tensor, optional (default = None)
+           A list of possibly valid action sequences, where each action is an index into the list
+           of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
+           sequence_length)``.
         """
         # (batch_size, question_length, embedding_dim)
         embedded_input = self._question_embedder(question)
@@ -138,9 +145,14 @@ class WikiTablesSemanticParser(Model):
                                                                   encoder_outputs,
                                                                   question_mask)
 
+        # TODO(mattg): embed actions here, make mapping for later `index_selects`.
+
         if target_action_sequences is not None:
-            # TODO(mattg): fix this
+            # Remove the trailing dimension (from ListField[ListField[IndexField]]).
             target_action_sequences = target_action_sequences.squeeze(-1)
+            target_mask = target_action_sequences != self._action_padding_index
+        else:
+            target_mask = None
 
         # To make grouping states together in the decoder easier, we convert the batch dimension in
         # all of our tensors into an outer list.  For instance, the encoder outputs have shape
@@ -166,14 +178,16 @@ class WikiTablesSemanticParser(Model):
         if self.training:
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
-                                                target_action_sequences)
+                                                target_action_sequences,
+                                                target_mask)
         else:
             outputs = {}
             if target_action_sequences is not None:
-                num_steps = max(len(action_sequence) for action_sequence in target_action_sequences)
+                num_steps = target_action_sequences.size(-1) - 1
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
-                                                               target_action_sequences)['loss']
+                                                               target_action_sequences,
+                                                               target_mask)['loss']
             else:
                 num_steps = self._max_decoding_steps
             best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)
