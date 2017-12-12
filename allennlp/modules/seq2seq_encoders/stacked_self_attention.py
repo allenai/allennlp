@@ -121,9 +121,9 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             output = add_positional_features(inputs)
         else:
             output = inputs
-        for index, (attention, feedforward, layer_norm) in enumerate(zip(self._attention_layers,
-                                                                         self._feedfoward_layers,
-                                                                         self._layer_norm_layers)):
+        for attention, feedforward, layer_norm in zip(self._attention_layers,
+                                                      self._feedfoward_layers,
+                                                      self._layer_norm_layers):
             cached_input = output
             # Project output of attention encoder through a feedforward
             # network and back to the input size for the next layer.
