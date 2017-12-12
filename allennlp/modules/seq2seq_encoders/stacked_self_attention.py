@@ -1,16 +1,16 @@
 from typing import List
+
 from overrides import overrides
 import torch
-from torch.nn.modules import Dropout
 
 from allennlp.common import Params
-from allennlp.nn.util import add_positional_features
-from allennlp.nn.activations import Activation
-from allennlp.modules.similarity_functions import MultiHeadedSimilarity, SimilarityFunction, DotProductSimilarity
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.layer_norm import LayerNorm
-from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
+from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.modules.similarity_functions import MultiHeadedSimilarity, SimilarityFunction, DotProductSimilarity
+from allennlp.nn.activations import Activation
+from allennlp.nn.util import add_positional_features
 
 
 @Seq2SeqEncoder.register("stacked_self_attention")
@@ -22,6 +22,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
     <https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077>`_ .
 
     This encoder combines 3 layers in a 'block':
+
     1. A 2 layer FeedForward network.
     2. Multi-headed self attention, which uses 2 learnt linear projections
        to perform a dot-product similarity between every pair of elements
@@ -35,10 +36,11 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.
-        The hidden dimension used for the self attention layers.
+        The hidden dimension used for the _input_ to self attention layers
+        and the _output_ from the feedforward layers.
     projection_dim : ``int``, required.
         The dimension of the linear projections for the self-attention layers.
-    non_linear_hidden_dim : ``int``, required.
+    feedforward_hidden_dim : ``int``, required.
         The middle dimension of the FeedForward network. The input and output
         dimensions are fixed to ensure sizes match up for the self attention layers.
     num_layers : ``int``, required.
@@ -53,13 +55,14 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
         which can be important features for many tasks.
+    dropout_prob : ``float``, optional, (default = 0.2)
+        The dropout probability for the feedforward network.
     """
-
     def __init__(self,
                  input_dim: int,
                  hidden_dim: int,
                  projection_dim: int,
-                 non_linear_hidden_dim: int,
+                 feedforward_hidden_dim: int,
                  num_layers: int,
                  num_attention_heads: int,
                  internal_similarity: SimilarityFunction = DotProductSimilarity(scale_output=True),
@@ -74,13 +77,12 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
         feedfoward_input_dim = input_dim
         for i in range(num_layers):
-            # Project output of attention encoder through a feedforward network
-            # and back to the input size for the next layer.
             feedfoward = FeedForward(feedfoward_input_dim,
                                      activations=[Activation.by_name('relu')(),
                                                   Activation.by_name('linear')()],
-                                     hidden_dims=[non_linear_hidden_dim, hidden_dim],
-                                     num_layers=2)
+                                     hidden_dims=[feedforward_hidden_dim, hidden_dim],
+                                     num_layers=2,
+                                     dropout=dropout_prob)
 
             self.add_module(f"feedforward_{i}", feedfoward)
             self._feedfoward_layers.append(feedfoward)
@@ -93,8 +95,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                                                            similarity_function,
                                                            num_attention_heads,
                                                            combination='1,2',
-                                                           output_projection_dim=hidden_dim)
-
+                                                           output_dim=hidden_dim)
             self.add_module(f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 
@@ -104,7 +105,6 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
             feedfoward_input_dim = hidden_dim
 
-        self._dropout = Dropout(p=dropout_prob)
         self._input_dim = input_dim
         self._output_dim = self._attention_layers[-1].get_output_dim()
 
@@ -125,14 +125,16 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                                                                          self._feedfoward_layers,
                                                                          self._layer_norm_layers)):
             cached_input = output
+            # Project output of attention encoder through a feedforward
+            # network and back to the input size for the next layer.
             # shape (batch_size, timesteps, input_size)
-            non_linear_output = feedforward(output)
-            if index != 0:
+            feedfoward_output = feedforward(output)
+            if feedfoward_output.size() == cached_input.size():
                 # First layer might have the wrong size for highway
                 # layers, so we exclude it here.
-                non_linear_output += cached_input
+                feedfoward_output += cached_input
             # shape (batch_size, hidden_dim)
-            attention_output = attention(non_linear_output, mask) + non_linear_output
+            attention_output = attention(feedfoward_output, mask) + feedfoward_output
             output = layer_norm(attention_output)
         return output
 

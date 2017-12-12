@@ -11,7 +11,7 @@ class TestStackedSelfAttention(AllenNlpTestCase):
         encoder = StackedSelfAttentionEncoder(input_dim=9,
                                               hidden_dim=12,
                                               projection_dim=7,
-                                              non_linear_hidden_dim=5,
+                                              feedforward_hidden_dim=5,
                                               num_layers=3,
                                               num_attention_heads=3)
         assert encoder.get_input_dim() == 9
@@ -24,7 +24,7 @@ class TestStackedSelfAttention(AllenNlpTestCase):
         encoder = StackedSelfAttentionEncoder(input_dim=9,
                                               hidden_dim=12,
                                               projection_dim=9,
-                                              non_linear_hidden_dim=5,
+                                              feedforward_hidden_dim=5,
                                               num_layers=3,
                                               num_attention_heads=3)
         inputs = Variable(torch.randn([3, 5, 9]))

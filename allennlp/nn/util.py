@@ -842,17 +842,17 @@ def add_positional_features(tensor: torch.Tensor,
                             max_timescale: float = 1.0e4):
     # pylint: disable=line-too-long
     """
-    Implements the frequency based positional encoding described
+    Implements the frequency-based positional encoding described
     in `Attention is all you Need
     <https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077>`_ .
 
-    Adds sinusoids of different frequencies to a ``Tensor``. Each dimension of
-    the input ``Tensor`` is added to a sinusoid of a different frequency and phase.
+    Adds sinusoids of different frequencies to a ``Tensor``. A sinusoid of a
+    different frequency and phase is added to each dimension of the input ``Tensor``.
     This allows the attention heads to use absolute and relative positions.
 
     The number of timescales is equal to hidden_dim / 2 within the range
     (min_timescale, max_timescale). For each timescale, the two sinusoidal
-    signals  sin(timestep / timescale) and cos(timestep / timescale) are
+    signals sin(timestep / timescale) and cos(timestep / timescale) are
     generated and concatenated along the hidden_dim dimension.
 
     Parameters

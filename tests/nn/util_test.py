@@ -626,3 +626,17 @@ class TestNnUtil(AllenNlpTestCase):
         result = util.add_positional_features(tensor, min_timescale=1.0, max_timescale=1.0e4)
         numpy.testing.assert_almost_equal(result[0].data.cpu().numpy(), tensor2tensor_result)
         numpy.testing.assert_almost_equal(result[1].data.cpu().numpy(), tensor2tensor_result)
+
+        # Check case with odd number of dimensions.
+        tensor2tensor_result = numpy.asarray([[0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 1.00000000e+00,
+                                               1.00000000e+00, 1.00000000e+00, 0.00000000e+00],
+                                              [8.41470957e-01, 9.99983307e-03, 9.99999902e-05, 5.40302277e-01,
+                                               9.99949992e-01, 1.00000000e+00, 0.00000000e+00],
+                                              [9.09297407e-01,  1.99986659e-02, 1.99999980e-04, -4.16146815e-01,
+                                               9.99800026e-01,   1.00000000e+00,   0.00000000e+00]])
+
+        tensor = Variable(torch.zeros([2, 3, 7]))
+        result = util.add_positional_features(tensor, min_timescale=1.0, max_timescale=1.0e4)
+        numpy.testing.assert_almost_equal(result[0].data.cpu().numpy(), tensor2tensor_result)
+        numpy.testing.assert_almost_equal(result[1].data.cpu().numpy(), tensor2tensor_result)
+

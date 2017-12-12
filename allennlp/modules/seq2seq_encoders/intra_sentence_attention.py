@@ -44,7 +44,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         :func:`~allennlp.nn.util.combine_tensors`; see that function for more detail on exactly how
         this works, but some simple examples are ``"1,2"`` for concatenation (the default),
         ``"1+2"`` for adding the two, or ``"2"`` for only keeping the attention representation.
-    output_projection_dim : ``bool``, optional (default = None)
+    output_dim : ``bool``, optional (default = None)
         The dimension of an optional output projection.
     """
     def __init__(self,
@@ -53,7 +53,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
                  similarity_function: SimilarityFunction = DotProductSimilarity(),
                  num_attention_heads: int = 1,
                  combination: str = '1,2',
-                 output_projection_dim: int = None) -> None:
+                 output_dim: int = None) -> None:
         super(IntraSentenceAttentionEncoder, self).__init__()
         self._input_dim = input_dim
         if projection_dim:
@@ -75,12 +75,11 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         self._combination = combination
 
         combined_dim = util.get_combined_dim(combination, [input_dim, projection_dim])
-        if output_projection_dim:
-
-            self._output_projection = Linear(combined_dim, output_projection_dim)
-            self._output_dim = output_projection_dim
+        if output_dim:
+            self._output_projection = Linear(combined_dim, output_dim)
+            self._output_dim = output_dim
         else:
-            self._output_projection = None
+            self._output_projection = lambda x: x
             self._output_dim = combined_dim
 
     @overrides
@@ -132,11 +131,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
 
         # Shape: (batch_size, sequence_length, combination_dim)
         combined_tensors = util.combine_tensors(self._combination, [tokens, attended_sentence])
-
-        if self._output_projection:
-            return self._output_projection(combined_tensors)
-        else:
-            return combined_tensors
+        return self._output_projection(combined_tensors)
 
     @classmethod
     def from_params(cls, params: Params) -> 'IntraSentenceAttentionEncoder':
