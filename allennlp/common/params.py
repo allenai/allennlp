@@ -72,8 +72,8 @@ class Params(MutableMapping):
         the final mapping can be retrieved from the top-level ``Params`` object.
 
         NOTE: You must call ``add_file_to_archive`` before you ``pop()``
-        the parameter, because it looks up the value of the filename
-        in itself.
+        the parameter, because the ``Params`` instance looks up the value
+        of the filename inside itself.
 
         If the ``loading_from_archive`` flag is True, this will be a no-op.
         """

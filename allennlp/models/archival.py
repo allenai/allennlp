@@ -22,8 +22,12 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
 
 # We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
-# In addition, we may create a "shelve" file that contains auxiliary serialized data.
-# These are the *known names* under which we archive them.
+#
+# We also may include other arbitrary files in the archive. In this case we store
+# the mapping { hocon_path -> filename } in ``files_to_archive.json`` and the files
+# themselves under the path ``fta/`` .
+#
+# These constants are the *known names* under which we archive them.
 _CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 _FTA_NAME = "files_to_archive.json"
@@ -32,8 +36,9 @@ def archive_model(serialization_dir: str,
                   weights: str = _DEFAULT_WEIGHTS,
                   files_to_archive: Dict[str, str] = None) -> None:
     """
-    Archives the model weights, its training configuration, and its
-    vocabulary to `model.tar.gz`
+    Archive the model weights, its training configuration, and its
+    vocabulary to `model.tar.gz`. Include the additional ``files_to_archive``
+    if provided.
 
     Parameters
     ----------
@@ -41,6 +46,9 @@ def archive_model(serialization_dir: str,
         The directory where the weights and vocabulary are written out.
     weights: ``str``, optional (default=_DEFAULT_WEIGHTS)
         Which weights file to include in the archive. The default is ``best.th``.
+    files_to_archive: ``Dict[str, str]``, optional (default=None)
+        A mapping {hocon_key -> filename} of supplementary files to include
+        in the archive.
     """
     weights_file = os.path.join(serialization_dir, weights)
     if not os.path.exists(weights_file):
@@ -51,6 +59,8 @@ def archive_model(serialization_dir: str,
     if not os.path.exists(config_file):
         logger.error("config file %s does not exist, unable to archive model", config_file)
 
+    # If there are files we want to archive, write out the mapping
+    # so that we can use it during de-archiving.
     if files_to_archive:
         fta_filename = os.path.join(serialization_dir, _FTA_NAME)
         with open(fta_filename, 'w') as fta_file:
@@ -65,8 +75,11 @@ def archive_model(serialization_dir: str,
         archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
 
+        # If there are supplemental files to archive:
         if files_to_archive:
+            # Archive the { hocon_key -> original_filename } mapping.
             archive.add(fta_filename, arcname=_FTA_NAME)
+            # And add each requested file to the archive.
             for key, filename in files_to_archive.items():
                 archive.add(filename, arcname=f"fta/{key}")
 
@@ -81,6 +94,8 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
     cuda_device: ``int``, optional (default = -1)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
+    overrides: ``str``, optional (default = "")
+        HOCON overrides to apply to the unarchived ``Params`` object.
     """
     # redirect to the cache, if necessary
     archive_file = cached_path(archive_file)
