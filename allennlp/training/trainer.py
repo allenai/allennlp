@@ -51,7 +51,9 @@ class TensorboardWriter:
         if self._train_log is not None:
             # SummaryWriter.add_histogram doesn't pass global step, so
             # need to access file_writer directly
-            self._train_log.file_writer.add_summary(tb_histogram(name, values.cpu().numpy().flatten()), global_step)
+            self._train_log.file_writer.add_summary(
+                    tb_histogram(name, values.cpu().numpy().flatten()), global_step
+            )
 
     def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
         if self._validation_log is not None:
@@ -162,6 +164,7 @@ class Trainer:
         self._summary_interval = 100  # num batches between logging to tensorboard
         self._histogram_interval = histogram_interval
         self._should_log_histogram = False
+        self._batch_num_total = None
 
         self._last_log = 0.0  # time of last logging
 
@@ -192,24 +195,25 @@ class Trainer:
                     continue
 
                 def hook(module_, inputs, outputs):
+                    # pylint: disable=unused-argument,cell-var-from-loop
                     if self._should_log_histogram:
                         if isinstance(outputs, torch.autograd.Variable):
                             log_name = "activation_histogram/{0}".format(name)
                             self._tensorboard.add_train_histogram(log_name,
-                                                       outputs.data,
-                                                       self._batch_num_total)
+                                                                  outputs.data,
+                                                                  self._batch_num_total)
                         elif isinstance(outputs, (list, tuple)):
                             for i, output in enumerate(outputs):
                                 log_name = "activation_histogram/{0}_{1}".format(name, i)
                                 self._tensorboard.add_train_histogram(log_name,
-                                                       output.data,
-                                                       self._batch_num_total)
+                                                                      output.data,
+                                                                      self._batch_num_total)
                         elif isinstance(outputs, dict):
                             for k, tensor in outputs.items():
                                 log_name = "activation_histogram/{0}_{1}".format(name, k)
                                 self._tensorboard.add_train_histogram(log_name,
-                                                       tensor.data,
-                                                       self._batch_num_total)
+                                                                      tensor.data,
+                                                                      self._batch_num_total)
                         else:
                             # skip it
                             pass
@@ -339,8 +343,8 @@ class Trainer:
             if self._should_log_histogram:
                 for name, param in self._model.named_parameters():
                     self._tensorboard.add_train_histogram("parameter_histogram/" + name,
-                                                       param.data,
-                                                       batch_num_total)
+                                                          param.data,
+                                                          batch_num_total)
 
             # Save model if needed.
             if self._model_save_interval is not None and (
