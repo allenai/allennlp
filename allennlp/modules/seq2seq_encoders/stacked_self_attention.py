@@ -143,7 +143,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         input_dim = params.pop('input_dim')
         hidden_dim = params.pop('hidden_dim')
         projection_dim = params.pop('projection_dim', None)
-        non_linear_hidden_dim = params.pop("non_linear_hidden_dim")
+        feedforward_hidden_dim = params.pop("feedforward_hidden_dim")
         num_layers = params.pop("num_layers", 2)
         num_attention_heads = params.pop('num_attention_heads', 3)
         internal_similarity = SimilarityFunction.from_params(params.pop('internal_similarity', {}))
@@ -152,7 +152,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
         return cls(input_dim=input_dim,
                    hidden_dim=hidden_dim,
-                   non_linear_hidden_dim=non_linear_hidden_dim,
+                   feedforward_hidden_dim=feedforward_hidden_dim,
                    projection_dim=projection_dim,
                    num_layers=num_layers,
                    num_attention_heads=num_attention_heads,
