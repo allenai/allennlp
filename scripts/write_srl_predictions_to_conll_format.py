@@ -40,7 +40,7 @@ def main(serialization_directory, device):
     model_predictions = []
     for batch in tqdm.tqdm(iterator(dataset, num_epochs=1, shuffle=False)):
         tensor_batch = arrays_to_variables(batch, device, for_training=False)
-        result = model.forward(**tensor_batch)
+        result = model(**tensor_batch)
         predictions = model.decode(result)
         model_predictions.extend(predictions["tags"])
 

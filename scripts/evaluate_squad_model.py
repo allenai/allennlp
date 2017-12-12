@@ -54,7 +54,7 @@ def main(config_file):
     result_dict = {}
     for batch in tqdm.tqdm(generator):
         tensor_batch = arrays_to_variables(batch, cuda_device, for_training=False)
-        result = model.forward(**tensor_batch)
+        result = model(**tensor_batch)
         best_span_tensor = result['best_span']
         for i in range(best_span_tensor.size(0)):
             best_spans.append(best_span_tensor[i].data.cpu().tolist())
