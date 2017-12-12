@@ -305,19 +305,21 @@ def _make_production_string(source: Type, target: Union[List[Type], Type]) -> st
     return "%s -> %s" % (str(source), str(target))
 
 
-def _get_complex_type_productions(complex_type: ComplexType) -> List[Tuple[str, str]]:
+def _get_complex_type_productions(complex_type: ComplexType) -> List[Tuple[Type, str]]:
     """
     Takes a complex type without any placeholders and returns all productions that lead to it, starting
     from the most basic return type. For example, if the complex is `<a,<<b,c>,d>>`, this gives the
-    following tuples
+    following tuples:
+
     ('<<b,c>,d>', '<<b,c>,d> -> [<a,<<b,c>,d>>, a]')
     ('d', 'd -> [<<b,c>,d>, <b,c>]')
+    ('c', 'c -> [<b,c>, b]')
     """
     all_productions = []
     while isinstance(complex_type, ComplexType) and not complex_type == ANY_TYPE:
-        all_productions.append((str(complex_type.second), _make_production_string(complex_type.second,
-                                                                                  [complex_type,
-                                                                                   complex_type.first])))
+        all_productions.append((complex_type.second, _make_production_string(complex_type.second,
+                                                                             [complex_type,
+                                                                              complex_type.first])))
         for production in _get_complex_type_productions(complex_type.first):
             all_productions.append(production)
         complex_type = complex_type.second
@@ -326,7 +328,7 @@ def _get_complex_type_productions(complex_type: ComplexType) -> List[Tuple[str, 
 
 def _get_placeholder_actions(complex_type: ComplexType,
                              basic_types: Set[Type],
-                             valid_actions: Dict[str, Set[str]]) -> None:
+                             valid_actions: Dict[Type, Set[str]]) -> None:
     """
     Takes a ``complex_type`` with placeholders and a set of ``basic_types``, infers the valid actions
     starting at all non-terminals, by substituting placeholders with basic types, and adds them to
@@ -338,8 +340,8 @@ def _get_placeholder_actions(complex_type: ComplexType,
             for basic_type in basic_types:
                 # Get the return type when the complex_type is applied to the basic type.
                 application_type = complex_type.get_application_type(basic_type)
-                valid_actions[str(application_type)].add(_make_production_string(application_type,
-                                                                                 [complex_type, basic_type]))
+                production = _make_production_string(application_type, [complex_type, basic_type])
+                valid_actions[application_type].add(production)
                 for head, production in _get_complex_type_productions(application_type):
                     valid_actions[head].add(production)
         else:
@@ -351,16 +353,15 @@ def _get_placeholder_actions(complex_type: ComplexType,
                 for second_type in basic_types:
                     input_type = ComplexType(first_type, second_type)
                     application_type = complex_type.get_application_type(input_type)
-                    valid_actions[str(application_type)].add(_make_production_string(application_type,
-                                                                                     [complex_type,
-                                                                                      input_type]))
-                    for head, production in _get_complex_type_productions(application_type):
-                        valid_actions[head].add(production)
+                    production = _make_production_string(application_type, [complex_type, input_type])
+                    valid_actions[application_type].add(production)
+            for head, production in _get_complex_type_productions(application_type):
+                valid_actions[head].add(production)
     else:
         for basic_type in basic_types:
             second_type = _substitute_placeholder_type(complex_type.second, basic_type)
             production_string = _make_production_string(second_type, [complex_type, complex_type.first])
-            valid_actions[str(second_type)].add(production_string)
+            valid_actions[second_type].add(production_string)
             for head, production in _get_complex_type_productions(second_type):
                 valid_actions[head].add(production)
 
@@ -406,11 +407,11 @@ def get_valid_actions(name_mapping: Dict[str, str],
         types, where the variable is determined by the number of nestings.  We currently only
         permit up to three levels of nesting, just for ease of implementation.
     """
-    valid_actions: Dict[str, Set[str]] = defaultdict(set)
+    valid_actions: Dict[Type, Set[str]] = defaultdict(set)
 
     valid_starting_types = valid_starting_types or basic_types
     for type_ in valid_starting_types:
-        valid_actions[START_SYMBOL].add(_make_production_string(START_TYPE, type_))
+        valid_actions[START_TYPE].add(_make_production_string(START_TYPE, type_))
 
     complex_types = set()
     for name, alias in name_mapping.items():
@@ -419,8 +420,8 @@ def get_valid_actions(name_mapping: Dict[str, str],
         name_type = type_signatures[alias]
         # Type to terminal productions.
         for substituted_type in _substitute_any_type(name_type, basic_types):
-            valid_actions[str(substituted_type)].add(_make_production_string(substituted_type, name))
-            print(str(substituted_type))
+            valid_actions[substituted_type].add(_make_production_string(substituted_type, name))
+            print(str(substituted_type), substituted_type, name)
         # Keeping track of complex types.
         if isinstance(name_type, ComplexType) and name_type != ANY_TYPE:
             complex_types.add(name_type)
@@ -428,25 +429,30 @@ def get_valid_actions(name_mapping: Dict[str, str],
     print('COMPLEX TYPES')
     for complex_type in complex_types:
         if isinstance(complex_type, PlaceholderType):
-            print(complex_type)
             _get_placeholder_actions(complex_type, basic_types, valid_actions)
         else:
-            # We can produce complex types with a lambda expression, though we'll leave out
-            # placeholder types for now.
-            for i in range(num_nested_lambdas):
-                lambda_var = chr(ord('x') + i)
-                production_string = _make_production_string(complex_type.first,
-                                                            ['lambda ' + lambda_var, complex_type.second])
-                valid_actions[str(complex_type)].add(production_string)
-                print(str(complex_type), production_string)
             for substituted_type in _substitute_any_type(complex_type, basic_types):
                 production_string = _make_production_string(substituted_type.second,
                                                             [substituted_type, substituted_type.first])
-                valid_actions[str(substituted_type.second)].add(production_string)
+                valid_actions[substituted_type.second].add(production_string)
                 for head, production in _get_complex_type_productions(substituted_type.second):
                     valid_actions[head].add(production)
-    print('<r,d>:', valid_actions['<r,d>'])
-    return valid_actions
+
+    # We can produce complex types with a lambda expression, though we'll leave out
+    # placeholder types for now.
+    for i in range(num_nested_lambdas):
+        lambda_var = chr(ord('x') + i)
+        for key, values in valid_actions.items():
+            if str(key) == 'e':
+                print('e:', values)
+            if isinstance(key, ComplexType) and not isinstance(key, PlaceholderType):
+                production_string = _make_production_string(key.first,
+                                                            ['lambda ' + lambda_var, key.second])
+                values.add(production_string)
+                print(str(key), production_string)
+
+    valid_action_strings = {str(key): value for key, value in valid_actions.items()}
+    return valid_action_strings
 
 
 START_TYPE = NamedBasicType(START_SYMBOL)

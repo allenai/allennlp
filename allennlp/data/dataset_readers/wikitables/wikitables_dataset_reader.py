@@ -184,8 +184,7 @@ class WikiTablesDatasetReader(DatasetReader):
                 print(expression)
                 print(sequence)
                 for production_rule in sequence:
-                    field = IndexField(action_map[production_rule], action_field)
-                    index_fields.append(field)
+                    index_fields.append(IndexField(action_map[production_rule], action_field))
                 action_sequence_fields.append(ListField(index_fields))
             fields['target_action_sequences'] = ListField(action_sequence_fields)
         return Instance(fields)

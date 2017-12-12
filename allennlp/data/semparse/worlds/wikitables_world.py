@@ -64,7 +64,7 @@ class WikiTablesWorld(World):
             # catch things like "-3" or "0.07".
             try:
                 float(token.text)
-                numbers.append(token)
+                numbers.append(token.text)
             except ValueError:
                 pass
         return numbers

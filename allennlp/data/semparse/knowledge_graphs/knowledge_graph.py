@@ -38,4 +38,5 @@ class KnowledgeGraph:
         return self._neighbors[entity]
 
     def get_all_entities(self) -> Set[str]:
-        return self._neighbors.keys()
+        # This is technically a KeysView, not a Set, but it's close enough.
+        return self._neighbors.keys()  # type: ignore
