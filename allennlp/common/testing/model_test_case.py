@@ -55,6 +55,10 @@ class ModelTestCase(AllenNlpTestCase):
         loaded_dataset.index_instances(loaded_model.vocab)
         loaded_batch = next(iterator(loaded_dataset, shuffle=False, cuda_device=cuda_device))
 
+        # Check gradients are None for non-trainable parameters and check that
+        # trainable parameters receive some gradient if they are trainable.
+        self.check_model_computes_gradients_correctly(model, model_batch)
+
         # The datasets themselves should be identical.
         for key in model_batch.keys():
             field = model_batch[key]
@@ -76,8 +80,8 @@ class ModelTestCase(AllenNlpTestCase):
             for module in model_.modules():
                 if hasattr(module, 'stateful') and module.stateful:
                     module.reset_states()
-        model_predictions = model.forward(**model_batch)
-        loaded_model_predictions = loaded_model.forward(**loaded_batch)
+        model_predictions = model(**model_batch)
+        loaded_model_predictions = loaded_model(**loaded_batch)
 
         # Check loaded model's loss exists and we can compute gradients, for continuing training.
         loaded_model_loss = loaded_model_predictions["loss"]
@@ -103,16 +107,31 @@ class ModelTestCase(AllenNlpTestCase):
         else:
             assert field1 == field2
 
+    @staticmethod
+    def check_model_computes_gradients_correctly(model, model_batch):
+        model.zero_grad()
+        result = model(**model_batch)
+        result["loss"].backward()
+
+        for parameter in model.parameters():
+            zeros = torch.zeros(parameter.size())
+            if parameter.requires_grad:
+                # Some parameters will only be partially updated,
+                # like embeddings, so we just check that any gradient is non-zero.
+                assert (parameter.grad.data.cpu() != zeros).any()
+            else:
+                assert parameter.grad is None
+
     def ensure_batch_predictions_are_consistent(self):
         self.model.eval()
         single_predictions = []
         for i, instance in enumerate(self.dataset.instances):
             dataset = Dataset([instance])
             tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
-            result = self.model.forward(**tensors)
+            result = self.model(**tensors)
             single_predictions.append(result)
         batch_tensors = self.dataset.as_tensor_dict(self.dataset.get_padding_lengths(), for_training=False)
-        batch_predictions = self.model.forward(**batch_tensors)
+        batch_predictions = self.model(**batch_tensors)
         for i, instance_predictions in enumerate(single_predictions):
             for key, single_predicted in instance_predictions.items():
                 tolerance = 1e-6

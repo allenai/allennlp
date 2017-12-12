@@ -106,7 +106,7 @@ class CrfTagger(Model):
 
         if tags is not None:
             # Add negative log-likelihood as loss
-            log_likelihood = self.crf.forward(logits, tags, mask)
+            log_likelihood = self.crf(logits, tags, mask)
             output["loss"] = -log_likelihood
 
             # Represent viterbi tags as "class probabilities" that we can
