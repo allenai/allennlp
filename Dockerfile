@@ -2,6 +2,9 @@ FROM python:3.6.3-jessie
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
+ENV PATH /usr/local/nvidia/bin/:$PATH
+
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64
 
 WORKDIR /stage
 
