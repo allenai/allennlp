@@ -125,3 +125,18 @@ class TestTrainer(AllenNlpTestCase):
         assert len(epochs) == 4
         assert epochs[3] == '1'
         assert '.' in epochs[0]
+
+        # Now make certain we can restore from timestamped checkpoint.
+        # To do so, remove the checkpoint from the end of epoch 1&2, so
+        # that we are forced to restore from the timestamped checkpoints.
+        for k in range(2):
+            os.remove(os.path.join(self.TEST_DIR, 'model_state_epoch_{}.th'.format(k)))
+            os.remove(os.path.join(self.TEST_DIR, 'training_state_epoch_{}.th'.format(k)))
+        os.remove(os.path.join(self.TEST_DIR, 'best.th'))
+
+        restore_trainer = Trainer(self.model, self.optimizer,
+                                  self.iterator, self.dataset, num_epochs=2,
+                                  serialization_dir=self.TEST_DIR,
+                                  model_save_interval=0.0001)
+        epoch, _ = restore_trainer._restore_checkpoint()
+        assert epoch == 2

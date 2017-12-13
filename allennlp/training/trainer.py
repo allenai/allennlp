@@ -592,7 +592,7 @@ class Trainer:
         # within epoch checkpoints.  5.1512684016
         found_epochs = [
                 # pylint: disable=anomalous-backslash-in-string
-                re.search("model_state_epoch_([0-9\.])+\.th", x).group(1)
+                re.search("model_state_epoch_([0-9\.]+)\.th", x).group(1)
                 for x in model_checkpoints
         ]
         int_epochs = []
