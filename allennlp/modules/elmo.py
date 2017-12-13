@@ -131,8 +131,7 @@ class Elmo(torch.nn.Module, Registrable):
         do_layer_norm = params.pop('do_layer_norm', False)
         params.assert_empty(cls.__name__)
 
-        instance = cls(options_file, weight_file, num_output_representations, do_layer_norm)
-        return instance
+        return cls(options_file, weight_file, num_output_representations, do_layer_norm)
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
