@@ -129,7 +129,7 @@ AllenNLP also has a pip package if you wish to use allennlp as a library. Instal
 pip install allennlp
 ```
 
-You will also manually install a couple of dependencies:
+You will also need to manually install some dependencies:
 
 1. Visit http://pytorch.org/ and install the relevant pytorch package.
 
