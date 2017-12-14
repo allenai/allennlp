@@ -24,7 +24,7 @@ lines of code to get a very flexible classifier for academic papers.
 In our [first
 commit](https://github.com/allenai/allennlp-as-a-library-example/tree/43b7dac8097a0c4a50c0b25594daa123f3889b75),
 we just add a `requirements.txt` file specifying `allennlp` as a dependency.  We referenced a
-particular commit on github, but you can just give a version number, like `allennlp==0.2.3`.  Then,
+particular commit on github, but you can just give a version number, like `allennlp==0.3.0`.  Then,
 after creating a python 3.6 environment, you install AllenNLP by running `pip install -r
 requirements.txt`.  You also need to install pytorch and a spacy model, as described in [the
 installation tutorial](installation).
