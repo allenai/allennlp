@@ -129,7 +129,11 @@ AllenNLP also has a pip package if you wish to use allennlp as a library. Instal
 pip install allennlp
 ```
 
-You will also need to visit http://pytorch.org/ and install the relevant pytorch package.
+You will also manually install a couple of dependencies:
+
+1. Visit http://pytorch.org/ and install the relevant pytorch package.
+
+2. Download necessary spacy models. `python -m spacy download en_core_web_sm`.
 
 ### Setting up a Docker development environment
 
