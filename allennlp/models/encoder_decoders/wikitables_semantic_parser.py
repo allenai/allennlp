@@ -13,6 +13,7 @@ from allennlp.common import util as common_util
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
+from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
@@ -41,6 +42,12 @@ class WikiTablesSemanticParser(Model):
     vocab : ``Vocabulary``
     question_embedder : ``TextFieldEmbedder``
         Embedder for questions.
+    nonterminal_embedder : ``TextFieldEmbedder``
+        We will embed nonterminals in the grammar using this embedder.  These aren't
+        ``TextFields``, but they are structured the same way.
+    terminal_embedder : ``TextFieldEmbedder``
+        We will embed terminals in the grammar using this embedder.  These aren't ``TextFields``,
+        but they are structured the same way.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
     decoder_trainer : ``DecoderTrainer``
@@ -51,12 +58,6 @@ class WikiTablesSemanticParser(Model):
     max_decoding_steps : ``int``
         When we're decoding with a beam search, what's the maximum number of steps we should take?
         This only applies at evaluation time, not during training.
-    action_namespace : ``str``
-        Parser actions are represented as strings in the data.  This is the namespace in the
-        vocabulary that was used to convert them into integers.
-    action_embedding_dim : ``int``
-        Parser actions get embeddings in this model, so we can use action histories as decoder
-        inputs.  This specifies the dimensionality of action embeddings.
     attention_function: ``SimilarityFunction``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  This is the similarity function we use for that
@@ -65,12 +66,12 @@ class WikiTablesSemanticParser(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  question_embedder: TextFieldEmbedder,
+                 nonterminal_embedder: TextFieldEmbedder,
+                 terminal_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  decoder_trainer: DecoderTrainer,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
-                 action_namespace: str,
-                 action_embedding_dim: int,
                  attention_function: SimilarityFunction) -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
@@ -78,16 +79,12 @@ class WikiTablesSemanticParser(Model):
         self._decoder_trainer = decoder_trainer
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
-        self._action_namespace = action_namespace
-        self._action_padding_index = 0 if self.vocab.is_padded(self._action_namespace) else -1
+        self._nonterminal_embedder = nonterminal_embedder
+        self._terminal_embedder = terminal_embedder
 
-        # This is a _global_ mapping because eventually we will have additional allowed actions for
-        # each instance (e.g., instance-specific entities or predicates), and for the current
-        # decoder state (e.g., you can only produce variables inside of a lambda expression).
-        # These are just the actions that are specified by the grammar.
-        self._global_type_productions = _get_type_productions(self.vocab, self._action_namespace)
+        self._action_padding_index = -1  # the padding value used by IndexField
+        action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
         self._decoder_step = WikiTablesDecoderStep(vocab=vocab,
-                                                   action_namespace=action_namespace,
                                                    encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function)
@@ -145,7 +142,7 @@ class WikiTablesSemanticParser(Model):
                                                                   encoder_outputs,
                                                                   question_mask)
 
-        # TODO(mattg): embed actions here, make mapping for later `index_selects`.
+        action_embeddings, action_indices = self._embed_actions(actions)
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
@@ -165,16 +162,19 @@ class WikiTablesSemanticParser(Model):
         initial_attended_question = [attended_question[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
         question_mask_list = [question_mask[i] for i in range(batch_size)]
+        initial_grammar_state = [GrammarState([START_SYMBOL], world[i].get_valid_actions())
+                                 for i in range(batch_size)]
         initial_state = WikiTablesDecoderState(batch_indices=list(range(batch_size)),
                                                action_history=[[] for _ in range(batch_size)],
                                                score=initial_score_list,
-                                               non_terminal_stack=[[START_SYMBOL] for _ in range(batch_size)],
                                                hidden_state=initial_hidden_state,
                                                memory_cell=initial_memory_cell,
                                                attended_question=initial_attended_question,
+                                               grammar_state=initial_grammar_state,
                                                encoder_outputs=encoder_output_list,
                                                encoder_output_mask=question_mask_list,
-                                               global_type_productions=self._global_type_productions)
+                                               action_embeddings=action_embeddings,
+                                               action_indices=action_indices)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
@@ -198,6 +198,107 @@ class WikiTablesSemanticParser(Model):
             # TODO(matt): compute accuracy here.
             return outputs
 
+    def _embed_actions(self, actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
+                                                                                Dict[Tuple[int, int], int]]:
+        """
+        Given all of the possible actions for all batch instances, produce an embedding for them.
+        There will be significant overlap in this list, as the production rules from the grammar
+        are shared across all batch instances.  Our returned tensor has an embedding for each
+        `unique` action, so we also need to return a mapping from the original ``(batch_index,
+        action_index)`` to our new ``global_action_index``, so that we can get the right action
+        embedding during decoding.
+        """
+        # Basic outline: we'll embed actions by embedding their left hand side (LHS) and right hand
+        # side (RHS) separately, then concatenating the two parts.  So first we need to find all of
+        # the unique terminals and non-terminals in the production rules, and embed those (for ease
+        # of reference, we'll refer to non-terminals and terminals collectively as "elements" in
+        # the logic below).  Then we'll gather all unique _actions_, and for each action, we'll use
+        # an `index_select` to look up the embedding for it's LHS and RHS, then do the concat.
+        nonterminals, terminals = self._get_unique_elements(actions)
+        nonterminal_strings = sorted(nonterminals.keys())
+        terminal_strings = sorted(terminals.keys())
+        nonterminal_tensors = [nonterminals[key] for key in nonterminal_strings]
+        terminal_tensors = [terminals[key] for key in terminal_strings]
+        # Shape: (num_nonterminals, element_embedding_dim)
+        embedded_nonterminals = self._nonterminal_embedder(nonterminal_tensors)
+        # Shape: (num_terminals, element_embedding_dim)
+        embedded_terminals = self._terminal_embedder(terminal_tensors)
+        # Shape: (num_nonterminals + num_terminals, element_embedding_dim)
+        embedded_elements = torch.cat([embedded_nonterminals, embedded_terminals], dim=0)
+        # This will map element strings to their index in the `embedded_elements` tensor.
+        element_ids = {nonterminal: i for i, nonterminal in enumerate(nonterminal_strings)}
+        element_ids.update({terminal: i + len(nonterminal_strings)
+                            for i, terminal in enumerate(terminal_strings)})
+        unique_actions: Set[Tuple[int, int]] = set()
+        for instance_actions in actions:
+            for action in instance_actions:
+                # This gives us the LHS and RHS strings, which we map to ids in the element tensor.
+                unique_actions.add((element_ids[action['left'][0]], element_ids[action['right'][0]]))
+        unique_action_list = list(unique_actions)
+        action_left_sides, action_right_sides = zip(*unique_action_list)
+        # We need a tensor to copy so we can create stuff on the right device; just grabbing one
+        # from the nonterminals here.
+        copy_tensor = next(nonterminals.values())
+        action_left_indices = Variable(copy_tensor.data.new(list(action_left_sides)).long())
+        action_right_indices = Variable(copy_tensor.data.new(list(action_right_sides)).long())
+        left_side_embeddings = embedded_elements.index_select(0, action_left_indices)
+        right_side_embeddings = embedded_elements.index_select(0, action_right_indices)
+        # Shape: (num_actions, element_embedding_dim * 2)
+        embedded_actions = torch.cat([left_side_embeddings, right_side_embeddings], dim=-1)
+
+        # Now we just need to make a map from `(batch_index, action_index)` to `action_index`.
+        action_ids = {action: i for action in unique_action_lst}
+        action_map: Dict[Tuple[int, int], int] = {}
+        for batch_index, action_list in enumerate(actions):
+            for action_index, action in enumerate(action_list):
+                action_indices = (element_ids[action['left'][0]], element_ids[action['right'][0]])
+                action_id = action_ids[action_indices]
+                action_map[(batch_index, action_index)] = action_id
+        return embedded_actions, action_map
+
+    @staticmethod
+    def _get_unique_elements(
+            actions: List[List[ProductionRuleArray]]) -> Tuple[Dict[str, Dict[str, torch.Tensor]],
+                                                               Dict[str, Dict[str, torch.Tensor]]]:
+        """
+        Finds all of the unique terminals and non-terminals in all of the production rules.  We
+        will embed these elements separately, then use those embeddings to get final action
+        embeddings.
+
+        Returns
+        -------
+        nonterminals : ``Dict[str, Dict[str, torch.Tensor]]]``
+            Each item in this dictionary represents a single nonterminal element of the grammar,
+            like "d", "<r,d>", "or "<#1,#1>".  The key is the string representation of the
+            nonterminal and the value its indexed representation, which we will use for computing
+            the embedding.
+        terminals : ``Dict[str, Dict[str, torch.Tensor]]]``
+            Identical to ``nonterminals``, but for terminal elements of the grammar, like
+            "fb:type.object.type", "reverse", or "fb:cell.2nd".
+        """
+        nonterminals: Dict[str, Dict[str, torch.Tensor]] = {}
+        terminals: Dict[str, Dict[str, torch.Tensor]] = {}
+        for action_sequence in actions:
+            for production_rule in action_sequence:
+                # This logic is hard to understand, because the ProductionRuleArray is a messy
+                # type.  The structure of each ProductionRuleArray is:
+                #     {
+                #      "left": (LHS_string, left_is_nonterminal, padded_LHS_tensor_dict),
+                #      "right": (RHS_string, right_is_nonterminal, padded_RHS_tensor_dict)
+                #     }
+                # Technically, the left hand side is _always_ a non-terminal (by definition, you
+                # can't expand a non-terminal), but we'll do this check anyway, in case you did
+                # something really crazy.
+                if production_rule['left'][1]:  # this is a nonterminal production
+                    nonterminals[production_rule['left'][0]] = production_rule['left'][2]
+                else:
+                    terminals[production_rule['left'][0]] = production_rule['left'][2]
+                if production_rule['right'][1]:  # this is a nonterminal production
+                    nonterminals[production_rule['right'][0]] = production_rule['right'][2]
+                else:
+                    terminals[production_rule['right'][0]] = production_rule['right'][2]
+        return nonterminals, terminals
+
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -218,12 +319,11 @@ class WikiTablesSemanticParser(Model):
 
     @classmethod
     def from_params(cls, vocab, params: Params) -> 'WikiTablesSemanticParser':
-        question_embedder_params = params.pop("question_embedder")
-        question_embedder = TextFieldEmbedder.from_params(vocab, question_embedder_params)
+        question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         max_decoding_steps = params.pop("max_decoding_steps")
-        action_namespace = params.pop("action_namespace")
-        action_embedding_dim = params.pop("action_embedding_dim", None)
+        nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
+        terminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("terminal_embedder"))
         decoder_trainer = DecoderTrainer.from_params(params.pop("decoder_trainer"))
         decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         # If no attention function is specified, we should not use attention, not attention with
@@ -233,14 +333,15 @@ class WikiTablesSemanticParser(Model):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
+        params.assert_empty(cls.__name__)
         return cls(vocab,
                    question_embedder=question_embedder,
+                   nonterminal_embedder=nonterminal_embedder,
+                   terminal_embedder=terminal_embedder,
                    encoder=encoder,
                    decoder_trainer=decoder_trainer,
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
-                   action_namespace=action_namespace,
-                   action_embedding_dim=action_embedding_dim,
                    attention_function=attention_function)
 
 
@@ -257,11 +358,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         Passed to super class; see docs there.
     score : ``List[Variable]``
         Passed to super class; see docs there.
-    non_terminal_stack : ``List[List[str]]``
-        Holds the list of non-terminals that still need to be expanded for each element of the
-        group.  This starts out as [START_SYMBOL], and decoding ends when this is empty.  Every
-        time we take an action, we update the non-terminal stack, and we use what's on the stack to
-        decide which actions are valid in the current state.
     hidden_state : ``List[Variable]``
         This holds the LSTM hidden state for each element of the group.  Each variable has shape
         ``(decoder_output_dim,)``.
@@ -273,6 +369,9 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         the previous timestep, for each element in the group.  We keep this as part of the state
         because we use the previous attention as part of our decoder cell update.  Each variable in
         this list has shape ``(encoder_output_dim,)``.
+    grammar_state : ``List[GrammarState]``
+        This hold the current grammar state for each element of the group.  The ``GrammarState``
+        keeps track of which actions are currently valid.
     encoder_outputs : ``List[Variable]``
         A list of variables, each of shape ``(question_length, encoder_output_dim)``, containing
         the encoder outputs at each timestep.  The list is over batch elements, and we do the input
@@ -287,99 +386,37 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         A list of variables, each of shape ``(question_length,)``, containing a mask over question
         tokens for each batch instance.  This is a list over batch elements, for the same reasons
         as above.
-    global_type_productions : ``Dict[str, List[int]]``
-        A mapping from type strings to valid action indices.  The type strings correspond to the
-        non-terminals on the ``non_terminal_stack``, and the action indices (for now) correspond to
-        actions in the action vocabulary.
     """
     def __init__(self,
                  batch_indices: List[int],
                  action_history: List[List[int]],
                  score: Variable,
-                 non_terminal_stack: List[List[str]],
                  hidden_state: List[Variable],
                  memory_cell: List[Variable],
                  attended_question: List[Variable],
+                 grammar_state: List[GrammarState],
                  encoder_outputs: Variable,
                  encoder_output_mask: Variable,
                  global_type_productions: Dict[str, List[int]]) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
-        self.non_terminal_stack = non_terminal_stack
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
         self.attended_question = attended_question
+        self.grammar_state = grammar_state
         self.encoder_outputs = encoder_outputs
         self.encoder_output_mask = encoder_output_mask
-        self.global_type_productions = global_type_productions
 
     def get_valid_actions(self) -> List[List[int]]:
         """
         Returns a list of valid actions for each element of the group.
         """
-        # TODO(matt): this is going to need to look at more than just the global type productions
-        # eventually - we'll need instance- and state-specific additions.  And we'll probably need
-        # to return strings, instead of integers, because instance-specific production rules won't
-        # be in a global vocabulary.
-        return [self.global_type_productions[stack[-1]] for stack in self.non_terminal_stack]
-
-    @staticmethod
-    def update_non_terminal_stack(stack: List[str], action: str) -> List[str]:
-        """
-        Given a single non-terminal stack (`not` a grouped one), and an action that was taken,
-        update the non-terminal stack.  This involves popping the non-terminal that was expanded
-        off of the stack, then pushing on any non-terminals in the production rule back on the
-        stack.  We push the non-terminals on in `reverse` order, so that the first non-terminal in
-        the production rule gets popped off the stack first.
-
-        For example, if ``stack`` is ``["r", "<e,r>", "d"]``, and ``action`` is ``d -> [<e,d>, e]``,
-        the result will be ``["r", "<e,r>", "e", "<e,d>"]``.
-        """
-        if ' -> ' in action:
-            # TODO(mattg,pradeep): we need to handle lambdas specially here, to update the valid
-            # productions for the type of the variable.
-            non_terminal, production_string = action.split(' -> ')
-            assert stack[-1] == non_terminal
-            new_stack = stack[:-1]
-            productions = WikiTablesDecoderState.get_productions_from_string(production_string)
-            for production in reversed(productions):
-                if WikiTablesDecoderState.is_non_terminal(production):
-                    new_stack.append(production)
-            return new_stack
-        else:
-            # The first action we take is just predicting a type, so doesn't have ' -> ' in it.  In
-            # this case, we had better be trying to expand the START_SYMBOL, and our next
-            # non-terminal stack is just the type that we predicted.
-            assert stack == [START_SYMBOL]
-            return [action]
-
-    @staticmethod
-    def get_productions_from_string(production_string: str) -> List[str]:
-        """
-        Takes a string like '[<d,d>, d]' and parses it into a list like ['<d,d>', 'd'].  For
-        production strings that are not lists, like '<e,d>', we return a single-element list:
-        ['<e,d>'].
-        """
-        if production_string[0] == '[':
-            return production_string[1:-1].split(', ')
-        else:
-            return [production_string]
-
-    @staticmethod
-    def is_non_terminal(production: str) -> bool:
-        # TODO(mattg): these static methods probably belong in some other class.
-        if production[0] == '<':
-            return True
-        if production.startswith('fb:'):
-            return False
-        if len(production) > 1 or production == "x":
-            return False
-        return production[0].islower()
+        return [state.get_valid_actions() for state in self.grammar_state]
 
     # @overrides  - overrides can't handle the generics we're using here, apparently
     def is_finished(self) -> bool:
         if len(self.batch_indices) != 1:
             raise RuntimeError("is_finished() is only defined with a group_size of 1")
-        return not self.non_terminal_stack[0]
+        return self.grammar_state[0].is_finished()
 
     # @overrides  - overrides can't handle the generics we're using here, apparently
     def split_finished(self) -> Tuple['WikiTablesDecoderState', 'WikiTablesDecoderState']:
@@ -387,11 +424,11 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         # all.
         finished_indices = []
         not_finished_indices = []
-        for i, stack in enumerate(self.non_terminal_stack):
-            if stack:
-                not_finished_indices.append(i)
-            else:
+        for i, state in enumerate(self.grammar_state):
+            if state.is_finished():
                 finished_indices.append(i)
+            else:
+                not_finished_indices.append(i)
 
         # Return value is (finished, not_finished)
         if not finished_indices:
@@ -408,20 +445,19 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
         action_histories = [action_history for state in states for action_history in state.action_history]
         scores = [score for state in states for score in state.score]
-        non_terminal_stacks = [stack for state in states for stack in state.non_terminal_stack]
         hidden_states = [hidden_state for state in states for hidden_state in state.hidden_state]
         memory_cells = [memory_cell for state in states for memory_cell in state.memory_cell]
         attended_question = [attended for state in states for attended in state.attended_question]
+        grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
         return WikiTablesDecoderState(batch_indices=batch_indices,
                                       action_history=action_histories,
                                       score=scores,
-                                      non_terminal_stack=non_terminal_stacks,
                                       hidden_state=hidden_states,
                                       memory_cell=memory_cells,
                                       attended_question=attended_question,
+                                      grammar_state=grammar_states,
                                       encoder_outputs=states[0].encoder_outputs,
-                                      encoder_output_mask=states[0].encoder_output_mask,
-                                      global_type_productions=states[0].global_type_productions)
+                                      encoder_output_mask=states[0].encoder_output_mask)
 
     def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'WikiTablesDecoderState':
         """
@@ -435,7 +471,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         group_batch_indices = [self.batch_indices[i] for i in group_indices]
         group_action_histories = [self.action_history[i] for i in group_indices]
         group_scores = [self.score[i] for i in group_indices]
-        group_non_terminal_stacks = [self.non_terminal_stack[i] for i in group_indices]
+        group_grammar_states = [self.grammar_state[i] for i in group_indices]
         group_hidden_states = [self.hidden_state[i] for i in group_indices]
         group_memory_cells = [self.memory_cell[i] for i in group_indices]
         group_attended_question = [self.attended_question[i] for i in group_indices]
@@ -446,23 +482,19 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       hidden_state=group_hidden_states,
                                       memory_cell=group_memory_cells,
                                       attended_question=group_attended_question,
+                                      grammar_state=group_grammar_states,
                                       encoder_outputs=self.encoder_outputs,
-                                      encoder_output_mask=self.encoder_output_mask,
-                                      global_type_productions=self.global_type_productions)
+                                      encoder_output_mask=self.encoder_output_mask)
 
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     def __init__(self,
                  vocab: Vocabulary,
-                 action_namespace: str,
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction) -> None:
         super(WikiTablesDecoderStep, self).__init__()
         self._vocab = vocab
-        self._action_namespace = action_namespace
-        num_actions = vocab.get_vocab_size(action_namespace)
-        self._action_embedder = Embedding(num_actions, action_embedding_dim)
         self._input_attention = Attention(attention_function)
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
@@ -639,17 +671,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 new_action_history = state.action_history[group_index] + [action]
                 new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
                 action_string = self._vocab.get_token_from_index(action, self._action_namespace)
-                new_non_terminal_stack = state.update_non_terminal_stack(
-                        state.non_terminal_stack[group_index], action_string)
+                new_grammar_state = state.grammar_state[group_index].take_action(action_string)
                 new_state = WikiTablesDecoderState(batch_indices=[state.batch_indices[group_index]],
                                                    action_history=[new_action_history],
                                                    score=[new_score],
-                                                   non_terminal_stack=[new_non_terminal_stack],
                                                    hidden_state=[hidden_state[group_index]],
                                                    memory_cell=[memory_cell[group_index]],
                                                    attended_question=[attended_question[group_index]],
+                                                   grammar_state=[new_grammar_state],
                                                    encoder_outputs=state.encoder_outputs,
-                                                   encoder_output_mask=state.encoder_output_mask,
-                                                   global_type_productions=state.global_type_productions)
+                                                   encoder_output_mask=state.encoder_output_mask)
                 new_states.append(new_state)
         return new_states
