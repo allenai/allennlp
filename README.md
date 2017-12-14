@@ -129,8 +129,7 @@ AllenNLP also has a pip package if you wish to use allennlp as a library. Instal
 pip install allennlp
 ```
 
-This installation method is still a little experimental. Please [open an issue](https://github.com/allenai/allennlp/issues)
-if you encounter issues after following the instructions to create a virtual environment above.
+You will also need to visit http://pytorch.org/ and install the relevant pytorch package.
 
 ### Setting up a Docker development environment
 
