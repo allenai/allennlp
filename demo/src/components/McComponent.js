@@ -105,9 +105,8 @@ render() {
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
                 <option value="">Choose an example...</option>
                 {mcExamples.map((example, index) => {
-                  const selected = example.passage === mcPassageValue && example.question === mcQuestionValue;
                   return (
-                      <option value={index} key={index} selected={selected}>{example.passage.substring(0,60) + "..."}</option>
+                      <option value={index} key={index}>{example.passage.substring(0,60) + "..."}</option>
                   );
                 })}
             </select>

@@ -88,9 +88,8 @@ class CorefInput extends React.Component {
                 <select disabled={outputState === "working"} onChange={this.handleListChange}>
                     <option value="">Choose an example...</option>
                     {corefExamples.map((example, index) => {
-                      const selected = example.document === corefDocumentValue;
                       return (
-                          <option value={index} key={index} selected={selected}>{example.document.substring(0,60) + ".. ."}</option>
+                          <option value={index} key={index}>{example.document.substring(0,60) + ".. ."}</option>
                       );
                     })}
                 </select>

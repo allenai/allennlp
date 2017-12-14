@@ -216,9 +216,8 @@ class SrlInput extends React.Component {
           <select disabled={outputState === "working"} onChange={this.handleListChange}>
             <option>Choose an example...</option>
             {srlSentences.map((sentence, index) => {
-              const selected = sentence === srlSentenceValue;
               return (
-                <option value={index} key={index} selected={selected}>{sentence}</option>
+                <option value={index} key={index}>{sentence}</option>
               );
             })}
           </select>
