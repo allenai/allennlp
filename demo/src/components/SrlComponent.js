@@ -20,7 +20,7 @@ const srlSentences = [
 
 const title = "Semantic Role Labeling";
 const description = (
-  <div>
+  <span>
     <span>
       Semantic Role Labeling (SRL) recovers the latent predicate argument structure of a sentence,
       providing representations that answer basic questions about sentence meaning, including “who” did “what” to “whom,” etc.
@@ -31,7 +31,7 @@ const description = (
     <span>
       , which is currently state of the art for PropBank SRL (Newswire sentences).
     </span>
-  </div>
+  </span>
 );
 
 const attributeToDisplayLabel = {

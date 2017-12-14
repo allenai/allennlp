@@ -24,7 +24,7 @@ const corefExamples = [
 
 const title = "Co-reference Resolution";
 const description = (
-  <div>
+  <span>
     <span>
     Coreference resolution is the task of finding all expressions that refer to the same entity
     in a text. It is an important step for a lot of higher level NLP tasks that involve natural
@@ -40,7 +40,7 @@ const description = (
     <span>
     in early 2017.
     </span>
-  </div>
+  </span>
 );
 
 
