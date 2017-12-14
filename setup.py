@@ -65,7 +65,7 @@ from setuptools import setup, find_packages
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
-VERSION = '0.3.1-unreleased'
+VERSION = '0.2.3'
 
 
 setup(name='allennlp',
@@ -104,7 +104,8 @@ setup(name='allennlp',
           'jupyter',
           'h5py',
           'scikit-learn',
-          'scipy'
+          'scipy',
+          'pytz==2017.3'
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
