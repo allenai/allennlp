@@ -26,6 +26,8 @@ from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSent
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
+from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelfAttentionEncoder
+from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
