@@ -60,6 +60,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'ElmoTokenEmbedder':
+        params.add_file_to_archive('options_file')
+        params.add_file_to_archive('weight_file')
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
         do_layer_norm = params.pop('do_layer_norm', False)

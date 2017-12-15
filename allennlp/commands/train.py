@@ -178,7 +178,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     trainer.train()
 
     # Now tar up results
-    archive_model(serialization_dir)
+    archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
     if test_data and evaluate_on_test:
         test_data.index_instances(vocab)
