@@ -20,7 +20,7 @@ const srlSentences = [
 
 const title = "Semantic Role Labeling";
 const description = (
-  <div>
+  <span>
     <span>
       Semantic Role Labeling (SRL) recovers the latent predicate argument structure of a sentence,
       providing representations that answer basic questions about sentence meaning, including “who” did “what” to “whom,” etc.
@@ -31,7 +31,7 @@ const description = (
     <span>
       , which is currently state of the art for PropBank SRL (Newswire sentences).
     </span>
-  </div>
+  </span>
 );
 
 const attributeToDisplayLabel = {
@@ -216,9 +216,8 @@ class SrlInput extends React.Component {
           <select disabled={outputState === "working"} onChange={this.handleListChange}>
             <option>Choose an example...</option>
             {srlSentences.map((sentence, index) => {
-              const selected = sentence === srlSentenceValue;
               return (
-                <option value={index} key={index} selected={selected}>{sentence}</option>
+                <option value={index} key={index}>{sentence}</option>
               );
             })}
           </select>

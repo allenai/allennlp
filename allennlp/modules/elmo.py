@@ -121,11 +121,16 @@ class Elmo(torch.nn.Module, Registrable):
 
     @classmethod
     def from_params(cls, params: Params) -> 'Elmo':
+        # Add files to archive
+        params.add_file_to_archive('options_file')
+        params.add_file_to_archive('weight_file')
+
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
         num_output_representations = params.pop('num_output_representations')
         do_layer_norm = params.pop('do_layer_norm', False)
         params.assert_empty(cls.__name__)
+
         return cls(options_file, weight_file, num_output_representations, do_layer_norm)
 
 
