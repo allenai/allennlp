@@ -8,7 +8,6 @@ from allennlp.common import Params
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2seq_encoders.efficent_multi_head_attention import EfficientMultiHeadAttention
-from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.nn.activations import Activation
 from allennlp.nn.util import add_positional_features
@@ -68,7 +67,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         super(StackedSelfAttentionEncoder, self).__init__()
 
         self._use_positional_encoding = use_positional_encoding
-        self._attention_layers: List[IntraSentenceAttentionEncoder] = []
+        self._attention_layers: List[EfficientMultiHeadAttention] = []
         self._feedfoward_layers: List[FeedForward] = []
         self._layer_norm_layers: List[LayerNorm] = []
 
