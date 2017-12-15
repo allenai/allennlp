@@ -47,7 +47,8 @@ A third alternative is to clone from our git repository:
 $ git clone https://github.com/allenai/allennlp.git
 ```
 
-Create a Python 3.6 virtual environment, and run
+Create a Python 3.6 virtual environment, and install the necessary requirements
+by running:
 
 ```bash
 $ INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
@@ -58,6 +59,12 @@ changing the flag to `false` if you don't want to be able to run tests.
 
 You'll also need to install PyTorch 0.2, following the appropriate instructions
 for your platform from [their website](http://pytorch.org/).
+
+Finally, install the package from source:
+
+```bash
+$ python setup.py install
+```
 
 ## Once You've Installed
 
