@@ -104,7 +104,8 @@ setup(name='allennlp',
           'jupyter',
           'h5py',
           'scikit-learn',
-          'scipy'
+          'scipy',
+          'pytz==2017.3'
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
