@@ -24,7 +24,7 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
         assert isinstance(instance.fields['world'].as_tensor({}), WikiTablesWorld)
 
         actions = [action_field.rule for action_field in instance.fields['actions'].field_list]
-        assert len(actions) == 186
+        assert len(actions) == 171
 
         # This is going to be long, but I think it's worth it, to be sure that all of the actions
         # we're expecting are present, and there are no extras.
@@ -39,29 +39,18 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "<<#1,#2>,<#2,#1>> -> reverse",
 
                 # These complex types are largely just here to build up a few specific functions:
-                # argmin and argmax.  The lambdas inside this are probably unnecessary, but are a
-                # side-effect of how we add lambdas wherever we can.
-                "<<d,d>,d> -> ['lambda x', d]",
+                # argmin and argmax.
                 "<<d,d>,d> -> [<d,<<d,d>,d>>, d]",
-                "<<d,e>,e> -> ['lambda x', e]",
                 "<<d,e>,e> -> [<e,<<d,e>,e>>, e]",
-                "<<d,p>,p> -> ['lambda x', p]",
                 "<<d,p>,p> -> [<p,<<d,p>,p>>, p]",
-                "<<d,r>,r> -> ['lambda x', r]",
                 "<<d,r>,r> -> [<r,<<d,r>,r>>, r]",
-                "<d,<<d,d>,d>> -> ['lambda x', <<d,d>,d>]",
                 "<d,<<d,d>,d>> -> [<d,<d,<<d,d>,d>>>, d]",
                 "<d,<d,<#1,<<d,#1>,#1>>>> -> argmax",
                 "<d,<d,<#1,<<d,#1>,#1>>>> -> argmin",
-                "<d,<d,<<d,d>,d>>> -> ['lambda x', <d,<<d,d>,d>>]",
                 "<d,<d,<<d,d>,d>>> -> [<d,<d,<#1,<<d,#1>,#1>>>>, d]",
                 "<d,<d,d>> -> -",
-                "<d,<d,d>> -> ['lambda x', <d,d>]",
-                "<d,<e,<<d,e>,e>>> -> ['lambda x', <e,<<d,e>,e>>]",
                 "<d,<e,<<d,e>,e>>> -> [<d,<d,<#1,<<d,#1>,#1>>>>, d]",
-                "<d,<p,<<d,p>,p>>> -> ['lambda x', <p,<<d,p>,p>>]",
                 "<d,<p,<<d,p>,p>>> -> [<d,<d,<#1,<<d,#1>,#1>>>>, d]",
-                "<d,<r,<<d,r>,r>>> -> ['lambda x', <r,<<d,r>,r>>]",
                 "<d,<r,<<d,r>,r>>> -> [<d,<d,<#1,<<d,#1>,#1>>>>, d]",
 
                 # Operations that manipulate numbers.
@@ -95,12 +84,9 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "<d,r> -> fb:row.row.index",
 
                 # Now we get to the CELL_TYPE, which is represented by "e".
-                "<e,<<d,e>,e>> -> ['lambda x', <<d,e>,e>]",
                 "<e,<<d,e>,e>> -> [<d,<e,<<d,e>,e>>>, d]",
-                "<e,<e,<e,d>>> -> ['lambda x', <e,<e,d>>]",
                 # TODO(mattg): why is this so complicated?
                 "<e,<e,<e,d>>> -> date",
-                "<e,<e,d>> -> ['lambda x', <e,d>]",
                 "<e,<e,d>> -> [<e,<e,<e,d>>>, e]",
                 "<e,d> -> ['lambda x', d]",
                 "<e,d> -> [<<#1,#2>,<#2,#1>>, <d,e>]",
@@ -127,7 +113,6 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
 
                 # PART_TYPE rules.
                 # TODO(mattg): what is a cell part?
-                "<p,<<d,p>,p>> -> ['lambda x', <<d,p>,p>]",
                 "<p,<<d,p>,p>> -> [<d,<p,<<d,p>,p>>>, d]",
                 "<p,d> -> ['lambda x', d]",
                 "<p,d> -> [<<#1,#2>,<#2,#1>>, <d,p>]",
@@ -141,7 +126,6 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "<p,r> -> [<<#1,#2>,<#2,#1>>, <r,p>]",
 
                 # Functions that operate on rows.
-                "<r,<<d,r>,r>> -> ['lambda x', <<d,r>,r>]",
                 "<r,<<d,r>,r>> -> [<d,<r,<<d,r>,r>>>, d]",
                 "<r,d> -> ['lambda x', d]",
                 "<r,d> -> [<<#1,#2>,<#2,#1>>, <d,r>]",
