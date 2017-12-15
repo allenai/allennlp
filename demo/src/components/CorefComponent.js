@@ -24,7 +24,7 @@ const corefExamples = [
 
 const title = "Co-reference Resolution";
 const description = (
-  <div>
+  <span>
     <span>
     Coreference resolution is the task of finding all expressions that refer to the same entity
     in a text. It is an important step for a lot of higher level NLP tasks that involve natural
@@ -40,7 +40,7 @@ const description = (
     <span>
     in early 2017.
     </span>
-  </div>
+  </span>
 );
 
 
@@ -88,9 +88,8 @@ class CorefInput extends React.Component {
                 <select disabled={outputState === "working"} onChange={this.handleListChange}>
                     <option value="">Choose an example...</option>
                     {corefExamples.map((example, index) => {
-                      const selected = example.document === corefDocumentValue;
                       return (
-                          <option value={index} key={index} selected={selected}>{example.document.substring(0,60) + ".. ."}</option>
+                          <option value={index} key={index}>{example.document.substring(0,60) + ".. ."}</option>
                       );
                     })}
                 </select>
@@ -157,7 +156,7 @@ class CorefOutput extends React.Component {
             <div className="model__content__summary">
             <ul>
               {clusters.map((cluster, index) =>
-               <li>
+               <li key={ index }>
                 {cluster.map((span, wordIndex) =>
                   <a key={ wordIndex } onMouseEnter={ () => this.onClusterMouseover(index) }> {doc.slice(span[0], span[1] + 1).join(" ")},</a>
                 )}
@@ -171,7 +170,7 @@ class CorefOutput extends React.Component {
             <label>Document</label>
             <div className="passage model__content__summary">
             {clusteredDocument.map((clusteredWord, index) =>
-              <span className={ wordStyle(clusteredWord) }> {clusteredWord['word']}</span>
+              <span key={ index } className={ wordStyle(clusteredWord) }> {clusteredWord['word']}</span>
             )}
             </div>
           </div>

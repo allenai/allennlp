@@ -64,3 +64,5 @@ jupyter
 # For pretrained model weights
 h5py
 
+# For timezone utilities
+pytz==2017.3
