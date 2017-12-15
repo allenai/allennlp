@@ -420,7 +420,7 @@ def get_valid_actions(name_mapping: Dict[str, str],
 
     complex_types = set()
     for name, alias in name_mapping.items():
-        if name == "lambda":
+        if name in ["lambda", "x", "y", "z"]:
             continue
         name_type = type_signatures[alias]
         # Type to terminal productions.

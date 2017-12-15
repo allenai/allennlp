@@ -69,6 +69,11 @@ class World:
         all_actions = set()
         for action_set in self.get_valid_actions().values():
             all_actions.update(action_set)
+        for i in range(self._num_nested_lambdas):
+            lambda_var = chr(ord('x') + i)
+            for basic_type in self.get_basic_types():
+                production = f"{basic_type} -> {lambda_var}"
+                all_actions.add(production)
         return sorted(all_actions)
 
     def get_basic_types(self) -> Set[Type]:

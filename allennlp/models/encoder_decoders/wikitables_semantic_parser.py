@@ -139,7 +139,6 @@ class WikiTablesSemanticParser(Model):
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
         memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
 
-
         initial_score = Variable(embedded_input.data.new(batch_size).fill_(0))
         attended_question = self._decoder_step.attend_on_question(final_encoder_output,
                                                                   encoder_outputs,

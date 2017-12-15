@@ -44,13 +44,17 @@ class MaximumMarginalLikelihood(DecoderTrainer):
             # We group together all current states to get more efficient (batched) computation.
             grouped_state = states[0].combine_states(states)
             allowed_actions = self._get_allowed_actions(grouped_state, allowed_transitions)
+            num_states = 0
             for next_state in decode_step.take_step(grouped_state, allowed_actions=allowed_actions):
+                num_states += 1
                 finished, not_finished = next_state.split_finished()
                 if finished is not None:
                     finished_states.append(finished)
                 if not_finished is not None:
                     next_states.append(not_finished)
             states = next_states
+            if num_states != sum(len(actions) for actions in allowed_actions):
+                raise RuntimeError("Not all allowed states taken!")
 
         # This is a dictionary of lists - for each batch instance, we want the score of all
         # finished states.  So this has shape (batch_size, num_target_action_sequences), though
