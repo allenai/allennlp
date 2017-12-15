@@ -27,7 +27,7 @@ from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelfAttentionEncoder
-from allennlp.modules.seq2seq_encoders.efficent_multi_head_attention import EfficientMultiHeadAttention
+from allennlp.modules.seq2seq_encoders.efficient_multi_head_attention import EfficientMultiHeadAttention
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

@@ -7,7 +7,7 @@ from torch.nn import Dropout
 from allennlp.common import Params
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.layer_norm import LayerNorm
-from allennlp.modules.seq2seq_encoders.efficent_multi_head_attention import EfficientMultiHeadAttention
+from allennlp.modules.seq2seq_encoders.efficient_multi_head_attention import EfficientMultiHeadAttention
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.nn.activations import Activation
 from allennlp.nn.util import add_positional_features

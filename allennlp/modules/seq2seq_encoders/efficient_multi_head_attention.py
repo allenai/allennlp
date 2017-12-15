@@ -42,7 +42,6 @@ class EfficientMultiHeadAttention(Seq2SeqEncoder):
         probability distribution even during training, due to the scaling
         factor applied to non-dropped elements.
     """
-
     def __init__(self,
                  num_heads: int,
                  input_dim: int,
