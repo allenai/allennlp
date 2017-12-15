@@ -6,7 +6,7 @@ from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
+from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
@@ -69,11 +69,10 @@ class SemanticRoleLabeler(Model):
                                                            self.num_classes))
         self.embedding_dropout = Dropout(p=embedding_dropout)
 
-        if text_field_embedder.get_output_dim() + binary_feature_dim != stacked_encoder.get_input_dim():
-            raise ConfigurationError("The SRL Model uses a binary verb indicator feature, meaning "
-                                     "the input dimension of the stacked_encoder must be equal to "
-                                     "the output dimension of the text_field_embedder + 1.")
-
+        check_dimensions_match(text_field_embedder.get_output_dim() + binary_feature_dim,
+                               stacked_encoder.get_input_dim(),
+                               "text embedding dim + verb indicator embedding dim",
+                               "encoder input dim")
         initializer(self)
 
     def forward(self,  # type: ignore
@@ -120,13 +119,7 @@ class SemanticRoleLabeler(Model):
         # Concatenate the verb feature onto the embedded text. This now
         # has shape (batch_size, sequence_length, embedding_dim + binary_feature_dim).
         embedded_text_with_verb_indicator = torch.cat([embedded_text_input, embedded_verb_indicator], -1)
-        batch_size, sequence_length, embedding_dim_with_binary_feature = embedded_text_with_verb_indicator.size()
-
-        if self.stacked_encoder.get_input_dim() != embedding_dim_with_binary_feature:
-            raise ConfigurationError("The SRL model uses an indicator feature, which makes "
-                                     "the embedding dimension one larger than the value "
-                                     "specified. Therefore, the 'input_dim' of the stacked_encoder "
-                                     "must be equal to total_embedding_dim + 1.")
+        batch_size, sequence_length, _ = embedded_text_with_verb_indicator.size()
 
         encoded_text = self.stacked_encoder(embedded_text_with_verb_indicator, mask)
 

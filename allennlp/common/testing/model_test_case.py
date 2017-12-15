@@ -28,7 +28,9 @@ class ModelTestCase(AllenNlpTestCase):
         self.dataset = dataset
         self.model = Model.from_params(self.vocab, params['model'])
 
-    def ensure_model_can_train_save_and_load(self, param_file: str, tolerance: float = 1e-6,
+    def ensure_model_can_train_save_and_load(self,
+                                             param_file: str,
+                                             tolerance: float = 1e-4,
                                              cuda_device: int = -1):
         save_dir = os.path.join(self.TEST_DIR, "save_and_load_test")
         archive_file = os.path.join(save_dir, "model.tar.gz")
@@ -57,15 +59,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         # The datasets themselves should be identical.
         for key in model_batch.keys():
-            field = model_batch[key]
-            if isinstance(field, dict):
-                for subfield in field:
-                    self.assert_fields_equal(model_batch[key][subfield],
-                                             loaded_batch[key][subfield],
-                                             tolerance=tolerance,
-                                             name=key + '.' + subfield)
-            else:
-                self.assert_fields_equal(model_batch[key], loaded_batch[key], 1e-6, key)
+            self.assert_fields_equal(model_batch[key], loaded_batch[key], 1e-6, key)
 
         # Set eval mode, to turn off things like dropout, then get predictions.
         model.eval()
@@ -88,18 +82,29 @@ class ModelTestCase(AllenNlpTestCase):
         for key in model_predictions.keys():
             self.assert_fields_equal(model_predictions[key],
                                      loaded_model_predictions[key],
-                                     tolerance=1e-4,
+                                     tolerance=tolerance,
                                      name=key)
 
         return model, loaded_model
 
-    @staticmethod
-    def assert_fields_equal(field1, field2, tolerance: float = 1e-6, name: str = None) -> None:
+    def assert_fields_equal(self, field1, field2, tolerance: float = 1e-6, name: str = None) -> None:
         if isinstance(field1, torch.autograd.Variable):
             assert_allclose(field1.data.cpu().numpy(),
                             field2.data.cpu().numpy(),
                             rtol=tolerance,
                             err_msg=name)
+        elif isinstance(field1, dict):
+            for key in field1:
+                self.assert_fields_equal(field1[key],
+                                         field2[key],
+                                         tolerance=tolerance,
+                                         name=name + '.' + key)
+        elif isinstance(field1, (list, tuple)):
+            for i, (subfield1, subfield2) in enumerate(zip(field1, field2)):
+                self.assert_fields_equal(subfield1,
+                                         subfield2,
+                                         tolerance=tolerance,
+                                         name=name + f"[{i}]")
         else:
             assert field1 == field2
 

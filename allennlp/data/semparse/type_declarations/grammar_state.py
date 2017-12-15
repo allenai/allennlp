@@ -48,12 +48,10 @@ class GrammarState:
     def __init__(self,
                  nonterminal_stack: List[str],
                  lambda_stack: Dict[str, List[str]],
-                 valid_actions: Dict[str, List[int]],
-                 action_indices: Dict[str, int]):
+                 valid_actions: Dict[str, List[int]]) -> None:
         self._nonterminal_stack = nonterminal_stack
         self._lambda_stack = lambda_stack
         self._valid_actions = valid_actions
-        self._action_indices = action_indices
 
     def is_finished(self) -> bool:
         """
@@ -68,10 +66,12 @@ class GrammarState:
         """
         return self._valid_actions[self._nonterminal_stack[-1]]
 
-    def take_action(self, action: str) -> 'GrammarState':
+    def take_action(self, left_side: str, right_side: str) -> 'GrammarState':
         """
         Takes an action in the current grammar state, returning a new grammar state with whatever
-        updates are necessary.
+        updates are necessary.  Because the decoder state keeps around actions that are already
+        split into left hand side and right hand side, we take those here directly, instead of
+        taking an action formatted as "LHS -> RHS" that we will just have to split.
 
         This will update the non-terminal stack and the context-dependent actions.  Updating the
         non-terminal stack involves popping the non-terminal that was expanded off of the stack,
@@ -83,19 +83,16 @@ class GrammarState:
         ``action`` is ``d -> [<e,d>, e]``, the resulting stack will be ``["r", "<e,r>", "e",
         "<e,d>"]``.
         """
-        non_terminal, production_string = action.split(' -> ')
-        assert self._nonterminal_stack[-1] == non_terminal
+        assert self._nonterminal_stack[-1] == left_side
         new_stack = self._nonterminal_stack[:-1]
-        productions = self.get_productions_from_string(production_string)
+        productions = self.get_productions_from_string(right_side)
         for production in reversed(productions):
             if self.is_nonterminal(production):
                 new_stack.append(production)
-        new_lambda_stack = {**lambda_stack}  # TODO(mattg): finish this
-        new_state = GrammarState(nonterminal_stack=new_stack,
-                                 lambda_stack=new_lambda_stack,
-                                 valid_actions=valid_actions,
-                                 action_indices=action_indices)
-        return new_stack
+        new_lambda_stack = {**self._lambda_stack}  # TODO(mattg): finish this
+        return GrammarState(nonterminal_stack=new_stack,
+                            lambda_stack=new_lambda_stack,
+                            valid_actions=self._valid_actions)
 
     @staticmethod
     def get_productions_from_string(production_string: str) -> List[str]:
@@ -121,4 +118,3 @@ class GrammarState:
         if len(production) > 1 or production == "x":
             return False
         return production[0].islower()
-

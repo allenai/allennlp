@@ -3,7 +3,7 @@ from typing import Dict, Optional
 import torch
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
+from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
@@ -82,14 +82,10 @@ class DecomposableAttention(Model):
 
         self._num_labels = vocab.get_vocab_size(namespace="labels")
 
-        if text_field_embedder.get_output_dim() != attend_feedforward.get_input_dim():
-            raise ConfigurationError("Output dimension of the text_field_embedder (dim: {}), "
-                                     "must match the input_dim of the FeedForward layer "
-                                     "attend_feedforward, (dim: {}). ".format(text_field_embedder.get_output_dim(),
-                                                                              attend_feedforward.get_input_dim()))
-        if aggregate_feedforward.get_output_dim() != self._num_labels:
-            raise ConfigurationError("Final output dimension (%d) must equal num labels (%d)" %
-                                     (aggregate_feedforward.get_output_dim(), self._num_labels))
+        check_dimensions_match(text_field_embedder.get_output_dim(), attend_feedforward.get_input_dim(),
+                               "text field embedding dim", "attend feedforward input dim")
+        check_dimensions_match(aggregate_feedforward.get_output_dim(), self._num_labels,
+                               "final output dimension", "number of labels")
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()

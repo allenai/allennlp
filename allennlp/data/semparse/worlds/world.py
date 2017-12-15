@@ -162,3 +162,8 @@ class World:
                 original_name = self.reverse_name_mapping[original_name]
             current_transitions.append("%s -> %s" % (expression_type, original_name))
         return current_transitions
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented

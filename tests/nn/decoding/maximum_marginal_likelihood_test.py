@@ -19,13 +19,15 @@ class TestMaximumMarginalLikelihood(AllenNlpTestCase):
         # There were two instances in this batch.
         assert len(result) == 2
 
-        # The first instance had three valid action sequence prefixes.
-        assert len(result[0]) == 3
-        assert result[0][()] == set([2, 4])
-        assert result[0][(2,)] == set([3])  # note that 7 is not in here; it was masked
-        assert result[0][(4,)] == set([5])
+        # The first instance had four valid action sequence prefixes.
+        assert len(result[0]) == 4
+        assert result[0][()] == set([1])
+        assert result[0][(1,)] == set([2, 4])
+        assert result[0][(1,2)] == set([3])  # note that 7 is not in here; it was masked
+        assert result[0][(1,4)] == set([5])
 
         # The second instance had two valid action sequence prefixes.
-        assert len(result[1]) == 2
-        assert result[1][()] == set([3])  # note that 9 is not in here; it was masked
-        assert result[1][(3,)] == set([3, 5])
+        assert len(result[1]) == 3
+        assert result[1][()] == set([1])
+        assert result[1][(1,)] == set([3])  # note that 9 is not in here; it was masked
+        assert result[1][(1,3)] == set([3, 5])

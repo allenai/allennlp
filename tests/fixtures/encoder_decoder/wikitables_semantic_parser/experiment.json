@@ -35,7 +35,7 @@
         "encoder": {
           "type": "cnn",
           "embedding_dim": 8,
-          "num_filters": 8,
+          "num_filters": 25,
           "ngram_filter_sizes": [3]
         }
       }

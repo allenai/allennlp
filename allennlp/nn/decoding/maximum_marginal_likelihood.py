@@ -75,13 +75,8 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         that the mask has the format 1*0* for each item in ``targets`` - that is, once we see our
         first zero, we stop processing that target.
 
-        Because of some implementation details around creating seq2seq datasets, our targets will
-        have a start and end symbol added to them.  We want to ignore the start symbol here,
-        because it's not actually a target, it's an input.
-
-        For example, if ``targets`` is the following tensor: ``[[S, 2, 3], [S, 4, 5]]``, the return
-        value will be: ``{(): set([2, 4]), (2,): set([3]), (4,): set([5])}`` (note that ``S``,
-        which we use to refer to the start symbol, does not appear in the return value).
+        For example, if ``targets`` is the following tensor: ``[[1, 2, 3], [1, 4, 5]]``, the return
+        value will be: ``{(): set([1]), (1,): set([2, 4]), (1, 2): set([3]), (1, 4): set([5])}``.
 
         We use this to prune the set of actions we consider during decoding, because we only need
         to score the sequences in ``targets``.
@@ -100,8 +95,8 @@ class MaximumMarginalLikelihood(DecoderTrainer):
             allowed_transitions: Dict[Tuple[int, ...], Set[int]] = defaultdict(set)
             for i, target_sequence in enumerate(instance_targets):
                 history: Tuple[int, ...] = ()
-                for j, action in enumerate(target_sequence[1:]):
-                    if instance_mask and instance_mask[i][j + 1] == 0:  # +1 because we start at index 1, not 0
+                for j, action in enumerate(target_sequence):
+                    if instance_mask and instance_mask[i][j] == 0:
                         break
                     allowed_transitions[history].add(action)
                     history = history + (action,)

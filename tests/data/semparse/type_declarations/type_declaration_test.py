@@ -22,11 +22,11 @@ class TestTypeResolution(AllenNlpTestCase):
         basic_types = {type_r, type_d, type_e}
         valid_actions = types.get_valid_actions(name_mapping, type_signatures, basic_types)
         assert len(valid_actions) == 5
-        assert valid_actions["<e,<r,<d,r>>>"] == {"<e,<r,<d,r>>> -> sample_function"}
-        assert valid_actions["<r,<d,r>>"] == {"<r,<d,r>> -> [<e,<r,<d,r>>>, e]"}
-        assert valid_actions["<d,r>"] == {"<d,r> -> [<r,<d,r>>, r]"}
-        assert valid_actions["r"] == {"r -> [<d,r>, d]"}
-        assert valid_actions["@START@"] == {"@START@ -> d", "@START@ -> r", "@START@ -> e"}
+        assert valid_actions["<e,<r,<d,r>>>"] == ["<e,<r,<d,r>>> -> sample_function"]
+        assert valid_actions["<r,<d,r>>"] == ["<r,<d,r>> -> [<e,<r,<d,r>>>, e]"]
+        assert valid_actions["<d,r>"] == ["<d,r> -> [<r,<d,r>>, r]"]
+        assert valid_actions["r"] == ["r -> [<d,r>, d]"]
+        assert valid_actions["@START@"] == ["@START@ -> d", "@START@ -> e", "@START@ -> r"]
 
     def test_get_valid_actions_with_placeholder_type(self):
         type_r = types.NamedBasicType("R")
@@ -38,11 +38,11 @@ class TestTypeResolution(AllenNlpTestCase):
         basic_types = {type_r, type_d, type_e}
         valid_actions = types.get_valid_actions(name_mapping, type_signatures, basic_types)
         assert len(valid_actions) == 5
-        assert valid_actions["<#1,#1>"] == {"<#1,#1> -> sample_function"}
-        assert valid_actions["e"] == {"e -> [<#1,#1>, e]"}
-        assert valid_actions["r"] == {"r -> [<#1,#1>, r]"}
-        assert valid_actions["d"] == {"d -> [<#1,#1>, d]"}
-        assert valid_actions["@START@"] == {"@START@ -> d", "@START@ -> r", "@START@ -> e"}
+        assert valid_actions["<#1,#1>"] == ["<#1,#1> -> sample_function"]
+        assert valid_actions["e"] == ["e -> [<#1,#1>, e]"]
+        assert valid_actions["r"] == ["r -> [<#1,#1>, r]"]
+        assert valid_actions["d"] == ["d -> [<#1,#1>, d]"]
+        assert valid_actions["@START@"] == ["@START@ -> d", "@START@ -> e", "@START@ -> r"]
 
     def test_get_valid_actions_with_any_type(self):
         type_r = types.NamedBasicType("R")
@@ -58,17 +58,17 @@ class TestTypeResolution(AllenNlpTestCase):
         basic_types = {type_r, type_d, type_e}
         valid_actions = types.get_valid_actions(name_mapping, type_signatures, basic_types)
         assert len(valid_actions) == 5
-        assert valid_actions["<d,r>"] == {"<d,r> -> sample_function"}
-        assert valid_actions["<e,r>"] == {"<e,r> -> sample_function"}
-        assert valid_actions["<r,r>"] == {"<r,r> -> sample_function"}
-        assert valid_actions["r"] == {"r -> [<e,r>, e]", "r -> [<d,r>, d]", "r -> [<r,r>, r]"}
-        assert valid_actions["@START@"] == {"@START@ -> d", "@START@ -> r", "@START@ -> e"}
+        assert valid_actions["<d,r>"] == ["<d,r> -> sample_function"]
+        assert valid_actions["<e,r>"] == ["<e,r> -> sample_function"]
+        assert valid_actions["<r,r>"] == ["<r,r> -> sample_function"]
+        assert valid_actions["r"] == ["r -> [<d,r>, d]", "r -> [<e,r>, e]", "r -> [<r,r>, r]"]
+        assert valid_actions["@START@"] == ["@START@ -> d", "@START@ -> e", "@START@ -> r"]
 
     def test_get_valid_actions_with_reverse(self):
         valid_actions = types.get_valid_actions(wt_types.COMMON_NAME_MAPPING, wt_types.COMMON_TYPE_SIGNATURE,
                                                 wt_types.BASIC_TYPES)
-        assert valid_actions['<d,e>'] == {'<d,e> -> [<<#1,#2>,<#2,#1>>, <e,d>]',
+        assert valid_actions['<d,e>'] == ['<d,e> -> [<<#1,#2>,<#2,#1>>, <e,d>]',
                                           '<d,e> -> fb:cell.cell.date',
-                                          '<d,e> -> fb:cell.cell.number',
-                                          '<d,e> -> fb:cell.cell.num2'
-                                         }
+                                          '<d,e> -> fb:cell.cell.num2',
+                                          '<d,e> -> fb:cell.cell.number'
+                                         ]

@@ -264,6 +264,11 @@ class DynamicTypeLogicParser(LogicParser):
                 raise RuntimeError("Unknown prefix: %s. Did you forget to pass it to the constructor?" % prefix)
         return super(DynamicTypeLogicParser, self).make_VariableExpression(name)
 
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
 
 def _substitute_any_type(_type: Type, basic_types: Set[BasicType]) -> Set[Type]:
     """

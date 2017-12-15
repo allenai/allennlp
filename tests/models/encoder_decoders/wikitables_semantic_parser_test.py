@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,no-self-use
 from allennlp.common.testing import ModelTestCase
 from allennlp.models import WikiTablesSemanticParser
 
