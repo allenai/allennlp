@@ -32,6 +32,7 @@ RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && apt-get install -y
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
 COPY requirements_test.txt .
+COPY setup.py .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
 RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
 RUN pip install http://download.pytorch.org/whl/cu80/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl
