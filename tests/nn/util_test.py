@@ -639,4 +639,3 @@ class TestNnUtil(AllenNlpTestCase):
         result = util.add_positional_features(tensor, min_timescale=1.0, max_timescale=1.0e4)
         numpy.testing.assert_almost_equal(result[0].data.cpu().numpy(), tensor2tensor_result)
         numpy.testing.assert_almost_equal(result[1].data.cpu().numpy(), tensor2tensor_result)
-

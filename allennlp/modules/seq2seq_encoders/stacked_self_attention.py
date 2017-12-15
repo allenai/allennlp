@@ -2,13 +2,14 @@ from typing import List
 
 from overrides import overrides
 import torch
+from torch.nn import Dropout
 
 from allennlp.common import Params
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.layer_norm import LayerNorm
+from allennlp.modules.seq2seq_encoders.efficent_multi_head_attention import EfficientMultiHeadAttention
 from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
-from allennlp.modules.similarity_functions import MultiHeadedSimilarity, SimilarityFunction, DotProductSimilarity
 from allennlp.nn.activations import Activation
 from allennlp.nn.util import add_positional_features
 
@@ -47,9 +48,6 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         The number of stacked self attention -> feedfoward -> layer normalisation blocks.
     num_attention_heads : ``int``, required.
         The number of attention heads to use per layer.
-    internal_similarity : ``SimilarityFunction``, optional (default = DotProductSimilarity(scale_output=True)).
-        The internal similarity function to use for creating the attention distributions per
-        attention head.
     use_positional_encoding: ``bool``, optional, (default = True)
         Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
         as without this feature, the self attention layers have no idea of absolute or relative
@@ -65,7 +63,6 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                  feedforward_hidden_dim: int,
                  num_layers: int,
                  num_attention_heads: int,
-                 internal_similarity: SimilarityFunction = DotProductSimilarity(scale_output=True),
                  use_positional_encoding: bool = True,
                  dropout_prob: float = 0.2) -> None:
         super(StackedSelfAttentionEncoder, self).__init__()
@@ -87,15 +84,10 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             self.add_module(f"feedforward_{i}", feedfoward)
             self._feedfoward_layers.append(feedfoward)
 
-            similarity_function = MultiHeadedSimilarity(num_attention_heads,
-                                                        tensor_1_dim=hidden_dim,
-                                                        internal_similarity=internal_similarity)
-            self_attention = IntraSentenceAttentionEncoder(hidden_dim,
-                                                           projection_dim,
-                                                           similarity_function,
-                                                           num_attention_heads,
-                                                           combination='1,2',
-                                                           output_dim=hidden_dim)
+            self_attention = EfficientMultiHeadAttention(num_heads=num_attention_heads,
+                                                         input_dim=hidden_dim,
+                                                         attention_dim=projection_dim,
+                                                         values_dim=projection_dim)
             self.add_module(f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 
@@ -105,6 +97,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
             feedfoward_input_dim = hidden_dim
 
+        self.dropout = Dropout(dropout_prob)
         self._input_dim = input_dim
         self._output_dim = self._attention_layers[-1].get_output_dim()
 
@@ -133,9 +126,9 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                 # First layer might have the wrong size for highway
                 # layers, so we exclude it here.
                 feedfoward_output += cached_input
-            # shape (batch_size, hidden_dim)
-            attention_output = attention(feedfoward_output, mask) + feedfoward_output
-            output = layer_norm(attention_output)
+            # shape (batch_size, sequence_length, hidden_dim)
+            attention_output = attention(feedfoward_output, mask)
+            output = layer_norm(self.dropout(attention_output) + feedfoward_output)
         return output
 
     @classmethod
@@ -146,7 +139,6 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         feedforward_hidden_dim = params.pop("feedforward_hidden_dim")
         num_layers = params.pop("num_layers", 2)
         num_attention_heads = params.pop('num_attention_heads', 3)
-        internal_similarity = SimilarityFunction.from_params(params.pop('internal_similarity', {}))
         use_positional_encoding = params.pop('use_positional_encoding', True)
         dropout_prob = params.pop("dropout_prob", 0.2)
 
@@ -156,6 +148,5 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                    projection_dim=projection_dim,
                    num_layers=num_layers,
                    num_attention_heads=num_attention_heads,
-                   internal_similarity=internal_similarity,
                    use_positional_encoding=use_positional_encoding,
                    dropout_prob=dropout_prob)
