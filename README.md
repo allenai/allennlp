@@ -85,6 +85,20 @@ state of the art models with high quality engineering.
 
 ## Running AllenNLP
 
+### Installing via pip
+
+AllenNLP also has a pip package if you wish to use allennlp as a library. Install with:
+
+```
+pip install allennlp
+```
+
+You will also need to manually install some dependencies:
+
+1. Visit http://pytorch.org/ and install the relevant pytorch package.
+
+2. Download necessary spacy models. `python -m spacy download en_core_web_sm`.
+
 ### Setting up a Conda development environment
 
 [Conda](https://conda.io/) will set up a virtual environment with the exact version of Python
@@ -120,20 +134,6 @@ to use AllenNLP.
 6. Visit http://pytorch.org/ and install the relevant pytorch package.
 
 You should now be able to test your installation with `pytest -v`.  Congratulations!
-
-### Installing via pip
-
-AllenNLP also has a pip package if you wish to use allennlp as a library. Install with:
-
-```
-pip install allennlp
-```
-
-You will also need to manually install some dependencies:
-
-1. Visit http://pytorch.org/ and install the relevant pytorch package.
-
-2. Download necessary spacy models. `python -m spacy download en_core_web_sm`.
 
 ### Setting up a Docker development environment
 
