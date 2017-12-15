@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 
 class GrammarState:
@@ -50,7 +50,7 @@ class GrammarState:
 
     def __init__(self,
                  nonterminal_stack: List[str],
-                 lambda_stacks: Dict[str, List[str]],
+                 lambda_stacks: Dict[Tuple[str, str], List[str]],
                  valid_actions: Dict[str, List[int]],
                  action_indices: Dict[str, int]) -> None:
         self._nonterminal_stack = nonterminal_stack
