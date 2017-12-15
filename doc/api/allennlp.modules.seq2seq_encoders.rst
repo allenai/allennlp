@@ -26,7 +26,7 @@ allennlp.modules.seq2seq_encoders
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.modules.seq2seq_encoders.efficient_multi_head_attention
+.. automodule:: allennlp.modules.seq2seq_encoders.multi_head_self_attention
    :members:
    :undoc-members:
    :show-inheritance:
