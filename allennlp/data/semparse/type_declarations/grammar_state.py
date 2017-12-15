@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Dict, List
 
 
@@ -31,27 +32,31 @@ class GrammarState:
         [START_SYMBOL], and decoding ends when this is empty.  Every time we take an action, we
         update the non-terminal stack and the context-dependent valid actions, and we use what's on
         the stack to decide which actions are valid in the current state.
-    lambda_stack : ``Dict[str, List[str]]``
+    lambda_stack : ``Dict[Tuple[str, str], List[str]]``
         The lambda stack keeps track of when we're in the scope of a lambda function.  The
-        dictionary is keyed by the lambda variable (e.g., "x"), and the value is a nonterminal
-        stack much like ``nonterminal_stack``.  When the stack becomes empty, we remove the lambda
-        entry.
+        dictionary is keyed by the production rule we are adding (like "r -> x", separated into
+        left hand side and right hand side, where the LHS is the type of the lambda variable and
+        the RHS is the variable itself), and the value is a nonterminal stack much like
+        ``nonterminal_stack``.  When the stack becomes empty, we remove the lambda entry.
     valid_actions : ``Dict[str, List[int]]``
         A mapping from non-terminals (represented as strings) to all valid (global and
         instance-specific) productions from that non-terminal (represented as a list of integers).
     action_indices : ``Dict[str, int]``
         We use integers to represent productions in the ``valid_actions`` dictionary for efficiency
-        reasons in the decoder.  However, we sometimes need access to the strings themselves, so we
-        take this mapping from production rule strings to integers.
+        reasons in the decoder.  This means we need a way to map from the production rule strings
+        that we generate for lambda variables back to the integer used to represent it.
     """
+    lambda_variables = set(['x', 'y', 'z'])
 
     def __init__(self,
                  nonterminal_stack: List[str],
-                 lambda_stack: Dict[str, List[str]],
-                 valid_actions: Dict[str, List[int]]) -> None:
+                 lambda_stacks: Dict[str, List[str]],
+                 valid_actions: Dict[str, List[int]],
+                 action_indices: Dict[str, int]) -> None:
         self._nonterminal_stack = nonterminal_stack
-        self._lambda_stack = lambda_stack
+        self._lambda_stacks = lambda_stacks
         self._valid_actions = valid_actions
+        self._action_indices = action_indices
 
     def is_finished(self) -> bool:
         """
@@ -64,7 +69,12 @@ class GrammarState:
         """
         Returns a list of valid actions (represented as integers)
         """
-        return self._valid_actions[self._nonterminal_stack[-1]]
+        actions = self._valid_actions[self._nonterminal_stack[-1]]
+        for type_, variable in self._lambda_stacks:
+            if self._nonterminal_stack[-1] == type_:
+                production_string = f"{type_} -> {variable}"
+                actions = actions + [self._action_indices[production_string]]
+        return actions
 
     def take_action(self, left_side: str, right_side: str) -> 'GrammarState':
         """
@@ -85,17 +95,47 @@ class GrammarState:
         """
         assert self._nonterminal_stack[-1] == left_side
         new_stack = self._nonterminal_stack[:-1]
-        productions = self.get_productions_from_string(right_side)
+        new_lambda_stacks = deepcopy(self._lambda_stacks)
+        for key, lambda_stack in new_lambda_stacks.items():
+            assert lambda_stack[-1] == left_side
+            lambda_stack.pop()  # pop to modify the value in the dictionary
+
+        productions = self._get_productions_from_string(right_side)
+        if 'lambda' in productions[0]:
+            production = productions[0]
+            if production[0] == "'" and production[-1] == "'":
+                production = production[1:-1]
+            lambda_variable = production.split(' ')[1]
+            if len(left_side) != 5:
+                raise NotImplementedError("Can't handle this type yet:", left_side)
+            # The left side must be formatted as "<t,d>", where "t" is the type of the lambda
+            # variable, and "d" is the return type of the lambda function.  We need to pull out the
+            # "t" here.  TODO(mattg): this is pretty limiting, but I'm not sure how general we
+            # should make this.
+            lambda_type = left_side[1]
+            new_lambda_stacks[(lambda_type, lambda_variable)] = []
+
         for production in reversed(productions):
-            if self.is_nonterminal(production):
+            if self._is_nonterminal(production):
                 new_stack.append(production)
-        new_lambda_stack = {**self._lambda_stack}  # TODO(mattg): finish this
+                for lambda_stack in new_lambda_stacks.values():
+                    lambda_stack.append(production)
+
+        # If any of the lambda stacks have now become empty, we remove them from our dictionary.
+        finished_lambdas = set()
+        for key, lambda_stack in new_lambda_stacks.items():
+            if not lambda_stack:
+                finished_lambdas.add(key)
+        for finished_lambda in finished_lambdas:
+            del new_lambda_stacks[finished_lambda]
+
         return GrammarState(nonterminal_stack=new_stack,
-                            lambda_stack=new_lambda_stack,
-                            valid_actions=self._valid_actions)
+                            lambda_stacks=new_lambda_stacks,
+                            valid_actions=self._valid_actions,
+                            action_indices=self._action_indices)
 
     @staticmethod
-    def get_productions_from_string(production_string: str) -> List[str]:
+    def _get_productions_from_string(production_string: str) -> List[str]:
         """
         Takes a string like '[<d,d>, d]' and parses it into a list like ['<d,d>', 'd'].  For
         production strings that are not lists, like '<e,d>', we return a single-element list:
@@ -107,14 +147,18 @@ class GrammarState:
             return [production_string]
 
     @staticmethod
-    def is_nonterminal(production: str) -> bool:
+    def _is_nonterminal(production: str) -> bool:
         # TODO(mattg): ProductionRuleField has a similar method, as does another place or two.  We
         # should centralize this logic somewhere, probably in the type declaration, or the
-        # ``World`` object.
+        # ``World`` object.  This is pretty specific to the WikiTablesWorld, and to the assumptions
+        # made in converting types to strings (e.g., that we're only using the first letter for
+        # types, lowercased).
+        if production in ['<=', '<']:
+            return False
         if production[0] == '<':
             return True
         if production.startswith('fb:'):
             return False
-        if len(production) > 1 or production == "x":
+        if len(production) > 1 or production in GrammarState.lambda_variables:
             return False
         return production[0].islower()

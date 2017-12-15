@@ -67,12 +67,14 @@ class World:
 
     def all_possible_actions(self) -> List[str]:
         all_actions = set()
-        for action_set in self.get_valid_actions().values():
+        type_set = set()
+        for type_, action_set in self.get_valid_actions().items():
             all_actions.update(action_set)
+            type_set.add(type_)
         for i in range(self._num_nested_lambdas):
             lambda_var = chr(ord('x') + i)
-            for basic_type in self.get_basic_types():
-                production = f"{basic_type} -> {lambda_var}"
+            for type_ in type_set:
+                production = f"{type_} -> {lambda_var}"
                 all_actions.add(production)
         return sorted(all_actions)
 

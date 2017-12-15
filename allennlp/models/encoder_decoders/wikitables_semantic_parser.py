@@ -215,7 +215,7 @@ class WikiTablesSemanticParser(Model):
         for key, action_strings in valid_actions.items():
             translated_valid_actions[key] = [action_mapping[action_string]
                                              for action_string in action_strings]
-        return GrammarState([START_SYMBOL], {}, translated_valid_actions)
+        return GrammarState([START_SYMBOL], {}, translated_valid_actions, action_mapping)
 
     def _embed_actions(self, actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
                                                                                 Dict[Tuple[int, int], int],
