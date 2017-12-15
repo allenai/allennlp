@@ -7,7 +7,7 @@ from torch.nn import Dropout
 from allennlp.common import Params
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.layer_norm import LayerNorm
-from allennlp.modules.seq2seq_encoders.efficient_multi_head_attention import EfficientMultiHeadAttention
+from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.nn.activations import Activation
 from allennlp.nn.util import add_positional_features
@@ -67,7 +67,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         super(StackedSelfAttentionEncoder, self).__init__()
 
         self._use_positional_encoding = use_positional_encoding
-        self._attention_layers: List[EfficientMultiHeadAttention] = []
+        self._attention_layers: List[MultiHeadSelfAttention] = []
         self._feedfoward_layers: List[FeedForward] = []
         self._layer_norm_layers: List[LayerNorm] = []
 
@@ -83,10 +83,10 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             self.add_module(f"feedforward_{i}", feedfoward)
             self._feedfoward_layers.append(feedfoward)
 
-            self_attention = EfficientMultiHeadAttention(num_heads=num_attention_heads,
-                                                         input_dim=hidden_dim,
-                                                         attention_dim=projection_dim,
-                                                         values_dim=projection_dim)
+            self_attention = MultiHeadSelfAttention(num_heads=num_attention_heads,
+                                                    input_dim=hidden_dim,
+                                                    attention_dim=projection_dim,
+                                                    values_dim=projection_dim)
             self.add_module(f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 

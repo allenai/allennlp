@@ -9,8 +9,8 @@ from allennlp.nn.util import last_dim_softmax
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
 
-@Seq2SeqEncoder.register("efficient_multi_head_attention")
-class EfficientMultiHeadAttention(Seq2SeqEncoder):
+@Seq2SeqEncoder.register("multi_head_self_attention")
+class MultiHeadSelfAttention(Seq2SeqEncoder):
     # pylint: disable=line-too-long
     """
     This class implements the key-value scaled dot product attention mechanism
@@ -38,9 +38,7 @@ class EfficientMultiHeadAttention(Seq2SeqEncoder):
         explicitly, the projection has size `input_size`.
     attention_dropout_prob : ``float``, optional (default = 0.1).
         The dropout probability applied to the normalised attention
-        distributions. The resulting attention is still a well defined
-        probability distribution even during training, due to the scaling
-        factor applied to non-dropped elements.
+        distributions.
     """
     def __init__(self,
                  num_heads: int,
@@ -49,7 +47,7 @@ class EfficientMultiHeadAttention(Seq2SeqEncoder):
                  values_dim: int,
                  output_projection_dim: int = None,
                  attention_dropout_prob: float = 0.1) -> None:
-        super(EfficientMultiHeadAttention, self).__init__()
+        super(MultiHeadSelfAttention, self).__init__()
 
         self._num_heads = num_heads
         self._input_dim = input_dim
@@ -150,7 +148,6 @@ class EfficientMultiHeadAttention(Seq2SeqEncoder):
         # Note that we _cannot_ use a reshape here, because this tensor was created
         # with num_heads being the first dimension, so reshaping naively would not
         # throw an error, but give an incorrect result.
-        # TODO(Mark): Given the possible slowness of split, maybe reshape + transpose is better?
         outputs = torch.cat(torch.split(outputs, batch_size, dim=0), dim=-1)
 
         # Project back to original input size.
