@@ -39,8 +39,8 @@ cffi==1.11.2
 awscli>=1.11.91
 
 # REST interface for models
-sanic==0.6.0
-sanic-cors==0.6.0.2
+flask==0.12.1
+flask-cors==3.0.3
 
 # Talk to postgres demo database
 psycopg2
