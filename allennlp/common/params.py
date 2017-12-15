@@ -60,7 +60,7 @@ class Params(MutableMapping):
         Any class in its ``from_params`` method can request that some of its
         input files be added to the archive by calling this method.
 
-        For example, if some class ``A`` had a ``input_file`` parameter, it could call
+        For example, if some class ``A`` had an ``input_file`` parameter, it could call
 
         ```
         params.add_file_to_archive("input_file")
