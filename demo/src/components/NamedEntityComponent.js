@@ -23,7 +23,7 @@ const nerSentences = [
 
 const title = "Named Entity Recognition";
 const description = (
-  <div>
+  <span>
     <span>
         The named entity recognition model identifies named entities
         (people, locations, organizations, and miscellaneous)
@@ -49,7 +49,7 @@ const description = (
     <span>
       tutorial.)
     </span>
-  </div>
+  </span>
 );
 
 class NerInput extends React.Component {
@@ -95,9 +95,8 @@ class NerInput extends React.Component {
           <select disabled={outputState === "working"} onChange={this.handleListChange}>
             <option>Choose an example...</option>
             {nerSentences.map((sentence, index) => {
-              const selected = sentence === nerSentenceValue;
               return (
-                <option value={index} key={index} selected={selected}>{sentence}</option>
+                <option value={index} key={index}>{sentence}</option>
               );
             })}
           </select>
