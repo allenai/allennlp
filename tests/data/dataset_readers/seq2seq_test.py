@@ -32,4 +32,3 @@ class TestSeq2SeqDatasetReader(AllenNlpTestCase):
         assert [t.text for t in fields["source_tokens"].tokens] == ["this", "is", "a", "sentence", "@@END@@"]
         assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
                                                                     "a", "sentence", "@@END@@"]
-        
