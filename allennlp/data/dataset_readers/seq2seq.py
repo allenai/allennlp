@@ -31,7 +31,7 @@ class Seq2SeqDatasetReader(DatasetReader):
         source_tokens: ``TextField`` and
         target_tokens: ``TextField``
 
-    `START_SYMBOL` and `END_SYMBOL` tokens are added to the source and target sequences. 
+    `START_SYMBOL` and `END_SYMBOL` tokens are added to the source and target sequences.
 
     Parameters
     ----------
@@ -88,7 +88,7 @@ class Seq2SeqDatasetReader(DatasetReader):
         tokenized_source = self._source_tokenizer.tokenize(source_string)
         if self._source_add_start_token:
             tokenized_source.insert(0, Token(START_SYMBOL))
-        tokenized_source.append(Token(END_SYMBOL))        
+        tokenized_source.append(Token(END_SYMBOL))
         source_field = TextField(tokenized_source, self._source_token_indexers)
         if target_string is not None:
             tokenized_target = self._target_tokenizer.tokenize(target_string)
