@@ -7,14 +7,14 @@ from typing import Dict, Union, List
 import os
 import logging
 
+import numpy
+import torch
+
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary, Dataset
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
-
-import numpy
-import torch
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
