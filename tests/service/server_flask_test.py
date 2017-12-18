@@ -73,15 +73,15 @@ class TestFlask(AllenNlpTestCase):
 
     def test_list_models(self):
         response = self.client.get("/models")
-        data = json.loads(response.data)
+        data = json.loads(response.get_data())
         assert "machine-comprehension" in set(data["models"])
 
     def test_unknown_model(self):
-        response = self.client.post("/predict/bogus_model",
-                                    data={"input": "broken"})
+        response = self.post_json("/predict/bogus_model",
+                                  data={"input": "broken"})
         assert response.status_code == 400
-        print(response.data)
-        assert b"unknown model" in response.data and b"bogus_model" in response.data
+        data = response.get_data()
+        assert b"unknown model" in data and b"bogus_model" in data
 
     def test_machine_comprehension(self):
         response = self.post_json("/predict/machine-comprehension",
@@ -96,7 +96,6 @@ class TestFlask(AllenNlpTestCase):
         response = self.post_json("/predict/textual-entailment",
                                   data={"premise": "the super bowl was played in seattle",
                                         "hypothesis": "the super bowl was played in ohio"})
-        print(response.data)
         assert response.status_code == 200
         results = json.loads(response.data)
         assert "label_probs" in results
