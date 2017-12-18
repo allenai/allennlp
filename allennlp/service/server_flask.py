@@ -179,7 +179,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
         # Add to database and get permalink
         if demo_db is not None:
             try:
-                perma_id = demo_db.add_result(headers=request.headers,
+                perma_id = demo_db.add_result(headers=dict(request.headers),
                                               model_name=model_name,
                                               inputs=data,
                                               outputs=prediction)
@@ -258,7 +258,10 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
 
     @app.route('/<path:path>')
     def static_proxy(path: str) -> Response: # pylint: disable=unused-variable
-        head, tail = os.path.split(path)
-        return send_from_directory(os.path.join(build_dir, head), tail)
+        return send_from_directory(build_dir, path)
+
+    @app.route('/static/js/<path:path>')
+    def static_js_proxy(path: str) -> Response: # pylint: disable=unused-variable
+        return send_from_directory(os.path.join(build_dir, 'static/js'), path)
 
     return app
