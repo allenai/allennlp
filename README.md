@@ -87,7 +87,7 @@ state of the art models with high quality engineering.
 
 ### Installing via pip
 
-AllenNLP also has a pip package if you wish to use allennlp as a library. Install with:
+The preferred way to install AllenNLP is as a pip package.  You can install with the following command:
 
 ```
 pip install allennlp
