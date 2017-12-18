@@ -43,6 +43,7 @@ RUN cd demo && npm install && npm run build && cd ..
 COPY allennlp/ allennlp/
 COPY tests/ tests/
 COPY pytest.ini pytest.ini
+COPY .pylintrc .pylintrc
 COPY scripts/ scripts/
 COPY tutorials/ tutorials/
 COPY training_config training_config/
