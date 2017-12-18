@@ -43,3 +43,9 @@ class Token:
         self.dep_ = dep
         self.ent_type_ = ent_type
         self.text_id = text_id
+
+    def __str__(self):
+        return self.text
+
+    def __repr__(self):
+        return self.__str__()

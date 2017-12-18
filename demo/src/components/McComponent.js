@@ -31,7 +31,7 @@ const mcExamples = [
 
 const title = "Machine Comprehension";
 const description = (
-  <div>
+  <span>
     <span>
       Machine Comprehension (MC) answers natural language questions by selecting an answer span within an evidence text.
       The AllenNLP toolkit provides the following MC visualization, which can be used for any MC model in AllenNLP.
@@ -46,7 +46,7 @@ const description = (
     <span>
       (Wikipedia sentences) in early 2017.
     </span>
-  </div>
+  </span>
 );
 
 
@@ -105,9 +105,8 @@ render() {
             <select disabled={outputState === "working"} onChange={this.handleListChange}>
                 <option value="">Choose an example...</option>
                 {mcExamples.map((example, index) => {
-                  const selected = example.passage === mcPassageValue && example.question === mcQuestionValue;
                   return (
-                      <option value={index} key={index} selected={selected}>{example.passage.substring(0,60) + "..."}</option>
+                      <option value={index} key={index}>{example.passage.substring(0,60) + "..."}</option>
                   );
                 })}
             </select>
