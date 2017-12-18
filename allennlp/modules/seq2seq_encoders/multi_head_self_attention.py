@@ -37,8 +37,8 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         The dimensionality of the final output projection. If this is not passed
         explicitly, the projection has size `input_size`.
     attention_dropout_prob : ``float``, optional (default = 0.1).
-        The dropout probability applied to the normalised attention
-        distributions.
+        The dropout probability applied to the logits before creating normalised
+        attention distributions.
     """
     def __init__(self,
                  num_heads: int,
@@ -133,8 +133,8 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         # shape (num_heads * batch_size, timesteps, timesteps)
         # Normalise the distributions, using the same mask for all heads.
+        scaled_similarities = self._attention_dropout(scaled_similarities)
         attention = last_dim_softmax(scaled_similarities, mask.repeat(num_heads, 1))
-        attention = self._attention_dropout(attention)
         # This is doing the following batch-wise matrix multiplication:
         # (num_heads * batch_size, timesteps, timesteps) *
         # (num_heads * batch_size, timesteps, values_dim)
