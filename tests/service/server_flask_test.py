@@ -5,6 +5,8 @@ import os
 import pathlib
 from collections import defaultdict
 
+from flask import Response
+
 from allennlp.common.util import JsonDict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
@@ -55,6 +57,12 @@ class TestFlask(AllenNlpTestCase):
             self.app.testing = True
             self.client = self.app.test_client()
 
+    def post_json(self, endpoint: str, data: JsonDict) -> Response:
+        return self.client.post(endpoint,
+                                content_type="application/json",
+                                data=json.dumps(data))
+
+
     def tearDown(self):
         super().tearDown()
         try:
@@ -76,27 +84,28 @@ class TestFlask(AllenNlpTestCase):
         assert b"unknown model" in response.data and b"bogus_model" in response.data
 
     def test_machine_comprehension(self):
-        response = self.client.post("/predict/machine-comprehension",
-                                    data={"passage": "the super bowl was played in seattle",
-                                          "question": "where was the super bowl played?"})
+        response = self.post_json("/predict/machine-comprehension",
+                                  data={"passage": "the super bowl was played in seattle",
+                                        "question": "where was the super bowl played?"})
+
         assert response.status_code == 200
         results = json.loads(response.data)
         assert "best_span" in results
 
     def test_textual_entailment(self):
-        response = self.client.post("/predict/textual-entailment",
-                                    data={"premise": "the super bowl was played in seattle",
-                                          "hypothesis": "the super bowl was played in ohio"})
+        response = self.post_json("/predict/textual-entailment",
+                                  data={"premise": "the super bowl was played in seattle",
+                                        "hypothesis": "the super bowl was played in ohio"})
         print(response.data)
         assert response.status_code == 200
         results = json.loads(response.data)
         assert "label_probs" in results
 
     def test_semantic_role_labeling(self):
-        response = self.client.post("/predict/semantic-role-labeling",
-                                       data={"sentence": "the super bowl was played in seattle"})
-        assert response.status == 200
-        results = json.loads(response.text)
+        response = self.post_json("/predict/semantic-role-labeling",
+                                  data={"sentence": "the super bowl was played in seattle"})
+        assert response.status_code == 200
+        results = json.loads(response.get_data())
         assert "verbs" in results
 
     def test_caching(self):
@@ -109,9 +118,9 @@ class TestFlask(AllenNlpTestCase):
         # call counts should be empty
         assert not predictor.calls
 
-        response = self.client.post("/predict/counting", data=data)
-        assert response.status == 200
-        assert json.loads(response.text) == data
+        response = self.post_json("/predict/counting", data=data)
+        assert response.status_code == 200
+        assert json.loads(response.get_data()) == data
 
         # call counts should reflect the one call
         assert predictor.calls.get(key) == 1
@@ -119,9 +128,9 @@ class TestFlask(AllenNlpTestCase):
 
         # make a different call
         noyes = {"no": "yes"}
-        response = self.client.post("/predict/counting", data=noyes)
-        assert response.status == 200
-        assert json.loads(response.text) == noyes
+        response = self.post_json("/predict/counting", data=noyes)
+        assert response.status_code == 200
+        assert json.loads(response.get_data()) == noyes
 
         # call counts should reflect two calls
         assert predictor.calls[key] == 1
@@ -130,9 +139,9 @@ class TestFlask(AllenNlpTestCase):
 
         # repeated calls should come from cache and not hit the predictor
         for _ in range(3):
-            response = self.client.post("/predict/counting", data=data)
-            assert response.status == 200
-            assert json.loads(response.text) == data
+            response = self.post_json("/predict/counting", data=data)
+            assert response.status_code == 200
+            assert json.loads(response.get_data()) == data
 
             # these should all be cached, so call counts should not be updated
             assert predictor.calls[key] == 1
@@ -140,14 +149,14 @@ class TestFlask(AllenNlpTestCase):
             assert len(predictor.calls) == 2
 
     def test_disable_caching(self):
-        import allennlp.service.server_sanic as server_sanic
-        server_sanic.CACHE_SIZE = 0
+        import allennlp.service.server_flask as server
+        server.CACHE_SIZE = 0
 
         predictor = CountingPredictor()
-        app = server_sanic.make_app(build_dir=self.TEST_DIR)
+        app = server.make_app(build_dir=self.TEST_DIR)
         app.predictors = {"counting": predictor}
         app.testing = True
-        client = app.test_client
+        client = app.test_client()
 
         data = {"input1": "this is input 1", "input2": 10}
         key = json.dumps(data)
@@ -155,9 +164,11 @@ class TestFlask(AllenNlpTestCase):
         assert not predictor.calls
 
         for i in range(5):
-            response = client.post("/predict/counting", data=data)
+            response = client.post("/predict/counting",
+                                   content_type="application/json",
+                                   data=json.dumps(data))
             assert response.status_code == 200
-            assert json.loads(response.data) == data
+            assert json.loads(response.get_data()) == data
 
             # cache is disabled, so call count should keep incrementing
             assert predictor.calls[key] == i + 1
@@ -179,17 +190,17 @@ class TestFlask(AllenNlpTestCase):
 
         # Make a prediction, no permalinks.
         data = {"some": "input"}
-        response = client.post("/predict/counting", data=data)
+        response = client.post("/predict/counting", content_type="application/json", data=json.dumps(data))
 
-        assert response.status == 200
+        assert response.status_code == 200
 
         # With permalinks not enabled, the result shouldn't contain a slug.
-        result = json.loads(response.text)
+        result = json.loads(response.get_data())
         assert "slug" not in result
 
         # With permalinks not enabled, a post to the /permadata endpoint should be a 400.
-        _, response = self.client.post("/permadata", data={"slug": "someslug"})
-        assert response.status == 400
+        response = self.client.post("/permadata", data="""{"slug": "someslug"}""")
+        assert response.status_code == 400
 
     def test_permalinks_work(self):
         db = InMemoryDemoDatabase()
@@ -199,22 +210,23 @@ class TestFlask(AllenNlpTestCase):
         app.testing = True
         client = app.test_client()
 
-        data = {"some": "input"}
-        response = client.post("/predict/counting", data=data)
+        def post(endpoint: str, data: JsonDict) -> Response:
+            return client.post(endpoint, content_type="application/json", data=json.dumps(data))
 
-        assert response.status == 200
-        result = json.loads(response.text)
+        data = {"some": "input"}
+        response = post("/predict/counting", data=data)
+
+        assert response.status_code == 200
+        result = json.loads(response.get_data())
         slug = result.get("slug")
         assert slug is not None
 
-        print("db data", db.data)
+        response = post("/permadata", data={"slug": "not the right slug"})
+        assert response.status_code == 400
 
-        response = client.post("/permadata", data={"slug": "not the right slug"})
-        assert response.status == 400
-
-        response = client.post("/permadata", data={"slug": slug})
-        assert response.status == 200
-        result2 = json.loads(response.text)
+        response = post("/permadata", data={"slug": slug})
+        assert response.status_code == 200
+        result2 = json.loads(response.get_data())
         assert set(result2.keys()) == {"modelName", "requestData", "responseData"}
         assert result2["modelName"] == "counting"
         assert result2["requestData"] == data

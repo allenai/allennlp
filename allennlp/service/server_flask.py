@@ -91,7 +91,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
         cache_size = 0
 
     @app.errorhandler(ServerError)
-    def handle_invalid_usage(error: ServerError) -> Response:
+    def handle_invalid_usage(error: ServerError) -> Response:  # pylint: disable=unused-variable
         response = jsonify(error.to_dict())
         response.status_code = error.status_code
         return response
@@ -156,7 +156,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
         if model is None:
             raise ServerError("unknown model: {}".format(model_name), status_code=400)
 
-        data = request.get_json(force=True)
+        data = request.get_json()
 
         log_blob = {"model": model_name, "inputs": data, "cached": False, "outputs": {}}
 
@@ -220,6 +220,8 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
             log_blob["outputs"]["verbs"] = verbs
 
         logger.info("prediction: %s", json.dumps(log_blob))
+
+        print(log_blob)
 
         return jsonify(prediction)
 
