@@ -42,11 +42,11 @@ class ServerError(Exception):
         self.payload = payload
 
     def to_dict(self):
-        rv = dict(self.payload or ())
-        rv['message'] = self.message
-        return rv
+        error_dict = dict(self.payload or ())
+        error_dict['message'] = self.message
+        return error_dict
 
-def run(port: int, workers: int,
+def run(port: int,
         trained_models: Dict[str, DemoModel],
         static_dir: str = None) -> None:
     """Run the server programatically"""
