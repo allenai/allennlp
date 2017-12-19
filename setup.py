@@ -113,7 +113,7 @@ setup(name='allennlp',
           'sanic-cors==0.6.0.2',
           # Talk to postgres demo database
           'psycopg2',
-          # argument parsing in for data cleaning scripts
+          # argument parsing for data cleaning scripts
           'argparse',
           # Used for downloading datasets over HTTP
           'requests>=2.18',
