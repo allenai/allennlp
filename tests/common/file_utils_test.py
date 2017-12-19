@@ -72,6 +72,16 @@ class TestFileUtils(AllenNlpTestCase):
             assert back_to_url == url
             assert etag == "mytag"
 
+    def test_url_to_filename_with_etags_eliminates_quotes(self):
+        for url in ['http://allenai.org', 'http://allennlp.org',
+                    'https://www.google.com', 'http://pytorch.org']:
+            filename = url_to_filename(url, etag='"mytag"')
+            assert "http" not in filename
+            pathlib.Path(os.path.join(self.TEST_DIR, filename)).touch()
+            back_to_url, etag = filename_to_url(filename)
+            assert back_to_url == url
+            assert etag == "mytag"
+
     @responses.activate
     def test_get_from_cache(self):
         url = 'http://fake.datastore.com/glove.txt.gz'
