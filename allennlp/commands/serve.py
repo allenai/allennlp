@@ -22,7 +22,7 @@ import argparse
 from typing import Dict
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.service import server_sanic
+from allennlp.service import server_flask as server
 from allennlp.service.predictors import DemoModel
 
 # This maps from the name of the task
@@ -67,7 +67,6 @@ class Serve(Subcommand):
                 name, description=description, help='Run the web service and demo.')
 
         subparser.add_argument('--port', type=int, default=8000)
-        subparser.add_argument('--workers', type=int, default=1)
 
         subparser.set_defaults(func=_serve(self.trained_models))
 
@@ -75,6 +74,6 @@ class Serve(Subcommand):
 
 def _serve(trained_models: Dict[str, DemoModel]):
     def serve_inner(args: argparse.Namespace) -> None:
-        server_sanic.run(args.port, args.workers, trained_models)
+        server.run(args.port, trained_models)
 
     return serve_inner
