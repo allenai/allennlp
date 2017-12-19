@@ -3,7 +3,7 @@ We store all the information related to a world (i.e. the context in which logic
 executed) here. For WikiTableQuestions, this includes a representation of a table, mapping from
 Sempre variables in all logical forms to NLTK variables, and the types of all predicates and entities.
 """
-from typing import List, Set
+from typing import Dict, List, Set
 import re
 
 from nltk.sem.logic import Type
@@ -72,6 +72,26 @@ class WikiTablesWorld(World):
     @overrides
     def get_basic_types(self) -> Set[Type]:
         return types.BASIC_TYPES
+
+    @overrides
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        """
+        We get the valid actions from the grammar using the logic in the super class; we just need
+        to add a few specific non-terminal productions here that don't get added in other places.
+        """
+        valid_actions = super(WikiTablesWorld, self).get_valid_actions()
+        # There is a "null cell" and a "null row" that basically allow checking for an empty set,
+        # because our "entity" and "row" types are actually set of entities / rows.
+        # TODO(mattg): Pradeep, is this the right way to add this, or is there another place where
+        # this would more naturally fit?
+        valid_actions['e'].append('e -> fb:cell.null')
+        valid_actions['<e,r>'].append('<e,r> -> fb:row.row.null')
+        # Not really sure why this rule gets produced, because of how negative numbers are handled
+        # in the type system, but it does.
+        # TODO(mattg): Pradeep, any ideas here?
+        valid_actions['e'].append('e -> -1')
+
+        return valid_actions
 
     @overrides
     def _map_name(self, name: str) -> str:

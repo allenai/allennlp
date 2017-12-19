@@ -19,6 +19,11 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         # and C6.
         assert str(expression) == "R(C6,C2(cell:usl_a_league))"
 
+    def test_world_parses_logical_forms_with_dates(self):
+        sempre_form = "((reverse fb:row.row.league) (fb:row.row.year (fb:cell.cell.date (date 2002 -1 -1))))"
+        expression = self.world.parse_logical_form(sempre_form)
+        assert str(expression) == "R(C2,C6(D1(D0(2002,~1,~1))))"
+
     def test_world_returns_correct_actions_with_reverse(self):
         sempre_form = "((reverse fb:row.row.year) (fb:row.row.league fb:cell.usl_a_league))"
         expression = self.world.parse_logical_form(sempre_form)

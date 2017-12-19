@@ -45,6 +45,9 @@ sanic-cors==0.6.0.2
 # Talk to postgres demo database
 psycopg2
 
+# Used by semantic parsing code to strip diacritics from unicode strings.
+unidecode
+
 #### LIBRARIES USED IN SCRIPTS ####
 # argument parsing in for data cleaning scripts
 argparse

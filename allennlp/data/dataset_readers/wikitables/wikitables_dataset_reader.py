@@ -57,6 +57,9 @@ class WikiTablesDatasetReader(DatasetReader):
     dpd_output_directory : ``str`` (optional)
         Directory that contains all the gzipped dpd output files. We assume the filenames match the
         example IDs (e.g.: ``nt-0.gz``).
+    max_dpd_logical_forms : ``int`` (optional)
+        We will use the first ``max_dpd_logical_forms`` logical forms as our target label.  Only
+        applicable if ``dpd_output_directory`` is given.  Default is 10.
     tokenizer : ``Tokenizer`` (optional)
         Tokenizer to use for the questions. Will default to ``WordTokenizer()``.
     question_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
@@ -82,6 +85,7 @@ class WikiTablesDatasetReader(DatasetReader):
     def __init__(self,
                  tables_directory: str = None,
                  dpd_output_directory: str = None,
+                 max_dpd_logical_forms: int = 10,
                  tokenizer: Tokenizer = None,
                  question_token_indexers: Dict[str, TokenIndexer] = None,
                  table_token_indexers: Dict[str, TokenIndexer] = None,
@@ -89,6 +93,7 @@ class WikiTablesDatasetReader(DatasetReader):
                  terminal_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._tables_directory = tables_directory
         self._dpd_output_directory = dpd_output_directory
+        self._max_dpd_logical_forms = max_dpd_logical_forms
         self._tokenizer = tokenizer or WordTokenizer()
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
@@ -101,7 +106,7 @@ class WikiTablesDatasetReader(DatasetReader):
         instances = []
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file: %s", file_path)
-            for line in tqdm.tqdm(data_file):
+            for line in tqdm.tqdm(data_file.readlines()):
                 line = line.strip("\n")
                 if not line:
                     continue
@@ -112,8 +117,17 @@ class WikiTablesDatasetReader(DatasetReader):
                                               parsed_info["context"].replace(".csv", ".tsv"))
                 dpd_output_filename = os.path.join(self._dpd_output_directory,
                                                    parsed_info["id"] + '.gz')
-                sempre_forms = [line.strip().decode('utf-8') for line in gzip.open(dpd_output_filename)]
-                instances.append(self.text_to_instance(question, table_filename, sempre_forms))
+                try:
+                    sempre_forms = [line.strip().decode('utf-8') for line in gzip.open(dpd_output_filename)]
+                except FileNotFoundError:
+                    logger.info(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
+                    continue
+                sempre_forms = sempre_forms[:self._max_dpd_logical_forms]
+                instance = self.text_to_instance(question, table_filename, sempre_forms)
+                if instance is not None:
+                    # The DPD output might not actually give us usable logical forms for some
+                    # instances, and in those cases `text_to_instance` returns None.
+                    instances.append(instance)
         if not instances:
             raise ConfigurationError("No instances read!")
         return Dataset(instances)
@@ -168,6 +182,12 @@ class WikiTablesDatasetReader(DatasetReader):
                   'actions': action_field}
 
         if dpd_output:
+            for form in dpd_output:
+                try:
+                    expression = world.parse_logical_form(form)
+                except:
+                    logger.error(form)
+                    raise
             expressions = [world.parse_logical_form(form) for form in dpd_output]
             action_sequences = [world.get_action_sequence(expression) for expression in expressions]
 
@@ -178,10 +198,21 @@ class WikiTablesDatasetReader(DatasetReader):
             action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
             action_sequence_fields: List[Field] = []
             for sequence in action_sequences:
-                index_fields: List[Field] = []
-                for production_rule in sequence:
-                    index_fields.append(IndexField(action_map[production_rule], action_field))
-                action_sequence_fields.append(ListField(index_fields))
+                try:
+                    index_fields: List[Field] = []
+                    for production_rule in sequence:
+                        index_fields.append(IndexField(action_map[production_rule], action_field))
+                    action_sequence_fields.append(ListField(index_fields))
+                except KeyError as error:
+                    logger.info(f'Missing production rule: {error.args}, skipping logical form')
+
+            if not action_sequence_fields:
+                # This is not great, but we're only doing it when we're passed logical form
+                # supervision, so we're expecting labeled logical forms, but we can't actually
+                # produce the logical forms.  We should skip this instance.  Note that this affects
+                # _dev_ and _test_ instances, too, so your metrics could be over-estimates on the
+                # full test data.
+                return None
             fields['target_action_sequences'] = ListField(action_sequence_fields)
         return Instance(fields)
 
