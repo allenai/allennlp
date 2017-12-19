@@ -59,7 +59,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         self._key_projections = Parameter(torch.FloatTensor(num_heads, input_dim, attention_dim))
         self._value_projections = Parameter(torch.FloatTensor(num_heads, input_dim, values_dim))
 
-        self._scale = (attention_dim // num_heads) ** 0.5
+        self._scale = input_dim ** 0.5
         self._output_projection = Linear(num_heads * values_dim,
                                          self._output_dim)
         self._attention_dropout = Dropout(attention_dropout_prob)
