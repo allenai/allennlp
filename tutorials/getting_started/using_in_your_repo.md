@@ -12,7 +12,7 @@ some repetition is good, right?
 We'll build a model for classifying academic papers, and we'll do it using a [separate
 repository](https://github.com/allenai/allennlp-as-a-library-example), showing how to include
 AllenNLP as a dependency in your project, what classes you need to implement, and how to train your
-model.  We'll step through the commits in that repository, explaining the code we write as we go.
+model.  We'll go through the code we wrote in that repository, explaining it as we go.
 
 In the end, there are only about 110 lines of actual implementation code in the `DatasetReader`
 and `Model` classes that we implement.  This tutorial is long because we're explaining what goes
@@ -21,37 +21,42 @@ lines of code to get a very flexible classifier for academic papers.
 
 ## First step: install AllenNLP
 
-In our [first
-commit](https://github.com/allenai/allennlp-as-a-library-example/tree/43b7dac8097a0c4a50c0b25594daa123f3889b75),
-we just add a `requirements.txt` file specifying `allennlp` as a dependency.  We referenced a
-particular commit on github, but you can just give a version number, like `allennlp==0.3.0`.  Then,
-after creating a python 3.6 environment, you install AllenNLP by running `pip install -r
-requirements.txt`.  You also need to install pytorch and a spacy model, as described in [the
-installation tutorial](installation).
+The first thing we need to do is specify AllenNLP as a dependency in our project.  We'll do this by
+adding a
+[`requirements.txt`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/requirements.txt)
+file.  It contains a single line: `allennlp==0.3`.  Then, after creating a python 3.6 environment,
+you install AllenNLP by running `pip install -r requirements.txt`.  You also need to install
+pytorch and a spacy model, as described in [the installation tutorial](installation):
+
+```bash
+pip install -r requirements.txt
+pip install http://download.pytorch.org/whl/cu80/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl
+python -m spacy download en_core_web_sm
+```
+
+(The above is assuming CUDA 8 installed on a linux machine; use a different pytorch version as
+necessary.)
 
 ## Step two: organize your modules
 
 As explained in the [tutorial on creating models](creating_a_model.md), there are two pieces of
 code that you have to write when you're building a model in AllenNLP: a `DatasetReader` and a
-`Model`.  In the [second
-commit](https://github.com/allenai/allennlp-as-a-library-example/tree/e4aa7b17a41ed1ff5169bea3fd1ad73bca0c89ec)
-in our example repository, we set up our library to hold this code.  We called the base module
-`my_library` - you'll probably want to choose a different name - and included two submodules:
-`dataset_readers` and `models`.  We'll put our two classes in these two modules.  You can use
-whatever structure you want, here; we chose this because it makes it clear what you have to write,
-and if you end up writing several different models or working on several tasks, this structure
-allows the repository to grow naturally.
+`Model`.  So the next thing we do is [set up our library to hold this
+code](https://github.com/allenai/allennlp-as-a-library-example/tree/master/my_library).  We called
+the base module `my_library` - you'll probably want to choose a different name - and included two
+submodules: `dataset_readers` and `models`.  We'll put our two classes in these two modules.  You
+can use whatever structure you want here; we chose this because it makes it clear what you have to
+write, and if you end up writing several different models or working on several tasks, this
+structure allows the repository to grow naturally.
 
 ## Step three: write your DatasetReader
 
-Now that our repository is set up, we'll start actually writing code ([link to the third
-commit](https://github.com/allenai/allennlp-as-a-library-example/commit/6be5e0b876325588803171a514f30da349542674)).
-The first thing we need is some data - what are we trying to build a model to predict?  In this
-example, we'll try to predict the "venue" of academic papers.  That is, given the title and
-abstract of a paper, we'll try to decide if it was (or should be) published in a "natural language
-processing" venue, a "machine learning" venue, or an "artificial intelligence" venue (all of those
-scare quotes are because this is a totally artificial task, and there aren't solid lines between
-these fields).
+Now that our repository is set up, we'll start actually writing code.  The first thing we need is
+some data - what are we trying to build a model to predict?  In this example, we'll try to predict
+the "venue" of academic papers.  That is, given the title and abstract of a paper, we'll try to
+decide if it was (or should be) published in a "natural language processing" venue, a "machine
+learning" venue, or an "artificial intelligence" venue (all of those scare quotes are because this
+is a totally artificial task, and there aren't solid lines between these fields).
 
 We'll use the [open research corpus](http://labs.semanticscholar.org/corpus/) provided by the academic
 search engine [Semantic Scholar](http://semanticscholar.org), with a heuristically-edited "venue"
@@ -69,7 +74,7 @@ JSON-lines file, where each JSON blob has at least these fields:
 Because we like writing tests (and you should too!), we'll write a test for our `DatasetReader` on
 some sample data before even writing any code.  We downloaded the data and took a sample of 10
 papers and made a little [test
-fixture](https://github.com/allenai/allennlp-as-a-library-example/blob/6be5e0b876325588803171a514f30da349542674/tests/fixtures/s2_papers.jsonl)
+fixture](https://github.com/allenai/allennlp-as-a-library-example/blob/master/tests/fixtures/s2_papers.jsonl)
 out of them.  We'll use this fixture to make sure we can read the data as we expect.
 
 For our test, we inherit from `allennlp.common.testing.AllenNlpTestCase`.  For this simple test,
@@ -137,14 +142,14 @@ little more general.
 
 With our test in hand, we're now ready to actually write the `DatasetReader` itself.  We'll put it
 as a [file in
-`my_library.dataset_readers`](https://github.com/allenai/allennlp-as-a-library-example/blob/6be5e0b876325588803171a514f30da349542674/my_library/dataset_readers/semantic_scholar_papers.py).
+`my_library.dataset_readers`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/dataset_readers/semantic_scholar_papers.py).
 
 To understand what's going on in this class, let's look at the `read` method first:
 
 ```python
     def read(self, file_path):
         instances = []
-        with open(file_path, "r") as data_file:
+        with open(cached_path(file_path), "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
             for line_num, line in enumerate(tqdm.tqdm(data_file.readlines())):
                 line = line.strip("\n")
@@ -160,14 +165,18 @@ To understand what's going on in this class, let's look at the `read` method fir
         return Dataset(instances)
 ```
 
-We're just going through every line in the input file, reading it as a JSON object, pulling out the
-fields we want, and passing them to `self.text_to_instance`.  `text_to_instance` takes untokenized
-text strings and does whatever is necessary to create an `Instance` for this data.  When you see
-how simple this method is, you might think it's unnecessary to have this bit of redirection,
-instead of just putting that logic inside of `read()` directly.  The reason we have
-`text_to_instance` is to make it easy to hook up a demo to your model - the demo needs to process
-data in the same way that the model's training data was processed, and this redirection makes that
-possible.  Here's `text_to_instance`:
+The `cached_path` method inside of the `with open()` call allows the path we specify to be a web
+URL instead of a path on disk; this will be important later so you can use this `DatasetReader`
+with some example data we provide, but most of the time this isn't necessary for your code.
+
+The logic inside of `read` just goes through every line in the input file, reading it as a JSON
+object, pulling out the fields we want, and passing them to `self.text_to_instance`.
+`text_to_instance` takes untokenized text strings and does whatever is necessary to create an
+`Instance` for this data.  When you see how simple this method is, you might think it's unnecessary
+to have this bit of redirection, instead of just putting that logic inside of `read()` directly.
+The reason we have `text_to_instance` is to make it easy to hook up a demo to your model - the demo
+needs to process data in the same way that the model's training data was processed, and this
+redirection makes that possible.  Here's `text_to_instance`:
 
 ```python
     def text_to_instance(self, title: str, abstract: str, venue: str = None) -> Instance:
@@ -247,11 +256,9 @@ data for our `Model`.  We can run the test we wrote with `pytest` and see that i
 
 ## Step four: write your model
 
-With code that will process data for us, we're now ready to build a model for this data ([link to
-the fourth
-commit](https://github.com/allenai/allennlp-as-a-library-example/commit/f39bd54ba9f7ee6b40200b7cd5f364b78a834fc8)).
+With code that will process data for us, we're now ready to build a model for this data.
 Once again, we'll start with [a
-test](https://github.com/allenai/allennlp-as-a-library-example/blob/f39bd54ba9f7ee6b40200b7cd5f364b78a834fc8/tests/models/academic_paper_classifier_test.py):
+test](https://github.com/allenai/allennlp-as-a-library-example/blob/master/tests/models/academic_paper_classifier_test.py):
 
 ```python
 from allennlp.common.testing import ModelTestCase
@@ -474,8 +481,7 @@ Our [getting started tutorial](training_and_evaluating.md) says to use `python -
 train CONFIG_FILE` to train a model.  That's not going to work for us, however, because
 `allennlp.run` doesn't know about the `DatasetReader` and `Model` classes that we added to the
 registry, so it will fail to load our configuration files.  Instead, we need to write our own
-`run.py` script ([link to the fifth
-commit](https://github.com/allenai/allennlp-as-a-library-example/commit/521d554c26681b6931169492900de6690fdd0cee)):
+`run.py` script:
 
 ```python
 #!/usr/bin/env python
@@ -503,7 +509,7 @@ our `DatasetReader` and `Model` classes, which adds them to the registry so that
 them.  Now we can train our model with `python run.py train CONFIG_FILE -s SAVE_DIR`.
 
 The only thing we're missing is the configuration file.  You can see the full file
-[here](https://github.com/allenai/allennlp-as-a-library-example/blob/521d554c26681b6931169492900de6690fdd0cee/experiments/venue_classifier.json).
+[here](https://github.com/allenai/allennlp-as-a-library-example/blob/master/experiments/venue_classifier.json).
 We'll look at it in chunks.
 
 ```json
@@ -519,8 +525,8 @@ aren't any, so we're just using the default tokenizer and word indexers (which, 
 were to split strings into words and represent words as single ids under the name "tokens").
 
 ```json
-  "train_data_path": "/s2_papers/train_sample.jsonl",
-  "validation_data_path": "/s2_papers/dev_sample.jsonl",
+  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/academic-papers-example/train.jsonl",
+  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/academic-papers-example/dev.jsonl",
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["abstract", "num_tokens"], ["title", "num_tokens"]],
@@ -544,9 +550,8 @@ using sorts the instances by the number of tokens in the abstract, then the numb
 title (with a little bit of noise added), then groups them into batches of size 64.  The sorting
 helps with efficiency, so you don't waste too much computation on padding tokens.  The trainer uses
 the AdaGrad optimizer for 40 epochs, stopping if validation accuracy has not increased for the last
-10 epochs.  The data files themselves are not included in the repository, but you can download the
-data from the [Semantic Scholar website](http://labs.semanticscholar.org/corpus/), do whatever
-heuristic venue labeling you want, and split it into train and dev.
+10 epochs.  The data files themselves are given as links to some sample data we've provided on S3;
+this is why we needed the `cached_path` call mentioned above.
 
 The last piece of the configuration to look at is the model itself:
 
@@ -590,9 +595,10 @@ The last piece of the configuration to look at is the model itself:
 Here again the "type" key matches what we registered our `Model` as, and the rest of the parameters
 get passed to our `AcademicPaperClassifier.from_params` method.  We have parameters for
 constructing the `TextFieldEmbedder`, which says to take the out of the "tokens" `TokenIndexer` and
-embed it using fixed, pretrained glove vectors.  If I wanted to also use a CNN over character ids,
-I would need to add a `TokenCharactersIndexer` to the `TokenIndexers` in the `DatasetReader`, and
-a corresponding entry to the `TextFieldEmbedder` parameters specifying a `TokenCharactersEncoder`.
+embed it using fixed, pretrained glove vectors (also provided on S3).  If I wanted to also use a
+CNN over character ids, I would need to add a `TokenCharactersIndexer` to the `TokenIndexers` in
+the `DatasetReader`, and a corresponding entry to the `TextFieldEmbedder` parameters specifying a
+`TokenCharactersEncoder`.
 
 The title and abstract encoders are both bi-directional LSTMs.  The actual LSTM implementation
 here is a wrapper around pytorch's built-in LSTMs that make them conform to the `Seq2VecEncoder`
@@ -603,6 +609,12 @@ The feed-forward network has a configurable depth, width, and activation.  You c
 `FeedForward` for more information on these parameters.
 
 And that's it!  You're now the proud owner of a new `DatasetReader`, `Model`, and means to train
-the model on your favorite data.  When you're ready to try writing your own code, be sure to check
-out the [github repository](https://github.com/allenai/allennlp-as-a-library-example/) that has all
-of the code from this tutorial.
+the model on your favorite data.  You can checkout the code from the [github
+repository](https://github.com/allenai/allennlp-as-a-library-example/), run the setup commands
+mentioned above to install AllenNLP, pytorch, and spacy, and try training this with:
+
+```bash
+python run.py train experiments/venue_classifier.json -s /tmp/venue_output_dir
+```
+
+When we do this, we get to around 80% validation accuracy after a few epochs of training.

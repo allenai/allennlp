@@ -85,27 +85,26 @@ def block_orthogonal(tensor: torch.Tensor,
 
     if isinstance(tensor, Variable):
         block_orthogonal(tensor.data, split_sizes, gain)
-        return tensor
-
-    sizes = list(tensor.size())
-    if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):
-        raise ConfigurationError("tensor dimensions must be divisible by their respective "
-                                 "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
-    indexes = [list(range(0, max_size, split))
-               for max_size, split in zip(sizes, split_sizes)]
-    # Iterate over all possible blocks within the tensor.
-    for block_start_indices in itertools.product(*indexes):
-        # A list of tuples containing the index to start at for this block
-        # and the appropriate step size (i.e split_size[i] for dimension i).
-        index_and_step_tuples = zip(block_start_indices, split_sizes)
-        # This is a tuple of slices corresponding to:
-        # tensor[index: index + step_size, ...]. This is
-        # required because we could have an arbitrary number
-        # of dimensions. The actual slices we need are the
-        # start_index: start_index + step for each dimension in the tensor.
-        block_slice = tuple([slice(start_index, start_index + step)
-                             for start_index, step in index_and_step_tuples])
-        tensor[block_slice] = torch.nn.init.orthogonal(tensor[block_slice].contiguous(), gain=gain)
+    else:
+        sizes = list(tensor.size())
+        if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):
+            raise ConfigurationError("tensor dimensions must be divisible by their respective "
+                                     "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
+        indexes = [list(range(0, max_size, split))
+                   for max_size, split in zip(sizes, split_sizes)]
+        # Iterate over all possible blocks within the tensor.
+        for block_start_indices in itertools.product(*indexes):
+            # A list of tuples containing the index to start at for this block
+            # and the appropriate step size (i.e split_size[i] for dimension i).
+            index_and_step_tuples = zip(block_start_indices, split_sizes)
+            # This is a tuple of slices corresponding to:
+            # tensor[index: index + step_size, ...]. This is
+            # required because we could have an arbitrary number
+            # of dimensions. The actual slices we need are the
+            # start_index: start_index + step for each dimension in the tensor.
+            block_slice = tuple([slice(start_index, start_index + step)
+                                 for start_index, step in index_and_step_tuples])
+            tensor[block_slice] = torch.nn.init.orthogonal(tensor[block_slice].contiguous(), gain=gain)
 
 
 def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
