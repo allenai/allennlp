@@ -3,6 +3,8 @@ from flaky import flaky
 import pytest
 import numpy
 
+import torch
+
 from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
@@ -10,8 +12,6 @@ from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.iterators import DataIterator, BasicIterator
 from allennlp.models import Model
 from allennlp.training import Trainer
-
-import torch
 
 class SimpleTaggerTest(ModelTestCase):
     def setUp(self):

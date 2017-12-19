@@ -401,14 +401,14 @@ class Trainer:
             self._update_learning_rate(epoch, val_metric=this_epoch_val_metric)
 
             epoch_elapsed_time = time.time() - epoch_start_time
-            logger.info("Epoch duration: " + time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
+            logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
 
             if epoch < self._num_epochs - 1:
                 training_elapsed_time = time.time() - training_start_time
                 estimated_time_remaining = training_elapsed_time * \
                     ((self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
                 formatted_time = time.strftime("%H:%M:%S", time.gmtime(estimated_time_remaining))
-                logger.info("Estimated training time remaining: " + formatted_time)
+                logger.info("Estimated training time remaining: %s", formatted_time)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
