@@ -1,4 +1,6 @@
 # Tutorials
+
+These tutorials relate to the version of AllenNLP at the git commit SHA you are currently looking at (likely the HEAD commit of the master branch).  If you want to see the tutorials that relate to the latest pip release, please see http://allennlp.org/tutorials/installation.
   
 ## Getting Started
 
