@@ -75,10 +75,10 @@ class TestInitializers(AllenNlpTestCase):
         tensor = Variable(torch.zeros([10, 6]))
         uniform_unit_scaling(tensor, "linear")
 
-        assert (tensor.data.max() < math.sqrt(3/10))
-        assert (tensor.data.min() > -math.sqrt(3/10))
+        assert tensor.data.max() < math.sqrt(3/10)
+        assert tensor.data.min() > -math.sqrt(3/10)
 
         # Check that it gets the scaling correct for relu (1.43).
         uniform_unit_scaling(tensor, "relu")
-        assert (tensor.data.max() < math.sqrt(3/10) * 1.43)
-        assert (tensor.data.min() > -math.sqrt(3/10) * 1.43)
+        assert tensor.data.max() < math.sqrt(3/10) * 1.43
+        assert tensor.data.min() > -math.sqrt(3/10) * 1.43
