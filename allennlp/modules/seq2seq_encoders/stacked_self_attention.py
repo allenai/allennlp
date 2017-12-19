@@ -118,10 +118,13 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             output = add_positional_features(inputs)
         else:
             output = inputs
-        for attention, feedforward, ff_layer_norm, layer_norm in zip(self._attention_layers,
-                                                      self._feedfoward_layers,
-                                                      self._feed_forward_layer_norm_layers,
-                                                      self._layer_norm_layers):
+        for (attention,
+             feedforward,
+             feedforward_layer_norm,
+             layer_norm) in zip(self._attention_layers,
+                                self._feedfoward_layers,
+                                self._feed_forward_layer_norm_layers,
+                                self._layer_norm_layers):
             cached_input = output
             # Project output of attention encoder through a feedforward
             # network and back to the input size for the next layer.
@@ -131,7 +134,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                 # First layer might have the wrong size for highway
                 # layers, so we exclude it here.
                 feedforward_output += cached_input
-            feedforward_output = ff_layer_norm(self.dropout(feedforward_output))
+            feedforward_output = feedforward_layer_norm(self.dropout(feedforward_output))
             # shape (batch_size, sequence_length, hidden_dim)
             attention_output = attention(feedforward_output, mask)
             output = layer_norm(self.dropout(attention_output) + feedforward_output)
