@@ -85,26 +85,47 @@ setup(name='allennlp',
       license='Apache',
       packages=find_packages(),
       install_requires=[
+          # Parameter parsing.
           'pyhocon==0.3.35',
+          # Type checking for python
           'typing',
+          # Adds an @overrides decorator for better documentation and error checking when using subclasses.
           'overrides',
+          # Used by some old code.  We moved away from it because it's too slow, but some old code still
+          # imports this.
           'nltk',
+          # Mainly used for the faster tokenizer.
           'spacy>=2.0,<2.1',
-          'numpy',
-          'tensorboard',
-          'cffi==1.11.2',
-          'awscli>=1.11.91',
-          'sanic==0.6.0',
-          'psycopg2',
-          'sanic-cors',
-          'argparse',
-          'requests>=2.18',
-          'tqdm',
-          'editdistance',
-          'jupyter',
-          'h5py',
-          'scikit-learn',
+          # Used by span prediction models.
+          # Used in coreference resolution evaluation metrics.
           'scipy',
+          'scikit-learn',
+          # Training visualisation using tensorboard.
+          'tensorboard',
+          # Required by torch.utils.ffi
+          'cffi==1.11.2',
+          # Used by span prediction models.
+          'numpy',
+          # aws commandline tools for running on Docker remotely.
+          'awscli>=1.11.91',
+          # REST interface for models
+          'sanic==0.6.0',
+          'sanic-cors==0.6.0.2',
+          # Talk to postgres demo database
+          'psycopg2',
+          # argument parsing for data cleaning scripts
+          'argparse',
+          # Used for downloading datasets over HTTP
+          'requests>=2.18',
+          # progress bars in data cleaning scripts
+          'tqdm',
+          # In SQuAD eval script, we use this to see if we likely have some tokenization problem.
+          'editdistance',
+          # Tutorial notebooks
+          'jupyter',
+          # For pretrained model weights
+          'h5py',
+          # For timezone utilities
           'pytz==2017.3'
       ],
       setup_requires=['pytest-runner'],
