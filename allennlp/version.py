@@ -1,6 +1,6 @@
-MAJOR = "0"
-MINOR = "3"
-REVISION = "1-unreleased"
+_MAJOR = "0"
+_MINOR = "3"
+_REVISION = "1-unreleased"
 
-SHORT = "{0}.{1}".format(MAJOR, MINOR)
-FULL = "{0}.{1}.{2}".format(MAJOR, MINOR, REVISION)
+VERSION_SHORT = "{0}.{1}".format(_MAJOR, _MINOR)
+VERSION = "{0}.{1}.{2}".format(_MAJOR, _MINOR, _REVISION)

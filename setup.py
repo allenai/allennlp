@@ -66,7 +66,7 @@ from allennlp import version
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
-VERSION = version.FULL
+VERSION = version.VERSION
 
 
 setup(name='allennlp',
