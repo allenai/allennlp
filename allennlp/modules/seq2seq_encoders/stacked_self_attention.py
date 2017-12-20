@@ -84,7 +84,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             self.add_module(f"feedforward_{i}", feedfoward)
             self._feedfoward_layers.append(feedfoward)
 
-            layer_norm = LayerNorm(feedfoward.get_output_dim())
+            layer_norm = LayerNorm(feedfoward.get_input_dim())
             self.add_module(f"feedforward_layer_norm_{i}", layer_norm)
             self._feed_forward_layer_norm_layers.append(layer_norm)
 
@@ -95,7 +95,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             self.add_module(f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 
-            layer_norm = LayerNorm(self_attention.get_output_dim())
+            layer_norm = LayerNorm(self_attention.get_input_dim())
             self.add_module(f"layer_norm_{i}", layer_norm)
             self._layer_norm_layers.append(layer_norm)
 
