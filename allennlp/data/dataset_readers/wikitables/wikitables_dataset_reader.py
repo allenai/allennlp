@@ -122,7 +122,6 @@ class WikiTablesDatasetReader(DatasetReader):
                 except FileNotFoundError:
                     logger.info(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
                     continue
-                sempre_forms = sempre_forms[:self._max_dpd_logical_forms]
                 instance = self.text_to_instance(question, table_filename, sempre_forms)
                 if instance is not None:
                     # The DPD output might not actually give us usable logical forms for some
@@ -182,29 +181,31 @@ class WikiTablesDatasetReader(DatasetReader):
                   'actions': action_field}
 
         if dpd_output:
-            for form in dpd_output:
-                try:
-                    expression = world.parse_logical_form(form)
-                except:
-                    logger.error(form)
-                    raise
-            expressions = [world.parse_logical_form(form) for form in dpd_output]
-            action_sequences = [world.get_action_sequence(expression) for expression in expressions]
-
             # We'll make each target action sequence a List[IndexField], where the index is into
             # the action list we made above.  We need to ignore the type here because mypy doesn't
             # like `action.rule` - it's hard to tell mypy that the ListField is made up of
             # ProductionRuleFields.
             action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
+
             action_sequence_fields: List[Field] = []
-            for sequence in action_sequences:
+            for logical_form in dpd_output:
+                if not self._should_keep_logical_form(logical_form):
+                    continue
+                try:
+                    expression = world.parse_logical_form(logical_form)
+                except:
+                    logger.error(logical_form)
+                    raise
+                action_sequence = world.get_action_sequence(expression)
                 try:
                     index_fields: List[Field] = []
-                    for production_rule in sequence:
+                    for production_rule in action_sequence:
                         index_fields.append(IndexField(action_map[production_rule], action_field))
                     action_sequence_fields.append(ListField(index_fields))
                 except KeyError as error:
                     logger.info(f'Missing production rule: {error.args}, skipping logical form')
+                if len(action_sequence_fields) >= self._max_dpd_logical_forms:
+                    break
 
             if not action_sequence_fields:
                 # This is not great, but we're only doing it when we're passed logical form
@@ -244,6 +245,15 @@ class WikiTablesDatasetReader(DatasetReader):
         # targetValue may not be present if the answer is not provided.
         assert all([x in parsed_info for x in ["id", "question", "context"]]), "Invalid format"
         return parsed_info
+
+    @staticmethod
+    def _should_keep_logical_form(logical_form: str) -> bool:
+        # DPD has funny ideas about long strings of "ors" being reasonable logical forms.  They
+        # aren't.
+        if logical_form.count('(or') > 3:
+            return False
+        # TODO(mattg): check for dates here
+        return True
 
     @classmethod
     def from_params(cls, params: Params) -> 'WikiTablesDatasetReader':

@@ -60,7 +60,7 @@ class TableKnowledgeGraph(KnowledgeGraph):
         column_ids = []
         columns: Dict[str, int] = {}
         for column_string in json_object['columns']:
-            normalized_string = f'fb:row.row.{cls._normalize_string(column_string)}'
+            normalized_string = f'fb:row.row.{cls._normalize_string(column_string, True)}'
             if normalized_string in columns:
                 columns[normalized_string] += 1
                 normalized_string = f'{normalized_string}_{columns[normalized_string]}'
@@ -78,7 +78,7 @@ class TableKnowledgeGraph(KnowledgeGraph):
             # Following Sempre's convention for naming cells.
             row_cell_ids = []
             for cell_string in row_cells:
-                normalized_string = f'fb:cell.{cls._normalize_string(cell_string)}'
+                normalized_string = f'fb:cell.{cls._normalize_string(cell_string, False)}'
                 if normalized_string in cells:
                     cells[normalized_string] += 1
                     normalized_string = f'{normalized_string}_{cells[normalized_string]}'
@@ -90,7 +90,7 @@ class TableKnowledgeGraph(KnowledgeGraph):
         return cls(dict(neighbors))
 
     @staticmethod
-    def _normalize_string(string: str) -> str:
+    def _normalize_string(string: str, is_column: bool) -> str:
         """
         These are the transformation rules used to normalize cell in column names in Sempre.
         See ``edu.stanford.nlp.sempre.tables.StringNormalizationUtils.characterNormalize`` and
@@ -98,7 +98,10 @@ class TableKnowledgeGraph(KnowledgeGraph):
         We reproduce those rules here to normalize and canonicalize cells and columns in the same way
         so that we can match them against constants in logical forms appropriately.
         """
-        string = string.replace("\\n", "_")
+        if is_column:
+            string = string.replace("\\n", "_")
+        else:
+            string = string.split('\\n')[0]
         # Normalization rules from Sempre
         # \u201A -> ,
         string = re.sub("‚", ",", string)

@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.semparse.knowledge_graphs.table_knowledge_graph import TableKnowledgeGraph
 from allennlp.data.semparse.worlds import WikiTablesWorld
@@ -56,3 +58,20 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                 assert "?" not in action, ("Found an unresolved type for form: %s\n"
                                            "Expression: %s\n"
                                            "Action sequence: %s\n" % (form, expression, action_sequence))
+
+    @pytest.mark.skip(reason="fibonacci recursion currently going on here")
+    def test_with_deeply_nested_logical_form(self):
+        table_kg = TableKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/tables/109.tsv")
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'district', '?']]
+        world = WikiTablesWorld(table_kg, question_tokens)
+        logical_form = ("(count ((reverse fb:cell.cell.number) (or (or (or (or (or (or (or (or "
+                        "(or (or (or (or (or (or (or (or (or (or (or (or (or fb:cell.virginia_1 "
+                        "fb:cell.virginia_10) fb:cell.virginia_11) fb:cell.virginia_12) "
+                        "fb:cell.virginia_13) fb:cell.virginia_14) fb:cell.virginia_15) "
+                        "fb:cell.virginia_16) fb:cell.virginia_17) fb:cell.virginia_18) "
+                        "fb:cell.virginia_19) fb:cell.virginia_2) fb:cell.virginia_20) "
+                        "fb:cell.virginia_21) fb:cell.virginia_22) fb:cell.virginia_3) "
+                        "fb:cell.virginia_4) fb:cell.virginia_5) fb:cell.virginia_6) "
+                        "fb:cell.virginia_7) fb:cell.virginia_8) fb:cell.virginia_9)))")
+        print("Parsing...")
+        world.parse_logical_form(logical_form)
