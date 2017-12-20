@@ -226,7 +226,11 @@ class Trainer:
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
         """
         if self._grad_norm:
-            self._batch_grad_norm = clip_grad_norm(self._model.parameters(), self._grad_norm)
+            # pytorch's clip_grad_norm doesn't support sparse updates
+            parameters_to_clip = [p for p in self._model.parameters()
+                                  if p.grad is not None
+                                  and not isinstance(p.grad.data, torch.sparse._SparseBase)]
+            self._batch_grad_norm = clip_grad_norm(parameters_to_clip, self._grad_norm)
 
     def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
         """
