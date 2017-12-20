@@ -96,7 +96,8 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     # Estimate the input size. This won't work perfectly,
     # but it covers almost all use cases where this initialiser
     # would be expected to be useful, i.e in large linear and
-    # convolutional layers.
+    # convolutional layers, as the last dimension will almost
+    # always be the output size.
     for dimension in list(tensor.size())[:-1]:
         size *= dimension
 
