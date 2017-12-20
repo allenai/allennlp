@@ -129,15 +129,15 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             # Project output of attention encoder through a feedforward
             # network and back to the input size for the next layer.
             # shape (batch_size, timesteps, input_size)
-            feedforward_output = feedforward(output)
+            feedforward_output = feedforward(feedforward_layer_norm(output))
+            feedforward_output = self.dropout(feedforward_output)
             if feedforward_output.size() == cached_input.size():
                 # First layer might have the wrong size for highway
                 # layers, so we exclude it here.
                 feedforward_output += cached_input
-            feedforward_output = feedforward_layer_norm(self.dropout(feedforward_output))
             # shape (batch_size, sequence_length, hidden_dim)
-            attention_output = attention(feedforward_output, mask)
-            output = layer_norm(self.dropout(attention_output) + feedforward_output)
+            attention_output = attention(layer_norm(feedforward_output), mask)
+            output = self.dropout(attention_output) + feedforward_output
         return output
 
     @classmethod
