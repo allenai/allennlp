@@ -34,6 +34,10 @@ from allennlp.training.optimizers import Optimizer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+def is_sparse(tensor):
+    return isinstance(tensor.data, torch.sparse._SparseBase)
+
+
 class TensorboardWriter:
     """
     Wraps a pair of ``SummaryWriter`` instances but is a no-op if they're ``None``.
@@ -229,7 +233,7 @@ class Trainer:
             # pytorch's clip_grad_norm doesn't support sparse updates
             parameters_to_clip = [p for p in self._model.parameters()
                                   if p.grad is not None
-                                  and not isinstance(p.grad.data, torch.sparse._SparseBase)]
+                                  and not is_sparse(p.grad)]
             self._batch_grad_norm = clip_grad_norm(parameters_to_clip, self._grad_norm)
 
     def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
@@ -336,11 +340,15 @@ class Trainer:
                                                        batch_num_total)
                     self._tensorboard.add_train_scalar("parameter_std/" + name, param.data.std(), batch_num_total)
                     if param.grad is not None:
+                        if is_sparse(param.grad):
+                            grad_data = param.grad.data._values()
+                        else:
+                            grad_data = param.grad.data
                         self._tensorboard.add_train_scalar("gradient_mean/" + name,
-                                                           param.grad.data.mean(),
+                                                           grad_data.mean(),
                                                            batch_num_total)
                         self._tensorboard.add_train_scalar("gradient_std/" + name,
-                                                           param.grad.data.std(),
+                                                           grad_data.std(),
                                                            batch_num_total)
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
                 self._metrics_to_tensorboard(batch_num_total,
