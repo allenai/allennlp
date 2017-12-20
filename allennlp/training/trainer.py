@@ -281,7 +281,7 @@ class Trainer:
             if hasattr(self._model, 'histogram_parameters'):
                 histogram_parameters = set(self._model.histogram_parameters)
             else:
-                histogram_parameters = set([name for name, param in self.named_parameters()])
+                histogram_parameters = set([name for name, param in self._model.named_parameters()])
 
         logger.info("Training")
         for batch in train_generator_tqdm:
