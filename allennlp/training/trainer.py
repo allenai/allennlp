@@ -277,6 +277,12 @@ class Trainer:
 
         last_save_time = time.time()
 
+        if self._histogram_interval is not None:
+            if hasattr(self._model, 'histogram_parameters'):
+                histogram_parameters = set(self._model.histogram_parameters)
+            else:
+                histogram_parameters = set([name for name, param in self.named_parameters()])
+
         logger.info("Training")
         for batch in train_generator_tqdm:
             batch_num += 1
@@ -300,11 +306,13 @@ class Trainer:
             if self._should_log_histogram:
                 # get the magnitude of parameter updates for logging
                 param_updates = {name: param.clone()
-                                 for name, param in self._model.named_parameters()}
+                    for name, param in self._model.named_parameters()
+                        if name in histogram_parameters}
                 self._optimizer.step()
                 for name, param in self._model.named_parameters():
-                    param_updates[name].sub_(param)
-                    self._tensorboard.add_train_scalar("gradient_update/" + name,
+                    if name in histogram_parameters:
+                        param_updates[name].sub_(param)
+                        self._tensorboard.add_train_scalar("gradient_update/" + name,
                                                        param_updates[name].abs().mean(),
                                                        batch_num_total)
             else:
@@ -342,7 +350,8 @@ class Trainer:
             # Histogram logging
             if self._should_log_histogram:
                 for name, param in self._model.named_parameters():
-                    self._tensorboard.add_train_histogram("parameter_histogram/" + name,
+                    if name in histogram_parameters:
+                        self._tensorboard.add_train_histogram("parameter_histogram/" + name,
                                                           param.data,
                                                           batch_num_total)
 
