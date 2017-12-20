@@ -1,5 +1,5 @@
 """
-A `Sanic <http://sanic.readthedocs.io/en/latest/>`_ server that serves up
+A `Flask <http://flask.pocoo.org/>`_ server that serves up
 AllenNLP models as well as our demo.
 
 Usually you would use :mod:`~allennlp.commands.serve`
@@ -7,16 +7,15 @@ rather than instantiating an ``app`` yourself.
 """
 from datetime import datetime
 from typing import Dict, Optional
-import asyncio
 import json
 import logging
 import os
 import sys
+import time
 from functools import lru_cache
 
-from sanic import Sanic, response, request
-from sanic.exceptions import ServerError
-from sanic_cors import CORS
+from flask import Flask, request, Response, jsonify, send_file, send_from_directory
+from flask_cors import CORS
 
 import psycopg2
 
@@ -28,15 +27,30 @@ from allennlp.service.permalinks import int_to_slug, slug_to_int
 from allennlp.service.predictors import Predictor, DemoModel
 
 # Can override cache size with an environment variable. If it's 0 then disable caching altogether.
-CACHE_SIZE = os.environ.get("SANIC_CACHE_SIZE") or 128
+CACHE_SIZE = os.environ.get("FLASK_CACHE_SIZE") or 128
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-def run(port: int, workers: int,
+class ServerError(Exception):
+    status_code = 400
+
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.payload = payload
+
+    def to_dict(self):
+        error_dict = dict(self.payload or ())
+        error_dict['message'] = self.message
+        return error_dict
+
+def run(port: int,
         trained_models: Dict[str, DemoModel],
         static_dir: str = None) -> None:
     """Run the server programatically"""
-    print("Starting a sanic server on port {}.".format(port))
+    print("Starting a flask server on port {}.".format(port))
 
     if port != 8000:
         logger.warning("The demo requires the API to be run on port 8000.")
@@ -52,13 +66,9 @@ def run(port: int, workers: int,
         predictor = demo_model.predictor()
         app.predictors[name] = predictor
 
-    app.run(port=port, host="0.0.0.0", workers=workers)
+    app.run(port=port, host="0.0.0.0")
 
-def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Sanic:
-    app = Sanic(__name__)  # pylint: disable=invalid-name
-    start_time = datetime.now(pytz.utc)
-    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S %Z")
-
+def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Flask:
     if build_dir is None:
         # Need path to static assets to be relative to this file.
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -68,6 +78,10 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
         logger.error("app directory %s does not exist, aborting", build_dir)
         sys.exit(-1)
 
+    app = Flask(__name__)  # pylint: disable=invalid-name
+    start_time = datetime.now(pytz.utc)
+    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S %Z")
+
     app.predictors = {}
 
     try:
@@ -76,6 +90,12 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
         logger.warning("unable to parse cache size %s as int, disabling cache", CACHE_SIZE)
         cache_size = 0
 
+    @app.errorhandler(ServerError)
+    def handle_invalid_usage(error: ServerError) -> Response:  # pylint: disable=unused-variable
+        response = jsonify(error.to_dict())
+        response.status_code = error.status_code
+        return response
+
     @lru_cache(maxsize=cache_size)
     def _caching_prediction(model: Predictor, data: str) -> JsonDict:
         """
@@ -83,23 +103,27 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
         """
         return model.predict_json(json.loads(data))
 
+    @app.route('/')
+    def index() -> Response: # pylint: disable=unused-variable
+        return send_file(os.path.join(build_dir, 'index.html'))
+
     @app.route('/permadata', methods=['POST', 'OPTIONS'])
-    async def permadata(req: request.Request) -> response.HTTPResponse: # pylint: disable=unused-variable
+    def permadata() -> Response:  # pylint: disable=unused-variable
         """
         If the user requests a permalink, the front end will POST here with the payload
             { slug: slug }
         which we convert to an integer id and use to retrieve saved results from the database.
         """
         # This is just CORS boilerplate.
-        if req.method == "OPTIONS":
-            return response.text("")
+        if request.method == "OPTIONS":
+            return Response(response="", status=200)
 
         # If we don't have a database configured, there are no permalinks.
         if demo_db is None:
             raise ServerError('Permalinks are not enabled', 400)
 
         # Convert the provided slug to an integer id.
-        slug = req.json["slug"]
+        slug = request.get_json()["slug"]
         perma_id = slug_to_int(slug)
         if perma_id is None:
             # Malformed slug
@@ -116,23 +140,24 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
             # No data found, invalid id?
             raise ServerError("Unrecognized permalink: {}".format(slug), 400)
 
-        return response.json({
+        return jsonify({
                 "modelName": permadata.model_name,
                 "requestData": permadata.request_data,
                 "responseData": permadata.response_data
         })
 
     @app.route('/predict/<model_name>', methods=['POST', 'OPTIONS'])
-    async def predict(req: request.Request, model_name: str) -> response.HTTPResponse:  # pylint: disable=unused-variable
+    def predict(model_name: str) -> Response:  # pylint: disable=unused-variable
         """make a prediction using the specified model and return the results"""
-        if req.method == "OPTIONS":
-            return response.text("")
+        if request.method == "OPTIONS":
+            return Response(response="", status=200)
 
         model = app.predictors.get(model_name.lower())
         if model is None:
             raise ServerError("unknown model: {}".format(model_name), status_code=400)
 
-        data = req.json
+        data = request.get_json()
+
         log_blob = {"model": model_name, "inputs": data, "cached": False, "outputs": {}}
 
         # See if we hit or not. In theory this could result in false positives.
@@ -154,7 +179,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
         # Add to database and get permalink
         if demo_db is not None:
             try:
-                perma_id = demo_db.add_result(headers=req.headers,
+                perma_id = demo_db.add_result(headers=dict(request.headers),
                                               model_name=model_name,
                                               inputs=data,
                                               outputs=prediction)
@@ -170,7 +195,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
         if post_hits > pre_hits:
             # Cache hit, so insert an artifical pause
             log_blob["cached"] = True
-            await asyncio.sleep(0.25)
+            time.sleep(0.25)
 
         # The model predictions are extremely verbose, so we only log the most human-readable
         # parts of them.
@@ -196,19 +221,21 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
 
         logger.info("prediction: %s", json.dumps(log_blob))
 
-        return response.json(prediction)
+        print(log_blob)
+
+        return jsonify(prediction)
 
     @app.route('/models')
-    async def list_models(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
+    def list_models() -> Response:  # pylint: disable=unused-variable
         """list the available models"""
-        return response.json({"models": list(app.predictors.keys())})
+        return jsonify({"models": list(app.predictors.keys())})
 
     @app.route('/info')
-    async def info(req: request.Request) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
+    def info() -> Response:  # pylint: disable=unused-variable
         """List metadata about the running webserver"""
         uptime = str(datetime.now(pytz.utc) - start_time)
         git_version = os.environ.get('SOURCE_COMMIT') or ""
-        return response.json({
+        return jsonify({
                 "start_time": start_time_str,
                 "uptime": uptime,
                 "git_version": git_version,
@@ -225,11 +252,16 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> S
     @app.route('/textual-entailment/<permalink>')
     @app.route('/coreference-resolution/<permalink>')
     @app.route('/named-entity-recognition/<permalink>')
-    async def return_page(req: request.Request, permalink: str = None) -> response.HTTPResponse:  # pylint: disable=unused-argument, unused-variable
+    def return_page(permalink: str = None) -> Response:  # pylint: disable=unused-argument, unused-variable
         """return the page"""
-        return await response.file(os.path.join(build_dir, 'index.html'))
+        return send_file(os.path.join(build_dir, 'index.html'))
 
-    app.static('/', os.path.join(build_dir, 'index.html'))
-    app.static('/', build_dir)
+    @app.route('/<path:path>')
+    def static_proxy(path: str) -> Response: # pylint: disable=unused-variable
+        return send_from_directory(build_dir, path)
+
+    @app.route('/static/js/<path:path>')
+    def static_js_proxy(path: str) -> Response: # pylint: disable=unused-variable
+        return send_from_directory(os.path.join(build_dir, 'static/js'), path)
 
     return app

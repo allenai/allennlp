@@ -10,7 +10,7 @@ via a REST API or similar.
    allennlp.service.db
    allennlp.service.permalinks
    allennlp.service.predictors
-   allennlp.service.server_sanic
+   allennlp.service.server_flask
 
 .. automodule:: allennlp.service
    :members:
