@@ -104,6 +104,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         self.dropout = Dropout(dropout_prob)
         self._input_dim = input_dim
         self._output_dim = self._attention_layers[-1].get_output_dim()
+        self._output_layer_norm = LayerNorm(self._output_dim)
 
     @overrides
     def get_input_dim(self) -> int:
@@ -138,7 +139,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             # shape (batch_size, sequence_length, hidden_dim)
             attention_output = attention(layer_norm(feedforward_output), mask)
             output = self.dropout(attention_output) + feedforward_output
-        return output
+        return self._output_layer_norm(output)
 
     @classmethod
     def from_params(cls, params: Params):
