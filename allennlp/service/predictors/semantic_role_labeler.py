@@ -41,7 +41,11 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         return " ".join(frame)
 
-    def _sentence_to_srl_instances(self, json_dict: JsonDict) -> Tuple[List[Instance], JsonDict]:
+    @overrides
+    def _json_to_instance(self, json: JsonDict):
+        raise NotImplementedError("The SRL model uses a different API for creating instances.")
+
+    def _sentence_to_srl_instances(self, json: JsonDict) -> Tuple[List[Instance], JsonDict]:
         """
         The SRL model has a slightly different API to other models, as the model is run
         forward for every verb in the sentence. This means that for a single sentence, we need
@@ -114,7 +118,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         # padded elements as the number of instances might not be perfectly
         # divisible by the batch size.
         batched_instances = group_by_count(flattened_instances, batch_size, None)
-        batched_instances[-1] = [instance for instance in batched_instances
+        batched_instances[-1] = [instance for instance in batched_instances[-1]
                                  if instance is not None]
         # Run the model on the batches.
         outputs = []
@@ -171,13 +175,13 @@ class SemanticRoleLabelerPredictor(Predictor):
         outputs = self._model.forward_on_instances(instances, cuda_device)
 
         for output, verb in zip(outputs, verbs_for_instances):
-                tags = output['tags']
-                description = SemanticRoleLabelerPredictor.make_srl_string(results["words"], tags)
-                results["verbs"].append({
-                        "verb": verb,
-                        "description": description,
-                        "tags": tags,
-                })
+            tags = output['tags']
+            description = SemanticRoleLabelerPredictor.make_srl_string(results["words"], tags)
+            results["verbs"].append({
+                    "verb": verb,
+                    "description": description,
+                    "tags": tags,
+            })
 
         results["tokens"] = results["words"]
         return sanitize(results)
