@@ -90,6 +90,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         and returns JSON that looks like
 
         .. code-block:: js
+
             [
                 {"words": [...],
                  "verbs": [
@@ -104,7 +105,6 @@ class SemanticRoleLabelerPredictor(Predictor):
                     {"verb": "...", "description": "...", "tags": [...]},
                 ]}
             ]
-
         """
         # For SRL, we have more instances than sentences, but the user specified
         # a batch size with respect to the number of sentences passed, so we respect
