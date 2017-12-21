@@ -42,7 +42,27 @@ class SemanticRoleLabelerPredictor(Predictor):
         return " ".join(frame)
 
     def _sentence_to_srl_instances(self, json_dict: JsonDict) -> Tuple[List[Instance], JsonDict]:
+        """
+        The SRL model has a slightly different API to other models, as the model is run
+        forward for every verb in the sentence. This means that for a single sentence, we need
+        to generate a ``List[Instance]``, where the length of this list corresponds to the number
+        of verbs in the sentence. Additionally, all of these verbs share the same return dictionary
+        after being passed through the model (as really we care about all the frames of the sentence
+        together, rather than separately).
 
+        Parameters
+        ----------
+        json : ``JsonDict``, required.
+            JSON that looks like ``{"sentence": "..."}``.
+
+        Returns
+        -------
+        instances : ``List[Instance]``
+            One instance per verb.
+        result_dict : ``JsonDict``
+            A dictionary containing the words of the sentence and the verbs extracted
+            by the Spacy POS tagger.
+        """
         sentence = json_dict["sentence"]
         tokens = self._tokenizer.split_words(sentence)
         words = [token.text for token in tokens]
@@ -60,15 +80,42 @@ class SemanticRoleLabelerPredictor(Predictor):
 
     @overrides
     def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
+        """
+        Expects JSON that looks like ``[{"sentence": "..."}, {"sentence": "..."}, ...]``
+        and returns JSON that looks like
 
+        .. code-block:: js
+            [
+                {"words": [...],
+                 "verbs": [
+                    {"verb": "...", "description": "...", "tags": [...]},
+                    ...
+                    {"verb": "...", "description": "...", "tags": [...]},
+                ]},
+                {"words": [...],
+                 "verbs": [
+                    {"verb": "...", "description": "...", "tags": [...]},
+                    ...
+                    {"verb": "...", "description": "...", "tags": [...]},
+                ]}
+            ]
+
+        """
+        # For SRL, we have more instances than sentences, but the user specified
+        # a batch size with respect to the number of sentences passed, so we respect
+        # that here by taking the batch size which we use to be the number of sentences
+        # we are given.
         batch_size = len(inputs)
         instances_per_sentence, return_dicts = zip(*[self._sentence_to_srl_instances(json)
                                                      for json in inputs])
-
         flattened_instances = sum(instances_per_sentence, [])
+        # Make the instances into batches and check the last batch for
+        # padded elements as the number of instances might not be perfectly
+        # divisible by the batch size.
         batched_instances = group_by_count(flattened_instances, batch_size, None)
         batched_instances[-1] = [instance for instance in batched_instances
                                  if instance is not None]
+        # Run the model on the batches.
         outputs = []
         for batch in batched_instances:
             outputs.extend(self._model.forward_on_instances(batch, cuda_device))
@@ -77,8 +124,10 @@ class SemanticRoleLabelerPredictor(Predictor):
         for results in return_dicts:
             verbs_for_sentence: List[str] = results["verbs"]
             results["verbs"] = []
+            # The verbs are in order, but nested as we have multiple sentences.
+            # The outputs are already flattened from running through the model,
+            # so we just index into this flat list for each verb, updating as we go.
             for verb in verbs_for_sentence:
-
                 output = outputs[sentence_index]
                 tags = output['tags']
                 description = SemanticRoleLabelerPredictor.make_srl_string(results["words"], tags)
