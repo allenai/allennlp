@@ -1,8 +1,4 @@
----
-layout: tutorial
-title: Creating Your Own Models
-id: creating-a-model
----
+# Creating Your Own Models
 
 Using the included models is fine, but at some point you'll probably want to implement your own models, which is what this tutorial is for.
 

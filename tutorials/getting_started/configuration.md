@@ -1,8 +1,4 @@
----
-layout: tutorial
-title: Configuring Experiments
-id: configuration
----
+# Configuring Experiments
 
 Now that we know how to train and evaluate models,
 let's take a deeper look at our experiment configuration file,

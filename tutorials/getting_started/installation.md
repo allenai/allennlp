@@ -1,8 +1,4 @@
----
-layout: tutorial
-title: Installation and Getting Started
-id: installation
----
+# Installation and Getting Started
 
 Welcome to AllenNLP!
 

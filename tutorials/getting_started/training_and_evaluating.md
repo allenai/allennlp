@@ -1,8 +1,4 @@
----
-layout: tutorial
-title: Training a Model
-id: training-a-model
----
+# Training a Model
 
 ### Training a Model
 
