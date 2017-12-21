@@ -38,7 +38,8 @@ def make_app(predictor: Predictor,
     If you would rather create your own HTML, call it index.html
     and provide its directory as ``static_dir``. In that case you
     don't need to supply the field names -- that information should
-    be implicit in your demo site.
+    be implicit in your demo site. (Probably the easiest thing to do
+    is just start with the bare-bones HTML and modify it.)
 
     In addition, if you want somehow transform the JSON prediction
     (e.g. by removing probabilities or logits)
@@ -180,11 +181,11 @@ _PAGE_TEMPLATE = Template("""
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.onload = function() {
             if (xhr.status == 200) {
-                document.getElementById("output").innerHTML = (
-                    "<pre>" +
-                    JSON.stringify(JSON.parse(xhr.responseText), null, 2) +
-                    "</pre>"
-                );
+                // If you want a more impressive visualization than just
+                // outputting the raw JSON, change this part of the code.
+                var htmlResults = "<pre>" + JSON.stringify(JSON.parse(xhr.responseText), null, 2) + "</pre>";
+
+                document.getElementById("output").innerHTML = htmlResults;
             }
         };
         xhr.send(JSON.stringify(data));
