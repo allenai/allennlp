@@ -61,7 +61,8 @@ class SemanticRoleLabelerPredictor(Predictor):
             One instance per verb.
         result_dict : ``JsonDict``
             A dictionary containing the words of the sentence and the verbs extracted
-            by the Spacy POS tagger.
+            by the Spacy POS tagger. These will be replaced in ``predict_json`` with the
+            SRL frame for the verb.
         """
         sentence = json_dict["sentence"]
         tokens = self._tokenizer.split_words(sentence)
@@ -122,6 +123,9 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         sentence_index = 0
         for results in return_dicts:
+            # We just added the verbs to the list in _sentence_to_srl_instances
+            # but we actually want to replace them with their frames, so we
+            # reset them here.
             verbs_for_sentence: List[str] = results["verbs"]
             results["verbs"] = []
             # The verbs are in order, but nested as we have multiple sentences.
@@ -158,6 +162,9 @@ class SemanticRoleLabelerPredictor(Predictor):
             ]}
         """
         instances, results = self._sentence_to_srl_instances(inputs)
+        # We just added the verbs to the list in _sentence_to_srl_instances
+        # but we actually want to replace them with their frames, so we
+        # reset them here.
         verbs_for_instances: List[str] = results["verbs"]
         results["verbs"] = []
 
