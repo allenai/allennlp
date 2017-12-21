@@ -3,6 +3,7 @@ A `Flask <http://flask.pocoo.org/>`_ server for serving predictions
 from a single AllenNLP model. It also includes a very, very bare-bones
 web front-end for exploring predictions (or you can provide your own).
 """
+# pylint: disable=too-many-lines
 from typing import List, Callable
 import json
 import logging
