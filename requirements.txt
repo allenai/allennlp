@@ -58,9 +58,6 @@ tqdm
 # In SQuAD eval script, we use this to see if we likely have some tokenization problem.
 editdistance
 
-# Tutorial notebooks
-jupyter
-
 # For pretrained model weights
 h5py
 
