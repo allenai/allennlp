@@ -105,7 +105,7 @@ class Params(MutableMapping):
         Performs a pop and coerces to an int.
         """
         value = self.pop(key, default)
-        if value == None:
+        if value is None:
             return None
         else:
             return int(value)
@@ -115,7 +115,7 @@ class Params(MutableMapping):
         Performs a pop and coerces to a float.
         """
         value = self.pop(key, default)
-        if value == None:
+        if value is None:
             return None
         else:
             return float(value)
@@ -125,7 +125,7 @@ class Params(MutableMapping):
         Performs a pop and coerces to a bool.
         """
         value = self.pop(key, default)
-        if value == None:
+        if value is None:
             return None
         elif isinstance(value, bool):
             return value
