@@ -7,6 +7,9 @@ pylint==1.8.1
 # the tests.  With this here, you can run the tests with `py.test` from the base directory.
 pytest
 
+# Tutorial notebooks
+jupyter
+
 # Static type checking
 mypy
 
