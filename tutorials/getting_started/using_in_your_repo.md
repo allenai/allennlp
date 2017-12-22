@@ -1,8 +1,4 @@
----
-layout: tutorial
-title: Using AllenNLP in Your Project
-id: using-allennlp-in-your-project
----
+# Using AllenNLP in your Project
 
 In this tutorial, we take you step-by-step through the process you need to go through to get up and
 running with your own models on your own data in your own repository, using AllenNLP as an imported

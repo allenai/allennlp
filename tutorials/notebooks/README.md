@@ -11,8 +11,8 @@ library. We recommend that you walk through them in the following order:
 4. `Trainers`, `Models` and `Drivers`
 5. Running experiments from JSON with AllenNLP.
 
-
-To load a tutorial, follow the [install instructions](../../README.md) and then launch Jupyter.
+To load a tutorial, follow the [install instructions](../../README.md) and install Jupyter
+(`pip install jupyter`).  Then you can launch Jupyter with the following.
 
 ```jupyter notebook```
 
