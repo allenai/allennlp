@@ -47,7 +47,7 @@ class SemanticRoleLabelerPredictor(Predictor):
 
     def _sentence_to_srl_instances(self, json: JsonDict) -> Tuple[List[Instance], JsonDict]:
         """
-        The SRL model has a slightly different API to other models, as the model is run
+        The SRL model has a slightly different API from other models, as the model is run
         forward for every verb in the sentence. This means that for a single sentence, we need
         to generate a ``List[Instance]``, where the length of this list corresponds to the number
         of verbs in the sentence. Additionally, all of these verbs share the same return dictionary
@@ -113,7 +113,9 @@ class SemanticRoleLabelerPredictor(Predictor):
         batch_size = len(inputs)
         instances_per_sentence, return_dicts = zip(*[self._sentence_to_srl_instances(json)
                                                      for json in inputs])
-        flattened_instances = sum(instances_per_sentence, [])
+
+        flattened_instances = [instance for sentence_instances in instances_per_sentence
+                               for instance in sentence_instances]
         # Make the instances into batches and check the last batch for
         # padded elements as the number of instances might not be perfectly
         # divisible by the batch size.
