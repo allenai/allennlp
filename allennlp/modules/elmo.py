@@ -128,7 +128,7 @@ class Elmo(torch.nn.Module, Registrable):
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
         num_output_representations = params.pop('num_output_representations')
-        do_layer_norm = params.pop('do_layer_norm', False)
+        do_layer_norm = params.pop_int('do_layer_norm', False)
         params.assert_empty(cls.__name__)
 
         return cls(options_file, weight_file, num_output_representations, do_layer_norm)

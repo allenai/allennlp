@@ -364,11 +364,11 @@ class Vocabulary:
             params.assert_empty("Vocabulary - from files")
             return Vocabulary.from_files(vocabulary_directory)
 
-        min_count = params.pop("min_count", 1)
-        max_vocab_size = params.pop("max_vocab_size", None)
+        min_count = params.pop_int("min_count", 1)
+        max_vocab_size = params.pop_int("max_vocab_size", None)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
-        only_include_pretrained_words = params.pop("only_include_pretrained_words", False)
+        only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         params.assert_empty("Vocabulary - from dataset")
         return Vocabulary.from_dataset(dataset=dataset,
                                        min_count=min_count,

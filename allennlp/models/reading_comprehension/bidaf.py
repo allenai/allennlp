@@ -329,17 +329,17 @@ class BidirectionalAttentionFlow(Model):
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        num_highway_layers = params.pop("num_highway_layers")
+        num_highway_layers = params.pop_int("num_highway_layers")
         phrase_layer = Seq2SeqEncoder.from_params(params.pop("phrase_layer"))
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
         modeling_layer = Seq2SeqEncoder.from_params(params.pop("modeling_layer"))
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
-        dropout = params.pop('dropout', 0.2)
+        dropout = params.pop_float('dropout', 0.2)
 
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
-        mask_lstms = params.pop('mask_lstms', True)
+        mask_lstms = params.pop_bool('mask_lstms', True)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,

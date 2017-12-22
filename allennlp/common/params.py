@@ -81,7 +81,7 @@ class Params(MutableMapping):
             self.files_to_archive[f"{self.history}{name}"] = self.get(name)
 
     @overrides
-    def pop(self, key: str, default: Any = DEFAULT):
+    def pop(self, key: str, default: Any = DEFAULT) -> Any:
         """
         Performs the functionality associated with dict.pop(key), along with checking for
         returned dictionaries, replacing them with Param objects with an updated history.
@@ -100,6 +100,42 @@ class Params(MutableMapping):
             logger.info(self.history + key + " = " + str(value))  # type: ignore
         return self._check_is_dict(key, value)
 
+    def pop_int(self, key: str, default: Any = DEFAULT) -> int:
+        """
+        Performs a pop and coerces to an int.
+        """
+        value = self.pop(key, default)
+        if value == None:
+            return None
+        else:
+            return int(value)
+
+    def pop_float(self, key: str, default: Any = DEFAULT) -> float:
+        """
+        Performs a pop and coerces to a float.
+        """
+        value = self.pop(key, default)
+        if value == None:
+            return None
+        else:
+            return float(value)
+
+    def pop_bool(self, key: str, default: Any = DEFAULT) -> bool:
+        """
+        Performs a pop and coerces to a bool.
+        """
+        value = self.pop(key, default)
+        if value == None:
+            return None
+        elif isinstance(value, bool):
+            return value
+        elif value == "true":
+            return True
+        elif value == "false":
+            return False
+        else:
+            raise ValueError("Cannot convert variable to bool: " + value)
+
     @overrides
     def get(self, key: str, default: Any = DEFAULT):
         """
@@ -115,7 +151,7 @@ class Params(MutableMapping):
             value = self.params.get(key, default)
         return self._check_is_dict(key, value)
 
-    def pop_choice(self, key: str, choices: List[Any], default_to_first_choice: bool = False):
+    def pop_choice(self, key: str, choices: List[Any], default_to_first_choice: bool = False) -> Any:
         """
         Gets the value of ``key`` in the ``params`` dictionary, ensuring that the value is one of
         the given choices. Note that this `pops` the key from params, modifying the dictionary,
