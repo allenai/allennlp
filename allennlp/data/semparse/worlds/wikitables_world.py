@@ -44,11 +44,11 @@ class WikiTablesWorld(World):
         # This adds all of the cell and column names to our local name mapping, so we can get them
         # as valid actions in the parser.
         for entity in table_graph.get_all_entities():
-            self._map_name(entity)
+            self._map_name(entity, keep_mapping=True)
 
         numbers = self._get_numbers_from_tokens(question_tokens) + list(str(i) for i in range(10))
         for number in numbers:
-            self._map_name(number)
+            self._map_name(number, keep_mapping=True)
 
     def _get_numbers_from_tokens(self, tokens: List[Token]) -> List[str]:
         """
@@ -110,33 +110,24 @@ class WikiTablesWorld(World):
         return valid_actions
 
     @overrides
-    def _map_name(self, name: str) -> str:
-        """
-        Takes the name of a predicate or a constant as used by Sempre, maps it to a unique string such that
-        NLTK processes it appropriately. This is needed because NLTK has a naming convention for variables:
-            Function variables: Single upper case letter optionally followed by digits
-            Individual variables: Single lower case letter (except e for events) optionally followed by digits
-            Constants: Everything else
-
-        Parameters
-        ----------
-        name : str
-            Token from Sempre's logical form.
-        """
+    def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         if name not in types.COMMON_NAME_MAPPING and name not in self.local_name_mapping:
             if name.startswith("fb:row.row"):
                 # Column name
                 translated_name = "C%d" % self._column_counter
                 self._column_counter += 1
-                self._add_name_mapping(name, translated_name, types.COLUMN_TYPE)
+                if keep_mapping:
+                    self._add_name_mapping(name, translated_name, types.COLUMN_TYPE)
             elif name.startswith("fb:cell"):
                 # Cell name
                 translated_name = "cell:%s" % name.split(".")[-1]
-                self._add_name_mapping(name, translated_name, types.CELL_TYPE)
+                if keep_mapping:
+                    self._add_name_mapping(name, translated_name, types.CELL_TYPE)
             elif name.startswith("fb:part"):
                 # part name
                 translated_name = "part:%s" % name.split(".")[-1]
-                self._add_name_mapping(name, translated_name, types.PART_TYPE)
+                if keep_mapping:
+                    self._add_name_mapping(name, translated_name, types.PART_TYPE)
             else:
                 # NLTK throws an error if it sees a "." in constants, which will most likely happen within
                 # numbers as a decimal point. We're changing those to underscores.
@@ -147,7 +138,8 @@ class WikiTablesWorld(World):
                     translated_name = translated_name.replace("-", "~")
                     # TODO(mattg): bare numbers are treated as cells by the type system.  This
                     # might not actually be correct...
-                self._add_name_mapping(name, translated_name, types.CELL_TYPE)
+                if keep_mapping:
+                    self._add_name_mapping(name, translated_name, types.CELL_TYPE)
         else:
             if name in types.COMMON_NAME_MAPPING:
                 translated_name = types.COMMON_NAME_MAPPING[name]

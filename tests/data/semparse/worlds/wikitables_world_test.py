@@ -33,6 +33,11 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         expression = world.parse_logical_form(sempre_form)
         assert str(expression) == "I1(I(0_200))"
 
+    def test_parsing_logical_forms_does_not_change_world_state(self):
+        expression = self.world.parse_logical_form("(number 20)")
+        assert str(expression) == "I(20)"
+        assert 'e -> 20' not in self.world.get_valid_actions()['e']
+
     def test_world_has_only_basic_numbers(self):
         valid_actions = self.world.get_valid_actions()
         for i in range(10):

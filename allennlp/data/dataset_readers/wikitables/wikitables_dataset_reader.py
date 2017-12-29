@@ -226,6 +226,7 @@ class WikiTablesDatasetReader(DatasetReader):
                 except KeyError as error:
                     logger.debug(f'Missing production rule: {error.args}, skipping logical form')
                     logger.debug(f'Logical form was: {logical_form}')
+                    continue
                 if len(action_sequence_fields) >= self._max_dpd_logical_forms:
                     break
 
