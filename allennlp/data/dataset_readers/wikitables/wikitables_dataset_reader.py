@@ -60,6 +60,13 @@ class WikiTablesDatasetReader(DatasetReader):
     max_dpd_logical_forms : ``int`` (optional)
         We will use the first ``max_dpd_logical_forms`` logical forms as our target label.  Only
         applicable if ``dpd_output_directory`` is given.  Default is 10.
+    max_dpd_tries : ``int`` (optional)
+        Sometimes DPD just made bad choices about logical forms and gives us forms that we can't
+        parse (most of the time these are very unlikely logical forms, because, e.g., it
+        halucinates a date or number from the table that's not in the question).  But we don't want
+        to spend our time trying to parse thousands of bad logical forms.  We will try at most
+        ``max_dpd_tries`` logical forms before giving up.  Only applicable if
+        ``dpd_output_directory`` is given.  Default is 20.
     tokenizer : ``Tokenizer`` (optional)
         Tokenizer to use for the questions. Will default to ``WordTokenizer()``.
     question_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
@@ -86,6 +93,7 @@ class WikiTablesDatasetReader(DatasetReader):
                  tables_directory: str = None,
                  dpd_output_directory: str = None,
                  max_dpd_logical_forms: int = 10,
+                 max_dpd_tries: int = 20,
                  tokenizer: Tokenizer = None,
                  question_token_indexers: Dict[str, TokenIndexer] = None,
                  table_token_indexers: Dict[str, TokenIndexer] = None,
@@ -94,6 +102,7 @@ class WikiTablesDatasetReader(DatasetReader):
         self._tables_directory = tables_directory
         self._dpd_output_directory = dpd_output_directory
         self._max_dpd_logical_forms = max_dpd_logical_forms
+        self._max_dpd_tries = max_dpd_tries
         self._tokenizer = tokenizer or WordTokenizer()
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
@@ -106,10 +115,13 @@ class WikiTablesDatasetReader(DatasetReader):
         instances = []
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file: %s", file_path)
+            num_dpd_missing = 0
+            num_lines = 0
             for line in tqdm.tqdm(data_file.readlines()):
                 line = line.strip("\n")
                 if not line:
                     continue
+                num_lines += 1
                 parsed_info = self._parse_line_as_lisp(line)
                 question = parsed_info["question"]
                 # We want the TSV file, but the ``*.examples`` files typically point to CSV.
@@ -120,13 +132,22 @@ class WikiTablesDatasetReader(DatasetReader):
                 try:
                     sempre_forms = [line.strip().decode('utf-8') for line in gzip.open(dpd_output_filename)]
                 except FileNotFoundError:
-                    logger.info(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
+                    logger.debug(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
+                    num_dpd_missing += 1
                     continue
                 instance = self.text_to_instance(question, table_filename, sempre_forms)
                 if instance is not None:
                     # The DPD output might not actually give us usable logical forms for some
                     # instances, and in those cases `text_to_instance` returns None.
                     instances.append(instance)
+        logger.info(f"Missing DPD info for {num_dpd_missing} out of {num_lines} instances")
+        num_instances = len(instances)
+        num_with_dpd = num_lines - num_dpd_missing
+        num_bad_lfs = num_with_dpd - num_instances
+        logger.info(f"DPD output was bad for {num_bad_lfs} out of {num_with_dpd} instances")
+        if num_bad_lfs > 0:
+            logger.info("Re-run with log level set to debug to see the un-parseable logical forms")
+        logger.info(f"Kept {num_instances} instances")
         if not instances:
             raise ConfigurationError("No instances read!")
         return Dataset(instances)
@@ -188,7 +209,7 @@ class WikiTablesDatasetReader(DatasetReader):
             action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
 
             action_sequence_fields: List[Field] = []
-            for logical_form in dpd_output:
+            for logical_form in dpd_output[:self._max_dpd_tries]:
                 if not self._should_keep_logical_form(logical_form):
                     continue
                 try:
@@ -203,7 +224,8 @@ class WikiTablesDatasetReader(DatasetReader):
                         index_fields.append(IndexField(action_map[production_rule], action_field))
                     action_sequence_fields.append(ListField(index_fields))
                 except KeyError as error:
-                    logger.info(f'Missing production rule: {error.args}, skipping logical form')
+                    logger.debug(f'Missing production rule: {error.args}, skipping logical form')
+                    logger.debug(f'Logical form was: {logical_form}')
                 if len(action_sequence_fields) >= self._max_dpd_logical_forms:
                     break
 
@@ -249,8 +271,16 @@ class WikiTablesDatasetReader(DatasetReader):
     @staticmethod
     def _should_keep_logical_form(logical_form: str) -> bool:
         # DPD has funny ideas about long strings of "ors" being reasonable logical forms.  They
-        # aren't.
+        # aren't, and they crash our recursive type inference code.  TODO(mattg): we need to fix
+        # the type inference code to not die in those cases, somehow...
         if logical_form.count('(or') > 3:
+            logger.debug(f'Skipping logical form with inordinate number of "ors": {logical_form}')
+            return False
+        if 'fb:part' in logical_form:
+            # TODO(mattg): we don't currently ever create production rules to generate cell parts,
+            # and it's not clear to me why we ever should.  These always fail to parse right now,
+            # so we'll just skip them and fix it later.
+            logger.debug(f'Skipping logical form with "fb.part": {logical_form}')
             return False
         # TODO(mattg): check for dates here
         return True
@@ -259,12 +289,16 @@ class WikiTablesDatasetReader(DatasetReader):
     def from_params(cls, params: Params) -> 'WikiTablesDatasetReader':
         tables_directory = params.pop('tables_directory')
         dpd_output_directory = params.pop('dpd_output_directory', None)
+        max_dpd_logical_forms = params.pop('max_dpd_logical_forms', 10)
+        max_dpd_tries = params.pop('max_dpd_tries', 20)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
         table_token_indexers = TokenIndexer.dict_from_params(params.pop('table_token_indexers', {}))
         params.assert_empty(cls.__name__)
         return WikiTablesDatasetReader(tables_directory=tables_directory,
                                        dpd_output_directory=dpd_output_directory,
+                                       max_dpd_logical_forms=max_dpd_logical_forms,
+                                       max_dpd_tries=max_dpd_tries,
                                        tokenizer=tokenizer,
                                        question_token_indexers=question_token_indexers,
                                        table_token_indexers=table_token_indexers)

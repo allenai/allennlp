@@ -36,6 +36,7 @@ class WikiTablesWorld(World):
                                               global_name_mapping=types.COMMON_NAME_MAPPING,
                                               num_nested_lambdas=1)
         self.table_graph = table_graph
+        self.question_tokens = [token.text for token in question_tokens]
 
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
@@ -47,7 +48,7 @@ class WikiTablesWorld(World):
 
         numbers = self._get_numbers_from_tokens(question_tokens) + list(str(i) for i in range(10))
         for number in numbers:
-            self._add_name_mapping(number, number, types.CELL_TYPE)
+            self._map_name(number)
 
     def _get_numbers_from_tokens(self, tokens: List[Token]) -> List[str]:
         """
@@ -56,15 +57,30 @@ class WikiTablesWorld(World):
         Eventually, we'd want this to detect things like ordinals ("first", "third") and cardinals
         ("one", "two"), but for now we just look for literal digits, and make up for missing
         ordinals and cardinals by adding all single-digit numbers as possible numbers to output.
+
+        We also handle year ranges expressed as decade or centuries ("1800s" or "1950s"), adding
+        the endpoints of the range as possible numbers to generate.
         """
         # pylint: disable=no-self-use
         numbers = []
         for token in tokens:
             # We'll use a check for float(text) to find numbers, because text.isdigit() doesn't
             # catch things like "-3" or "0.07".
+            text = token.text.replace(',', '')
+            is_range = False
+            if len(text) > 1 and text[-1] == 's' and text[-2] == '0':
+                is_range = True
+                text = text[:-1]
             try:
-                float(token.text)
-                numbers.append(token.text)
+                number = float(text)
+                if '.' in text:
+                    text = '%.3f' % number
+                numbers.append(text)
+                if is_range:
+                    num_zeros = 1
+                    while text[-(num_zeros + 1)] == '0':
+                        num_zeros += 1
+                    numbers.append(str(int(number + 10 ** num_zeros)))
             except ValueError:
                 pass
         return numbers
@@ -129,7 +145,9 @@ class WikiTablesWorld(World):
                     # The string is a negative number. This makes NLTK interpret this as a negated expression
                     # and force its type to be TRUTH_VALUE (t).
                     translated_name = translated_name.replace("-", "~")
-                self._add_name_mapping(name, translated_name)
+                    # TODO(mattg): bare numbers are treated as cells by the type system.  This
+                    # might not actually be correct...
+                self._add_name_mapping(name, translated_name, types.CELL_TYPE)
         else:
             if name in types.COMMON_NAME_MAPPING:
                 translated_name = types.COMMON_NAME_MAPPING[name]

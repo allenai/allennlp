@@ -1,4 +1,5 @@
 from collections import defaultdict
+import logging
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import torch
@@ -9,6 +10,8 @@ from allennlp.nn import util
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DecoderTrainer.register('max_marginal_likelihood')
@@ -44,17 +47,19 @@ class MaximumMarginalLikelihood(DecoderTrainer):
             # We group together all current states to get more efficient (batched) computation.
             grouped_state = states[0].combine_states(states)
             allowed_actions = self._get_allowed_actions(grouped_state, allowed_transitions)
-            num_states = 0
+            # This will store a set of (batch_index, action_history) tuples, and we'll check it
+            # against the allowed actions to make sure we're actually scoring all of the actions we
+            # are supposed to.
+            actions_taken: Set[Tuple[int, Tuple[int]]] = set()
             for next_state in decode_step.take_step(grouped_state, allowed_actions=allowed_actions):
-                num_states += 1
+                actions_taken.add((next_state.batch_indices[0], tuple(next_state.action_history[0])))
                 finished, not_finished = next_state.split_finished()
                 if finished is not None:
                     finished_states.append(finished)
                 if not_finished is not None:
                     next_states.append(not_finished)
             states = next_states
-            if num_states != sum(len(actions) for actions in allowed_actions):
-                raise RuntimeError("Not all allowed states taken!")
+            self._check_all_actions_taken(actions_taken, grouped_state, allowed_actions)
 
         # This is a dictionary of lists - for each batch instance, we want the score of all
         # finished states.  So this has shape (batch_size, num_target_action_sequences), though
@@ -108,12 +113,24 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         return batched_allowed_transitions
 
     @staticmethod
+    def _check_all_actions_taken(action_histories: Set[Tuple[int, Tuple[int]]],
+                                 grouped_state: DecoderState,
+                                 allowed_actions: List[Set[int]]) -> None:
+        expected_histories = set()
+        for i in range(len(allowed_actions)):
+            batch_index = grouped_state.batch_indices[i]
+            action_history = grouped_state.action_history[i]
+            for allowed_action in allowed_actions[i]:
+                expected_histories.add((batch_index, tuple(action_history + [allowed_action])))
+        assert action_histories == expected_histories
+
+    @staticmethod
     def _get_allowed_actions(state: DecoderState,
                              allowed_transitions: List[Dict[Tuple[int, ...], Set[int]]]) -> List[Set[int]]:
         """
         Takes a list of allowed transitions for each element of a batch, and a decoder state that
-        contains the current action history for each element of the batch, and returns a list of
-        allowed actions in the current state, also for each element of the batch.
+        contains the current action history for each `group` element, and returns a list of allowed
+        actions in the current state, also for each `group` element.
         """
         allowed_actions = []
         for batch_index, action_history in zip(state.batch_indices, state.action_history):
