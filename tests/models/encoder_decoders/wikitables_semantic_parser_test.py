@@ -6,6 +6,7 @@ from torch.autograd import Variable
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.semparse.type_declarations import GrammarState
+from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.models import WikiTablesSemanticParser
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderState
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderStep
@@ -46,6 +47,85 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                 'entity_2': 5,
                 'entity_3': 6,
                 }
+
+    def test_embed_actions_works_with_batched_and_padded_input(self):
+        model = self.model
+        nonterminal_embedding = model._nonterminal_embedder._token_embedders['tokens']
+        terminal_encoder = model._terminal_embedder._token_embedders['token_characters']
+        terminal_embedding = terminal_encoder._embedding
+        terminal_cnn = terminal_encoder._encoder
+        start_id = model.vocab.get_token_index(START_SYMBOL, 'rule_labels')
+        start_tensor = Variable(torch.LongTensor([start_id]))
+        rule2 = model.vocab.get_token_from_index(2, 'rule_labels')
+        rule2_tensor = Variable(torch.LongTensor([2]))
+        rule3 = model.vocab.get_token_from_index(3, 'rule_labels')
+        rule3_tensor = Variable(torch.LongTensor([3]))
+        rule4 = model.vocab.get_token_from_index(4, 'rule_labels')
+        rule4_tensor = Variable(torch.LongTensor([4]))
+        char2 = model.vocab.get_token_from_index(2, 'token_characters')
+        char2_tensor = Variable(torch.LongTensor([2, 2, 2]))
+        char3 = model.vocab.get_token_from_index(3, 'token_characters')
+        char3_tensor = Variable(torch.LongTensor([3, 3, 3]))
+        char4 = model.vocab.get_token_from_index(4, 'token_characters')
+        char4_tensor = Variable(torch.LongTensor([4, 4, 4]))
+        actions = [[{'left': (rule2, True, {'tokens': rule2_tensor}),
+                     'right': (char2 * 3, False, {'token_characters': char2_tensor})},
+                    {'left': (rule3, True, {'tokens': rule3_tensor}),
+                     'right': (char3 * 3, False, {'token_characters': char3_tensor})},
+                    # This one is padding; the tensors shouldn't matter here.
+                    {'left': ('', True, {'tokens': rule3_tensor}),
+                     'right': ('', False, {'token_characters': char3_tensor})}],
+                   [{'left': (rule2, True, {'tokens': rule2_tensor}),
+                     'right': (char2 * 3, False, {'token_characters': char2_tensor})},
+                    {'left': (rule4, True, {'tokens': rule4_tensor}),
+                     'right': (char4 * 3, False, {'token_characters': char4_tensor})},
+                    {'left': (START_SYMBOL, True, {'tokens': start_tensor}),
+                     'right': (rule2, True, {'tokens': rule2_tensor})}]]
+        embedded_actions, action_indices, initial_action_embedding = model._embed_actions(actions)
+        assert embedded_actions.size(0) == 4
+        assert action_indices[(0, 0)] == action_indices[(1, 0)]
+        assert len(set(action_indices.values())) == 4
+
+        # Now we'll go through all four unique actions and make sure the embedding is as we expect.
+        action_embedding = embedded_actions[action_indices[(0, 0)]]
+        left_side_embedding = nonterminal_embedding(rule2_tensor)
+        right_side_embedding = terminal_encoder(char2_tensor.unsqueeze(0).unsqueeze(0)).squeeze(0)
+        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
+                                              dim=-1).squeeze(0)
+        assert_almost_equal(action_embedding.cpu().data.numpy(),
+                            expected_action_embedding.cpu().data.numpy())
+
+        action_embedding = embedded_actions[action_indices[(0, 1)]]
+        left_side_embedding = nonterminal_embedding(rule3_tensor)
+        right_side_embedding = terminal_encoder(char3_tensor.unsqueeze(0).unsqueeze(0)).squeeze(0)
+        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
+                                              dim=-1).squeeze(0)
+        assert_almost_equal(action_embedding.cpu().data.numpy(),
+                            expected_action_embedding.cpu().data.numpy())
+
+        action_embedding = embedded_actions[action_indices[(1, 1)]]
+        left_side_embedding = nonterminal_embedding(rule4_tensor)
+        right_side_embedding = terminal_encoder(char4_tensor.unsqueeze(0).unsqueeze(0)).squeeze(0)
+        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
+                                              dim=-1).squeeze(0)
+        assert_almost_equal(action_embedding.cpu().data.numpy(),
+                            expected_action_embedding.cpu().data.numpy())
+
+        action_embedding = embedded_actions[action_indices[(1, 2)]]
+        left_side_embedding = nonterminal_embedding(start_tensor)
+        right_side_embedding = nonterminal_embedding(rule2_tensor)
+        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
+                                              dim=-1).squeeze(0)
+        assert_almost_equal(action_embedding.cpu().data.numpy(),
+                            expected_action_embedding.cpu().data.numpy())
+
+        # Finally, we'll check that the embedding for the initial action is as we expect.
+        start_embedding = nonterminal_embedding(start_tensor).squeeze(0)
+        zeros = Variable(start_embedding.data.new(start_embedding.size(-1)).fill_(0).float())
+        expected_action_embedding = torch.cat([zeros, start_embedding], dim=-1)
+        assert_almost_equal(initial_action_embedding.cpu().data.numpy(),
+                            expected_action_embedding.cpu().data.numpy())
+
 
 
 class WikiTablesDecoderStepTest(AllenNlpTestCase):

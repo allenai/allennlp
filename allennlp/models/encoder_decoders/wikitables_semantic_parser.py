@@ -212,21 +212,9 @@ class WikiTablesSemanticParser(Model):
             action_string = action['left'][0] + ' -> ' + action['right'][0]
             action_mapping[action_string] = i
         translated_valid_actions = {}
-        try:
-            for key, action_strings in valid_actions.items():
-                translated_valid_actions[key] = [action_mapping[action_string]
-                                                 for action_string in action_strings]
-        except KeyError:
-            print("Valid actions:")
-            for key, action_strings in valid_actions.items():
-                for action_string in action_strings:
-                    print(f"  {key}: {action_string}")
-            print("Action mapping:")
-            for action_string, index in action_mapping.items():
-                print(f"  {action_string}: {index}")
-            print("Question tokens:")
-            print(world.question_tokens)
-            raise
+        for key, action_strings in valid_actions.items():
+            translated_valid_actions[key] = [action_mapping[action_string]
+                                             for action_string in action_strings]
         return GrammarState([START_SYMBOL], {}, translated_valid_actions, action_mapping)
 
     def _embed_actions(self, actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
@@ -286,6 +274,9 @@ class WikiTablesSemanticParser(Model):
         unique_actions: Set[Tuple[int, int]] = set()
         for instance_actions in actions:
             for action in instance_actions:
+                if not action['left'][0]:
+                    # This rule is padding.
+                    continue
                 # This gives us the LHS and RHS strings, which we map to ids in the element tensor.
                 unique_actions.add((element_ids[action['left'][0]], element_ids[action['right'][0]]))
         unique_action_list = list(unique_actions)
@@ -312,6 +303,9 @@ class WikiTablesSemanticParser(Model):
         action_map: Dict[Tuple[int, int], int] = {}
         for batch_index, action_list in enumerate(actions):
             for action_index, action in enumerate(action_list):
+                if not action['left'][0]:
+                    # This rule is padding.
+                    continue
                 action_indices = (element_ids[action['left'][0]], element_ids[action['right'][0]])
                 action_id = action_ids[action_indices]
                 action_map[(batch_index, action_index)] = action_id
@@ -341,6 +335,9 @@ class WikiTablesSemanticParser(Model):
         terminals: Dict[str, Dict[str, torch.Tensor]] = {}
         for action_sequence in actions:
             for production_rule in action_sequence:
+                if not production_rule['left'][0]:
+                    # This rule is padding.
+                    continue
                 # This logic is hard to understand, because the ProductionRuleArray is a messy
                 # type.  The structure of each ProductionRuleArray is:
                 #     {
