@@ -62,8 +62,9 @@ class ModelTestCase(AllenNlpTestCase):
         self.check_model_computes_gradients_correctly(model, model_batch)
 
         # The datasets themselves should be identical.
+        assert model_batch.keys() == loaded_batch.keys()
         for key in model_batch.keys():
-            self.assert_fields_equal(model_batch[key], loaded_batch[key], 1e-6, key)
+            self.assert_fields_equal(model_batch[key], loaded_batch[key], key, 1e-6)
 
         # Set eval mode, to turn off things like dropout, then get predictions.
         model.eval()
@@ -86,24 +87,26 @@ class ModelTestCase(AllenNlpTestCase):
         for key in model_predictions.keys():
             self.assert_fields_equal(model_predictions[key],
                                      loaded_model_predictions[key],
-                                     tolerance=tolerance,
-                                     name=key)
+                                     name=key,
+                                     tolerance=tolerance)
 
         return model, loaded_model
 
-    def assert_fields_equal(self, field1, field2, tolerance: float = 1e-6, name: str = None) -> None:
+    def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
         if isinstance(field1, torch.autograd.Variable):
             assert_allclose(field1.data.cpu().numpy(),
                             field2.data.cpu().numpy(),
                             rtol=tolerance,
                             err_msg=name)
         elif isinstance(field1, dict):
+            assert field1.keys() == field2.keys()
             for key in field1:
                 self.assert_fields_equal(field1[key],
                                          field2[key],
                                          tolerance=tolerance,
                                          name=name + '.' + key)
         elif isinstance(field1, (list, tuple)):
+            assert len(field1) == len(field2)
             for i, (subfield1, subfield2) in enumerate(zip(field1, field2)):
                 self.assert_fields_equal(subfield1,
                                          subfield2,
