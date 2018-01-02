@@ -1,7 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
 import argparse
+import csv
+import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 from unittest import TestCase
@@ -77,6 +80,8 @@ class TestPredict(TestCase):
                                           "span_start_probs", "span_end_probs", "best_span",
                                           "best_span_str"}
 
+        shutil.rmtree(tempdir)
+
     def test_batch_prediction_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()
         infile = os.path.join(tempdir, "inputs.txt")
@@ -107,6 +112,8 @@ class TestPredict(TestCase):
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
                                           "span_start_probs", "span_end_probs", "best_span",
                                           "best_span_str"}
+
+        shutil.rmtree(tempdir)
 
     def test_fails_without_required_args(self):
         sys.argv = ["run.py",            # executable
@@ -158,3 +165,62 @@ class TestPredict(TestCase):
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
                                           "span_start_probs", "span_end_probs", "best_span",
                                           "best_span_str", "overridden"}
+
+        shutil.rmtree(tempdir)
+
+    def test_alternative_file_formats(self):
+        tempdir = tempfile.mkdtemp()
+        infile = os.path.join(tempdir, "inputs.txt")
+        outfile = os.path.join(tempdir, "outputs.txt")
+
+        @Predictor.register('bidaf-csv')  # pylint: disable=unused-variable
+        class BidafCsvPredictor(BidafPredictor):
+            """same as bidaf predictor but using CSV inputs and outputs"""
+            def load_line(self, line: str) -> JsonDict:
+                reader = csv.reader([line])
+                passage, question = next(reader)
+                return {"passage": passage, "question": question}
+
+            def dump_line(self, outputs: JsonDict) -> str:
+                output = io.StringIO()
+                writer = csv.writer(output)
+                row = [outputs["span_start_probs"][0],
+                       outputs["span_end_probs"][0],
+                       *outputs["best_span"],
+                       outputs["best_span_str"]]
+
+                writer.writerow(row)
+                return output.getvalue()
+
+        with open(infile, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(["the seahawks won the super bowl in 2016",
+                             "when did the seahawks win the super bowl?"])
+            writer.writerow(["the mariners won the super bowl in 2037",
+                             "when did the mariners win the super bowl?"])
+
+
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    "tests/fixtures/bidaf/serialization/model.tar.gz",
+                    infile,     # input_file
+                    "--output-file", outfile,
+                    "--silent"]
+
+        main(predictor_overrides={'bidaf': 'bidaf-csv'})
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'r') as f:
+            reader = csv.reader(f)
+            results = [row for row in reader]
+
+        assert len(results) == 2
+        for row in results:
+            assert len(row) == 5
+            start_prob, end_prob, span_start, span_end, span = row
+            for prob in (start_prob, end_prob):
+                assert 0 <= float(prob) <= 1
+            assert 0 <= int(span_start) <= int(span_end) <= 8
+            assert span != ''
+
+        shutil.rmtree(tempdir)
