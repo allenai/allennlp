@@ -1,4 +1,6 @@
+import json
 from typing import List
+
 from allennlp.common import Registrable
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
@@ -15,12 +17,28 @@ class Predictor(Registrable):
         self._model = model
         self._dataset_reader = dataset_reader
 
+    @staticmethod
+    def load_line(line: str) -> JsonDict:
+        """
+        If your inputs are not in JSON-lines format (e.g. you have a CSV)
+        you can override this function to parse them correctly.
+        """
+        return json.loads(line)
+
+    @staticmethod
+    def dump_line(outputs: JsonDict) -> str:
+        """
+        If you don't want your outputs in JSON-lines format
+        you can override this function to output them differently.
+        """
+        return json.dumps(outputs) + "\n"
+
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         instance = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance, cuda_device)
         return sanitize(outputs)
 
-    def _json_to_instance(self, json: JsonDict) -> Instance:
+    def _json_to_instance(self, obj: JsonDict) -> Instance:
         """
         Converts a JSON object into an :class:`~allennlp.data.instance.Instance`.
         """
@@ -31,7 +49,7 @@ class Predictor(Registrable):
         outputs = self._model.forward_on_instances(instances, cuda_device)
         return sanitize(outputs)
 
-    def _batch_json_to_instances(self, json: List[JsonDict]) -> List[Instance]:
+    def _batch_json_to_instances(self, objs: List[JsonDict]) -> List[Instance]:
         """
         Converts a list of JSON objects into a list of :class:`~allennlp.data.instance.Instance`s.
         By default, this expects that a "batch" consists of a list of JSON blobs which would
@@ -41,8 +59,8 @@ class Predictor(Registrable):
         directly.
         """
         instances = []
-        for blob in json:
-            instances.append(self._json_to_instance(blob))
+        for obj in objs:
+            instances.append(self._json_to_instance(obj))
         return instances
 
     @classmethod

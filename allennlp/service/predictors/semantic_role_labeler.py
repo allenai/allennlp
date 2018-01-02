@@ -41,14 +41,14 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         return " ".join(frame)
 
-    def _json_to_instance(self, json: JsonDict) -> Instance:
+    def _json_to_instance(self, obj: JsonDict) -> Instance:
         # We're overriding `predict_json` directly, so we don't need this.  But I'd rather have a
         # useless stub here then make the base class throw a RuntimeError instead of a
         # NotImplementedError - the checking on the base class is worth it.
         raise RuntimeError("this should never be called")
 
     @overrides
-    def _batch_json_to_instances(self, json: List[JsonDict]) -> List[Instance]:
+    def _batch_json_to_instances(self, objs: List[JsonDict]) -> List[Instance]:
         raise NotImplementedError("The SRL Predictor does not currently support batch prediction.")
 
     @overrides
