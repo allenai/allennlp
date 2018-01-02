@@ -26,7 +26,7 @@ def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
         The list of tensor dictionaries to batch.
     remove_trailing_dimension : ``bool``
         If ``True``, we will check for a trailing dimension of size 1 on the tensors that are being
-        batched, and remove it if it find it.
+        batched, and remove it if we find it.
     """
     key_to_tensors: Dict[str, List[torch.Tensor]] = defaultdict(list)
     for tensor_dict in tensor_dicts:
@@ -35,9 +35,8 @@ def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
     batched_tensors = {}
     for key, tensor_list in key_to_tensors.items():
         batched_tensor = torch.stack(tensor_list)
-        if remove_trailing_dimension:
-            if set(tensor.size(-1) for tensor in tensor_list) == set([1]):
-                batched_tensor = batched_tensor.squeeze(-1)
+        if remove_trailing_dimension and all(tensor.size(-1) == 1 for tensor in tensor_list):
+            batched_tensor = batched_tensor.squeeze(-1)
         batched_tensors[key] = batched_tensor
     return batched_tensors
 
