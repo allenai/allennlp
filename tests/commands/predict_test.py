@@ -176,14 +176,12 @@ class TestPredict(TestCase):
         @Predictor.register('bidaf-csv')  # pylint: disable=unused-variable
         class BidafCsvPredictor(BidafPredictor):
             """same as bidaf predictor but using CSV inputs and outputs"""
-            @staticmethod
-            def load_line(line: str) -> JsonDict:
+            def load_line(self, line: str) -> JsonDict:
                 reader = csv.reader([line])
                 passage, question = next(reader)
                 return {"passage": passage, "question": question}
 
-            @staticmethod
-            def dump_line(outputs: JsonDict) -> str:
+            def dump_line(self, outputs: JsonDict) -> str:
                 output = io.StringIO()
                 writer = csv.writer(output)
                 row = [outputs["span_start_probs"][0],
