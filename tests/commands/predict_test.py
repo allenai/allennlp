@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 from unittest import TestCase
@@ -79,6 +80,8 @@ class TestPredict(TestCase):
                                           "span_start_probs", "span_end_probs", "best_span",
                                           "best_span_str"}
 
+        shutil.rmtree(tempdir)
+
     def test_batch_prediction_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()
         infile = os.path.join(tempdir, "inputs.txt")
@@ -109,6 +112,8 @@ class TestPredict(TestCase):
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
                                           "span_start_probs", "span_end_probs", "best_span",
                                           "best_span_str"}
+
+        shutil.rmtree(tempdir)
 
     def test_fails_without_required_args(self):
         sys.argv = ["run.py",            # executable
@@ -160,6 +165,8 @@ class TestPredict(TestCase):
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
                                           "span_start_probs", "span_end_probs", "best_span",
                                           "best_span_str", "overridden"}
+
+        shutil.rmtree(tempdir)
 
     def test_alternative_file_formats(self):
         tempdir = tempfile.mkdtemp()
@@ -217,3 +224,5 @@ class TestPredict(TestCase):
                 assert 0 <= float(prob) <= 1
             assert 0 <= int(span_start) <= int(span_end) <= 8
             assert span != ''
+
+        shutil.rmtree(tempdir)

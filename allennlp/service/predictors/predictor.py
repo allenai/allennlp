@@ -17,16 +17,14 @@ class Predictor(Registrable):
         self._model = model
         self._dataset_reader = dataset_reader
 
-    @staticmethod
-    def load_line(line: str) -> JsonDict:
+    def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
         """
         If your inputs are not in JSON-lines format (e.g. you have a CSV)
         you can override this function to parse them correctly.
         """
         return json.loads(line)
 
-    @staticmethod
-    def dump_line(outputs: JsonDict) -> str:
+    def dump_line(self, outputs: JsonDict) -> str:  # pylint: disable=no-self-use
         """
         If you don't want your outputs in JSON-lines format
         you can override this function to output them differently.
@@ -38,7 +36,7 @@ class Predictor(Registrable):
         outputs = self._model.forward_on_instance(instance, cuda_device)
         return sanitize(outputs)
 
-    def _json_to_instance(self, obj: JsonDict) -> Instance:
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Converts a JSON object into an :class:`~allennlp.data.instance.Instance`.
         """
@@ -49,7 +47,7 @@ class Predictor(Registrable):
         outputs = self._model.forward_on_instances(instances, cuda_device)
         return sanitize(outputs)
 
-    def _batch_json_to_instances(self, objs: List[JsonDict]) -> List[Instance]:
+    def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Instance]:
         """
         Converts a list of JSON objects into a list of :class:`~allennlp.data.instance.Instance`s.
         By default, this expects that a "batch" consists of a list of JSON blobs which would
@@ -59,8 +57,8 @@ class Predictor(Registrable):
         directly.
         """
         instances = []
-        for obj in objs:
-            instances.append(self._json_to_instance(obj))
+        for json_dict in json_dicts:
+            instances.append(self._json_to_instance(json_dict))
         return instances
 
     @classmethod
