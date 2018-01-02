@@ -11,6 +11,7 @@ via a REST API or similar.
    allennlp.service.permalinks
    allennlp.service.predictors
    allennlp.service.server_flask
+   allennlp.service.server_simple
 
 .. automodule:: allennlp.service
    :members:
