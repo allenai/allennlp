@@ -1,7 +1,7 @@
 """
 Assorted utilities for working with neural networks in AllenNLP.
 """
-
+from collections import defaultdict
 from typing import Dict, List, Optional, Any, Tuple, Callable
 import logging
 
@@ -12,6 +12,34 @@ from torch.autograd import Variable
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
+                       remove_trailing_dimension: bool = False) -> Dict[str, torch.Tensor]:
+    """
+    Takes a list of tensor dictionaries, where each dictionary is assumed to have matching keys,
+    and returns a single dictionary with all tensors with the same key batched together.
+
+    Parameters
+    ----------
+    tensor_dicts : ``List[Dict[str, torch.Tensor]]``
+        The list of tensor dictionaries to batch.
+    remove_trailing_dimension : ``bool``
+        If ``True``, we will check for a trailing dimension of size 1 on the tensors that are being
+        batched, and remove it if it find it.
+    """
+    key_to_tensors: Dict[str, List[torch.Tensor]] = defaultdict(list)
+    for tensor_dict in tensor_dicts:
+        for key, tensor in tensor_dict.items():
+            key_to_tensors[key].append(tensor)
+    batched_tensors = {}
+    for key, tensor_list in key_to_tensors.items():
+        batched_tensor = torch.stack(tensor_list)
+        if remove_trailing_dimension:
+            if set(tensor.size(-1) for tensor in tensor_list) == set([1]):
+                batched_tensor = batched_tensor.squeeze(-1)
+        batched_tensors[key] = batched_tensor
+    return batched_tensors
 
 
 def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
