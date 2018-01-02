@@ -21,6 +21,7 @@ from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
+from allennlp.training.metrics import Average
 
 
 @Model.register("wikitables_parser")
@@ -81,6 +82,7 @@ class WikiTablesSemanticParser(Model):
         self._max_decoding_steps = max_decoding_steps
         self._nonterminal_embedder = nonterminal_embedder
         self._terminal_embedder = terminal_embedder
+        self._action_sequence_accuracy = Average()
 
         check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
                                "nonterminal embedding dim", "terminal embedding dim")
@@ -198,10 +200,33 @@ class WikiTablesSemanticParser(Model):
             best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)
             best_action_sequences = []
             for i in range(batch_size):
-                best_action_sequences.append(best_final_states[i][0].action_history)
+                predicted = best_final_states[i][0].action_history
+                credit = 0
+                if target_action_sequences is not None:
+                    # Use a Tensor, not a Variable, to avoid a memory leak.
+                    targets = target_action_sequences[i].data
+                    credit = self._action_history_match(predicted[0], targets)
+                self._action_sequence_accuracy(credit)
+                best_action_sequences.append(predicted)
             outputs['best_action_sequence'] = best_action_sequences
             # TODO(matt): compute accuracy here.
             return outputs
+
+    def _action_history_match(self, predicted: List[int], targets: torch.LongTensor) -> int:
+        # TODO(mattg): this could probably be moved into a FullSequenceMatch metric, or something.
+        # Check if target is big enough to cover prediction (including start/end symbols)
+        if len(predicted) > targets.size(1):
+            return 0
+        predicted_tensor = targets.new(predicted)
+        targets_trimmed = targets[:, :len(predicted)]
+        # Return 1 if the predicted sequence is anywhere in the list of targets.
+        return torch.max(torch.min(targets_trimmed.eq(predicted_tensor), dim=1)[0])
+
+    @overrides
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return {
+            'parse_acc': self._action_sequence_accuracy.get_metric(reset)
+        }
 
     @staticmethod
     def _create_grammar_state(world: WikiTablesWorld,
