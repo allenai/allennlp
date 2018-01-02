@@ -211,7 +211,6 @@ class TestPredict(TestCase):
 
         assert len(results) == 2
         for row in results:
-            print(row)
             assert len(row) == 5
             start_prob, end_prob, span_start, span_end, span = row
             for prob in (start_prob, end_prob):
