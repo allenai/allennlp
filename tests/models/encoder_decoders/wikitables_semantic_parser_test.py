@@ -49,11 +49,10 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                 }
 
     def test_embed_actions_works_with_batched_and_padded_input(self):
+        # pylint: disable=protected-access
         model = self.model
         nonterminal_embedding = model._nonterminal_embedder._token_embedders['tokens']
         terminal_encoder = model._terminal_embedder._token_embedders['token_characters']
-        terminal_embedding = terminal_encoder._embedding
-        terminal_cnn = terminal_encoder._encoder
         start_id = model.vocab.get_token_index(START_SYMBOL, 'rule_labels')
         start_tensor = Variable(torch.LongTensor([start_id]))
         rule2 = model.vocab.get_token_from_index(2, 'rule_labels')
@@ -130,6 +129,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
 class WikiTablesDecoderStepTest(AllenNlpTestCase):
     def test_compute_new_states(self):
+        # pylint: disable=protected-access
         batch_indices = [0, 1, 0]
         action_history = [[1], [3, 4], []]
         score = [Variable(torch.FloatTensor([x])) for x in [.1, 1.1, 2.2]]

@@ -212,7 +212,8 @@ class WikiTablesSemanticParser(Model):
             # TODO(matt): compute accuracy here.
             return outputs
 
-    def _action_history_match(self, predicted: List[int], targets: torch.LongTensor) -> int:
+    @staticmethod
+    def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
         # TODO(mattg): this could probably be moved into a FullSequenceMatch metric, or something.
         # Check if target is big enough to cover prediction (including start/end symbols)
         if len(predicted) > targets.size(1):
@@ -225,8 +226,8 @@ class WikiTablesSemanticParser(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
-            'parse_acc': self._action_sequence_accuracy.get_metric(reset)
-        }
+                'parse_acc': self._action_sequence_accuracy.get_metric(reset)
+                }
 
     @staticmethod
     def _create_grammar_state(world: WikiTablesWorld,
@@ -756,6 +757,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                             allowed_actions: List[Set[int]],
                             max_actions: int = None) -> List[WikiTablesDecoderState]:
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
+        if max_actions is not None:
+            # We might need a version of `sorted_log_probs` on the CPU later, but only if we need
+            # to truncate the best states to `max_actions`.
+            sorted_log_probs_cpu = sorted_log_probs.data.cpu().numpy()
         sorted_actions = sorted_actions.data.cpu().numpy().tolist()
         best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)
         for group_index, (batch_index, group_actions) in enumerate(zip(state.batch_indices, sorted_actions)):
@@ -783,7 +788,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # instance's states again (across group index) by score.  We don't need to do this
                 # if `max_actions` is None, because we'll be keeping all of the next states,
                 # anyway.
-                sorted_log_probs_cpu = sorted_log_probs.data.cpu().numpy()
                 best_states.sort(key=lambda x: sorted_log_probs_cpu[x[:2]], reverse=True)
                 best_states = best_states[:max_actions]
             for group_index, action_index, action in best_states:

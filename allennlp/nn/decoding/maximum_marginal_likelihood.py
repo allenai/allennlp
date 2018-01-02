@@ -117,8 +117,7 @@ class MaximumMarginalLikelihood(DecoderTrainer):
                                  grouped_state: DecoderState,
                                  allowed_actions: List[Set[int]]) -> None:
         expected_histories = set()
-        for i in range(len(allowed_actions)):
-            batch_index = grouped_state.batch_indices[i]
+        for i, batch_index in enumerate(grouped_state.batch_indices):
             action_history = grouped_state.action_history[i]
             for allowed_action in allowed_actions[i]:
                 expected_histories.add((batch_index, tuple(action_history + [allowed_action])))
