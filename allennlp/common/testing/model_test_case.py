@@ -133,7 +133,7 @@ class ModelTestCase(AllenNlpTestCase):
     def ensure_batch_predictions_are_consistent(self):
         self.model.eval()
         single_predictions = []
-        for i, instance in enumerate(self.dataset.instances):
+        for i, instance in enumerate(self.dataset.iterinstances()):
             dataset = Dataset([instance])
             tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
             result = self.model(**tensors)

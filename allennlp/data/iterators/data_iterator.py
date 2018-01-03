@@ -67,7 +67,7 @@ class DataIterator(Registrable):
             batch = Dataset(group)
             padding_lengths = batch.get_padding_lengths()
             logger.debug("Batch padding lengths: %s", str(padding_lengths))
-            logger.debug("Batch size: %d", len(batch.instances))
+            logger.debug("Batch size: %d", batch.num_instances)
             yield batch.as_tensor_dict(padding_lengths,
                                        cuda_device=cuda_device,
                                        for_training=for_training)

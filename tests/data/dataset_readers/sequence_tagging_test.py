@@ -8,17 +8,18 @@ class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
         reader = SequenceTaggingDatasetReader()
         dataset = reader.read('tests/fixtures/data/sequence_tagging.tsv')
 
-        assert len(dataset.instances) == 4
-        fields = dataset.instances[0].fields
+        instances = list(dataset.iterinstances())
+        assert len(instances) == 4
+        fields = instances[0].fields
         assert [t.text for t in fields["tokens"].tokens] == ["cats", "are", "animals", "."]
         assert fields["tags"].labels == ["N", "V", "N", "N"]
-        fields = dataset.instances[1].fields
+        fields = instances[1].fields
         assert [t.text for t in fields["tokens"].tokens] == ["dogs", "are", "animals", "."]
         assert fields["tags"].labels == ["N", "V", "N", "N"]
-        fields = dataset.instances[2].fields
+        fields = instances[2].fields
         assert [t.text for t in fields["tokens"].tokens] == ["snakes", "are", "animals", "."]
         assert fields["tags"].labels == ["N", "V", "N", "N"]
-        fields = dataset.instances[3].fields
+        fields = instances[3].fields
         assert [t.text for t in fields["tokens"].tokens] == ["birds", "are", "animals", "."]
         assert fields["tags"].labels == ["N", "V", "N", "N"]
 
@@ -26,16 +27,17 @@ class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
         reader = SequenceTaggingDatasetReader(word_tag_delimiter='/')
         dataset = reader.read('tests/fixtures/data/brown_corpus.txt')
 
-        assert len(dataset.instances) == 4
-        fields = dataset.instances[0].fields
+        instances = list(dataset.iterinstances())
+        assert len(instances) == 4
+        fields = instances[0].fields
         assert [t.text for t in fields["tokens"].tokens] == ["cats", "are", "animals", "."]
         assert fields["tags"].labels == ["N", "V", "N", "N"]
-        fields = dataset.instances[1].fields
+        fields = instances[1].fields
         assert [t.text for t in fields["tokens"].tokens] == ["dogs", "are", "animals", "."]
         assert fields["tags"].labels == ["N", "V", "N", "N"]
-        fields = dataset.instances[2].fields
+        fields = instances[2].fields
         assert [t.text for t in fields["tokens"].tokens] == ["snakes", "are", "animals", "."]
         assert fields["tags"].labels == ["N", "V", "N", "N"]
-        fields = dataset.instances[3].fields
+        fields = instances[3].fields
         assert [t.text for t in fields["tokens"].tokens] == ["birds", "are", "animals", "."]
         assert fields["tags"].labels == ["N", "V", "N", "N"]

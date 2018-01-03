@@ -323,7 +323,7 @@ class Vocabulary:
         """
         logger.info("Fitting token dictionary from dataset.")
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        for instance in tqdm.tqdm(dataset.instances):
+        for instance in tqdm.tqdm(dataset.iterinstances()):
             instance.count_vocab_items(namespace_token_counts)
 
         return Vocabulary(counter=namespace_token_counts,

@@ -32,7 +32,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.common.util import prepare_environment
-from allennlp.data import Dataset, Vocabulary
+from allennlp.data import Dataset, Vocabulary, LazyDataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.archival import archive_model
@@ -152,10 +152,16 @@ def train_model(params: Params, serialization_dir: str) -> Model:
             raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
-    vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
-                                   Dataset([instance for key, dataset in all_datasets.items()
-                                            for instance in dataset.instances
-                                            if key in datasets_for_vocab_creation]))
+
+    # As the individual Datasets may be lazy (and, in particular, large), we don't want to
+    # manifest a List of their instances to construct the vocabulary. Instead we use a LazyDataset
+    # with the combined instances.
+    combined_instances = (instance for key, dataset in all_datasets.items()
+                          for instance in dataset.iterinstances()
+                          if key in datasets_for_vocab_creation)
+    lazy_combined_dataset = LazyDataset(lambda: combined_instances)
+    vocab = Vocabulary.from_params(params.pop("vocabulary", {}), lazy_combined_dataset)
+
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))

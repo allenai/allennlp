@@ -27,11 +27,11 @@ class BasicIterator(DataIterator):
 
     @overrides
     def get_num_batches(self, dataset: Dataset) -> int:
-        return math.ceil(len(dataset.instances) / self._batch_size)
+        return math.ceil(dataset.num_instances / self._batch_size)
 
     @overrides
     def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
-        instances = dataset.instances
+        instances = [instance for instance in dataset.iterinstances()]
         if shuffle:
             random.shuffle(instances)
         grouped_instances = group_by_count(instances, self._batch_size, None)

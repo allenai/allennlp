@@ -5,7 +5,7 @@ For example, when you train a model, you will likely have a *training* dataset a
 
 import logging
 from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Iterator
 
 import torch
 import tqdm
@@ -38,7 +38,8 @@ class Dataset:
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
             raise ConfigurationError("You cannot construct a Dataset with non-homogeneous Instances.")
 
-        self.instances = instances
+        self._instances = instances
+        self.num_instances = len(instances)
 
     def truncate(self, max_instances: int):
         """
@@ -46,8 +47,8 @@ class Dataset:
         instances to the first ``max_instances``.  This `modifies` the current object, and returns
         nothing.
         """
-        if len(self.instances) > max_instances:
-            self.instances = self.instances[:max_instances]
+        if len(self._instances) > max_instances:
+            self._instances = self._instances[:max_instances]
 
     def index_instances(self, vocab: Vocabulary):
         """
@@ -55,8 +56,14 @@ class Dataset:
         ``IndexedFields``.  This modifies the current object, it does not return a new object.
         """
         logger.info("Indexing dataset")
-        for instance in tqdm.tqdm(self.instances):
+        for instance in tqdm.tqdm(self._instances):
             instance.index_fields(vocab)
+
+    def iterinstances(self) -> Iterator[Instance]:
+        """
+        An iterator over instances.
+        """
+        yield from self._instances
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """
@@ -70,7 +77,7 @@ class Dataset:
         """
         padding_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
         all_instance_lengths: List[Dict[str, Dict[str, int]]] = [instance.get_padding_lengths()
-                                                                 for instance in self.instances]
+                                                                 for instance in self._instances]
         if not all_instance_lengths:
             return {**padding_lengths}
         all_field_lengths: Dict[str, List[Dict[str, int]]] = defaultdict(list)
@@ -140,7 +147,7 @@ class Dataset:
         # given a max length for a particular field and padding key.  If we were, we use that
         # instead of the instance-based one.
         if verbose:
-            logger.info("Padding dataset of size %d to lengths %s", len(self.instances), str(padding_lengths))
+            logger.info("Padding dataset of size %d to lengths %s", self.num_instances, str(padding_lengths))
             logger.info("Getting max lengths from instances")
         instance_padding_lengths = self.get_padding_lengths()
         if verbose:
@@ -157,7 +164,7 @@ class Dataset:
         field_tensors: Dict[str, list] = defaultdict(list)
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
-        for instance in self.instances:
+        for instance in self.iterinstances():
             for field, tensors in instance.as_tensor_dict(lengths_to_use, cuda_device, for_training).items():
                 field_tensors[field].append(tensors)
 
@@ -165,7 +172,7 @@ class Dataset:
         # of tensors) per field.  The `Field` classes themselves have the logic for batching the
         # tensors together, so we grab a dictionary of field_name -> field class from the first
         # instance in the dataset.
-        field_classes = self.instances[0].fields
+        field_classes = self._instances[0].fields
         final_fields = {}
         for field_name, field_tensor_list in field_tensors.items():
             final_fields[field_name] = field_classes[field_name].batch_tensors(field_tensor_list)
