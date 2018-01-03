@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use, invalid-name
 import logging
+import math
 
 import numpy
 import pytest
@@ -8,7 +9,7 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.nn import InitializerApplicator
-from allennlp.nn.initializers import block_orthogonal
+from allennlp.nn.initializers import block_orthogonal, uniform_unit_scaling
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
@@ -69,3 +70,15 @@ class TestInitializers(AllenNlpTestCase):
         tensor = torch.zeros([10, 6, 8])
         with pytest.raises(ConfigurationError):
             block_orthogonal(tensor, [7, 2, 1])
+
+    def test_uniform_unit_scaling_can_initialize(self):
+        tensor = Variable(torch.zeros([10, 6]))
+        uniform_unit_scaling(tensor, "linear")
+
+        assert tensor.data.max() < math.sqrt(3/10)
+        assert tensor.data.min() > -math.sqrt(3/10)
+
+        # Check that it gets the scaling correct for relu (1.43).
+        uniform_unit_scaling(tensor, "relu")
+        assert tensor.data.max() < math.sqrt(3/10) * 1.43
+        assert tensor.data.min() > -math.sqrt(3/10) * 1.43

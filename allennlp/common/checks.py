@@ -23,4 +23,13 @@ class ConfigurationError(Exception):
 
 def log_pytorch_version_info():
     import torch
-    logger.info("Pytorch version: " + torch.__version__)
+    logger.info("Pytorch version: %s", torch.__version__)
+
+
+def check_dimensions_match(dimension_1: int,
+                           dimension_2: int,
+                           dim_1_name: str,
+                           dim_2_name: str) -> None:
+    if dimension_1 != dimension_2:
+        raise ConfigurationError(f"{dim_1_name} must match {dim_2_name}, but got {dimension_1} "
+                                 f"and {dimension_2} instead")

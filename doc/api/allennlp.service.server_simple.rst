@@ -1,7 +1,7 @@
-allennlp.service.server_sanic
+allennlp.service.server_simple
 =================================
 
-.. automodule:: allennlp.service.server_sanic
+.. automodule:: allennlp.service.server_simple
    :members:
    :undoc-members:
    :show-inheritance:
