@@ -113,6 +113,10 @@ class TableKnowledgeGraph(KnowledgeGraph):
         string = re.sub("[•†‡²³]", "", string)
         string = re.sub("[‐‑–—]", "-", string)
         string = re.sub("[\\u0170-\\uFFFF]", "", string).strip()
+        # Oddly, some unicode characters get converted to _ instead of being stripped.  Not really
+        # sure how sempre decides what to do with these...  TODO(mattg): can we just get rid of the
+        # need for this function somehow?  It's causing a whole lot of headaches.
+        string = re.sub("[ðø]", "_", string)
         string = string.replace("\\n", "_")
         string = re.sub("\\s+", " ", string)
         # Canonicalization rules from Sempre

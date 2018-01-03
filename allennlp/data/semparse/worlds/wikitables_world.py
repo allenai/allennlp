@@ -10,7 +10,7 @@ from nltk.sem.logic import Type
 from overrides import overrides
 
 from allennlp.data.tokenizers import Token
-from allennlp.data.semparse.worlds.world import World
+from allennlp.data.semparse.worlds.world import ParsingError, World
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 
@@ -41,12 +41,12 @@ class WikiTablesWorld(World):
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
 
-        # This adds all of the cell and column names to our local name mapping, so we can get them
-        # as valid actions in the parser.
-        for entity in table_graph.get_all_entities():
+        # This adds all of the cell and column names to our local name mapping, including null
+        # cells and entities, so we can get them as valid actions in the parser.
+        for entity in table_graph.get_all_entities() + ['fb:cell.null', 'fb:row.row.null']:
             self._map_name(entity, keep_mapping=True)
 
-        numbers = self._get_numbers_from_tokens(question_tokens) + list(str(i) for i in range(10))
+        numbers = self._get_numbers_from_tokens(question_tokens) + list(str(i) for i in range(-1, 10))
         for number in numbers:
             self._map_name(number, keep_mapping=True)
 
@@ -90,44 +90,23 @@ class WikiTablesWorld(World):
         return types.BASIC_TYPES
 
     @overrides
-    def get_valid_actions(self) -> Dict[str, List[str]]:
-        """
-        We get the valid actions from the grammar using the logic in the super class; we just need
-        to add a few specific non-terminal productions here that don't get added in other places.
-        """
-        valid_actions = super(WikiTablesWorld, self).get_valid_actions()
-        # There is a "null cell" and a "null row" that basically allow checking for an empty set,
-        # because our "entity" and "row" types are actually set of entities / rows.
-        # TODO(mattg): Pradeep, is this the right way to add this, or is there another place where
-        # this would more naturally fit?
-        valid_actions['e'].append('e -> fb:cell.null')
-        valid_actions['<e,r>'].append('<e,r> -> fb:row.row.null')
-        # Not really sure why this rule gets produced, because of how negative numbers are handled
-        # in the type system, but it does.
-        # TODO(mattg): Pradeep, any ideas here?
-        valid_actions['e'].append('e -> -1')
-
-        return valid_actions
-
-    @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         if name not in types.COMMON_NAME_MAPPING and name not in self.local_name_mapping:
+            if not keep_mapping:
+                raise ParsingError(f"Encountered un-mapped name: {name}")
             if name.startswith("fb:row.row"):
                 # Column name
                 translated_name = "C%d" % self._column_counter
                 self._column_counter += 1
-                if keep_mapping:
-                    self._add_name_mapping(name, translated_name, types.COLUMN_TYPE)
+                self._add_name_mapping(name, translated_name, types.COLUMN_TYPE)
             elif name.startswith("fb:cell"):
                 # Cell name
                 translated_name = "cell:%s" % name.split(".")[-1]
-                if keep_mapping:
-                    self._add_name_mapping(name, translated_name, types.CELL_TYPE)
+                self._add_name_mapping(name, translated_name, types.CELL_TYPE)
             elif name.startswith("fb:part"):
                 # part name
                 translated_name = "part:%s" % name.split(".")[-1]
-                if keep_mapping:
-                    self._add_name_mapping(name, translated_name, types.PART_TYPE)
+                self._add_name_mapping(name, translated_name, types.PART_TYPE)
             else:
                 # NLTK throws an error if it sees a "." in constants, which will most likely happen within
                 # numbers as a decimal point. We're changing those to underscores.
@@ -138,8 +117,7 @@ class WikiTablesWorld(World):
                     translated_name = translated_name.replace("-", "~")
                     # TODO(mattg): bare numbers are treated as cells by the type system.  This
                     # might not actually be correct...
-                if keep_mapping:
-                    self._add_name_mapping(name, translated_name, types.CELL_TYPE)
+                self._add_name_mapping(name, translated_name, types.CELL_TYPE)
         else:
             if name in types.COMMON_NAME_MAPPING:
                 translated_name = types.COMMON_NAME_MAPPING[name]

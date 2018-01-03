@@ -59,6 +59,18 @@ class TestTableKnowledgeGraph(AllenNlpTestCase):
         neighbors = set(knowledge_graph.get_column_neighbors('fb:row.row.notes'))
         assert neighbors == {'fb:cell.8_districts_formed_from_oruzgan_province_in_2004'}
 
+    def test_read_from_json_handles_crazy_unicode(self):
+        json = {
+                'columns': ['Town'],
+                'cells': [['Viðareiði'],
+                          ['Funningsfjørður']]
+                }
+        knowledge_graph = TableKnowledgeGraph.read_from_json(json)
+        neighbors = set(knowledge_graph.get_column_neighbors('fb:row.row.town'))
+        assert neighbors == {'fb:cell.funningsfj_r_ur',
+                             'fb:cell.vi_arei_i',
+                             }
+
     def test_read_from_json_handles_parentheses_correctly(self):
         json = {
                 'columns': ['Urban settlements'],

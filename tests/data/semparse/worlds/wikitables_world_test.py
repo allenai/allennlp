@@ -2,6 +2,7 @@
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.semparse import ParsingError
 from allennlp.data.semparse.knowledge_graphs.table_knowledge_graph import TableKnowledgeGraph
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.tokenizers import Token
@@ -22,8 +23,10 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         assert str(expression) == "R(C6,C2(cell:usl_a_league))"
 
     def test_world_parses_logical_forms_with_dates(self):
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'year', '2002', '?']]
+        world = WikiTablesWorld(self.table_kg, question_tokens)
         sempre_form = "((reverse fb:row.row.league) (fb:row.row.year (fb:cell.cell.date (date 2002 -1 -1))))"
-        expression = self.world.parse_logical_form(sempre_form)
+        expression = world.parse_logical_form(sempre_form)
         assert str(expression) == "R(C2,C6(D1(D0(2002,~1,~1))))"
 
     def test_world_parses_logical_forms_with_decimals(self):
@@ -33,10 +36,9 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         expression = world.parse_logical_form(sempre_form)
         assert str(expression) == "I1(I(0_200))"
 
-    def test_parsing_logical_forms_does_not_change_world_state(self):
-        expression = self.world.parse_logical_form("(number 20)")
-        assert str(expression) == "I(20)"
-        assert 'e -> 20' not in self.world.get_valid_actions()['e']
+    def test_parsing_logical_forms_fails_with_unmapped_names(self):
+        with pytest.raises(ParsingError):
+            expression = self.world.parse_logical_form("(number 20)")
 
     def test_world_has_only_basic_numbers(self):
         valid_actions = self.world.get_valid_actions()
@@ -85,17 +87,6 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                   '<e,r> -> fb:row.row.year', 'r -> [<e,r>, e]',
                                   '<e,r> -> fb:row.row.league', 'e -> fb:cell.usl_a_league']
         assert actions == target_action_sequence
-
-    def test_large_scale_processing(self):
-        # A sample of 500 logical forms taken randomly from DPD outputs of all questions in training data.
-        forms = [x.strip() for x in open("tests/fixtures/data/wikitables/logical_forms_large_sample.txt")]
-        expressions = [self.world.parse_logical_form(form) for form in forms]
-        for form, expression in zip(forms, expressions):
-            action_sequence = self.world.get_action_sequence(expression)
-            for action in action_sequence:
-                assert "?" not in action, ("Found an unresolved type for form: %s\n"
-                                           "Expression: %s\n"
-                                           "Action sequence: %s\n" % (form, expression, action_sequence))
 
     @pytest.mark.skip(reason="fibonacci recursion currently going on here")
     def test_with_deeply_nested_logical_form(self):

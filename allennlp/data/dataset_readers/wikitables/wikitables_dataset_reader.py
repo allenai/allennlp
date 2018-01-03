@@ -16,15 +16,16 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict
 from allennlp.data.dataset import Dataset
-from allennlp.data.instance import Instance
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListField
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
+from allennlp.data.instance import Instance
+from allennlp.data.semparse import ParsingError
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
 from allennlp.data.semparse.worlds import WikiTablesWorld
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -214,6 +215,10 @@ class WikiTablesDatasetReader(DatasetReader):
                     continue
                 try:
                     expression = world.parse_logical_form(logical_form)
+                except ParsingError as error:
+                    logger.debug(f'Parsing error: {error.message}, skipping logical form')
+                    logger.debug(f'Logical form was: {logical_form}')
+                    continue
                 except:
                     logger.error(logical_form)
                     raise

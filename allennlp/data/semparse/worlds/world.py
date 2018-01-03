@@ -6,6 +6,21 @@ from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
 from allennlp.data.semparse.type_declarations import type_declaration as types
 
 
+class ParsingError(Exception):
+    """
+    This exception gets raised when there is a parsing error during logical form processing.  This
+    might happen because you're not handling the full set of possible logical forms, for instance,
+    and having this error provides a consistent way to catch those errors and log how frequently
+    this occurs.
+    """
+    def __init__(self, message):
+        super(ParsingError, self).__init__()
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+
+
 class World:
     """
     Base class for defining a world in a new domain. This class defines a method to translate a
