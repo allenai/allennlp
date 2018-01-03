@@ -45,7 +45,7 @@ class SemanticRoleLabelerPredictor(Predictor):
     def _json_to_instance(self, json: JsonDict):
         raise NotImplementedError("The SRL model uses a different API for creating instances.")
 
-    def _sentence_to_srl_instances(self, json: JsonDict) -> Tuple[List[Instance], JsonDict]:
+    def _sentence_to_srl_instances(self, json_dict: JsonDict) -> Tuple[List[Instance], JsonDict]:
         """
         The SRL model has a slightly different API from other models, as the model is run
         forward for every verb in the sentence. This means that for a single sentence, we need
@@ -56,7 +56,7 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         Parameters
         ----------
-        json : ``JsonDict``, required.
+        json_dict : ``JsonDict``, required.
             JSON that looks like ``{"sentence": "..."}``.
 
         Returns
