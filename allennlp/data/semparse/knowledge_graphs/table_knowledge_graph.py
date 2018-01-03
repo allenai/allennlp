@@ -4,7 +4,7 @@ Classes related to representing a table in WikitableQuestions. At this point we 
 """
 import re
 from collections import defaultdict
-from typing import List, DefaultDict, Dict, Any
+from typing import Any, DefaultDict, Dict, List, Set
 
 from unidecode import unidecode
 
@@ -34,15 +34,15 @@ class TableKnowledgeGraph(KnowledgeGraph):
         we read "Nation", "Olympics" and "Medals" as column headers, "USA" and "China" as cells under the
         "Nation" column and so on.
         """
-        all_cells = []
+        cells = []
         # We assume the first row is column names.
         for row_index, line in enumerate(open(filename)):
             line = line.rstrip('\n')
             if row_index == 0:
                 columns = line.split('\t')
             else:
-                all_cells.append(line.split('\t'))
-        return cls.read_from_json({"columns": columns, "cells": all_cells})
+                cells.append(line.split('\t'))
+        return cls.read_from_json({"columns": columns, "cells": cells})
 
     @classmethod
     def read_from_json(cls, json_object: Dict[str, Any]) -> 'TableKnowledgeGraph':
@@ -55,6 +55,7 @@ class TableKnowledgeGraph(KnowledgeGraph):
                    [row2_cell1, row2_cell2, ...],
                    ... ]}
         """
+        entity_text: Dict[str, str] = {}
         neighbors: DefaultDict[str, List[str]] = defaultdict(list)
         # Following Sempre's convention for naming columns.  Sempre gives columns unique names when
         # columns normalize to a collision, so we keep track of these.  We do not give cell text
@@ -69,9 +70,9 @@ class TableKnowledgeGraph(KnowledgeGraph):
                 normalized_string = f'{normalized_string}_{columns[normalized_string]}'
             columns[normalized_string] = 1
             column_ids.append(normalized_string)
+            entity_text[normalized_string] = column_string
 
-        cells = json_object["cells"]
-        for row_index, row_cells in enumerate(cells):
+        for row_index, row_cells in enumerate(json_object['cells']):
             assert len(columns) == len(row_cells), ("Invalid format. Row %d has %d cells, but header has %d"
                                                     " columns" % (row_index, len(row_cells), len(columns)))
             # Following Sempre's convention for naming cells.
@@ -79,10 +80,11 @@ class TableKnowledgeGraph(KnowledgeGraph):
             for cell_string in row_cells:
                 normalized_string = f'fb:cell.{cls._normalize_string(cell_string)}'
                 row_cell_ids.append(normalized_string)
+                entity_text[normalized_string] = cell_string
             for column, cell in zip(column_ids, row_cell_ids):
                 neighbors[column].append(cell)
                 neighbors[cell].append(column)
-        return cls(dict(neighbors))
+        return cls(set(neighbors.keys()), dict(neighbors), entity_text)
 
     @staticmethod
     def _normalize_string(string: str) -> str:
@@ -119,21 +121,3 @@ class TableKnowledgeGraph(KnowledgeGraph):
         string = re.sub("_+", "_", string)
         string = re.sub("_$", "", string)
         return unidecode(string.lower())
-
-    def get_cell_neighbors(self, cell: str) -> List[str]:
-        """
-        Parameters
-        ----------
-        cell : str
-            Sempre name of the cell (Eg. fb:cell.usa)
-        """
-        return super(TableKnowledgeGraph, self).get_neighbors(cell)
-
-    def get_column_neighbors(self, column: str) -> List[str]:
-        """
-        Parameters
-        ----------
-        column : str
-            Sempre name of the column (Eg. fb:row.row.nation)
-        """
-        return super(TableKnowledgeGraph, self).get_neighbors(column)
