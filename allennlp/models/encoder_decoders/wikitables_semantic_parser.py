@@ -661,7 +661,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # We'll do a batch dot product here with `bmm`.  We want `dot(predicted_action_embedding,
         # action_embedding)` for each `action_embedding`, and we can get that efficiently with
         # `bmm` and some squeezing.
-        # Shape: (batch_size, num_actions)
+        # Shape: (group_size, num_actions)
         action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
         log_probs = util.masked_log_softmax(action_logits, action_mask.float())
         return self._compute_new_states(state,
