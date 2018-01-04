@@ -42,7 +42,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         return " ".join(frame)
 
     @overrides
-    def _json_to_instance(self, json: JsonDict):
+    def _json_to_instance(self, json_dict: JsonDict):
         raise NotImplementedError("The SRL model uses a different API for creating instances.")
 
     def _sentence_to_srl_instances(self, json_dict: JsonDict) -> Tuple[List[Instance], JsonDict]:

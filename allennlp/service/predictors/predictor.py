@@ -1,7 +1,6 @@
-import json
-from typing import List
-
 from typing import List, Tuple
+import json
+
 from allennlp.common import Registrable
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
