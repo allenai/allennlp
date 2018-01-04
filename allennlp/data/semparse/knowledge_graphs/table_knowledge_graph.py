@@ -4,7 +4,7 @@ Classes related to representing a table in WikitableQuestions. At this point we 
 """
 import re
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Set
+from typing import Any, DefaultDict, Dict, List
 
 from unidecode import unidecode
 
