@@ -15,8 +15,8 @@
     },
     "max_span_width": 5
   },
-  "train_data_path": "tests/fixtures/data/coref/sample.gold_conll",
-  "validation_data_path": "tests/fixtures/data/coref/sample.gold_conll",
+  "train_data_path": "tests/fixtures/conll_2012/",
+  "validation_data_path": "tests/fixtures/conll_2012/",
   "model": {
     "type": "coref",
     "text_field_embedder": {

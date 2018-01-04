@@ -35,3 +35,12 @@ class TestSrlPredictor(TestCase):
             assert isinstance(tags, list)
             assert all(isinstance(tag, str) for tag in tags)
             assert len(tags) == num_words
+
+    def test_batch_prediction(self):
+        inputs = {
+                "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
+        }
+        archive = load_archive('tests/fixtures/srl/serialization/model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
+        result = predictor.predict_batch_json([inputs, inputs])
+        assert result[0] == result[1]
