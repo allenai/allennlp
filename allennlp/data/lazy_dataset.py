@@ -1,7 +1,9 @@
 """
-A :class:`~LazyDataset` is essentially a :class:`~Dataset` that lives on disk
-instead of in-memory. It's not a subclass of ``Dataset`` because it doesn't
-behave quite the same.
+A :class:`~LazyDataset` is a subclass of :class:`~Dataset` that
+instead of storing a ``List`` of ``Instance`` s, stores a method
+for generating instances. The main intended use case is for datasets
+that are too large to load into memory, in which case the generator
+would just read the file from disk for each call to ``iterinstances``.
 """
 import logging
 from collections import defaultdict
