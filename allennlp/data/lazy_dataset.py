@@ -62,9 +62,9 @@ class LazyDataset(Dataset):
 
     def index_instances(self, vocab: Vocabulary):
         """
-        This is a little bit misleading, as we have to index the instances as they're generated.
-        However, code will still call this and it's a good place to grab a reference to the
-        ``Vocabulary``.
+        In the ``LazyDataset`` case, we basically use this to grab a reference
+        to the ``Vocabulary`` and generate the `padding_lengths`. We'll also have to index
+        the instances on the fly every time we generate them.
         """
         self.vocab = vocab
 
@@ -81,9 +81,15 @@ class LazyDataset(Dataset):
 
     def iterinstances(self) -> Iterator[Instance]:
         for i, instance in tqdm.tqdm(enumerate(self.generator())):
+            # Truncate after `max_instances` if it's set.
             if self.max_instances is not None and i >= self.max_instances:
                 return
-            instance.index_fields(self.vocab)
+
+            # If ``index_instances`` has not been called yet, then
+            # self.vocab will be ``None`` and we don't want to call
+            # instance.index_fields.
+            if self.vocab is not None:
+                instance.index_fields(self.vocab)
             yield instance
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:

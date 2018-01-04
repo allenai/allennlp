@@ -156,10 +156,12 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     # As the individual Datasets may be lazy (and, in particular, large), we don't want to
     # manifest a List of their instances to construct the vocabulary. Instead we use a LazyDataset
     # with the combined instances.
-    combined_instances = (instance for key, dataset in all_datasets.items()
-                          for instance in dataset.iterinstances()
-                          if key in datasets_for_vocab_creation)
-    lazy_combined_dataset = LazyDataset(lambda: combined_instances)
+    def combined_generator():
+        yield from (instance for key, dataset in all_datasets.items()
+                    for instance in dataset.iterinstances()
+                    if key in datasets_for_vocab_creation)
+
+    lazy_combined_dataset = LazyDataset(combined_generator)
     vocab = Vocabulary.from_params(params.pop("vocabulary", {}), lazy_combined_dataset)
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
