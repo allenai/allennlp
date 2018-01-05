@@ -178,8 +178,8 @@ class SpacyWordSplitter(WordSplitter):
     @classmethod
     def from_params(cls, params: Params) -> 'WordSplitter':
         language = params.pop('language', 'en_core_web_sm')
-        pos_tags = params.pop('pos_tags', False)
-        parse = params.pop('parse', False)
-        ner = params.pop('ner', False)
+        pos_tags = params.pop_bool('pos_tags', False)
+        parse = params.pop_bool('parse', False)
+        ner = params.pop_bool('ner', False)
         params.assert_empty(cls.__name__)
         return cls(language, pos_tags, parse, ner)

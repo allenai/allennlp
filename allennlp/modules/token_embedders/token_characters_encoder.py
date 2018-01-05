@@ -44,6 +44,6 @@ class TokenCharactersEncoder(TokenEmbedder):
         embedding = Embedding.from_params(vocab, embedding_params)
         encoder_params: Params = params.pop("encoder")
         encoder = Seq2VecEncoder.from_params(encoder_params)
-        dropout = params.pop("dropout", 0.0)
+        dropout = params.pop_float("dropout", 0.0)
         params.assert_empty(cls.__name__)
         return cls(embedding, encoder, dropout)

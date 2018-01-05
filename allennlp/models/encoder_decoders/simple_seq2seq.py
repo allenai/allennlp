@@ -297,7 +297,7 @@ class SimpleSeq2Seq(Model):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
-        scheduled_sampling_ratio = params.pop("scheduled_sampling_ratio", 0.0)
+        scheduled_sampling_ratio = params.pop_float("scheduled_sampling_ratio", 0.0)
         return cls(vocab,
                    source_embedder=source_embedder,
                    encoder=encoder,

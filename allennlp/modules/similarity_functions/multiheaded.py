@@ -95,11 +95,11 @@ class MultiHeadedSimilarity(SimilarityFunction):
 
     @classmethod
     def from_params(cls, params: Params) -> 'MultiHeadedSimilarity':
-        num_heads = params.pop("num_heads")
-        tensor_1_dim = params.pop("tensor_1_dim")
-        tensor_1_projected_dim = params.pop("tensor_1_projected_dim", None)
-        tensor_2_dim = params.pop("tensor_2_dim", None)
-        tensor_2_projected_dim = params.pop("tensor_1_projected_dim", None)
+        num_heads = params.pop_int("num_heads")
+        tensor_1_dim = params.pop_int("tensor_1_dim")
+        tensor_1_projected_dim = params.pop_int("tensor_1_projected_dim", None)
+        tensor_2_dim = params.pop_int("tensor_2_dim", None)
+        tensor_2_projected_dim = params.pop_int("tensor_1_projected_dim", None)
         internal_similarity = SimilarityFunction.from_params(params.pop("internal_similarity", {}))
         params.assert_empty(cls.__name__)
         return cls(num_heads=num_heads,

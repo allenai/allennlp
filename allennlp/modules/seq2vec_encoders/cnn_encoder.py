@@ -114,9 +114,9 @@ class CnnEncoder(Seq2VecEncoder):
 
     @classmethod
     def from_params(cls, params: Params) -> 'CnnEncoder':
-        embedding_dim = params.pop('embedding_dim')
-        output_dim = params.pop('output_dim', None)
-        num_filters = params.pop('num_filters')
+        embedding_dim = params.pop_int('embedding_dim')
+        output_dim = params.pop_int('output_dim', None)
+        num_filters = params.pop_int('num_filters')
         conv_layer_activation = Activation.by_name(params.pop("conv_layer_activation", "relu"))()
         ngram_filter_sizes = tuple(params.pop('ngram_filter_sizes', [2, 3, 4, 5]))
         params.assert_empty(cls.__name__)

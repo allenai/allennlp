@@ -63,6 +63,6 @@ class Attention(torch.nn.Module):
     @classmethod
     def from_params(cls, params: Params) -> 'Attention':
         similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
-        normalize = params.pop('normalize', True)
+        normalize = params.pop_bool('normalize', True)
         return cls(similarity_function=similarity_function,
                    normalize=normalize)
