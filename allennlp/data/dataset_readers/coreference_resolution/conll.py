@@ -1,5 +1,4 @@
 import logging
-import re
 import collections
 from typing import Any, Dict, List, Optional, Tuple, DefaultDict, Set
 
@@ -14,86 +13,41 @@ from allennlp.data.fields import Field, ListField, TextField, IndexField, Metada
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
+from allennlp.data.dataset_readers.dataset_utils import Ontonotes
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class _DocumentState:
+def canonicalize_clusters(clusters: DefaultDict[int, List[Tuple[int, int]]]) -> List[List[Tuple[int, int]]]:
     """
-    Represents the state of a document. Words are collected in a sentence buffer,
-    which are incrementally collected in a list when sentences end, representing
-    all tokens in the document.
-
-    Additionally, this class contains a per-id stacks to hold the start indices of
-    active spans (spans which we are inside of when processing a given word). Spans
-    with the same id can be nested, which is why we collect these opening spans
-    on a stack, e.g:
-
-    [Greg, the baker who referred to [himself]_ID1 as 'the bread man']_ID1
-
-    Once an active span is closed, the span is added to the cluster for the given id.
+    The CONLL 2012 data includes 2 annotatated spans which are identical,
+    but have different ids. This checks all clusters for spans which are
+    identical, and if it finds any, merges the clusters containing the
+    identical spans.
     """
-    def __init__(self) -> None:
-        self.sentence_buffer: List[str] = []
-        self.sentences: List[List[str]] = []
-        self.num_total_words = 0
-        # Cluster id -> List of (start_index, end_index) spans.
-        self.clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
-        # Cluster id -> List of start_indices which are open for this id.
-        self.coref_stacks: DefaultDict[int, List[int]] = collections.defaultdict(list)
-
-    def assert_document_is_finished(self) -> None:
-        if self.sentence_buffer:
-            raise ConfigurationError("Processing was attempted on a document which had "
-                                     "incomplete sentences. Current sentence buffer "
-                                     "contains: {}".format(self.sentence_buffer))
-
-        if not self.sentences or self.num_total_words == 0:
-            raise ConfigurationError("Processing was attempted on a document with no sentences or words.")
-
-        if any(x for x in self.coref_stacks.values()):
-            raise ConfigurationError("Processing was attempted on a document which contains incomplete "
-                                     "(unclosed) spans within the scope of the document. Current ids "
-                                     "and start indices" " of unclosed spans: {}".format(self.coref_stacks))
-
-    def complete_sentence(self) -> None:
-        self.sentences.append(self.sentence_buffer)
-        self.sentence_buffer = []
-
-    def add_word(self, word) -> None:
-        self.sentence_buffer.append(word)
-        self.num_total_words += 1
-
-    def canonicalize_clusters(self) -> List[List[Tuple[int, int]]]:
-        """
-        The CONLL 2012 data includes 2 annotatated spans which are identical,
-        but different ids. This checks all clusters for spans which are
-        identical, and if it finds any, merges the clusters containing the
-        identical spans.
-        """
-        merged_clusters: List[Set[Tuple[int, int]]] = []
-        for cluster in self.clusters.values():
-            cluster_with_overlapping_mention = None
-            for mention in cluster:
-                # Look at clusters we have already processed to
-                # see if they contain a mention in the current
-                # cluster for comparison.
-                for cluster2 in merged_clusters:
-                    if mention in cluster2:
-                        # first cluster in merged clusters
-                        # which contains this mention.
-                        cluster_with_overlapping_mention = cluster2
-                        break
-                # Already encountered overlap - no need to keep looking.
-                if cluster_with_overlapping_mention is not None:
+    merged_clusters: List[Set[Tuple[int, int]]] = []
+    for cluster in clusters.values():
+        cluster_with_overlapping_mention = None
+        for mention in cluster:
+            # Look at clusters we have already processed to
+            # see if they contain a mention in the current
+            # cluster for comparison.
+            for cluster2 in merged_clusters:
+                if mention in cluster2:
+                    # first cluster in merged clusters
+                    # which contains this mention.
+                    cluster_with_overlapping_mention = cluster2
                     break
+            # Already encountered overlap - no need to keep looking.
             if cluster_with_overlapping_mention is not None:
-                # Merge cluster we are currently processing into
-                # the cluster in the processed list.
-                cluster_with_overlapping_mention.update(cluster)
-            else:
-                merged_clusters.append(set(cluster))
-        return [list(c) for c in merged_clusters]
+                break
+        if cluster_with_overlapping_mention is not None:
+            # Merge cluster we are currently processing into
+            # the cluster in the processed list.
+            cluster_with_overlapping_mention.update(cluster)
+        else:
+            merged_clusters.append(set(cluster))
+    return [list(c) for c in merged_clusters]
 
 
 @DatasetReader.register("coref")
@@ -126,33 +80,32 @@ class ConllCorefReader(DatasetReader):
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self._begin_document_regex = re.compile(r"#begin document \((.*)\); part (\d+)")
 
     @overrides
     def read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
-        logger.info("Reading file at %s", file_path)
         instances = []
-        with open(file_path) as dataset_file:
-            document_state = _DocumentState()
+        ontonotes_reader = Ontonotes()
+        for document in ontonotes_reader.dataset_path_iterator(file_path):
+            clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
+            sentences = [s for s in ontonotes_reader.sentence_iterator(document)]
 
-            for line in dataset_file:
+            total_tokens = 0
+            for sentence in sentences:
+                for typed_span in sentence.coref_spans:
+                    # Coref annotations are on a _per sentence_
+                    # basis, so we need to adjust them to be relative
+                    # to the length of the document.
+                    span_id, (start, end) = typed_span
+                    clusters[span_id].append((start + total_tokens,
+                                              end + total_tokens))
+                total_tokens += len(sentence.words)
 
-                if self._begin_document_regex.match(line):
-                    # We're beginning a document. Refresh the state.
-                    document_state = _DocumentState()
-
-                elif line.startswith("#end document"):
-                    # We've finished a document.
-                    document_state.assert_document_is_finished()
-                    clusters = document_state.canonicalize_clusters()
-                    instance = self.text_to_instance(document_state.sentences, clusters)
-                    instances.append(instance)
-                else:
-                    # Process a line.
-                    self._handle_line(line, document_state)
+            canonical_clusters = canonicalize_clusters(clusters)
+            instance = self.text_to_instance([s.words for s in sentences], canonical_clusters)
+            instances.append(instance)
 
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
@@ -190,9 +143,10 @@ class ConllCorefReader(DatasetReader):
                  not belong to a cluster. As these labels have variable length (it depends on
                  how many spans we are considering), we represent this a as a ``SequenceLabelField``
                  with respect to the ``span_starts`` ``ListField``.
-
         """
-        flattened_sentences = [token for sentence in sentences for token in sentence]
+        flattened_sentences = [self._normalize_word(word)
+                               for sentence in sentences
+                               for word in sentence]
 
         metadata: Dict[str, Any] = {"original_text": flattened_sentences}
         if gold_clusters is not None:
@@ -253,41 +207,3 @@ class ConllCorefReader(DatasetReader):
             return word[1:]
         else:
             return word
-
-    def _handle_line(self, line: str, document_state: _DocumentState) -> None:
-        row = line.split()
-        if not row:
-            # End of a sentence. Clear the sentence buffer and
-            # add sentence to document sentences.
-            document_state.complete_sentence()
-        else:
-            if len(row) < 12:
-                raise ConfigurationError("Encountered a non-empty line with fewer than 12 entries"
-                                         " - this does not match the CONLL format.: {}".format(row))
-            word = self._normalize_word(row[3])
-            coref = row[-1]
-            word_index = document_state.num_total_words
-            document_state.add_word(word)
-
-            if coref != "-":
-                for segment in coref.split("|"):
-                    # The conll representation of coref spans allows spans to
-                    # overlap. If spans end or begin at the same word, they are
-                    # separated by a "|".
-                    if segment[0] == "(":
-                        # The span begins at this word.
-                        if segment[-1] == ")":
-                            # The span begins and ends at this word (single word span).
-                            cluster_id = int(segment[1:-1])
-                            document_state.clusters[cluster_id].append((word_index, word_index))
-                        else:
-                            # The span is starting, so we record the index of the word.
-                            cluster_id = int(segment[1:])
-                            document_state.coref_stacks[cluster_id].append(word_index)
-                    else:
-                        # The span for this id is ending, but didn't start at this word.
-                        # Retrieve the start index from the document state and
-                        # add the span to the clusters for this id.
-                        cluster_id = int(segment[:-1])
-                        start = document_state.coref_stacks[cluster_id].pop()
-                        document_state.clusters[cluster_id].append((start, word_index))
