@@ -3,7 +3,7 @@ Various utilities that don't fit anwhere else.
 """
 
 from itertools import zip_longest
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Tuple, TypeVar
 import random
 
 import torch
@@ -131,7 +131,7 @@ def namespace_match(pattern: str, namespace: str):
     return False
 
 
-def prepare_environment(params: Union[Params, Dict[str, Any]]):
+def prepare_environment(params: Params):
     """
     Sets random seeds for reproducible experiments. This may not work as expected
     if you use this from within a python project in which you have already imported Pytorch.
