@@ -135,19 +135,19 @@ class Embedding(TokenEmbedder):
         mapping for the things getting embedded here, then you can pass in the ``num_embeddings``
         key directly, and the vocabulary will be ignored.
         """
-        num_embeddings = params.pop('num_embeddings', None)
+        num_embeddings = params.pop_int('num_embeddings', None)
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         if num_embeddings is None:
             num_embeddings = vocab.get_vocab_size(vocab_namespace)
-        embedding_dim = params.pop('embedding_dim')
+        embedding_dim = params.pop_int('embedding_dim')
         pretrained_file = params.pop("pretrained_file", None)
-        projection_dim = params.pop("projection_dim", None)
-        trainable = params.pop("trainable", True)
-        padding_index = params.pop('padding_index', None)
-        max_norm = params.pop('max_norm', None)
-        norm_type = params.pop('norm_type', 2.)
-        scale_grad_by_freq = params.pop('scale_grad_by_freq', False)
-        sparse = params.pop('sparse', False)
+        projection_dim = params.pop_int("projection_dim", None)
+        trainable = params.pop_bool("trainable", True)
+        padding_index = params.pop_int('padding_index', None)
+        max_norm = params.pop_float('max_norm', None)
+        norm_type = params.pop_float('norm_type', 2.)
+        scale_grad_by_freq = params.pop_bool('scale_grad_by_freq', False)
+        sparse = params.pop_bool('sparse', False)
         params.assert_empty(cls.__name__)
 
         if pretrained_file:

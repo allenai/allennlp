@@ -109,9 +109,9 @@ class BucketIterator(BasicIterator):
     @classmethod
     def from_params(cls, params: Params) -> 'BucketIterator':
         sorting_keys = params.pop('sorting_keys', [])
-        padding_noise = params.pop('padding_noise', 0.1)
-        biggest_batch_first = params.pop('biggest_batch_first', False)
-        batch_size = params.pop('batch_size', 32)
+        padding_noise = params.pop_float('padding_noise', 0.1)
+        biggest_batch_first = params.pop_bool('biggest_batch_first', False)
+        batch_size = params.pop_int('batch_size', 32)
         params.assert_empty(cls.__name__)
         return cls(sorting_keys=sorting_keys,
                    padding_noise=padding_noise,

@@ -68,6 +68,6 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
     @classmethod
     def from_params(cls, params: Params) -> 'SingleIdTokenIndexer':
         namespace = params.pop('namespace', 'tokens')
-        lowercase_tokens = params.pop('lowercase_tokens', False)
+        lowercase_tokens = params.pop_bool('lowercase_tokens', False)
         params.assert_empty(cls.__name__)
         return cls(namespace=namespace, lowercase_tokens=lowercase_tokens)

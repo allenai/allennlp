@@ -178,7 +178,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
                                   validation_data,
                                   trainer_params)
 
-    evaluate_on_test = params.pop("evaluate_on_test", False)
+    evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
     trainer.train()
 

@@ -32,6 +32,6 @@ class DotProductSimilarity(SimilarityFunction):
 
     @classmethod
     def from_params(cls, params: Params) -> 'DotProductSimilarity':
-        scale_output = params.pop('scale_output', False)
+        scale_output = params.pop_bool('scale_output', False)
         params.assert_empty(cls.__name__)
         return cls(scale_output=scale_output)
