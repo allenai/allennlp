@@ -12,6 +12,7 @@ import sys
 
 from flask import Flask, request, Response, jsonify, send_file, send_from_directory
 from flask_cors import CORS
+from gevent.wsgi import WSGIServer
 
 from allennlp.common import JsonDict
 from allennlp.models.archival import load_archive
@@ -123,7 +124,8 @@ def main():
                    field_names=['passage', 'question'],
                    sanitizer=sanitizer)
 
-    app.run(port=8888, host="0.0.0.0")
+    http_server = WSGIServer(('0.0.0.0', 8888), app)
+    http_server.serve_forever()
 
 #
 # HTML and Templates for the default bare-bones app are below
