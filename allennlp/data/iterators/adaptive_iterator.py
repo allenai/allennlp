@@ -123,7 +123,7 @@ class AdaptiveIterator(BucketIterator):
         current_batch = []
         current_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
         logger.debug("Creating adaptive groups")
-        for instance in dataset.iterinstances():
+        for instance in dataset:
             current_batch.append(instance)
             instance_lengths = instance.get_padding_lengths()
             for field_name in instance_lengths:

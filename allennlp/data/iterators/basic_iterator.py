@@ -31,7 +31,7 @@ class BasicIterator(DataIterator):
 
     @overrides
     def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
-        instances = [instance for instance in dataset.iterinstances()]
+        instances = [instance for instance in dataset]
         if shuffle:
             random.shuffle(instances)
         grouped_instances = group_by_count(instances, self._batch_size, None)

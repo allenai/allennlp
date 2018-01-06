@@ -8,7 +8,7 @@ class TestSeq2SeqDatasetReader(AllenNlpTestCase):
         reader = Seq2SeqDatasetReader()
         dataset = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
 
-        instances = list(dataset.iterinstances())
+        instances = list(dataset)
         assert len(instances) == 3
         fields = instances[0].fields
         assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
@@ -30,7 +30,7 @@ class TestSeq2SeqDatasetReader(AllenNlpTestCase):
         reader = Seq2SeqDatasetReader(source_add_start_token=False)
         dataset = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
 
-        instances = list(dataset.iterinstances())
+        instances = list(dataset)
         assert len(instances) == 3
         fields = instances[0].fields
         assert [t.text for t in fields["source_tokens"].tokens] == ["this", "is", "a", "sentence", "@@END@@"]

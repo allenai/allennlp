@@ -16,7 +16,6 @@ from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-
 class Dataset:
     """
     A collection of :class:`~allennlp.data.instance.Instance` objects.
@@ -41,6 +40,10 @@ class Dataset:
         self._instances = instances
         self.num_instances = len(instances)
 
+        # A Dataset is an ``Iterator[Instance]``, this index ranges over
+        # the instances in each iteration.
+        self.idx = 0
+
     def truncate(self, max_instances: int):
         """
         If there are more instances than ``max_instances`` in this dataset, we truncate the
@@ -59,9 +62,9 @@ class Dataset:
         for instance in tqdm.tqdm(self._instances):
             instance.index_fields(vocab)
 
-    def iterinstances(self) -> Iterator[Instance]:
+    def __iter__(self) -> Iterator[Instance]:
         """
-        An iterator over instances.
+        A ``Dataset`` is its own iterator.
         """
         yield from self._instances
 
@@ -164,7 +167,7 @@ class Dataset:
         field_tensors: Dict[str, list] = defaultdict(list)
         if verbose:
             logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
-        for instance in self.iterinstances():
+        for instance in self._instances:
             for field, tensors in instance.as_tensor_dict(lengths_to_use, cuda_device, for_training).items():
                 field_tensors[field].append(tensors)
 

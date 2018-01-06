@@ -20,30 +20,10 @@ class TestLazyDataset(AllenNlpTestCase):
         self.token_indexer = {"tokens": SingleIdTokenIndexer()}
         super(TestLazyDataset, self).setUp()
 
-    def test_instances_must_have_homogeneous_fields(self):
-        instance1 = Instance({"tag": (LabelField(1, skip_indexing=True))})
-        instance2 = Instance({"words": TextField([Token("hello")], {})})
-        with pytest.raises(ConfigurationError):
-            _ = LazyDataset(lambda: (instance for instance in [instance1, instance2]))
-
-    def test_padding_lengths_uses_max_instance_lengths(self):
-        dataset = self.get_lazy_dataset()
-        dataset.index_instances(self.vocab)
-        padding_lengths = dataset.get_padding_lengths()
-        assert padding_lengths == {"text1": {"num_tokens": 5}, "text2": {"num_tokens": 6}}
-
-    def test_as_tensor_dict(self):
-        dataset = self.get_lazy_dataset()
-        dataset.index_instances(self.vocab)
-        padding_lengths = dataset.get_padding_lengths()
-        with pytest.raises(NotImplementedError):
-            _ = dataset.as_tensor_dict(padding_lengths)
-
     def test_iterinstances(self):
         dataset = self.get_lazy_dataset()
         dataset.index_instances(self.vocab)
-        padding_lengths = dataset.get_padding_lengths()
-        iterator = dataset.iterinstances()
+        iterator = iter(dataset)
 
         instance1 = next(iterator)
         instance2 = next(iterator)
@@ -51,12 +31,14 @@ class TestLazyDataset(AllenNlpTestCase):
         with pytest.raises(StopIteration):
             _ = next(iterator)
 
+        padding_lengths = instance1.get_padding_lengths()
         tensors1 = instance1.as_tensor_dict(padding_lengths)
         text_1_1 = tensors1['text1']['tokens'].data.cpu().numpy()
         text_1_2 = tensors1['text2']['tokens'].data.cpu().numpy()
         numpy.testing.assert_array_almost_equal(text_1_1, numpy.array([2, 3, 4, 5, 6]))
         numpy.testing.assert_array_almost_equal(text_1_2, numpy.array([2, 3, 4, 1, 5, 6]))
 
+        padding_lengths = instance2.get_padding_lengths()
         tensors2 = instance2.as_tensor_dict(padding_lengths)
         text_2_1 = tensors2['text1']['tokens'].data.cpu().numpy()
         text_2_2 = tensors2['text2']['tokens'].data.cpu().numpy()

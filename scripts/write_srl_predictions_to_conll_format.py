@@ -44,7 +44,7 @@ def main(serialization_directory, device):
         predictions = model.decode(result)
         model_predictions.extend(predictions["tags"])
 
-    for instance, prediction in zip(dataset.iterinstances(), model_predictions):
+    for instance, prediction in zip(dataset, model_predictions):
         fields = instance.fields
         predicted_tags = [model._vocab.get_token_from_index(x, namespace="labels") for x in prediction]
         try:

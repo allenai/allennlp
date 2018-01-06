@@ -5,6 +5,7 @@ import numpy
 
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
 
@@ -20,6 +21,7 @@ class DataIterator(Registrable):
 
     def __call__(self,
                  dataset: Dataset,
+                 vocab: Vocabulary = None,
                  num_epochs: int = None,
                  shuffle: bool = True,
                  cuda_device: int = -1,
@@ -46,6 +48,8 @@ class DataIterator(Registrable):
             which disables gradient computations in the graph.  This makes inference more efficient
             (particularly in memory usage), but is incompatible with training models.
         """
+        self.vocab = vocab
+
         if num_epochs is None:
             while True:
                 yield from self._yield_one_epoch(dataset, shuffle, cuda_device, for_training)

@@ -25,14 +25,21 @@ class LazyIterator(DataIterator):
     """
     def __init__(self, batch_size: int = 32) -> None:
         self._batch_size = batch_size
+        self.vocab = None
 
     def _yield_one_epoch(self, dataset: Dataset, shuffle: bool, cuda_device: int, for_training: bool):
+        if self.vocab is None:
+            raise RuntimeError("LazyIterator must be called with vocab parameter")
+
+        # TODO(joelgrus): this should probably throw a ConfigurationError
+        # but right now `shuffle` is not even part of the configuration
         if shuffle:
             logger.warning("shuffle is not implemented for LazyIterator")
 
-        indexed_instances = enumerate(dataset.iterinstances())
+        indexed_instances = enumerate(dataset)
         for _, group in itertools.groupby(indexed_instances, lambda pair: pair[0] // self._batch_size):
             batch = Dataset([instance for _, instance in group])
+            batch.index_instances(self.vocab)
             padding_lengths = batch.get_padding_lengths()
             logger.debug("Batch padding lengths: %s", str(padding_lengths))
             logger.debug("Batch size: %d", batch.num_instances)

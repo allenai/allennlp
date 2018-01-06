@@ -6,28 +6,28 @@ that are too large to load into memory, in which case the generator
 would just read the file from disk for each call to ``iterinstances``.
 """
 import logging
-from collections import defaultdict
 from typing import Dict, Union, Callable, Iterator
 
+from overrides import overrides
 import torch
-import tqdm
 
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class LazyDataset(Dataset):
     """
-    A collection of :class:`~allennlp.data.instance.Instance` objects.
+    A lazy collection of :class:`~allennlp.data.instance.Instance` objects.
     The ``Instances`` have ``Fields``, and the fields
     could be in an indexed or unindexed state - the ``Dataset`` has methods around indexing the
     data and converting the data into arrays.
     """
-    def __init__(self, generator: Callable[[], Iterator[Instance]]) -> None:
+    def __init__(self,
+                 generator: Callable[[], Iterator[Instance]],
+                 instances_per_epoch: int) -> None:
         """
         A LazyDataset just takes a way of generating instances.
         """
@@ -35,77 +35,68 @@ class LazyDataset(Dataset):
         super().__init__([])
 
         self.generator = generator
-        self.max_instances: int = None
+        self.iterator = self.generator()
         self.vocab: Vocabulary = None
-        self.padding_lengths: Dict[str, Dict[str, int]] = None
-        self.num_instances = 0
+        self.num_instances = instances_per_epoch
 
-        logger.info("initial pass through the dataset")
-        fields_and_types: Dict[str, str] = None
-
-        for instance in tqdm.tqdm(generator()):
-            self.num_instances += 1
-
-            # Check that all instances have the same "shape"
-            instance_fields_and_types = {k: v.__class__.__name__ for k, v in instance.fields.items()}
-            if fields_and_types is None:
-                fields_and_types = instance_fields_and_types
-            elif instance_fields_and_types != fields_and_types:
-                raise ConfigurationError("You cannot construct a LazyDataset with non-homogeneous Instances.")
-
-
+    @overrides
     def truncate(self, max_instances: int):
-        """
-        If there are more instances than ``max_instances`` in this dataset, we truncate the
-        instances to the first ``max_instances``.  This `modifies` the current object, and returns
-        nothing.
-        """
-        self.max_instances = max_instances
+        raise RuntimeError("cannot truncate a LazyIterator")
 
+    @overrides
     def index_instances(self, vocab: Vocabulary):
         """
         In the ``LazyDataset`` case, we basically use this to grab a reference
-        to the ``Vocabulary`` and generate the `padding_lengths`. We'll also have to index
-        the instances on the fly every time we generate them.
+        to the ``Vocabulary``.
         """
         self.vocab = vocab
 
-        padding_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
-        for instance in tqdm.tqdm(self.iterinstances()):
-            instance.index_fields(vocab)
-            instance_lengths = instance.get_padding_lengths()
-            for field_name, instance_field_lengths in instance_lengths.items():
-                for padding_key, length in instance_field_lengths.items():
-                    prev_max_length = padding_lengths[field_name].get(padding_key, 0)
-                    padding_lengths[field_name][padding_key] = max(length, prev_max_length)
 
-        self.padding_lengths = {**padding_lengths}
+    @overrides
+    def __iter__(self) -> Iterator[Instance]:
+        if self.vocab is None:
+            logger.warning("iterating over lazy dataset that has no vocabulary")
+        if self.num_instances is not None:
+            try:
+                for _ in range(self.num_instances):
+                    instance = next(self.iterator)
+                    if self.vocab is not None:
+                        instance.index_fields(self.vocab)
+                    yield instance
 
-    def iterinstances(self) -> Iterator[Instance]:
-        for i, instance in tqdm.tqdm(enumerate(self.generator())):
-            # Truncate after `max_instances` if it's set.
-            if self.max_instances is not None and i >= self.max_instances:
-                return
+            except StopIteration:
+                # Got to the end, so reset
+                self.iterator = self.generator()
+        else:
+            yield from self.iterator
+            self.iterator = self.generator()
 
-            # If ``index_instances`` has not been called yet, then
-            # self.vocab will be ``None`` and we don't want to call
-            # instance.index_fields.
+    def __next__(self) -> Instance:
+        # First, check if we've reached the end of an epoch,
+        # based on the specified instances-per-epoch
+        if self.num_instances is not None and self.idx >= self.num_instances:
+            self.idx = 0
+            raise StopIteration
+
+        try:
+            # Get the next instance from ``self.iterator`` and return it.
+            self.idx += 1
+            instance = next(self.iterator)
             if self.vocab is not None:
                 instance.index_fields(self.vocab)
-            yield instance
+            return instance
+        except StopIteration:
+            # This error means ``self.iterator`` is finished, so we need to
+            # reset the index to 0, grab a fresh iterator, and stop iteration.
+            self.idx = 0
+            self.iterator = self.generator()
+            raise StopIteration
 
+    @overrides
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
-        """
-        Gets the maximum padding lengths from all ``Instances`` in this dataset.  Each ``Instance``
-        has multiple ``Fields``, and each ``Field`` could have multiple things that need padding.
-        We look at all fields in all instances, and find the max values for each (field_name,
-        padding_key) pair, returning them in a dictionary.
+        raise NotImplementedError("cannot call get_padding_lengths on a LazyDataset")
 
-        This can then be used to convert this dataset into arrays of consistent length, or to set
-        model parameters, etc.
-        """
-        return self.padding_lengths
-
+    @overrides
     def as_tensor_dict(self,
                        padding_lengths: Dict[str, Dict[str, int]] = None,
                        cuda_device: int = -1,

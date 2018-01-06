@@ -50,7 +50,7 @@ class TestLazyIterator(LazyIteratorTestCase):
     # We also test some of the stuff in `DataIterator` here.
     def test_yield_one_epoch_iterates_over_the_data_once(self):
         iterator = LazyIterator(batch_size=2)
-        batches = list(iterator(self.dataset, num_epochs=1))
+        batches = list(iterator(self.dataset, num_epochs=1, shuffle=False))
         # We just want to get the single-token array for the text field in the instance.
         instances = [tuple(instance.data.cpu().numpy())
                      for batch in batches
@@ -59,7 +59,7 @@ class TestLazyIterator(LazyIteratorTestCase):
         self.assert_instances_are_correct(instances)
 
     def test_call_iterates_over_data_forever(self):
-        generator = LazyIterator(batch_size=2)(self.dataset)
+        generator = LazyIterator(batch_size=2)(self.dataset, shuffle=False)
         batches = [next(generator) for _ in range(18)]  # going over the data 6 times
         # We just want to get the single-token array for the text field in the instance.
         instances = [tuple(instance.data.cpu().numpy())

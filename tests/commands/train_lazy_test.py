@@ -13,21 +13,23 @@ class LazySequenceTaggerDatasetReader(DatasetReader):
     """
     This is a dumb hack to get a LazyDataset
     """
-    def __init__(self) -> None:
+    def __init__(self, instances_per_epoch: int) -> None:
         self.reader = SequenceTaggingDatasetReader()
+        self.instances_per_epoch = instances_per_epoch
 
     def read(self, file_path: str):
         def generator() -> Iterator[Instance]:
             """
             Read from the file every time generator is called
             """
-            yield from self.reader.read(file_path).iterinstances()
+            yield from self.reader.read(file_path)
 
-        return LazyDataset(generator)
+        return LazyDataset(generator, self.instances_per_epoch)
 
     @classmethod
     def from_params(cls, params: Params) -> 'LazySequenceTaggingDatasetReader':
-        return cls()
+        instances_per_epoch = params.pop('instances_per_epoch')
+        return cls(instances_per_epoch)
 
 
 class TestLazyTrain(AllenNlpTestCase):
@@ -48,10 +50,10 @@ class TestLazyTrain(AllenNlpTestCase):
                                 "num_layers": 2
                         }
                 },
-                "dataset_reader": {"type": "lazy-sequence-tagger"},
+                "dataset_reader": {"type": "lazy-sequence-tagger", "instances_per_epoch": 4},
                 "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "iterator": {"type": "basic", "batch_size": 2},
+                "iterator": {"type": "lazy", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
                         "optimizer": "adam"
@@ -77,12 +79,12 @@ class TestLazyTrain(AllenNlpTestCase):
                                 "num_layers": 2
                         }
                 },
-                "dataset_reader": {"type": "lazy-sequence-tagger"},
+                "dataset_reader": {"type": "lazy-sequence-tagger", "instances_per_epoch": 4},
                 "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "test_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "evaluate_on_test": True,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "iterator": {"type": "lazy", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
                         "optimizer": "adam"

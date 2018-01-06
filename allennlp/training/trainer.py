@@ -207,7 +207,8 @@ class Trainer:
         # Get tqdm for the training batches
         train_generator = self._iterator(self._train_dataset,
                                          num_epochs=1,
-                                         cuda_device=self._cuda_device)
+                                         cuda_device=self._cuda_device,
+                                         vocab=self._model.vocab)
         num_training_batches = self._iterator.get_num_batches(self._train_dataset)
         train_generator_tqdm = tqdm.tqdm(train_generator,
                                          disable=self._no_tqdm,
@@ -334,7 +335,8 @@ class Trainer:
         val_generator = self._iterator(self._validation_dataset,
                                        num_epochs=1,
                                        cuda_device=self._cuda_device,
-                                       for_training=False)
+                                       for_training=False,
+                                       vocab=self._model.vocab)
         num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
         val_generator_tqdm = tqdm.tqdm(val_generator,
                                        disable=self._no_tqdm,

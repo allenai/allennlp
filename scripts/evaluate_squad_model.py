@@ -58,7 +58,7 @@ def main(config_file):
         best_span_tensor = result['best_span']
         for i in range(best_span_tensor.size(0)):
             best_spans.append(best_span_tensor[i].data.cpu().tolist())
-    for best_span, instance in zip(best_spans, dataset.iterinstances()):
+    for best_span, instance in zip(best_spans, dataset):
         span_tokens = instance.fields['passage'].tokens[best_span[0]:best_span[1]]
         # We have to do some hacks to get from our tokens back to the original passage text, so
         # that our answers get scored correctly.  This could be made much easier if we kept around

@@ -8,7 +8,7 @@ class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
         reader = SequenceTaggingDatasetReader()
         dataset = reader.read('tests/fixtures/data/sequence_tagging.tsv')
 
-        instances = list(dataset.iterinstances())
+        instances = list(dataset)
         assert len(instances) == 4
         fields = instances[0].fields
         assert [t.text for t in fields["tokens"].tokens] == ["cats", "are", "animals", "."]
@@ -27,7 +27,7 @@ class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
         reader = SequenceTaggingDatasetReader(word_tag_delimiter='/')
         dataset = reader.read('tests/fixtures/data/brown_corpus.txt')
 
-        instances = list(dataset.iterinstances())
+        instances = list(dataset)
         assert len(instances) == 4
         fields = instances[0].fields
         assert [t.text for t in fields["tokens"].tokens] == ["cats", "are", "animals", "."]

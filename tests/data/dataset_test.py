@@ -49,7 +49,7 @@ class TestDataset(AllenNlpTestCase):
         dataset = self.get_dataset()
         dataset.index_instances(self.vocab)
         padding_lengths = dataset.get_padding_lengths()
-        iterator = dataset.iterinstances()
+        iterator = iter(dataset)
 
         instance1 = next(iterator)
         instance2 = next(iterator)

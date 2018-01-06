@@ -25,7 +25,7 @@ class TestSnliReader(AllenNlpTestCase):
                      "hypothesis": ["A", "person", "is", "outdoors", ",", "on", "a", "horse", "."],
                      "label": "entailment"}
 
-        instances = list(dataset.iterinstances())
+        instances = list(dataset)
         assert len(instances) == 3
         fields = instances[0].fields
         assert [t.text for t in fields["premise"].tokens] == instance1["premise"]

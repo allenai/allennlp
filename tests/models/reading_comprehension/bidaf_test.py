@@ -37,7 +37,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         assert_almost_equal(numpy.sum(span_end_probs, -1), 1, decimal=6)
         span_start, span_end = tuple(output_dict['best_span'][0].data.numpy())
 
-        instance = next(self.dataset.iterinstances())
+        instance = next(iter(self.dataset))
         assert span_start >= 0
         assert span_start <= span_end
         assert span_end < instance.fields['passage'].sequence_length()

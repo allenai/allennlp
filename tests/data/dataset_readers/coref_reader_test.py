@@ -16,7 +16,7 @@ class TestCorefReader(AllenNlpTestCase):
         conll_reader = ConllCorefReader(max_span_width=self.span_width)
         dataset = conll_reader.read('tests/fixtures/data/coref/sample.gold_conll')
 
-        instances = list(dataset.iterinstances())
+        instances = list(dataset)
         assert len(instances) == 2
 
         fields = instances[0].fields

@@ -92,7 +92,7 @@ class BucketIterator(BasicIterator):
         ``(field_name, padding_key)`` tuples.
         """
         instances_with_lengths = []
-        for instance in dataset.iterinstances():
+        for instance in dataset:
             padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
             if padding_noise > 0.0:
                 noisy_lengths = {}
