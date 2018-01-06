@@ -505,12 +505,12 @@ class Trainer:
                     validation_dataset: Optional[Dataset],
                     params: Params) -> 'Trainer':
 
-        patience = params.pop("patience", 2)
+        patience = params.pop_int("patience", 2)
         validation_metric = params.pop("validation_metric", "-loss")
-        num_epochs = params.pop("num_epochs", 20)
-        cuda_device = params.pop("cuda_device", -1)
-        grad_norm = params.pop("grad_norm", None)
-        grad_clipping = params.pop("grad_clipping", None)
+        num_epochs = params.pop_int("num_epochs", 20)
+        cuda_device = params.pop_int("cuda_device", -1)
+        grad_norm = params.pop_float("grad_norm", None)
+        grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
 
         if cuda_device >= 0:
@@ -522,7 +522,7 @@ class Trainer:
             scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
         else:
             scheduler = None
-        no_tqdm = params.pop("no_tqdm", False)
+        no_tqdm = params.pop_bool("no_tqdm", False)
 
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,

@@ -142,13 +142,13 @@ class AdaptiveIterator(BucketIterator):
 
     @classmethod
     def from_params(cls, params: Params) -> 'AdaptiveIterator':
-        adaptive_memory_usage_constant = params.pop('adaptive_memory_usage_constant')
+        adaptive_memory_usage_constant = params.pop_int('adaptive_memory_usage_constant')
         padding_memory_scaling = params.pop('padding_memory_scaling')
-        maximum_batch_size = params.pop('maximum_batch_size', 10000)
-        biggest_batch_first = params.pop('biggest_batch_first', False)
-        batch_size = params.pop('batch_size', None)
+        maximum_batch_size = params.pop_int('maximum_batch_size', 10000)
+        biggest_batch_first = params.pop_bool('biggest_batch_first', False)
+        batch_size = params.pop_int('batch_size', None)
         sorting_keys = params.pop('sorting_keys', None)
-        padding_noise = params.pop('sorting_noise', 0.2)
+        padding_noise = params.pop_float('sorting_noise', 0.2)
         params.assert_empty(cls.__name__)
 
         return cls(adaptive_memory_usage_constant=adaptive_memory_usage_constant,

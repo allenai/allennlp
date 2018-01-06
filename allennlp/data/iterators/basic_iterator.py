@@ -42,6 +42,6 @@ class BasicIterator(DataIterator):
 
     @classmethod
     def from_params(cls, params: Params) -> 'BasicIterator':
-        batch_size = params.pop('batch_size', 32)
+        batch_size = params.pop_int('batch_size', 32)
         params.assert_empty(cls.__name__)
         return cls(batch_size=batch_size)

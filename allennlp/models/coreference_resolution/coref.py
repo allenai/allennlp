@@ -768,11 +768,11 @@ class CoreferenceResolver(Model):
         mention_feedforward = FeedForward.from_params(params.pop("mention_feedforward"))
         antecedent_feedforward = FeedForward.from_params(params.pop("antecedent_feedforward"))
 
-        feature_size = params.pop("feature_size")
-        max_span_width = params.pop("max_span_width")
-        spans_per_word = params.pop("spans_per_word")
-        max_antecedents = params.pop("max_antecedents")
-        lexical_dropout = params.pop("lexical_dropout", 0.2)
+        feature_size = params.pop_int("feature_size")
+        max_span_width = params.pop_int("max_span_width")
+        spans_per_word = params.pop_float("spans_per_word")
+        max_antecedents = params.pop_int("max_antecedents")
+        lexical_dropout = params.pop_float("lexical_dropout", 0.2)
 
         init_params = params.pop("initializer", None)
         reg_params = params.pop("regularizer", None)
