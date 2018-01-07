@@ -114,14 +114,14 @@ class WikiTablesSemanticParser(Model):
             ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
             entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
             get embeddings for each entity.
-        world : ``ListWikiTablesWorld``
+        world : ``List[WikiTablesWorld]``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
             how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
         actions : ``List[List[ProductionRuleArray]]``
             A list of all possible actions for each ``World`` in the batch, indexed into a
             ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
-            decoder.n
+            decoder.
         target_action_sequences : torch.Tensor, optional (default = None)
            A list of possibly valid action sequences, where each action is an index into the list
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
@@ -336,7 +336,7 @@ class WikiTablesSemanticParser(Model):
                 #      "right": (RHS_string, right_is_nonterminal, padded_RHS_tensor_dict)
                 #     }
                 # Technically, the left hand side is _always_ a non-terminal (by definition, you
-                # can't expand a non-terminal), but we'll do this check anyway, in case you did
+                # can't expand a terminal), but we'll do this check anyway, in case you did
                 # something really crazy.
                 if production_rule['left'][1]:  # this is a nonterminal production
                     nonterminals[production_rule['left'][0]] = production_rule['left'][2]

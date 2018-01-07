@@ -54,7 +54,9 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "<d,<r,<<d,r>,r>>> -> [<d,<d,<#1,<<d,#1>,#1>>>>, d]",
 
                 # Operations that manipulate numbers.
-                # TODO(mattg): question for Pradeep: why aren't these two-argument functions?
+                # Note that the comparison operators here are single-argument functions, taking a
+                # date or number and returning the set of all dates or numbers in the context that
+                # are [comparator] what was given.
                 "<d,d> -> <",
                 "<d,d> -> <=",
                 "<d,d> -> >",
@@ -72,8 +74,10 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "<d,d> -> sum",
                 "<d,e> -> ['lambda x', e]",
                 "<d,e> -> [<<#1,#2>,<#2,#1>>, <e,d>]",
-                # TODO(mattg): isn't this backwards?  Aren't these functions that take cells and
-                # return numbers?
+                # These might look backwards, but that's because SEMPRE chose to make them
+                # backwards.  fb:a.b is a function that takes b and returns a.  So
+                # fb:cell.cell.date takes cell.date and returns cell and fb:row.row.index takes
+                # row.index and returns row.
                 "<d,e> -> fb:cell.cell.date",
                 "<d,e> -> fb:cell.cell.num2",
                 "<d,e> -> fb:cell.cell.number",
@@ -85,7 +89,8 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
 
                 # Now we get to the CELL_TYPE, which is represented by "e".
                 "<e,<<d,e>,e>> -> [<d,<e,<<d,e>,e>>>, d]",
-                # TODO(mattg): why is this so complicated?
+                # "date" is a function that takes three numbers: (date 2018 01 06).  And these
+                # numbers have type "e", not type "d", for some reason.
                 "<e,<e,<e,d>>> -> date",
                 "<e,<e,d>> -> [<e,<e,<e,d>>>, e]",
                 "<e,d> -> ['lambda x', d]",
@@ -101,8 +106,10 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "<e,r> -> [<<#1,#2>,<#2,#1>>, <r,e>]",
 
                 # These are instance-specific production rules.  These are the columns in the
-                # table.
-                # TODO(mattg): this also seems backwards.
+                # table.  Remember that SEMPRE did things backwards: fb:row.row.division takes a
+                # cell ID and returns the row that has that cell in its row.division column.  This
+                # is why we have to reverse all of these functions to go from a row to the cell in
+                # a particular column.
                 "<e,r> -> fb:row.row.avg_attendance",
                 "<e,r> -> fb:row.row.division",
                 "<e,r> -> fb:row.row.league",
@@ -111,8 +118,11 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "<e,r> -> fb:row.row.regular_season",
                 "<e,r> -> fb:row.row.year",
 
-                # PART_TYPE rules.
-                # TODO(mattg): what is a cell part?
+                # PART_TYPE rules.  A cell part is for when a cell has text that can be split into
+                # multiple parts.  We don't really handle this, so we don't have any terminal
+                # productions here.  We actually skip all logical forms that have "fb:part"
+                # productions, and we'll never actually push one of these non-terminals onto our
+                # stack.  But they're in the grammar, so we they are in our list of valid actions.
                 "<p,<<d,p>,p>> -> [<d,<p,<<d,p>,p>>>, d]",
                 "<p,d> -> ['lambda x', d]",
                 "<p,d> -> [<<#1,#2>,<#2,#1>>, <d,p>]",
@@ -151,6 +161,8 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
 
                 # Date and numbers.  We don't have any terminal productions for these, as for some
                 # reason terminal numbers are actually represented as CELL_TYPE.
+                # TODO(mattg,pradeep): we should probably change the number type to not be the same
+                # as CELL_TYPE.
                 "d -> [<#1,#1>, d]",
                 "d -> [<#1,d>, d]",
                 "d -> [<#1,d>, e]",

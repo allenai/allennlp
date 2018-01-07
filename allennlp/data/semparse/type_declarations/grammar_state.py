@@ -32,7 +32,7 @@ class GrammarState:
         [START_SYMBOL], and decoding ends when this is empty.  Every time we take an action, we
         update the non-terminal stack and the context-dependent valid actions, and we use what's on
         the stack to decide which actions are valid in the current state.
-    lambda_stack : ``Dict[Tuple[str, str], List[str]]``
+    lambda_stacks : ``Dict[Tuple[str, str], List[str]]``
         The lambda stack keeps track of when we're in the scope of a lambda function.  The
         dictionary is keyed by the production rule we are adding (like "r -> x", separated into
         left hand side and right hand side, where the LHS is the type of the lambda variable and
@@ -46,6 +46,10 @@ class GrammarState:
         reasons in the decoder.  This means we need a way to map from the production rule strings
         that we generate for lambda variables back to the integer used to represent it.
     """
+    # TODO(mattg): We're hard-coding three lambda variables here.  This isn't a great way to do
+    # this; it's just something that works for now, that we can fix later if / when it's needed.
+    # If you allow for more than three nested lambdas, or if you want to use different lambda
+    # variable names, you'll have to change this somehow.
     lambda_variables = set(['x', 'y', 'z'])
 
     def __init__(self,
@@ -104,14 +108,16 @@ class GrammarState:
         if 'lambda' in productions[0]:
             production = productions[0]
             if production[0] == "'" and production[-1] == "'":
+                # The production rule with a lambda is typically "<t,d> -> ['lambda x', d]".  We
+                # need to strip the quotes.
                 production = production[1:-1]
             lambda_variable = production.split(' ')[1]
-            if len(left_side) != 5:
-                raise NotImplementedError("Can't handle this type yet:", left_side)
             # The left side must be formatted as "<t,d>", where "t" is the type of the lambda
             # variable, and "d" is the return type of the lambda function.  We need to pull out the
             # "t" here.  TODO(mattg): this is pretty limiting, but I'm not sure how general we
             # should make this.
+            if len(left_side) != 5:
+                raise NotImplementedError("Can't handle this type yet:", left_side)
             lambda_type = left_side[1]
             new_lambda_stacks[(lambda_type, lambda_variable)] = []
 
@@ -154,6 +160,9 @@ class GrammarState:
         # made in converting types to strings (e.g., that we're only using the first letter for
         # types, lowercased).
         if production in ['<=', '<']:
+            # Some grammars (including the wikitables grammar) have "less than" and "less than or
+            # equal to" functions that are terminals.  We don't want to treat those like our
+            # "<t,d>" types.
             return False
         if production[0] == '<':
             return True
