@@ -23,6 +23,9 @@ from allennlp.nn import util
 from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
 from allennlp.training.metrics import Average
 
+# TODO(mattg): figure out how to pass this configuration around in a sane way.
+USE_TERMINAL_EMBEDDING = True
+
 
 @Model.register("wikitables_parser")
 class WikiTablesSemanticParser(Model):
@@ -310,24 +313,36 @@ class WikiTablesSemanticParser(Model):
         terminal_tensors = {key: tensor.unsqueeze(0) for key, tensor in terminal_tensors.items()}
         # Shape: (num_nonterminals, element_embedding_dim)
         embedded_nonterminals = self._nonterminal_embedder(nonterminal_tensors).squeeze(0)
-        # Shape: (num_terminals, element_embedding_dim)
-        embedded_terminals = self._terminal_embedder(terminal_tensors).squeeze(0)
-        # Shape: (num_nonterminals + num_terminals, element_embedding_dim)
-        embedded_elements = torch.cat([embedded_nonterminals, embedded_terminals], dim=0)
+
+        if USE_TERMINAL_EMBEDDING:
+            # Shape: (num_terminals, element_embedding_dim)
+            embedded_terminals = self._terminal_embedder(terminal_tensors).squeeze(0)
+            # Shape: (num_nonterminals + num_terminals, element_embedding_dim)
+            embedded_elements = torch.cat([embedded_nonterminals, embedded_terminals], dim=0)
+        else:
+            embedded_elements = embedded_nonterminals
         # This will map element strings to their index in the `embedded_elements` tensor.
         element_ids = {nonterminal: i for i, nonterminal in enumerate(nonterminal_strings)}
         element_ids.update({terminal: i + len(nonterminal_strings)
                             for i, terminal in enumerate(terminal_strings)})
-        unique_actions: Set[Tuple[int, int]] = set()
+        unique_nonterminal_actions: Set[Tuple[int, int]] = set()
+        unique_terminal_actions: Set[Tuple[int, int]] = set()
         for instance_actions in actions:
             for action in instance_actions:
                 if not action['left'][0]:
                     # This rule is padding.
                     continue
                 # This gives us the LHS and RHS strings, which we map to ids in the element tensor.
-                unique_actions.add((element_ids[action['left'][0]], element_ids[action['right'][0]]))
-        unique_action_list = list(unique_actions)
+                action_ids = (element_ids[action['left'][0]], element_ids[action['right'][0]])
+                if action['right'][1]:
+                    unique_nonterminal_actions.add(action_ids)
+                else:
+                    unique_terminal_actions.add(action_ids)
+        unique_action_list = list(unique_nonterminal_actions) + list(unique_terminal_actions)
         action_left_sides, action_right_sides = zip(*unique_action_list)
+        if not USE_TERMINAL_EMBEDDING:
+            action_left_sides = action_left_sides[:len(unique_nonterminal_actions)]
+            action_right_sides = action_right_sides[:len(unique_nonterminal_actions)]
         # We need a tensor to copy so we can create stuff on the right device; just grabbing one
         # from the nonterminals here.
         copy_tensor = list(list(nonterminals.values())[0].values())[0]
@@ -675,16 +690,28 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # (group_size, action_embedding_dim)
         predicted_action_embedding = self._output_projection_layer(action_query)
 
-        # action_embeddings: (group_size, num_actions, action_embedding_dim)
-        # action_mask: (group_size, num_actions)
-        action_embeddings, action_mask, considered_actions = self._get_action_embeddings(state)
+        considered_actions, actions_to_embed, actions_to_link = self._get_actions_to_consider(state)
 
+        # action_embeddings: (group_size, num_embedded_actions, action_embedding_dim)
+        # action_mask: (group_size, num_embedded_actions)
+        action_embeddings, embedded_action_mask = self._get_action_embeddings(state, actions_to_embed)
         # We'll do a batch dot product here with `bmm`.  We want `dot(predicted_action_embedding,
         # action_embedding)` for each `action_embedding`, and we can get that efficiently with
         # `bmm` and some squeezing.
-        # Shape: (group_size, num_actions)
-        action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
-        log_probs = util.masked_log_softmax(action_logits, action_mask.float())
+        # Shape: (group_size, num_embedded_actions)
+        embedded_action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+
+        if actions_to_link:
+            # entity_action_logits: (group_size, num_entity_actions)
+            # entity_action_mask: (group_size, num_entity_actions)
+            entity_action_logits, entity_action_mask = self._get_entity_action_logits(state, actions_to_link)
+            action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=-1)
+            action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=-1).float()
+        else:
+            action_logits = embedded_action_logits
+            action_mask = embedded_action_mask.float()
+        log_probs = util.masked_log_softmax(action_logits, action_mask)
+
         return self._compute_new_states(state,
                                         log_probs,
                                         hidden_state,
@@ -716,12 +743,92 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         return util.weighted_sum(encoder_outputs, question_attention_weights)
 
     @staticmethod
+    def _get_actions_to_consider(state: WikiTablesDecoderState) -> Tuple[List[List[int]],
+                                                                         List[List[int]],
+                                                                         List[List[int]]]:
+        """
+        The ``WikiTablesDecoderState`` defines a set of actions that are valid in the current
+        grammar state for each group element.  This method gets that set of actions and separates
+        them into actions that can be embedded and actions that need to be linked.
+
+        Returns
+        -------
+        considered_actions : ``List[List[int]]``
+            A sorted list of all actions considered for each group element, both for embedding and
+            for linking.  This list has one inner list for each group element, and each item in the
+            inner list represents ``batch_action_index`` that was considered.  This inner list is
+            also `padded` to size ``max_num_embedded_actions + max_num_linked_actions``, with
+            `interior` padding in between the embedded actions and the linked actions where
+            necessary.  The ``action_index`` for padded entries is -1.  This padding replicates the
+            structre that we'll get in the model once we concatenate logits together, so that
+            :func:`_compute_new_states` has an easy time figuring out what to do.
+        actions_to_embed : ``List[List[int]]``
+            These actions are in the global action embedding tensor, and can be embedded.  Shape is
+            (group_size, num_actions), not padded, and the value is the ``global_action_index``,
+            not the ``batch_action_index``.  You can use these indices to ``index_select`` on the
+            global action embeddings directly, without additional translation.
+        actions_to_link : ``
+            These actions are `not` in the global action embedding tensor, and must have scores
+            computed some way other than with an embedding.  Shape is (group_size, num_actions),
+            not padded, and the value is the ``batch_action_index``.  These need to be converted
+            into batch entity indices, then looked up in the linking scores.
+
+            If there are `no` actions to link, because all actions have an embedding, we return
+            `None` here.
+        """
+        num_global_actions = state.action_embeddings.size(0)
+        print(num_global_actions)
+        valid_actions = state.get_valid_actions()
+        global_valid_actions = []
+        for batch_index, valid_action_list in zip(state.batch_indices, valid_actions):
+            global_valid_actions.append([])
+            for action_index in valid_action_list:
+                global_action_index = state.action_indices[(batch_index, action_index)]
+                global_valid_actions[-1].append((global_action_index, action_index))
+        embedded_actions = []
+        linked_actions = []
+        for batch_index, global_action_list in zip(state.batch_indices, global_valid_actions):
+            global_action_list.sort()
+            embedded_actions.append([])
+            linked_actions.append([])
+            for global_action_index, action_index in global_action_list:
+                if global_action_index >= num_global_actions:
+                    linked_actions[-1].append(action_index)
+                else:
+                    embedded_actions[-1].append(global_action_index)
+
+        num_embedded_actions = max(len(actions) for actions in embedded_actions)
+        num_linked_actions = max(len(actions) for actions in linked_actions)
+        considered_actions = []
+        # TODO(mattg): this block isn't working right...
+        for batch_index, global_valid_actions in zip(state.batch_indices, global_valid_actions):
+            # The global_valid_action list is already sorted from above.
+            considered_actions.append([])
+            # First we add the embedded actions to the list.
+            for global_action_index, action_index in global_action_list:
+                if global_action_index < num_global_actions:
+                    considered_actions[-1].append((action_index))
+            # Then we pad that portion.
+            while len(considered_actions[-1]) < num_embedded_actions:
+                considered_actions[-1].append(-1)
+            # Then we add the linked actions to the list.
+            for global_action_index, action_index in global_action_list:
+                if global_action_index >= num_global_actions:
+                    considered_actions[-1].append((action_index))
+            # Finally, we pad the linked portion.
+            while len(considered_actions[-1]) < num_embedded_actions + num_linked_actions:
+                considered_actions[-1].append(-1)
+        return considered_actions, embedded_actions, linked_actions
+
+    @staticmethod
     def _get_action_embeddings(state: WikiTablesDecoderState) -> Tuple[torch.Tensor,
                                                                        torch.Tensor,
                                                                        List[List[int]]]:
         """
         Returns an embedded representation for all actions that should be considered in the given
-        state.
+        state.  Additionally, because sometimes we do not use an embedding to score certain actions
+        (deferring instead to a linking score), we also return the set of actions that were valid
+        but not embedded, so that the model can decide how to score them.
 
         Parameters
         ----------
@@ -740,17 +847,22 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             action_index)`` pairs were merely added as padding.
         considered_actions : ``List[List[int]]``
             A list representing the action indices that were considered for each group element (in
-            terms of the list of possible actions for each batch instance).
+            terms of the list of possible actions for each batch instance).  Each inner list is
+            `sorted` by its index in the `global action list`.  This is important, because the
+            global action list has nonterminals `before` terminals, and in some model
+            configurations, we use an entity linking instead of an embedding to score terminal
+            productions.  We need this to be sorted so that we're guaranteed that we can
+            concatenate the logits from the nonterminals with the logits from terminals, and have
+            the ordering still work out right.
         """
-        valid_actions = state.get_valid_actions()
-        actions = []
-        for batch_index, valid_action_list in zip(state.batch_indices, valid_actions):
-            actions.append([state.action_indices[(batch_index, action_index)]
-                            for action_index in valid_action_list])
-        num_actions = [len(action_list) for action_list in actions]
+        # First we're going to map all (batch_index, action_index) pairs in the valid actions to
+        # global action indices.  Then we'll sort these for each group element, and separate them
+        # into actions that we can embed and actions that we can't.
+
+        num_actions = [len(action_list) for action_list in embedded_actions]
         max_num_actions = max(num_actions)
         padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
-                          for action_list in actions]
+                          for action_list in embedded_actions]
         # Shape: (group_size, num_actions)
         action_tensor = Variable(state.encoder_output_mask[0].data.new(padded_actions).long())
         # `state.action_embeddings` is shape (total_num_actions, action_embedding_dim).
@@ -759,7 +871,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # functions in nn.util don't do this operation.  So we'll do some reshapes and do the
         # index_select ourselves.
         group_size = len(valid_actions)
-        action_embedding_dim = state.action_embeddings.size(-1)
         flattened_actions = action_tensor.view(-1)
         flattened_action_embeddings = state.action_embeddings.index_select(0, flattened_actions)
         action_embeddings = flattened_action_embeddings.view(group_size, max_num_actions, action_embedding_dim)
