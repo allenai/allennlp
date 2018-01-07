@@ -7,13 +7,15 @@ improvements:
 We also extend NLTK's ``LogicParser`` to define a ``DynamicTypeLogicParser`` that knows how to deal with the
 two improvements above.
 """
-from typing import Dict, Set, Optional, List, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 from collections import defaultdict
 import re
 
 from overrides import overrides
 from nltk.sem.logic import Expression, ApplicationExpression, ConstantExpression, LogicParser, Variable
 from nltk.sem.logic import Type, BasicType, ComplexType, ANY_TYPE
+
+START_SYMBOL = '@START@'
 
 
 class NamedBasicType(BasicType):
@@ -31,9 +33,12 @@ class NamedBasicType(BasicType):
         self._string_rep = string_rep
 
     def __str__(self):
-        # TODO (pradeep): This limits the number of basic types we can have to 26. We may want to change this
-        # in the future if we extend to domains where we have more than 26 basic types.
-        return self._string_rep.lower()[0]
+        # TODO (pradeep): This limits the number of basic types we can have to 26. We may want to
+        # change this in the future if we extend to domains where we have more than 26 basic types.
+        if self._string_rep == START_SYMBOL:
+            return START_SYMBOL
+        else:
+            return self._string_rep.lower()[0]
 
     def str(self):
         return self._string_rep
@@ -259,6 +264,11 @@ class DynamicTypeLogicParser(LogicParser):
                 raise RuntimeError("Unknown prefix: %s. Did you forget to pass it to the constructor?" % prefix)
         return super(DynamicTypeLogicParser, self).make_VariableExpression(name)
 
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
 
 def _substitute_any_type(_type: Type, basic_types: Set[BasicType]) -> Set[Type]:
     """
@@ -300,19 +310,21 @@ def _make_production_string(source: Type, target: Union[List[Type], Type]) -> st
     return "%s -> %s" % (str(source), str(target))
 
 
-def _get_complex_type_productions(complex_type: ComplexType) -> List[Tuple[str, str]]:
+def _get_complex_type_productions(complex_type: ComplexType) -> List[Tuple[Type, str]]:
     """
     Takes a complex type without any placeholders and returns all productions that lead to it, starting
     from the most basic return type. For example, if the complex is `<a,<<b,c>,d>>`, this gives the
-    following tuples
+    following tuples:
+
     ('<<b,c>,d>', '<<b,c>,d> -> [<a,<<b,c>,d>>, a]')
     ('d', 'd -> [<<b,c>,d>, <b,c>]')
+    ('c', 'c -> [<b,c>, b]')
     """
     all_productions = []
     while isinstance(complex_type, ComplexType) and not complex_type == ANY_TYPE:
-        all_productions.append((str(complex_type.second), _make_production_string(complex_type.second,
-                                                                                  [complex_type,
-                                                                                   complex_type.first])))
+        all_productions.append((complex_type.second, _make_production_string(complex_type.second,
+                                                                             [complex_type,
+                                                                              complex_type.first])))
         for production in _get_complex_type_productions(complex_type.first):
             all_productions.append(production)
         complex_type = complex_type.second
@@ -321,7 +333,7 @@ def _get_complex_type_productions(complex_type: ComplexType) -> List[Tuple[str, 
 
 def _get_placeholder_actions(complex_type: ComplexType,
                              basic_types: Set[Type],
-                             valid_actions: Dict[str, Set[str]]) -> None:
+                             valid_actions: Dict[Type, Set[str]]) -> None:
     """
     Takes a ``complex_type`` with placeholders and a set of ``basic_types``, infers the valid actions
     starting at all non-terminals, by substituting placeholders with basic types, and adds them to
@@ -333,8 +345,8 @@ def _get_placeholder_actions(complex_type: ComplexType,
             for basic_type in basic_types:
                 # Get the return type when the complex_type is applied to the basic type.
                 application_type = complex_type.get_application_type(basic_type)
-                valid_actions[str(application_type)].add(_make_production_string(application_type,
-                                                                                 [complex_type, basic_type]))
+                production = _make_production_string(application_type, [complex_type, basic_type])
+                valid_actions[application_type].add(production)
                 for head, production in _get_complex_type_productions(application_type):
                     valid_actions[head].add(production)
         else:
@@ -346,33 +358,38 @@ def _get_placeholder_actions(complex_type: ComplexType,
                 for second_type in basic_types:
                     input_type = ComplexType(first_type, second_type)
                     application_type = complex_type.get_application_type(input_type)
-                    valid_actions[str(application_type)].add(_make_production_string(application_type,
-                                                                                     [complex_type,
-                                                                                      input_type]))
+                    production = _make_production_string(application_type, [complex_type, input_type])
+                    valid_actions[application_type].add(production)
                     for head, production in _get_complex_type_productions(application_type):
                         valid_actions[head].add(production)
     else:
         for basic_type in basic_types:
             second_type = _substitute_placeholder_type(complex_type.second, basic_type)
             production_string = _make_production_string(second_type, [complex_type, complex_type.first])
-            valid_actions[str(second_type)].add(production_string)
+            valid_actions[second_type].add(production_string)
             for head, production in _get_complex_type_productions(second_type):
                 valid_actions[head].add(production)
 
 
 def get_valid_actions(name_mapping: Dict[str, str],
                       type_signatures: Dict[str, Type],
-                      basic_types: Set[Type]) -> Dict[str, Set[str]]:
+                      basic_types: Set[Type],
+                      valid_starting_types: Set[Type] = None,
+                      num_nested_lambdas: int = 0) -> Dict[str, List[str]]:
     """
     Generates all the valid actions starting from each non-terminal. For terminals of a specific
-    type, we simply add to valid actions, productions from the types to the terminals. Among those
-    types, we keep track of all the non-basic types (i.e., function types). For those types, we
-    infer the list of productions that start from a basic type leading to them.
+    type, we simply add a production from the type to the terminal. Among those types, we keep
+    track of all the non-basic types (i.e., function types). For those types, we infer the list of
+    productions that start from a basic type leading to them.
+
     For complex types that do not contain ANY_TYPE or placeholder types, this is straight-forward.
     For example, if the complex type is <e,<r,<d,r>>>, the productions should be [r -> [<d,r>, r],
     <d,r> -> [<r,<d,r>>, r], <r,<d,r>> -> [<e,<r,<d,r>>>, e]].
+
     We do ANY_TYPE substitution here, and make a call to ``_get_placeholder_actions`` for
     placeholder substitution.
+
+    We additionally add a valid action from the start symbol to all ``valid_starting_types``.
 
     Parameters
     ----------
@@ -385,17 +402,30 @@ def get_valid_actions(name_mapping: Dict[str, str],
         type declaration, this can be the ``COMMON_TYPE_SIGNATURE``.
     basic_types : ``Set[Type]``
         Set of all basic types in the type declaration.
+    valid_starting_types : ``Set[Type]``, optional
+        These are the valid starting types for your grammar; e.g., what types are we allowed to
+        parse expressions into?  We will add a "START -> TYPE" rule for each of these types.  If
+        this is ``None``, we default to using ``basic_types``.
+    num_nested_lambdas : ``int`` (optional)
+        Does the language used permit lambda expressions?  And if so, how many nested lambdas do we
+        need to worry about?  We'll add rules like "<r,d> -> ['lambda x', d]" for all complex
+        types, where the variable is determined by the number of nestings.  We currently only
+        permit up to three levels of nesting, just for ease of implementation.
     """
-    valid_actions: Dict[str, Set[str]] = defaultdict(set)
+    valid_actions: Dict[Type, Set[str]] = defaultdict(set)
+
+    valid_starting_types = valid_starting_types or basic_types
+    for type_ in valid_starting_types:
+        valid_actions[START_TYPE].add(_make_production_string(START_TYPE, type_))
 
     complex_types = set()
     for name, alias in name_mapping.items():
-        if name == "lambda":
+        if name in ["lambda", "x", "y", "z"]:
             continue
         name_type = type_signatures[alias]
         # Type to terminal productions.
         for substituted_type in _substitute_any_type(name_type, basic_types):
-            valid_actions[str(substituted_type)].add(_make_production_string(substituted_type, name))
+            valid_actions[substituted_type].add(_make_production_string(substituted_type, name))
         # Keeping track of complex types.
         if isinstance(name_type, ComplexType) and name_type != ANY_TYPE:
             complex_types.add(name_type)
@@ -407,7 +437,25 @@ def get_valid_actions(name_mapping: Dict[str, str],
             for substituted_type in _substitute_any_type(complex_type, basic_types):
                 production_string = _make_production_string(substituted_type.second,
                                                             [substituted_type, substituted_type.first])
-                valid_actions[str(substituted_type.second)].add(production_string)
+                valid_actions[substituted_type.second].add(production_string)
                 for head, production in _get_complex_type_productions(substituted_type.second):
                     valid_actions[head].add(production)
-    return valid_actions
+
+    # We can produce complex types with a lambda expression, though we'll leave out
+    # placeholder types for now.
+    for i in range(num_nested_lambdas):
+        lambda_var = chr(ord('x') + i)
+        for key, values in valid_actions.items():
+            # We'll only allow lambdas to be functions that take and return basic types as their
+            # arguments, for now.  This is also how we treat lambda variable generation at the
+            # moment, so this check is just enforcing some consistency.  If we need more general
+            # handling of lambdas we'll need to rethink a few things.
+            if isinstance(key, ComplexType) and key.first in basic_types and key.second in basic_types:
+                production_string = _make_production_string(key, ['lambda ' + lambda_var, key.second])
+                values.add(production_string)
+
+    valid_action_strings = {str(key): sorted(value) for key, value in valid_actions.items()}
+    return valid_action_strings
+
+
+START_TYPE = NamedBasicType(START_SYMBOL)

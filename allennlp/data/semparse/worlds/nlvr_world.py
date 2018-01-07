@@ -2,17 +2,17 @@
 This module defines classes Object and Box (the two entities in the NLVR domain) and an NlvrWorld,
 which mainly contains an execution method and related helper methods.
 """
-
 from collections import defaultdict
 import operator
 from typing import Any, List, Dict, Set, Callable, TypeVar, Union
-from overrides import overrides
 import pyparsing
+
+from nltk.sem.logic import Type
+from overrides import overrides
 
 from allennlp.common import util
 from allennlp.common.util import JsonDict
-from allennlp.data.semparse.type_declarations.nlvr_type_declaration import (COMMON_NAME_MAPPING,
-                                                                            COMMON_TYPE_SIGNATURE)
+from allennlp.data.semparse.type_declarations import nlvr_type_declaration as types
 from allennlp.data.semparse.worlds.world import World
 
 
@@ -94,8 +94,8 @@ class NlvrWorld(World):
     # pylint: disable=too-many-public-methods
     # TODO(pradeep): Define more spatial relationship methods: above, below, left_of, right_of..
     def __init__(self, world_representation: List[List[JsonDict]]) -> None:
-        super(NlvrWorld, self).__init__(global_type_signatures=COMMON_TYPE_SIGNATURE,
-                                        global_name_mapping=COMMON_NAME_MAPPING)
+        super(NlvrWorld, self).__init__(global_type_signatures=types.COMMON_TYPE_SIGNATURE,
+                                        global_name_mapping=types.COMMON_NAME_MAPPING)
         self._boxes = set([Box(object_list, "box%d" % index)
                            for index, object_list in enumerate(world_representation)])
         self._objects: Set[Object] = set()
@@ -103,8 +103,12 @@ class NlvrWorld(World):
             self._objects.update(box.objects)
 
     @overrides
+    def get_basic_types(self) -> Set[Type]:
+        return types.BASIC_TYPES
+
+    @overrides
     def _map_name(self, name: str) -> str:
-        return COMMON_NAME_MAPPING[name] if name in COMMON_NAME_MAPPING else name
+        return types.COMMON_NAME_MAPPING[name] if name in types.COMMON_NAME_MAPPING else name
 
     def _apply_function_list(self,
                              functions: List[str],
