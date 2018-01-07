@@ -50,7 +50,7 @@ class MaximumMarginalLikelihood(DecoderTrainer):
             # This will store a set of (batch_index, action_history) tuples, and we'll check it
             # against the allowed actions to make sure we're actually scoring all of the actions we
             # are supposed to.
-            actions_taken: Set[Tuple[int, Tuple[int]]] = set()
+            actions_taken: Set[Tuple[int, Tuple[int, ...]]] = set()
             for next_state in decode_step.take_step(grouped_state, allowed_actions=allowed_actions):
                 actions_taken.add((next_state.batch_indices[0], tuple(next_state.action_history[0])))
                 finished, not_finished = next_state.split_finished()
@@ -113,7 +113,7 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         return batched_allowed_transitions
 
     @staticmethod
-    def _check_all_actions_taken(action_histories: Set[Tuple[int, Tuple[int]]],
+    def _check_all_actions_taken(action_histories: Set[Tuple[int, Tuple[int, ...]]],
                                  grouped_state: DecoderState,
                                  allowed_actions: List[Set[int]]) -> None:
         expected_histories = set()
