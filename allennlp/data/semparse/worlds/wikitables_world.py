@@ -3,7 +3,7 @@ We store all the information related to a world (i.e. the context in which logic
 executed) here. For WikiTableQuestions, this includes a representation of a table, mapping from
 Sempre variables in all logical forms to NLTK variables, and the types of all predicates and entities.
 """
-from typing import Dict, List, Set
+from typing import List, Set
 import re
 
 from nltk.sem.logic import Type
