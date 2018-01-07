@@ -2,7 +2,6 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
-from collections import defaultdict
 from typing import Dict, List, Optional
 
 from overrides import overrides
@@ -10,11 +9,12 @@ from spacy.tokens import Token as SpacyToken
 import torch
 from torch.autograd import Variable
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common.checks import ConfigurationError
+from allennlp.nn import util
 
 TokenList = List[TokenType]  # pylint: disable=invalid-name
 
@@ -130,13 +130,8 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         return text_field
 
     @overrides
-    def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
+    def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         # pylint: disable=no-self-use
         # This is creating a dict of {token_indexer_key: batch_tensor} for each token indexer used
         # to index this field.
-        token_indexer_key_to_batch_dict: Dict[str, List[torch.Tensor]] = defaultdict(list)
-        for encoding_name_dict in tensor_list:
-            for indexer_name, tensor in encoding_name_dict.items():
-                token_indexer_key_to_batch_dict[indexer_name].append(tensor)
-        return {indexer_name: torch.stack(tensor_list)
-                for indexer_name, tensor_list in token_indexer_key_to_batch_dict.items()}
+        return util.batch_tensor_dicts(tensor_list)

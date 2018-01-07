@@ -93,6 +93,6 @@ class ListField(SequenceField[DataArray]):
         return ListField([self.field_list[0].empty_field()])
 
     @overrides
-    def batch_tensors(self, tensor_list: List[DataArray]) -> DataArray:  # type: ignore
+    def batch_tensors(self, tensor_list: List[DataArray]) -> DataArray:
         # We defer to the class we're wrapping in a list to handle the batching.
         return self.field_list[0].batch_tensors(tensor_list)
