@@ -20,3 +20,8 @@ allennlp.data.semparse.type_declarations
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.data.semparse.type_declarations.grammar_state
+   :members:
+   :undoc-members:
+   :show-inheritance:

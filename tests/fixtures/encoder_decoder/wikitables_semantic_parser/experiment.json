@@ -18,6 +18,28 @@
         "trainable": true
       }
     },
+    "nonterminal_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "vocab_namespace": "rule_labels",
+        "embedding_dim": 25,
+        "trainable": true
+      }
+    },
+    "terminal_embedder": {
+      "token_characters": {
+        "type": "character_encoding",
+        "embedding": {
+          "embedding_dim": 8
+        },
+        "encoder": {
+          "type": "cnn",
+          "embedding_dim": 8,
+          "num_filters": 25,
+          "ngram_filter_sizes": [3]
+        }
+      }
+    },
     "encoder": {
       "type": "lstm",
       "input_size": 25,
@@ -31,8 +53,6 @@
       "beam_size": 3
     },
     "max_decoding_steps": 20,
-    "action_namespace": "actions",
-    "action_embedding_dim": 10,
     "attention_function": {"type": "dot_product"}
   },
   "iterator": {
