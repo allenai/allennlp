@@ -37,5 +37,13 @@ class KnowledgeGraph:
         """
         return self._neighbors[entity]
 
-    def get_all_entities(self):
-        return self._neighbors.keys()
+    def get_all_entities(self) -> List[str]:
+        # We return a sorted list here so we get guaranteed consistent ordering, for
+        # reproducibility's sake.  The ordering will affect the name mapping that we do, which
+        # affects the intermediate nltk logical forms.
+        return sorted(self._neighbors.keys())
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
