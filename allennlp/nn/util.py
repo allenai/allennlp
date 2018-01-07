@@ -60,11 +60,39 @@ def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     return mask.long().sum(-1)
 
 
+def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
+                       remove_trailing_dimension: bool = False) -> Dict[str, torch.Tensor]:
+    """
+    Takes a list of tensor dictionaries, where each dictionary is assumed to have matching keys,
+    and returns a single dictionary with all tensors with the same key batched together.
+
+    Parameters
+    ----------
+    tensor_dicts : ``List[Dict[str, torch.Tensor]]``
+        The list of tensor dictionaries to batch.
+    remove_trailing_dimension : ``bool``
+        If ``True``, we will check for a trailing dimension of size 1 on the tensors that are being
+        batched, and remove it if it find it.
+    """
+    key_to_tensors: Dict[str, List[torch.Tensor]] = defaultdict(list)
+    for tensor_dict in tensor_dicts:
+        for key, tensor in tensor_dict.items():
+            key_to_tensors[key].append(tensor)
+    batched_tensors = {}
+    for key, tensor_list in key_to_tensors.items():
+        batched_tensor = torch.stack(tensor_list)
+        if remove_trailing_dimension:
+            if set(tensor.size(-1) for tensor in tensor_list) == set([1]):
+                batched_tensor = batched_tensor.squeeze(-1)
+        batched_tensors[key] = batched_tensor
+    return batched_tensors
+
+
 def get_mask_from_sequence_lengths(sequence_lengths: Variable, max_length: int) -> Variable:
     """
     Given a variable of shape ``(batch_size,)`` that represents the sequence lengths of each batch
-    element, this function returns a ``(batch_size, max_length)`` mask variable.  For example, if our
-    input was ``[2, 2, 3]``, with a ``max_length`` of 4, we'd return
+    element, this function returns a ``(batch_size, max_length)`` mask variable.  For example, if
+    our input was ``[2, 2, 3]``, with a ``max_length`` of 4, we'd return
     ``[[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 1, 0]]``.
 
     We require ``max_length`` here instead of just computing it from the input ``sequence_lengths``
@@ -654,20 +682,21 @@ def batched_index_select(target: torch.Tensor,
                          indices: torch.LongTensor,
                          flattened_indices: Optional[torch.LongTensor] = None) -> torch.Tensor:
     """
-    The given `indices` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence dimension
-    (dimension 2) of the target, which has size ``(batch_size, sequence_length, embedding_size)``.
+    The given ``indices`` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence
+    dimension (dimension 2) of the target, which has size ``(batch_size, sequence_length,
+    embedding_size)``.
 
     This function returns selected values in the target with respect to the provided indices, which
-    have size ``(batch_size, d_1, ..., d_n, embedding_size)``. This can use the optionally precomputed
-    :func:`~flattened_indices` with size ``(batch_size * d_1 * ... * d_n)`` if given.
+    have size ``(batch_size, d_1, ..., d_n, embedding_size)``. This can use the optionally
+    precomputed :func:`~flattened_indices` with size ``(batch_size * d_1 * ... * d_n)`` if given.
 
     An example use case of this function is looking up the start and end indices of spans in a
     sequence tensor. This is used in the
     :class:`~allennlp.models.coreference_resolution.CoreferenceResolver`. Model to select
-    contextual word representations corresponding to the start and end indices of mentions. The
-    key reason this can't be done with basic torch functions is that we want to be able to use
-    look-up tensors with an arbitrary number of dimensions (for example, in the coref model,
-    we don't know a-priori how many spans we are looking up).
+    contextual word representations corresponding to the start and end indices of mentions. The key
+    reason this can't be done with basic torch functions is that we want to be able to use look-up
+    tensors with an arbitrary number of dimensions (for example, in the coref model, we don't know
+    a-priori how many spans we are looking up).
 
     Parameters
     ----------
@@ -725,7 +754,7 @@ def flattened_index_select(target: torch.Tensor,
         A Tensor of shape (batch_size, set_size, subset_size, embedding_size).
     """
     if indices.dim() != 2:
-        raise ConfigurationError("Indices passed to flatten_index_select had shape {} but "
+        raise ConfigurationError("Indices passed to flattened_index_select had shape {} but "
                                  "only 2 dimensional inputs are supported.".format(indices.size()))
     # Shape: (batch_size, set_size * subset_size, embedding_size)
     flattened_selected = target.index_select(1, indices.view(-1))
