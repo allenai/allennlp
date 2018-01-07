@@ -70,7 +70,7 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         logical_form = "(assert_equals (color (circle (touch_wall (all_objects)))) color_black)"
         expression = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(expression)
-        assert action_sequence == ['t', 't -> [<c,t>, c]', '<c,t> -> [<#1,<#1,t>>, c]',
+        assert action_sequence == ['@START@ -> t', 't -> [<c,t>, c]', '<c,t> -> [<#1,<#1,t>>, c]',
                                    '<#1,<#1,t>> -> assert_equals', 'c -> [<o,c>, o]', '<o,c> -> color',
                                    'o -> [<o,o>, o]', '<o,o> -> circle', 'o -> [<o,o>, o]',
                                    '<o,o> -> touch_wall', 'o -> all_objects', 'c -> color_black']
@@ -82,7 +82,7 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
                           1)")
         expression = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(expression)
-        assert action_sequence == ['t', 't -> [<e,t>, e]', '<e,t> -> [<e,<e,t>>, e]',
+        assert action_sequence == ['@START@ -> t', 't -> [<e,t>, e]', '<e,t> -> [<e,<e,t>>, e]',
                                    '<e,<e,t>> -> assert_greater_equals', 'e -> [<#1,e>, b]', '<#1,e> -> count',
                                    'b -> [<e,b>, e]', '<e,b> -> [<<b,e>,<e,b>>, <b,e>]',
                                    '<<b,e>,<e,b>> -> [<b,<<b,#1>,<#1,b>>>, b]',

@@ -1,7 +1,6 @@
 """
 ``KnowledgeGraphField`` is a ``Field`` which stores a knowledge graph representation.
 """
-from collections import defaultdict
 from typing import Dict, List
 
 import torch
@@ -13,6 +12,7 @@ from allennlp.data.semparse import KnowledgeGraph
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.nn import util
 
 TokenList = List[TokenType]  # pylint: disable=invalid-name
 
@@ -104,13 +104,6 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         return KnowledgeGraphField(KnowledgeGraph({}), self._token_indexers)
 
     @overrides
-    def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
+    def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         # pylint: disable=no-self-use
-        # This is creating a dict of {token_indexer_key: batch_tensor} for each token indexer used
-        # to index this field.
-        token_indexer_key_to_batch_dict: Dict[str, List[torch.Tensor]] = defaultdict(list)
-        for encoding_name_dict in tensor_list:
-            for indexer_name, tensor in encoding_name_dict.items():
-                token_indexer_key_to_batch_dict[indexer_name].append(tensor)
-        return {indexer_name: torch.stack(tensor_list)
-                for indexer_name, tensor_list in token_indexer_key_to_batch_dict.items()}
+        return util.batch_tensor_dicts(tensor_list)
