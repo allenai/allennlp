@@ -777,7 +777,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             `None` here.
         """
         num_global_actions = state.action_embeddings.size(0)
-        print(num_global_actions)
         valid_actions = state.get_valid_actions()
         global_valid_actions = []
         for batch_index, valid_action_list in zip(state.batch_indices, valid_actions):
@@ -787,7 +786,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 global_valid_actions[-1].append((global_action_index, action_index))
         embedded_actions = []
         linked_actions = []
-        for batch_index, global_action_list in zip(state.batch_indices, global_valid_actions):
+        for global_action_list in global_valid_actions:
             global_action_list.sort()
             embedded_actions.append([])
             linked_actions.append([])
@@ -800,21 +799,20 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         num_embedded_actions = max(len(actions) for actions in embedded_actions)
         num_linked_actions = max(len(actions) for actions in linked_actions)
         considered_actions = []
-        # TODO(mattg): this block isn't working right...
-        for batch_index, global_valid_actions in zip(state.batch_indices, global_valid_actions):
+        for global_action_list in global_valid_actions:
             # The global_valid_action list is already sorted from above.
             considered_actions.append([])
             # First we add the embedded actions to the list.
             for global_action_index, action_index in global_action_list:
                 if global_action_index < num_global_actions:
-                    considered_actions[-1].append((action_index))
+                    considered_actions[-1].append(action_index)
             # Then we pad that portion.
             while len(considered_actions[-1]) < num_embedded_actions:
                 considered_actions[-1].append(-1)
             # Then we add the linked actions to the list.
             for global_action_index, action_index in global_action_list:
                 if global_action_index >= num_global_actions:
-                    considered_actions[-1].append((action_index))
+                    considered_actions[-1].append(action_index)
             # Finally, we pad the linked portion.
             while len(considered_actions[-1]) < num_embedded_actions + num_linked_actions:
                 considered_actions[-1].append(-1)

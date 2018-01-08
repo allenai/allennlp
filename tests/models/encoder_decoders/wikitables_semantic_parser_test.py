@@ -234,7 +234,7 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         # pylint: disable=protected-access
         valid_actions_1 = {'e': [0, 1, 2, 4]}
         valid_actions_2 = {'e': [0, 1, 3]}
-        valid_actions_3 = {'e': [3, 4]}
+        valid_actions_3 = {'e': [2, 3, 4]}
         self.state.grammar_state[0] = GrammarState(['e'], {}, valid_actions_1, {})
         self.state.grammar_state[1] = GrammarState(['e'], {}, valid_actions_2, {})
         self.state.grammar_state[2] = GrammarState(['e'], {}, valid_actions_3, {})
@@ -246,11 +246,11 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         # These are _batch_ action indices with a _global_ action index above num_global_actions,
         # sorted by their _global_ action index.
         # They come from actions [[(0, 2), (0, 4)], [(1, 3), (1, 0)], [(0, 3), (0, 4)]].
-        expected_to_link = [[2, 4], [3, 0], [3, 4]]
+        expected_to_link = [[2, 4], [3, 0], [2, 3, 4]]
         assert to_link == expected_to_link
         # These are _batch_ action indices, sorted by _global_ action index, with padding in
         # between the embedded actions and the linked actions.
-        expected_considered = [[1, 0, 2, 4], [1, -1, 3, 0], [-1, -1, 3, 4]]
+        expected_considered = [[1, 0, 2, 4, -1], [1, -1, 3, 0, -1], [-1, -1, 2, 3, 4]]
         assert considered == expected_considered
 
     def test_compute_new_states(self):
