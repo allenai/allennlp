@@ -27,7 +27,7 @@ class LazyDataset(Dataset):
     """
     def __init__(self,
                  generator: Callable[[], Iterator[Instance]],
-                 instances_per_epoch: int) -> None:
+                 instances_per_epoch: int = None) -> None:
         """
         A LazyDataset just takes a way of generating instances.
         """
@@ -35,9 +35,12 @@ class LazyDataset(Dataset):
         super().__init__([])
 
         self.generator = generator
+        # Because one epoch might not range over the whole generator, we store
+        # an instantiated iterator to use in __iter__
         self.iterator = self.generator()
         self.vocab: Vocabulary = None
         self.num_instances = instances_per_epoch
+
 
     @overrides
     def truncate(self, max_instances: int):
@@ -49,48 +52,65 @@ class LazyDataset(Dataset):
         In the ``LazyDataset`` case, we basically use this to grab a reference
         to the ``Vocabulary``.
         """
-        self.vocab = vocab
+        if self.vocab is None:
+            # Not indexed
+            self.vocab = vocab
+            for instance in self.generator():
+                instance.index_fields(vocab)
+
+    def _next_instance(self) -> Instance:
+        instance = next(self.iterator)
+        if self.vocab is not None:
+            instance.index_fields(self.vocab)
+        return instance
 
 
     @overrides
     def __iter__(self) -> Iterator[Instance]:
         if self.vocab is None:
             logger.warning("iterating over lazy dataset that has no vocabulary")
-        if self.num_instances is not None:
-            try:
-                for _ in range(self.num_instances):
-                    instance = next(self.iterator)
-                    if self.vocab is not None:
-                        instance.index_fields(self.vocab)
-                    yield instance
 
-            except StopIteration:
-                # Got to the end, so reset
-                self.iterator = self.generator()
+        # Two different code paths for "use the whole generator" and "don't".
+        if self.num_instances is None:
+
+            # Start with a fresh iterator and yield everything from it.
+            self.iterator = self.generator()
+            while True:
+                yield self._next_instance()
+
         else:
-            yield from self.iterator
-            self.iterator = self.generator()
+            # If we're at the end, we need to refresh the generator.
+            # Trying
+            try:
+                yield self._next_instance()
+                start_idx = 1
+            except StopIteration:
+                self.iterator = self.generator()
+                start_idx = 0
 
-    def __next__(self) -> Instance:
-        # First, check if we've reached the end of an epoch,
-        # based on the specified instances-per-epoch
-        if self.num_instances is not None and self.idx >= self.num_instances:
-            self.idx = 0
-            raise StopIteration
+            for _ in range(start_idx, self.num_instances):
+                yield self._next_instance()
 
-        try:
-            # Get the next instance from ``self.iterator`` and return it.
-            self.idx += 1
-            instance = next(self.iterator)
-            if self.vocab is not None:
-                instance.index_fields(self.vocab)
-            return instance
-        except StopIteration:
-            # This error means ``self.iterator`` is finished, so we need to
-            # reset the index to 0, grab a fresh iterator, and stop iteration.
-            self.idx = 0
-            self.iterator = self.generator()
-            raise StopIteration
+    # def __next__(self) -> Instance:
+    #     # First, check if we've reached the end of an epoch,
+    #     # based on the specified instances-per-epoch
+    #     if self.num_instances is not None and self.idx >= self.num_instances:
+    #         self.idx = 0
+    #         raise StopIteration
+
+    #     try:
+    #         # Get the next instance from ``self.iterator`` and return it.
+    #         self.idx += 1
+    #         instance = next(self.iterator)
+    #         if self.vocab is not None:
+    #             instance.index_fields(self.vocab)
+    #         return instance
+    #     except StopIteration:
+    #         # This error means ``self.iterator`` is finished, so we need to
+    #         # reset the index to 0, grab a fresh iterator, and stop iteration.
+    #         self.idx = 0
+    #         self.iterator = self.generator()
+    #         raise StopIteration
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:

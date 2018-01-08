@@ -66,7 +66,7 @@ class Dataset:
         """
         A ``Dataset`` is its own iterator.
         """
-        yield from self._instances
+        return (instance for instance in self._instances)
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """
