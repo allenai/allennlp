@@ -91,7 +91,10 @@ class TestSemanticScholarDatasetReader(AllenNlpTestCase):
 ```
 
 Then we just want to make sure that the resulting dataset looks like we expect.  We'll refer you to
-the [dataset tutorial](data-pipeline) for a deeper dive on the `Dataset`, `Instance`, and `Field`
+the [documentation](https://allenai.github.io/allennlp-docs/) for a deeper dive on the
+[`Dataset`](https://allenai.github.io/allennlp-docs/api/allennlp.data.dataset.html),
+[`Instance`](https://allenai.github.io/allennlp-docs/api/allennlp.data.instance.html), and
+[`Field`](https://allenai.github.io/allennlp-docs/api/allennlp.data.fields.html)
 classes; for now, just remember that we want each paper to have a title, an abstract, and a venue.
 The paper itself is an `Instance` inside of the `Dataset`, and the title, abstract and venue are
 all `Fields` inside the `Instance`.  We can make sure that the dataset got read correctly by giving
