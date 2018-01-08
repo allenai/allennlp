@@ -1,4 +1,5 @@
 # pylint: disable=invalid-name,no-self-use,abstract-method
+import itertools
 from typing import Iterator
 
 from allennlp.common import Params
@@ -18,13 +19,14 @@ class LazySequenceTaggerDatasetReader(DatasetReader):
         self.instances_per_epoch = instances_per_epoch
 
     def read(self, file_path: str):
-        def generator() -> Iterator[Instance]:
-            """
-            Read from the file every time generator is called
-            """
-            yield from self.reader.read(file_path)
+        dataset = self.reader.read(file_path)
+        iterator = itertools.cycle(instance for instance in dataset)
 
-        return LazyDataset(generator, self.instances_per_epoch)
+        def generator() -> Iterator[Instance]:
+            for _ in range(self.instances_per_epoch):
+                yield next(iterator)
+
+        return LazyDataset(generator)
 
     @classmethod
     def from_params(cls, params: Params) -> 'LazySequenceTaggingDatasetReader':

@@ -4,6 +4,7 @@ from typing import Dict, List, Generator, Union
 import numpy
 
 from allennlp.data.dataset import Dataset
+from allennlp.data.in_memory_dataset import InMemoryDataset
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common import Params
@@ -68,7 +69,7 @@ class DataIterator(Registrable):
     def _yield_one_epoch(self, dataset: Dataset, shuffle: bool, cuda_device: int, for_training: bool):
         grouped_instances = self._create_batches(dataset, shuffle)
         for group in grouped_instances:
-            batch = Dataset(group)
+            batch = InMemoryDataset(group)
             padding_lengths = batch.get_padding_lengths()
             logger.debug("Batch padding lengths: %s", str(padding_lengths))
             logger.debug("Batch size: %d", batch.num_instances)

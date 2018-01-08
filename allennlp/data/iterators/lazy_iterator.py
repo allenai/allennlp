@@ -8,6 +8,7 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.dataset import Dataset
+from allennlp.data.in_memory_dataset import InMemoryDataset
 from allennlp.data.instance import Instance
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -34,7 +35,7 @@ class LazyIterator(DataIterator):
 
         indexed_instances = enumerate(instance for instance in dataset)
         for _, group in itertools.groupby(indexed_instances, lambda pair: pair[0] // self._batch_size):
-            batch = Dataset([instance for _, instance in group])
+            batch = InMemoryDataset([instance for _, instance in group])
             padding_lengths = batch.get_padding_lengths()
             logger.debug("Batch padding lengths: %s", str(padding_lengths))
             logger.debug("Batch size: %d", batch.num_instances)
@@ -47,7 +48,11 @@ class LazyIterator(DataIterator):
 
     @overrides
     def get_num_batches(self, dataset: Dataset) -> int:
-        return math.ceil(dataset.num_instances / self._batch_size)
+        if dataset.num_instances is not None:
+            return math.ceil(dataset.num_instances / self._batch_size)
+        else:
+            # TODO(joelgrus): this isn't right, figure out something better
+            return 1
 
     @classmethod
     def from_params(cls, params: Params) -> 'LazyIterator':

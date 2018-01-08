@@ -83,8 +83,10 @@ class TestTrainer(AllenNlpTestCase):
     def test_train_driver_raises_on_model_with_no_loss_key(self):
 
         class FakeModel(torch.nn.Module):
+            vocab = Vocabulary()
             def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
                 return {}
+
         with pytest.raises(ConfigurationError):
             trainer = Trainer(FakeModel(), self.optimizer,
                               self.iterator, self.dataset,

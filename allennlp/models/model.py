@@ -13,6 +13,7 @@ import torch
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary, Dataset
+from allennlp.data.in_memory_dataset import InMemoryDataset
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
 
@@ -125,7 +126,7 @@ class Model(torch.nn.Module, Registrable):
         :func:`forward_on_instance`.
         """
 
-        dataset = Dataset(instances)
+        dataset = InMemoryDataset(instances)
         dataset.index_instances(self.vocab)
         model_input = dataset.as_tensor_dict(cuda_device=cuda_device, for_training=False)
         outputs = self.decode(self(**model_input))

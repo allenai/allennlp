@@ -43,7 +43,7 @@ class TestLazyDataset(AllenNlpTestCase):
         text_2_1 = tensors2['text1']['tokens'].data.cpu().numpy()
         text_2_2 = tensors2['text2']['tokens'].data.cpu().numpy()
         numpy.testing.assert_array_almost_equal(text_2_1, numpy.array([1, 3, 4, 5, 6]))
-        numpy.testing.assert_array_almost_equal(text_2_2, numpy.array([2, 3, 1, 0, 0, 0]))
+        numpy.testing.assert_array_almost_equal(text_2_2, numpy.array([2, 3, 1]))
 
     def get_lazy_dataset(self):
         field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence", "."]],

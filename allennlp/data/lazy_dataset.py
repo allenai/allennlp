@@ -27,99 +27,37 @@ class LazyDataset(Dataset):
     """
     def __init__(self,
                  generator: Callable[[], Iterator[Instance]],
-                 instances_per_epoch: int = None) -> None:
+                 num_instances_per_epoch: int = None) -> None:
         """
         A LazyDataset just takes a way of generating instances.
+        Each call to ``generator()`` should return an Iterator
+        representing one epoch worth of Instances (which may be
+        your entire dataset and may not be).
         """
-        # Call superclass constructor with no instances, we'll override the methods that use them.
-        super().__init__([])
+        super().__init__(num_instances_per_epoch)
 
         self.generator = generator
-        # Because one epoch might not range over the whole generator, we store
-        # an instantiated iterator to use in __iter__
-        self.iterator = self.generator()
         self.vocab: Vocabulary = None
-        self.num_instances = instances_per_epoch
-
-
-    @overrides
-    def truncate(self, max_instances: int):
-        raise RuntimeError("cannot truncate a LazyIterator")
 
     @overrides
     def index_instances(self, vocab: Vocabulary):
         """
         In the ``LazyDataset`` case, we basically use this to grab a reference
-        to the ``Vocabulary``.
+        to the ``Vocabulary``. We'll index instances as we generate them.
         """
-        if self.vocab is None:
-            # Not indexed
-            self.vocab = vocab
-            for instance in self.generator():
-                instance.index_fields(vocab)
+        self.vocab = vocab
 
-    def _next_instance(self) -> Instance:
-        instance = next(self.iterator)
+    def _indexed(self, instance: Instance) -> Instance:
         if self.vocab is not None:
             instance.index_fields(self.vocab)
         return instance
-
 
     @overrides
     def __iter__(self) -> Iterator[Instance]:
         if self.vocab is None:
             logger.warning("iterating over lazy dataset that has no vocabulary")
 
-        # Two different code paths for "use the whole generator" and "don't".
-        if self.num_instances is None:
-
-            # Start with a fresh iterator and yield everything from it.
-            self.iterator = self.generator()
-            while True:
-                yield self._next_instance()
-
-        else:
-            # If we're at the end, we need to refresh the generator.
-            # Trying
-            try:
-                yield self._next_instance()
-                start_idx = 1
-            except StopIteration:
-                self.iterator = self.generator()
-                start_idx = 0
-
-            for _ in range(start_idx, self.num_instances):
-                yield self._next_instance()
-
-    # def __next__(self) -> Instance:
-    #     # First, check if we've reached the end of an epoch,
-    #     # based on the specified instances-per-epoch
-    #     if self.num_instances is not None and self.idx >= self.num_instances:
-    #         self.idx = 0
-    #         raise StopIteration
-
-    #     try:
-    #         # Get the next instance from ``self.iterator`` and return it.
-    #         self.idx += 1
-    #         instance = next(self.iterator)
-    #         if self.vocab is not None:
-    #             instance.index_fields(self.vocab)
-    #         return instance
-    #     except StopIteration:
-    #         # This error means ``self.iterator`` is finished, so we need to
-    #         # reset the index to 0, grab a fresh iterator, and stop iteration.
-    #         self.idx = 0
-    #         self.iterator = self.generator()
-    #         raise StopIteration
-
-    @overrides
-    def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
-        raise NotImplementedError("cannot call get_padding_lengths on a LazyDataset")
-
-    @overrides
-    def as_tensor_dict(self,
-                       padding_lengths: Dict[str, Dict[str, int]] = None,
-                       cuda_device: int = -1,
-                       for_training: bool = True,
-                       verbose: bool = False) -> Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]:
-        raise NotImplementedError("cannot call as_tensor_dict on a LazyDataset")
+        for instance in self.generator():
+            if self.vocab is not None:
+                instance.index_fields(self.vocab)
+            yield instance

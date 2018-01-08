@@ -7,6 +7,7 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.util import add_noise_to_dict_values
 from allennlp.data import Dataset, Instance
+from allennlp.data.in_memory_dataset import InMemoryDataset
 from allennlp.data.iterators.basic_iterator import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
 
@@ -104,7 +105,7 @@ class BucketIterator(BasicIterator):
                                      instance)
             instances_with_lengths.append(instance_with_lengths)
         instances_with_lengths.sort(key=lambda x: x[0])
-        return Dataset([instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths])
+        return InMemoryDataset([instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths])
 
     @classmethod
     def from_params(cls, params: Params) -> 'BucketIterator':

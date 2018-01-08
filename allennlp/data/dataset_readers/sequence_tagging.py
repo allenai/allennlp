@@ -8,6 +8,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
+from allennlp.data.in_memory_dataset import InMemoryDataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.instance import Instance
@@ -76,7 +77,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
-        return Dataset(instances)
+        return InMemoryDataset(instances)
 
     def text_to_instance(self, tokens: List[Token]) -> Instance:  # type: ignore
         """

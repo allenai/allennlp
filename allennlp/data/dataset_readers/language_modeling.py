@@ -8,6 +8,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
+from allennlp.data.in_memory_dataset import InMemoryDataset
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers import WordTokenizer
@@ -93,7 +94,7 @@ class LanguageModelingReader(DatasetReader):
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
-        return Dataset(instances)
+        return InMemoryDataset(instances)
 
     @overrides
     def text_to_instance(self, sentence: str) -> Instance:  # type: ignore

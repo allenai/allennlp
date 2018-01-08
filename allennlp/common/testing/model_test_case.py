@@ -7,6 +7,7 @@ from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data import DataIterator, Dataset, DatasetReader, Vocabulary
+from allennlp.data.in_memory_dataset import InMemoryDataset
 from allennlp.models import Model, load_archive
 
 
@@ -134,7 +135,7 @@ class ModelTestCase(AllenNlpTestCase):
         self.model.eval()
         single_predictions = []
         for i, instance in enumerate(self.dataset):
-            dataset = Dataset([instance])
+            dataset = InMemoryDataset([instance])
             tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
             result = self.model(**tensors)
             single_predictions.append(result)
