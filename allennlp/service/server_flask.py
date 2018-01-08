@@ -16,6 +16,7 @@ from functools import lru_cache
 
 from flask import Flask, request, Response, jsonify, send_file, send_from_directory
 from flask_cors import CORS
+from gevent.wsgi import WSGIServer
 
 import psycopg2
 
@@ -66,7 +67,8 @@ def run(port: int,
         predictor = demo_model.predictor()
         app.predictors[name] = predictor
 
-    app.run(port=port, host="0.0.0.0")
+    http_server = WSGIServer(('0.0.0.0', port), app)
+    http_server.serve_forever()
 
 def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Flask:
     if build_dir is None:
