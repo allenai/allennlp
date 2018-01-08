@@ -443,7 +443,7 @@ def bio_tags_to_spans(tag_sequence: List[str],
 
     Parameters
     ----------
-    tag_sequence : List[int], required.
+    tag_sequence : List[str], required.
         The integer class labels for a sequence.
     classes_to_ignore : List[str], optional (default = None).
         A list of string class labels `excluding` the bio tag
@@ -451,8 +451,8 @@ def bio_tags_to_spans(tag_sequence: List[str],
 
     Returns
     -------
-    spans : Set[Tuple[Tuple[int, int], str]]
-        The typed, extracted spans from the sequence, in the format ((span_start, span_end), label).
+    spans : List[TypedStringSpan]
+        The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
     """
     classes_to_ignore = classes_to_ignore or []

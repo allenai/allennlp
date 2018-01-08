@@ -117,10 +117,10 @@ class SpanBasedF1Measure(Metric):
                                        for label_id in sequence_prediction[:length].tolist()]
             gold_string_labels = [self._label_vocabulary[label_id]
                                   for label_id in sequence_gold_label[:length].tolist()]
-            prediction_spans = bio_tags_to_spans(predicted_string_labels, self._ignore_classes)
+            predicted_spans = bio_tags_to_spans(predicted_string_labels, self._ignore_classes)
             gold_spans = bio_tags_to_spans(gold_string_labels, self._ignore_classes)
 
-            for span in prediction_spans:
+            for span in predicted_spans:
                 if span in gold_spans:
                     self._true_positives[span[0]] += 1
                     gold_spans.remove(span)
