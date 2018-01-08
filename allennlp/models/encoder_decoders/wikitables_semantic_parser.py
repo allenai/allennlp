@@ -798,6 +798,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
         num_embedded_actions = max(len(actions) for actions in embedded_actions)
         num_linked_actions = max(len(actions) for actions in linked_actions)
+        if num_linked_actions == 0:
+            linked_actions = None
         considered_actions = []
         for global_action_list in global_valid_actions:
             # The global_valid_action list is already sorted from above.

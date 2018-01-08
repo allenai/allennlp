@@ -253,6 +253,28 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         expected_considered = [[1, 0, 2, 4, -1], [1, -1, 3, 0, -1], [-1, -1, 2, 3, 4]]
         assert considered == expected_considered
 
+    def test_get_actions_to_consider_returns_none_if_no_linked_actions(self):
+        # pylint: disable=protected-access
+        valid_actions_1 = {'e': [0, 1, 2, 4]}
+        valid_actions_2 = {'e': [0, 1, 3]}
+        valid_actions_3 = {'e': [2, 3, 4]}
+        self.state.grammar_state[0] = GrammarState(['e'], {}, valid_actions_1, {})
+        self.state.grammar_state[1] = GrammarState(['e'], {}, valid_actions_2, {})
+        self.state.grammar_state[2] = GrammarState(['e'], {}, valid_actions_3, {})
+        considered, to_embed, to_link = WikiTablesDecoderStep._get_actions_to_consider(self.state)
+        # These are _global_ action indices.  All of the actions in this case are embedded, so this
+        # is just a mapping from the valid actions above to their global ids.
+        expected_to_embed = [[0, 1, 2, 5], [0, 3, 4], [2, 3, 5]]
+        assert to_embed == expected_to_embed
+        # There are no linked actions (all of them are embedded), so this should be None.
+        assert to_link is None
+        # These are _batch_ action indices, sorted by _global_ action index, with padding in
+        # between the embedded actions and the linked actions.  Because there are no linked
+        # actions, this is basically just the valid_actions for each group element padded with -1s,
+        # and sorted by global action index.
+        expected_considered = [[1, 0, 2, 4], [1, 3, 0, -1], [2, 3, 4, -1]]
+        assert considered == expected_considered
+
     def test_compute_new_states(self):
         # pylint: disable=protected-access
         log_probs = Variable(torch.FloatTensor([[.1, .9, -.1, .2],
