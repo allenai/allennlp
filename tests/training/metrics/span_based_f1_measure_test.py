@@ -24,36 +24,6 @@ class SpanBasedF1Test(AllenNlpTestCase):
         vocab.add_token_to_namespace("U-ARG2", "tags")
         self.vocab = vocab
 
-    def test_span_based_f1_extracts_correct_spans(self):
-        metric = SpanBasedF1Measure(self.vocab, tag_namespace="tags")
-        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "B-ARG1", "B-ARG2"]
-        indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
-        spans = metric._extract_spans(indices)
-        assert spans == {((1, 2), "ARG1"), ((4, 5), "ARG2"), ((6, 6), "ARG1"), ((7, 7), "ARG2")}
-
-        # Check that it works when we use U- tags for single tokens.
-        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "U-ARG1", "U-ARG2"]
-        indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
-        spans = metric._extract_spans(indices)
-        assert spans == {((1, 2), "ARG1"), ((4, 5), "ARG2"), ((6, 6), "ARG1"), ((7, 7), "ARG2")}
-
-        # Check that invalid BIO sequences are also handled as spans.
-        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "I-ARG1", "B-ARG2", "I-ARG2", "B-ARG1", "I-ARG2", "I-ARG2"]
-        indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
-        spans = metric._extract_spans(indices)
-        assert spans == {((1, 2), "ARG1"), ((5, 6), "ARG2"), ((7, 7), "ARG1"),
-                         ((4, 4), "ARG1"), ((8, 9), "ARG2")}
-
-
-    def test_span_based_f1_ignores_specified_tags(self):
-        metric = SpanBasedF1Measure(self.vocab, "tags", ["ARG1", "V"])
-
-        tag_sequence = ["B-V", "I-V", "O", "B-ARG1", "I-ARG1",
-                        "O", "B-ARG2", "I-ARG2", "B-ARG1", "B-ARG2"]
-        indices = [self.vocab.get_token_index(x, "tags") for x in tag_sequence]
-        spans = metric._extract_spans(indices)
-        assert spans == {((6, 7), "ARG2"), ((9, 9), "ARG2")}
-
     def test_span_metrics_are_computed_correcly_with_prediction_map(self):
         # In this example, datapoint1 only has access to ARG1 and V labels,
         # whereas datapoint2 only has access to ARG2 and V labels.
