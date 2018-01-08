@@ -22,7 +22,7 @@ adding a
 [`requirements.txt`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/requirements.txt)
 file.  It contains a single line: `allennlp==0.3`.  Then, after creating a python 3.6 environment,
 you install AllenNLP by running `pip install -r requirements.txt`.  You also need to install
-pytorch and a spacy model, as described in [the installation tutorial](installation):
+pytorch and a spacy model, as described in [the installation tutorial](installation.md):
 
 ```bash
 pip install -r requirements.txt
