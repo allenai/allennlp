@@ -23,9 +23,6 @@ from allennlp.nn import util
 from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
 from allennlp.training.metrics import Average
 
-# TODO(mattg): figure out how to pass this configuration around in a sane way.
-USE_TERMINAL_EMBEDDING = True
-
 
 @Model.register("wikitables_parser")
 class WikiTablesSemanticParser(Model):
@@ -62,10 +59,18 @@ class WikiTablesSemanticParser(Model):
     max_decoding_steps : ``int``
         When we're decoding with a beam search, what's the maximum number of steps we should take?
         This only applies at evaluation time, not during training.
-    attention_function: ``SimilarityFunction``
+    attention_function : ``SimilarityFunction``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  This is the similarity function we use for that
         attention.
+    embed_terminals : ``bool``, optional (default=False)
+        When selecting grammar actions in a particular state, we compare an action embedding with
+        our current decoder state.  Computing the action embedding might be hard for
+        instance-specific entity productions.  Additionally, we have a linking from question words
+        to table entities, and an embedding comparison makes no use of this linking score or the
+        current attention on question words.  If ``embed_terminals`` is ``False``, instead of
+        constructing an embedding for terminal (that is, table-specific) entity productions, we
+        will compute scores for these actions using the linking score and current attention.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -76,7 +81,8 @@ class WikiTablesSemanticParser(Model):
                  decoder_trainer: DecoderTrainer,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
-                 attention_function: SimilarityFunction) -> None:
+                 attention_function: SimilarityFunction,
+                 embed_terminals: bool = False) -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
@@ -86,6 +92,7 @@ class WikiTablesSemanticParser(Model):
         self._nonterminal_embedder = nonterminal_embedder
         self._terminal_embedder = terminal_embedder
         self._action_sequence_accuracy = Average()
+        self._embed_terminals = embed_terminals
 
         check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
                                "nonterminal embedding dim", "terminal embedding dim")
@@ -142,6 +149,7 @@ class WikiTablesSemanticParser(Model):
         # Actually a Dict[str, torch.LongTensor], but there is probably a single entry, with a
         # tensor of shape (batch_size, num_entities, num_entity_tokens).
         table_text = table['text']
+        embedded_table_text = self._question_embedder(table_text)
         # TODO(mattg): embed the table, similar to how the question is embedded (probably just
         # using the question embedder), giving a tensor of shape (batch_size, num_entities,
         # num_entity_tokens, embedding_dim).  Then encode that into shape (batch_size,
@@ -156,7 +164,9 @@ class WikiTablesSemanticParser(Model):
         # represents how well each question token matches table entities.  I'm stubbing this out
         # for now, so that I have a variable to pass to the decoder, because we need this there.
         # (batch_size, num_entities, num_question_tokens)
-        linking_scores: torch.FloatTensor = None
+        num_entities = embedded_table_text.size(1)
+        num_question_tokens = embedded_input.size(1)
+        linking_scores: torch.FloatTensor = torch.rand(batch_size, num_entities, num_question_tokens)
 
         # (batch_size, question_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, question_mask)
@@ -166,11 +176,17 @@ class WikiTablesSemanticParser(Model):
         memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
 
         initial_score = Variable(embedded_input.data.new(batch_size).fill_(0))
-        attended_question = self._decoder_step.attend_on_question(final_encoder_output,
-                                                                  encoder_outputs,
-                                                                  question_mask)
+        attended_question, _ = self._decoder_step.attend_on_question(final_encoder_output,
+                                                                     encoder_outputs,
+                                                                     question_mask)
 
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
+
+        num_global_actions = action_embeddings.size(0)
+        _, num_entities, num_question_tokens = linking_scores.size()
+        flattened_linking_scores, actions_to_entities = self._map_entity_productions(linking_scores,
+                                                                                     world,
+                                                                                     actions)
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
@@ -205,7 +221,9 @@ class WikiTablesSemanticParser(Model):
                                                encoder_output_mask=question_mask_list,
                                                action_embeddings=action_embeddings,
                                                action_indices=action_indices,
-                                               possible_actions=actions)
+                                               possible_actions=actions,
+                                               flattened_linking_scores=flattened_linking_scores,
+                                               actions_to_entities=actions_to_entities)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
@@ -314,7 +332,7 @@ class WikiTablesSemanticParser(Model):
         # Shape: (num_nonterminals, element_embedding_dim)
         embedded_nonterminals = self._nonterminal_embedder(nonterminal_tensors).squeeze(0)
 
-        if USE_TERMINAL_EMBEDDING:
+        if self._embed_terminals:
             # Shape: (num_terminals, element_embedding_dim)
             embedded_terminals = self._terminal_embedder(terminal_tensors).squeeze(0)
             # Shape: (num_nonterminals + num_terminals, element_embedding_dim)
@@ -340,7 +358,7 @@ class WikiTablesSemanticParser(Model):
                     unique_terminal_actions.add(action_ids)
         unique_action_list = list(unique_nonterminal_actions) + list(unique_terminal_actions)
         action_left_sides, action_right_sides = zip(*unique_action_list)
-        if not USE_TERMINAL_EMBEDDING:
+        if not self._embed_terminals:
             action_left_sides = action_left_sides[:len(unique_nonterminal_actions)]
             action_right_sides = action_right_sides[:len(unique_nonterminal_actions)]
         # We need a tensor to copy so we can create stuff on the right device; just grabbing one
@@ -419,6 +437,64 @@ class WikiTablesSemanticParser(Model):
                     terminals[production_rule['right'][0]] = production_rule['right'][2]
         return nonterminals, terminals
 
+    @staticmethod
+    def _map_entity_productions(linking_scores: torch.Tensor,
+                                worlds: List[WikiTablesWorld],
+                                actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
+                                                                                   Dict[Tuple[int, int], int]]:
+        """
+        Constructs a map from ``(batch_index, action_index)`` to ``(batch_index * entity_index)``.
+        That is, some actions correspond to terminal productions of entities from our table.  We
+        need to find those actions and map them to their corresponding entity indices, where the
+        entity index is its position in the list of entities returned by the ``world``.  This list
+        is what defines the second dimension of the ``linking_scores`` tensor, so we can use this
+        index to look up linking scores for each action in that tensor.
+
+        For easier processing later, the mapping that we return is `flattened` - we really want to
+        map ``(batch_index, action_index)`` to ``(batch_index, entity_index)``, but we are going to
+        have to use the result of this mapping to do ``index_selects`` on the ``linking_scores``
+        tensor.  You can't do ``index_select`` with tuples, so we flatten ``linking_scores`` to
+        have shape ``(batch_size * num_entities, num_question_tokens)``, and return shifted indices
+        into this flattened tensor.
+
+        Parameters
+        ----------
+        linking_scores : ``torch.Tensor``
+            A tensor representing linking scores between each table entity and each question token.
+            Has shape ``(batch_size, num_entities, num_question_tokens)``.
+        worlds : ``List[WikiTablesWorld]``
+            The ``World`` for each batch instance.  The ``World`` contains a reference to the
+            ``TableKnowledgeGraph`` that defines the set of entities in the linking.
+        actions : ``List[List[ProductionRuleArray]]``
+            The list of possible actions for each batch instance.  Our action indices are defined
+            in terms of this list, so we'll find entity productions in this list and map them to
+            entity indices from the entity list we get from the ``World``.
+
+        Returns
+        -------
+        flattened_linking_scores : ``torch.Tensor``
+            A flattened version of ``linking_scores``, with shape ``(batch_size * num_entities,
+            num_question_tokens)``.
+        actions_to_entities : ``Dict[Tuple[int, int], int]``
+            A mapping from ``(batch_index, action_index)`` to ``(batch_size * num_entities)``,
+            representing which action indices correspond to which entity indices in the returned
+            ``flattened_linking_scores`` tensor.
+        """
+        batch_size, num_entities, num_question_tokens = linking_scores.size()
+        entity_map: Dict[Tuple[int, str], Tuple[int]] = {}
+        for batch_index, world in enumerate(worlds):
+            for entity_index, entity in enumerate(world.table_graph.entities):
+                entity_map[(batch_index, entity)] = batch_index * num_entities + entity_index
+        actions_to_entities: Dict[Tuple[int, int], int] = {}
+        for batch_index, action_list in enumerate(actions):
+            for action_index, action in enumerate(action_list):
+                production = action['right'][0]
+                entity_index = entity_map.get((batch_index, production), None)
+                if entity_index is not None:
+                    actions_to_entities[(batch_index, action_index)] = entity_index
+        flattened_linking_scores = linking_scores.view(batch_size * num_entities, num_question_tokens)
+        return flattened_linking_scores, actions_to_entities
+
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -453,6 +529,7 @@ class WikiTablesSemanticParser(Model):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
+        embed_terminals = params.pop('embed_terminals', False)
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    question_embedder=question_embedder,
@@ -462,7 +539,8 @@ class WikiTablesSemanticParser(Model):
                    decoder_trainer=decoder_trainer,
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
-                   attention_function=attention_function)
+                   attention_function=attention_function,
+                   embed_terminals=embed_terminals)
 
 
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that
@@ -509,6 +587,22 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         A list of variables, each of shape ``(question_length,)``, containing a mask over question
         tokens for each batch instance.  This is a list over batch elements, for the same reasons
         as above.
+    action_embeddings : ``torch.Tensor``
+        The global action embeddings tensor.  Has shape ``(num_global_actions,
+        action_embedding_dim)``.
+    action_indices : ``Dict[Tuple[int, int], int]``
+        A mapping from ``(batch_index, action_index)`` to ``global_action_index``.
+    possible_actions : ``List[List[ProductionRuleArray]]``
+        The list of all possible actions that was passed to ``model.forward()``.  We need this so
+        we can recover production strings, which we need to update grammar states.
+    flattened_linking_scores : ``torch.Tensor``
+        Linking scores between table entities and question tokens.  The unflattened version has
+        shape ``(batch_size, num_entities, num_question_tokens)``, though this version is flattened
+        to have shape ``(batch_size * num_entities, num_question_tokens)``, for easier lookups with
+        ``index_select``.
+    actions_to_entities : ``Dict[Tuple[int, int], int]``
+        A mapping from ``(batch_index, action_index)`` to ``batch_size * num_entities``, for
+        actions that are terminal entity productions.
     """
     def __init__(self,
                  batch_indices: List[int],
@@ -523,7 +617,9 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  encoder_output_mask: torch.Tensor,
                  action_embeddings: torch.Tensor,
                  action_indices: Dict[Tuple[int, int], int],
-                 possible_actions: List[List[ProductionRuleArray]]) -> None:
+                 possible_actions: List[List[ProductionRuleArray]],
+                 flattened_linking_scores: torch.Tensor,
+                 actions_to_entities: Dict[Tuple[int, int], int]) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
@@ -535,6 +631,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.action_embeddings = action_embeddings
         self.action_indices = action_indices
         self.possible_actions = possible_actions
+        self.flattened_linking_scores = flattened_linking_scores
+        self.actions_to_entities = actions_to_entities
 
     def get_valid_actions(self) -> List[List[int]]:
         """
@@ -592,7 +690,9 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       encoder_output_mask=states[0].encoder_output_mask,
                                       action_embeddings=states[0].action_embeddings,
                                       action_indices=states[0].action_indices,
-                                      possible_actions=states[0].possible_actions)
+                                      possible_actions=states[0].possible_actions,
+                                      flattened_linking_scores=states[0].flattened_linking_scores,
+                                      actions_to_entities=states[0].actions_to_entities)
 
     def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'WikiTablesDecoderState':
         """
@@ -623,7 +723,9 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       encoder_output_mask=self.encoder_output_mask,
                                       action_embeddings=self.action_embeddings,
                                       action_indices=self.action_indices,
-                                      possible_actions=self.possible_actions)
+                                      possible_actions=self.possible_actions,
+                                      flattened_linking_scores=self.flattened_linking_scores,
+                                      actions_to_entities=self.actions_to_entities)
 
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
@@ -678,9 +780,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # (group_size, encoder_output_dim)
         encoder_outputs = torch.stack([state.encoder_outputs[i] for i in state.batch_indices])
         encoder_output_mask = torch.stack([state.encoder_output_mask[i] for i in state.batch_indices])
-        attended_question = self.attend_on_question(hidden_state,
-                                                    encoder_outputs,
-                                                    encoder_output_mask)
+        attended_question, attention_weights = self.attend_on_question(hidden_state,
+                                                                       encoder_outputs,
+                                                                       encoder_output_mask)
 
         # To predict an action, we'll use a concatenation of the hidden state and attention over
         # the question.  We'll just predict an _embedding_, which we will compare to embedded
@@ -704,7 +806,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         if actions_to_link:
             # entity_action_logits: (group_size, num_entity_actions)
             # entity_action_mask: (group_size, num_entity_actions)
-            entity_action_logits, entity_action_mask = self._get_entity_action_logits(state, actions_to_link)
+            entity_action_logits, entity_action_mask = self._get_entity_action_logits(state,
+                                                                                      actions_to_link,
+                                                                                      attention_weights)
             action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=-1)
             action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=-1).float()
         else:
@@ -725,11 +829,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     def attend_on_question(self,
                            query: torch.Tensor,
                            encoder_outputs: torch.Tensor,
-                           encoder_output_mask: torch.Tensor) -> torch.Tensor:
+                           encoder_output_mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Given a query (which is typically the decoder hidden state), compute an attention over the
         output of the question encoder, and return a weighted sum of the question representations
-        given this attention.
+        given this attention.  We also return the attention weights themselves.
 
         This is a simple computation, but we have it as a separate method so that the ``forward``
         method on the main parser module can call it on the initial hidden state, to simplify the
@@ -740,7 +844,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                            encoder_outputs,
                                                            encoder_output_mask)
         # (group_size, encoder_output_dim)
-        return util.weighted_sum(encoder_outputs, question_attention_weights)
+        attended_question = util.weighted_sum(encoder_outputs, question_attention_weights)
+        return attended_question, question_attention_weights
 
     @staticmethod
     def _get_actions_to_consider(state: WikiTablesDecoderState) -> Tuple[List[List[int]],
@@ -821,20 +926,20 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         return considered_actions, embedded_actions, linked_actions
 
     @staticmethod
-    def _get_action_embeddings(state: WikiTablesDecoderState) -> Tuple[torch.Tensor,
-                                                                       torch.Tensor,
-                                                                       List[List[int]]]:
+    def _get_action_embeddings(state: WikiTablesDecoderState,
+                               actions_to_embed: List[List[int]]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Returns an embedded representation for all actions that should be considered in the given
-        state.  Additionally, because sometimes we do not use an embedding to score certain actions
-        (deferring instead to a linking score), we also return the set of actions that were valid
-        but not embedded, so that the model can decide how to score them.
+        Returns an embedded representation for all actions in ``actions_to_embed``, using the state
+        in ``WikiTablesDecoderState``.
 
         Parameters
         ----------
         state : ``WikiTablesDecoderState``
-            The current state.  We'll use this to get the list of valid actions for each group
-            element, and the action embeddings, and other things that we need.
+            The current state.  We'll use this to get the global action embeddings.
+        actions_to_embed : ``List[List[int]]``
+            A list of _global_ action indices for each group element.  Should have shape
+            (group_size, num_actions), unpadded.  This is expected to be output from
+            :func:`_get_actions_to_consider`.
 
         Returns
         -------
@@ -845,24 +950,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         action_mask : ``torch.LongTensor``
             A mask of shape ``(group_size, num_actions)`` indicating which ``(group_index,
             action_index)`` pairs were merely added as padding.
-        considered_actions : ``List[List[int]]``
-            A list representing the action indices that were considered for each group element (in
-            terms of the list of possible actions for each batch instance).  Each inner list is
-            `sorted` by its index in the `global action list`.  This is important, because the
-            global action list has nonterminals `before` terminals, and in some model
-            configurations, we use an entity linking instead of an embedding to score terminal
-            productions.  We need this to be sorted so that we're guaranteed that we can
-            concatenate the logits from the nonterminals with the logits from terminals, and have
-            the ordering still work out right.
         """
-        # First we're going to map all (batch_index, action_index) pairs in the valid actions to
-        # global action indices.  Then we'll sort these for each group element, and separate them
-        # into actions that we can embed and actions that we can't.
-
-        num_actions = [len(action_list) for action_list in embedded_actions]
+        num_actions = [len(action_list) for action_list in actions_to_embed]
         max_num_actions = max(num_actions)
         padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
-                          for action_list in embedded_actions]
+                          for action_list in actions_to_embed]
         # Shape: (group_size, num_actions)
         action_tensor = Variable(state.encoder_output_mask[0].data.new(padded_actions).long())
         # `state.action_embeddings` is shape (total_num_actions, action_embedding_dim).
@@ -870,13 +962,90 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # shape (group_size, num_actions, action_embedding_dim).  Unfortunately, the index_select
         # functions in nn.util don't do this operation.  So we'll do some reshapes and do the
         # index_select ourselves.
-        group_size = len(valid_actions)
+        group_size = len(state.batch_indices)
+        action_embedding_dim = state.action_embeddings.size(-1)
         flattened_actions = action_tensor.view(-1)
         flattened_action_embeddings = state.action_embeddings.index_select(0, flattened_actions)
         action_embeddings = flattened_action_embeddings.view(group_size, max_num_actions, action_embedding_dim)
         sequence_lengths = Variable(action_embeddings.data.new(num_actions))
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
-        return action_embeddings, action_mask, valid_actions
+        return action_embeddings, action_mask
+
+    @staticmethod
+    def _get_entity_action_logits(state: WikiTablesDecoderState,
+                                  actions_to_link: List[List[int]],
+                                  attention_weights: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Returns scores for each action in ``actions_to_link`` that are derived from the linking
+        scores between the question and the table entities, and the current attention on the
+        question.  The intuition is that if we're paying attention to a particular word in the
+        question, we should tend to select entity productions that we think that word refers to.
+
+        The ``actions_to_link`` are in terms of the `batch` action list passed to
+        ``model.forward()``.  We need to convert these integers into indices into the linking score
+        tensor, which has shape (batch_size, num_entities, num_question_tokens), look up the
+        linking score for each entity, then aggregate the scores using the current question
+        attention.
+
+        Parameters
+        ----------
+        state : ``WikiTablesDecoderState``
+            The current state.  We'll use this to get the linking scores.
+        actions_to_link : ``List[List[int]]``
+            A list of _batch_ action indices for each group element.  Should have shape
+            (group_size, num_actions), unpadded.  This is expected to be output from
+            :func:`_get_actions_to_consider`.
+        attention_weights : ``torch.Tensor``
+            The current attention weights over the question tokens.  Should have shape
+            ``(group_size, num_question_tokens)``.
+
+        Returns
+        -------
+        action_embeddings : ``torch.FloatTensor``
+            An embedded representation of all of the given actions.  Shape is ``(group_size,
+            num_actions, action_embedding_dim)``, where ``num_actions`` is the maximum number of
+            considered actions for any group element.
+        action_mask : ``torch.LongTensor``
+            A mask of shape ``(group_size, num_actions)`` indicating which ``(group_index,
+            action_index)`` pairs were merely added as padding.
+        """
+        # First we map the actions to entity indices, using state.actions_to_entities.
+        action_entities = []
+        for batch_index, action_list in zip(state.batch_indices, actions_to_link):
+            action_entities.append([])
+            for action_index in action_list:
+                print(state.possible_actions[batch_index][action_index]['right'][0])
+                action_entities[-1].append(state.actions_to_entities[(batch_index, action_index)])
+
+        # Then we create a padded tensor suitable for use with
+        # `state.flattened_linking_scores.index_select()`.
+        num_actions = [len(action_list) for action_list in action_entities]
+        max_num_actions = max(num_actions)
+        padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
+                          for action_list in action_entities]
+        # Shape: (group_size, num_actions)
+        action_tensor = Variable(state.encoder_output_mask[0].data.new(padded_actions).long())
+
+        # `state.flattened_linking_scores` is shape (batch_size * num_entities, num_question_tokens).
+        # We want to select from this using `action_tensor` to get a tensor of shape (group_size,
+        # num_actions, num_question_tokens).  Unfortunately, the index_select functions in nn.util
+        # don't do this operation.  So we'll do some reshapes and do the index_select ourselves.
+        group_size = len(state.batch_indices)
+        num_question_tokens = state.flattened_linking_scores.size(-1)
+        flattened_actions = action_tensor.view(-1)
+        # (group_size * num_actions, num_question_tokens)
+        flattened_action_linking = state.flattened_linking_scores.index_select(0, flattened_actions)
+        # (group_size, num_actions, num_question_tokens)
+        action_linking = flattened_action_linking.view(group_size, max_num_actions, num_question_tokens)
+
+        # Now we get action logits by weighting these entity x token scores by the attention over
+        # the question tokens.  We can do this efficiently with torch.bmm.
+        action_logits = action_linking.bmm(attention_weights.unsqueeze(-1)).squeeze(-1)
+
+        # Finally, we make a mask for our action logit tensor.
+        sequence_lengths = Variable(action_linking.data.new(num_actions))
+        action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
+        return action_logits, action_mask
 
     @staticmethod
     def _compute_new_states(state: WikiTablesDecoderState,
@@ -950,6 +1119,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    encoder_output_mask=state.encoder_output_mask,
                                                    action_embeddings=state.action_embeddings,
                                                    action_indices=state.action_indices,
-                                                   possible_actions=state.possible_actions)
+                                                   possible_actions=state.possible_actions,
+                                                   flattened_linking_scores=state.flattened_linking_scores,
+                                                   actions_to_entities=state.actions_to_entities)
                 new_states.append(new_state)
         return new_states
