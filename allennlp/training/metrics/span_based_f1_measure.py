@@ -120,7 +120,6 @@ class SpanBasedF1Measure(Metric):
             predicted_spans = bio_tags_to_spans(predicted_string_labels, self._ignore_classes)
             gold_spans = bio_tags_to_spans(gold_string_labels, self._ignore_classes)
 
-            # This next bit is pretty random.
             predicted_spans = self._handle_continued_spans(predicted_spans)
             gold_spans = self._handle_continued_spans(gold_spans)
 
