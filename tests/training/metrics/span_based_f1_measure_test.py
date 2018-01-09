@@ -178,21 +178,13 @@ class SpanBasedF1Test(AllenNlpTestCase):
         sentence = ["Mark", "and", "Matt", "were", "running", "fast", "."]
 
         gold_indices = [self.vocab.get_token_index(x, "tags") for x in bio_tags]
-
         gold_tensor = torch.Tensor([gold_indices])
         prediction_tensor = torch.rand([1, 6, self.vocab.get_vocab_size("tags")])
-
-        # Test that the span measure ignores completely masked sequences by
-        # passing a mask with a fully masked row.
         mask = torch.LongTensor([[1, 1, 1, 1, 1, 1, 1, 1, 1]])
 
         # Make prediction so that it is exactly correct.
-        prediction_tensor[:, 0, 1] = 1
-        prediction_tensor[:, 1, 0] = 1
-        prediction_tensor[:, 2, 10] = 1
-        prediction_tensor[:, 3, 5] = 1
-        prediction_tensor[:, 4, 11] = 1
-        prediction_tensor[:, 5, 0] = 1
+        for i, tag_index in enumerate(gold_indices):
+            prediction_tensor[0, i, tag_index] = 1
 
         metric = SpanBasedF1Measure(self.vocab, "tags")
         metric(prediction_tensor, gold_tensor, mask)
@@ -221,16 +213,18 @@ class SpanBasedF1Test(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 1.0)
         numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 1.0)
 
-        # This doesn't directly feature in the test, but it demonstrates that continued arguments
-        # are represented as single spans in the output of the official perl script. If you run
-        # pytest with the -v flag, you will be able to see the perl script output.
+        # Check that the number of true positive ARG1 labels is the same as the perl script's output:
         gold_file_path = os.path.join(self.TEST_DIR, "gold_conll_eval.txt")
         prediction_file_path = os.path.join(self.TEST_DIR, "prediction_conll_eval.txt")
         with open(gold_file_path, "a+") as gold_file, open(prediction_file_path, "a+") as prediction_file:
             # Use the same bio tags as prediction vs gold to make it obvious by looking
             # at the perl script output if something is wrong.
             write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
-
+        # Run the official perl script and collect stdout.
         perl_script_command = ["perl", "./scripts/srl-eval.pl", prediction_file_path, gold_file_path]
-        exit_code = subprocess.check_call(perl_script_command)
-        assert exit_code == 0
+        stdout = subprocess.check_output(perl_script_command, universal_newlines=True)
+        stdout_lines = stdout.split("\n")
+        # Parse the stdout of the perl script to find the ARG1 row (this happens to be line 8).
+        num_correct_arg1_instances_from_perl_evaluation = int([token for token in
+                                                               stdout_lines[8].split(" ") if token][1])
+        assert num_correct_arg1_instances_from_perl_evaluation == metric._true_positives["ARG1"]
