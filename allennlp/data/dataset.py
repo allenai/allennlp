@@ -217,8 +217,9 @@ class LazyDataset(Dataset):
     @overrides
     def __iter__(self) -> Iterator[Instance]:
         if self.vocab is None:
-            raise ConfigurationError("iterating over an unindexed dataset")
+            logger.warning("iterating over an unindexed dataset")
 
         for instance in self.generator():
-            instance.index_fields(self.vocab)
+            if self.vocab is not None:
+                instance.index_fields(self.vocab)
             yield instance
