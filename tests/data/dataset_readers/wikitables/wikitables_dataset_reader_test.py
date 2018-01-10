@@ -12,9 +12,14 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
         dataset = reader.read("tests/fixtures/data/wikitables/sample_data.examples")
         assert len(dataset.instances) == 2
         instance = dataset.instances[0]
+
+        assert instance.fields.keys() == {'question', 'table', 'world', 'actions',
+                                          'target_action_sequences'}
+
         question_tokens = ["what", "was", "the", "last", "year", "where", "this", "team", "was",
                            "a", "part", "of", "the", "usl", "a", "-", "league", "?"]
         assert [t.text for t in instance.fields["question"].tokens] == question_tokens
+
         entities = instance.fields['table'].knowledge_graph.entities
         assert len(entities) == 47
         assert sorted(entities) == [
@@ -74,12 +79,47 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
         # sure we get a WikiTablesWorld object in here.
         assert isinstance(instance.fields['world'].as_tensor({}), WikiTablesWorld)
 
-        actions = [action_field.rule for action_field in instance.fields['actions'].field_list]
-        assert len(actions) == 174
+        action_fields = instance.fields['actions'].field_list
+        action_fields.sort(key=lambda x: x.rule)
+        assert len(action_fields) == 174
+
+        # Here we're making sure that we're deciding which things are "nonterminals" correctly
+        # (where "nonterminal" in this setting means "part of the global grammar", including things
+        # that are actually terminal productions...).  So there are two blocks that we're looking
+        # for: the "<e,r> -> fb:row.row.[column]" block, and the "e -> fb:cell.[cell]" block.  Each
+        # of these has a null entity thrown in that we treat as a "nonterminal", because it's part
+        # of the global grammar.
+
+        # Before the "<e,r> -> fb:row.row.[column]" block.
+        for i in range(55):
+            assert action_fields[i]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
+        # Start of the "<e,r> -> fb:row.row.[column]" block.
+        for i in range(55, 58):
+            assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
+        # This is the null column, right in the middle of the other columns.
+        assert action_fields[58]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
+        # End of the "<e,r> -> fb:row.row.[column]" block.
+        for i in range(59, 63):
+            assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
+        # In between the column and the cell blocks.
+        for i in range(63, 117):
+            assert action_fields[i]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
+        # Start of the "e -> fb:cell.[column]" block.
+        for i in range(117, 171):
+            assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
+        # This is the null cell, right in the middle of the other cells.
+        assert action_fields[171]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
+        # End of the "e -> fb:cell.[column]" block.
+        for i in range(172, 188):
+            assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
+        # After the "e -> fb:cell.[column]" block.
+        for i in range(188, 204):
+            assert action_fields[i]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
 
         # This is going to be long, but I think it's worth it, to be sure that all of the actions
         # we're expecting are present, and there are no extras.
-        assert sorted(actions) == [
+        actions = [action_field.rule for action_field in action_fields]
+        assert actions == [
                 # Placeholder types
                 "<#1,#1> -> !=",
                 "<#1,#1> -> fb:type.object.type",

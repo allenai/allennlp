@@ -166,7 +166,7 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_question_tokens)
         num_entities = embedded_table_text.size(1)
         num_question_tokens = embedded_input.size(1)
-        linking_scores: torch.FloatTensor = torch.rand(batch_size, num_entities, num_question_tokens)
+        linking_scores: torch.FloatTensor = Variable(torch.rand(batch_size, num_entities, num_question_tokens))
 
         # (batch_size, question_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, question_mask)
@@ -1014,7 +1014,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         for batch_index, action_list in zip(state.batch_indices, actions_to_link):
             action_entities.append([])
             for action_index in action_list:
-                print(state.possible_actions[batch_index][action_index]['right'][0])
                 action_entities[-1].append(state.actions_to_entities[(batch_index, action_index)])
 
         # Then we create a padded tensor suitable for use with

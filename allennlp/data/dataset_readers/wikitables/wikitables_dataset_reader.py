@@ -203,7 +203,7 @@ class WikiTablesDatasetReader(DatasetReader):
             field = ProductionRuleField(production_rule,
                                         terminal_indexers=self._terminal_indexers,
                                         nonterminal_indexers=self._nonterminal_indexers,
-                                        is_nonterminal=world.is_table_entity,
+                                        is_nonterminal=lambda x: not world.is_table_entity(x),
                                         context=tokenized_question)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
