@@ -4,7 +4,7 @@ out-of-vocabulary token.
 """
 
 from collections import defaultdict
-from typing import Any, Callable, Dict, Union, Sequence, Set, Optional
+from typing import Any, Callable, Dict, Union, Sequence, Set, Optional, Iterator
 import codecs
 import logging
 import os
@@ -16,6 +16,8 @@ from allennlp.common.util import namespace_match
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
+from allennlp.data import instance as adi  # pylint: disable=unused-import
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
@@ -309,13 +311,13 @@ class Vocabulary:
             assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
 
     @classmethod
-    def from_dataset(cls,
-                     dataset,
-                     min_count: int = 1,
-                     max_vocab_size: Union[int, Dict[str, int]] = None,
-                     non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
-                     pretrained_files: Optional[Dict[str, str]] = None,
-                     only_include_pretrained_words: bool = False) -> 'Vocabulary':
+    def from_instances(cls,
+                       instances: Iterator['adi.Instance'],
+                       min_count: int = 1,
+                       max_vocab_size: Union[int, Dict[str, int]] = None,
+                       non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
+                       pretrained_files: Optional[Dict[str, str]] = None,
+                       only_include_pretrained_words: bool = False) -> 'Vocabulary':
         """
         Constructs a vocabulary given a :class:`.Dataset` and some parameters.  We count all of the
         vocabulary items in the dataset, then pass those counts, and the other parameters, to
@@ -323,7 +325,7 @@ class Vocabulary:
         """
         logger.info("Fitting token dictionary from dataset.")
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        for instance in tqdm.tqdm(dataset.instances):
+        for instance in tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
 
         return Vocabulary(counter=namespace_token_counts,
@@ -334,10 +336,10 @@ class Vocabulary:
                           only_include_pretrained_words=only_include_pretrained_words)
 
     @classmethod
-    def from_params(cls, params: Params, dataset=None):
+    def from_params(cls, params: Params, instances: Iterator['adi.Instance'] = None):
         """
         There are two possible ways to build a vocabulary; from a
-        pre-existing dataset, using :func:`Vocabulary.from_dataset`, or
+        pre-existing dataset, using :func:`Vocabulary.from_instances`, or
         from a pre-saved vocabulary, using :func:`Vocabulary.from_files`.
         This method wraps both of these options, allowing their specification
         from a ``Params`` object, generated from a JSON configuration file.
@@ -354,10 +356,10 @@ class Vocabulary:
         A ``Vocabulary``.
         """
         vocabulary_directory = params.pop("directory_path", None)
-        if not vocabulary_directory and not dataset:
+        if not vocabulary_directory and not instances:
             raise ConfigurationError("You must provide either a Params object containing a "
                                      "vocab_directory key or a Dataset to build a vocabulary from.")
-        if vocabulary_directory and dataset:
+        if vocabulary_directory and instances:
             logger.info("Loading Vocab from files instead of dataset.")
 
         if vocabulary_directory:
@@ -370,12 +372,12 @@ class Vocabulary:
         pretrained_files = params.pop("pretrained_files", {})
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         params.assert_empty("Vocabulary - from dataset")
-        return Vocabulary.from_dataset(dataset=dataset,
-                                       min_count=min_count,
-                                       max_vocab_size=max_vocab_size,
-                                       non_padded_namespaces=non_padded_namespaces,
-                                       pretrained_files=pretrained_files,
-                                       only_include_pretrained_words=only_include_pretrained_words)
+        return Vocabulary.from_instances(instances=instances,
+                                         min_count=min_count,
+                                         max_vocab_size=max_vocab_size,
+                                         non_padded_namespaces=non_padded_namespaces,
+                                         pretrained_files=pretrained_files,
+                                         only_include_pretrained_words=only_include_pretrained_words)
 
     def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:
         """

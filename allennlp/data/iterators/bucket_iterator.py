@@ -1,12 +1,13 @@
 import logging
 import random
-from typing import List, Tuple, Dict, cast
+from typing import List, Tuple, Dict, cast, Iterator
 
 from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.util import add_noise_to_dict_values
-from allennlp.data import Dataset, Instance
+from allennlp.data import Instance
+from allennlp.data.dataset import InMemoryDataset
 from allennlp.data.iterators.basic_iterator import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
 
@@ -62,12 +63,12 @@ class BucketIterator(BasicIterator):
         super(BucketIterator, self).__init__(batch_size)
 
     @overrides
-    def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
+    def _create_batches(self, dataset: InMemoryDataset, shuffle: bool) -> Iterator[List[Instance]]:
         if self._sorting_keys:
             dataset = self._sort_dataset_by_padding(dataset,
                                                     self._sorting_keys,
                                                     self._padding_noise)
-        grouped_instances = super(BucketIterator, self)._create_batches(dataset, shuffle=False)
+        grouped_instances = list(super(BucketIterator, self)._create_batches(dataset, shuffle=False))
         if self._biggest_batch_first:
             # We'll actually pop the last _two_ batches, because the last one might not be full.
             last_batch = grouped_instances.pop()
@@ -80,14 +81,15 @@ class BucketIterator(BasicIterator):
         if self._biggest_batch_first:
             grouped_instances.insert(0, penultimate_batch)
             grouped_instances.insert(0, last_batch)
-        return grouped_instances
+
+        return iter(grouped_instances)
 
     @staticmethod
-    def _sort_dataset_by_padding(dataset: Dataset,
+    def _sort_dataset_by_padding(dataset: InMemoryDataset,
                                  sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
-                                 padding_noise: float = 0.0) -> Dataset:
+                                 padding_noise: float = 0.0) -> InMemoryDataset:
         """
-        Sorts the ``Instances`` in this ``Dataset`` by their padding lengths, using the keys in
+        Sorts the ``Instances`` in this ``Batch`` by their padding lengths, using the keys in
         ``sorting_keys`` (in the order in which they are provided).  ``sorting_keys`` is a list of
         ``(field_name, padding_key)`` tuples.
         """
@@ -104,7 +106,7 @@ class BucketIterator(BasicIterator):
                                      instance)
             instances_with_lengths.append(instance_with_lengths)
         instances_with_lengths.sort(key=lambda x: x[0])
-        return Dataset([instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths])
+        return InMemoryDataset([instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths])
 
     @classmethod
     def from_params(cls, params: Params) -> 'BucketIterator':

@@ -14,7 +14,7 @@ class TestAdaptiveIterator(IteratorTest):
                                     padding_memory_scaling=lambda x: x['text']['num_tokens'],
                                     padding_noise=0,
                                     sorting_keys=[('text', 'num_tokens')])
-        grouped_instances = iterator._create_batches(self.dataset, shuffle=False)
+        grouped_instances = list(iterator._create_batches(self.dataset, shuffle=False))
         assert grouped_instances == [[self.instances[4], self.instances[2], self.instances[0]],
                                      [self.instances[1]],
                                      [self.instances[3]]]
@@ -25,7 +25,7 @@ class TestAdaptiveIterator(IteratorTest):
                                     maximum_batch_size=2,
                                     padding_noise=0,
                                     sorting_keys=[('text', 'num_tokens')])
-        grouped_instances = iterator._create_batches(self.dataset, shuffle=False)
+        grouped_instances = list(iterator._create_batches(self.dataset, shuffle=False))
         assert grouped_instances == [[self.instances[4], self.instances[2]],
                                      [self.instances[0], self.instances[1]],
                                      [self.instances[3]]]
@@ -37,7 +37,7 @@ class TestAdaptiveIterator(IteratorTest):
                                     sorting_keys=[('text', 'num_tokens')],
                                     biggest_batch_first=True,
                                     batch_size=2)
-        grouped_instances = iterator._create_batches(self.dataset, shuffle=False)
+        grouped_instances = list(iterator._create_batches(self.dataset, shuffle=False))
         assert grouped_instances == [[self.instances[3]],
                                      [self.instances[0], self.instances[1]],
                                      [self.instances[4], self.instances[2]]]

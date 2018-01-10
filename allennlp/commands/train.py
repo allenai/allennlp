@@ -158,9 +158,9 @@ def train_model(params: Params, serialization_dir: str) -> Model:
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
-                                   Dataset([instance for key, dataset in all_datasets.items()
-                                            for instance in dataset.instances
-                                            if key in datasets_for_vocab_creation]))
+                                   (instance for key, dataset in all_datasets.items()
+                                    for instance in dataset
+                                    if key in datasets_for_vocab_creation))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))

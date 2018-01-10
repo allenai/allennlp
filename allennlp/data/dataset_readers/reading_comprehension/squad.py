@@ -8,7 +8,7 @@ from tqdm import tqdm
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset import Dataset
+from allennlp.data.dataset import InMemoryDataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
@@ -75,7 +75,7 @@ class SquadReader(DatasetReader):
         if not instances:
             raise ConfigurationError("No instances were read from the given filepath {}. "
                                      "Is the path correct?".format(file_path))
-        return Dataset(instances)
+        return InMemoryDataset(instances)
 
     @overrides
     def text_to_instance(self,  # type: ignore

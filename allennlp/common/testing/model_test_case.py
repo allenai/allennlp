@@ -6,7 +6,8 @@ import torch
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.data import DataIterator, Dataset, DatasetReader, Vocabulary
+from allennlp.data import DataIterator, DatasetReader, Vocabulary
+from allennlp.data.dataset import InMemoryDataset
 from allennlp.models import Model, load_archive
 
 
@@ -22,7 +23,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         reader = DatasetReader.from_params(params['dataset_reader'])
         dataset = reader.read(dataset_file)
-        vocab = Vocabulary.from_dataset(dataset)
+        vocab = Vocabulary.from_instances(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)
         self.dataset = dataset
@@ -134,11 +135,12 @@ class ModelTestCase(AllenNlpTestCase):
         self.model.eval()
         single_predictions = []
         for i, instance in enumerate(self.dataset.instances):
-            dataset = Dataset([instance])
+            dataset = InMemoryDataset([instance])
             tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
             result = self.model(**tensors)
             single_predictions.append(result)
-        batch_tensors = self.dataset.as_tensor_dict(self.dataset.get_padding_lengths(), for_training=False)
+        full_dataset = InMemoryDataset([instance for instance in self.dataset])
+        batch_tensors = full_dataset.as_tensor_dict(self.dataset.get_padding_lengths(), for_training=False)
         batch_predictions = self.model(**batch_tensors)
         for i, instance_predictions in enumerate(single_predictions):
             for key, single_predicted in instance_predictions.items():
