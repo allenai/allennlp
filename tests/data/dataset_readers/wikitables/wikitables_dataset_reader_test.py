@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use
+# pylint: disable=invalid-name,no-self-use,protected-access
 from allennlp.data.dataset_readers import WikiTablesDatasetReader
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.common.testing import AllenNlpTestCase

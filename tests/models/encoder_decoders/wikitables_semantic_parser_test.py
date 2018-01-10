@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,no-self-use
+# pylint: disable=invalid-name,no-self-use,protected-access
 from collections import namedtuple
 
 from numpy.testing import assert_almost_equal
@@ -7,11 +7,13 @@ from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.testing import ModelTestCase
+from allennlp.common import Params
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.models import WikiTablesSemanticParser
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderState
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderStep
+from allennlp.modules import SimilarityFunction
 
 
 class WikiTablesSemanticParserTest(ModelTestCase):
@@ -133,7 +135,6 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         model = self.model
         model._embed_terminals = False
         nonterminal_embedding = model._nonterminal_embedder._token_embedders['tokens']
-        terminal_encoder = model._terminal_embedder._token_embedders['token_characters']
         start_id = model.vocab.get_token_index(START_SYMBOL, 'rule_labels')
         start_tensor = Variable(torch.LongTensor([start_id]))
         rule2 = model.vocab.get_token_from_index(2, 'rule_labels')
@@ -161,7 +162,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                      'right': (char4 * 3, False, {'token_characters': char4_tensor})},
                     {'left': (START_SYMBOL, True, {'tokens': start_tensor}),
                      'right': (rule2, True, {'tokens': rule2_tensor})}]]
-        embedded_actions, action_indices, initial_action_embedding = model._embed_actions(actions)
+        embedded_actions, action_indices, _ = model._embed_actions(actions)
         assert embedded_actions.size(0) == 1
         assert action_indices[(1, 2)] == 0  # non-terminals should have lower indices than terminals
         assert action_indices[(0, 0)] == action_indices[(1, 0)]
@@ -177,6 +178,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                             expected_action_embedding.cpu().data.numpy())
 
     def test_map_entity_productions(self):
+        # pylint: disable=protected-access
         # (batch_size, num_entities, num_question_tokens) = (3, 4, 5)
         linking_scores = Variable(torch.rand(3, 4, 5))
         # Because we only need a small piece of the WikiTablesWorld and TableKnowledgeGraph, we'll
@@ -257,6 +259,42 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                  {'left': ('e', True, None), 'right': ('g', True, None)},
                  {'left': ('e', True, None), 'right': ('h', True, None)},
                  {'left': ('e', True, None), 'right': ('i', True, None)}]]
+
+        # (batch_size, num_entities, num_question_tokens) = (2, 5, 3)
+        linking_scores = Variable(torch.Tensor([[[.1, .2, .3],
+                                                 [.4, .5, .6],
+                                                 [.7, .8, .9],
+                                                 [1.0, 1.1, 1.2],
+                                                 [1.3, 1.4, 1.5]],
+                                                [[-.1, -.2, -.3],
+                                                 [-.4, -.5, -.6],
+                                                 [-.7, -.8, -.9],
+                                                 [-1.0, -1.1, -1.2],
+                                                 [-1.3, -1.4, -1.5]]]))
+        flattened_linking_scores = linking_scores.view(2 * 5, 3)
+
+        # Maps (batch_index, action_index) to indices into the flattened linking score tensor,
+        # which has shae (batch_size * num_entities, num_question_tokens).
+        actions_to_entities = {
+                (0, 0): 0,
+                (0, 1): 1,
+                (0, 2): 2,
+                (0, 6): 3,
+                (1, 3): 6,
+                (1, 4): 7,
+                (1, 5): 8,
+                }
+        entity_types = {
+                0: 0,
+                1: 1,
+                2: 1,
+                3: 0,
+                4: 0,
+                5: 1,
+                6: 0,
+                7: 1,
+                8: 1,
+                }
         self.state = WikiTablesDecoderState(batch_indices=batch_indices,
                                             action_history=action_history,
                                             score=score,
@@ -269,7 +307,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                                             encoder_output_mask=self.encoder_output_mask,
                                             action_embeddings=self.action_embeddings,
                                             action_indices=self.action_indices,
-                                            possible_actions=self.possible_actions)
+                                            possible_actions=self.possible_actions,
+                                            flattened_linking_scores=flattened_linking_scores,
+                                            actions_to_entities=actions_to_entities,
+                                            entity_types=entity_types)
 
     def test_get_actions_to_consider(self):
         # pylint: disable=protected-access
@@ -317,7 +358,6 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert considered == expected_considered
 
     def test_get_action_embeddings(self):
-        # pylint: disable=protected-access
         action_embeddings = Variable(torch.rand(5, 4))
         self.state.action_embeddings = action_embeddings
         actions_to_embed = [[0, 4], [1], [2, 3, 4]]
@@ -335,40 +375,17 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert_almost_equal(embeddings[2, 2].data.cpu().numpy(), action_embeddings[4].data.cpu().numpy())
 
     def test_get_entity_action_logits(self):
-        # (batch_size, num_entities, num_question_tokens) = (2, 5, 3)
-        linking_scores = Variable(torch.Tensor([[[.1, .2, .3],
-                                                 [.4, .5, .6],
-                                                 [.7, .8, .9],
-                                                 [1.0, 1.1, 1.2],
-                                                 [1.3, 1.4, 1.5]],
-                                                [[-.1, -.2, -.3],
-                                                 [-.4, -.5, -.6],
-                                                 [-.7, -.8, -.9],
-                                                 [-1.0, -1.1, -1.2],
-                                                 [-1.3, -1.4, -1.5]]]))
-        flattened_linking_scores = linking_scores.view(2 * 5, 3)
-        # Maps (batch_index, action_index) to indices into the flattened linking score tensor,
-        # which has shae (batch_size * num_entities, num_question_tokens).
-        actions_to_entities = {
-                (0, 0): 0,
-                (0, 1): 1,
-                (0, 2): 2,
-                (0, 6): 3,
-                (1, 3): 6,
-                (1, 4): 7,
-                (1, 5): 8,
-                }
+        decoder_step = WikiTablesDecoderStep(1, 5, SimilarityFunction.from_params(Params({})), 2)
         actions_to_link = [[1, 2], [3, 4, 5], [6]]
         # (group_size, num_question_tokens) = (3, 3)
         attention_weights = Variable(torch.Tensor([[.2, .8, 0],
                                                    [.7, .1, .2],
                                                    [.3, .3, .4]]))
-        self.state.flattened_linking_scores = flattened_linking_scores
-        self.state.actions_to_entities = actions_to_entities
-        action_logits, mask = WikiTablesDecoderStep._get_entity_action_logits(self.state,
-                                                                              actions_to_link,
-                                                                              attention_weights)
+        action_logits, mask, type_embeddings = decoder_step._get_entity_action_logits(self.state,
+                                                                                      actions_to_link,
+                                                                                      attention_weights)
         assert_almost_equal(mask.data.cpu().numpy(), [[1, 1, 0], [1, 1, 1], [1, 0, 0]])
+
         assert tuple(action_logits.size()) == (3, 3)
         assert_almost_equal(action_logits[0, 0].data.cpu().numpy(), .4 * .2 + .5 * .8 + .6 * 0)
         assert_almost_equal(action_logits[0, 1].data.cpu().numpy(), .7 * .2 + .8 * .8 + .9 * 0)
@@ -376,6 +393,14 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert_almost_equal(action_logits[1, 1].data.cpu().numpy(), -.7 * .7 + -.8 * .1 + -.9 * .2)
         assert_almost_equal(action_logits[1, 2].data.cpu().numpy(), -1.0 * .7 + -1.1 * .1 + -1.2 * .2)
         assert_almost_equal(action_logits[2, 0].data.cpu().numpy(), 1.0 * .3 + 1.1 * .3 + 1.2 * .4)
+
+        embedding_matrix = decoder_step._entity_type_embedding.weight.data.cpu().numpy()
+        assert_almost_equal(type_embeddings[0, 0].data.cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[0, 1].data.cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[1, 0].data.cpu().numpy(), embedding_matrix[0])
+        assert_almost_equal(type_embeddings[1, 1].data.cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[1, 2].data.cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[2, 0].data.cpu().numpy(), embedding_matrix[0])
 
     def test_compute_new_states(self):
         # pylint: disable=protected-access
@@ -416,8 +441,8 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert new_state.grammar_state[0]._nonterminal_stack == ['j']
         assert_almost_equal(new_state.encoder_outputs.cpu().numpy(),
                             self.encoder_outputs.cpu().numpy())
-        assert_almost_equal(new_state.encoder_output_mask.cpu().numpy(),
-                            self.encoder_output_mask.cpu().numpy())
+        assert_almost_equal(new_state.encoder_output_mask.data.cpu().numpy(),
+                            self.encoder_output_mask.data.cpu().numpy())
         assert_almost_equal(new_state.action_embeddings.cpu().numpy(),
                             self.action_embeddings.cpu().numpy())
         assert new_state.action_indices == self.action_indices
@@ -436,8 +461,8 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert new_state.grammar_state[0]._nonterminal_stack == ['q']
         assert_almost_equal(new_state.encoder_outputs.cpu().numpy(),
                             self.encoder_outputs.cpu().numpy())
-        assert_almost_equal(new_state.encoder_output_mask.cpu().numpy(),
-                            self.encoder_output_mask.cpu().numpy())
+        assert_almost_equal(new_state.encoder_output_mask.data.cpu().numpy(),
+                            self.encoder_output_mask.data.cpu().numpy())
         assert_almost_equal(new_state.action_embeddings.cpu().numpy(),
                             self.action_embeddings.cpu().numpy())
         assert new_state.action_indices == self.action_indices

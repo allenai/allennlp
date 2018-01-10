@@ -1,3 +1,5 @@
+# pylint: disable=too-many-lines
+# TODO(mattg): Separate this file out somehow, or simplify things here.
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple
 
@@ -18,6 +20,7 @@ from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
@@ -101,10 +104,11 @@ class WikiTablesSemanticParser(Model):
 
         self._action_padding_index = -1  # the padding value used by IndexField
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
-        self._decoder_step = WikiTablesDecoderStep(vocab=vocab,
-                                                   encoder_output_dim=self._encoder.get_output_dim(),
+        num_entity_types = 2  # TODO(mattg): get this in a more principled way somehow?
+        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
-                                                   attention_function=attention_function)
+                                                   attention_function=attention_function,
+                                                   num_entity_types=num_entity_types)
 
     @overrides
     def forward(self,  # type: ignore
@@ -156,7 +160,7 @@ class WikiTablesSemanticParser(Model):
         # num_entities, embedding_dim).
 
         # (batch_size, num_entities, num_question_tokens, num_features)
-        linking_features = table['linking']
+        linking_features = table['linking']  # pylint: disable=unused-variable
         # TODO(mattg): multiply this by the feature weights, use this and the text embedding above
         # to compute a linking scores.
 
@@ -166,7 +170,7 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_question_tokens)
         num_entities = embedded_table_text.size(1)
         num_question_tokens = embedded_input.size(1)
-        linking_scores: torch.FloatTensor = Variable(torch.rand(batch_size, num_entities, num_question_tokens))
+        linking_scores: torch.FloatTensor = Variable(torch.ones(batch_size, num_entities, num_question_tokens))
 
         # (batch_size, question_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, question_mask)
@@ -182,11 +186,16 @@ class WikiTablesSemanticParser(Model):
 
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
 
-        num_global_actions = action_embeddings.size(0)
         _, num_entities, num_question_tokens = linking_scores.size()
         flattened_linking_scores, actions_to_entities = self._map_entity_productions(linking_scores,
                                                                                      world,
                                                                                      actions)
+        entity_types = {}
+        for batch_index in range(batch_size):
+            for entity_index, entity_name in enumerate(world[batch_index].table_graph.entities):
+                flattened_entity_index = batch_index * num_entities + entity_index
+                entity_type = 0 if entity_name.startswith('fb:cell') else 1
+                entity_types[flattened_entity_index] = entity_type
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
@@ -223,7 +232,8 @@ class WikiTablesSemanticParser(Model):
                                                action_indices=action_indices,
                                                possible_actions=actions,
                                                flattened_linking_scores=flattened_linking_scores,
-                                               actions_to_entities=actions_to_entities)
+                                               actions_to_entities=actions_to_entities,
+                                               entity_types=entity_types)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
@@ -548,6 +558,9 @@ class WikiTablesSemanticParser(Model):
 # come out right.  See the note in `nn.decoding.decoder_state.py` for a little more detail.
 class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
     """
+    TODO(mattg): This class is a mess!  We need to figure out a better way to pass around and
+    update this state.  There are too many things going on here, and it's getting out of control.
+
     Parameters
     ----------
     batch_indices : ``List[int]``
@@ -603,6 +616,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
     actions_to_entities : ``Dict[Tuple[int, int], int]``
         A mapping from ``(batch_index, action_index)`` to ``batch_size * num_entities``, for
         actions that are terminal entity productions.
+    entity_types : ``Dict[int, int]``
+        A mapping from flattened entity indices (same as the `values` in the
+        ``actions_to_entities`` dictionary) to entity type indices.  This represents what type each
+        entity has, which we will use for getting type embeddings in certain circumstances.
     """
     def __init__(self,
                  batch_indices: List[int],
@@ -619,7 +636,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  action_indices: Dict[Tuple[int, int], int],
                  possible_actions: List[List[ProductionRuleArray]],
                  flattened_linking_scores: torch.Tensor,
-                 actions_to_entities: Dict[Tuple[int, int], int]) -> None:
+                 actions_to_entities: Dict[Tuple[int, int], int],
+                 entity_types: Dict[int, int]) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
@@ -633,6 +651,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.possible_actions = possible_actions
         self.flattened_linking_scores = flattened_linking_scores
         self.actions_to_entities = actions_to_entities
+        self.entity_types = entity_types
 
     def get_valid_actions(self) -> List[List[int]]:
         """
@@ -692,7 +711,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       action_indices=states[0].action_indices,
                                       possible_actions=states[0].possible_actions,
                                       flattened_linking_scores=states[0].flattened_linking_scores,
-                                      actions_to_entities=states[0].actions_to_entities)
+                                      actions_to_entities=states[0].actions_to_entities,
+                                      entity_types=states[0].entity_types)
 
     def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'WikiTablesDecoderState':
         """
@@ -725,17 +745,18 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       action_indices=self.action_indices,
                                       possible_actions=self.possible_actions,
                                       flattened_linking_scores=self.flattened_linking_scores,
-                                      actions_to_entities=self.actions_to_entities)
+                                      actions_to_entities=self.actions_to_entities,
+                                      entity_types=self.entity_types)
 
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     def __init__(self,
-                 vocab: Vocabulary,
                  encoder_output_dim: int,
                  action_embedding_dim: int,
-                 attention_function: SimilarityFunction) -> None:
+                 attention_function: SimilarityFunction,
+                 num_entity_types: int) -> None:
         super(WikiTablesDecoderStep, self).__init__()
-        self._vocab = vocab
+        self._entity_type_embedding = Embedding(num_entity_types, action_embedding_dim)
         self._input_attention = Attention(attention_function)
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
@@ -806,11 +827,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         if actions_to_link:
             # entity_action_logits: (group_size, num_entity_actions)
             # entity_action_mask: (group_size, num_entity_actions)
-            entity_action_logits, entity_action_mask = self._get_entity_action_logits(state,
-                                                                                      actions_to_link,
-                                                                                      attention_weights)
-            action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=-1)
-            action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=-1).float()
+            entity_action_logits, entity_action_mask, entity_type_embeddings = \
+                    self._get_entity_action_logits(state, actions_to_link, attention_weights)
+            action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
+            action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=1).float()
+
+            # The `action_embeddings` tensor gets used later as the input to the next decoder step.
+            # For linked actions, we don't have any action embedding, so we use the entity type
+            # instead.
+            action_embeddings = torch.cat([action_embeddings, entity_type_embeddings], dim=1)
         else:
             action_logits = embedded_action_logits
             action_mask = embedded_action_mask.float()
@@ -971,8 +996,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
         return action_embeddings, action_mask
 
-    @staticmethod
-    def _get_entity_action_logits(state: WikiTablesDecoderState,
+    def _get_entity_action_logits(self,
+                                  state: WikiTablesDecoderState,
                                   actions_to_link: List[List[int]],
                                   attention_weights: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -980,6 +1005,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         scores between the question and the table entities, and the current attention on the
         question.  The intuition is that if we're paying attention to a particular word in the
         question, we should tend to select entity productions that we think that word refers to.
+        We additionally return a mask representing which elements in the returned ``action_logits``
+        tensor are just padding, and an embedded representation of each action that can be used as
+        input to the next step of the encoder.  That embedded representation is derived from the
+        type of the entity produced by the action.
 
         The ``actions_to_link`` are in terms of the `batch` action list passed to
         ``model.forward()``.  We need to convert these integers into indices into the linking score
@@ -1001,20 +1030,27 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
         Returns
         -------
-        action_embeddings : ``torch.FloatTensor``
-            An embedded representation of all of the given actions.  Shape is ``(group_size,
-            num_actions, action_embedding_dim)``, where ``num_actions`` is the maximum number of
-            considered actions for any group element.
+        action_logits : ``torch.FloatTensor``
+            A score for each of the given actions.  Shape is ``(group_size, num_actions)``, where
+            ``num_actions`` is the maximum number of considered actions for any group element.
         action_mask : ``torch.LongTensor``
             A mask of shape ``(group_size, num_actions)`` indicating which ``(group_index,
             action_index)`` pairs were merely added as padding.
+        type_embeddings : ``torch.LongTensor``
+            A tensor of shape ``(group_size, num_actions, action_embedding_dim)``, with an embedded
+            representation of the `type` of the entity corresponding to each action.
         """
-        # First we map the actions to entity indices, using state.actions_to_entities.
+        # First we map the actions to entity indices, using state.actions_to_entities, and find the
+        # type of each entity using state.entity_types.
         action_entities = []
+        entity_types = []
         for batch_index, action_list in zip(state.batch_indices, actions_to_link):
             action_entities.append([])
+            entity_types.append([])
             for action_index in action_list:
-                action_entities[-1].append(state.actions_to_entities[(batch_index, action_index)])
+                entity_index = state.actions_to_entities[(batch_index, action_index)]
+                action_entities[-1].append(entity_index)
+                entity_types[-1].append(state.entity_types[entity_index])
 
         # Then we create a padded tensor suitable for use with
         # `state.flattened_linking_scores.index_select()`.
@@ -1022,8 +1058,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         max_num_actions = max(num_actions)
         padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
                           for action_list in action_entities]
+        padded_types = [common_util.pad_sequence_to_length(type_list, max_num_actions)
+                        for type_list in entity_types]
         # Shape: (group_size, num_actions)
         action_tensor = Variable(state.encoder_output_mask[0].data.new(padded_actions).long())
+        type_tensor = Variable(state.encoder_output_mask[0].data.new(padded_types).long())
+
+        # To get the type embedding tensor, we just use an embedding matrix on the list of entity
+        # types.
+        type_embeddings = self._entity_type_embedding(type_tensor)
 
         # `state.flattened_linking_scores` is shape (batch_size * num_entities, num_question_tokens).
         # We want to select from this using `action_tensor` to get a tensor of shape (group_size,
@@ -1044,7 +1087,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # Finally, we make a mask for our action logit tensor.
         sequence_lengths = Variable(action_linking.data.new(num_actions))
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
-        return action_logits, action_mask
+        return action_logits, action_mask, type_embeddings
 
     @staticmethod
     def _compute_new_states(state: WikiTablesDecoderState,
@@ -1120,6 +1163,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    action_indices=state.action_indices,
                                                    possible_actions=state.possible_actions,
                                                    flattened_linking_scores=state.flattened_linking_scores,
-                                                   actions_to_entities=state.actions_to_entities)
+                                                   actions_to_entities=state.actions_to_entities,
+                                                   entity_types=state.entity_types)
                 new_states.append(new_state)
         return new_states
