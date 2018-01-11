@@ -21,10 +21,10 @@ class TestOntonotes(AllenNlpTestCase):
         assert annotation.word_senses == [None, None, 1, 1, None, 2, None, None, 1, None, None]
         assert annotation.predicate_framenet_ids == [None, None, None, '01', None,
                                                      None, None, None, '01', None, None]
-        assert annotation.srl_frames == {"say": ['B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
-                                                 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O'],
-                                         "was": ['O', 'O', 'O', 'O', 'B-ARG1', 'I-ARG1', 'I-ARG1',
-                                                 'I-ARG1', 'B-V', 'B-ARG2', 'O']}
+        assert annotation.srl_frames == [("say", ['B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
+                                                  'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']),
+                                         ("was", ['O', 'O', 'O', 'O', 'B-ARG1', 'I-ARG1', 'I-ARG1',
+                                                  'I-ARG1', 'B-V', 'B-ARG2', 'O'])]
         assert annotation.named_entities == ['B-GPE', 'O', 'O', 'O', 'O', 'O',
                                              'O', 'O', 'O', 'O', 'O']
         assert annotation.predicate_lemmas == [None, None, 'official', 'say', None,
@@ -50,12 +50,12 @@ class TestOntonotes(AllenNlpTestCase):
                                           None, None, 1, None, 1, None]
         assert annotation.predicate_framenet_ids == [None, None, '01', None, None, None,
                                                      None, None, None, None, None, '01', None]
-        assert annotation.srl_frames == {'rested': ['B-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
-                                                    'I-ARG1', 'B-ARGM-TMP', 'I-ARGM-TMP',
-                                                    'B-ARGM-TMP', 'I-ARGM-TMP', 'I-ARGM-TMP',
-                                                    'I-ARGM-TMP', 'I-ARGM-TMP', 'O'],
-                                         'hearings': ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
-                                                      'O', 'O', 'O', 'B-V', 'O']}
+        assert annotation.srl_frames == [('rested', ['B-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
+                                                     'I-ARG1', 'B-ARGM-TMP', 'I-ARGM-TMP',
+                                                     'B-ARGM-TMP', 'I-ARGM-TMP', 'I-ARGM-TMP',
+                                                     'I-ARGM-TMP', 'I-ARGM-TMP', 'O']),
+                                         ('hearings', ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
+                                                       'O', 'O', 'O', 'B-V', 'O'])]
         assert annotation.named_entities == ['O', 'O', 'O', 'O', 'O', 'B-DATE', 'I-DATE',
                                              'O', 'B-DATE', 'I-DATE', 'O', 'O', 'O']
         assert annotation.predicate_lemmas == [None, 'prosecution', 'rest', None, 'case',
@@ -76,7 +76,7 @@ class TestOntonotes(AllenNlpTestCase):
         assert annotation.pos_tags == ['NNP', 'NNP', 'NNP', 'NNP', '.']
         assert annotation.word_senses == [None, None, None, None, None]
         assert annotation.predicate_framenet_ids == [None, None, None, None, None]
-        assert annotation.srl_frames == {}
+        assert annotation.srl_frames == []
         assert annotation.named_entities == ['B-PERSON', 'I-PERSON',
                                              'B-WORK_OF_ART', 'I-WORK_OF_ART', 'O']
         assert annotation.predicate_lemmas == [None, None, None, None, None]

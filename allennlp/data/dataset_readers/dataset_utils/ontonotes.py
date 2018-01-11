@@ -45,7 +45,7 @@ class OntonotesSentence:
         and Web Log data. When not available the rows are marked with an "-".
     named_entities : ``List[str]``
         The BIO tags for named entities in the sentence.
-    srl_frames : ``Dict[str, List[str]]``
+    srl_frames : ``List[Tuple[str, List[str]]]``
         A dictionary keyed by the verb in the sentence for the given
         Propbank frame labels, in a BIO format.
     coref_spans : ``Set[TypedSpan]``
@@ -64,7 +64,7 @@ class OntonotesSentence:
                  word_senses: List[Optional[float]],
                  speakers: List[Optional[str]],
                  named_entities: List[str],
-                 srl_frames: Dict[str, List[str]],
+                 srl_frames: List[Tuple[str, List[str]]],
                  coref_spans: Set[TypedSpan]) -> None:
 
         self.document_id = document_id
@@ -318,8 +318,8 @@ class Ontonotes:
             speakers.append(speaker if speaker != "-" else None)
 
         named_entities = span_labels[0]
-        srl_frames = {predicate: labels for predicate, labels
-                      in zip(verbal_predicates, span_labels[1:])}
+        srl_frames = [(predicate, labels) for predicate, labels
+                      in zip(verbal_predicates, span_labels[1:])]
 
         if all(parse_pieces):
             parse_tree = Tree.fromstring("".join(parse_pieces))
