@@ -2,35 +2,16 @@
 from typing import List
 
 from allennlp.common import Params
-from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Instance, Token, Vocabulary
+from allennlp.data import Instance, Token
 from allennlp.data.dataset import LazyDataset
 from allennlp.data.fields import TextField
 from allennlp.data.iterators.lazy_iterator import LazyIterator
-from allennlp.data.token_indexers import SingleIdTokenIndexer
+from tests.data.iterators.basic_iterator_test import IteratorTest
 
-class LazyIteratorTest(AllenNlpTestCase):
+class LazyIteratorTest(IteratorTest):
     def setUp(self):
         super(LazyIteratorTest, self).setUp()
-        self.token_indexers = {"tokens": SingleIdTokenIndexer()}
-        self.vocab = Vocabulary()
-        self.this_index = self.vocab.add_token_to_namespace('this')
-        self.is_index = self.vocab.add_token_to_namespace('is')
-        self.a_index = self.vocab.add_token_to_namespace('a')
-        self.sentence_index = self.vocab.add_token_to_namespace('sentence')
-        self.another_index = self.vocab.add_token_to_namespace('another')
-        self.yet_index = self.vocab.add_token_to_namespace('yet')
-        self.very_index = self.vocab.add_token_to_namespace('very')
-        self.long_index = self.vocab.add_token_to_namespace('long')
-        self.instances = [
-                self.create_instance(["this", "is", "a", "sentence"]),
-                self.create_instance(["this", "is", "another", "sentence"]),
-                self.create_instance(["yet", "another", "sentence"]),
-                self.create_instance(["this", "is", "a", "very", "very", "very", "very", "long", "sentence"]),
-                self.create_instance(["sentence"]),
-                ]
         self.dataset = LazyDataset(lambda: iter(self.instances))
-        self.dataset.index_instances(self.vocab)
 
     def create_instance(self, str_tokens: List[str]):
         tokens = [Token(t) for t in str_tokens]
