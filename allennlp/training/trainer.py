@@ -200,21 +200,22 @@ class Trainer:
 
                 def hook(module_, inputs, outputs):
                     # pylint: disable=unused-argument,cell-var-from-loop
+                    log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
                     if self._should_log_histogram:
                         if isinstance(outputs, torch.autograd.Variable):
-                            log_name = "activation_histogram/{0}".format(name)
+                            log_name = log_prefix
                             self._tensorboard.add_train_histogram(log_name,
                                                                   outputs.data,
                                                                   self._batch_num_total)
                         elif isinstance(outputs, (list, tuple)):
                             for i, output in enumerate(outputs):
-                                log_name = "activation_histogram/{0}_{1}".format(name, i)
+                                log_name = "{0}_{1}".format(log_prefix, i)
                                 self._tensorboard.add_train_histogram(log_name,
                                                                       output.data,
                                                                       self._batch_num_total)
                         elif isinstance(outputs, dict):
                             for k, tensor in outputs.items():
-                                log_name = "activation_histogram/{0}_{1}".format(name, k)
+                                log_name = "{0}_{1}".format(log_prefix, k)
                                 self._tensorboard.add_train_histogram(log_name,
                                                                       tensor.data,
                                                                       self._batch_num_total)
