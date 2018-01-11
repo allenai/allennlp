@@ -320,8 +320,10 @@ class Trainer:
                 for name, param in self._model.named_parameters():
                     if name in histogram_parameters:
                         param_updates[name].sub_(param)
+                        update_norm = torch.norm(param_updates[name].view(-1, ))
+                        param_norm = torch.norm(param.view(-1, ))
                         self._tensorboard.add_train_scalar("gradient_update/" + name,
-                                                       param_updates[name].abs().mean(),
+                                                       update_norm / (param_norm + 1e-7),
                                                        batch_num_total)
             else:
                 self._optimizer.step()
