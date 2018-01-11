@@ -314,6 +314,8 @@ class Trainer:
 
             self._rescale_gradients()
 
+            self._update_learning_rate(None, batch_num_total=batch_num_total)
+
             if self._should_log_histogram:
                 # get the magnitude of parameter updates for logging
                 param_updates = {name: param.clone()
@@ -330,8 +332,6 @@ class Trainer:
                                                        batch_num_total)
             else:
                 self._optimizer.step()
-
-            self._update_learning_rate(None, batch_num_total=batch_num_total)
 
             # Update the description with the latest metrics
             metrics = self._get_metrics(train_loss, batch_num)
