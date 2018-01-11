@@ -222,4 +222,3 @@ The pod name will be your job name followed by some additional characters.
 
 AllenNLP is an open-source project backed by [the Allen Institute for Artificial Intelligence (AI2)](http://www.allenai.org).
 AI2 is a non-profit institute with the mission to contribute to humanity through high-impact AI research and engineering.
-To learn more about who specifically contributed to this codebase, see [our contributors](https://github.com/allenai/allennlp/graphs/contributors)
