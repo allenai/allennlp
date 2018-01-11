@@ -130,7 +130,9 @@ class Trainer:
             A Pytorch learning rate scheduler. The learning rate will be decayed with respect to
             this schedule at the end of each epoch. If you use
             :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`, this will use the ``validation_metric``
-            provided to determine if learning has plateaued.
+            provided to determine if learning has plateaued.  To support updating the learning
+            rate on every batch, this can optionally implement ``step_batch(batch_num)`` which
+            updates the learning rate given the batch number.
         histogram_interval : ``int``, optional, (default = ``None``)
             If not None, then log histograms to tensorboard every ``histogram_interval`` batches.
         """
@@ -329,6 +331,8 @@ class Trainer:
             else:
                 self._optimizer.step()
 
+            self._update_learning_rate(None, batch_num_total=batch_num_total)
+
             # Update the description with the latest metrics
             metrics = self._get_metrics(train_loss, batch_num)
             description = self._description_from_metrics(metrics)
@@ -439,8 +443,14 @@ class Trainer:
             elif train_metric is not None:
                 logger.info(message_template, "Training", name, train_metric)
 
-    def _update_learning_rate(self, epoch: int, val_metric: float = None) -> None:
+    def _update_learning_rate(self, epoch: int, val_metric: float = None,
+                              batch_num_total: int = None) -> None:
         if not self._learning_rate_scheduler:
+            return
+
+        if batch_num_total is not None:
+            if hasattr(self._learning_rate_scheduler, 'step_batch'):
+                self._learning_rate_scheduler.step_batch(batch_num_total)
             return
 
         # Grim hack to determine whether the validation metric we are recording
