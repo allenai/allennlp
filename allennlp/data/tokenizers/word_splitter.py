@@ -181,7 +181,7 @@ class SpacyWordSplitter(WordSplitter):
 
     @overrides
     def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
-        return self.spacy.pipe(sentences)
+        return self.spacy.pipe(sentences, n_threads=-1)
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
