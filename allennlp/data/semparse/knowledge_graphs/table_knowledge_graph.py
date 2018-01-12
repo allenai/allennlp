@@ -2,12 +2,11 @@
 Classes related to representing a table in WikitableQuestions. At this point we have just a
 ``TableKnowledgeGraph``, a ``KnowledgeGraph`` that reads a TSV file and stores a table representation.
 """
-
-
 import re
-
 from collections import defaultdict
 from typing import List, DefaultDict, Dict, Any
+
+from unidecode import unidecode
 
 from allennlp.data.semparse.knowledge_graphs.knowledge_graph import KnowledgeGraph
 
@@ -19,9 +18,7 @@ class TableKnowledgeGraph(KnowledgeGraph):
     it is under. We store them all in a single dict. We don't have to worry about name clashes because we
     follow NLTK's naming convention for representing cells and columns, and thus they have unique names.
 
-    This is a rather simplistic view of the table. For example, we don't store the order
-    of rows, and we do not distinguish between multiple occurrences of the same cell name (we treat all
-    those cells as the same entity).
+    This is a rather simplistic view of the table. For example, we don't store the order of rows.
     """
     # TODO (pradeep): We may want to reconsider this representation later.
     @classmethod
@@ -59,15 +56,30 @@ class TableKnowledgeGraph(KnowledgeGraph):
                    ... ]}
         """
         neighbors: DefaultDict[str, List[str]] = defaultdict(list)
-        # Following Sempre's convention for naming columns.
-        columns = ["fb:row.row.%s" % cls._normalize_string(x) for x in json_object["columns"]]
-        all_cells = json_object["cells"]
-        for row_index, row_cells in enumerate(all_cells):
+        # Following Sempre's convention for naming columns.  Sempre gives columns unique names when
+        # columns normalize to a collision, so we keep track of these.  We do not give cell text
+        # unique names, however, as `fb:cell.x` is actually a function that returns all cells that
+        # have text that normalizes to "x".
+        column_ids = []
+        columns: Dict[str, int] = {}
+        for column_string in json_object['columns']:
+            normalized_string = f'fb:row.row.{cls._normalize_string(column_string)}'
+            if normalized_string in columns:
+                columns[normalized_string] += 1
+                normalized_string = f'{normalized_string}_{columns[normalized_string]}'
+            columns[normalized_string] = 1
+            column_ids.append(normalized_string)
+
+        cells = json_object["cells"]
+        for row_index, row_cells in enumerate(cells):
             assert len(columns) == len(row_cells), ("Invalid format. Row %d has %d cells, but header has %d"
                                                     " columns" % (row_index, len(row_cells), len(columns)))
             # Following Sempre's convention for naming cells.
-            row_cells = ["fb:cell.%s" % cls._normalize_string(x) for x in row_cells]
-            for column, cell in zip(columns, row_cells):
+            row_cell_ids = []
+            for cell_string in row_cells:
+                normalized_string = f'fb:cell.{cls._normalize_string(cell_string)}'
+                row_cell_ids.append(normalized_string)
+            for column, cell in zip(column_ids, row_cell_ids):
                 neighbors[column].append(cell)
                 neighbors[cell].append(column)
         return cls(dict(neighbors))
@@ -93,15 +105,20 @@ class TableKnowledgeGraph(KnowledgeGraph):
         string = re.sub("›", ">", string)
         string = re.sub("[‘’´`]", "'", string)
         string = re.sub("[“”«»]", "\"", string)
-        string = re.sub("[•†‡]", "", string)
+        string = re.sub("[•†‡²³]", "", string)
         string = re.sub("[‐‑–—]", "-", string)
-        string = re.sub("[\\u2E00-\\uFFFF]", "", string)
+        string = re.sub("[\\u0170-\\uFFFF]", "", string).strip()
+        # Oddly, some unicode characters get converted to _ instead of being stripped.  Not really
+        # sure how sempre decides what to do with these...  TODO(mattg): can we just get rid of the
+        # need for this function somehow?  It's causing a whole lot of headaches.
+        string = re.sub("[ðø]", "_", string)
+        string = string.replace("\\n", "_")
         string = re.sub("\\s+", " ", string)
         # Canonicalization rules from Sempre
         string = re.sub("[^\\w]", "_", string)
         string = re.sub("_+", "_", string)
         string = re.sub("_$", "", string)
-        return string.lower()
+        return unidecode(string.lower())
 
     def get_cell_neighbors(self, cell: str) -> List[str]:
         """
