@@ -3,45 +3,47 @@ A ``KnowledgeGraph`` is a graphical representation of some structured knowledge 
 table, figure or an explicit knowledge base.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Set
 
 
 class KnowledgeGraph:
     """
-    ``KnowledgeGraph`` currently stores some basic neighborhood information, and provides  minimal
-    functionality for querying that information, for embedding this knowledge or linking the
-    entities in the knowledge base to some text.
+    A ``KnowledgeGraph`` represents a collection of entities and their relationships.
+
+    The ``KnowledgeGraph`` currently stores (untyped) neighborhood information and text
+    representations of each entity (if there is any).
 
     The knowledge base itself can be a table (like in WikitableQuestions), a figure (like in NLVR)
     or some other structured knowledge source. This abstract class needs to be inherited for
     implementing the functionality appropriate for a given KB.
 
+    All of the parameters listed below are stored as public attributes.
+
     Parameters
     ----------
-    neighbors : Dict[str, List[str]]
-        Entities (represented as strings) mapped to their neighbors.
+    entities : ``Set[str]``
+        The string identifiers of the entities in this knowledge graph.  We sort this set and store
+        it as a list.  The sorting is so that we get a guaranteed consistent ordering across
+        separate runs of the code.
+    neighbors : ``Dict[str, List[str]]``
+        A mapping from string identifiers to other string identifiers, denoting which entities are
+        neighbors in the graph.
+    entity_text : ``Dict[str, str]``
+        If you have additional text associated with each entity (other than its string identifier),
+        you can store that here.  This might be, e.g., the text in a table cell, or the description
+        of a wikipedia entity.
     """
-    def __init__(self, neighbors: Dict[str, List[str]]) -> None:
-        self._neighbors = neighbors
+    def __init__(self,
+                 entities: Set[str],
+                 neighbors: Dict[str, List[str]],
+                 entity_text: Dict[str, str] = None) -> None:
+        self.entities = sorted(entities)
+        self.neighbors = neighbors
+        self.entity_text = entity_text
 
     @classmethod
     def read_from_file(cls, filename: str):
         raise NotImplementedError
-
-    def get_neighbors(self, entity: str) -> List[str]:
-        """
-        Parameters
-        ----------
-        entity : str
-            String representation of the entity whose neighbors will be returned.
-        """
-        return self._neighbors[entity]
-
-    def get_all_entities(self) -> List[str]:
-        # We return a sorted list here so we get guaranteed consistent ordering, for
-        # reproducibility's sake.  The ordering will affect the name mapping that we do, which
-        # affects the intermediate nltk logical forms.
-        return sorted(self._neighbors.keys())
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
