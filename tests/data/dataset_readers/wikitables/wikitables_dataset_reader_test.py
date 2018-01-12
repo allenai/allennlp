@@ -15,7 +15,7 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
         question_tokens = ["what", "was", "the", "last", "year", "where", "this", "team", "was",
                            "a", "part", "of", "the", "usl", "a", "-", "league", "?"]
         assert [t.text for t in instance.fields["question"].tokens] == question_tokens
-        entities = instance.fields['table'].knowledge_graph.get_all_entities()
+        entities = instance.fields['table'].knowledge_graph.entities
         assert len(entities) == 47
         assert sorted(entities) == [
                 # The table cell entity names.  Duplicates have trailing _2, _3, etc.

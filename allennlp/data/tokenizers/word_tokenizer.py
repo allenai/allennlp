@@ -35,19 +35,6 @@ class WordTokenizer(Tokenizer):
         If given, these tokens will be added to the beginning of every string we tokenize.
     end_tokens : ``List[str]``, optional
         If given, these tokens will be added to the end of every string we tokenize.
-    language : ``str``, optional
-        We use spacy to tokenize strings; this option specifies which language to use.  By default
-        we use English.
-    pos_tags : ``bool``, optional
-        By default we do not load spacy's tagging model, to save loading time and memory.  Set this
-        to ``True`` if you want to have access to spacy's POS tags in the returned tokens.
-    parse : ``bool``, optional
-        By default we do not load spacy's parsing model, to save loading time and memory.  Set this
-        to ``True`` if you want to have access to spacy's dependency parse tags in the returned
-        tokens.
-    ner : ``bool``, optional
-        By default we do not load spacy's parsing model, to save loading time and memory.  Set this
-        to ``True`` if you want to have access to spacy's NER tags in the returned tokens.
     """
     def __init__(self,
                  word_splitter: WordSplitter = None,
