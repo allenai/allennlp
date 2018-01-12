@@ -1,4 +1,4 @@
-from typing import Dict, DefaultDict, List, Optional, Iterator, Set, Tuple
+from typing import DefaultDict, List, Optional, Iterator, Set, Tuple
 from collections import defaultdict
 import codecs
 import os

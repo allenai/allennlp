@@ -25,7 +25,9 @@ class TestCorefReader(AllenNlpTestCase):
         assert text == ['Mali', 'government', 'officials', 'say', 'the', 'woman', "'s",
                         'confession', 'was', 'forced', '.', 'The', 'prosecution', 'rested',
                         'its', 'case', 'last', 'month', 'after', 'four', 'months', 'of',
-                        'hearings', '.', 'Denise', 'Dillon', 'Headline', 'News', '.']
+                        'hearings', '.', 'Denise', 'Dillon', 'Headline', 'News', '.', 'and',
+                        'that', 'wildness', 'is', 'still', 'in', 'him', ',', 'as', 'it', 'is',
+                        'with', 'all', 'children', '.']
 
         span_starts = fields["span_starts"].field_list
         span_ends = fields["span_ends"].field_list
@@ -41,7 +43,8 @@ class TestCorefReader(AllenNlpTestCase):
                                           (['the', 'woman', "'s", 'confession'], 1),
                                           (['The', 'prosecution'], 2),
                                           (['its'], 2),
-                                          (['Denise', 'Dillon'], 2)]
+                                          (['Denise', 'Dillon'], 2),
+                                          (['him'], 3)]
 
         # Now check that we don't collect spans greater than the max width.
         conll_reader = ConllCorefReader(max_span_width=2)
@@ -62,7 +65,8 @@ class TestCorefReader(AllenNlpTestCase):
 
         assert gold_mentions_with_ids == [(['The', 'prosecution'], 2),
                                           (['its'], 2),
-                                          (['Denise', 'Dillon'], 2)]
+                                          (['Denise', 'Dillon'], 2),
+                                          (['him'], 3)]
 
     def check_candidate_mentions_are_well_defined(self, span_starts, span_ends, text):
         candidate_mentions = []

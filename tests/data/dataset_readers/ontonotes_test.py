@@ -69,6 +69,7 @@ class TestOntonotes(AllenNlpTestCase):
                                                         " of) (NP (NNS hearings) ))))) (. .) ))")
         assert annotation.coref_spans == {(2, (0, 1)), (2, (3, 3))}
 
+        # Check we can handle sentences without verbs.
         annotation = annotated_sentences[2]
         assert annotation.document_id == 'test/test/03/test_003'
         assert annotation.sentence_id == 0
@@ -85,6 +86,38 @@ class TestOntonotes(AllenNlpTestCase):
                                                         " (NNP Dillon) )(NP (NNP Headline)  "
                                                         "(NNP News) ) (. .) ))")
         assert annotation.coref_spans == {(2, (0, 1))}
+
+        # Check we can handle sentences with 2 identical verbs.
+        annotation = annotated_sentences[3]
+        assert annotation.document_id == 'test/test/04/test_004'
+        assert annotation.sentence_id == 0
+        assert annotation.words == ['and', 'that', 'wildness', 'is', 'still', 'in', 'him', ',',
+                                    'as', 'it', 'is', 'with', 'all', 'children', '.']
+        assert annotation.pos_tags == ['CC', 'DT', 'NN', 'VBZ', 'RB', 'IN', 'PRP', ',',
+                                       'IN', 'PRP', 'VBZ', 'IN', 'DT', 'NNS', '.']
+        assert annotation.word_senses == [None, None, None, 4.0, None, None, None, None,
+                                          None, None, 5.0, None, None, None, None]
+        assert annotation.predicate_framenet_ids == [None, None, None, '01', None, None,
+                                                     None, None, None, None, '01', None, None, None, None]
+        assert annotation.srl_frames == [('is', ['B-ARGM-DIS', 'B-ARG1', 'I-ARG1',
+                                                 'B-V', 'B-ARGM-TMP', 'B-ARG2', 'I-ARG2',
+                                                 'O', 'B-ARGM-ADV', 'I-ARGM-ADV', 'I-ARGM-ADV',
+                                                 'I-ARGM-ADV', 'I-ARGM-ADV', 'I-ARGM-ADV', 'O']),
+                                         ('is', ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
+                                                 'B-ARG1', 'B-V', 'B-ARG2', 'I-ARG2', 'I-ARG2', 'O'])]
+        assert annotation.named_entities == ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
+                                             'O', 'O', 'O', 'O', 'O', 'O', 'O']
+        assert annotation.predicate_lemmas == [None, None, None, 'be', None, None, None,
+                                               None, None, None, 'be', None, None, None, None]
+        assert annotation.speakers == ['_Avalon_', '_Avalon_', '_Avalon_', '_Avalon_', '_Avalon_',
+                                       '_Avalon_', '_Avalon_', '_Avalon_', '_Avalon_', '_Avalon_',
+                                       '_Avalon_', '_Avalon_', '_Avalon_', '_Avalon_', '_Avalon_']
+        assert annotation.parse_tree == Tree.fromstring("(TOP (S (CC and) (NP (DT that) (NN wildness)) "
+                                                        "(VP (VBZ is) (ADVP (RB still)) (PP (IN in) (NP "
+                                                        "(PRP him))) (, ,) (SBAR (IN as) (S (NP (PRP it)) "
+                                                        "(VP (VBZ is) (PP (IN with) (NP (DT all) (NNS "
+                                                        "children))))))) (. .)))")
+        assert annotation.coref_spans == {(14, (6, 6))}
 
     def test_dataset_path_iterator(self):
         reader = Ontonotes()
