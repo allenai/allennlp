@@ -1,0 +1,1 @@
+(example (id nt-64) (utterance "how many districts are there in virginia?") (context (graph tables.TableKnowledgeGraph csv/204-csv/109.csv)) (targetValue (list (description "22"))))
