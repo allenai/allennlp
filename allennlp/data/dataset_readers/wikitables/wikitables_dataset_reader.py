@@ -210,6 +210,7 @@ class WikiTablesDatasetReader(DatasetReader):
             action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
 
             action_sequence_fields: List[Field] = []
+            # TODO(mattg): might want to sort by length here before truncating...
             for logical_form in dpd_output[:self._max_dpd_tries]:
                 if not self._should_keep_logical_form(logical_form):
                     continue
