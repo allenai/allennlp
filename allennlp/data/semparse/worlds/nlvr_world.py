@@ -107,7 +107,7 @@ class NlvrWorld(World):
         return types.BASIC_TYPES
 
     @overrides
-    def _map_name(self, name: str) -> str:
+    def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         return types.COMMON_NAME_MAPPING[name] if name in types.COMMON_NAME_MAPPING else name
 
     def _apply_function_list(self,

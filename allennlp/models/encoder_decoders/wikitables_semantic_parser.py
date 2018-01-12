@@ -21,6 +21,7 @@ from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
+from allennlp.training.metrics import Average
 
 
 @Model.register("wikitables_parser")
@@ -81,6 +82,7 @@ class WikiTablesSemanticParser(Model):
         self._max_decoding_steps = max_decoding_steps
         self._nonterminal_embedder = nonterminal_embedder
         self._terminal_embedder = terminal_embedder
+        self._action_sequence_accuracy = Average()
 
         check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
                                "nonterminal embedding dim", "terminal embedding dim")
@@ -198,10 +200,34 @@ class WikiTablesSemanticParser(Model):
             best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)
             best_action_sequences = []
             for i in range(batch_size):
-                best_action_sequences.append(best_final_states[i][0].action_history)
+                predicted = best_final_states[i][0].action_history
+                credit = 0
+                if target_action_sequences is not None:
+                    # Use a Tensor, not a Variable, to avoid a memory leak.
+                    targets = target_action_sequences[i].data
+                    credit = self._action_history_match(predicted[0], targets)
+                self._action_sequence_accuracy(credit)
+                best_action_sequences.append(predicted)
             outputs['best_action_sequence'] = best_action_sequences
             # TODO(matt): compute accuracy here.
             return outputs
+
+    @staticmethod
+    def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
+        # TODO(mattg): this could probably be moved into a FullSequenceMatch metric, or something.
+        # Check if target is big enough to cover prediction (including start/end symbols)
+        if len(predicted) > targets.size(1):
+            return 0
+        predicted_tensor = targets.new(predicted)
+        targets_trimmed = targets[:, :len(predicted)]
+        # Return 1 if the predicted sequence is anywhere in the list of targets.
+        return torch.max(torch.min(targets_trimmed.eq(predicted_tensor), dim=1)[0])
+
+    @overrides
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return {
+                'parse_acc': self._action_sequence_accuracy.get_metric(reset)
+                }
 
     @staticmethod
     def _create_grammar_state(world: WikiTablesWorld,
@@ -274,6 +300,9 @@ class WikiTablesSemanticParser(Model):
         unique_actions: Set[Tuple[int, int]] = set()
         for instance_actions in actions:
             for action in instance_actions:
+                if not action['left'][0]:
+                    # This rule is padding.
+                    continue
                 # This gives us the LHS and RHS strings, which we map to ids in the element tensor.
                 unique_actions.add((element_ids[action['left'][0]], element_ids[action['right'][0]]))
         unique_action_list = list(unique_actions)
@@ -300,6 +329,9 @@ class WikiTablesSemanticParser(Model):
         action_map: Dict[Tuple[int, int], int] = {}
         for batch_index, action_list in enumerate(actions):
             for action_index, action in enumerate(action_list):
+                if not action['left'][0]:
+                    # This rule is padding.
+                    continue
                 action_indices = (element_ids[action['left'][0]], element_ids[action['right'][0]])
                 action_id = action_ids[action_indices]
                 action_map[(batch_index, action_index)] = action_id
@@ -329,6 +361,9 @@ class WikiTablesSemanticParser(Model):
         terminals: Dict[str, Dict[str, torch.Tensor]] = {}
         for action_sequence in actions:
             for production_rule in action_sequence:
+                if not production_rule['left'][0]:
+                    # This rule is padding.
+                    continue
                 # This logic is hard to understand, because the ProductionRuleArray is a messy
                 # type.  The structure of each ProductionRuleArray is:
                 #     {
@@ -442,7 +477,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
     def __init__(self,
                  batch_indices: List[int],
                  action_history: List[List[int]],
-                 score: torch.Tensor,
+                 score: List[torch.Tensor],
                  hidden_state: List[torch.Tensor],
                  memory_cell: List[torch.Tensor],
                  previous_action_embedding: List[torch.Tensor],
@@ -626,7 +661,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # We'll do a batch dot product here with `bmm`.  We want `dot(predicted_action_embedding,
         # action_embedding)` for each `action_embedding`, and we can get that efficiently with
         # `bmm` and some squeezing.
-        # Shape: (batch_size, num_actions)
+        # Shape: (group_size, num_actions)
         action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
         log_probs = util.masked_log_softmax(action_logits, action_mask.float())
         return self._compute_new_states(state,
@@ -711,8 +746,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
         return action_embeddings, action_mask, valid_actions
 
-    def _compute_new_states(self,  # pylint: disable=no-self-use
-                            state: WikiTablesDecoderState,
+    @staticmethod
+    def _compute_new_states(state: WikiTablesDecoderState,
                             log_probs: torch.Tensor,
                             hidden_state: torch.Tensor,
                             memory_cell: torch.Tensor,
@@ -722,20 +757,22 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                             allowed_actions: List[Set[int]],
                             max_actions: int = None) -> List[WikiTablesDecoderState]:
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
+        if max_actions is not None:
+            # We might need a version of `sorted_log_probs` on the CPU later, but only if we need
+            # to truncate the best states to `max_actions`.
+            sorted_log_probs_cpu = sorted_log_probs.data.cpu().numpy()
         sorted_actions = sorted_actions.data.cpu().numpy().tolist()
         best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)
         for group_index, (batch_index, group_actions) in enumerate(zip(state.batch_indices, sorted_actions)):
             for action_index, action in enumerate(group_actions):
                 # `action` is currently the index in `log_probs`, not the actual action ID.  To get
                 # the action ID, we need to go through `considered_actions`.
-                if action_index >= len(considered_actions[group_index]):
+                if action >= len(considered_actions[group_index]):
                     # This was padding.  We can check either `action_index` or `action` here - it's
                     # really `action` that we care about, but our masking should have sorted all of
                     # the higher actions to the end, anyway.
                     continue
                 action = considered_actions[group_index][action]
-                left_side = state.possible_actions[batch_index][action]['left'][0]
-                right_side = state.possible_actions[batch_index][action]['right'][0]
                 if allowed_actions is not None and action not in allowed_actions[group_index]:
                     # This happens when our _decoder trainer_ wants us to only evaluate certain
                     # actions, likely because they are the gold actions in this state.  We just skip
@@ -744,8 +781,14 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                     continue
                 best_next_states[batch_index].append((group_index, action_index, action))
         new_states = []
-        for batch_index, best_states in best_next_states.items():
+        for batch_index, best_states in sorted(best_next_states.items()):
             if max_actions is not None:
+                # We sorted previously by _group_index_, but we then combined by _batch_index_.  We
+                # need to get the top next states for each _batch_ instance, so we sort all of the
+                # instance's states again (across group index) by score.  We don't need to do this
+                # if `max_actions` is None, because we'll be keeping all of the next states,
+                # anyway.
+                best_states.sort(key=lambda x: sorted_log_probs_cpu[x[:2]], reverse=True)
                 best_states = best_states[:max_actions]
             for group_index, action_index, action in best_states:
                 # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
@@ -754,7 +797,12 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 batch_index = state.batch_indices[group_index]
                 new_action_history = state.action_history[group_index] + [action]
                 new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
-                action_embedding = action_embeddings[group_index, action_index, :]
+
+                # `action_index` is the index in the _sorted_ tensors, but the action embedding
+                # matrix is _not_ sorted, so we need to get back the original, non-sorted action
+                # index before we get the action embedding.
+                action_embedding_index = sorted_actions[group_index][action_index]
+                action_embedding = action_embeddings[group_index, action_embedding_index, :]
                 left_side = state.possible_actions[batch_index][action]['left'][0]
                 right_side = state.possible_actions[batch_index][action]['right'][0]
                 new_grammar_state = state.grammar_state[group_index].take_action(left_side, right_side)
