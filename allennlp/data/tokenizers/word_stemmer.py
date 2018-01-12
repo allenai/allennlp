@@ -51,4 +51,11 @@ class PorterStemmer(WordStemmer):
     @overrides
     def stem_word(self, word: Token) -> Token:
         new_text = self.stemmer.stem(word.text)
-        return Token(new_text, word.idx, word.pos_, word.tag_, word.dep_, getattr(word, 'text_id', None))
+        return Token(text=new_text,
+                     idx=word.idx,
+                     lemma=word.lemma_,
+                     pos=word.pos_,
+                     tag=word.tag_,
+                     dep=word.dep_,
+                     ent_type=word.ent_type_,
+                     text_id=getattr(word, 'text_id', None))
