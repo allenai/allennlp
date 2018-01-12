@@ -284,9 +284,11 @@ class Trainer:
         train_generator_tqdm = Tqdm.tqdm(train_generator,
                                          total=num_training_batches)
         self._last_log = time.time()
-        batch_num = 0
-
         last_save_time = time.time()
+
+        batch_num = 0
+        if self._batch_num_total is None:
+            self._batch_num_total = 0
 
         if self._histogram_interval is not None:
             if hasattr(self._model, 'histogram_parameters'):
@@ -297,8 +299,8 @@ class Trainer:
         logger.info("Training")
         for batch in train_generator_tqdm:
             batch_num += 1
-            batch_num_total = num_training_batches * epoch + batch_num
-            self._batch_num_total = batch_num_total
+            self._batch_num_total += 1
+            batch_num_total = self._batch_num_total
 
             self._should_log_histogram = self._histogram_interval is not None and (
                     batch_num_total % self._histogram_interval == 0)
@@ -578,7 +580,8 @@ class Trainer:
 
             training_state = {'epoch': epoch,
                               'val_metric_per_epoch': val_metric_per_epoch,
-                              'optimizer': self._optimizer.state_dict()}
+                              'optimizer': self._optimizer.state_dict(),
+                              'batch_num_total': self._batch_num_total}
             training_path = os.path.join(self._serialization_dir,
                                          "training_state_epoch_{}.th".format(epoch))
             torch.save(training_state, training_path)
@@ -667,6 +670,12 @@ class Trainer:
             epoch_to_return = training_state["epoch"] + 1
         else:
             epoch_to_return = int(training_state["epoch"].split('.')[0]) + 1
+
+        # For older checkpoints with batch_num_total missing, default to old behavior where
+        # it is unchanged.
+        batch_num_total = training_state.get('batch_num_total')
+        if batch_num_total is not None:
+            self._batch_num_total = batch_num_total
 
         return epoch_to_return, val_metric_per_epoch
 
