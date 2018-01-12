@@ -23,7 +23,7 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
         entities = instance.fields['table'].knowledge_graph.entities
         assert len(entities) == 47
         assert sorted(entities) == [
-                # The table cell entity names.  Duplicates have trailing _2, _3, etc.
+                # The table cell entity names.
                 'fb:cell.10_727',
                 'fb:cell.11th',
                 'fb:cell.1st',
@@ -105,15 +105,15 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
         for i in range(63, 117):
             assert action_fields[i]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
         # Start of the "e -> fb:cell.[column]" block.
-        for i in range(117, 171):
+        for i in range(117, 152):
             assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
         # This is the null cell, right in the middle of the other cells.
-        assert action_fields[171]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
+        assert action_fields[152]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
         # End of the "e -> fb:cell.[column]" block.
-        for i in range(172, 188):
+        for i in range(153, 158):
             assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
         # After the "e -> fb:cell.[column]" block.
-        for i in range(188, 204):
+        for i in range(158, 174):
             assert action_fields[i]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
 
         # This is going to be long, but I think it's worth it, to be sure that all of the actions
