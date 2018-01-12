@@ -101,6 +101,7 @@ def _read_pretrained_words(embeddings_filename: str)-> Set[str]:
             words.add(word)
     return words
 
+
 class Vocabulary:
     """
     A Vocabulary maps strings to integers, allowing for strings to be mapped to an
@@ -385,7 +386,6 @@ class Vocabulary:
         Returns whether or not there are padding and OOV tokens added to the given namepsace.
         """
         return self._index_to_token[namespace][0] == self._padding_token
-
 
     def add_token_to_namespace(self, token: str, namespace: str = 'tokens') -> int:
         """
