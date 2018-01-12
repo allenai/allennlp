@@ -17,14 +17,65 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
         assert [t.text for t in instance.fields["question"].tokens] == question_tokens
         entities = instance.fields['table'].knowledge_graph.get_all_entities()
         assert len(entities) == 47
-        assert 'fb:row.row.year' in entities
+        assert sorted(entities) == [
+                # The table cell entity names.  Duplicates have trailing _2, _3, etc.
+                'fb:cell.10_727',
+                'fb:cell.11th',
+                'fb:cell.1st',
+                'fb:cell.1st_round',
+                'fb:cell.1st_western',
+                'fb:cell.2',
+                'fb:cell.2001',
+                'fb:cell.2002',
+                'fb:cell.2003',
+                'fb:cell.2004',
+                'fb:cell.2005',
+                'fb:cell.2006',
+                'fb:cell.2007',
+                'fb:cell.2008',
+                'fb:cell.2009',
+                'fb:cell.2010',
+                'fb:cell.2nd',
+                'fb:cell.2nd_pacific',
+                'fb:cell.2nd_round',
+                'fb:cell.3rd_pacific',
+                'fb:cell.3rd_round',
+                'fb:cell.3rd_usl_3rd',
+                'fb:cell.4th_round',
+                'fb:cell.4th_western',
+                'fb:cell.5_575',
+                'fb:cell.5_628',
+                'fb:cell.5_871',
+                'fb:cell.5th',
+                'fb:cell.6_028',
+                'fb:cell.6_260',
+                'fb:cell.6_851',
+                'fb:cell.7_169',
+                'fb:cell.8_567',
+                'fb:cell.9_734',
+                'fb:cell.did_not_qualify',
+                'fb:cell.quarterfinals',
+                'fb:cell.semifinals',
+                'fb:cell.usl_a_league',
+                'fb:cell.usl_first_division',
+                'fb:cell.ussf_d_2_pro_league',
+
+                # Column headers
+                'fb:row.row.avg_attendance',
+                'fb:row.row.division',
+                'fb:row.row.league',
+                'fb:row.row.open_cup',
+                'fb:row.row.playoffs',
+                'fb:row.row.regular_season',
+                'fb:row.row.year',
+                ]
 
         # The content of this will be tested indirectly by checking the actions; we'll just make
         # sure we get a WikiTablesWorld object in here.
         assert isinstance(instance.fields['world'].as_tensor({}), WikiTablesWorld)
 
         actions = [action_field.rule for action_field in instance.fields['actions'].field_list]
-        assert len(actions) == 171
+        assert len(actions) == 174
 
         # This is going to be long, but I think it's worth it, to be sure that all of the actions
         # we're expecting are present, and there are no extras.
@@ -113,6 +164,7 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "<e,r> -> fb:row.row.avg_attendance",
                 "<e,r> -> fb:row.row.division",
                 "<e,r> -> fb:row.row.league",
+                "<e,r> -> fb:row.row.null",  # null column, representing an empty set
                 "<e,r> -> fb:row.row.open_cup",
                 "<e,r> -> fb:row.row.playoffs",
                 "<e,r> -> fb:row.row.regular_season",
@@ -178,6 +230,7 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 # CELL_TYPE productions.  We have some numbers here, whatever numbers showed up in
                 # the question (as digits), as well as some which are hard-coded to cover
                 # ordinals and cardinals that are written out as text.
+                "e -> -1",
                 "e -> 0",
                 "e -> 1",
                 "e -> 2",
@@ -230,6 +283,7 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "e -> fb:cell.8_567",
                 "e -> fb:cell.9_734",
                 "e -> fb:cell.did_not_qualify",
+                "e -> fb:cell.null",  # null cell, representing an empty set
                 "e -> fb:cell.quarterfinals",
                 "e -> fb:cell.semifinals",
                 "e -> fb:cell.usl_a_league",
