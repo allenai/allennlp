@@ -6,6 +6,21 @@ from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
 from allennlp.data.semparse.type_declarations import type_declaration as types
 
 
+class ParsingError(Exception):
+    """
+    This exception gets raised when there is a parsing error during logical form processing.  This
+    might happen because you're not handling the full set of possible logical forms, for instance,
+    and having this error provides a consistent way to catch those errors and log how frequently
+    this occurs.
+    """
+    def __init__(self, message):
+        super(ParsingError, self).__init__()
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+
+
 class World:
     """
     Base class for defining a world in a new domain. This class defines a method to translate a
@@ -126,7 +141,28 @@ class World:
             arguments = ["(%s)" % name for name in mapped_names[1:]]
         return "(%s %s)" % (mapped_names[0], " ".join(arguments))
 
-    def _map_name(self, name: str) -> str:
+    def _map_name(self, name: str, keep_mapping: bool = False) -> str:
+        """
+        Takes the name of a predicate or a constant as used by Sempre, maps it to a unique string
+        such that NLTK processes it appropriately. This is needed because NLTK has a naming
+        convention for variables:
+
+            - Function variables: Single upper case letter optionally followed by digits
+            - Individual variables: Single lower case letter (except e for events) optionally
+              followed by digits
+            - Constants: Everything else
+
+        Parameters
+        ----------
+        name : ``str``
+            Token from Sempre's logical form.
+        keep_mapping : ``bool``, optional (default=False)
+            If this is ``True``, we will add the name and its mapping to our local state, so that
+            :func:`get_name_mapping` and :func:`get_valid_actions` know about it.  You typically
+            want to do this when you're `initializing` the object, but you very likely don't want
+            to when you're parsing logical forms - getting an ill-formed logical form can then
+            change your state in bad ways, for instance.
+        """
         raise NotImplementedError
 
     def _add_name_mapping(self, name: str, translated_name: str, name_type: Type = None):
