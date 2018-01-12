@@ -56,7 +56,10 @@ class TableKnowledgeGraph(KnowledgeGraph):
                    ... ]}
         """
         neighbors: DefaultDict[str, List[str]] = defaultdict(list)
-        # Following Sempre's convention for naming columns.
+        # Following Sempre's convention for naming columns.  Sempre gives columns unique names when
+        # columns normalize to a collision, so we keep track of these.  We do not give cell text
+        # unique names, however, as `fb:cell.x` is actually a function that returns all cells that
+        # have text that normalizes to "x".
         column_ids = []
         columns: Dict[str, int] = {}
         for column_string in json_object['columns']:
@@ -67,22 +70,14 @@ class TableKnowledgeGraph(KnowledgeGraph):
             columns[normalized_string] = 1
             column_ids.append(normalized_string)
 
-        # TODO(mattg): I know that sempre gives separate ids to columns that collide on
-        # normalization; I don't know if sempre similarly does this for cells that collide.  We'll
-        # implement it anyway.
-        cells: Dict[str, int] = {}
-        all_cells = json_object["cells"]
-        for row_index, row_cells in enumerate(all_cells):
+        cells = json_object["cells"]
+        for row_index, row_cells in enumerate(cells):
             assert len(columns) == len(row_cells), ("Invalid format. Row %d has %d cells, but header has %d"
                                                     " columns" % (row_index, len(row_cells), len(columns)))
             # Following Sempre's convention for naming cells.
             row_cell_ids = []
             for cell_string in row_cells:
                 normalized_string = f'fb:cell.{cls._normalize_string(cell_string)}'
-                if normalized_string in cells:
-                    cells[normalized_string] += 1
-                    normalized_string = f'{normalized_string}_{cells[normalized_string]}'
-                cells[normalized_string] = 1
                 row_cell_ids.append(normalized_string)
             for column, cell in zip(column_ids, row_cell_ids):
                 neighbors[column].append(cell)

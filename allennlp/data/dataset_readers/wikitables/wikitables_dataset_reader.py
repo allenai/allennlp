@@ -65,8 +65,8 @@ class WikiTablesDatasetReader(DatasetReader):
         Sometimes DPD just made bad choices about logical forms and gives us forms that we can't
         parse (most of the time these are very unlikely logical forms, because, e.g., it
         halucinates a date or number from the table that's not in the question).  But we don't want
-        to spend our time trying to parse thousands of bad logical forms.  We will try at most
-        ``max_dpd_tries`` logical forms before giving up.  Only applicable if
+        to spend our time trying to parse thousands of bad logical forms.  We will try to parse
+        only the ``max_dpd_tries`` logical forms before giving up.  Only applicable if
         ``dpd_output_directory`` is given.  Default is 20.
     tokenizer : ``Tokenizer`` (optional)
         Tokenizer to use for the questions. Will default to ``WordTokenizer()``.

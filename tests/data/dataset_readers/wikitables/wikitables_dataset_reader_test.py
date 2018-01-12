@@ -16,15 +16,13 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                            "a", "part", "of", "the", "usl", "a", "-", "league", "?"]
         assert [t.text for t in instance.fields["question"].tokens] == question_tokens
         entities = instance.fields['table'].knowledge_graph.get_all_entities()
-        assert len(entities) == 77
+        assert len(entities) == 47
         assert sorted(entities) == [
                 # The table cell entity names.  Duplicates have trailing _2, _3, etc.
                 'fb:cell.10_727',
                 'fb:cell.11th',
-                'fb:cell.11th_2',
                 'fb:cell.1st',
                 'fb:cell.1st_round',
-                'fb:cell.1st_round_2',
                 'fb:cell.1st_western',
                 'fb:cell.2',
                 'fb:cell.2001',
@@ -37,25 +35,13 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 'fb:cell.2008',
                 'fb:cell.2009',
                 'fb:cell.2010',
-                'fb:cell.2_10',
-                'fb:cell.2_2',
-                'fb:cell.2_3',
-                'fb:cell.2_4',
-                'fb:cell.2_5',
-                'fb:cell.2_6',
-                'fb:cell.2_7',
-                'fb:cell.2_8',
-                'fb:cell.2_9',
                 'fb:cell.2nd',
                 'fb:cell.2nd_pacific',
                 'fb:cell.2nd_round',
                 'fb:cell.3rd_pacific',
                 'fb:cell.3rd_round',
-                'fb:cell.3rd_round_2',
-                'fb:cell.3rd_round_3',
                 'fb:cell.3rd_usl_3rd',
                 'fb:cell.4th_round',
-                'fb:cell.4th_round_2',
                 'fb:cell.4th_western',
                 'fb:cell.5_575',
                 'fb:cell.5_628',
@@ -68,26 +54,10 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 'fb:cell.8_567',
                 'fb:cell.9_734',
                 'fb:cell.did_not_qualify',
-                'fb:cell.did_not_qualify_2',
-                'fb:cell.did_not_qualify_3',
-                'fb:cell.did_not_qualify_4',
-                'fb:cell.did_not_qualify_5',
-                'fb:cell.did_not_qualify_6',
                 'fb:cell.quarterfinals',
-                'fb:cell.quarterfinals_2',
-                'fb:cell.quarterfinals_3',
-                'fb:cell.quarterfinals_4',
                 'fb:cell.semifinals',
-                'fb:cell.semifinals_2',
                 'fb:cell.usl_a_league',
-                'fb:cell.usl_a_league_2',
-                'fb:cell.usl_a_league_3',
-                'fb:cell.usl_a_league_4',
                 'fb:cell.usl_first_division',
-                'fb:cell.usl_first_division_2',
-                'fb:cell.usl_first_division_3',
-                'fb:cell.usl_first_division_4',
-                'fb:cell.usl_first_division_5',
                 'fb:cell.ussf_d_2_pro_league',
 
                 # Column headers
@@ -105,7 +75,7 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
         assert isinstance(instance.fields['world'].as_tensor({}), WikiTablesWorld)
 
         actions = [action_field.rule for action_field in instance.fields['actions'].field_list]
-        assert len(actions) == 204
+        assert len(actions) == 174
 
         # This is going to be long, but I think it's worth it, to be sure that all of the actions
         # we're expecting are present, and there are no extras.
@@ -194,7 +164,7 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "<e,r> -> fb:row.row.avg_attendance",
                 "<e,r> -> fb:row.row.division",
                 "<e,r> -> fb:row.row.league",
-                "<e,r> -> fb:row.row.null",  # null row, representing an empty set
+                "<e,r> -> fb:row.row.null",  # null column, representing an empty set
                 "<e,r> -> fb:row.row.open_cup",
                 "<e,r> -> fb:row.row.playoffs",
                 "<e,r> -> fb:row.row.regular_season",
@@ -280,10 +250,8 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 # And these are the cells that we saw in the table.
                 "e -> fb:cell.10_727",
                 "e -> fb:cell.11th",
-                "e -> fb:cell.11th_2",
                 "e -> fb:cell.1st",
                 "e -> fb:cell.1st_round",
-                "e -> fb:cell.1st_round_2",
                 "e -> fb:cell.1st_western",
                 "e -> fb:cell.2",
                 "e -> fb:cell.2001",
@@ -296,25 +264,13 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "e -> fb:cell.2008",
                 "e -> fb:cell.2009",
                 "e -> fb:cell.2010",
-                "e -> fb:cell.2_10",
-                "e -> fb:cell.2_2",
-                "e -> fb:cell.2_3",
-                "e -> fb:cell.2_4",
-                "e -> fb:cell.2_5",
-                "e -> fb:cell.2_6",
-                "e -> fb:cell.2_7",
-                "e -> fb:cell.2_8",
-                "e -> fb:cell.2_9",
                 "e -> fb:cell.2nd",
                 "e -> fb:cell.2nd_pacific",
                 "e -> fb:cell.2nd_round",
                 "e -> fb:cell.3rd_pacific",
                 "e -> fb:cell.3rd_round",
-                "e -> fb:cell.3rd_round_2",
-                "e -> fb:cell.3rd_round_3",
                 "e -> fb:cell.3rd_usl_3rd",
                 "e -> fb:cell.4th_round",
-                "e -> fb:cell.4th_round_2",
                 "e -> fb:cell.4th_western",
                 "e -> fb:cell.5_575",
                 "e -> fb:cell.5_628",
@@ -327,27 +283,11 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                 "e -> fb:cell.8_567",
                 "e -> fb:cell.9_734",
                 "e -> fb:cell.did_not_qualify",
-                "e -> fb:cell.did_not_qualify_2",
-                "e -> fb:cell.did_not_qualify_3",
-                "e -> fb:cell.did_not_qualify_4",
-                "e -> fb:cell.did_not_qualify_5",
-                "e -> fb:cell.did_not_qualify_6",
                 "e -> fb:cell.null",  # null cell, representing an empty set
                 "e -> fb:cell.quarterfinals",
-                "e -> fb:cell.quarterfinals_2",
-                "e -> fb:cell.quarterfinals_3",
-                "e -> fb:cell.quarterfinals_4",
                 "e -> fb:cell.semifinals",
-                "e -> fb:cell.semifinals_2",
                 "e -> fb:cell.usl_a_league",
-                "e -> fb:cell.usl_a_league_2",
-                "e -> fb:cell.usl_a_league_3",
-                "e -> fb:cell.usl_a_league_4",
                 "e -> fb:cell.usl_first_division",
-                "e -> fb:cell.usl_first_division_2",
-                "e -> fb:cell.usl_first_division_3",
-                "e -> fb:cell.usl_first_division_4",
-                "e -> fb:cell.usl_first_division_5",
                 "e -> fb:cell.ussf_d_2_pro_league",
                 "e -> x",
 

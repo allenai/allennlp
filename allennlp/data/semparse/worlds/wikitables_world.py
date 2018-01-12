@@ -42,7 +42,9 @@ class WikiTablesWorld(World):
         self._column_counter = 0
 
         # This adds all of the cell and column names to our local name mapping, including null
-        # cells and entities, so we can get them as valid actions in the parser.
+        # cells and columns, so we can get them as valid actions in the parser.  The null cell and
+        # column are used to check against empty sets, e.g., for questions like "Is there a team
+        # that won three times in a row?".
         for entity in table_graph.get_all_entities() + ['fb:cell.null', 'fb:row.row.null']:
             self._map_name(entity, keep_mapping=True)
 
