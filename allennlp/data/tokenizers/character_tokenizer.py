@@ -47,7 +47,7 @@ class CharacterTokenizer(Tokenizer):
         self._end_tokens = end_tokens or []
 
     @overrides
-    def batch_tokenize(self, texts: str) -> List[Token]:
+    def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
         return [self.tokenize(text) for text in texts]
 
     @overrides

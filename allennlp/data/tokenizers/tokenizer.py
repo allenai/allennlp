@@ -23,7 +23,7 @@ class Tokenizer(Registrable):
     """
     default_implementation = 'word'
 
-    def batch_tokenize(self, texts: List[str]) -> List[Token]:
+    def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
         """
         Batches together tokenization of several texts, in case that is faster for particular
         tokenizers.
