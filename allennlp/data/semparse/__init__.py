@@ -4,3 +4,4 @@ declarations, and world representations for all the domains for which we want to
 """
 
 from allennlp.data.semparse.knowledge_graphs.knowledge_graph import KnowledgeGraph
+from allennlp.data.semparse.worlds.world import ParsingError, World
