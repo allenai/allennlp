@@ -97,6 +97,7 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         self._context = context
 
         if rule:
+            assert ' -> ' in rule, f"Got invalid rule format: {rule}"
             self._left_side, self._right_side = rule.split(' -> ')
             self._left_side_token, self._right_side_token = (Token(self._left_side), Token(self._right_side))
             self._right_is_nonterminal = self._is_nonterminal(self._right_side)

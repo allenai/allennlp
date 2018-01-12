@@ -2,7 +2,7 @@
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.nn.decoding import MaximumMarginalLikelihood
+from allennlp.nn.decoding import DecoderState, MaximumMarginalLikelihood
 
 
 class TestMaximumMarginalLikelihood(AllenNlpTestCase):
@@ -31,3 +31,10 @@ class TestMaximumMarginalLikelihood(AllenNlpTestCase):
         assert result[1][()] == set([1])
         assert result[1][(1,)] == set([3])  # note that 9 is not in here; it was masked
         assert result[1][(1, 3)] == set([3, 5])
+
+    def test_get_allowed_actions(self):
+        # pylint: disable=protected-access
+        state = DecoderState([0, 1, 0], [[1], [0], []], [])
+        allowed_transitions = [{(1,): {2}, (): {3}}, {(0,): {4, 5}}]
+        allowed_actions = MaximumMarginalLikelihood._get_allowed_actions(state, allowed_transitions)
+        assert allowed_actions == [{2}, {4, 5}, {3}]
