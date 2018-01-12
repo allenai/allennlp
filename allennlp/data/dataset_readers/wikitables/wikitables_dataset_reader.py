@@ -26,6 +26,7 @@ from allennlp.data.semparse.type_declarations import wikitables_type_declaration
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -69,7 +70,8 @@ class WikiTablesDatasetReader(DatasetReader):
         only the ``max_dpd_tries`` logical forms before giving up.  Only applicable if
         ``dpd_output_directory`` is given.  Default is 20.
     tokenizer : ``Tokenizer`` (optional)
-        Tokenizer to use for the questions. Will default to ``WordTokenizer()``.
+        Tokenizer to use for the questions. Will default to ``WordTokenizer()`` with Spacy's tagger
+        enabled, as we use lemma matches as features for entity linking.
     question_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
         Token indexers for questions. Will default to ``{"tokens": SingleIdTokenIndexer()}``.
     table_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
@@ -89,6 +91,10 @@ class WikiTablesDatasetReader(DatasetReader):
         TokenCharactersIndexer()}``.  We use this indexer by default because WikiTables has plenty
         of terminals that are unseen at training time, so we need to use a representation for them
         that is not just a vocabulary lookup.
+    linking_feature_extractors : ``List[str]`` (optional)
+        The list of feature extractors to use in the :class:`KnowledgeGraphField` when computing
+        entity linking features.  See that class for more information.  By default, we will use all
+        available feature extractors.
     """
     def __init__(self,
                  tables_directory: str = None,
@@ -99,16 +105,18 @@ class WikiTablesDatasetReader(DatasetReader):
                  question_token_indexers: Dict[str, TokenIndexer] = None,
                  table_token_indexers: Dict[str, TokenIndexer] = None,
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
-                 terminal_indexers: Dict[str, TokenIndexer] = None) -> None:
+                 terminal_indexers: Dict[str, TokenIndexer] = None,
+                 linking_feature_extractors: List[str] = None) -> None:
         self._tables_directory = tables_directory
         self._dpd_output_directory = dpd_output_directory
         self._max_dpd_logical_forms = max_dpd_logical_forms
         self._max_dpd_tries = max_dpd_tries
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
         self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
         self._terminal_indexers = terminal_indexers or {"token_characters": TokenCharactersIndexer()}
+        self._linking_feature_extractors = linking_feature_extractors
         self._basic_types = set(str(type_) for type_ in wt_types.BASIC_TYPES)
 
     @overrides
@@ -183,7 +191,10 @@ class WikiTablesDatasetReader(DatasetReader):
             table_knowledge_graph = TableKnowledgeGraph.read_from_file(table_info)
         else:
             table_knowledge_graph = TableKnowledgeGraph.read_from_json(table_info)
-        table_field = KnowledgeGraphField(table_knowledge_graph, self._table_token_indexers)
+        table_field = KnowledgeGraphField(table_knowledge_graph,
+                                          tokenized_question,
+                                          self._tokenizer,
+                                          self._table_token_indexers)
         world = WikiTablesWorld(table_knowledge_graph, tokenized_question)
         world_field = MetadataField(world)
 
@@ -298,9 +309,11 @@ class WikiTablesDatasetReader(DatasetReader):
         dpd_output_directory = params.pop('dpd_output_directory', None)
         max_dpd_logical_forms = params.pop('max_dpd_logical_forms', 10)
         max_dpd_tries = params.pop('max_dpd_tries', 20)
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
+        default_tokenizer_params = {'word_splitter': {'type': 'spacy', 'pos_tags': True}}
+        tokenizer = Tokenizer.from_params(params.pop('tokenizer', default_tokenizer_params))
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
         table_token_indexers = TokenIndexer.dict_from_params(params.pop('table_token_indexers', {}))
+        linking_feature_extracters = params.pop('linking_feature_extractors', None)
         params.assert_empty(cls.__name__)
         return WikiTablesDatasetReader(tables_directory=tables_directory,
                                        dpd_output_directory=dpd_output_directory,
@@ -308,4 +321,5 @@ class WikiTablesDatasetReader(DatasetReader):
                                        max_dpd_tries=max_dpd_tries,
                                        tokenizer=tokenizer,
                                        question_token_indexers=question_token_indexers,
-                                       table_token_indexers=table_token_indexers)
+                                       table_token_indexers=table_token_indexers,
+                                       linking_feature_extractors=linking_feature_extracters)
