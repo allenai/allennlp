@@ -4,7 +4,7 @@ out-of-vocabulary token.
 """
 
 from collections import defaultdict
-from typing import Any, Callable, Dict, Union, Sequence, Set, Optional, Iterator
+from typing import Any, Callable, Dict, Union, Sequence, Set, Optional, Iterable
 import codecs
 import logging
 import os
@@ -312,7 +312,7 @@ class Vocabulary:
 
     @classmethod
     def from_instances(cls,
-                       instances: Iterator['adi.Instance'],
+                       instances: Iterable['adi.Instance'],
                        min_count: int = 1,
                        max_vocab_size: Union[int, Dict[str, int]] = None,
                        non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
@@ -336,7 +336,7 @@ class Vocabulary:
                           only_include_pretrained_words=only_include_pretrained_words)
 
     @classmethod
-    def from_params(cls, params: Params, instances: Iterator['adi.Instance'] = None):
+    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
         """
         There are two possible ways to build a vocabulary; from a
         pre-existing dataset, using :func:`Vocabulary.from_instances`, or
