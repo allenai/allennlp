@@ -87,6 +87,8 @@ class WikiTablesSemanticParser(Model):
         check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
                                "nonterminal embedding dim", "terminal embedding dim")
 
+        # TODO(mattg): instantiate a parameter vector for the linking features.
+
         self._action_padding_index = -1  # the padding value used by IndexField
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
         self._decoder_step = WikiTablesDecoderStep(vocab=vocab,
@@ -133,6 +135,25 @@ class WikiTablesSemanticParser(Model):
         embedded_input = self._question_embedder(question)
         question_mask = util.get_text_field_mask(question).float()
         batch_size = embedded_input.size(0)
+
+        # Actually a Dict[str, torch.LongTensor], but there is probably a single entry, with a
+        # tensor of shape (batch_size, num_entities, num_entity_tokens).
+        table_text = table['text']
+        # TODO(mattg): embed the table, similar to how the question is embedded (probably just
+        # using the question embedder), giving a tensor of shape (batch_size, num_entities,
+        # num_entity_tokens, embedding_dim).  Then encode that into shape (batch_size,
+        # num_entities, embedding_dim).
+
+        # (batch_size, num_entities, num_question_tokens, num_features)
+        linking_features = table['linking']
+        # TODO(mattg): multiply this by the feature weights, use this and the text embedding above
+        # to compute a linking scores.
+
+        # TODO(mattg): we need to actually compute this with the stuff mentioned above.  This
+        # represents how well each question token matches table entities.  I'm stubbing this out
+        # for now, so that I have a variable to pass to the decoder, because we need this there.
+        # (batch_size, num_entities, num_question_tokens)
+        linking_scores: torch.FloatTensor = None
 
         # (batch_size, question_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, question_mask)
