@@ -45,7 +45,7 @@ class WikiTablesWorld(World):
         # cells and columns, so we can get them as valid actions in the parser.  The null cell and
         # column are used to check against empty sets, e.g., for questions like "Is there a team
         # that won three times in a row?".
-        for entity in table_graph.get_all_entities() + ['fb:cell.null', 'fb:row.row.null']:
+        for entity in table_graph.entities + ['fb:cell.null', 'fb:row.row.null']:
             self._map_name(entity, keep_mapping=True)
 
         numbers = self._get_numbers_from_tokens(question_tokens) + list(str(i) for i in range(-1, 10))
