@@ -108,12 +108,16 @@ class TableKnowledgeGraph(KnowledgeGraph):
         string = re.sub("[‘’´`]", "'", string)
         string = re.sub("[“”«»]", "\"", string)
         string = re.sub("[•†‡²³]", "", string)
-        string = re.sub("[‐‑–—]", "-", string)
-        string = re.sub("[\\u0170-\\uFFFF]", "", string).strip()
+        string = re.sub("[‐‑–—−]", "-", string)
         # Oddly, some unicode characters get converted to _ instead of being stripped.  Not really
         # sure how sempre decides what to do with these...  TODO(mattg): can we just get rid of the
         # need for this function somehow?  It's causing a whole lot of headaches.
-        string = re.sub("[ðø]", "_", string)
+        string = re.sub("[ðø′″€⁄ª]", "_", string)
+        # This is such a mess.  There isn't just a block of unicode that we can strip out, because
+        # sometimes sempre just strips diacritics...  We'll try stripping out a few separate
+        # blocks, skipping the ones that sempre skips...
+        string = re.sub("[\\u0180-\\u0210]", "", string).strip()
+        string = re.sub("[\\u0220-\\uFFFF]", "", string).strip()
         string = string.replace("\\n", "_")
         string = re.sub("\\s+", " ", string)
         # Canonicalization rules from Sempre
