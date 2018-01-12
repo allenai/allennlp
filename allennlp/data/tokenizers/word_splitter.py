@@ -24,7 +24,7 @@ class WordSplitter(Registrable):
         and call ``split_words``, but the ``SpacyWordSplitter`` will actually do batched
         processing.
         """
-        return [self.split_words(sentence) for sentence in senteces]
+        return [self.split_words(sentence) for sentence in sentences]
 
     def split_words(self, sentence: str) -> List[Token]:
         """
