@@ -13,15 +13,18 @@ from torch.nn.modules.linear import Linear
 from allennlp.common import Params
 from allennlp.common import util as common_util
 from allennlp.common.checks import check_dimensions_match
+from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.type_declarations import GrammarState
+from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.worlds import WikiTablesWorld
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.modules.token_embedders import Embedding
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.model import Model
+from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
+from allennlp.modules.similarity_functions import SimilarityFunction, CosineSimilarity
+from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
 from allennlp.training.metrics import Average
@@ -155,16 +158,117 @@ class WikiTablesSemanticParser(Model):
         # Actually a Dict[str, torch.LongTensor], but there is probably a single entry, with a
         # tensor of shape (batch_size, num_entities, num_entity_tokens).
         table_text = table['text']
-        embedded_table_text = self._question_embedder(table_text)
-        # TODO(mattg): embed the table, similar to how the question is embedded (probably just
-        # using the question embedder), giving a tensor of shape (batch_size, num_entities,
-        # num_entity_tokens, embedding_dim).  Then encode that into shape (batch_size,
-        # num_entities, embedding_dim).
+
+        # (batch_size, num_entities, num_entity_tokens, embedding_dim)
+        embedded_table = self._question_embedder(table_text)
+        # (batch_size, num_entities, num_entity_tokens)
+        table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
+
+        # todo move
+        table_encoder = BagOfEmbeddingsEncoder(embedding_dim=25, averaged=True)
+
+        # encode the able using an average of the entity words
+        dims = embedded_table.size()
+        table_mask = table_mask.view(-1, table_mask.size()[2])
+        encoded_table = table_encoder(embedded_table.view(-1, dims[2], dims[3]), table_mask)
+        # (batch_size, num_entities, embedding_dim)
+        encoded_table = encoded_table.view(batch_size, dims[1], dims[3])
+
+        # find each entities neighbors
+        batches = []
+        for w in world:
+            # each batch has it's own world aka table
+            entities = w.table_graph.entities
+            neighbors = w.table_graph.neighbors
+            neighbor_indexes = []
+            for e in entities:
+                # get indexes of entity e's neighbors
+                # todo precompute
+                curr_neighbors = [entities.index(cn) for cn in neighbors[e]]
+                # curr_neighbors = [0,0]
+                padded = pad_sequence_to_length(curr_neighbors, len(entities)) # todo change max
+                neighbor_indexes.append(padded)
+            batches.append(neighbor_indexes)
+        # (batch_size, num_entities, num_entities)
+        neighbor_idx_tensor = Variable(torch.LongTensor(batches))
+
+        # get averaged entity word embeddings for each neighbor
+        # (batch_size, num_entities, num_entities, embedding_dim)
+        neighbor_embed_tensor = util.batched_index_select(encoded_table, neighbor_idx_tensor)
+
+        # bag of word encoder for sum and average
+        neighbor_mask = util.get_text_field_mask({'tokens':neighbor_idx_tensor}, num_wrapping_dims=1).float()
+        dims = neighbor_embed_tensor.size()
+        neighbor_embed_tensor = neighbor_embed_tensor.view(-1, dims[2], dims[3])
+        neighbor_mask = neighbor_mask.view(-1, neighbor_mask.size()[2])
+        neighbor_embeddings = table_encoder(neighbor_embed_tensor, neighbor_mask)
+        # (batch_size, num_entities, embedding_dim)
+        neighbor_embeddings = neighbor_embeddings.view(batch_size, dims[1], dims[3])
+
+        # compute type vector (batch, num_entities)
+        batches = []
+        for w in world:
+            types = []
+            ent2type = w.local_type_signatures
+            for e in w.table_graph.entities:
+                types.append((1 if ent2type[w.local_name_mapping[e]] == 'e' else 0)) # only 2 types 'e' and '<e,r>'
+            batches.append(types)
+        # (batch_size, num_entities)
+        type_vector = Variable(torch.LongTensor(batches))
+
+        # todo change to actual embedding size
+        paramsType = torch.nn.Linear(1, 25)
+        paramsNeighbor = torch.nn.Linear(25, 25)
+
+        x = paramsType(type_vector.unsqueeze(-1).float())
+        y = paramsNeighbor(neighbor_embeddings.float())
+        tan = torch.nn.Tanh()
+        entity_embedding = tan(x + y)
 
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']  # pylint: disable=unused-variable
         # TODO(mattg): multiply this by the feature weights, use this and the text embedding above
         # to compute a linking scores.
+        similarity = CosineSimilarity()
+
+        # STEP 1 expand both embedded question and table since cosine similarity requires
+        # the same dimensions
+        # embedded_input (batch_size, num_question_tokens, embedding_dim) ->
+        # (batch_size, num_entities, num_question_tokens, num_entity_tokens, embedding_dim)
+        embedded_input = embedded_input.unsqueeze(2)
+        embedded_input = embedded_input.expand(batch_size,11,6,25) # todo change numbers
+        # embedded table (batch_size, num_entities, num_entity_tokens, embedding_dim) ->
+        # (batch_size, num_entities, num_question_tokens, num_entity_tokens, embedding_dim)
+
+        # STEP 2 similarity and max
+        # compute cosine similarity across embedding dim dimension
+        # (batch_size, num_entities, num_question_tokens, num_entity_tokens
+        # compute max across num_entity_tokens dimension for tensor of size
+        # (batch_size, num_entities, num_question_tokens)
+
+        # STEP 3 compute s(e,i) by combining with linking features
+        # combine with linking features for:
+        # (batch_size, num_entities, num_question_tokens)
+
+        # STEP 4 compute exp of all s(e,i)'s
+        # (batch_size, num_entities, num_question_tokens)
+
+        # STEP 5
+        # swap the entity and question token dimensions for easier normalization
+        # (batch_size, num_question_tokens, num_entities)
+
+        # STEP 6
+        # compute normalized exp for p(e|i) through summing along num_entities, expanding
+        # then dividing all elements by the sum
+        # (batch_size, num_question_tokens, num_entities)
+
+        # STEP 7
+        # compute link embedding
+        # probs = (batch_size, num_question_tokens, num_entities)
+        # embeddings = (batch_size, num_entities, embedding_dim)
+        # todo I want to do probs x embeddings but how to deal with batch size
+        # l_{i} =  (batch_size, num_question_tokens, embedding_dim)
+
 
         # TODO(mattg): we need to actually compute this with the stuff mentioned above.  This
         # represents how well each question token matches table entities.  I'm stubbing this out

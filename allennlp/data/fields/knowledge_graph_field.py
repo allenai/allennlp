@@ -173,13 +173,17 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                                           desired_num_entities,
                                                           default_value=lambda: [])
             padded_arrays = []
+            unpadded_lengths = []
             for padded_entity in padded_entities:
                 padded_array = indexer.pad_token_sequence(padded_entity,
                                                           desired_num_entity_tokens,
                                                           padding_lengths)
                 padded_arrays.append(padded_array)
+                unpadded_lengths.append(len(padded_entity))
             tensor = Variable(torch.LongTensor(padded_arrays), volatile=not for_training)
+            # tensor2 = Variable(torch.LongTensor(unpadded_lengths), volatile=not for_training)
             tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+            # tensors['token_lengths'] = tensor2 if cuda_device == -1 else tensor.cuda(cuda_device)
         linking_features = self._compute_linking_features(desired_num_entities,
                                                           desired_num_utterance_tokens,
                                                           cuda_device,
