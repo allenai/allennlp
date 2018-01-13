@@ -154,58 +154,51 @@ class WikiTablesSemanticParser(Model):
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
         """
-        # (batch_size, question_length, embedding_dim)
-        embedded_input = self._question_embedder(question)
-        question_mask = util.get_text_field_mask(question).float()
-        batch_size = embedded_input.size(0)
-        embedding_dim = self._question_embedder.get_output_dim()
 
-        # Actually a Dict[str, torch.LongTensor], but there is probably a single entry, with a
-        # tensor of shape (batch_size, num_entities, num_entity_tokens).
         table_text = table['text']
+        embedding_dim = self._question_embedder.get_output_dim()
+        batch_size = table_text['tokens'].size(0)
+
+        # (batch_size, question_length, embedding_dim)
+        embedded_question = self._question_embedder(question)
+        question_mask = util.get_text_field_mask(question).float()
 
         # (batch_size, num_entities, num_entity_tokens, embedding_dim)
         embedded_table = self._question_embedder(table_text)
         # (batch_size, num_entities, num_entity_tokens)
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
-        # dims = embedded_table.size()
-        # table_mask = table_mask.view(-1, table_mask.size()[2])
-        # encoded_table = self._entity_encoder(embedded_table.view(-1, dims[2], dims[3]), table_mask)
-        # # (batch_size, num_entities, embedding_dim)
-        # encoded_table = encoded_table.view(batch_size, dims[1], dims[3])
+        # compute the average of each entity's word embeddings
         # (batch_size, num_entities, embedding_dim)
-        encoded_table = self._compute_average_with_encoder(embedded_table, table_mask, self._entity_encoder)
+        encoded_table = self._compute_average_with_encoder(embedded_table, table_mask,
+                                                           self._entity_encoder)
 
         # (batch_size, num_entities, num_entities)
         neighbor_idx_tensor = self._get_neighbor_indexes(world, encoded_table.size()[1])
 
-        # get averaged entity word embeddings for each neighbor
+        # get averaged word embeddings for each entity's neighbors
         # (batch_size, num_entities, num_entities, embedding_dim)
         neighbor_embed_tensor = util.batched_index_select(encoded_table, neighbor_idx_tensor)
+        neighbor_mask = util.get_text_field_mask({'tokens': neighbor_idx_tensor},
+                                                 num_wrapping_dims=1).float()
 
-        # bag of word encoder for sum and average
-        neighbor_mask = util.get_text_field_mask({'tokens': neighbor_idx_tensor}, num_wrapping_dims=1).float()
-
-        # dims = neighbor_embed_tensor.size()
-        # neighbor_embed_tensor = neighbor_embed_tensor.view(-1, dims[2], dims[3])
-        # neighbor_mask = neighbor_mask.view(-1, neighbor_mask.size()[2])
-        # neighbor_embeddings = self._entity_encoder(neighbor_embed_tensor, neighbor_mask)
-        # # (batch_size, num_entities, embedding_dim)
-        # neighbor_embeddings = neighbor_embeddings.view(batch_size, dims[1], dims[3])
-
+        # get averaged neighbor embeddings for each entity
         # (batch_size, num_entities, embedding_dim)
-        neighbor_embeddings = self._compute_average_with_encoder(neighbor_embed_tensor, neighbor_mask, self._entity_encoder)
+        neighbor_embeddings = self._compute_average_with_encoder(neighbor_embed_tensor,
+                                                                 neighbor_mask, self._entity_encoder)
 
+        # each entity has a binary flag indicating type
         # (batch_size, num_entities)
         type_vector = self._get_type_vector(world)
 
-        paramsType = torch.nn.Linear(1, embedding_dim)
-        paramsNeighbor = torch.nn.Linear(embedding_dim, embedding_dim)
-
-        x = paramsType(type_vector.unsqueeze(-1).float())
-        y = paramsNeighbor(neighbor_embeddings.float())
+        # construct the entity embeddings through a linear combination of type
+        # and neighbor embeddings fed through tanh
+        type_params = torch.nn.Linear(1, embedding_dim)
+        neighbor_params = torch.nn.Linear(embedding_dim, embedding_dim)
+        x = type_params(type_vector.unsqueeze(-1).float())
+        y = neighbor_params(neighbor_embeddings.float())
         tan = torch.nn.Tanh()
+        # (batch_size, num_entities, embedding_dim)
         entity_embeddings = tan(x + y)
 
         # (batch_size, num_entities, num_question_tokens, num_features)
@@ -218,15 +211,15 @@ class WikiTablesSemanticParser(Model):
 
         # STEP 1 expand both embedded question and table since cosine similarity requires
         # the same dimensions
-        # embedded_input (batch_size, num_question_tokens, embedding_dim) ->
+        # embedded_question (batch_size, num_question_tokens, embedding_dim) ->
         # (batch_size, num_entities, num_question_tokens, num_entity_tokens, embedding_dim)
 
         # todo bmm transpose to (batch_size, embedding_dim, num_question_tokens)
 
         # (b, entity, entity token, E) x (b, E, Q) = (b, entity, entity token, Q)
 
-        embedded_input = embedded_input.unsqueeze(2)
-        embedded_input = embedded_input.expand(batch_size,11,6,25) # todo change numbers
+        embedded_question = embedded_question.unsqueeze(2)
+        embedded_question = embedded_question.expand(batch_size,11,6,25) # todo change numbers
         # embedded table (batch_size, num_entities, num_entity_tokens, embedding_dim) ->
         # (batch_size, num_entities, num_question_tokens, num_entity_tokens, embedding_dim)
 
@@ -268,13 +261,13 @@ class WikiTablesSemanticParser(Model):
         linking_scores: torch.FloatTensor = Variable(torch.ones(batch_size, num_entities, num_question_tokens))
 
         # (batch_size, question_length, encoder_output_dim)
-        encoder_outputs = self._encoder(embedded_input, question_mask)
+        encoder_outputs = self._encoder(embedded_question, question_mask)
 
         # This will be our initial hidden state and memory cell for the decoder LSTM.
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
         memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
 
-        initial_score = Variable(embedded_input.data.new(batch_size).fill_(0))
+        initial_score = Variable(embedded_question.data.new(batch_size).fill_(0))
         attended_question, _ = self._decoder_step.attend_on_question(final_encoder_output,
                                                                      encoder_outputs,
                                                                      question_mask)
