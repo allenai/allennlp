@@ -158,6 +158,8 @@ class WikiTablesSemanticParser(Model):
         table_text = table['text']
         embedding_dim = self._question_embedder.get_output_dim()
         batch_size = table_text['tokens'].size(0)
+        max_num_entities = table_text['tokens'].size(1)
+        num_types = 2  # todo should we compute from type_signatures?
 
         # (batch_size, question_length, embedding_dim)
         embedded_question = self._question_embedder(question)
@@ -173,7 +175,7 @@ class WikiTablesSemanticParser(Model):
         encoded_table = self._compute_average_with_encoder(embedded_table, table_mask)
 
         # (batch_size, num_entities, num_entities)
-        neighbor_idx_tensor = self._get_neighbor_indexes(world, encoded_table.size(1))
+        neighbor_idx_tensor = self._get_neighbor_indexes(world, max_num_entities)
 
         # get averaged word embeddings for each entity's neighbors
         # (batch_size, num_entities, num_entities, embedding_dim)
@@ -187,13 +189,13 @@ class WikiTablesSemanticParser(Model):
 
         # each entity has a binary flag indicating type
         # (batch_size, num_entities)
-        type_vector = self._get_type_vector(world)
+        type_vector = self._get_type_vector(world, max_num_entities)
 
         # construct the entity embeddings through a linear combination of type
         # and neighbor embeddings fed through tanh
-        type_params = torch.nn.Linear(1, embedding_dim)
+        type_params = torch.nn.Linear(num_types, embedding_dim)
         neighbor_params = torch.nn.Linear(embedding_dim, embedding_dim)
-        x = type_params(type_vector.unsqueeze(-1).float())
+        x = type_params(type_vector.float())
         y = neighbor_params(neighbor_embeddings.float())
         tan = torch.nn.Tanh()
         # (batch_size, num_entities, embedding_dim)
@@ -373,16 +375,20 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_entities)
         return Variable(torch.LongTensor(batches))
 
-    def _get_type_vector(self, world: List[WikiTablesWorld]) -> Variable:
-        # compute type vector with 0,1 for types e and <e,r> respectively
+    def _get_type_vector(self, world: List[WikiTablesWorld], max_num_entities: int) -> Variable:
+        # compute type one hot vector with dim 2 for types e and <e,r>
         batches = []
         for w in world:
             types = []
             ent2type = w.local_type_signatures
             for e in w.table_graph.entities:
-                # 1 for 'e' and 0 for '<e,r>'
-                types.append((1 if ent2type[w.local_name_mapping[e]] == 'e' else 0))
-            batches.append(types)
+                # [1,0] for 'e' and [0,1] for '<e,r>'
+                e_1hot = [1,0]
+                er_1hot = [0,1]
+                types.append((e_1hot if ent2type[w.local_name_mapping[e]] == 'e' else er_1hot))
+            # pad types with all 0's vector
+            padded = pad_sequence_to_length(types, max_num_entities, lambda:[0,0])
+            batches.append(padded)
         # (batch_size, num_entities)
         return Variable(torch.LongTensor(batches))
 
