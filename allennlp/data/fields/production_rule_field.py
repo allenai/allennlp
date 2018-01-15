@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import torch
 from torch.autograd import Variable
@@ -46,9 +46,9 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
     split the indexing decision is on "built-in" vs. instance-specific.  That is, if you have a
     terminal production that is part of your grammar, like "<#1,#1> -> identity", you might want to
     just learn an embedding for the terminal "identity", instead of treating it like you might
-    treat a terminal like "my_instance_specific_function".  You can accomplish this by just adding
-    all built-in terminals to the set of ``nonterminal_types`` passed in to this ``Field`` 's
-    constructor, and they will get indexed with the ``nonterminal_indexers``.
+    treat a terminal like "my_instance_specific_function".  You can accomplish this by just
+    defining ``is_nonterminal`` to return ``True`` for any globally-valid terminal productions, and
+    they will get indexed with the ``nonterminal_indexers``.
 
     We currently treat non-terminal sequences as a single non-terminal token from the
     ``TokenIndexers`` point of view.  The alternative here would be to represent each non-terminal
@@ -74,10 +74,10 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         The ``TokenIndexers`` that we will use to convert terminal strings into arrays.
     nonterminal_indexers : ``Dict[str, TokenIndexer]``
         The ``TokenIndexers`` that we will use to convert non-terminal strings into arrays.
-    nonterminal_types : ``Set[str]``
-        A set of basic types used in the grammar.  This is for things like NP, VP, S, N, a, b, and
-        c in the examples above.  We use this set to determine whether to use the terminal or the
-        non-terminal token indexers when we are representing the RHS of a production rule.
+    is_nonterminal : ``Callable[[str], bool]``
+        A function that maps right-hand sides of production rules to whether they represent
+        non-terminals.  We use this to determine whether to use the terminal or the non-terminal
+        token indexers when we are representing the RHS of a production rule.
     context : Any, optional
         Additional context that can be used by the token indexers when constructing their
         representations.  This could be an utterance we're trying to produce a semantic parse for,
@@ -88,12 +88,12 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
                  rule: str,
                  terminal_indexers: Dict[str, TokenIndexer],
                  nonterminal_indexers: Dict[str, TokenIndexer],
-                 nonterminal_types: Set[str],
+                 is_nonterminal: Callable[[str], bool],
                  context: Any = None) -> None:
         self.rule = rule
         self._terminal_indexers = terminal_indexers
         self._nonterminal_indexers = nonterminal_indexers
-        self._nonterminal_types = nonterminal_types
+        self._is_nonterminal = is_nonterminal
         self._context = context
 
         if rule:
@@ -114,11 +114,6 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         # annotations like this?
         self._indexed_left_side: Dict = None
         self._indexed_right_side: Dict = None
-
-    def _is_nonterminal(self, right_side: str) -> bool:
-        if right_side[0] == '[' or right_side[0] == '<':
-            return True
-        return right_side in self._nonterminal_types
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
@@ -201,7 +196,7 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         return ProductionRuleField(rule='',
                                    terminal_indexers={},
                                    nonterminal_indexers={},
-                                   nonterminal_types=set(),
+                                   is_nonterminal=self._is_nonterminal,
                                    context=None)
 
     @overrides

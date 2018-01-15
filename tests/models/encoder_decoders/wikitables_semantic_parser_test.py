@@ -1,15 +1,19 @@
-# pylint: disable=invalid-name,no-self-use
+# pylint: disable=invalid-name,no-self-use,protected-access
+from collections import namedtuple
+
 from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.testing import ModelTestCase
+from allennlp.common import Params
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.models import WikiTablesSemanticParser
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderState
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderStep
+from allennlp.modules import SimilarityFunction
 
 
 class WikiTablesSemanticParserTest(ModelTestCase):
@@ -51,6 +55,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
     def test_embed_actions_works_with_batched_and_padded_input(self):
         # pylint: disable=protected-access
         model = self.model
+        model._embed_terminals = True
         nonterminal_embedding = model._nonterminal_embedder._token_embedders['tokens']
         terminal_encoder = model._terminal_embedder._token_embedders['token_characters']
         start_id = model.vocab.get_token_index(START_SYMBOL, 'rule_labels')
@@ -125,11 +130,103 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         assert_almost_equal(initial_action_embedding.cpu().data.numpy(),
                             expected_action_embedding.cpu().data.numpy())
 
+    def test_embed_actions_does_not_embed_terminals_when_set(self):
+        # pylint: disable=protected-access
+        model = self.model
+        model._embed_terminals = False
+        nonterminal_embedding = model._nonterminal_embedder._token_embedders['tokens']
+        start_id = model.vocab.get_token_index(START_SYMBOL, 'rule_labels')
+        start_tensor = Variable(torch.LongTensor([start_id]))
+        rule2 = model.vocab.get_token_from_index(2, 'rule_labels')
+        rule2_tensor = Variable(torch.LongTensor([2]))
+        rule3 = model.vocab.get_token_from_index(3, 'rule_labels')
+        rule3_tensor = Variable(torch.LongTensor([3]))
+        rule4 = model.vocab.get_token_from_index(4, 'rule_labels')
+        rule4_tensor = Variable(torch.LongTensor([4]))
+        char2 = model.vocab.get_token_from_index(2, 'token_characters')
+        char2_tensor = Variable(torch.LongTensor([2, 2, 2]))
+        char3 = model.vocab.get_token_from_index(3, 'token_characters')
+        char3_tensor = Variable(torch.LongTensor([3, 3, 3]))
+        char4 = model.vocab.get_token_from_index(4, 'token_characters')
+        char4_tensor = Variable(torch.LongTensor([4, 4, 4]))
+        actions = [[{'left': (rule2, True, {'tokens': rule2_tensor}),
+                     'right': (char2 * 3, False, {'token_characters': char2_tensor})},
+                    {'left': (rule3, True, {'tokens': rule3_tensor}),
+                     'right': (char3 * 3, False, {'token_characters': char3_tensor})},
+                    # This one is padding; the tensors shouldn't matter here.
+                    {'left': ('', True, {'tokens': rule3_tensor}),
+                     'right': ('', False, {'token_characters': char3_tensor})}],
+                   [{'left': (rule2, True, {'tokens': rule2_tensor}),
+                     'right': (char2 * 3, False, {'token_characters': char2_tensor})},
+                    {'left': (rule4, True, {'tokens': rule4_tensor}),
+                     'right': (char4 * 3, False, {'token_characters': char4_tensor})},
+                    {'left': (START_SYMBOL, True, {'tokens': start_tensor}),
+                     'right': (rule2, True, {'tokens': rule2_tensor})}]]
+        embedded_actions, action_indices, _ = model._embed_actions(actions)
+        assert embedded_actions.size(0) == 1
+        assert action_indices[(1, 2)] == 0  # non-terminals should have lower indices than terminals
+        assert action_indices[(0, 0)] == action_indices[(1, 0)]
+        assert len(set(action_indices.values())) == 4
+
+        # Now we'll go through all four unique actions and make sure the embedding is as we expect.
+        action_embedding = embedded_actions[action_indices[(1, 2)]]
+        left_side_embedding = nonterminal_embedding(start_tensor)
+        right_side_embedding = nonterminal_embedding(rule2_tensor)
+        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
+                                              dim=-1).squeeze(0)
+        assert_almost_equal(action_embedding.cpu().data.numpy(),
+                            expected_action_embedding.cpu().data.numpy())
+
+    def test_map_entity_productions(self):
+        # pylint: disable=protected-access
+        # (batch_size, num_entities, num_question_tokens) = (3, 4, 5)
+        linking_scores = Variable(torch.rand(3, 4, 5))
+        # Because we only need a small piece of the WikiTablesWorld and TableKnowledgeGraph, we'll
+        # just use some namedtuples to fake the part of the API that we need, instead of going to
+        # the trouble of constructing the full objects.
+        FakeTable = namedtuple('FakeTable', ['entities'])
+        FakeWorld = namedtuple('FakeWorld', ['table_graph'])
+        entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
+                    ['fb:cell.2012', 'fb:cell.2013', 'fb:row.row.year'],
+                    ['fb:cell.2010', 'fb:row.row.year']]
+        worlds = [FakeWorld(FakeTable(entity_list)) for entity_list in entities]
+        # The left-hand side of each action here will not be read, so we won't bother constructing
+        # it.  Same with the RHS tensors.  NT* here is just saying "some non-terminal".
+        actions = [[{'left': None, 'right': ('NT1', True, None)},
+                    {'left': None, 'right': ('NT2', True, None)},
+                    {'left': None, 'right': ('NT3', True, None)},
+                    {'left': None, 'right': ('fb:cell.2010', True, None)},
+                    {'left': None, 'right': ('fb:cell.2011', True, None)},
+                    {'left': None, 'right': ('fb:row.row.year', True, None)},
+                    {'left': None, 'right': ('fb:row.row.year2', True, None)}],
+                   [{'left': None, 'right': ('NT1', True, None)},
+                    {'left': None, 'right': ('fb:cell.2012', True, None)},
+                    {'left': None, 'right': ('fb:cell.2013', True, None)},
+                    {'left': None, 'right': ('fb:row.row.year', True, None)}],
+                   [{'left': None, 'right': ('NT4', True, None)},
+                    {'left': None, 'right': ('fb:cell.2010', True, None)},
+                    {'left': None, 'right': ('fb:row.row.year', True, None)}]]
+        flattened_linking_scores, actions_to_entities = \
+                WikiTablesSemanticParser._map_entity_productions(linking_scores, worlds, actions)
+        assert_almost_equal(flattened_linking_scores.data.cpu().numpy(),
+                            linking_scores.view(3 * 4, 5).data.cpu().numpy())
+        assert actions_to_entities == {
+                (0, 3): 0,
+                (0, 4): 1,
+                (0, 5): 2,
+                (0, 6): 3,
+                (1, 1): 4,
+                (1, 2): 5,
+                (1, 3): 6,
+                (2, 1): 8,
+                (2, 2): 9,
+                }
 
 
 class WikiTablesDecoderStepTest(AllenNlpTestCase):
-    def test_compute_new_states(self):
-        # pylint: disable=protected-access
+    def setUp(self):
+        super(WikiTablesDecoderStepTest, self).setUp()
+
         batch_indices = [0, 1, 0]
         action_history = [[1], [3, 4], []]
         score = [Variable(torch.FloatTensor([x])) for x in [.1, 1.1, 2.2]]
@@ -138,10 +235,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         previous_action_embedding = [torch.FloatTensor([i, i]) for i in range(len(batch_indices))]
         attended_question = [torch.FloatTensor([i, i]) for i in range(len(batch_indices))]
         grammar_state = [GrammarState(['e'], {}, {}, {}) for _ in batch_indices]
-        encoder_outputs = torch.FloatTensor([[1, 2], [3, 4], [5, 6]])
-        encoder_output_mask = torch.FloatTensor([[1, 1], [1, 0], [1, 1]])
-        action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
-        action_indices = {
+        self.encoder_outputs = torch.FloatTensor([[1, 2], [3, 4], [5, 6]])
+        self.encoder_output_mask = Variable(torch.FloatTensor([[1, 1], [1, 0], [1, 1]]))
+        self.action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
+        self.action_indices = {
                 (0, 0): 1,
                 (0, 1): 0,
                 (0, 2): 2,
@@ -152,7 +249,7 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                 (1, 2): 2,
                 (1, 3): 3,
                 }
-        possible_actions = [
+        self.possible_actions = [
                 [{'left': ('e', True, None), 'right': ('f', False, None)},
                  {'left': ('e', True, None), 'right': ('g', True, None)},
                  {'left': ('e', True, None), 'right': ('h', True, None)},
@@ -162,19 +259,151 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                  {'left': ('e', True, None), 'right': ('g', True, None)},
                  {'left': ('e', True, None), 'right': ('h', True, None)},
                  {'left': ('e', True, None), 'right': ('i', True, None)}]]
-        state = WikiTablesDecoderState(batch_indices=batch_indices,
-                                       action_history=action_history,
-                                       score=score,
-                                       hidden_state=hidden_state,
-                                       memory_cell=memory_cell,
-                                       previous_action_embedding=previous_action_embedding,
-                                       attended_question=attended_question,
-                                       grammar_state=grammar_state,
-                                       encoder_outputs=encoder_outputs,
-                                       encoder_output_mask=encoder_output_mask,
-                                       action_embeddings=action_embeddings,
-                                       action_indices=action_indices,
-                                       possible_actions=possible_actions)
+
+        # (batch_size, num_entities, num_question_tokens) = (2, 5, 3)
+        linking_scores = Variable(torch.Tensor([[[.1, .2, .3],
+                                                 [.4, .5, .6],
+                                                 [.7, .8, .9],
+                                                 [1.0, 1.1, 1.2],
+                                                 [1.3, 1.4, 1.5]],
+                                                [[-.1, -.2, -.3],
+                                                 [-.4, -.5, -.6],
+                                                 [-.7, -.8, -.9],
+                                                 [-1.0, -1.1, -1.2],
+                                                 [-1.3, -1.4, -1.5]]]))
+        flattened_linking_scores = linking_scores.view(2 * 5, 3)
+
+        # Maps (batch_index, action_index) to indices into the flattened linking score tensor,
+        # which has shae (batch_size * num_entities, num_question_tokens).
+        actions_to_entities = {
+                (0, 0): 0,
+                (0, 1): 1,
+                (0, 2): 2,
+                (0, 6): 3,
+                (1, 3): 6,
+                (1, 4): 7,
+                (1, 5): 8,
+                }
+        entity_types = {
+                0: 0,
+                1: 1,
+                2: 1,
+                3: 0,
+                4: 0,
+                5: 1,
+                6: 0,
+                7: 1,
+                8: 1,
+                }
+        self.state = WikiTablesDecoderState(batch_indices=batch_indices,
+                                            action_history=action_history,
+                                            score=score,
+                                            hidden_state=hidden_state,
+                                            memory_cell=memory_cell,
+                                            previous_action_embedding=previous_action_embedding,
+                                            attended_question=attended_question,
+                                            grammar_state=grammar_state,
+                                            encoder_outputs=self.encoder_outputs,
+                                            encoder_output_mask=self.encoder_output_mask,
+                                            action_embeddings=self.action_embeddings,
+                                            action_indices=self.action_indices,
+                                            possible_actions=self.possible_actions,
+                                            flattened_linking_scores=flattened_linking_scores,
+                                            actions_to_entities=actions_to_entities,
+                                            entity_types=entity_types)
+
+    def test_get_actions_to_consider(self):
+        # pylint: disable=protected-access
+        valid_actions_1 = {'e': [0, 1, 2, 4]}
+        valid_actions_2 = {'e': [0, 1, 3]}
+        valid_actions_3 = {'e': [2, 3, 4]}
+        self.state.grammar_state[0] = GrammarState(['e'], {}, valid_actions_1, {})
+        self.state.grammar_state[1] = GrammarState(['e'], {}, valid_actions_2, {})
+        self.state.grammar_state[2] = GrammarState(['e'], {}, valid_actions_3, {})
+        self.state.action_embeddings = self.state.action_embeddings[:2]
+        considered, to_embed, to_link = WikiTablesDecoderStep._get_actions_to_consider(self.state)
+        # These are _global_ action indices.  They come from actions [[(0, 1), (0, 0)], [(1, 1)], []].
+        expected_to_embed = [[0, 1], [0], []]
+        assert to_embed == expected_to_embed
+        # These are _batch_ action indices with a _global_ action index above num_global_actions,
+        # sorted by their _global_ action index.
+        # They come from actions [[(0, 2), (0, 4)], [(1, 3), (1, 0)], [(0, 3), (0, 4)]].
+        expected_to_link = [[2, 4], [3, 0], [2, 3, 4]]
+        assert to_link == expected_to_link
+        # These are _batch_ action indices, sorted by _global_ action index, with padding in
+        # between the embedded actions and the linked actions.
+        expected_considered = [[1, 0, 2, 4, -1], [1, -1, 3, 0, -1], [-1, -1, 2, 3, 4]]
+        assert considered == expected_considered
+
+    def test_get_actions_to_consider_returns_none_if_no_linked_actions(self):
+        # pylint: disable=protected-access
+        valid_actions_1 = {'e': [0, 1, 2, 4]}
+        valid_actions_2 = {'e': [0, 1, 3]}
+        valid_actions_3 = {'e': [2, 3, 4]}
+        self.state.grammar_state[0] = GrammarState(['e'], {}, valid_actions_1, {})
+        self.state.grammar_state[1] = GrammarState(['e'], {}, valid_actions_2, {})
+        self.state.grammar_state[2] = GrammarState(['e'], {}, valid_actions_3, {})
+        considered, to_embed, to_link = WikiTablesDecoderStep._get_actions_to_consider(self.state)
+        # These are _global_ action indices.  All of the actions in this case are embedded, so this
+        # is just a mapping from the valid actions above to their global ids.
+        expected_to_embed = [[0, 1, 2, 5], [0, 3, 4], [2, 3, 5]]
+        assert to_embed == expected_to_embed
+        # There are no linked actions (all of them are embedded), so this should be None.
+        assert to_link is None
+        # These are _batch_ action indices, sorted by _global_ action index, with padding in
+        # between the embedded actions and the linked actions.  Because there are no linked
+        # actions, this is basically just the valid_actions for each group element padded with -1s,
+        # and sorted by global action index.
+        expected_considered = [[1, 0, 2, 4], [1, 3, 0, -1], [2, 3, 4, -1]]
+        assert considered == expected_considered
+
+    def test_get_action_embeddings(self):
+        action_embeddings = Variable(torch.rand(5, 4))
+        self.state.action_embeddings = action_embeddings
+        actions_to_embed = [[0, 4], [1], [2, 3, 4]]
+        embeddings, mask = WikiTablesDecoderStep._get_action_embeddings(self.state, actions_to_embed)
+        assert_almost_equal(mask.data.cpu().numpy(), [[1, 1, 0], [1, 0, 0], [1, 1, 1]])
+        assert tuple(embeddings.size()) == (3, 3, 4)
+        assert_almost_equal(embeddings[0, 0].data.cpu().numpy(), action_embeddings[0].data.cpu().numpy())
+        assert_almost_equal(embeddings[0, 1].data.cpu().numpy(), action_embeddings[4].data.cpu().numpy())
+        assert_almost_equal(embeddings[0, 2].data.cpu().numpy(), action_embeddings[0].data.cpu().numpy())
+        assert_almost_equal(embeddings[1, 0].data.cpu().numpy(), action_embeddings[1].data.cpu().numpy())
+        assert_almost_equal(embeddings[1, 1].data.cpu().numpy(), action_embeddings[0].data.cpu().numpy())
+        assert_almost_equal(embeddings[1, 2].data.cpu().numpy(), action_embeddings[0].data.cpu().numpy())
+        assert_almost_equal(embeddings[2, 0].data.cpu().numpy(), action_embeddings[2].data.cpu().numpy())
+        assert_almost_equal(embeddings[2, 1].data.cpu().numpy(), action_embeddings[3].data.cpu().numpy())
+        assert_almost_equal(embeddings[2, 2].data.cpu().numpy(), action_embeddings[4].data.cpu().numpy())
+
+    def test_get_entity_action_logits(self):
+        decoder_step = WikiTablesDecoderStep(1, 5, SimilarityFunction.from_params(Params({})), 2)
+        actions_to_link = [[1, 2], [3, 4, 5], [6]]
+        # (group_size, num_question_tokens) = (3, 3)
+        attention_weights = Variable(torch.Tensor([[.2, .8, 0],
+                                                   [.7, .1, .2],
+                                                   [.3, .3, .4]]))
+        action_logits, mask, type_embeddings = decoder_step._get_entity_action_logits(self.state,
+                                                                                      actions_to_link,
+                                                                                      attention_weights)
+        assert_almost_equal(mask.data.cpu().numpy(), [[1, 1, 0], [1, 1, 1], [1, 0, 0]])
+
+        assert tuple(action_logits.size()) == (3, 3)
+        assert_almost_equal(action_logits[0, 0].data.cpu().numpy(), .4 * .2 + .5 * .8 + .6 * 0)
+        assert_almost_equal(action_logits[0, 1].data.cpu().numpy(), .7 * .2 + .8 * .8 + .9 * 0)
+        assert_almost_equal(action_logits[1, 0].data.cpu().numpy(), -.4 * .7 + -.5 * .1 + -.6 * .2)
+        assert_almost_equal(action_logits[1, 1].data.cpu().numpy(), -.7 * .7 + -.8 * .1 + -.9 * .2)
+        assert_almost_equal(action_logits[1, 2].data.cpu().numpy(), -1.0 * .7 + -1.1 * .1 + -1.2 * .2)
+        assert_almost_equal(action_logits[2, 0].data.cpu().numpy(), 1.0 * .3 + 1.1 * .3 + 1.2 * .4)
+
+        embedding_matrix = decoder_step._entity_type_embedding.weight.data.cpu().numpy()
+        assert_almost_equal(type_embeddings[0, 0].data.cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[0, 1].data.cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[1, 0].data.cpu().numpy(), embedding_matrix[0])
+        assert_almost_equal(type_embeddings[1, 1].data.cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[1, 2].data.cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[2, 0].data.cpu().numpy(), embedding_matrix[0])
+
+    def test_compute_new_states(self):
+        # pylint: disable=protected-access
         log_probs = Variable(torch.FloatTensor([[.1, .9, -.1, .2],
                                                 [.3, .1, 0, .8],
                                                 [.1, .25, .3, .4]]))
@@ -184,10 +413,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         step_action_embeddings = torch.FloatTensor([[[1, 1], [0, 0], [2, 2], [3, 3]],
                                                     [[4, 4], [3, 3], [0, 0], [0, 0]],
                                                     [[1, 1], [2, 2], [5, 5], [0, 0]]])
-        new_hidden_state = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(batch_indices))]
-        new_memory_cell = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(batch_indices))]
-        new_attended_question = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(batch_indices))]
-        new_states = WikiTablesDecoderStep._compute_new_states(state,
+        new_hidden_state = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(allowed_actions))]
+        new_memory_cell = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(allowed_actions))]
+        new_attended_question = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(allowed_actions))]
+        new_states = WikiTablesDecoderStep._compute_new_states(self.state,
                                                                log_probs,
                                                                new_hidden_state,
                                                                new_memory_cell,
@@ -211,13 +440,13 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert_almost_equal(new_state.attended_question[0].cpu().numpy().tolist(), [3, 3])
         assert new_state.grammar_state[0]._nonterminal_stack == ['j']
         assert_almost_equal(new_state.encoder_outputs.cpu().numpy(),
-                            encoder_outputs.cpu().numpy())
-        assert_almost_equal(new_state.encoder_output_mask.cpu().numpy(),
-                            encoder_output_mask.cpu().numpy())
+                            self.encoder_outputs.cpu().numpy())
+        assert_almost_equal(new_state.encoder_output_mask.data.cpu().numpy(),
+                            self.encoder_output_mask.data.cpu().numpy())
         assert_almost_equal(new_state.action_embeddings.cpu().numpy(),
-                            action_embeddings.cpu().numpy())
-        assert new_state.action_indices == action_indices
-        assert new_state.possible_actions == possible_actions
+                            self.action_embeddings.cpu().numpy())
+        assert new_state.action_indices == self.action_indices
+        assert new_state.possible_actions == self.possible_actions
 
         new_state = new_states[1]
         assert new_state.batch_indices == [1]
@@ -231,10 +460,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert_almost_equal(new_state.attended_question[0].cpu().numpy().tolist(), [2, 2])
         assert new_state.grammar_state[0]._nonterminal_stack == ['q']
         assert_almost_equal(new_state.encoder_outputs.cpu().numpy(),
-                            encoder_outputs.cpu().numpy())
-        assert_almost_equal(new_state.encoder_output_mask.cpu().numpy(),
-                            encoder_output_mask.cpu().numpy())
+                            self.encoder_outputs.cpu().numpy())
+        assert_almost_equal(new_state.encoder_output_mask.data.cpu().numpy(),
+                            self.encoder_output_mask.data.cpu().numpy())
         assert_almost_equal(new_state.action_embeddings.cpu().numpy(),
-                            action_embeddings.cpu().numpy())
-        assert new_state.action_indices == action_indices
-        assert new_state.possible_actions == possible_actions
+                            self.action_embeddings.cpu().numpy())
+        assert new_state.action_indices == self.action_indices
+        assert new_state.possible_actions == self.possible_actions
