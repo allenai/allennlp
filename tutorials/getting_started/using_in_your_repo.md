@@ -22,7 +22,7 @@ adding a
 [`requirements.txt`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/requirements.txt)
 file.  It contains a single line: `allennlp==0.3`.  Then, after creating a python 3.6 environment,
 you install AllenNLP by running `pip install -r requirements.txt`.  You also need to install
-pytorch and a spacy model, as described in [the installation tutorial](installation):
+pytorch and a spacy model, as described in [the installation tutorial](installation.md):
 
 ```bash
 pip install -r requirements.txt
@@ -91,11 +91,11 @@ class TestSemanticScholarDatasetReader(AllenNlpTestCase):
 ```
 
 Then we just want to make sure that the resulting dataset looks like we expect.  We'll refer you to
-the [dataset tutorial](data-pipeline) for a deeper dive on the `Dataset`, `Instance`, and `Field`
-classes; for now, just remember that we want each paper to have a title, an abstract, and a venue.
-The paper itself is an `Instance` inside of the `Dataset`, and the title, abstract and venue are
-all `Fields` inside the `Instance`.  We can make sure that the dataset got read correctly by giving
-expected values for the first few instances in our test fixture:
+the [dataset tutorial](../notebooks/data_pipeline.ipynb) for a deeper dive on the `Dataset`,
+`Instance`, and `Field` classes; for now, just remember that we want each paper to have a title, an
+abstract, and a venue. The paper itself is an `Instance` inside of the `Dataset`, and the title, abstract
+and venue are all `Fields` inside the `Instance`.  We can make sure that the dataset got read correctly
+by giving expected values for the first few instances in our test fixture:
 
 ```python
         instance1 = {"title": ["Interferring", "Discourse", "Relations", "in", "Context"],

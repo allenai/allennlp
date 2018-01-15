@@ -111,4 +111,4 @@ that runs on the AllenNLP website.
 
 ### Next Steps
 
-Continue on to the [Training and Evaluating Models](training-and-evaluating) tutorial.
+Continue on to the [Training and Evaluating Models](training_and_evaluating.md) tutorial.
