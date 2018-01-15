@@ -6,6 +6,9 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestWikiTablesDatasetReader(AllenNlpTestCase):
     def test_reader_reads(self):
+        # pylint is having trouble applying the disable command above to this method; maybe because
+        # it is so long?
+        # pylint: disable=no-self-use,protected-access
         tables_directory = "tests/fixtures/data/wikitables"
         dpd_output_directory = "tests/fixtures/data/wikitables/dpd_output"
         reader = WikiTablesDatasetReader(tables_directory, dpd_output_directory)

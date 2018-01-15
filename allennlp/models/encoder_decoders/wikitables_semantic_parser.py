@@ -190,6 +190,11 @@ class WikiTablesSemanticParser(Model):
         flattened_linking_scores, actions_to_entities = self._map_entity_productions(linking_scores,
                                                                                      world,
                                                                                      actions)
+
+        # This is a mapping from (batch_index, entity_index) to entity type id.  We just map
+        # "fb:cell" entities to type 0 and "fb:row" entities to type 1.  And for easier lookups
+        # later, we're actually using a _flattened_ version of (batch_index, entity_index) for the
+        # key, because this is how the linking scores are stored.
         entity_types = {}
         for batch_index in range(batch_size):
             for entity_index, entity_name in enumerate(world[batch_index].table_graph.entities):
@@ -389,7 +394,9 @@ class WikiTablesSemanticParser(Model):
         initial_action_embedding = torch.cat([zeros, start_vector], dim=-1)
 
         # Now we just need to make a map from `(batch_index, action_index)` to `action_index`.
-        action_ids = {action: i for i, action in enumerate(unique_action_list)}
+        # global_action_ids has the list of all unique actions; here we're going over all of the
+        # actions for each batch instance so we can map them to the global action ids.
+        global_action_ids = {action: i for i, action in enumerate(unique_action_list)}
         action_map: Dict[Tuple[int, int], int] = {}
         for batch_index, action_list in enumerate(actions):
             for action_index, action in enumerate(action_list):
@@ -397,7 +404,7 @@ class WikiTablesSemanticParser(Model):
                     # This rule is padding.
                     continue
                 action_indices = (element_ids[action['left'][0]], element_ids[action['right'][0]])
-                action_id = action_ids[action_indices]
+                action_id = global_action_ids[action_indices]
                 action_map[(batch_index, action_index)] = action_id
         return embedded_actions, action_map, initial_action_embedding
 
@@ -491,7 +498,7 @@ class WikiTablesSemanticParser(Model):
             ``flattened_linking_scores`` tensor.
         """
         batch_size, num_entities, num_question_tokens = linking_scores.size()
-        entity_map: Dict[Tuple[int, str], Tuple[int]] = {}
+        entity_map: Dict[Tuple[int, str], int] = {}
         for batch_index, world in enumerate(worlds):
             for entity_index, entity in enumerate(world.table_graph.entities):
                 entity_map[(batch_index, entity)] = batch_index * num_entities + entity_index
@@ -601,7 +608,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         tokens for each batch instance.  This is a list over batch elements, for the same reasons
         as above.
     action_embeddings : ``torch.Tensor``
-        The global action embeddings tensor.  Has shape ``(num_global_actions,
+        The global action embeddings tensor.  Has shape ``(num_global_embeddable_actions,
         action_embedding_dim)``.
     action_indices : ``Dict[Tuple[int, int], int]``
         A mapping from ``(batch_index, action_index)`` to ``global_action_index``.
@@ -881,6 +888,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         grammar state for each group element.  This method gets that set of actions and separates
         them into actions that can be embedded and actions that need to be linked.
 
+        This method goes through all of the actions from ``state.get_valid_actions()`` and
+        separates them into actions that can be embedded and actions that need to be linked, based
+        on the action's ``global_action_index`` (all embeddable actions have an action index lower
+        than the number of global embeddable actions).  After separating the actions, we combine
+        them again, getting a padded list of all considered actions that can be used by
+        :func:`_compute_new_states`.  All three of these lists are returned (the embeddable
+        actions, the actions that need to be linked, and the padded collection of all actions that
+        were considered).
+
         Returns
         -------
         considered_actions : ``List[List[int]]``
@@ -906,22 +922,26 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             If there are `no` actions to link, because all actions have an embedding, we return
             `None` here.
         """
-        num_global_actions = state.action_embeddings.size(0)
+        # This is a (num_global_embeddable_actions, action_embedding_dim) tensor.
+        num_global_embeddable_actions = state.action_embeddings.size(0)
+        # A list of `batch_action_indices` for each group element.
         valid_actions = state.get_valid_actions()
-        global_valid_actions = []
+        global_valid_actions: List[List[Tuple[int, int]]] = []
         for batch_index, valid_action_list in zip(state.batch_indices, valid_actions):
             global_valid_actions.append([])
             for action_index in valid_action_list:
+                # state.action_indices is a dictionary that maps (batch_index, batch_action_index)
+                # to global_action_index
                 global_action_index = state.action_indices[(batch_index, action_index)]
                 global_valid_actions[-1].append((global_action_index, action_index))
-        embedded_actions = []
-        linked_actions = []
+        embedded_actions: List[List[int]] = []
+        linked_actions: List[List[int]] = []
         for global_action_list in global_valid_actions:
             global_action_list.sort()
             embedded_actions.append([])
             linked_actions.append([])
             for global_action_index, action_index in global_action_list:
-                if global_action_index >= num_global_actions:
+                if global_action_index >= num_global_embeddable_actions:
                     linked_actions[-1].append(action_index)
                 else:
                     embedded_actions[-1].append(global_action_index)
@@ -930,20 +950,20 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         num_linked_actions = max(len(actions) for actions in linked_actions)
         if num_linked_actions == 0:
             linked_actions = None
-        considered_actions = []
+        considered_actions: List[List[int]] = []
         for global_action_list in global_valid_actions:
             # The global_valid_action list is already sorted from above.
             considered_actions.append([])
             # First we add the embedded actions to the list.
             for global_action_index, action_index in global_action_list:
-                if global_action_index < num_global_actions:
+                if global_action_index < num_global_embeddable_actions:
                     considered_actions[-1].append(action_index)
             # Then we pad that portion.
             while len(considered_actions[-1]) < num_embedded_actions:
                 considered_actions[-1].append(-1)
             # Then we add the linked actions to the list.
             for global_action_index, action_index in global_action_list:
-                if global_action_index >= num_global_actions:
+                if global_action_index >= num_global_embeddable_actions:
                     considered_actions[-1].append(action_index)
             # Finally, we pad the linked portion.
             while len(considered_actions[-1]) < num_embedded_actions + num_linked_actions:
@@ -999,7 +1019,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     def _get_entity_action_logits(self,
                                   state: WikiTablesDecoderState,
                                   actions_to_link: List[List[int]],
-                                  attention_weights: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+                                  attention_weights: torch.Tensor) -> Tuple[torch.FloatTensor,
+                                                                            torch.LongTensor,
+                                                                            torch.FloatTensor]:
         """
         Returns scores for each action in ``actions_to_link`` that are derived from the linking
         scores between the question and the table entities, and the current attention on the
@@ -1042,8 +1064,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         """
         # First we map the actions to entity indices, using state.actions_to_entities, and find the
         # type of each entity using state.entity_types.
-        action_entities = []
-        entity_types = []
+        action_entities: List[List[int]] = []
+        entity_types: List[List[int]] = []
         for batch_index, action_list in zip(state.batch_indices, actions_to_link):
             action_entities.append([])
             entity_types.append([])
