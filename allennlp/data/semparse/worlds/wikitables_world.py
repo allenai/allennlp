@@ -52,6 +52,14 @@ class WikiTablesWorld(World):
         for number in numbers:
             self._map_name(number, keep_mapping=True)
 
+        self._entity_set = set(table_graph.entities)
+
+    def is_table_entity(self, entity_name: str) -> bool:
+        """
+        Returns ``True`` if the given entity is one of the entities in the table.
+        """
+        return entity_name in self._entity_set
+
     def _get_numbers_from_tokens(self, tokens: List[Token]) -> List[str]:
         """
         Finds numbers in the input tokens and returns them as strings.

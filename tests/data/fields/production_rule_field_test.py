@@ -30,7 +30,11 @@ class TestProductionRuleField(AllenNlpTestCase):
         self.terminal_indexers = {"entities": SingleIdTokenIndexer("entities")}
         self.nonterminal_indexers = {"rules": SingleIdTokenIndexer("rule_labels")}
         self.character_indexer = {'characters': TokenCharactersIndexer('characters')}
-        self.nonterminal_types = {'S', 'NP', 'VP'}
+        def is_nonterminal(name: str) -> bool:
+            if name[0] in {'<', '['}:
+                return True
+            return name in {'S', 'NP', 'VP'}
+        self.is_nonterminal = is_nonterminal
 
         super(TestProductionRuleField, self).setUp()
 
@@ -43,7 +47,7 @@ class TestProductionRuleField(AllenNlpTestCase):
         return ProductionRuleField(rule_string,
                                    terminal_indexers=terminal_indexers,
                                    nonterminal_indexers=nonterminal_indexers,
-                                   nonterminal_types=self.nonterminal_types)
+                                   is_nonterminal=self.is_nonterminal)
 
     def test_field_counts_vocab_items_correctly(self):
         field = self._make_field('S -> [NP, VP]')
