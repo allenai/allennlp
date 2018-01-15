@@ -135,9 +135,10 @@ class ModelTestCase(AllenNlpTestCase):
         result = model(**model_batch)
         result["loss"].backward()
 
-        for parameter in model.parameters():
+        for name, parameter in model.named_parameters():
             zeros = torch.zeros(parameter.size())
             if parameter.requires_grad:
+                assert parameter.grad is not None, f"Missing gradient for parameter {name}"
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
                 assert (parameter.grad.data.cpu() != zeros).any()
