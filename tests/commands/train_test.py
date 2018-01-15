@@ -5,7 +5,7 @@ from typing import Iterator
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import Train, train_model, train_model_from_args
-from allennlp.data import DatasetReader, Instance, Dataset
+from allennlp.data import DatasetReader, Instance, InstanceCollection
 from allennlp.data.dataset import LazyDataset
 
 class TestTrain(AllenNlpTestCase):
@@ -94,7 +94,7 @@ class TestTrain(AllenNlpTestCase):
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
 @DatasetReader.register('lazy-test')
-class LazyTestReader(DatasetReader):
+class LazyFakeReader(DatasetReader):
     # pylint: disable=abstract-method
     def __init__(self) -> None:
         self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging'}))
@@ -105,7 +105,7 @@ class LazyTestReader(DatasetReader):
 
         return generator
 
-    def read(self, file_path: str) -> Dataset:
+    def read(self, file_path: str) -> InstanceCollection:
         """
         Actually reads some data from the `file_path` and returns a :class:`Dataset`.
         """
@@ -113,7 +113,7 @@ class LazyTestReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'LazyTestReader':
-        return LazyTestReader()
+        return LazyFakeReader()
 
 
 class TestTrainOnLazyDataset(AllenNlpTestCase):
@@ -137,7 +137,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 "dataset_reader": {"type": "lazy-test"},
                 "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "iterator": {"type": "lazy", "batch_size": 2},
+                "iterator": {"type": "lazy-basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
                         "optimizer": "adam"
@@ -168,7 +168,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 "test_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "evaluate_on_test": True,
-                "iterator": {"type": "lazy", "batch_size": 2},
+                "iterator": {"type": "lazy-basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
                         "optimizer": "adam"

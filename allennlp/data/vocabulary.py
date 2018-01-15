@@ -319,9 +319,10 @@ class Vocabulary:
                        pretrained_files: Optional[Dict[str, str]] = None,
                        only_include_pretrained_words: bool = False) -> 'Vocabulary':
         """
-        Constructs a vocabulary given a :class:`.Dataset` and some parameters.  We count all of the
-        vocabulary items in the dataset, then pass those counts, and the other parameters, to
-        :func:`__init__`.  See that method for a description of what the other parameters do.
+        Constructs a vocabulary given a collection of `Instances` and some parameters.
+        We count all of the vocabulary items in the instances, then pass those counts
+        and the other parameters, to :func:`__init__`.  See that method for a description
+        of what the other parameters do.
         """
         logger.info("Fitting token dictionary from dataset.")
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -339,7 +340,7 @@ class Vocabulary:
     def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
         """
         There are two possible ways to build a vocabulary; from a
-        pre-existing dataset, using :func:`Vocabulary.from_instances`, or
+        collection of instances, using :func:`Vocabulary.from_instances`, or
         from a pre-saved vocabulary, using :func:`Vocabulary.from_files`.
         This method wraps both of these options, allowing their specification
         from a ``Params`` object, generated from a JSON configuration file.

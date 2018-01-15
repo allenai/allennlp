@@ -1,16 +1,15 @@
 import logging
-from typing import Dict, List, Generator, Union, Iterator, TypeVar, Generic
+from typing import Dict, Generator, Union, Iterable, TypeVar, Generic
 
 import numpy
 
-from allennlp.data.dataset import Dataset, InMemoryDataset
-from allennlp.data.instance import Instance
+from allennlp.data.dataset import InstanceCollection, Dataset
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-DatasetType = TypeVar('DatasetType', bound=Dataset)  # pylint: disable=invalid-name
+DatasetType = TypeVar('DatasetType', bound=InstanceCollection)  # pylint: disable=invalid-name
 
 class DataIterator(Generic[DatasetType], Registrable):
     """
@@ -63,9 +62,8 @@ class DataIterator(Generic[DatasetType], Registrable):
         raise NotImplementedError
 
     def _yield_one_epoch(self, dataset: DatasetType, shuffle: bool, cuda_device: int, for_training: bool):
-        grouped_instances = self._create_batches(dataset, shuffle)
-        for group in grouped_instances:
-            batch = InMemoryDataset(group)
+        batches = self._create_batches(dataset, shuffle)
+        for batch in batches:
             padding_lengths = batch.get_padding_lengths()
             logger.debug("Batch padding lengths: %s", str(padding_lengths))
             logger.debug("Batch size: %d", len(batch.instances))
@@ -73,9 +71,9 @@ class DataIterator(Generic[DatasetType], Registrable):
                                        cuda_device=cuda_device,
                                        for_training=for_training)
 
-    def _create_batches(self, dataset: DatasetType, shuffle: bool) -> Iterator[List[Instance]]:
+    def _create_batches(self, dataset: DatasetType, shuffle: bool) -> Iterable[Dataset]:
         """
-        Actually does the work of batching instances in the ``Dataset`` together.
+        Creates batches of instances. Each batch is a small ``Dataset``.
         """
         raise NotImplementedError
 

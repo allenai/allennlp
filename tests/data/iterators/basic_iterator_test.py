@@ -4,7 +4,7 @@ from typing import List
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token, Vocabulary
-from allennlp.data.dataset import InMemoryDataset
+from allennlp.data.dataset import Dataset
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
@@ -29,7 +29,7 @@ class IteratorTest(AllenNlpTestCase):
                 self.create_instance(["this", "is", "a", "very", "very", "very", "very", "long", "sentence"]),
                 self.create_instance(["sentence"]),
                 ]
-        self.dataset = InMemoryDataset(self.instances)
+        self.dataset = Dataset(self.instances)
 
     def create_instance(self, str_tokens: List[str]):
         tokens = [Token(t) for t in str_tokens]
@@ -71,7 +71,8 @@ class TestBasicIterator(IteratorTest):
     def test_create_batches_groups_correctly(self):
         # pylint: disable=protected-access
         iterator = BasicIterator(batch_size=2)
-        grouped_instances = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[0], self.instances[1]],
                                      [self.instances[2], self.instances[3]],
                                      [self.instances[4]]]

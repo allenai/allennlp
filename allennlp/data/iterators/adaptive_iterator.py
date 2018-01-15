@@ -1,13 +1,13 @@
 import logging
 import random
 from collections import defaultdict
-from typing import Callable, Dict, List, Tuple, Iterator
+from typing import Callable, Dict, List, Tuple, Iterable
 
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.data import Instance
-from allennlp.data.dataset import InMemoryDataset
+from allennlp.data.dataset import Dataset
+from allennlp.data.instance import Instance
 from allennlp.data.iterators.bucket_iterator import BucketIterator
 from allennlp.data.iterators.data_iterator import DataIterator
 
@@ -94,7 +94,7 @@ class AdaptiveIterator(BucketIterator):
                                                batch_size=batch_size)
 
     @overrides
-    def get_num_batches(self, dataset: InMemoryDataset) -> int:
+    def get_num_batches(self, dataset: Dataset) -> int:
         """
         This is a non-trivial operation with an ``AdaptiveIterator``, and it's only approximate,
         because the actual number of batches constructed depends on the padding noise.  Call this
@@ -103,7 +103,7 @@ class AdaptiveIterator(BucketIterator):
         return len(self._create_batches(dataset))
 
     @overrides
-    def _create_batches(self, dataset: InMemoryDataset, shuffle: bool) -> Iterator[List[Instance]]:
+    def _create_batches(self, dataset: Dataset, shuffle: bool) -> Iterable[Dataset]:
         if self._biggest_batch_first:
             return super(AdaptiveIterator, self)._create_batches(dataset, shuffle)
         if self._sorting_keys:
@@ -117,9 +117,9 @@ class AdaptiveIterator(BucketIterator):
         else:
             logger.warning("shuffle parameter is set to False,"
                            " while adaptive iterators by definition change the order of your data.")
-        return grouped_instances
+        return (Dataset(batch) for batch in grouped_instances)
 
-    def _adaptive_grouping(self, dataset: InMemoryDataset):
+    def _adaptive_grouping(self, dataset: Dataset) -> List[List[Instance]]:
         batches = []
         current_batch = []
         current_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
