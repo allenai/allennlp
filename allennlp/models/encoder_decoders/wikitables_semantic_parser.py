@@ -93,7 +93,9 @@ class WikiTablesSemanticParser(Model):
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._nonterminal_embedder = nonterminal_embedder
-        self._terminal_embedder = terminal_embedder
+        if embed_terminals:
+            self._terminal_embedder = terminal_embedder
+            # TODO(mattg): should we raise an error here if terminal_embedder is not None?
         self._action_sequence_accuracy = Average()
         self._embed_terminals = embed_terminals
 
