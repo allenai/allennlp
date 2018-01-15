@@ -5,16 +5,16 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.testing import ModelTestCase
-from allennlp.common import Params
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.models import Model, WikiTablesSemanticParser
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderState
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderStep
 from allennlp.modules import SimilarityFunction
-
+from allennlp.nn.util import get_text_field_mask
 
 class WikiTablesSemanticParserTest(ModelTestCase):
     def setUp(self):
@@ -24,6 +24,18 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
+
+    def test_average_encoder_works_simple(self):
+        # (batch_size, num_entities, num_entity_tokens)
+        word_id_tensor = Variable(torch.LongTensor([[[1,2,0],[3,0,0]]]))
+        # its embedded by repeating each word id twice
+        # (batch_size, num_entities, num_entity_tokens, embedding_dim)
+        embed_tensor = Variable(torch.LongTensor([[[[1,1],[2,2],[0,0]],[[3,3],[0,0],[0,0]]]])).float()
+        mask = get_text_field_mask({'tokens':embed_tensor}, num_wrapping_dims=1).float()
+        # (batch_size, num_entities, embedding_dim)
+        averaged = self.model._compute_average_with_encoder(embed_tensor, mask)
+        assert True == torch.equal(averaged.data, torch.FloatTensor([[[1.5,1.5],[3.0,3.0]]]))
+
 
     def test_get_unique_elements(self):
         # pylint: disable=protected-access
