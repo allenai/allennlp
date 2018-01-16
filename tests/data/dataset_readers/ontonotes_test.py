@@ -123,3 +123,9 @@ class TestOntonotes(AllenNlpTestCase):
         reader = Ontonotes()
         files = list(reader.dataset_path_iterator('tests/fixtures/conll_2012/'))
         assert files == ['tests/fixtures/conll_2012/example.gold_conll']
+
+    def test_ontonotes_can_read_conll_file_with_multiple_documents(self):
+        reader = Ontonotes()
+        file_path = 'tests/fixtures/coref/coref.gold_conll'
+        documents = list(reader.dataset_document_iterator(file_path))
+        assert len(documents) == 2
