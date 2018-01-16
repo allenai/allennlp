@@ -10,7 +10,7 @@ cache:
   - /home/travis/.allennlp/datasets
 env:
   matrix:
-    - COVERAGE="true" RUN_TESTS="true"
+    - RUN_TESTS="true"
     - RUN_PYLINT="true"
     - RUN_MYPY="true"
     - BUILD_DOCS="true" CHECK_DOCS="true"
