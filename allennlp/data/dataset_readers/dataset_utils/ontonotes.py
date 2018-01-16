@@ -174,7 +174,7 @@ class Ontonotes:
         Co-reference chain information encoded in a parenthesis structure. For documents that do
          not have co-reference annotations, each line is represented with a "-".
     """
-    def dataset_iterator(self, file_path) -> Iterator[OntonotesSentence]:
+    def dataset_iterator(self, file_path: str) -> Iterator[OntonotesSentence]:
         """
         An iterator over the entire dataset, yielding all sentences processed.
         """
@@ -198,22 +198,40 @@ class Ontonotes:
 
                 yield os.path.join(root, data_file)
 
+    def dataset_document_iterator(self, file_path: str) -> Iterator[List[OntonotesSentence]]:
+        """
+        An iterator over CONLL formatted files which yields documents, regardless
+        of the number of document annotations in a particular file. This is useful
+        for conll data which has been preprocessed, such as the preprocessing which
+        takes place for the 2012 CONLL Coreference Resolution task.
+        """
+        with codecs.open(file_path, 'r', encoding='utf8') as open_file:
+            conll_rows = []
+            document: List[OntonotesSentence] = []
+            for line in open_file:
+                line = line.strip()
+                if line != '' and not line.startswith('#'):
+                    # Non-empty line. Collect the annotation.
+                    conll_rows.append(line)
+                else:
+                    if conll_rows:
+                        document.append(self._conll_rows_to_sentence(conll_rows))
+                        conll_rows = []
+                if line.startswith("#end document"):
+                    yield document
+                    document = []
+            if document:
+                # Collect any stragglers or files which might not
+                # have the '#end document' format for the end of the file.
+                yield document
+
     def sentence_iterator(self, file_path: str) -> Iterator[OntonotesSentence]:
         """
         An iterator over the sentences in an individual CONLL formatted file.
         """
-        with codecs.open(file_path, 'r', encoding='utf8') as open_file:
-            conll_rows = []
-            for line in open_file:
-                line = line.strip()
-                if line != '' and not line.startswith('#'):
-                    conll_rows.append(line)
-                else:
-                    if not conll_rows:
-                        continue
-                    else:
-                        yield self._conll_rows_to_sentence(conll_rows)
-                        conll_rows = []
+        for document in self.dataset_document_iterator(file_path):
+            for sentence in document:
+                yield sentence
 
     def _conll_rows_to_sentence(self, conll_rows: List[str]) -> OntonotesSentence:
         document_id: str = None
