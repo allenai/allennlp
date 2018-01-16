@@ -6,7 +6,6 @@ from itertools import zip_longest
 from typing import Any, Callable, Dict, List, Tuple, TypeVar
 import random
 
-import torch
 import numpy
 import spacy
 from spacy.language import Language as SpacyModelType
