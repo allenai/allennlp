@@ -4,7 +4,8 @@ import numpy
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Dataset, Instance, Token, Vocabulary
+from allennlp.data import Instance, Token, Vocabulary
+from allennlp.data.dataset import Dataset, LazyDataset
 from allennlp.data.fields import TextField, LabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
@@ -45,6 +46,22 @@ class TestDataset(AllenNlpTestCase):
         numpy.testing.assert_array_almost_equal(text2, numpy.array([[2, 3, 4, 1, 5, 6],
                                                                     [2, 3, 1, 0, 0, 0]]))
 
+    def test_lazy_as_tensor_dict(self):
+        lazy_dataset = self.get_lazy_dataset()
+        lazy_dataset.index_instances(self.vocab)
+
+        for _ in range(10):
+            dataset = Dataset([instance for instance in lazy_dataset])
+            padding_lengths = dataset.get_padding_lengths()
+            tensors = dataset.as_tensor_dict(padding_lengths)
+            text1 = tensors["text1"]["tokens"].data.cpu().numpy()
+            text2 = tensors["text2"]["tokens"].data.cpu().numpy()
+
+            numpy.testing.assert_array_almost_equal(text1, numpy.array([[2, 3, 4, 5, 6],
+                                                                        [1, 3, 4, 5, 6]]))
+            numpy.testing.assert_array_almost_equal(text2, numpy.array([[2, 3, 4, 1, 5, 6],
+                                                                        [2, 3, 1, 0, 0, 0]]))
+
     def get_dataset(self):
         field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence", "."]],
                            self.token_indexer)
@@ -57,3 +74,9 @@ class TestDataset(AllenNlpTestCase):
         instances = [Instance({"text1": field1, "text2": field2}),
                      Instance({"text1": field3, "text2": field4})]
         return Dataset(instances)
+
+    def get_lazy_dataset(self):
+        instances = self.get_dataset().instances
+        generator = lambda: iter(instances)
+
+        return LazyDataset(generator)
