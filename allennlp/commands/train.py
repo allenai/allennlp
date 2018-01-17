@@ -69,7 +69,7 @@ class Train(Subcommand):
         subparser.add_argument('--include-package',
                                type=str,
                                action='append',
-                               default=(),
+                               default=[],
                                help='additional packages to include')
 
         subparser.set_defaults(func=train_model_from_args)

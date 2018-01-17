@@ -73,7 +73,7 @@ class Evaluate(Subcommand):
         subparser.add_argument('--include-package',
                                type=str,
                                action='append',
-                               default=(),
+                               default=[],
                                help='additional packages to include')
 
         subparser.set_defaults(func=evaluate_from_args)
