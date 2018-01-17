@@ -25,18 +25,6 @@ class WikiTablesSemanticParserTest(ModelTestCase):
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    def test_average_encoder_works_simple(self):
-        # (batch_size, num_entities, num_entity_tokens)
-        word_id_tensor = Variable(torch.LongTensor([[[1,2,0],[3,0,0]]]))
-        # its embedded by repeating each word id twice
-        # (batch_size, num_entities, num_entity_tokens, embedding_dim)
-        embed_tensor = Variable(torch.LongTensor([[[[1,1],[2,2],[0,0]],[[3,3],[0,0],[0,0]]]])).float()
-        mask = get_text_field_mask({'tokens':embed_tensor}, num_wrapping_dims=1).float()
-        # (batch_size, num_entities, embedding_dim)
-        averaged = self.model._compute_average_with_encoder(embed_tensor, mask)
-        assert True == torch.equal(averaged.data, torch.FloatTensor([[[1.5,1.5],[3.0,3.0]]]))
-
-
     def test_get_unique_elements(self):
         # pylint: disable=protected-access
         production_rules = [

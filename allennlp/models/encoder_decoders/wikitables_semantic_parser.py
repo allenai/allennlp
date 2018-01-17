@@ -19,11 +19,11 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.worlds import WikiTablesWorld
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction, CosineSimilarity
+from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
+from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
@@ -57,8 +57,10 @@ class WikiTablesSemanticParser(Model):
         but they are structured the same way.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
-    entity_encoder : ``BagOfEmbeddingsEncoder``
-        The encoder to used for combining the words of an entity.
+    entity_encoder : ``Seq2VecEncoder``
+        The encoder to used for averaging the words of an entity.
+    neighbor_encoder : ``Seq2VecEncoder``
+        The encoder to used for averaging the neighbors of an entity.
     decoder_trainer : ``DecoderTrainer``
         The structured learning algorithm used to train the decoder (which also trains the encoder,
         but it's applied to the decoder outputs).
@@ -86,7 +88,8 @@ class WikiTablesSemanticParser(Model):
                  nonterminal_embedder: TextFieldEmbedder,
                  terminal_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 entity_encoder: BagOfEmbeddingsEncoder,
+                 entity_encoder: Seq2VecEncoder,
+                 neighbor_encoder: Seq2VecEncoder,
                  decoder_trainer: DecoderTrainer,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
@@ -95,7 +98,8 @@ class WikiTablesSemanticParser(Model):
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
-        self._entity_encoder = entity_encoder
+        self._entity_encoder = TimeDistributed(entity_encoder)
+        self._neighbor_encoder = TimeDistributed(neighbor_encoder)
         self._decoder_trainer = decoder_trainer
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
@@ -106,6 +110,8 @@ class WikiTablesSemanticParser(Model):
         self._action_sequence_accuracy = Average()
         self._embed_terminals = embed_terminals
 
+        check_dimensions_match(entity_encoder.get_input_dim(), question_embedder.get_output_dim(),
+                               "entity word average embedding dim", "question embedding dim")
         check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
                                "nonterminal embedding dim", "terminal embedding dim")
 
@@ -114,6 +120,12 @@ class WikiTablesSemanticParser(Model):
         self._action_padding_index = -1  # the padding value used by IndexField
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
         num_entity_types = 2  # TODO(mattg): get this in a more principled way somehow?
+        self._embedding_dim = question_embedder.get_output_dim()
+        self._type_params = torch.nn.Linear(num_entity_types, self._embedding_dim)
+        self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
+        # TODO(mattg): ok to leave number 1 since it gets squeezed out?
+        self._linking_params = torch.nn.Linear(7,1)  # TODO(mattg): use linking features param vector
+
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
@@ -156,10 +168,6 @@ class WikiTablesSemanticParser(Model):
         """
 
         table_text = table['text']
-        embedding_dim = self._question_embedder.get_output_dim()
-        batch_size = table_text['tokens'].size(0)
-        max_num_entities = table_text['tokens'].size(1)
-        num_types = 2  # todo should we compute from type_signatures?
 
         # (batch_size, question_length, embedding_dim)
         embedded_question = self._question_embedder(question)
@@ -170,12 +178,17 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_entity_tokens)
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
+        batch_size = embedded_table.size(0)
+        num_entities = embedded_table.size(1)
+        num_entity_tokens = embedded_table.size(2)
+        num_question_tokens = embedded_question.size(1)
+
         # compute the average of each entity's word embeddings
         # (batch_size, num_entities, embedding_dim)
-        encoded_table = self._compute_average_with_encoder(embedded_table, table_mask)
+        encoded_table = self._entity_encoder(embedded_table, table_mask)
 
         # (batch_size, num_entities, num_entities)
-        neighbor_idx_tensor = self._get_neighbor_indexes(world, max_num_entities)
+        neighbor_idx_tensor = self._get_neighbor_indexes(world, num_entities, embedded_table)
 
         # get averaged word embeddings for each entity's neighbors
         # (batch_size, num_entities, num_entities, embedding_dim)
@@ -185,21 +198,18 @@ class WikiTablesSemanticParser(Model):
 
         # get averaged neighbor embeddings for each entity
         # (batch_size, num_entities, embedding_dim)
-        neighbor_embeddings = self._compute_average_with_encoder(neighbor_embed_tensor, neighbor_mask)
+        neighbor_embeddings = self._neighbor_encoder(neighbor_embed_tensor, neighbor_mask)
 
         # each entity has a binary flag indicating type
         # (batch_size, num_entities)
-        type_vector = self._get_type_vector(world, max_num_entities)
+        type_vector = self._get_type_vector(world, num_entities)
 
         # construct the entity embeddings through a linear combination of type
         # and neighbor embeddings fed through tanh
-        type_params = torch.nn.Linear(num_types, embedding_dim)
-        neighbor_params = torch.nn.Linear(embedding_dim, embedding_dim)
-        x = type_params(type_vector.float())
-        y = neighbor_params(neighbor_embeddings.float())
-        tan = torch.nn.Tanh()
+        x = self._type_params(type_vector.float())
+        y = self._neighbor_params(neighbor_embeddings.float())
         # (batch_size, num_entities, embedding_dim)
-        entity_embeddings = tan(x + y)
+        entity_embeddings = torch.nn.functional.tanh(x + y)
 
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']  # pylint: disable=unused-variable
@@ -240,8 +250,6 @@ class WikiTablesSemanticParser(Model):
         # represents how well each question token matches table entities.  I'm stubbing this out
         # for now, so that I have a variable to pass to the decoder, because we need this there.
         # (batch_size, num_entities, num_question_tokens)
-        num_entities = embedded_table.size(1)
-        num_question_tokens = embedded_question.size(1)
         linking_scores: torch.FloatTensor = Variable(torch.ones(batch_size, num_entities, num_question_tokens))
 
         # (batch_size, question_length, encoder_output_dim)
@@ -341,18 +349,8 @@ class WikiTablesSemanticParser(Model):
             # TODO(matt): compute accuracy here.
             return outputs
 
-    def _compute_average_with_encoder(self, embed_tensor: Variable,
-                                      mask: Variable) -> Variable:
-        # computes the average along dimension 1 of the embed_tensor
-        dims = embed_tensor.size()
-        table_mask = mask.view(-1, mask.size(2))
-        averaged_tensor = self._entity_encoder(embed_tensor.view(-1, dims[2], dims[3]),
-                                               table_mask)
-        # (batch_size, num_entities, embedding_dim)
-        return averaged_tensor.view(dims[0], dims[1], dims[3])
-
     def _get_neighbor_indexes(self, world: List[WikiTablesWorld],
-                                    max_num_entities: int) -> Variable:
+                                    num_entities: int, tensor: torch.Tensor) -> Variable:
         # returns each entity's neighbor indexes
         batches = []
         for w in world:
@@ -365,17 +363,18 @@ class WikiTablesSemanticParser(Model):
                 # get indexes of entity e's neighbors
                 curr_neighbors = [entity2idx[cn] for cn in neighbors[e]]
                 # pad to length of max number of entities in a batch
-                padded = pad_sequence_to_length(curr_neighbors, max_num_entities)
+                padded = pad_sequence_to_length(curr_neighbors, num_entities)
                 neighbor_indexes.append(padded)
             # pad the list with empty lists to hit length max num entities
             neighbor_indexes = pad_sequence_to_length(neighbor_indexes,
-                                                      max_num_entities,
-                                                      lambda:[0]*max_num_entities)
+                                                      num_entities,
+                                                      lambda:[0]*num_entities)
             batches.append(neighbor_indexes)
         # (batch_size, num_entities, num_entities)
-        return Variable(torch.LongTensor(batches))
+        # return Variable(torch.LongTensor(batches))
+        return Variable(tensor.data.new(batches)).long()
 
-    def _get_type_vector(self, world: List[WikiTablesWorld], max_num_entities: int) -> Variable:
+    def _get_type_vector(self, world: List[WikiTablesWorld], num_entities: int) -> Variable:
         # compute type one hot vector with dim 2 for types e and <e,r>
         batches = []
         for w in world:
@@ -387,7 +386,7 @@ class WikiTablesSemanticParser(Model):
                 er_1hot = [0,1]
                 types.append((e_1hot if ent2type[w.local_name_mapping[e]] == 'e' else er_1hot))
             # pad types with all 0's vector
-            padded = pad_sequence_to_length(types, max_num_entities, lambda:[0,0])
+            padded = pad_sequence_to_length(types, num_entities, lambda:[0,0])
             batches.append(padded)
         # (batch_size, num_entities)
         return Variable(torch.LongTensor(batches))
@@ -657,7 +656,8 @@ class WikiTablesSemanticParser(Model):
     def from_params(cls, vocab, params: Params) -> 'WikiTablesSemanticParser':
         question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        entity_encoder = BagOfEmbeddingsEncoder.from_params(params.pop('entity_encoder'))
+        entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
+        neighbor_encoder = Seq2VecEncoder.from_params(params.pop('neighbor_encoder'))
         max_decoding_steps = params.pop("max_decoding_steps")
         nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
         terminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("terminal_embedder"))
@@ -678,6 +678,7 @@ class WikiTablesSemanticParser(Model):
                    terminal_embedder=terminal_embedder,
                    encoder=encoder,
                    entity_encoder=entity_encoder,
+                   neighbor_encoder=neighbor_encoder,
                    decoder_trainer=decoder_trainer,
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,

@@ -51,6 +51,11 @@
       "embedding_dim": 25,
       "averaged": true
     },
+    "neighbor_encoder": {
+      "type": "boe",
+      "embedding_dim": 25,
+      "averaged": true
+    },
     "decoder_trainer": {
       "type": "max_marginal_likelihood"
     },
