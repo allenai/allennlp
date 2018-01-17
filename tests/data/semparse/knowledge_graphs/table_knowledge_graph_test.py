@@ -35,6 +35,30 @@ class TestTableKnowledgeGraph(AllenNlpTestCase):
         neighbors = set(graph.neighbors['fb:row.row.name_in_turkish'])
         assert neighbors == {'fb:cell.van_golu', 'fb:cell.gala_golu'}
 
+        json = {
+                'columns': ['Notes'],
+                'cells': [['Ordained as a priest at\nReșița on March, 29th 1936']]
+                }
+        graph = TableKnowledgeGraph.read_from_json(json)
+        neighbors = set(graph.neighbors['fb:row.row.notes'])
+        assert neighbors == {'fb:cell.ordained_as_a_priest_at_resita_on_march_29th_1936'}
+
+        json = {
+                'columns': ['Player'],
+                'cells': [['Mateja Kežman']]
+                }
+        graph = TableKnowledgeGraph.read_from_json(json)
+        neighbors = set(graph.neighbors['fb:row.row.player'])
+        assert neighbors == {'fb:cell.mateja_kezman'}
+
+        json = {
+                'columns': ['Venue'],
+                'cells': [['Arena Națională, Bucharest, Romania']]
+                }
+        graph = TableKnowledgeGraph.read_from_json(json)
+        neighbors = set(graph.neighbors['fb:row.row.venue'])
+        assert neighbors == {'fb:cell.arena_nationala_bucharest_romania'}
+
     def test_read_from_json_handles_newlines_in_columns(self):
         # The TSV file we use has newlines converted to "\n", not actual escape characters.  We
         # need to be sure we catch this.
@@ -72,13 +96,41 @@ class TestTableKnowledgeGraph(AllenNlpTestCase):
         json = {
                 'columns': ['Town'],
                 'cells': [['Viðareiði'],
-                          ['Funningsfjørður']]
+                          ['Funningsfjørður'],
+                          ['Froðba']]
                 }
         graph = TableKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.town'])
         assert neighbors == {'fb:cell.funningsfj_r_ur',
                              'fb:cell.vi_arei_i',
+                             'fb:cell.fro_ba',
                              }
+
+        json = {
+                'columns': ['Fate'],
+                'cells': [['Sunk at 45°00′N 11°21′W﻿ / ﻿45.000°N 11.350°W'],
+                          ['66°22′32″N 29°20′19″E﻿ / ﻿66.37556°N 29.33861°E']]
+                }
+        graph = TableKnowledgeGraph.read_from_json(json)
+        neighbors = set(graph.neighbors['fb:row.row.fate'])
+        assert neighbors == {'fb:cell.sunk_at_45_00_n_11_21_w_45_000_n_11_350_w',
+                             'fb:cell.66_22_32_n_29_20_19_e_66_37556_n_29_33861_e'}
+
+        json = {
+                'columns': ['€0.01'],
+                'cells': [['6,000']]
+                }
+        graph = TableKnowledgeGraph.read_from_json(json)
+        neighbors = set(graph.neighbors['fb:row.row._0_01'])
+        assert neighbors == {'fb:cell.6_000'}
+
+        json = {
+                'columns': ['Division'],
+                'cells': [['1ª Aut. Pref.']]
+                }
+        graph = TableKnowledgeGraph.read_from_json(json)
+        neighbors = set(graph.neighbors['fb:row.row.division'])
+        assert neighbors == {'fb:cell.1_aut_pref'}
 
     def test_read_from_json_handles_parentheses_correctly(self):
         json = {
@@ -92,6 +144,22 @@ class TestTableKnowledgeGraph(AllenNlpTestCase):
         assert neighbors == {'fb:cell.dzhebariki_khaya',
                              'fb:cell.south_korea_kor',
                              'fb:cell.area_km'}
+
+        json = {
+                'columns': ['Margin\\nof victory'],
+                'cells': [['−9 (67-67-68-69=271)']]
+                }
+        graph = TableKnowledgeGraph.read_from_json(json)
+        neighbors = set(graph.neighbors['fb:row.row.margin_of_victory'])
+        assert neighbors == {'fb:cell._9_67_67_68_69_271'}
+
+        json = {
+                'columns': ['Record'],
+                'cells': [['4.08 m (13 ft 41⁄2 in)']]
+                }
+        graph = TableKnowledgeGraph.read_from_json(json)
+        neighbors = set(graph.neighbors['fb:row.row.record'])
+        assert neighbors == {'fb:cell.4_08_m_13_ft_41_2_in'}
 
     def test_read_from_json_handles_columns_with_duplicate_normalizations(self):
         json = {
