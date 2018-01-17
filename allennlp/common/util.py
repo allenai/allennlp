@@ -5,6 +5,8 @@ Various utilities that don't fit anwhere else.
 from itertools import zip_longest
 from typing import Any, Callable, Dict, List, Tuple, TypeVar
 import random
+import resource
+import sys
 
 import torch
 import numpy
@@ -184,3 +186,20 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
         spacy_model = spacy.load(spacy_model_name, disable=disable)
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
+
+def peak_memory_mb() -> float:
+    """
+    Get peak memory usage for this process.
+    Only works on OSX and Linux, returns 0.0 otherwise.
+    """
+    if sys.platform not in ('linux', 'darwin'):
+        return 0.0
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+    if sys.platform == 'darwin':
+        # measured in bytes
+        return peak / 1_000_000
+
+    else:
+        # measured in kilobyte
+        return peak / 1_000
