@@ -4,6 +4,7 @@ from a single AllenNLP model. It also includes a very, very bare-bones
 web front-end for exploring predictions (or you can provide your own).
 """
 from typing import List, Callable
+import argparse
 import json
 import logging
 import os
@@ -15,6 +16,7 @@ from flask_cors import CORS
 from gevent.wsgi import WSGIServer
 
 from allennlp.common import JsonDict
+from allennlp.common.util import import_submodules
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 from allennlp.service.server_flask import ServerError
@@ -100,7 +102,7 @@ def make_app(predictor: Predictor,
         return app
 
 
-def main():
+def main(args):
     # Executing this file runs the simple service with the bidaf test fixture
     # and the machine-comprehension predictor. There's no good reason you'd want
     # to do this (except maybe to test changes to the stock HTML), but this shows
@@ -108,21 +110,33 @@ def main():
 
     # Make sure all the classes you need for your Model / Predictor / DatasetReader / etc...
     # are imported here, because otherwise they can't be constructed ``from_params``.
+    parser = argparse.ArgumentParser(description='Serve up a simple model')
 
-    archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
-    predictor = Predictor.from_archive(archive, 'machine-comprehension')
+    parser.add_argument('--archive-path', type=str, help='path to trained archive file')
+    parser.add_argument('--predictor', type=str, help='name of predictor')
+    parser.add_argument('--include-package',
+                        type=str,
+                        action='append',
+                        default=[],
+                        help='additional packages to include')
+    parser.add_argument('--static-dir', type=str, help='serve index.html from this directory')
+    parser.add_argument('--title', type=str, help='change the default page title')
+    parser.add_argument('--field-name', type=str, action='append', help='field names to include in the demo')
 
-    def sanitizer(prediction: JsonDict) -> JsonDict:
-        """
-        Only want best_span results.
-        """
-        return {key: value
-                for key, value in prediction.items()
-                if key.startswith("best_span")}
+    args = parser.parse_args(args)
+
+    # Load modules
+    for package_name in args.include_package:
+        import_submodules(package_name)
+
+    archive = load_archive(args.archive_path or 'tests/fixtures/bidaf/serialization/model.tar.gz')
+    predictor = Predictor.from_archive(archive, args.predictor or 'machine-comprehension')
+    field_names = args.field_names or ['passage', 'question']
 
     app = make_app(predictor=predictor,
-                   field_names=['passage', 'question'],
-                   sanitizer=sanitizer)
+                   field_names=field_names,
+                   static_dir=args.static_dir,
+                   title=args.title)
 
     http_server = WSGIServer(('0.0.0.0', 8888), app)
     http_server.serve_forever()
@@ -689,4 +703,4 @@ def _html(title: str, field_names: List[str]) -> str:
                                      qfl=quoted_field_list)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
