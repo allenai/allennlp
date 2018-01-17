@@ -2,6 +2,7 @@
 .cache/
 .coverage
 doc/_build/
+.ipynb_checkpoints
 
 # build artifacts
 allennlp.egg-info/
