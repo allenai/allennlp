@@ -25,6 +25,38 @@ class WikiTablesSemanticParserTest(ModelTestCase):
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    def test_correct_neighbor_indexes(self):
+        # Verify that 2nd entity has correct neighbor indexes.
+        worlds = []
+        for instance in self.dataset.instances:
+            worlds.append(instance.fields['world'].metadata)
+        num_entities = len(worlds[0].table_graph.entities)
+        tensor = Variable(torch.LongTensor([]))
+        neighbor_indexes = self.model._get_neighbor_indexes(worlds, num_entities, tensor)
+        assert neighbor_indexes.size(1) == num_entities
+        assert neighbor_indexes.size(2) == num_entities
+        lst = [0]*(num_entities)
+        lst[0],lst[1] = 45, 45
+        second_entity_neighbors = (torch.LongTensor(lst))
+        assert torch.equal(neighbor_indexes[0][1].data, second_entity_neighbors) == True
+
+    def test_all_types_present_in_type_vector(self):
+        # Verifies that at least 1 instance of every one hot vector
+        # is present. This guards against a bug where entity equality
+        # wasn't working since each entity is of type EntityType and
+        # not str. The result of this bug was the same one hot vector
+        # always picked regardless of type.
+        worlds = []
+        for instance in self.dataset.instances:
+            worlds.append(instance.fields['world'].metadata)
+        num_entities = len(worlds[0].table_graph.entities)
+        tensor = Variable(torch.LongTensor([]))
+        type_vector = self.model._get_type_vector(worlds, num_entities, tensor)
+        # (batch_size, num_types)
+        sums = torch.sum(type_vector, dim=1)
+        x = torch.nonzero(sums.data[0])
+        assert torch.equal(x, torch.LongTensor())
+
     def test_get_unique_elements(self):
         # pylint: disable=protected-access
         production_rules = [

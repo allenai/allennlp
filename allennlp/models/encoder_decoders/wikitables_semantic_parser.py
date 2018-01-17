@@ -407,7 +407,7 @@ class WikiTablesSemanticParser(Model):
                 # [1,0] for 'e' and [0,1] for '<e,r>'
                 e_1hot = [1,0]
                 er_1hot = [0,1]
-                types.append((e_1hot if entity2type[world.local_name_mapping[entity]] == 'e' else er_1hot))
+                types.append((e_1hot if str(entity2type[world.local_name_mapping[entity]]) == 'e' else er_1hot))
             padded = pad_sequence_to_length(types, num_entities, lambda:[0,0])
             batch_types.append(padded)
         return Variable(tensor.data.new(batch_types))
