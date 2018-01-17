@@ -197,9 +197,9 @@ def peak_memory_mb() -> float:
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
     if sys.platform == 'darwin':
-        # measured in bytes
+        # On OSX the result is in bytes.
         return peak / 1_000_000
 
     else:
-        # measured in kilobyte
+        # On Linux the result is in kilobytes.
         return peak / 1_000
