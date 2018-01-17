@@ -189,7 +189,11 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
 
 def peak_memory_mb() -> float:
     """
-    Get peak memory usage for this process.
+    Get peak memory usage for this process, as measured by
+    max-resident-set size:
+
+    https://unix.stackexchange.com/questions/30940/getrusage-system-call-what-is-maximum-resident-set-size
+
     Only works on OSX and Linux, returns 0.0 otherwise.
     """
     if sys.platform not in ('linux', 'darwin'):
