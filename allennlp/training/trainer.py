@@ -16,7 +16,6 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable
 
 import torch
 import torch.optim.lr_scheduler
-from torch.nn.utils.clip_grad import clip_grad_norm
 from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
 from tensorboard import SummaryWriter
 from tensorboard.summary import histogram as tb_histogram
@@ -35,7 +34,49 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def is_sparse(tensor):
-    return isinstance(tensor.data, torch.sparse._SparseBase)
+    return tensor.data.is_sparse
+
+def sparse_clip_norm(parameters, max_norm, norm_type=2):
+    """Clips gradient norm of an iterable of parameters.
+
+    The norm is computed over all gradients together, as if they were
+    concatenated into a single vector. Gradients are modified in-place.
+    Supports sparse gradients.
+
+    Arguments:
+        parameters (Iterable[Variable]): an iterable of Variables that will have
+            gradients normalized
+        max_norm (float or int): max norm of the gradients
+        norm_type (float or int): type of the used p-norm. Can be ``'inf'`` for
+            infinity norm.
+
+    Returns:
+        Total norm of the parameters (viewed as a single vector).
+    """
+    parameters = list(filter(lambda p: p.grad is not None, parameters))
+    max_norm = float(max_norm)
+    norm_type = float(norm_type)
+    if norm_type == float('inf'):
+        total_norm = max(p.grad.data.abs().max() for p in parameters)
+    else:
+        total_norm = 0
+        for p in parameters:
+            if is_sparse(p.grad):
+                # need to coalesce the repeated indices before finding norm
+                grad = p.grad.data.coalesce()
+                param_norm = grad._values().norm(norm_type)
+            else:
+                param_norm = p.grad.data.norm(norm_type)
+            total_norm += param_norm ** norm_type
+        total_norm = total_norm ** (1. / norm_type)
+    clip_coef = max_norm / (total_norm + 1e-6)
+    if clip_coef < 1:
+        for p in parameters:
+            if is_sparse(p.grad):
+                p.grad.data._values().mul_(clip_coef)
+            else:
+                p.grad.data.mul_(clip_coef)
+    return total_norm
 
 
 class TensorboardWriter:
@@ -233,11 +274,9 @@ class Trainer:
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
         """
         if self._grad_norm:
-            # pytorch's clip_grad_norm doesn't support sparse updates
             parameters_to_clip = [p for p in self._model.parameters()
-                                  if p.grad is not None
-                                  and not is_sparse(p.grad)]
-            self._batch_grad_norm = clip_grad_norm(parameters_to_clip, self._grad_norm)
+                                  if p.grad is not None]
+            self._batch_grad_norm = sparse_clip_norm(parameters_to_clip, self._grad_norm)
 
     def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
         """

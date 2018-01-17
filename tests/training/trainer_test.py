@@ -7,7 +7,7 @@ import torch
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.training.trainer import Trainer
+from allennlp.training.trainer import Trainer, sparse_clip_norm, is_sparse
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
@@ -140,3 +140,24 @@ class TestTrainer(AllenNlpTestCase):
                                   model_save_interval=0.0001)
         epoch, _ = restore_trainer._restore_checkpoint()
         assert epoch == 2
+
+
+class TestSparseClipGrad(AllenNlpTestCase):
+    def test_sparse_clip_grad(self):
+        # create a sparse embedding layer, then take gradient
+        embedding = torch.nn.Embedding(100, 16, sparse=True)
+        embedding.zero_grad()
+        ids = torch.autograd.Variable((torch.rand(17) * 100).long())
+        # Set some of the ids to the same value so that the sparse gradient
+        # has repeated indices.  This tests some additional logic.
+        ids[:5] = 5
+        loss = embedding(ids).sum()
+        loss.backward()
+        assert is_sparse(embedding.weight.grad)
+
+        # Now try to clip the gradients.
+        grad_norm = sparse_clip_norm([embedding.weight], 1.5)
+        # Final norm should be 1.5
+        grad = embedding.weight.grad.data.coalesce()
+        self.assertAlmostEqual(grad._values().norm(2.0), 1.5, places=5)
+
