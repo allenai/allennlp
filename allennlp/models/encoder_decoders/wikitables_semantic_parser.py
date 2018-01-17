@@ -240,8 +240,8 @@ class WikiTablesSemanticParser(Model):
         # represents how well each question token matches table entities.  I'm stubbing this out
         # for now, so that I have a variable to pass to the decoder, because we need this there.
         # (batch_size, num_entities, num_question_tokens)
-        num_entities = embedded_table_text.size(1)
-        num_question_tokens = embedded_input.size(1)
+        num_entities = embedded_table.size(1)
+        num_question_tokens = embedded_question.size(1)
         linking_scores: torch.FloatTensor = Variable(torch.ones(batch_size, num_entities, num_question_tokens))
 
         # (batch_size, question_length, encoder_output_dim)
