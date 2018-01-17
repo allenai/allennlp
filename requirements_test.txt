@@ -11,7 +11,7 @@ pytest
 jupyter
 
 # Static type checking
-mypy
+mypy==0.521
 
 # Makes it so that pytest can handle the code structure we use, with src/main/python, and src/test.
 pytest-pythonpath
