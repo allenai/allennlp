@@ -49,13 +49,15 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         worlds = []
         for instance in self.dataset.instances:
             worlds.append(instance.fields['world'].metadata)
-        num_entities = len(worlds[0].table_graph.entities)
+        num_entities = max([len(world.table_graph.entities) for world in worlds])
         tensor = Variable(torch.LongTensor([]))
         type_vector = self.model._get_type_vector(worlds, num_entities, tensor)
         # (batch_size, num_types)
         sums = torch.sum(type_vector, dim=1)
-        x = torch.nonzero(sums.data[0])
-        assert torch.equal(x, torch.LongTensor())
+        x = torch.nonzero(sums.data)
+        # this means every element in sums is nonzero hence both 2 numbers
+        # representing its index will be in x
+        assert x.size(0) * x.size(1) == 2 * sums.size(0) * sums.size(1)
 
     def test_get_unique_elements(self):
         # pylint: disable=protected-access
