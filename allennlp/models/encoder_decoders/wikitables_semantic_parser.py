@@ -172,10 +172,8 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, question_length, embedding_dim)
         embedded_question = self._question_embedder(question)
         question_mask = util.get_text_field_mask(question).float()
-
         # (batch_size, num_entities, num_entity_tokens, embedding_dim)
         embedded_table = self._question_embedder(table_text)
-        # (batch_size, num_entities, num_entity_tokens)
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
         batch_size = embedded_table.size(0)
@@ -183,31 +181,26 @@ class WikiTablesSemanticParser(Model):
         num_entity_tokens = embedded_table.size(2)
         num_question_tokens = embedded_question.size(1)
 
-        # compute the average of each entity's word embeddings
+        # Compute the average of each entity's word embeddings.
         # (batch_size, num_entities, embedding_dim)
-        encoded_table = self._entity_encoder(embedded_table, table_mask)
+        embedded_table = self._entity_encoder(embedded_table, table_mask)
 
         # (batch_size, num_entities, num_entities)
-        neighbor_idx_tensor = self._get_neighbor_indexes(world, num_entities, embedded_table)
+        neighbor_indices = self._get_neighbor_indexes(world, num_entities, embedded_table)
 
-        # get averaged word embeddings for each entity's neighbors
         # (batch_size, num_entities, num_entities, embedding_dim)
-        neighbor_embed_tensor = util.batched_index_select(encoded_table, neighbor_idx_tensor)
-        neighbor_mask = util.get_text_field_mask({'tokens': neighbor_idx_tensor},
+        embedded_neighbors = util.batched_index_select(embedded_table, neighbor_indices)
+        neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices},
                                                  num_wrapping_dims=1).float()
 
-        # get averaged neighbor embeddings for each entity
         # (batch_size, num_entities, embedding_dim)
-        neighbor_embeddings = self._neighbor_encoder(neighbor_embed_tensor, neighbor_mask)
+        embedded_neighbors = self._neighbor_encoder(embedded_neighbors, neighbor_mask)
 
-        # each entity has a binary flag indicating type
-        # (batch_size, num_entities)
-        type_vector = self._get_type_vector(world, num_entities)
+        # (batch_size, num_entities, num_types)
+        type_vector = self._get_type_vector(world, num_entities, embedded_table)
 
-        # construct the entity embeddings through a linear combination of type
-        # and neighbor embeddings fed through tanh
         x = self._type_params(type_vector.float())
-        y = self._neighbor_params(neighbor_embeddings.float())
+        y = self._neighbor_params(embedded_neighbors.float())
         # (batch_size, num_entities, embedding_dim)
         entity_embeddings = torch.nn.functional.tanh(x + y)
 
@@ -349,47 +342,75 @@ class WikiTablesSemanticParser(Model):
             # TODO(matt): compute accuracy here.
             return outputs
 
-    def _get_neighbor_indexes(self, world: List[WikiTablesWorld],
-                                    num_entities: int, tensor: torch.Tensor) -> Variable:
-        # returns each entity's neighbor indexes
-        batches = []
-        for w in world:
-            # each batch has it's own world aka table
-            entities = w.table_graph.entities
-            entity2idx = {e: i for i, e in enumerate(entities)}
-            neighbors = w.table_graph.neighbors
+    def _get_neighbor_indexes(self,
+                              worlds: List[WikiTablesWorld],
+                              num_entities: int,
+                              tensor: torch.Tensor) -> Variable:
+        """
+        This method returns the indices of each entity's neighbors. A tensor
+        is accepted as a parameter for copying purposes
+
+        Parameters
+        ----------
+        worlds : ``List[WikiTablesWorld]``
+        num_entities : ``int``
+        tensor : ``torch.Tensor``
+            Used for copying the constructed list onto the right device.
+
+        Returns
+        -------
+        A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities, num_entities)``.
+        Dimension 2 contains the indices for the neighbors of the entity represented by the
+        index of dimension 1. Dimension 2 is limited to num_entities as it is assumed that
+        each entity can have a number of neighbors at most equal to the total number of entities.
+        """
+        batches_neighbors = []
+        for world in worlds:
+            # Each batch instance has its own world, which has a corresponding table.
+            entities = world.table_graph.entities
+            entity2indices = {entity: i for i, entity in enumerate(entities)}
+            entity2neighbors = world.table_graph.neighbors
             neighbor_indexes = []
-            for e in entities:
-                # get indexes of entity e's neighbors
-                curr_neighbors = [entity2idx[cn] for cn in neighbors[e]]
-                # pad to length of max number of entities in a batch
-                padded = pad_sequence_to_length(curr_neighbors, num_entities)
+            for entity in entities:
+                entity_neighbors = [entity2indices[cn] for cn in entity2neighbors[entity]]
+                padded = pad_sequence_to_length(entity_neighbors, num_entities)
                 neighbor_indexes.append(padded)
-            # pad the list with empty lists to hit length max num entities
             neighbor_indexes = pad_sequence_to_length(neighbor_indexes,
                                                       num_entities,
                                                       lambda:[0]*num_entities)
-            batches.append(neighbor_indexes)
-        # (batch_size, num_entities, num_entities)
-        # return Variable(torch.LongTensor(batches))
-        return Variable(tensor.data.new(batches)).long()
+            batches_neighbors.append(neighbor_indexes)
+        return Variable(tensor.data.new(batches_neighbors)).long()
 
-    def _get_type_vector(self, world: List[WikiTablesWorld], num_entities: int) -> Variable:
-        # compute type one hot vector with dim 2 for types e and <e,r>
-        batches = []
-        for w in world:
+    def _get_type_vector(self,
+                         worlds: List[WikiTablesWorld],
+                         num_entities: int,
+                         tensor: torch.Tensor) -> Variable:
+        """
+        Produces the one hot encoding for each entity's type.
+
+        Parameters
+        ----------
+        worlds : ``List[WikiTablesWorld]``
+        num_entities : ``int``
+        tensor : ``torch.Tensor``
+            Used for copying the constructed list onto the right device.
+
+        Returns
+        -------
+        A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities, num_types)``.
+        """
+        batch_types = []
+        for world in worlds:
             types = []
-            ent2type = w.local_type_signatures
-            for e in w.table_graph.entities:
+            entity2type = world.local_type_signatures
+            for entity in world.table_graph.entities:
                 # [1,0] for 'e' and [0,1] for '<e,r>'
                 e_1hot = [1,0]
                 er_1hot = [0,1]
-                types.append((e_1hot if ent2type[w.local_name_mapping[e]] == 'e' else er_1hot))
-            # pad types with all 0's vector
+                types.append((e_1hot if entity2type[world.local_name_mapping[entity]] == 'e' else er_1hot))
             padded = pad_sequence_to_length(types, num_entities, lambda:[0,0])
-            batches.append(padded)
-        # (batch_size, num_entities)
-        return Variable(torch.LongTensor(batches))
+            batch_types.append(padded)
+        return Variable(tensor.data.new(batch_types))
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
