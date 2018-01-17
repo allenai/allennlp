@@ -198,7 +198,11 @@ def peak_memory_mb() -> float:
     """
     if sys.platform not in ('linux', 'darwin'):
         return 0.0
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+    # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
+    # next line, but later versions (e.g. 0.530) are fine with it. Once we get that
+    # figured out, remove the type: ignore.
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
 
     if sys.platform == 'darwin':
         # On OSX the result is in bytes.
