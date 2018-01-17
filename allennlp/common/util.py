@@ -189,5 +189,5 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
 
 def import_submodules(package_name: str) -> None:
     module = importlib.import_module(package_name)
-    for _, name, _ in pkgutil.walk_packages(module.__path__):
+    for _, name, _ in pkgutil.walk_packages(getattr(module, "__path__", "")):
         importlib.import_module(package_name + '.' + name)

@@ -5,7 +5,6 @@ import os
 import pathlib
 import shutil
 import sys
-import tempfile
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
