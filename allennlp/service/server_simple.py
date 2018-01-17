@@ -2,6 +2,18 @@
 A `Flask <http://flask.pocoo.org/>`_ server for serving predictions
 from a single AllenNLP model. It also includes a very, very bare-bones
 web front-end for exploring predictions (or you can provide your own).
+
+For example, if you have your own predictor and model in the `my_stuff` package,
+and you want to use the default HTML, you could run this like
+
+```
+python -m allennlp.service.server_simple \
+    --archive-path /path/to/trained/model/archive.tar.gz \
+    --predictor my-predictor-name \
+    --title "Demo of My Stuff" \
+    --field-name question --field-name passage --field-name hint \
+    --include-package my_stuff
+```
 """
 from typing import List, Callable
 import argparse
@@ -103,25 +115,23 @@ def make_app(predictor: Predictor,
 
 
 def main(args):
-    # Executing this file runs the simple service with the bidaf test fixture
+    # Executing this file with no extra options runs the simple service with the bidaf test fixture
     # and the machine-comprehension predictor. There's no good reason you'd want
-    # to do this (except maybe to test changes to the stock HTML), but this shows
-    # you what you'd do in your own code to run your own demo.
+    # to do this, except possibly to test changes to the stock HTML).
 
-    # Make sure all the classes you need for your Model / Predictor / DatasetReader / etc...
-    # are imported here, because otherwise they can't be constructed ``from_params``.
     parser = argparse.ArgumentParser(description='Serve up a simple model')
 
     parser.add_argument('--archive-path', type=str, help='path to trained archive file')
     parser.add_argument('--predictor', type=str, help='name of predictor')
+    parser.add_argument('--static-dir', type=str, help='serve index.html from this directory')
+    parser.add_argument('--title', type=str, help='change the default page title', default="AllenNLP Demo")
+    parser.add_argument('--field-name', type=str, action='append', help='field names to include in the demo')
+
     parser.add_argument('--include-package',
                         type=str,
                         action='append',
                         default=[],
                         help='additional packages to include')
-    parser.add_argument('--static-dir', type=str, help='serve index.html from this directory')
-    parser.add_argument('--title', type=str, help='change the default page title')
-    parser.add_argument('--field-name', type=str, action='append', help='field names to include in the demo')
 
     args = parser.parse_args(args)
 
@@ -131,7 +141,7 @@ def main(args):
 
     archive = load_archive(args.archive_path or 'tests/fixtures/bidaf/serialization/model.tar.gz')
     predictor = Predictor.from_archive(archive, args.predictor or 'machine-comprehension')
-    field_names = args.field_names or ['passage', 'question']
+    field_names = args.field_name or ['passage', 'question']
 
     app = make_app(predictor=predictor,
                    field_names=field_names,
@@ -703,4 +713,4 @@ def _html(title: str, field_names: List[str]) -> str:
                                      qfl=quoted_field_list)
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main(sys.argv[1:])
