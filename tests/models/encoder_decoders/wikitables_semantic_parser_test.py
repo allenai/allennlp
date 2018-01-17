@@ -10,7 +10,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common import Params
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
-from allennlp.models import WikiTablesSemanticParser
+from allennlp.models import Model, WikiTablesSemanticParser
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderState
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderStep
 from allennlp.modules import SimilarityFunction
@@ -54,8 +54,9 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
     def test_embed_actions_works_with_batched_and_padded_input(self):
         # pylint: disable=protected-access
-        model = self.model
-        model._embed_terminals = True
+        params = Params.from_file(self.param_file)
+        params['model']['embed_terminals'] = True
+        model = Model.from_params(self.vocab, params['model'])
         nonterminal_embedding = model._nonterminal_embedder._token_embedders['tokens']
         terminal_encoder = model._terminal_embedder._token_embedders['token_characters']
         start_id = model.vocab.get_token_index(START_SYMBOL, 'rule_labels')
