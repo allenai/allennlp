@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>AllenNLP Configuration Wizard</title>
+    <style>
+    </style>
+  </head>
+  <body>
+    <h1>AllenNLP Configuration Wizard</h1>
+
+    <div id="root"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react-dom.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.21.1/babel.min.js"></script>
+    <script type="text/babel">
+
+        const TYPES = $types;
+        const INFOS = $infos;
+
+        const INITIAL_CONFIG = {
+            'train_data_path': {'datatype': 'str'},
+            'validation_data_path': {'datatype': ['union', 'str', 'None']},
+            'model': {'datatype': 'allennlp.models.model.Model'},
+            'iterator': {'datatype': 'allennlp.data.iterators.data_iterator.DataIterator'}
+        };
+
+        class App extends React.Component {
+            constructor(props) {
+                super(props);
+
+                this.state = {
+                    config: INITIAL_CONFIG,
+                    valid: false
+                }
+            }
+
+            render() {
+                return (
+                    <div>
+                        <h1>Configuration</h1>
+                    {
+                        Object.keys(this.state.config).map((key) => {
+                            const value = this.state.config[key];
+                            return (
+                                <Chooser name={key} value={value}/>
+                            )
+                        })
+                    }
+                        <h1>Output</h1>
+                    </div>
+                );
+            }
+        }
+
+        class Chooser extends React.Component {
+            constructor(props) {
+                super(props);
+
+                const {name, value} = props;
+                const {datatype} = value;
+
+                const choices = TYPES[datatype] && Object.keys(TYPES[datatype]);
+
+
+                this.state = {
+                    name,
+                    value,
+                    choices: choices,
+                    children: null
+                }
+            }
+
+            render() {
+                let dropdown;
+                if (this.state.choices) {
+                    dropdown = (
+                        <select>
+                            {
+                                this.state.choices.map((choice) => {
+                                    return (
+                                        <option value={choice}>{choice}</option>
+                                    )
+                                })
+                            }
+                        </select>
+                    )
+                }
+                return (
+                    <div>
+                        <div>{this.state.name}: {JSON.stringify(this.state.value)}</div>
+                        {dropdown}
+                    </div>
+                )
+            }
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+
+  </body>
+</html>
