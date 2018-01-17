@@ -22,6 +22,7 @@ from tensorboard import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import peak_memory_mb
 from allennlp.data import InstanceCollection
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
@@ -200,6 +201,7 @@ class Trainer:
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
+        logger.info(f"Peak memory usage MB: {peak_memory_mb()}")
         train_loss = 0.0
         # Set the model to "train" mode.
         self._model.train()

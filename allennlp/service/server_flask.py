@@ -22,7 +22,7 @@ import psycopg2
 
 import pytz
 
-from allennlp.common.util import JsonDict
+from allennlp.common.util import JsonDict, peak_memory_mb
 from allennlp.service.db import DemoDatabase, PostgresDemoDatabase
 from allennlp.service.permalinks import int_to_slug, slug_to_int
 from allennlp.service.predictors import Predictor, DemoModel
@@ -241,6 +241,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
                 "start_time": start_time_str,
                 "uptime": uptime,
                 "git_version": git_version,
+                "peak_memory_mb": peak_memory_mb(),
                 "githubUrl": "http://github.com/allenai/allennlp/commit/" + git_version})
 
     # As a SPA, we need to return index.html for /model-name and /model-name/permalink
