@@ -1,6 +1,10 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
 from typing import Iterator
+import os
+import pathlib
+import shutil
+import tempfile
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
@@ -92,6 +96,19 @@ class TestTrain(AllenNlpTestCase):
         with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
             args = parser.parse_args(["train", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
+
+    def test_other_modules(self):
+        tempdir = tempfile.mkdtemp()
+        packagedir = os.path.join(tempdir, 'testpackage')
+        pathlib.Path(packagedir).mkdir()
+        pathlib.Path(os.path.join(packagedir, '__init__.py')).touch()
+
+
+
+
+
+        shutil.rmtree(tempdir)
+
 
 @DatasetReader.register('lazy-test')
 class LazyFakeReader(DatasetReader):

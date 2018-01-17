@@ -168,6 +168,50 @@ class TestPredict(TestCase):
 
         shutil.rmtree(tempdir)
 
+
+    def test_can_specify_predictor(self):
+
+        @Predictor.register('bidaf-explicit')  # pylint: disable=unused-variable
+        class Bidaf3Predictor(BidafPredictor):
+            """same as bidaf predictor but with an extra field"""
+            def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+                result = super().predict_json(inputs)
+                result["explicit"] = True
+                return result
+
+        tempdir = tempfile.mkdtemp()
+        infile = os.path.join(tempdir, "inputs.txt")
+        outfile = os.path.join(tempdir, "outputs.txt")
+
+        with open(infile, 'w') as f:
+            f.write("""{"passage": "the seahawks won the super bowl in 2016", """
+                    """ "question": "when did the seahawks win the super bowl?"}\n""")
+            f.write("""{"passage": "the mariners won the super bowl in 2037", """
+                    """ "question": "when did the mariners win the super bowl?"}\n""")
+
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    "tests/fixtures/bidaf/serialization/model.tar.gz",
+                    infile,     # input_file
+                    "--output-file", outfile,
+                    "--predictor", "bidaf-explicit",
+                    "--silent"]
+
+        main()
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'r') as f:
+            results = [json.loads(line) for line in f]
+
+        assert len(results) == 2
+        # Overridden predictor should output extra field
+        for result in results:
+            assert set(result.keys()) == {"span_start_logits", "span_end_logits",
+                                          "span_start_probs", "span_end_probs", "best_span",
+                                          "best_span_str", "explicit"}
+
+        shutil.rmtree(tempdir)
+
     def test_alternative_file_formats(self):
         tempdir = tempfile.mkdtemp()
         infile = os.path.join(tempdir, "inputs.txt")
