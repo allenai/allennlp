@@ -61,7 +61,10 @@
                 const {name, value} = props;
                 const {datatype} = value;
 
-                const choices = TYPES[datatype] && Object.keys(TYPES[datatype]);
+                let choices = TYPES[datatype] && Object.keys(TYPES[datatype]);
+                if (choices) {
+                    choices = [''] + choices;
+                }
 
 
                 this.state = {
@@ -70,6 +73,12 @@
                     choices: choices,
                     children: null
                 }
+
+                this.handleListChange = this.handleListChange.bind(this);
+            }
+
+            handleListChange(e) {
+
             }
 
             render() {
@@ -80,7 +89,7 @@
                             {
                                 this.state.choices.map((choice) => {
                                     return (
-                                        <option value={choice}>{choice}</option>
+                                        <option value={choice} onChange={this.handleListChange}>{choice}</option>
                                     )
                                 })
                             }
