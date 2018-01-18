@@ -140,7 +140,7 @@ if use_gpu:
 batch = [
     'Pre-trained biLMs compute representations useful for NLP tasks .'.split(),
     'They give state of the art performance for many tasks .'.split(),
-    'A third sentence . '.split()
+    'A third sentence .'.split()
 ]
 
 # character ids is size (3, 11, 50)
