@@ -29,7 +29,7 @@ Note that this simple case only includes one layer of ELMo representation
 in the final model.
 In some case (e.g. SQuAD and SNLI) we found that including multiple layers improved performance.  Multiple layers require code changes (see below).
 
-We will use existing SRL model [configuration file](../training_config/semantic_role_labeler.json) as an example to illustrate the changes.  Without ELMo, it uses 100 dimensional pre-trained GloVe vectors.
+We will use existing SRL model [configuration file](../../training_config/semantic_role_labeler.json) as an example to illustrate the changes.  Without ELMo, it uses 100 dimensional pre-trained GloVe vectors.
 
 To add ELMo, there are three relevant changes.  First, modify the `text_field_embedder` section as follows:
 
@@ -156,5 +156,5 @@ representations = elmo(character_ids)
 
 ## Writing contextual representations to disk
 
-See [write_elmo_representations_to_file.py](../scripts/write_elmo_representations_to_file.py) for a script to dump all of the biLM individual layer representations for a dataset to hdf5 file.
+See [write_elmo_representations_to_file.py](../../scripts/write_elmo_representations_to_file.py) for a script to dump all of the biLM individual layer representations for a dataset to hdf5 file.
 
