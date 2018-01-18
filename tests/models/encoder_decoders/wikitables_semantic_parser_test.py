@@ -51,7 +51,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
             worlds.append(instance.fields['world'].metadata)
         num_entities = max([len(world.table_graph.entities) for world in worlds])
         tensor = Variable(torch.LongTensor([]))
-        type_vector = self.model._get_type_vector(worlds, num_entities, tensor)
+        type_vector, entity_types = self.model._get_type_vector(worlds, num_entities, tensor)
         # (batch_size, num_types)
         sums = torch.sum(type_vector, dim=1)
         x = torch.nonzero(sums.data)

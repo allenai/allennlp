@@ -197,7 +197,7 @@ class WikiTablesSemanticParser(Model):
         embedded_neighbors = self._neighbor_encoder(embedded_neighbors, neighbor_mask)
 
         # (batch_size, num_entities, num_types)
-        type_vector = self._get_type_vector(world, num_entities, embedded_table)
+        type_vector, entity_types = self._get_type_vector(world, num_entities, embedded_table)
 
         x = self._type_params(type_vector.float())
         y = self._neighbor_params(embedded_neighbors.float())
@@ -263,17 +263,6 @@ class WikiTablesSemanticParser(Model):
         flattened_linking_scores, actions_to_entities = self._map_entity_productions(linking_scores,
                                                                                      world,
                                                                                      actions)
-
-        # This is a mapping from (batch_index, entity_index) to entity type id.  We just map
-        # "fb:cell" entities to type 0 and "fb:row" entities to type 1.  And for easier lookups
-        # later, we're actually using a _flattened_ version of (batch_index, entity_index) for the
-        # key, because this is how the linking scores are stored.
-        entity_types = {}
-        for batch_index in range(batch_size):
-            for entity_index, entity_name in enumerate(world[batch_index].table_graph.entities):
-                flattened_entity_index = batch_index * num_entities + entity_index
-                entity_type = 0 if entity_name.startswith('fb:cell') else 1
-                entity_types[flattened_entity_index] = entity_type
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
@@ -384,7 +373,7 @@ class WikiTablesSemanticParser(Model):
     def _get_type_vector(self,
                          worlds: List[WikiTablesWorld],
                          num_entities: int,
-                         tensor: torch.Tensor) -> Variable:
+                         tensor: torch.Tensor) -> (Variable, Dict[str,str]):
         """
         Produces the one hot encoding for each entity's type.
 
@@ -398,19 +387,30 @@ class WikiTablesSemanticParser(Model):
         Returns
         -------
         A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities, num_types)``.
+        entity_types : ``Dict[int,str]``
+            This is a mapping from (batch_index, entity_index) to entity type id.
+
         """
+
+
+        entity_types = {}
         batch_types = []
-        for world in worlds:
+        for batch_index, world in enumerate(worlds):
             types = []
-            entity2type = world.local_type_signatures
-            for entity in world.table_graph.entities:
-                # [1,0] for 'e' and [0,1] for '<e,r>'
+            for entity_index, entity in enumerate(world.table_graph.entities):
                 e_1hot = [1,0]
                 er_1hot = [0,1]
-                types.append((e_1hot if str(entity2type[world.local_name_mapping[entity]]) == 'e' else er_1hot))
+                types.append((e_1hot if entity.startswith('fb:cell') else er_1hot))
+
+                # For easier lookups later, we're actually using a _flattened_ version
+                # of (batch_index, entity_index) for the key, because this is how the
+                # linking scores are stored.
+                flattened_entity_index = batch_index * num_entities + entity_index
+                entity_type = 0 if entity.startswith('fb:cell') else 1
+                entity_types[flattened_entity_index] = entity_type
             padded = pad_sequence_to_length(types, num_entities, lambda:[0,0])
             batch_types.append(padded)
-        return Variable(tensor.data.new(batch_types))
+        return Variable(tensor.data.new(batch_types)), entity_types
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
