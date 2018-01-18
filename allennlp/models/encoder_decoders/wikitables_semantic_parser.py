@@ -979,7 +979,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  attention_function: SimilarityFunction,
                  num_entity_types: int) -> None:
         super(WikiTablesDecoderStep, self).__init__()
-        self._entity_type_embedding = Embedding(num_entity_types, action_embedding_dim)
+        self._entity_type_embedding = Embedding(num_entity_types,
+                                                action_embedding_dim) if num_entity_types > 0 else None
         self._input_attention = Attention(attention_function)
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the

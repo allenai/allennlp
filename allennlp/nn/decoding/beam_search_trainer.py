@@ -13,10 +13,10 @@ from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
 @DecoderTrainer.register('beam_search')
 class BeamSearchTrainer(DecoderTrainer):
     """
-    This class implements a trainer that performs beam search and maximizes the scores of the finished states
-    in the beam. This is like Beam Search Optimiziation (Wiseman and Rush, 2016), except that the loss
-    is not margin based. Not that we do not have a notion of targets here, so we're breaking the API of
-    DecoderTrainer a bit.
+    This class implements a trainer that performs beam search and maximizes the scores of the
+    finished states in the beam. This is like Beam Search Optimiziation (Wiseman and Rush, 2016),
+    except that the loss is not margin based. Note that we do not have a notion of targets here, so
+    we're breaking the API of DecoderTrainer a bit.
     """
     def __init__(self, beam_size: int) -> None:
         self._beam_size = beam_size
