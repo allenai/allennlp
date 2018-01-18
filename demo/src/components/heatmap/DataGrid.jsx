@@ -1,12 +1,12 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import FixedBox from './FixedBox';
 
 const DataGrid = ({
   xLabels,
   yLabels,
   data,
   xLabelWidth,
+  boxSize,
   background,
   height,
 }) => {
@@ -14,21 +14,20 @@ const DataGrid = ({
   const max = Math.max(...flatArray);
   const min = Math.min(...flatArray);
   return (
-    <div>
+    <div style={{"white-space": "nowrap"}}>
       {yLabels.map((y, yi) => (
-        <div key={`${y}_${yi}`} style={{display: 'flex'}}>
-          <FixedBox width={xLabelWidth}>
-            <div style={{textAlign: 'right', paddingRight: '5px', paddingTop:`${height/3.7}px`}}>{y}</div>
-          </FixedBox>
+        <div key={`${y}_${yi}`} style={{clear: "both"}}>
+          <div style={{display: "inline-block", width: xLabelWidth, textAlign: 'right', paddingRight: '5px', paddingTop:`${boxSize/3.7}px`}}>{y}</div>
           {xLabels.map((x, xi) => (
             <div
               title={`${data[yi][xi]}`}
               key={`${x}_${xi}_${y}_${yi}`}
               style={{
                 background,
+                display: "inline-block",
                 margin: '1px 1px 0 0',
-                height,
-                flex: 1,
+                width: boxSize,
+                height: boxSize,
                 opacity: (data[yi][xi] - min) / (max - min),
               }}
             >

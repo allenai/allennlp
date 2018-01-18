@@ -1,13 +1,19 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import FixedBox from './FixedBox'
 
-function XLabels({labels, width}) {
+function XLabels({labels, width, boxSize}) {
   return (
-    <div style={{display: 'flex'}}>
-      <FixedBox width={width} />
-      {labels.map(x => (
-        <div key={x} style={{flex: 1, textAlign: 'center'}}>
+    <div>
+      <div style={{display: "inline-block", width: width, height: "4em"}} />
+      {labels.map((x, xi) => (
+        <div
+          key={`${x}_${xi}`}
+          style={{display: "inline-block",
+                  transform: "rotate(-90deg)",
+                  margin: "1px 1px 0 0",
+                  width: boxSize,
+                  textAlign: 'center'}}
+        >
           {x}
         </div>
       ))}
