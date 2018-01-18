@@ -17,13 +17,27 @@
     <script type="text/babel">
 
         const TYPES = $types;
+
         const INFOS = $infos;
 
         const INITIAL_CONFIG = {
-            'train_data_path': {'datatype': 'str'},
-            'validation_data_path': {'datatype': ['union', 'str', 'None']},
-            'model': {'datatype': 'allennlp.models.model.Model'},
-            'iterator': {'datatype': 'allennlp.data.iterators.data_iterator.DataIterator'}
+            'train_data_path': {
+                "name": "train_data_path",
+                "annotation": "str"
+            },
+            'validation_data_path': {
+                "name": "validation_data_path",
+                "optional": true,
+                "annotation": "str"
+            },
+            'model': {
+                "name": "model",
+                'annotation': 'allennlp.models.model.Model'
+            },
+            'iterator': {
+                "name": "iterator",
+                "annotation": 'allennlp.data.iterators.data_iterator.DataIterator'
+            }
         };
 
         class App extends React.Component {
@@ -42,13 +56,13 @@
                         <h1>Configuration</h1>
                     {
                         Object.keys(this.state.config).map((key) => {
-                            const value = this.state.config[key];
-                            const datatype = value['datatype'];
+                            const info = this.state.config[key];
+                            const annotation = info['annotation'];
 
-                            if (datatype == 'str') {
-                                return <StringChooser name={key} value={value}/>
+                            if (annotation == 'str') {
+                                return <StringChooser info={info}/>
                             } else {
-                                return <div>{key}: {JSON.stringify(value)}</div>
+                                return <div>{key}: {JSON.stringify(info)}</div>
                             }
                         })
                     }
@@ -62,19 +76,16 @@
             constructor(props) {
                 super(props);
 
-                const {name, value} = props;
-                const {datatype} = value;
+                const {info} = props;
+                const {name, annotation, optional, defaultValue} = info;
 
-
-                let choices = TYPES[datatype] && Object.keys(TYPES[datatype]);
+                let choices = TYPES[annotation] && Object.keys(TYPES[annotation]);
                 if (choices) {
                     choices = [''] + choices;
                 }
 
-
                 this.state = {
-                    name,
-                    value,
+                    info,
                     choices: choices,
                     children: null
                 }
@@ -84,9 +95,9 @@
 
             handleListChange(e) {
                 if (e.target.value) {
-
+                    //
                 } else {
-                    this.setState({})
+                    //
                 }
             }
 
@@ -107,7 +118,7 @@
                 }
                 return (
                     <div>
-                        <div>{this.state.name}: {JSON.stringify(this.state.value)}</div>
+                        <div>{name}: {JSON.stringify(this.state.info)}</div>
                         {dropdown}
                     </div>
                 )

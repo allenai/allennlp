@@ -265,14 +265,20 @@ def get_infos(registered_classes: dict) -> JsonDict:
             default = param.default
             optional = (default != inspect._empty)
 
-            print(class_name, param_name, default, annotation)
+            annotation = get_info(registered_classes, annotation)
+
+            if len(annotation) == 3 and annotation[0] == 'union' and annotation[2] == 'None':
+                annotation = annotation[1]
+                optional = True
 
             info: JsonDict = {
                 'name': param_name,
-                'default': str(default) if optional else None,
-                'optional': optional,
-                'annotation': get_info(registered_classes, annotation)
+                'annotation': annotation
             }
+
+            if optional:
+                info['defaultValue'] = str(default)
+                info['optional'] = True
 
             config_infos.append(info)
 
