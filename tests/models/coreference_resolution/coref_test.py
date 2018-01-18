@@ -9,7 +9,7 @@ class CorefTest(ModelTestCase):
     def setUp(self):
         super(CorefTest, self).setUp()
         self.set_up_model('tests/fixtures/coref/experiment.json',
-                          'tests/fixtures/conll_2012/')
+                          'tests/fixtures/coref/coref.gold_conll')
 
     def test_coref_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
