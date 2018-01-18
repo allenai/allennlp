@@ -83,22 +83,21 @@ ELMo provides a 1024 dimension representation so the new dimension is 1224.
 ```
 
 
-## Advanced uses
+## Usage template
 
-To include ELMo at multiple layers in a task model, or for more advanced
-use the `Elmo` class directly [see API doc](https://allenai.github.io/allennlp-docs/api/allennlp.modules.elmo.html).
+Use the `Elmo` class directly [API doc](https://allenai.github.io/allennlp-docs/api/allennlp.modules.elmo.html)
+to include ELMo at multiple layers in a task model, or for more advanced uses.
 
 
-```
+```python
+# Compute multiple layers of ELMo representations from raw text
+
 from allennlp.modules.elmo import Elmo
 from allennlp.data.dataset import Dataset
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 
-
-options_file = 'tests/fixtures/elmo/options.json'
-weight_file = 'tests/fixtures/elmo/lm_weights.hdf5'
 
 options_file = '/path/to/elmo_2x4096_512_2048cnn_2xhighway_options.json'
 weight_file = '/path/to/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5'
