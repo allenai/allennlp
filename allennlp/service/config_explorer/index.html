@@ -43,9 +43,13 @@
                     {
                         Object.keys(this.state.config).map((key) => {
                             const value = this.state.config[key];
-                            return (
-                                <Chooser name={key} value={value}/>
-                            )
+                            const datatype = value['datatype'];
+
+                            if (datatype == 'str') {
+                                return <StringChooser name={key} value={value}/>
+                            } else {
+                                return <div>{key}: {JSON.stringify(value)}</div>
+                            }
                         })
                     }
                         <h1>Output</h1>
@@ -54,12 +58,13 @@
             }
         }
 
-        class Chooser extends React.Component {
+        class StringChooser extends React.Component {
             constructor(props) {
                 super(props);
 
                 const {name, value} = props;
                 const {datatype} = value;
+
 
                 let choices = TYPES[datatype] && Object.keys(TYPES[datatype]);
                 if (choices) {
@@ -78,7 +83,11 @@
             }
 
             handleListChange(e) {
+                if (e.target.value) {
 
+                } else {
+                    this.setState({})
+                }
             }
 
             render() {
