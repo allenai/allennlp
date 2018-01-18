@@ -14,20 +14,22 @@ class TestCorefReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
         conll_reader = ConllCorefReader(max_span_width=self.span_width)
-        dataset = conll_reader.read('tests/fixtures/conll_2012/')
+        dataset = conll_reader.read('tests/fixtures/coref/coref.gold_conll')
 
-        assert len(dataset.instances) == 1
+        assert len(dataset.instances) == 2
 
         instances = dataset.instances
         fields = instances[0].fields
         text = [x.text for x in fields["text"].tokens]
 
-        assert text == ['Mali', 'government', 'officials', 'say', 'the', 'woman', "'s",
-                        'confession', 'was', 'forced', '.', 'The', 'prosecution', 'rested',
-                        'its', 'case', 'last', 'month', 'after', 'four', 'months', 'of',
-                        'hearings', '.', 'Denise', 'Dillon', 'Headline', 'News', '.', 'and',
-                        'that', 'wildness', 'is', 'still', 'in', 'him', ',', 'as', 'it', 'is',
-                        'with', 'all', 'children', '.']
+        assert text == ['In', 'the', 'summer', 'of', '2005', ',', 'a', 'picture', 'that',
+                        'people', 'have', 'long', 'been', 'looking', 'forward', 'to',
+                        'started', 'emerging', 'with', 'frequency', 'in', 'various', 'major',
+                        'Hong', 'Kong', 'media', '.', 'With', 'their', 'unique', 'charm', ',',
+                        'these', 'well', '-', 'known', 'cartoon', 'images', 'once', 'again',
+                        'caused', 'Hong', 'Kong', 'to', 'be', 'a', 'focus', 'of', 'worldwide',
+                        'attention', '.', 'The', 'world', "'s", 'fifth', 'Disney', 'park',
+                        'will', 'soon', 'open', 'to', 'the', 'public', 'here', '.']
 
         span_starts = fields["span_starts"].field_list
         span_ends = fields["span_ends"].field_list
@@ -39,20 +41,21 @@ class TestCorefReader(AllenNlpTestCase):
         gold_mentions_with_ids: List[Tuple[List[str], int]] = [(candidate_mentions[i], x)
                                                                for i, x in gold_indices_with_ids]
 
-        assert gold_mentions_with_ids == [(['the', 'woman', "'s"], 0),
-                                          (['the', 'woman', "'s", 'confession'], 1),
-                                          (['The', 'prosecution'], 2),
-                                          (['its'], 2),
-                                          (['Denise', 'Dillon'], 2),
-                                          (['him'], 3)]
+        assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
+        gold_mentions_with_ids.remove((["Hong", "Kong"], 0))
+        assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
+        assert (["their"], 1) in gold_mentions_with_ids
+        # This is a span which exceeds our max_span_width, so it should not be considered.
+        assert not (["these", "well", "known", "cartoon", "images"], 1) in gold_mentions_with_ids
 
-        # Now check that we don't collect spans greater than the max width.
-        conll_reader = ConllCorefReader(max_span_width=2)
-        dataset = conll_reader.read('tests/fixtures/conll_2012/')
-
-        instances = dataset.instances
-        fields = instances[0].fields
+        fields = instances[1].fields
         text = [x.text for x in fields["text"].tokens]
+        assert text == ['The', 'area', 'of', 'Hong', 'Kong', 'is', 'only', 'one', 'thousand', '-', 'plus',
+                        'square', 'kilometers', '.', 'The', 'population', 'is', 'dense', '.', 'Natural',
+                        'resources', 'are', 'relatively', 'scarce', '.', 'However', ',', 'the', 'clever',
+                        'Hong', 'Kong', 'people', 'will', 'utilize', 'all', 'resources', 'they', 'have',
+                        'created', 'for', 'developing', 'the', 'Hong', 'Kong', 'tourism', 'industry', '.']
+
         span_starts = fields["span_starts"].field_list
         span_ends = fields["span_ends"].field_list
 
@@ -63,10 +66,11 @@ class TestCorefReader(AllenNlpTestCase):
         gold_mentions_with_ids: List[Tuple[List[str], int]] = [(candidate_mentions[i], x)
                                                                for i, x in gold_indices_with_ids]
 
-        assert gold_mentions_with_ids == [(['The', 'prosecution'], 2),
-                                          (['its'], 2),
-                                          (['Denise', 'Dillon'], 2),
-                                          (['him'], 3)]
+        assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
+        gold_mentions_with_ids.remove((["Hong", "Kong"], 0))
+        assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
+        assert (["they"], 1) in gold_mentions_with_ids
+        assert (['the', 'clever', 'Hong', 'Kong', 'people'], 1) in gold_mentions_with_ids
 
     def check_candidate_mentions_are_well_defined(self, span_starts, span_ends, text):
         candidate_mentions = []
