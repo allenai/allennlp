@@ -181,18 +181,14 @@ class WikiTablesSemanticParser(Model):
         num_entity_tokens = embedded_table.size(2)
         num_question_tokens = embedded_question.size(1)
 
-        # Compute the average of each entity's word embeddings.
         # (batch_size, num_entities, embedding_dim)
         encoded_table = self._entity_encoder(embedded_table, table_mask)
-
         # (batch_size, num_entities, num_entities)
         neighbor_indices = self._get_neighbor_indexes(world, num_entities, encoded_table)
-
         # (batch_size, num_entities, num_entities, embedding_dim)
         embedded_neighbors = util.batched_index_select(encoded_table, neighbor_indices)
         neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices},
                                                  num_wrapping_dims=1).float()
-
         # (batch_size, num_entities, embedding_dim)
         embedded_neighbors = self._neighbor_encoder(embedded_neighbors, neighbor_mask)
 
@@ -208,7 +204,6 @@ class WikiTablesSemanticParser(Model):
         sim_dot_prod = torch.bmm(embedded_table.view(batch_size, -1, self._embedding_dim),
                                  torch.transpose(embedded_question, 1, 2))
         sim_dot_prod = sim_dot_prod.view(batch_size, num_entities, num_entity_tokens, num_question_tokens)
-
         # (batch_size, num_entities, num_question_tokens)
         max_sim = torch.max(sim_dot_prod, 2)[0]
 
