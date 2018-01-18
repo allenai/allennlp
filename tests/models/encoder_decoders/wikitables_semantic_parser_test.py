@@ -72,16 +72,32 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
         # (batch_size, num_entities + 1, num_question_tokens)
         entity_probability = self.model._get_prob_entity(worlds, linking_scores, batch_size, num_entities, num_question_tokens, tensor)
-
+        # Check for null entity probability
         assert entity_probability.size(1) == num_entities+1
-
-        sums = torch.sum(entity_probability, dim=2)
-        for batch_index, world in enumerate(worlds):
-            num_entities = len(world.table_graph.entities)
+        for batch_index, _ in enumerate(worlds):
             # Make sure the null entity has probability 0.
-            assert torch.equal(sums[batch_index][0], Variable(torch.zeros(1))) == True
-            # Check that probability of an entity given all question words sums to 1.
-            assert torch.equal(sums[batch_index][1:num_entities+1], Variable(torch.ones(num_entities))) == True
+            assert torch.equal(entity_probability[batch_index][0].data, (torch.zeros(entity_probability[batch_index][0].size())))
+
+        for batch_index, world in enumerate(worlds):
+            type_one_index, type_two_index = self.model._get_entity_index_by_type(world)
+            type_one_index = [index + 1 for index in type_one_index]
+            type_two_index = [index + 1 for index in type_two_index]
+
+            # (num_entities_per_type, num_question_tokens)
+            type_one_probs = torch.index_select(entity_probability[batch_index],
+                                                 dim=0,
+                                                 index=Variable(tensor.data.new(type_one_index)).long())
+            type_two_probs = torch.index_select(entity_probability[batch_index],
+                                                 dim=0,
+                                                 index=Variable(tensor.data.new(type_two_index)).long())
+
+            total_one_probs = torch.sum(type_one_probs, dim=1)
+            total_two_probs = torch.sum(type_two_probs, dim=1)
+            # Check that normalization worked and probabilities sum to 1.
+            for summed_prob in total_one_probs.data:
+                assert_almost_equal(summed_prob, 1)
+            for summed_prob in total_two_probs.data:
+                assert_almost_equal(summed_prob, 1)
 
     def test_get_unique_elements(self):
         # pylint: disable=protected-access

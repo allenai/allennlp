@@ -415,21 +415,15 @@ class WikiTablesSemanticParser(Model):
                                                            num_entities+1,
                                                            num_question_tokens)))
         for batch_index, world in enumerate(worlds):
-            type_one_index, type_two_index = [], []
-            entities = world.table_graph.entities
-            entity2index = {entity: entity_index for entity_index, entity in enumerate(entities)}
-            for entity in entities:
-                if entity.startswith('fb:cell'):
-                    type_one_index.append(entity2index[entity])
-                else:
-                    type_two_index.append(entity2index[entity])
+            type_one_index, type_two_index = self._get_entity_index_by_type(world)
+
             # Separate the scores by type, since normalization summed over types.
             type_one_scores = torch.index_select(scores[batch_index],
-                                                 0,
-                                                 Variable(tensor.data.new(type_one_index)).long())
+                                                 dim=0,
+                                                 index=Variable(tensor.data.new(type_one_index)).long())
             type_two_scores = torch.index_select(scores[batch_index],
-                                                 0,
-                                                 Variable(tensor.data.new(type_two_index)).long())
+                                                 dim=0,
+                                                 index=Variable(tensor.data.new(type_two_index)).long())
 
             # todo(rajas): check sum to 1 in test case
             probs1 = torch.nn.functional.softmax(torch.transpose(type_one_scores, 0, 1), dim=0)
@@ -449,6 +443,22 @@ class WikiTablesSemanticParser(Model):
 
         return batch_probs
 
+    def _get_entity_index_by_type(self, world: WikiTablesWorld) -> (List, List):
+        """
+
+        Returns
+        -------
+
+        """
+        type_one_index, type_two_index = [], []
+        entities = world.table_graph.entities
+        entity2index = {entity: entity_index for entity_index, entity in enumerate(entities)}
+        for entity in entities:
+            if entity.startswith('fb:cell'):
+                type_one_index.append(entity2index[entity])
+            else:
+                type_two_index.append(entity2index[entity])
+        return type_one_index, type_two_index
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
