@@ -411,9 +411,9 @@ class WikiTablesSemanticParser(Model):
         A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities+1, num_question_tokens)``.
         Contains all the probabilities for an entity given a question word.
         """
-        batch_probs = Variable(tensor.data.new(torch.FloatTensor(batch_size,
-                                                                 num_entities+1,
-                                                                 num_question_tokens)))
+        batch_probs = Variable(tensor.data.new(torch.zeros(batch_size,
+                                                           num_entities+1,
+                                                           num_question_tokens)))
         for batch_index, world in enumerate(worlds):
             type_one_index, type_two_index = [], []
             entities = world.table_graph.entities
@@ -440,7 +440,7 @@ class WikiTablesSemanticParser(Model):
 
             # Adding 1 to all for 0 probability of the null entity.
             # (num_entities+1, num_question_tokens)
-            probs_mat = Variable(tensor.data.new(torch.FloatTensor(num_entities+1, num_question_tokens)))
+            probs_mat = Variable(tensor.data.new(torch.zeros(num_entities+1, num_question_tokens)))
             for ind, mat in zip(type_one_index, probs1):
                 probs_mat[ind+1] = mat
             for ind, mat in zip(type_two_index, probs2):
