@@ -205,35 +205,31 @@ class WikiTablesSemanticParser(Model):
         entity_embeddings = torch.nn.functional.tanh(x + y)
 
         # compute entity and question word similarity through a dot product
-        # (b, entity, entity_token, E) x (b, E, Q) = (b, entity, entity token, Q)
         sim_dot_prod = torch.bmm(embedded_table.view(batch_size, -1, self._embedding_dim),
                                  torch.transpose(embedded_question, 1, 2))
-        sim_dot_prod = sim_dot_prod.view(batch_size, num_entities, num_entity_tokens,
-                                         num_question_tokens)
+        sim_dot_prod = sim_dot_prod.view(batch_size, num_entities, num_entity_tokens, num_question_tokens)
 
-        # compute max across num_entity_tokens dimension for tensor of size
         # (batch_size, num_entities, num_question_tokens)
         max_sim = torch.max(sim_dot_prod, 2)[0]
 
-        # generate entity linking score through linear combination of features
-        # and max similarity values
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        x = self._linking_params(linking_features.float())
-        # (batch_size, num_entities, num_question_tokens)
-        linking_scores = max_sim + x.squeeze(3)
 
-        # softmax over each of the arrays for p(e|i,t)
         # (batch_size, num_entities, num_question_tokens)
+        linking_scores = max_sim + self._linking_params(linking_features.float()).squeeze(3)
+
+        # (batch_size, num_entities+1, num_question_tokens)
         softmax_scores = self._get_prob_entity(world, linking_scores, batch_size,num_entities,
                                                num_question_tokens, encoded_table)
 
-        # transpose scores (batch_size, num_question_tokens, num_entities)
-        # bmm with re (batch_size, num_entities, embedding_dim) for li!
+        null_entity_embedding = Variable(entity_embeddings.data.new(torch.zeros(batch_size,1, self._embedding_dim)))
+        # (batch_size, num_entities+1, embedding_dim)
+        entity_embeddings = torch.cat([null_entity_embedding, entity_embeddings], 1)
+
         # (batch_size, num_question_tokens, embedding_dim)
         link_embedding = torch.bmm(torch.transpose(softmax_scores, 1, 2), entity_embeddings)
-
         encoder_input = torch.cat([link_embedding, embedded_question], 2)
+
         # (batch_size, question_length, encoder_output_dim)
         encoder_outputs = self._encoder(encoder_input, question_mask)
 
@@ -412,42 +408,43 @@ class WikiTablesSemanticParser(Model):
 
         Returns
         -------
-        A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities, num_question_tokens)``.
+        A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities+1, num_question_tokens)``.
         Contains all the probabilities for an entity given a question word.
         """
         batch_probs = Variable(tensor.data.new(torch.FloatTensor(batch_size,
-                                                                 num_entities,
+                                                                 num_entities+1,
                                                                  num_question_tokens)))
         for batch_index, world in enumerate(worlds):
             type_one_index, type_two_index = [], []
-            entity2type = world.local_type_signatures
             entities = world.table_graph.entities
-            entity2index = {entity: j for j, entity in enumerate(entities)}
+            entity2index = {entity: entity_index for entity_index, entity in enumerate(entities)}
             for entity in entities:
-                # get indexes of entities for each type
-                if str(entity2type[world.local_name_mapping[entity]]) == 'e':
+                if entity.startswith('fb:cell'):
                     type_one_index.append(entity2index[entity])
                 else:
                     type_two_index.append(entity2index[entity])
-            # separate the scores by type, since normalization summed over types
+            # Separate the scores by type, since normalization summed over types.
             type_one_scores = torch.index_select(scores[batch_index],
                                                  0,
-                                                 Variable(torch.LongTensor(type_one_index)))
+                                                 Variable(tensor.data.new(type_one_index)).long())
             type_two_scores = torch.index_select(scores[batch_index],
                                                  0,
-                                                 Variable(torch.LongTensor(type_two_index)))
+                                                 Variable(tensor.data.new(type_two_index)).long())
 
-            probs1 = torch.nn.functional.softmax(torch.transpose(type_one_scores, 0, 1))
-            probs2 = torch.nn.functional.softmax(torch.transpose(type_two_scores, 0, 1))
+            # todo(rajas): check sum to 1 in test case
+            probs1 = torch.nn.functional.softmax(torch.transpose(type_one_scores, 0, 1), dim=0)
+            probs2 = torch.nn.functional.softmax(torch.transpose(type_two_scores, 0, 1), dim=0)
+            # (num_entities_per_type, num_question_tokens)
             probs1 = torch.transpose(probs1, 0, 1)
             probs2 = torch.transpose(probs2, 0, 1)
 
-            # combine scores into (num_entities, num_question_tokens) tensor
-            probs_mat = Variable(tensor.data.new(torch.FloatTensor(num_entities, num_question_tokens)))
+            # Adding 1 to all for 0 probability of the null entity.
+            # (num_entities+1, num_question_tokens)
+            probs_mat = Variable(tensor.data.new(torch.FloatTensor(num_entities+1, num_question_tokens)))
             for ind, mat in zip(type_one_index, probs1):
-                probs_mat[ind] = mat
+                probs_mat[ind+1] = mat
             for ind, mat in zip(type_two_index, probs2):
-                probs_mat[ind] = mat
+                probs_mat[ind+1] = mat
             batch_probs[batch_index] = probs_mat
 
         return batch_probs
