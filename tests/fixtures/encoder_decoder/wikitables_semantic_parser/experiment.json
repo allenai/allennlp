@@ -42,7 +42,7 @@
     },
     "encoder": {
       "type": "lstm",
-      "input_size": 25,
+      "input_size": 50,
       "hidden_size": 10,
       "num_layers": 1
     },

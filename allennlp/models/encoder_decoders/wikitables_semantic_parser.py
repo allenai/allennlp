@@ -183,13 +183,13 @@ class WikiTablesSemanticParser(Model):
 
         # Compute the average of each entity's word embeddings.
         # (batch_size, num_entities, embedding_dim)
-        embedded_table = self._entity_encoder(embedded_table, table_mask)
+        encoded_table = self._entity_encoder(embedded_table, table_mask)
 
         # (batch_size, num_entities, num_entities)
-        neighbor_indices = self._get_neighbor_indexes(world, num_entities, embedded_table)
+        neighbor_indices = self._get_neighbor_indexes(world, num_entities, encoded_table)
 
         # (batch_size, num_entities, num_entities, embedding_dim)
-        embedded_neighbors = util.batched_index_select(embedded_table, neighbor_indices)
+        embedded_neighbors = util.batched_index_select(encoded_table, neighbor_indices)
         neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices},
                                                  num_wrapping_dims=1).float()
 
@@ -197,56 +197,45 @@ class WikiTablesSemanticParser(Model):
         embedded_neighbors = self._neighbor_encoder(embedded_neighbors, neighbor_mask)
 
         # (batch_size, num_entities, num_types)
-        type_vector, entity_types = self._get_type_vector(world, num_entities, embedded_table)
+        type_vector, entity_types = self._get_type_vector(world, num_entities, encoded_table)
 
         x = self._type_params(type_vector.float())
         y = self._neighbor_params(embedded_neighbors.float())
         # (batch_size, num_entities, embedding_dim)
         entity_embeddings = torch.nn.functional.tanh(x + y)
 
-        # (batch_size, num_entities, num_question_tokens, num_features)
-        linking_features = table['linking']  # pylint: disable=unused-variable
-        # TODO(mattg): multiply this by the feature weights, use this and the text embedding above
-        # to compute a linking scores.
+        # compute entity and question word similarity through a dot product
+        # (b, entity, entity_token, E) x (b, E, Q) = (b, entity, entity token, Q)
+        sim_dot_prod = torch.bmm(embedded_table.view(batch_size, -1, self._embedding_dim),
+                                 torch.transpose(embedded_question, 1, 2))
+        sim_dot_prod = sim_dot_prod.view(batch_size, num_entities, num_entity_tokens,
+                                         num_question_tokens)
 
-        # STEP 1 similarity through a dot product
-        # bmm transpose to (batch_size, embedding_dim, num_question_tokens)
-        # (b, entity, entity token, E) x (b, E, Q) = (b, entity, entity token, Q)
-
-        # STEP 2 similarity and max
         # compute max across num_entity_tokens dimension for tensor of size
         # (batch_size, num_entities, num_question_tokens)
+        max_sim = torch.max(sim_dot_prod, 2)[0]
 
-        # STEP 3 compute s(e,i) by combining with linking features
-        # combine with linking features for:
+        # generate entity linking score through linear combination of features
+        # and max similarity values
+        # (batch_size, num_entities, num_question_tokens, num_features)
+        linking_features = table['linking']
+        x = self._linking_params(linking_features.float())
         # (batch_size, num_entities, num_question_tokens)
+        linking_scores = max_sim + x.squeeze(3)
 
-        # STEP 4 compute exp of all s(e,i)'s
+        # softmax over each of the arrays for p(e|i,t)
         # (batch_size, num_entities, num_question_tokens)
+        softmax_scores = self._get_prob_entity(world, linking_scores, batch_size,num_entities,
+                                               num_question_tokens, encoded_table)
 
-        # STEP 5
-        # swap the entity and question token dimensions for easier normalization
-        # (batch_size, num_question_tokens, num_entities)
+        # transpose scores (batch_size, num_question_tokens, num_entities)
+        # bmm with re (batch_size, num_entities, embedding_dim) for li!
+        # (batch_size, num_question_tokens, embedding_dim)
+        link_embedding = torch.bmm(torch.transpose(softmax_scores, 1, 2), entity_embeddings)
 
-        # STEP 6
-        # compute normalized exp for p(e|i,t) through summing along num_entities, expanding
-        # then dividing all elements by the sum
-        # (batch_size, num_question_tokens, num_entities)
-
-        # STEP 7
-        # compute link embedding
-        # probs = (batch_size, num_question_tokens, num_entities)
-        # embeddings = (batch_size, num_entities, embedding_dim)
-        # l_{i} =  (batch_size, num_question_tokens, embedding_dim)
-
-        # TODO(mattg): we need to actually compute this with the stuff mentioned above.  This
-        # represents how well each question token matches table entities.  I'm stubbing this out
-        # for now, so that I have a variable to pass to the decoder, because we need this there.
-        # (batch_size, num_entities, num_question_tokens)
-        linking_scores: torch.FloatTensor = Variable(torch.ones(batch_size, num_entities, num_question_tokens))
-
+        encoder_input = torch.cat([link_embedding, embedded_question], 2)
         # (batch_size, question_length, encoder_output_dim)
-        encoder_outputs = self._encoder(embedded_question, question_mask)
+        encoder_outputs = self._encoder(encoder_input, question_mask)
 
         # This will be our initial hidden state and memory cell for the decoder LSTM.
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
@@ -389,10 +378,7 @@ class WikiTablesSemanticParser(Model):
         A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities, num_types)``.
         entity_types : ``Dict[int,str]``
             This is a mapping from (batch_index, entity_index) to entity type id.
-
         """
-
-
         entity_types = {}
         batch_types = []
         for batch_index, world in enumerate(worlds):
@@ -411,6 +397,61 @@ class WikiTablesSemanticParser(Model):
             padded = pad_sequence_to_length(types, num_entities, lambda:[0,0])
             batch_types.append(padded)
         return Variable(tensor.data.new(batch_types)), entity_types
+
+    def _get_prob_entity(self,
+                         worlds: List[WikiTablesWorld],
+                         scores: Variable,
+                         batch_size: int,
+                         num_entities: int,
+                         num_question_tokens: int,
+                         tensor: torch.Tensor) -> Variable:
+        """
+        Produces the probability of an entity given a question word and type. The logic below
+        separates the entities by type since the softmax normalization term sums over entities
+        of a single type.
+
+        Returns
+        -------
+        A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities, num_question_tokens)``.
+        Contains all the probabilities for an entity given a question word.
+        """
+        batch_probs = Variable(tensor.data.new(torch.FloatTensor(batch_size,
+                                                                 num_entities,
+                                                                 num_question_tokens)))
+        for batch_index, world in enumerate(worlds):
+            type_one_index, type_two_index = [], []
+            entity2type = world.local_type_signatures
+            entities = world.table_graph.entities
+            entity2index = {entity: j for j, entity in enumerate(entities)}
+            for entity in entities:
+                # get indexes of entities for each type
+                if str(entity2type[world.local_name_mapping[entity]]) == 'e':
+                    type_one_index.append(entity2index[entity])
+                else:
+                    type_two_index.append(entity2index[entity])
+            # separate the scores by type, since normalization summed over types
+            type_one_scores = torch.index_select(scores[batch_index],
+                                                 0,
+                                                 Variable(torch.LongTensor(type_one_index)))
+            type_two_scores = torch.index_select(scores[batch_index],
+                                                 0,
+                                                 Variable(torch.LongTensor(type_two_index)))
+
+            probs1 = torch.nn.functional.softmax(torch.transpose(type_one_scores, 0, 1))
+            probs2 = torch.nn.functional.softmax(torch.transpose(type_two_scores, 0, 1))
+            probs1 = torch.transpose(probs1, 0, 1)
+            probs2 = torch.transpose(probs2, 0, 1)
+
+            # combine scores into (num_entities, num_question_tokens) tensor
+            probs_mat = Variable(tensor.data.new(torch.FloatTensor(num_entities, num_question_tokens)))
+            for ind, mat in zip(type_one_index, probs1):
+                probs_mat[ind] = mat
+            for ind, mat in zip(type_two_index, probs2):
+                probs_mat[ind] = mat
+            batch_probs[batch_index] = probs_mat
+
+        return batch_probs
+
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
