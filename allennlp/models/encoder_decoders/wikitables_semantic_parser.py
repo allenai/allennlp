@@ -360,7 +360,9 @@ class WikiTablesSemanticParser(Model):
                          num_entities: int,
                          tensor: torch.Tensor) -> (Variable, Dict[str,str]):
         """
-        Produces the one hot encoding for each entity's type.
+        Produces the one hot encoding for each entity's type. In addition,
+        a map from index to type is returned to combine entity type operations
+        into one method.
 
         Parameters
         ----------
@@ -380,9 +382,9 @@ class WikiTablesSemanticParser(Model):
         for batch_index, world in enumerate(worlds):
             types = []
             for entity_index, entity in enumerate(world.table_graph.entities):
-                e_1hot = [1,0]
-                er_1hot = [0,1]
-                types.append((e_1hot if entity.startswith('fb:cell') else er_1hot))
+                cell_type_one_hot = [1,0]
+                row_type_one_hot = [0,1]
+                types.append((cell_type_one_hot if entity.startswith('fb:cell') else row_type_one_hot))
 
                 # For easier lookups later, we're actually using a _flattened_ version
                 # of (batch_index, entity_index) for the key, because this is how the
@@ -406,59 +408,72 @@ class WikiTablesSemanticParser(Model):
         separates the entities by type since the softmax normalization term sums over entities
         of a single type.
 
+        Parameters
+        ----------
+        worlds : ``List[WikiTablesWorld]``
+        scores : ``torch.autograd.Variable``
+            Has shape (batch_size, num_entities, num_question_tokens).
+        batch_size : ``int``
+        num_entities : ``int``
+        num_question_tokens : ``int``
+        tensor : ``torch.Tensor``
+            Used for copying the constructed list onto the right device.
+
         Returns
         -------
-        A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities+1, num_question_tokens)``.
-        Contains all the probabilities for an entity given a question word.
+        batch_probabilities : ``torch.autograd.Variable``
+            Has shape ``(batch_size, num_entities+1, num_question_tokens)``.
+            Contains all the probabilities for an entity given a question word.
         """
-        batch_probs = Variable(tensor.data.new(torch.zeros(batch_size,
-                                                           num_entities+1,
-                                                           num_question_tokens)))
+        batch_probabilities = Variable(tensor.data.new(torch.zeros(batch_size,
+                                                                   num_entities+1,
+                                                                   num_question_tokens)))
         for batch_index, world in enumerate(worlds):
-            type_one_index, type_two_index = self._get_entity_index_by_type(world)
+            cell_type_index, row_type_index = self._get_entity_index_by_type(world)
 
             # Separate the scores by type, since normalization summed over types.
-            type_one_scores = torch.index_select(scores[batch_index],
+            cell_type_scores = torch.index_select(scores[batch_index],
                                                  dim=0,
-                                                 index=Variable(tensor.data.new(type_one_index)).long())
-            type_two_scores = torch.index_select(scores[batch_index],
+                                                 index=Variable(tensor.data.new(cell_type_index)).long())
+            row_type_scores = torch.index_select(scores[batch_index],
                                                  dim=0,
-                                                 index=Variable(tensor.data.new(type_two_index)).long())
+                                                 index=Variable(tensor.data.new(row_type_index)).long())
 
-            # todo(rajas): check sum to 1 in test case
-            probs1 = torch.nn.functional.softmax(torch.transpose(type_one_scores, 0, 1), dim=0)
-            probs2 = torch.nn.functional.softmax(torch.transpose(type_two_scores, 0, 1), dim=0)
+            probabilities_one = torch.nn.functional.softmax(torch.transpose(cell_type_scores, 0, 1), dim=0)
+            probabilities_two = torch.nn.functional.softmax(torch.transpose(row_type_scores, 0, 1), dim=0)
             # (num_entities_per_type, num_question_tokens)
-            probs1 = torch.transpose(probs1, 0, 1)
-            probs2 = torch.transpose(probs2, 0, 1)
+            probabilities_one = torch.transpose(probabilities_one, 0, 1)
+            probabilities_two = torch.transpose(probabilities_two, 0, 1)
 
             # Adding 1 to all for 0 probability of the null entity.
             # (num_entities+1, num_question_tokens)
-            probs_mat = Variable(tensor.data.new(torch.zeros(num_entities+1, num_question_tokens)))
-            for ind, mat in zip(type_one_index, probs1):
-                probs_mat[ind+1] = mat
-            for ind, mat in zip(type_two_index, probs2):
-                probs_mat[ind+1] = mat
-            batch_probs[batch_index] = probs_mat
+            probabilities_mat = Variable(tensor.data.new(torch.zeros(num_entities+1, num_question_tokens)))
+            for ind, mat in zip(cell_type_index, probabilities_one):
+                probabilities_mat[ind+1] = mat
+            for ind, mat in zip(row_type_index, probabilities_two):
+                probabilities_mat[ind+1] = mat
+            batch_probabilities[batch_index] = probabilities_mat
 
-        return batch_probs
+        return batch_probabilities
 
     def _get_entity_index_by_type(self, world: WikiTablesWorld) -> (List, List):
         """
-
         Returns
         -------
-
+        cell_type_index: ``List[int]``
+            Indexes for entities starting with fb:cell.
+        row_type_index: ``List[int]``
+            Indexes for entities not starting with fb:cell.
         """
-        type_one_index, type_two_index = [], []
+        cell_type_index, row_type_index = [], []
         entities = world.table_graph.entities
         entity2index = {entity: entity_index for entity_index, entity in enumerate(entities)}
         for entity in entities:
             if entity.startswith('fb:cell'):
-                type_one_index.append(entity2index[entity])
+                cell_type_index.append(entity2index[entity])
             else:
-                type_two_index.append(entity2index[entity])
-        return type_one_index, type_two_index
+                row_type_index.append(entity2index[entity])
+        return cell_type_index, row_type_index
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:

@@ -79,24 +79,24 @@ class WikiTablesSemanticParserTest(ModelTestCase):
             assert torch.equal(entity_probability[batch_index][0].data, (torch.zeros(entity_probability[batch_index][0].size())))
 
         for batch_index, world in enumerate(worlds):
-            type_one_index, type_two_index = self.model._get_entity_index_by_type(world)
-            type_one_index = [index + 1 for index in type_one_index]
-            type_two_index = [index + 1 for index in type_two_index]
+            cell_type_index, row_type_index = self.model._get_entity_index_by_type(world)
+            cell_type_index = [index + 1 for index in cell_type_index]
+            row_type_index = [index + 1 for index in row_type_index]
 
             # (num_entities_per_type, num_question_tokens)
-            type_one_probs = torch.index_select(entity_probability[batch_index],
+            cell_type_probs = torch.index_select(entity_probability[batch_index],
                                                  dim=0,
-                                                 index=Variable(tensor.data.new(type_one_index)).long())
-            type_two_probs = torch.index_select(entity_probability[batch_index],
+                                                 index=Variable(tensor.data.new(cell_type_index)).long())
+            row_type_probs = torch.index_select(entity_probability[batch_index],
                                                  dim=0,
-                                                 index=Variable(tensor.data.new(type_two_index)).long())
+                                                 index=Variable(tensor.data.new(row_type_index)).long())
 
-            total_one_probs = torch.sum(type_one_probs, dim=1)
-            total_two_probs = torch.sum(type_two_probs, dim=1)
+            total_cell_probs = torch.sum(cell_type_probs, dim=1)
+            total_row_probs = torch.sum(row_type_probs, dim=1)
             # Check that normalization worked and probabilities sum to 1.
-            for summed_prob in total_one_probs.data:
+            for summed_prob in total_cell_probs.data:
                 assert_almost_equal(summed_prob, 1)
-            for summed_prob in total_two_probs.data:
+            for summed_prob in total_row_probs.data:
                 assert_almost_equal(summed_prob, 1)
 
     def test_get_unique_elements(self):
