@@ -219,7 +219,7 @@ class WikiTablesSemanticParser(Model):
         linking_scores = max_sim + self._linking_params(linking_features.float()).squeeze(3)
 
         # (batch_size, num_entities+1, num_question_tokens)
-        softmax_scores = self._get_prob_entity(world, linking_scores, batch_size,num_entities,
+        softmax_scores = self._get_prob_entity(world, linking_scores, batch_size, num_entities,
                                                num_question_tokens, encoded_table)
 
         null_entity_embedding = Variable(entity_embeddings.data.new(torch.zeros(batch_size,1, self._embedding_dim)))

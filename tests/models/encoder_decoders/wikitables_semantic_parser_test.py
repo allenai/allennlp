@@ -59,6 +59,30 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         # representing its index will be in x
         assert x.size(0) * x.size(1) == 2 * sums.size(0) * sums.size(1)
 
+    def test_get_prob_entity_valid_probability_distribution(self):
+        worlds = []
+        for instance in self.dataset.instances:
+            worlds.append(instance.fields['world'].metadata)
+        batch_size = len(worlds)
+        num_entities = max([len(world.table_graph.entities) for world in worlds])
+        num_question_tokens = max([len(world.question_tokens) for world in worlds])
+        tensor = Variable(torch.FloatTensor(batch_size, num_entities, num_question_tokens))
+        # (batch_size, num_entities, num_question_tokens)
+        linking_scores = Variable(torch.FloatTensor(batch_size, num_entities, num_question_tokens))
+
+        # (batch_size, num_entities + 1, num_question_tokens)
+        entity_probability = self.model._get_prob_entity(worlds, linking_scores, batch_size, num_entities, num_question_tokens, tensor)
+
+        assert entity_probability.size(1) == num_entities+1
+
+        sums = torch.sum(entity_probability, dim=2)
+        for batch_index, world in enumerate(worlds):
+            num_entities = len(world.table_graph.entities)
+            # Make sure the null entity has probability 0.
+            assert torch.equal(sums[batch_index][0], Variable(torch.zeros(1))) == True
+            # Check that probability of an entity given all question words sums to 1.
+            assert torch.equal(sums[batch_index][1:num_entities+1], Variable(torch.ones(num_entities))) == True
+
     def test_get_unique_elements(self):
         # pylint: disable=protected-access
         production_rules = [
