@@ -6,7 +6,10 @@ import pathlib
 import shutil
 import sys
 
+import pytest
+
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands import main
 from allennlp.commands.train import Train, train_model, train_model_from_args
@@ -152,10 +155,16 @@ class TestTrain(AllenNlpTestCase):
         serialization_dir = os.path.join(self.TEST_DIR, 'serialization')
 
         # Run train with using the non-allennlp module.
-        sys.argv = ["some_executable",
+        sys.argv = ["python -m allennlp.run",
                     "train", config_path,
-                    "-s", serialization_dir,
-                    "--include-package", 'testpackage']
+                    "-s", serialization_dir]
+
+        # Shouldn't be able to find the model.
+        with pytest.raises(ConfigurationError):
+            main()
+
+        # Now add the --include-package flag and it should work.
+        sys.argv.extend(["--include-package", 'testpackage'])
 
         main()
 
