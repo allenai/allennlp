@@ -68,7 +68,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         num_question_tokens = max([len(world.question_tokens) for world in worlds])
         tensor = Variable(torch.FloatTensor(batch_size, num_entities, num_question_tokens))
         # (batch_size, num_entities, num_question_tokens)
-        linking_scores = Variable(torch.FloatTensor(batch_size, num_entities, num_question_tokens))
+        linking_scores = Variable(torch.rand(batch_size, num_entities, num_question_tokens))
 
         # (batch_size, num_entities + 1, num_question_tokens)
         entity_probability = self.model._get_prob_entity(worlds, linking_scores, batch_size, num_entities, num_question_tokens, tensor)
