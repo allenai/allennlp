@@ -94,7 +94,6 @@ class ModelTestCase(AllenNlpTestCase):
         return model, loaded_model
 
     def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
-        print("assert fields ", name)
         if isinstance(field1, torch.autograd.Variable):
             assert_allclose(field1.data.cpu().numpy(),
                             field2.data.cpu().numpy(),
