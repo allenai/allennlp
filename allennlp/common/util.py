@@ -7,6 +7,8 @@ from typing import Any, Callable, Dict, List, Tuple, TypeVar
 import importlib
 import pkgutil
 import random
+import resource
+import sys
 
 import torch
 import numpy
@@ -188,6 +190,37 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
     return LOADED_SPACY_MODELS[options]
 
 def import_submodules(package_name: str) -> None:
+    """
+    Import all submodules under the given package.
+    Primarily useful so that people using AllenNLP as a library
+    can specify their own custom packages and have their custom
+    classes get loaded and registered.
+    """
     module = importlib.import_module(package_name)
     for _, name, _ in pkgutil.walk_packages(getattr(module, "__path__", "")):
         importlib.import_module(package_name + '.' + name)
+
+def peak_memory_mb() -> float:
+    """
+    Get peak memory usage for this process, as measured by
+    max-resident-set size:
+
+    https://unix.stackexchange.com/questions/30940/getrusage-system-call-what-is-maximum-resident-set-size
+
+    Only works on OSX and Linux, returns 0.0 otherwise.
+    """
+    if sys.platform not in ('linux', 'darwin'):
+        return 0.0
+
+    # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
+    # next line, but later versions (e.g. 0.530) are fine with it. Once we get that
+    # figured out, remove the type: ignore.
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
+
+    if sys.platform == 'darwin':
+        # On OSX the result is in bytes.
+        return peak / 1_000_000
+
+    else:
+        # On Linux the result is in kilobytes.
+        return peak / 1_000
