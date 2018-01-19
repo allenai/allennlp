@@ -58,7 +58,6 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
                                                  max_decoding_steps=max_decoding_steps,
                                                  attention_function=attention_function,
                                                  embed_terminals=True)
-        #self._sentence_embedder = sentence_embedder
 
         nonterminal_embed_dim = nonterminal_embedder.get_output_dim()
         action_embedding_dim = nonterminal_embed_dim * 2
@@ -96,7 +95,7 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
                                                                      encoder_outputs, sentence_mask)
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
         # Get a mapping from production rules to global action ids.
-        production_rule_ids: Dict[ProductionRuleArray, int] = {}
+        production_rule_ids: Dict[str, int] = {}
         get_production_string = lambda production_rule: "%s -> %s" % (production_rule['left'][0],
                                                                       production_rule['right'][0])
         for (batch_index, action_index), action_id in action_indices.items():
