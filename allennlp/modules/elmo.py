@@ -11,7 +11,7 @@ from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
-from allennlp.common import Registrable, Params
+from allennlp.common import Params
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
@@ -22,8 +22,7 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
 # pylint: disable=attribute-defined-outside-init
 
 
-@Registrable.register('elmo')
-class Elmo(torch.nn.Module, Registrable):
+class Elmo(torch.nn.Module):
     """
     Compute ELMo representations using a pre-trained bidirectional language model.
 
