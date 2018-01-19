@@ -141,7 +141,7 @@ class WikiTablesSemanticParser(Model):
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
         """
-        Decoder logic for producing the entire target sequence.
+        Encoder and decoder logic for producing the entire target sequence.
 
         Parameters
         ----------
@@ -204,13 +204,11 @@ class WikiTablesSemanticParser(Model):
         sim_dot_prod = torch.bmm(embedded_table.view(batch_size, -1, self._embedding_dim),
                                  torch.transpose(embedded_question, 1, 2))
         sim_dot_prod = sim_dot_prod.view(batch_size, num_entities, num_entity_tokens, num_question_tokens)
+        # Note the 0th index is accessed below since max returns a tuple of a float and long tensor.
         # (batch_size, num_entities, num_question_tokens)
         max_sim = torch.max(sim_dot_prod, 2)[0]
-
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-
-        # (batch_size, num_entities, num_question_tokens)
         linking_scores = max_sim + self._linking_params(linking_features.float()).squeeze(3)
 
         # (batch_size, num_entities+1, num_question_tokens)
@@ -435,20 +433,20 @@ class WikiTablesSemanticParser(Model):
                                                  dim=0,
                                                  index=Variable(tensor.data.new(row_type_index)).long())
 
-            probabilities_one = torch.nn.functional.softmax(torch.transpose(cell_type_scores, 0, 1), dim=0)
-            probabilities_two = torch.nn.functional.softmax(torch.transpose(row_type_scores, 0, 1), dim=0)
+            probabilities_cell = torch.nn.functional.softmax(torch.transpose(cell_type_scores, 0, 1), dim=0)
+            probabilities_row = torch.nn.functional.softmax(torch.transpose(row_type_scores, 0, 1), dim=0)
             # (num_entities_per_type, num_question_tokens)
-            probabilities_one = torch.transpose(probabilities_one, 0, 1)
-            probabilities_two = torch.transpose(probabilities_two, 0, 1)
+            probabilities_cell = torch.transpose(probabilities_cell, 0, 1)
+            probabilities_row = torch.transpose(probabilities_row, 0, 1)
 
             # Adding 1 to all for 0 probability of the null entity.
             # (num_entities+1, num_question_tokens)
-            probabilities_mat = Variable(tensor.data.new(torch.zeros(num_entities+1, num_question_tokens)))
-            for ind, mat in zip(cell_type_index, probabilities_one):
-                probabilities_mat[ind+1] = mat
-            for ind, mat in zip(row_type_index, probabilities_two):
-                probabilities_mat[ind+1] = mat
-            batch_probabilities[batch_index] = probabilities_mat
+            probabilities_all = Variable(tensor.data.new(torch.zeros(num_entities+1, num_question_tokens)))
+            for ind, mat in zip(cell_type_index, probabilities_cell):
+                probabilities_all[ind+1] = mat
+            for ind, mat in zip(row_type_index, probabilities_row):
+                probabilities_all[ind+1] = mat
+            batch_probabilities[batch_index] = probabilities_all
 
         return batch_probabilities
 
