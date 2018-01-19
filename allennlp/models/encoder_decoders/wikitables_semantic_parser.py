@@ -353,7 +353,7 @@ class WikiTablesSemanticParser(Model):
     def _get_type_vector(self,
                          worlds: List[WikiTablesWorld],
                          num_entities: int,
-                         tensor: torch.Tensor) -> (Variable, Dict[str,str]):
+                         tensor: torch.Tensor) -> Tuple[Variable, Dict[int, int]]:
         """
         Produces the one hot encoding for each entity's type. In addition,
         a map from index to type is returned to combine entity type operations
@@ -451,7 +451,7 @@ class WikiTablesSemanticParser(Model):
 
         return batch_probabilities
 
-    def _get_entity_index_by_type(self, world: WikiTablesWorld) -> (List, List):
+    def _get_entity_index_by_type(self, world: WikiTablesWorld) -> Tuple[List, List]:
         """
         Returns
         -------
