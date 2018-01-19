@@ -124,7 +124,7 @@ class WikiTablesSemanticParser(Model):
         self._type_params = torch.nn.Linear(num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
         # TODO(mattg): ok to leave number 1 since it gets squeezed out?
-        self._linking_params = torch.nn.Linear(7,1)  # TODO(mattg): use linking features param vector
+        self._linking_params = torch.nn.Linear(7, 1)  # TODO(mattg): use linking features param vector
 
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
@@ -195,10 +195,10 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_types)
         type_vector, entity_types = self._get_type_vector(world, num_entities, encoded_table)
 
-        x = self._type_params(type_vector.float())
-        y = self._neighbor_params(embedded_neighbors.float())
+        type_linear_combination = self._type_params(type_vector.float())
+        neighbor_linear_combination = self._neighbor_params(embedded_neighbors.float())
         # (batch_size, num_entities, embedding_dim)
-        entity_embeddings = torch.nn.functional.tanh(x + y)
+        entity_embeddings = torch.nn.functional.tanh(type_linear_combination + neighbor_linear_combination)
 
         # compute entity and question word similarity through a dot product
         sim_dot_prod = torch.bmm(embedded_table.view(batch_size, -1, self._embedding_dim),
@@ -217,7 +217,8 @@ class WikiTablesSemanticParser(Model):
         softmax_scores = self._get_prob_entity(world, linking_scores, batch_size, num_entities,
                                                num_question_tokens, encoded_table)
 
-        null_entity_embedding = Variable(entity_embeddings.data.new(torch.zeros(batch_size,1, self._embedding_dim)))
+        null_entity_embedding = Variable(entity_embeddings.data.new(torch.zeros(batch_size, 1,
+                                                                                self._embedding_dim)))
         # (batch_size, num_entities+1, embedding_dim)
         entity_embeddings = torch.cat([null_entity_embedding, entity_embeddings], 1)
 
@@ -311,8 +312,8 @@ class WikiTablesSemanticParser(Model):
             # TODO(matt): compute accuracy here.
             return outputs
 
-    def _get_neighbor_indexes(self,
-                              worlds: List[WikiTablesWorld],
+    @staticmethod
+    def _get_neighbor_indexes(worlds: List[WikiTablesWorld],
                               num_entities: int,
                               tensor: torch.Tensor) -> Variable:
         """
@@ -346,12 +347,12 @@ class WikiTablesSemanticParser(Model):
                 neighbor_indexes.append(padded)
             neighbor_indexes = pad_sequence_to_length(neighbor_indexes,
                                                       num_entities,
-                                                      lambda:[0]*num_entities)
+                                                      lambda: [0] * num_entities)
             batches_neighbors.append(neighbor_indexes)
         return Variable(tensor.data.new(batches_neighbors)).long()
 
-    def _get_type_vector(self,
-                         worlds: List[WikiTablesWorld],
+    @staticmethod
+    def _get_type_vector(worlds: List[WikiTablesWorld],
                          num_entities: int,
                          tensor: torch.Tensor) -> Tuple[Variable, Dict[int, int]]:
         """
@@ -377,8 +378,8 @@ class WikiTablesSemanticParser(Model):
         for batch_index, world in enumerate(worlds):
             types = []
             for entity_index, entity in enumerate(world.table_graph.entities):
-                cell_type_one_hot = [1,0]
-                row_type_one_hot = [0,1]
+                cell_type_one_hot = [1, 0]
+                row_type_one_hot = [0, 1]
                 types.append((cell_type_one_hot if entity.startswith('fb:cell') else row_type_one_hot))
 
                 # For easier lookups later, we're actually using a _flattened_ version
@@ -387,7 +388,7 @@ class WikiTablesSemanticParser(Model):
                 flattened_entity_index = batch_index * num_entities + entity_index
                 entity_type = 0 if entity.startswith('fb:cell') else 1
                 entity_types[flattened_entity_index] = entity_type
-            padded = pad_sequence_to_length(types, num_entities, lambda:[0,0])
+            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0])
             batch_types.append(padded)
         return Variable(tensor.data.new(batch_types)), entity_types
 
@@ -428,8 +429,8 @@ class WikiTablesSemanticParser(Model):
 
             # Separate the scores by type, since normalization summed over types.
             cell_type_scores = torch.index_select(scores[batch_index],
-                                                 dim=0,
-                                                 index=Variable(tensor.data.new(cell_type_index)).long())
+                                                  dim=0,
+                                                  index=Variable(tensor.data.new(cell_type_index)).long())
             row_type_scores = torch.index_select(scores[batch_index],
                                                  dim=0,
                                                  index=Variable(tensor.data.new(row_type_index)).long())
@@ -451,7 +452,8 @@ class WikiTablesSemanticParser(Model):
 
         return batch_probabilities
 
-    def _get_entity_index_by_type(self, world: WikiTablesWorld) -> Tuple[List, List]:
+    @staticmethod
+    def _get_entity_index_by_type(world: WikiTablesWorld) -> Tuple[List, List]:
         """
         Returns
         -------

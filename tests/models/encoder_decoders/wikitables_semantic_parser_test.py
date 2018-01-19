@@ -14,7 +14,6 @@ from allennlp.models import Model, WikiTablesSemanticParser
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderState
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderStep
 from allennlp.modules import SimilarityFunction
-from allennlp.nn.util import get_text_field_mask
 
 class WikiTablesSemanticParserTest(ModelTestCase):
     def setUp(self):
@@ -36,9 +35,9 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         assert neighbor_indexes.size(1) == num_entities
         assert neighbor_indexes.size(2) == num_entities
         lst = [0]*(num_entities)
-        lst[0],lst[1] = 45, 45
+        lst[0], lst[1] = 45, 45
         second_entity_neighbors = (torch.LongTensor(lst))
-        assert torch.equal(neighbor_indexes[0][1].data, second_entity_neighbors) == True
+        assert torch.equal(neighbor_indexes[0][1].data, second_entity_neighbors)
 
     def test_all_types_present_in_type_vector(self):
         # Verifies that at least 1 instance of every one hot vector
@@ -51,7 +50,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
             worlds.append(instance.fields['world'].metadata)
         num_entities = max([len(world.table_graph.entities) for world in worlds])
         tensor = Variable(torch.LongTensor([]))
-        type_vector, entity_types = self.model._get_type_vector(worlds, num_entities, tensor)
+        type_vector, _ = self.model._get_type_vector(worlds, num_entities, tensor)
         # (batch_size, num_types)
         sums = torch.sum(type_vector, dim=1)
         x = torch.nonzero(sums.data)
@@ -71,12 +70,14 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         linking_scores = Variable(torch.rand(batch_size, num_entities, num_question_tokens))
 
         # (batch_size, num_entities + 1, num_question_tokens)
-        entity_probability = self.model._get_prob_entity(worlds, linking_scores, batch_size, num_entities, num_question_tokens, tensor)
+        entity_probability = self.model._get_prob_entity(worlds, linking_scores, batch_size,
+                                                         num_entities, num_question_tokens, tensor)
         # Check for null entity probability
         assert entity_probability.size(1) == num_entities+1
         for batch_index, _ in enumerate(worlds):
             # Make sure the null entity has probability 0.
-            assert torch.equal(entity_probability[batch_index][0].data, (torch.zeros(entity_probability[batch_index][0].size())))
+            assert torch.equal(entity_probability[batch_index][0].data,
+                               (torch.zeros(entity_probability[batch_index][0].size())))
 
         for batch_index, world in enumerate(worlds):
             cell_type_index, row_type_index = self.model._get_entity_index_by_type(world)
@@ -88,8 +89,8 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                                                  dim=0,
                                                  index=Variable(tensor.data.new(cell_type_index)).long())
             row_type_probs = torch.index_select(entity_probability[batch_index],
-                                                 dim=0,
-                                                 index=Variable(tensor.data.new(row_type_index)).long())
+                                                dim=0,
+                                                index=Variable(tensor.data.new(row_type_index)).long())
 
             total_cell_probs = torch.sum(cell_type_probs, dim=1)
             total_row_probs = torch.sum(row_type_probs, dim=1)
