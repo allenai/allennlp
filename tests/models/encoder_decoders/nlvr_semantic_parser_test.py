@@ -7,5 +7,5 @@ class NlvrSemanticParserTest(ModelTestCase):
         self.set_up_model("tests/fixtures/encoder_decoder/nlvr_semantic_parser/experiment.json",
                           "tests/fixtures/data/nlvr/sample_data.jsonl")
 
-    def test_model_can_train_svave_and_load(self):
+    def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
