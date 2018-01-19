@@ -2,9 +2,12 @@ FROM python:3.6.3-jessie
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
-ENV PATH /usr/local/nvidia/bin/:$PATH
 
-ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64
+ENV PATH /usr/local/nvidia/bin/:$PATH
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
+
+# Tell nvidia-docker that we need the driver, which gets mounted at /usr/local/nvidia.
+LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage
 
