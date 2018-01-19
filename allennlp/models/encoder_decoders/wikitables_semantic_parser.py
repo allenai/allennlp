@@ -18,6 +18,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
+from allennlp.data.semparse.worlds.world import World
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
@@ -501,7 +502,7 @@ class WikiTablesSemanticParser(Model):
                 }
 
     @staticmethod
-    def _create_grammar_state(world: WikiTablesWorld,
+    def _create_grammar_state(world: World,
                               possible_actions: List[ProductionRuleArray]) -> GrammarState:
         valid_actions = world.get_valid_actions()
         action_mapping = {}

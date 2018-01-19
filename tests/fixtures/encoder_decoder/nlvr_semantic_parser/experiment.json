@@ -16,6 +16,22 @@
         "trainable": true
       }
     },
+    "nonterminal_embedder": {
+      "tokens": {
+	"type": "embedding",
+	"vocab_namespace": "rule_labels",
+	"embedding_dim": 25,
+	"trainable": true
+      }
+    },
+    "terminal_embedder": {
+      "tokens": {
+	"type": "embedding",
+	"vocab_namespace": "rule_labels",
+	"embedding_dim": 25,
+	"trainable": true
+      }
+    },
     "encoder": {
       "type": "lstm",
       "input_size": 25,
@@ -30,8 +46,6 @@
       "beam_size": 3
     },
     "max_decoding_steps": 20,
-    "action_namespace": "actions",
-    "action_embedding_dim": 10,
     "attention_function": {"type": "dot_product"}
   },
   "iterator": {
@@ -40,8 +54,8 @@
     "batch_size" : 1
   },
   "trainer": {
-    "num_epochs": 2,
-    "patience": 10,
+    "num_epochs": 1,
+    "patience": 2,
     "cuda_device": -1,
     "optimizer": {
       "type": "sgd",

@@ -21,7 +21,7 @@ class BeamSearchTrainer(DecoderTrainer):
     def __init__(self, beam_size: int) -> None:
         self._beam_size = beam_size
 
-    def decode(self,
+    def decode(self,  # type: ignore  # ``DecoderTrainer.decode`` also takes targets and their masks
                initial_state: DecoderState,
                decode_step: DecoderStep,
                max_num_steps: int) -> Dict[str, torch.Tensor]:

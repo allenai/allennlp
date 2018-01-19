@@ -128,7 +128,7 @@ class ModelTestCase(AllenNlpTestCase):
                 assert parameter.grad is not None, f"Missing gradient for parameter {name}"
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
-                assert (parameter.grad.data.cpu() != zeros).any()
+                assert (parameter.grad.data.cpu() != zeros).any(), f"Zero grad for parameter {name}"
             else:
                 assert parameter.grad is None
 

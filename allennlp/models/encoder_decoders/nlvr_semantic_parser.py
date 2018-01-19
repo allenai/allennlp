@@ -7,6 +7,7 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
+from allennlp.common import util as common_util
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.worlds import NlvrWorld
@@ -57,7 +58,7 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
                                                  max_decoding_steps=max_decoding_steps,
                                                  attention_function=attention_function,
                                                  embed_terminals=True)
-        self._sentence_embedder = sentence_embedder
+        #self._sentence_embedder = sentence_embedder
 
         nonterminal_embed_dim = nonterminal_embedder.get_output_dim()
         action_embedding_dim = nonterminal_embed_dim * 2
@@ -71,7 +72,7 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
                 sentence: Dict[str, torch.LongTensor],
                 world: List[NlvrWorld],
                 actions: List[List[ProductionRuleArray]],
-                agenda: torch.LongTensor,
+                agenda: List[List[ProductionRuleArray]],
                 label: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ,unused-argument
         """
@@ -81,7 +82,7 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
         executed to produce denotations.
         """
         # TODO(pradeep): Use labels.
-        embedded_input = self._sentence_embedder(sentence)
+        embedded_input = self._question_embedder(sentence)
         sentence_mask = nn_util.get_text_field_mask(sentence).float()
         batch_size = embedded_input.size(0)
 
@@ -94,9 +95,27 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
         attended_sentence, _ = self._decoder_step.attend_on_question(final_encoder_output,
                                                                      encoder_outputs, sentence_mask)
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
+        # Get a mapping from production rules to global action ids.
+        production_rule_ids: Dict[ProductionRuleArray, int] = {}
+        get_production_string = lambda production_rule: "%s -> %s" % (production_rule['left'][0],
+                                                                      production_rule['right'][0])
+        for (batch_index, action_index), action_id in action_indices.items():
+            production_rule = actions[batch_index][action_index]
+            production_rule_ids[get_production_string(production_rule)] = action_id
+        agenda_ids = [[production_rule_ids[get_production_string(rule)] for rule in batch_rules]
+                      for batch_rules in agenda]
+        max_agenda_len = max([len(batch_agenda_ids) for batch_agenda_ids in agenda_ids])
+        padded_agenda_ids = [common_util.pad_sequence_to_length(batch_agenda_ids,
+                                                                max_agenda_len,
+                                                                default_value=lambda: -1)
+                             for batch_agenda_ids in agenda_ids]
+        agenda_tensor = torch.Tensor(padded_agenda_ids)
+        agenda_variable = nn_util.new_variable_with_data(action_embeddings, agenda_tensor)
+        # TODO(pradeep): agenda_mask = agenda_variable.eq(-1)
         # (batch_size, agenda_size)
-        initial_checklist = nn_util.new_variable_with_size(agenda, agenda.size(), 0).float()
-        agenda_list = [agenda[i] for i in range(batch_size)]
+        initial_checklist = nn_util.new_variable_with_size(agenda_variable,
+                                                           agenda_variable.size(), 0).float()
+        agenda_list = [agenda_variable[i] for i in range(batch_size)]
         initial_checklist_list = [initial_checklist[i] for i in range(batch_size)]
         initial_score_list = [NlvrDecoderStep.score_instance_checklist(checklist) for checklist in
                               initial_checklist_list]
@@ -124,7 +143,7 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
                                          action_indices,
                                          actions)
 
-        outputs = self._decoder_trainer.decode(initial_state, self._decoder_step,
+        outputs = self._decoder_trainer.decode(initial_state, self._decoder_step,  # type: ignore
                                                self._max_decoding_steps)
         if not self.training:
             best_final_states = self._beam_search.search(self._max_decoding_steps, initial_state,
@@ -183,7 +202,7 @@ class NlvrDecoderState(WikiTablesDecoderState):
                  encoder_output_mask: List[torch.Tensor],
                  action_embeddings: torch.Tensor,
                  action_indices: Dict[Tuple[int, int], int],
-                 possible_actions: List[List[ProductionRuleArray]]):
+                 possible_actions: List[List[ProductionRuleArray]]) -> None:
         super(NlvrDecoderState, self).__init__(batch_indices=batch_indices,
                                                action_history=action_history,
                                                score=score,
@@ -204,7 +223,7 @@ class NlvrDecoderState(WikiTablesDecoderState):
         self.checklist = checklist
 
     @classmethod
-    def combine_states(cls, states: List['NlvrDecoderState']) -> 'NlvrDecoderState':
+    def combine_states(cls, states) -> 'NlvrDecoderState':
         super_state = super(NlvrDecoderState, cls).combine_states(states)
         agenda = [alist for state in states for alist in state.agenda]
         checklist = [clist for state in states for clist in state.checklist]
@@ -259,7 +278,7 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
                                               num_entity_types=0)
 
     @classmethod
-    def _compute_new_states(cls,
+    def _compute_new_states(cls,  # type: ignore
                             state: NlvrDecoderState,
                             log_probs: torch.Tensor,
                             hidden_state: torch.Tensor,
@@ -277,12 +296,11 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
         """
         # TODO(pradeep): We do not have a notion of ``allowed_actions`` for NLVR for now, but this
         # may be applicable in the future.
-        # TODO(pradeep): log_probs contains NaNs sometimes. Find out why and fix it.
         # Note that we're not sorting these probs. We'll score checklists and sort states based on
         # checklist scores later.
         probs = torch.exp(log_probs)
         # batch_index -> [(group_index, action_index, action, checklist, score)]
-        next_states_info: Dict[int, List[Tuple[int, int, Variable, Variable]]] = defaultdict(list)
+        next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
         for group_index, (batch_index, instance_action_probs) in enumerate(zip(state.batch_indices, probs)):
             instance_agenda = state.agenda[group_index]
             instance_checklist = state.checklist[group_index]

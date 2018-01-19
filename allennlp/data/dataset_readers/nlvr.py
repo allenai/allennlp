@@ -1,7 +1,6 @@
 from typing import Dict, List
 import json
 import logging
-from collections import defaultdict
 
 from overrides import overrides
 import tqdm
@@ -26,8 +25,9 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("nlvr")
 class NlvrDatasetReader(DatasetReader):
     """
-    ``DatasetReader`` for the NLVR domain. In addition to the usual methods for reading files and instances
-    from text, this class contains a method for creating an agenda of actions that each sentence triggers.
+    ``DatasetReader`` for the NLVR domain. In addition to the usual methods for reading files and
+    instances from text, this class contains a method for creating an agenda of actions that each
+    sentence triggers.
 
     Parameters
     ----------
@@ -53,7 +53,7 @@ class NlvrDatasetReader(DatasetReader):
         self._nonterminal_indexers = nonterminal_indexers or {"tokens":
                                                               SingleIdTokenIndexer("rule_labels")}
         self._terminal_indexers = terminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
-        self._agenda_mapping = defaultdict(list)
+        self._agenda_mapping: Dict[str, str] = {}
         for constant in nlvr_types.COMMON_NAME_MAPPING:
             alias = nlvr_types.COMMON_NAME_MAPPING[constant]
             if alias in nlvr_types.COMMON_TYPE_SIGNATURE:
@@ -87,13 +87,17 @@ class NlvrDatasetReader(DatasetReader):
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)
         agenda = self._get_agenda_for_sentence(sentence)
         assert agenda, "No agenda found for sentence: %s" % sentence
-        agenda_field = ListField([LabelField(action, label_namespace='actions') for action in agenda])
+        is_nonterminal = lambda x: "<" not in x and len(x) > 1
+        agenda_field = ListField([ProductionRuleField(action,
+                                                      terminal_indexers=self._terminal_indexers,
+                                                      nonterminal_indexers=self._nonterminal_indexers,
+                                                      is_nonterminal=is_nonterminal) for action in agenda])
         production_rule_fields: List[Field] = []
         for production_rule in world.all_possible_actions():
             field = ProductionRuleField(production_rule,
                                         terminal_indexers=self._terminal_indexers,
                                         nonterminal_indexers=self._nonterminal_indexers,
-                                        is_nonterminal=lambda x: "<" not in x and len(x) > 1,
+                                        is_nonterminal=is_nonterminal,
                                         context=tokenized_sentence)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
@@ -112,8 +116,9 @@ class NlvrDatasetReader(DatasetReader):
         Given a ``sentence``, return a list of actions it triggers. The model tries to include as many
         of these actions in the decoded sequences as possible.
         """
+        # TODO(pradeep): Add more rules in the mapping?
         # TODO(pradeep): Use approximate and substring matching as well.
-        agenda = ['t']
+        agenda = ['@START@ -> t']
         # This takes care of shapes, colors, top, bottom, big, small etc.
         for constant, production in self._agenda_mapping.items():
             if constant in sentence:
