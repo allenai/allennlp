@@ -2,9 +2,9 @@
 Given a pre-processed input text file, this script dumps all of the internal
 layers used to compute ELMo representations to a single (potentially large) file.
 
-The input file is pre-tokenized whitespace separated text, one sentence per line.
-The output is a hdf5 file where each sentence is a size (3, num_tokens, 1024)
-array with the biLM representations.
+The input file is previously tokenized, whitespace separated text, one sentence per line.
+The output is a hdf5 file (http://docs.h5py.org/en/latest/) where each
+sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 
 In the default setting, each sentence is keyed in the output file by the line number
 in the original text file.  Optionally, by specifying --use_sentence_key

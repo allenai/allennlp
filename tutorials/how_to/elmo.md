@@ -9,16 +9,7 @@ NLP tasks.
 This document describes how to add ELMo representations to your model using `allennlp`.
 We also have a tensorflow implementation [here](https://github.com/allenai/bilm-tf).
 
-Reference: ["Deep contextualized word representations"](https://openreview.net/forum?id=S1p31z-Ab)
-
-
-## Installing
-
-After installing `allennlp`, download the pre-trained options and weight files.
-
-* [options file](https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json)
-* [weight file](https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5)
-
+For more detail about ELMo, please see the publication ["Deep contextualized word representations"](https://openreview.net/forum?id=S1p31z-Ab).
 
 ## Using ELMo with existing `allennlp` models
 
@@ -44,8 +35,8 @@ To add ELMo, there are three relevant changes.  First, modify the `text_field_em
      },
      "elmo":{
        "type": "elmo_token_embedder",
-       "options_file": "/path/to/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-       "weight_file": "/path/to/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+       "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+       "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
        "do_layer_norm": true,
        "dropout": 0.5
      }
@@ -84,10 +75,9 @@ ELMo provides a 1024 dimension representation so the new dimension is 1224.
 ```
 
 
-## Usage template
+## Using ELMo programmatically
 
-Use the `Elmo` class directly [(API doc)](https://allenai.github.io/allennlp-docs/api/allennlp.modules.elmo.html)
-to include ELMo at multiple layers in a task model, or for more advanced uses.
+If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to use the Elmo class directly [(API doc)](https://allenai.github.io/allennlp-docs/api/allennlp.modules.elmo.html).
 
 
 ```python
@@ -100,12 +90,12 @@ from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 
 
-options_file = '/path/to/elmo_2x4096_512_2048cnn_2xhighway_options.json'
-weight_file = '/path/to/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5'
+options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
+
 use_gpu = False
 
 
-# a helper function
 indexer = ELMoTokenCharactersIndexer()
 def batch_to_ids(batch):
     """
