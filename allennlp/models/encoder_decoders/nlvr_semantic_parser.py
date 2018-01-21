@@ -7,7 +7,6 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
-from allennlp.common import util as common_util
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.worlds import NlvrWorld
@@ -71,7 +70,7 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
                 sentence: Dict[str, torch.LongTensor],
                 world: List[NlvrWorld],
                 actions: List[List[ProductionRuleArray]],
-                agenda: List[List[ProductionRuleArray]],
+                agenda: torch.LongTensor,
                 label: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ,unused-argument
         """
@@ -83,6 +82,7 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
         # TODO(pradeep): Use labels.
         embedded_input = self._question_embedder(sentence)
         sentence_mask = nn_util.get_text_field_mask(sentence).float()
+
         batch_size = embedded_input.size(0)
 
         encoder_outputs = self._encoder(embedded_input, sentence_mask)
@@ -95,26 +95,12 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
                                                                      encoder_outputs, sentence_mask)
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
         # Get a mapping from production rules to global action ids.
-        production_rule_ids: Dict[str, int] = {}
         get_production_string = lambda production_rule: "%s -> %s" % (production_rule['left'][0],
                                                                       production_rule['right'][0])
-        for (batch_index, action_index), action_id in action_indices.items():
-            production_rule = actions[batch_index][action_index]
-            production_rule_ids[get_production_string(production_rule)] = action_id
-        agenda_ids = [[production_rule_ids[get_production_string(rule)] for rule in batch_rules]
-                      for batch_rules in agenda]
-        max_agenda_len = max([len(batch_agenda_ids) for batch_agenda_ids in agenda_ids])
-        padded_agenda_ids = [common_util.pad_sequence_to_length(batch_agenda_ids,
-                                                                max_agenda_len,
-                                                                default_value=lambda: -1)
-                             for batch_agenda_ids in agenda_ids]
-        agenda_tensor = torch.Tensor(padded_agenda_ids)
-        agenda_variable = nn_util.new_variable_with_data(action_embeddings, agenda_tensor)
-        # TODO(pradeep): agenda_mask = agenda_variable.eq(-1)
+        # TODO(pradeep): agenda_mask = agenda.neq(-1) Use this for checklist scoring?
         # (batch_size, agenda_size)
-        initial_checklist = nn_util.new_variable_with_size(agenda_variable,
-                                                           agenda_variable.size(), 0).float()
-        agenda_list = [agenda_variable[i] for i in range(batch_size)]
+        initial_checklist = nn_util.new_variable_with_size(agenda, agenda.size(), 0).float()
+        agenda_list = [agenda[i] for i in range(batch_size)]
         initial_checklist_list = [initial_checklist[i] for i in range(batch_size)]
         initial_score_list = [NlvrDecoderStep.score_instance_checklist(checklist) for checklist in
                               initial_checklist_list]
@@ -305,11 +291,11 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
             instance_checklist = state.checklist[group_index]
             # action_prob is a Variable.
             for action_index, action_prob in enumerate(instance_action_probs):
-                if action_index >= len(considered_actions[group_index]):
-                    # Ignoring padding.
-                    continue
                 # This is the actual index of the action from the original list of actions.
                 action = considered_actions[group_index][action_index]
+                if action == -1:
+                    # Ignoring padding.
+                    continue
                 # If action is not in instance_agenda, mask_variable, and checklist_addition will be
                 # all 0s.
                 mask_variable = instance_agenda.eq(action)

@@ -88,18 +88,21 @@ class NlvrDatasetReader(DatasetReader):
         agenda = self._get_agenda_for_sentence(sentence)
         assert agenda, "No agenda found for sentence: %s" % sentence
         is_nonterminal = lambda x: "<" not in x and len(x) > 1
-        agenda_field = ListField([ProductionRuleField(action,
-                                                      terminal_indexers=self._terminal_indexers,
-                                                      nonterminal_indexers=self._nonterminal_indexers,
-                                                      is_nonterminal=is_nonterminal) for action in agenda])
         production_rule_fields: List[Field] = []
+        instance_action_ids: Dict[str, int] = {}
         for production_rule in world.all_possible_actions():
+            instance_action_ids[production_rule] = len(instance_action_ids)
             field = ProductionRuleField(production_rule,
                                         terminal_indexers=self._terminal_indexers,
                                         nonterminal_indexers=self._nonterminal_indexers,
                                         is_nonterminal=is_nonterminal,
                                         context=tokenized_sentence)
             production_rule_fields.append(field)
+        # agenda_field contains indices into actions.
+        agenda_field = ListField([LabelField(instance_action_ids[action],
+                                             skip_indexing=True,
+                                             label_namespace='actions')
+                                  for action in agenda])
         action_field = ListField(production_rule_fields)
         world_field = MetadataField(world)
         fields = {"sentence": sentence_field,
