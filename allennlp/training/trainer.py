@@ -22,7 +22,8 @@ from tensorboard import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import Dataset
+from allennlp.common.util import peak_memory_mb
+from allennlp.data import InstanceCollection
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
 from allennlp.nn import util
@@ -54,8 +55,8 @@ class Trainer:
                  model: Model,
                  optimizer: torch.optim.Optimizer,
                  iterator: DataIterator,
-                 train_dataset: Dataset,
-                 validation_dataset: Optional[Dataset] = None,
+                 train_dataset: InstanceCollection,
+                 validation_dataset: Optional[InstanceCollection] = None,
                  patience: int = 2,
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
@@ -200,6 +201,7 @@ class Trainer:
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
+        logger.info(f"Peak memory usage MB: {peak_memory_mb()}")
         train_loss = 0.0
         # Set the model to "train" mode.
         self._model.train()
@@ -501,8 +503,8 @@ class Trainer:
                     model: Model,
                     serialization_dir: str,
                     iterator: DataIterator,
-                    train_dataset: Dataset,
-                    validation_dataset: Optional[Dataset],
+                    train_dataset: InstanceCollection,
+                    validation_dataset: Optional[InstanceCollection],
                     params: Params) -> 'Trainer':
 
         patience = params.pop_int("patience", 2)

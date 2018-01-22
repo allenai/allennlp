@@ -1,4 +1,4 @@
-from allennlp.data.dataset import Dataset
+from allennlp.data.dataset import InstanceCollection
 from allennlp.data.instance import Instance
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
@@ -10,7 +10,7 @@ class DatasetReader(Registrable):
     parameters necessary to read the data apart from the filepath should be passed to the
     constructor of the ``DatasetReader``.
     """
-    def read(self, file_path: str) -> Dataset:
+    def read(self, file_path: str) -> InstanceCollection:
         """
         Actually reads some data from the `file_path` and returns a :class:`Dataset`.
         """

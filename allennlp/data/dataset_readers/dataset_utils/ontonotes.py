@@ -1,4 +1,4 @@
-from typing import Dict, DefaultDict, List, Optional, Iterator, Set, Tuple
+from typing import DefaultDict, List, Optional, Iterator, Set, Tuple
 from collections import defaultdict
 import codecs
 import os
@@ -45,7 +45,7 @@ class OntonotesSentence:
         and Web Log data. When not available the rows are marked with an "-".
     named_entities : ``List[str]``
         The BIO tags for named entities in the sentence.
-    srl_frames : ``Dict[str, List[str]]``
+    srl_frames : ``List[Tuple[str, List[str]]]``
         A dictionary keyed by the verb in the sentence for the given
         Propbank frame labels, in a BIO format.
     coref_spans : ``Set[TypedSpan]``
@@ -64,7 +64,7 @@ class OntonotesSentence:
                  word_senses: List[Optional[float]],
                  speakers: List[Optional[str]],
                  named_entities: List[str],
-                 srl_frames: Dict[str, List[str]],
+                 srl_frames: List[Tuple[str, List[str]]],
                  coref_spans: Set[TypedSpan]) -> None:
 
         self.document_id = document_id
@@ -174,7 +174,7 @@ class Ontonotes:
         Co-reference chain information encoded in a parenthesis structure. For documents that do
          not have co-reference annotations, each line is represented with a "-".
     """
-    def dataset_iterator(self, file_path) -> Iterator[OntonotesSentence]:
+    def dataset_iterator(self, file_path: str) -> Iterator[OntonotesSentence]:
         """
         An iterator over the entire dataset, yielding all sentences processed.
         """
@@ -198,22 +198,40 @@ class Ontonotes:
 
                 yield os.path.join(root, data_file)
 
+    def dataset_document_iterator(self, file_path: str) -> Iterator[List[OntonotesSentence]]:
+        """
+        An iterator over CONLL formatted files which yields documents, regardless
+        of the number of document annotations in a particular file. This is useful
+        for conll data which has been preprocessed, such as the preprocessing which
+        takes place for the 2012 CONLL Coreference Resolution task.
+        """
+        with codecs.open(file_path, 'r', encoding='utf8') as open_file:
+            conll_rows = []
+            document: List[OntonotesSentence] = []
+            for line in open_file:
+                line = line.strip()
+                if line != '' and not line.startswith('#'):
+                    # Non-empty line. Collect the annotation.
+                    conll_rows.append(line)
+                else:
+                    if conll_rows:
+                        document.append(self._conll_rows_to_sentence(conll_rows))
+                        conll_rows = []
+                if line.startswith("#end document"):
+                    yield document
+                    document = []
+            if document:
+                # Collect any stragglers or files which might not
+                # have the '#end document' format for the end of the file.
+                yield document
+
     def sentence_iterator(self, file_path: str) -> Iterator[OntonotesSentence]:
         """
         An iterator over the sentences in an individual CONLL formatted file.
         """
-        with codecs.open(file_path, 'r', encoding='utf8') as open_file:
-            conll_rows = []
-            for line in open_file:
-                line = line.strip()
-                if line != '' and not line.startswith('#'):
-                    conll_rows.append(line)
-                else:
-                    if not conll_rows:
-                        continue
-                    else:
-                        yield self._conll_rows_to_sentence(conll_rows)
-                        conll_rows = []
+        for document in self.dataset_document_iterator(file_path):
+            for sentence in document:
+                yield sentence
 
     def _conll_rows_to_sentence(self, conll_rows: List[str]) -> OntonotesSentence:
         document_id: str = None
@@ -318,8 +336,8 @@ class Ontonotes:
             speakers.append(speaker if speaker != "-" else None)
 
         named_entities = span_labels[0]
-        srl_frames = {predicate: labels for predicate, labels
-                      in zip(verbal_predicates, span_labels[1:])}
+        srl_frames = [(predicate, labels) for predicate, labels
+                      in zip(verbal_predicates, span_labels[1:])]
 
         if all(parse_pieces):
             parse_tree = Tree.fromstring("".join(parse_pieces))

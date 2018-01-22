@@ -1,17 +1,17 @@
 import logging
-from typing import Dict, List, Generator, Union
+from typing import Dict, Generator, Union, Iterable, TypeVar, Generic
 
 import numpy
 
-from allennlp.data.dataset import Dataset
-from allennlp.data.instance import Instance
+from allennlp.data.dataset import InstanceCollection, Dataset
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+DatasetType = TypeVar('DatasetType', bound=InstanceCollection)  # pylint: disable=invalid-name
 
-class DataIterator(Registrable):
+class DataIterator(Generic[DatasetType], Registrable):
     """
     An abstract ``DataIterator`` class. ``DataIterators`` must implement __call__, which yields
     batched examples.
@@ -19,7 +19,7 @@ class DataIterator(Registrable):
     default_implementation = 'bucket'
 
     def __call__(self,
-                 dataset: Dataset,
+                 dataset: DatasetType,
                  num_epochs: int = None,
                  shuffle: bool = True,
                  cuda_device: int = -1,
@@ -53,7 +53,7 @@ class DataIterator(Registrable):
             for _ in range(num_epochs):
                 yield from self._yield_one_epoch(dataset, shuffle, cuda_device, for_training)
 
-    def get_num_batches(self, dataset: Dataset) -> int:
+    def get_num_batches(self, dataset: DatasetType) -> int:
         """
         Returns the number of batches that ``dataset`` will be split into; if you want to track
         progress through the batch with the generator produced by ``__call__``, this could be
@@ -61,10 +61,9 @@ class DataIterator(Registrable):
         """
         raise NotImplementedError
 
-    def _yield_one_epoch(self, dataset: Dataset, shuffle: bool, cuda_device: int, for_training: bool):
-        grouped_instances = self._create_batches(dataset, shuffle)
-        for group in grouped_instances:
-            batch = Dataset(group)
+    def _yield_one_epoch(self, dataset: DatasetType, shuffle: bool, cuda_device: int, for_training: bool):
+        batches = self._create_batches(dataset, shuffle)
+        for batch in batches:
             padding_lengths = batch.get_padding_lengths()
             logger.debug("Batch padding lengths: %s", str(padding_lengths))
             logger.debug("Batch size: %d", len(batch.instances))
@@ -72,9 +71,9 @@ class DataIterator(Registrable):
                                        cuda_device=cuda_device,
                                        for_training=for_training)
 
-    def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
+    def _create_batches(self, dataset: DatasetType, shuffle: bool) -> Iterable[Dataset]:
         """
-        Actually does the work of batching instances in the ``Dataset`` together.
+        Creates batches of instances. Each batch is a small ``Dataset``.
         """
         raise NotImplementedError
 

@@ -62,7 +62,7 @@ class SrlReader(DatasetReader):
                 verb_label = [0 for _ in tokens]
                 instances.append(self.text_to_instance(tokens, verb_label, tags))
             else:
-                for tags in sentence.srl_frames.values():
+                for (_, tags) in sentence.srl_frames:
                     verb_indicator = [1 if label[-2:] == "-V" else 0 for label in tags]
                     instances.append(self.text_to_instance(tokens, verb_indicator, tags))
 

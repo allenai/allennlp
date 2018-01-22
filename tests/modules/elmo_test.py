@@ -9,7 +9,8 @@ from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
-from allennlp.data import Token, Vocabulary, Dataset, Instance
+from allennlp.data import Token, Vocabulary, Instance
+from allennlp.data.dataset import Dataset
 from allennlp.data.iterators import BasicIterator
 from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
 from allennlp.data.fields import TextField
