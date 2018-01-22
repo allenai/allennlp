@@ -284,10 +284,10 @@ class Trainer:
         """
         Sends all of the train metrics (and validation metrics, if provided) to tensorboard.
         """
-
         metric_names = set(train_metrics.keys())
         if val_metrics:
             metric_names.update(val_metrics.keys())
+        val_metrics = val_metrics or {}
 
         for name in metric_names:
             train_metric = train_metrics.get(name, None)
@@ -303,6 +303,7 @@ class Trainer:
         """
         Logs all of the train metrics (and validation metrics, if provided) to the console.
         """
+        val_metrics = val_metrics or {}
         dual_message_template = "Training %s : %3f    Validation %s : %3f "
         message_template = "%s %s : %3f "
 
