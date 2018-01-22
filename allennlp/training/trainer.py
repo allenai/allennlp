@@ -303,11 +303,9 @@ class Trainer:
         """
         Logs all of the train metrics (and validation metrics, if provided) to the console.
         """
-        if val_metrics:
-            message_template = "Training %s : %3f    Validation %s : %3f "
-        else:
-            message_template = "%s %s : %3f "
-        
+        dual_message_template = "Training %s : %3f    Validation %s : %3f "
+        message_template = "%s %s : %3f "
+
         metric_names = set(train_metrics.keys())
         if val_metrics:
             metric_names.update(val_metrics.keys())
@@ -315,8 +313,9 @@ class Trainer:
         for name in metric_names:
             train_metric = train_metrics.get(name, None)
             val_metric = val_metrics.get(name, None)
+            
             if val_metric is not None and train_metric is not None:
-                logger.info(message_template, name, train_metric, name, val_metric)
+                logger.info(dual_message_template, name, train_metric, name, val_metric)
             elif val_metric is not None:
                 logger.info(message_template, "Validation", name, val_metric)
             elif train_metric is not None:
