@@ -95,15 +95,15 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
                                                                      encoder_outputs, sentence_mask)
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
         # Get a mapping from production rules to global action ids.
-        get_production_string = lambda production_rule: "%s -> %s" % (production_rule['left'][0],
-                                                                      production_rule['right'][0])
-        # TODO(pradeep): agenda_mask = agenda.neq(-1) Use this for checklist scoring?
+        agenda_mask = agenda.ne(-1)
         # (batch_size, agenda_size)
         initial_checklist = nn_util.new_variable_with_size(agenda, agenda.size(), 0).float()
         agenda_list = [agenda[i] for i in range(batch_size)]
+        agenda_mask_list = [agenda_mask[i] for i in range(batch_size)]
         initial_checklist_list = [initial_checklist[i] for i in range(batch_size)]
-        initial_score_list = [NlvrDecoderStep.score_instance_checklist(checklist) for checklist in
-                              initial_checklist_list]
+        initial_score_list = [NlvrDecoderStep.score_instance_checklist(checklist, agenda_mask)
+                              for checklist, agenda_mask in zip(initial_checklist_list,
+                                                                agenda_mask_list)]
         initial_hidden_state = [final_encoder_output[i] for i in range(batch_size)]
         initial_memory_cell = [memory_cell[i] for i in range(batch_size)]
         initial_action_embedding_list = [initial_action_embedding for _ in range(batch_size)]
@@ -113,6 +113,7 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
         encoder_outputs_list = [encoder_outputs[i] for i in range(batch_size)]
         sentence_mask_list = [sentence_mask[i] for i in range(batch_size)]
         initial_state = NlvrDecoderState(agenda_list,
+                                         agenda_mask_list,
                                          initial_checklist_list,
                                          list(range(batch_size)),
                                          [[] for _ in range(batch_size)],
@@ -167,13 +168,19 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
 
 class NlvrDecoderState(WikiTablesDecoderState):
     """
-    The two things this state keeps track of, beyond what the ``WikiTablesDecoderState`` does is an
-    agenda, which for each instance is a tensor containing the indices of the actions we want to
-    appear in the decoded output, and a (soft) checklist indicating how many times each action in an
-    agenda has been chosen previously.
+    The three things this state keeps track of, beyond what the ``WikiTablesDecoderState`` does is
+    1) an agenda, which for each instance is a tensor containing the indices of the actions we want
+    to see in the decoded output
+    2) a mask corresponding to the agenda, that shows which elements are not padding; and
+    3) a (soft) checklist indicating how many times each action in an agenda has been chosen
+    previously
+
+    The checklist is soft because it contains the (sum of) the probabilities previously assigned to
+    each action.
     """
     def __init__(self,
                  agenda: List[torch.LongTensor],
+                 agenda_mask: List[torch.LongTensor],
                  checklist: List[Variable],
                  batch_indices: List[int],
                  action_history: List[List[int]],
@@ -205,14 +212,17 @@ class NlvrDecoderState(WikiTablesDecoderState):
                                                actions_to_entities=None,
                                                entity_types=None)
         self.agenda = agenda
+        self.agenda_mask = agenda_mask
         self.checklist = checklist
 
     @classmethod
     def combine_states(cls, states) -> 'NlvrDecoderState':
         super_state = super(NlvrDecoderState, cls).combine_states(states)
         agenda = [alist for state in states for alist in state.agenda]
+        agenda_mask = [mask_list for state in states for mask_list in state.agenda_mask]
         checklist = [clist for state in states for clist in state.checklist]
         return NlvrDecoderState(agenda,
+                                agenda_mask,
                                 checklist,
                                 super_state.batch_indices,
                                 super_state.action_history,
@@ -232,8 +242,10 @@ class NlvrDecoderState(WikiTablesDecoderState):
     def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'NlvrDecoderState':
         super_state = super(NlvrDecoderState, self)._make_new_state_with_group_indices(group_indices)
         group_agenda = [self.agenda[i] for i in group_indices]
+        group_agenda_mask = [self.agenda_mask[i] for i in group_indices]
         group_checklist = [self.checklist[i] for i in group_indices]
         return NlvrDecoderState(group_agenda,
+                                group_agenda_mask,
                                 group_checklist,
                                 super_state.batch_indices,
                                 super_state.action_history,
@@ -288,6 +300,7 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
         next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
         for group_index, (batch_index, instance_action_probs) in enumerate(zip(state.batch_indices, probs)):
             instance_agenda = state.agenda[group_index]
+            instance_agenda_mask = state.agenda_mask[group_index]
             instance_checklist = state.checklist[group_index]
             # action_prob is a Variable.
             for action_index, action_prob in enumerate(instance_action_probs):
@@ -298,10 +311,10 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
                     continue
                 # If action is not in instance_agenda, mask_variable, and checklist_addition will be
                 # all 0s.
-                mask_variable = instance_agenda.eq(action)
-                checklist_addition = mask_variable.float() * action_prob
+                checklist_mask = instance_agenda.eq(action)
+                checklist_addition = checklist_mask.float() * action_prob
                 new_checklist = instance_checklist + checklist_addition
-                new_score = cls.score_instance_checklist(new_checklist)
+                new_score = cls.score_instance_checklist(new_checklist, instance_agenda_mask)
                 next_states_info[batch_index].append((group_index, action_index, action,
                                                       new_checklist, new_score))
         new_states = []
@@ -322,6 +335,7 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
                                                                                  right_side)
 
                 new_state = NlvrDecoderState([state.agenda[group_index]],
+                                             [state.agenda_mask[group_index]],
                                              [new_checklist],
                                              [batch_index],
                                              [new_action_history],
@@ -340,6 +354,12 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
         return new_states
 
     @staticmethod
-    def score_instance_checklist(checklist: Variable) -> Variable:
-        # TODO(pradeep): Is there something else that's better than mean of agenda probabilities?
-        return torch.mean(checklist)
+    def score_instance_checklist(checklist: Variable, agenda_mask: Variable) -> Variable:
+        """
+        Takes a checklist and agenda's mask (that shows which of the agenda items are not actually
+        padding), and scores the checklist. For now, the score is simply the average of checklist
+        probabilities.
+        """
+        # TODO(pradeep): Is there a better alternative to mean of agenda probabilities?
+        float_mask = agenda_mask.float()
+        return torch.sum(checklist * float_mask) / float_mask.sum()
