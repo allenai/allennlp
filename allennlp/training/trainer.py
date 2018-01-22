@@ -314,7 +314,7 @@ class Trainer:
         for name in metric_names:
             train_metric = train_metrics.get(name)
             val_metric = val_metrics.get(name)
-            
+
             if val_metric is not None and train_metric is not None:
                 logger.info(dual_message_template, name, train_metric, name, val_metric)
             elif val_metric is not None:
