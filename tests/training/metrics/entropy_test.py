@@ -8,10 +8,6 @@ from allennlp.training.metrics import Entropy
 
 class EntropyTest(AllenNlpTestCase):
     def test_low_entropy_distribution(self):
-        metric = Entropy()
-        logits = torch.Tensor([[10000, -10000, -10000, -1000],
-                               [10000, -10000, -10000, -1000]])
-        metric(logits)
         assert metric.get_metric() == 0.0
 
     def test_entropy_for_uniform_distribution(self):
