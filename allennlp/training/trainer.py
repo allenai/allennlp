@@ -285,15 +285,15 @@ class Trainer:
         Sends all of the train metrics (and validation metrics, if provided) to tensorboard.
         """
         metric_names = set(train_metrics.keys())
-        if val_metrics:
+        if val_metrics is not None:
             metric_names.update(val_metrics.keys())
         val_metrics = val_metrics or {}
 
         for name in metric_names:
-            train_metric = train_metrics.get(name, None)
+            train_metric = train_metrics.get(name)
             if train_metric is not None:
                 self._tensorboard.add_train_scalar(name, train_metric, epoch)
-            val_metric = val_metrics.get(name, None)
+            val_metric = val_metrics.get(name)
             if val_metric is not None:
                 self._tensorboard.add_validation_scalar(name, val_metric, epoch)
 
