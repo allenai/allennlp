@@ -3,6 +3,7 @@ from typing import List, Dict, Set
 from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
 
 from allennlp.data.semparse.type_declarations import type_declaration as types
+from allennlp.data.semparse import util as semparse_util
 
 
 class ParsingError(Exception):
@@ -93,36 +94,13 @@ class World:
     def get_basic_types(self) -> Set[Type]:
         raise NotImplementedError
 
-    @staticmethod
-    def _lisp_to_nested_expression(lisp_string: str) -> List:
-        """
-        Takes a logical form as a lisp string and returns a nested list representation of the lisp.
-        For example, "(count (division first))" would get mapped to ['count', ['division',
-        'first']].
-        """
-        stack = []
-        current_expression = []
-        tokens = lisp_string.split()
-        for token in tokens:
-            while token[0] == '(':
-                nested_expression = []
-                current_expression.append(nested_expression)
-                stack.append(current_expression)
-                current_expression = nested_expression
-                token = token[1:]
-            current_expression.append(token.replace(')', ''))
-            while token[-1] == ')':
-                current_expression = stack.pop()
-                token = token[:-1]
-        return current_expression
-
     def parse_logical_form(self, logical_form: str) -> Expression:
         """
         Takes a logical form as a string, maps its tokens using the mapping and returns a parsed expression.
         """
         if not logical_form.startswith("("):
             logical_form = "(%s)" % logical_form
-        parsed_lisp = self._lisp_to_nested_expression(logical_form)
+        parsed_lisp = semparse_util.lisp_to_nested_expression(logical_form)
         translated_string = self._process_nested_expression(parsed_lisp)
         type_signature = self.local_type_signatures.copy()
         type_signature.update(self.global_type_signatures)

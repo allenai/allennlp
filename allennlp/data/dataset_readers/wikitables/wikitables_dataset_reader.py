@@ -6,7 +6,6 @@ from typing import Dict, List, Union
 import gzip
 import logging
 import os
-import pyparsing
 
 from overrides import overrides
 
