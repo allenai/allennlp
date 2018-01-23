@@ -14,7 +14,7 @@ from allennlp.data.fields import Field, ListField, TextField, IndexField, Metada
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.dataset_readers.dataset_utils import Ontonotes
+from allennlp.data.dataset_readers.dataset_utils import Ontonotes, enumerate_spans
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -166,11 +166,9 @@ class ConllCorefReader(DatasetReader):
 
         sentence_offset = 0
         for sentence in sentences:
-            for start_index in range(len(sentence)):
-                for end_index in range(start_index, min(start_index + self._max_span_width, len(sentence))):
-                    start = sentence_offset + start_index
-                    end = sentence_offset + end_index
-
+            for start, end in enumerate_spans(sentence,
+                                              offset=sentence_offset,
+                                              max_span_width=self._max_span_width):
                     if span_labels is not None:
                         if (start, end) in cluster_dict:
                             span_labels.append(cluster_dict[(start, end)])
