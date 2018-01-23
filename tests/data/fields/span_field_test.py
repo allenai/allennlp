@@ -20,15 +20,15 @@ class TestSpanField(AllenNlpTestCase):
         numpy.testing.assert_array_equal(tensor, numpy.array([2, 3]))
 
     def test_span_field_raises_on_incorrect_label_type(self):
-        with pytest.raises(ConfigurationError):
+        with pytest.raises(TypeError):
             _ = SpanField("hello", 3, self.text)
 
     def test_span_field_raises_on_ill_defined_span(self):
-        with pytest.raises(ConfigurationError):
+        with pytest.raises(ValueError):
             _ = SpanField(4, 1, self.text)
 
     def test_span_field_raises_if_span_end_is_greater_than_sentence_length(self):
-        with pytest.raises(ConfigurationError):
+        with pytest.raises(ValueError):
             _ = SpanField(1, 30, self.text)
 
     def test_empty_span_field_works(self):
