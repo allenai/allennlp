@@ -169,14 +169,14 @@ class ConllCorefReader(DatasetReader):
             for start, end in enumerate_spans(sentence,
                                               offset=sentence_offset,
                                               max_span_width=self._max_span_width):
-                    if span_labels is not None:
-                        if (start, end) in cluster_dict:
-                            span_labels.append(cluster_dict[(start, end)])
-                        else:
-                            span_labels.append(-1)
+                if span_labels is not None:
+                    if (start, end) in cluster_dict:
+                        span_labels.append(cluster_dict[(start, end)])
+                    else:
+                        span_labels.append(-1)
 
-                    span_starts.append(IndexField(start, text_field))
-                    span_ends.append(IndexField(end, text_field))
+                span_starts.append(IndexField(start, text_field))
+                span_ends.append(IndexField(end, text_field))
             sentence_offset += len(sentence)
 
         span_starts_field = ListField(span_starts)
