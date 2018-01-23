@@ -1134,12 +1134,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             for action_index, action in enumerate(group_actions):
                 # `action` is currently the index in `log_probs`, not the actual action ID.  To get
                 # the action ID, we need to go through `considered_actions`.
-                if action >= len(considered_actions[group_index]):
-                    # This was padding.  We can check either `action_index` or `action` here - it's
-                    # really `action` that we care about, but our masking should have sorted all of
-                    # the higher actions to the end, anyway.
-                    continue
                 action = considered_actions[group_index][action]
+                if action == -1:
+                    # This was padding.
+                    continue
                 if allowed_actions is not None and action not in allowed_actions[group_index]:
                     # This happens when our _decoder trainer_ wants us to only evaluate certain
                     # actions, likely because they are the gold actions in this state.  We just skip
