@@ -432,10 +432,11 @@ def main(argv):
                                1, dropout_p=0.1)
 
     if use_cuda:
+        print("*** using cuda to train ***")
         encoder1 = encoder1.cuda()
         attn_decoder1 = attn_decoder1.cuda()
 
-    trainIters(encoder1, attn_decoder1, 150000, print_every=5)
+    trainIters(encoder1, attn_decoder1, 150000, print_every=1000)
  
 
 if __name__ == "__main__":
