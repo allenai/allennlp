@@ -64,7 +64,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                                                                 [0, 0],
                                                                 [0, 0]]]))
 
-    def test_get_linking_probabilities_valid_probability_distribution(self):
+    def test_get_linking_probabilities(self):
         worlds, num_entities = self.get_fake_worlds()
         tensor = Variable(torch.FloatTensor([]))
         _, entity_type_dict = self.model._get_type_vector(worlds, num_entities, tensor)
@@ -105,7 +105,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         assert torch.equal(entity_probability.data, true_probability)
 
     def get_fake_worlds(self):
-        # Generate a toy WikitablesWorld for testing the encoder.
+        # Generate a toy WikitablesWorld.
         FakeTable = namedtuple('FakeTable', ['entities', 'neighbors'])
         FakeWorld = namedtuple('FakeWorld', ['table_graph'])
         entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],

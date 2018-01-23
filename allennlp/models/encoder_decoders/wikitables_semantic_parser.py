@@ -335,9 +335,8 @@ class WikiTablesSemanticParser(Model):
 
         Returns
         -------
-        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_neighbors)``.
-        Dimension 2 contains the indices for the neighbors of the entity represented by the
-        index of dimension 1. Dimension 2 is the maximum number of neighbors an entity has.
+        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_neighbors)``. It is padded
+        with -1 instead of 0, since 0 is a valid neighbor index.
         """
 
         num_neighbors = 0
@@ -407,8 +406,8 @@ class WikiTablesSemanticParser(Model):
 
     @staticmethod
     def _get_linking_probabilities(worlds: List[WikiTablesWorld],
-                                   linking_scores: Variable,
-                                   question_mask: Variable,
+                                   linking_scores: torch.FloatTensor,
+                                   question_mask: torch.LongTensor,
                                    entity_type_dict: Dict[int, int],
                                    tensor: Variable) -> torch.FloatTensor:
         """
@@ -419,9 +418,9 @@ class WikiTablesSemanticParser(Model):
         Parameters
         ----------
         worlds : ``List[WikiTablesWorld]``
-        linking_scores : ``torch.autograd.Variable``
+        linking_scores : ``torch.FloatTensor``
             Has shape (batch_size, num_entities, num_question_tokens).
-        question_mask: ``torch.autograd.Variable``
+        question_mask: ``torch.LongTensor``
             Has shape (batch_size, num_question_tokens).
         entity_type_dict : ``Dict[int, int]``
             This is a mapping from ((batch_index * num_entities) + entity_index) to entity type id.
@@ -663,7 +662,7 @@ class WikiTablesSemanticParser(Model):
         return nonterminals, terminals
 
     @staticmethod
-    def _map_entity_productions(linking_scores: torch.Tensor,
+    def _map_entity_productions(linking_scores: torch.FloatTensor,
                                 worlds: List[WikiTablesWorld],
                                 actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
                                                                                    Dict[Tuple[int, int], int]]:
@@ -825,7 +824,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
     possible_actions : ``List[List[ProductionRuleArray]]``
         The list of all possible actions that was passed to ``model.forward()``.  We need this so
         we can recover production strings, which we need to update grammar states.
-    flattened_linking_scores : ``torch.Tensor``
+    flattened_linking_scores : ``torch.FloatTensor``
         Linking scores between table entities and question tokens.  The unflattened version has
         shape ``(batch_size, num_entities, num_question_tokens)``, though this version is flattened
         to have shape ``(batch_size * num_entities, num_question_tokens)``, for easier lookups with
@@ -852,7 +851,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  action_embeddings: torch.Tensor,
                  action_indices: Dict[Tuple[int, int], int],
                  possible_actions: List[List[ProductionRuleArray]],
-                 flattened_linking_scores: torch.Tensor,
+                 flattened_linking_scores: torch.FloatTensor,
                  actions_to_entities: Dict[Tuple[int, int], int],
                  entity_types: Dict[int, int]) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
