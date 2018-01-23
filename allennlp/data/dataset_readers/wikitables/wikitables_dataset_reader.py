@@ -143,8 +143,8 @@ class WikiTablesDatasetReader(DatasetReader):
                 try:
                     dpd_file = gzip.open(dpd_output_filename)
                     sempre_forms = []
-                    for line in dpd_file:
-                        sempre_forms.append(line.strip().decode('utf-8'))
+                    for dpd_line in dpd_file:
+                        sempre_forms.append(dpd_line.strip().decode('utf-8'))
                         if self._max_dpd_tries and len(sempre_forms) >= self._max_dpd_tries:
                             # TODO(mattg): might want to sort by length here before truncating...
                             break
@@ -295,7 +295,6 @@ class WikiTablesDatasetReader(DatasetReader):
         target value right now, because we use a pre-computed set of logical forms.  So we don't
         bother parsing it; we can change that if we ever need to.
         """
-        parsed_info = {}
         id_piece, rest = lisp_string.split(') (utterance "')
         example_id = id_piece.split('(id ')[1]
         question, rest = rest.split('") (context (graph tables.TableKnowledgeGraph ')
