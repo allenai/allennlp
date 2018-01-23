@@ -1,13 +1,13 @@
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, TypeVar
 
 from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
-from allennlp.data.tokenizers.token import Token
 
-def enumerate_spans(sentence: List[Token],
+T = TypeVar("T")
+def enumerate_spans(sentence: List[T],
                     offset: int = 0,
                     max_span_width: int = None,
                     min_span_width: int = None,
-                    filter_function: Callable[[List[Token]], bool] = None) -> List[Tuple[int, int]]:
+                    filter_function: Callable[[List[T]], bool] = None) -> List[Tuple[int, int]]:
     """
     Given a sentence, return all token spans within the sentence. Spans are `inclusive`.
     Additionally, you can provide a maximum and minimum span width, which will be used
@@ -19,8 +19,9 @@ def enumerate_spans(sentence: List[Token],
 
     Parameters
     ----------
-    sentence : ``List[Token]``, required.
-        The sentence to generate spans for.
+    sentence : ``List[T]``, required.
+        The sentence to generate spans for. The type is generic, as this function
+        can be used with strings, or Spacy ``Tokens`` or other sequences.
     offset : ``int``, optional (default = 0)
         A numeric offset to add to all span start and end indices. This is helpful
         if the sentence is part of a larger structure, such as a document, which
@@ -29,6 +30,10 @@ def enumerate_spans(sentence: List[Token],
         The maximum length of spans which should be included.
     min_span_width : ``int``, optional (default = None)
         The minimum length of spans which should be included.
+    filter_function : ``Callable[[List[T]], bool]``, optional (default = None)
+        A function mapping sequences of the passed type T to a boolean value,
+        dictating whether or not a particular span should be included in the
+        returned spans from the sentence.
     """
     max_span_width = max_span_width or len(sentence)
     min_span_width = min_span_width or 0
