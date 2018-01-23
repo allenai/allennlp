@@ -26,63 +26,31 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_get_neighbor_indices(self):
-        FakeTable = namedtuple('FakeTable', ['entities', 'neighbors'])
-        FakeWorld = namedtuple('FakeWorld', ['table_graph'])
-        entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
-                    ['fb:cell.2012', 'fb:row.row.year']
-                    ]
-        neighbors = [{'fb:cell.2010': ['fb:row.row.year', 'fb:row.row.year2'],
-                     'fb:cell.2011': ['fb:row.row.year', 'fb:row.row.year2'],
-                     'fb:row.row.year': ['fb:cell.2010', 'fb:cell.2011'],
-                     'fb:row.row.year2': ['fb:cell.2010', 'fb:cell.2011']
-                       },
-                     {'fb:cell.2012': ['fb:row.row.year'],
-                       'fb:row.row.year': ['fb:cell.2012'],
-                     }]
-        worlds = [FakeWorld(FakeTable(entity_list, entity2neighbors))
-                  for entity_list, entity2neighbors in zip(entities, neighbors)]
-        num_entities = sum([len(entity_list) for entity_list in entities])
-        num_neighbors = max([len(entity2neighbors[entity]) for entity2neighbors in neighbors
-                             for entity in entity2neighbors])
+        worlds, num_entities = self.get_fake_worlds()
         tensor = Variable(torch.LongTensor([]))
 
         neighbor_indexes = self.model._get_neighbor_indices(worlds, num_entities, tensor)
 
-        # Checks for the correct shape, padding of -1, and neighbor indices.
-        assert torch.equal(neighbor_indexes.data,torch.LongTensor([[[2,  3],
-                                                                    [2,  3],
-                                                                    [0,  1],
-                                                                    [0,  1],
-                                                                    [-1, -1],
-                                                                    [-1, -1]],
-                                                                   [[1, -1],
-                                                                    [0, -1],
-                                                                    [-1, -1],
-                                                                    [-1, -1],
-                                                                    [-1, -1],
-                                                                    [-1, -1]]]))
+        # Checks for the correct shape meaning dimension 2 has size num_neighbors,
+        # padding of -1 is used, and correct neighbor indices.
+        assert torch.equal(neighbor_indexes.data, torch.LongTensor([[[2, 3],
+                                                                     [2, 3],
+                                                                     [0, 1],
+                                                                     [0, 1],
+                                                                     [-1, -1],
+                                                                     [-1, -1]],
+                                                                    [[1, -1],
+                                                                     [0, -1],
+                                                                     [-1, -1],
+                                                                     [-1, -1],
+                                                                     [-1, -1],
+                                                                     [-1, -1]]]))
 
     def test_get_type_vector(self):
-        FakeTable = namedtuple('FakeTable', ['entities', 'neighbors'])
-        FakeWorld = namedtuple('FakeWorld', ['table_graph'])
-        entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
-                    ['fb:cell.2012', 'fb:row.row.year']
-                    ]
-        neighbors = [{'fb:cell.2010': ['fb:row.row.year', 'fb:row.row.year2'],
-                      'fb:cell.2011': ['fb:row.row.year', 'fb:row.row.year2'],
-                      'fb:row.row.year': ['fb:cell.2010', 'fb:cell.2011'],
-                      'fb:row.row.year2': ['fb:cell.2010', 'fb:cell.2011']
-                      },
-                     {'fb:cell.2012': ['fb:row.row.year'],
-                      'fb:row.row.year': ['fb:cell.2012'],
-                      }]
-        worlds = [FakeWorld(FakeTable(entity_list, entity2neighbors))
-                  for entity_list, entity2neighbors in zip(entities, neighbors)]
-        num_entities = sum([len(entity_list) for entity_list in entities])
+        worlds, num_entities = self.get_fake_worlds()
         tensor = Variable(torch.LongTensor([]))
-
         type_vector, _ = self.model._get_type_vector(worlds, num_entities, tensor)
-
+        # Verify that both types are present and padding used for non existent entities.
         assert torch.equal(type_vector.data, torch.LongTensor([[[1, 0],
                                                                 [1, 0],
                                                                 [0, 1],
@@ -97,59 +65,62 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                                                                 [0, 0]]]))
 
     def test_get_linking_probabilities_valid_probability_distribution(self):
-        worlds = []
-        for instance in self.dataset.instances:
-            worlds.append(instance.fields['world'].metadata)
-        batch_size = len(worlds)
-        num_entities = max([len(world.table_graph.entities) for world in worlds])
-        num_question_tokens = max([len(world.question_tokens) for world in worlds])
-        tensor = Variable(torch.FloatTensor(batch_size, num_question_tokens, num_entities))
+        worlds, _ = self.get_fake_worlds()
+        tensor = Variable(torch.FloatTensor([]))
+        questions = Variable(torch.LongTensor([[14, 40],
+                                               [78, 0]]))
         # (batch_size, num_entities, num_question_tokens)
-        linking_scores = Variable(torch.rand(batch_size, num_entities, num_question_tokens))
-
-        padding_lengths = {'num_tokens': num_question_tokens}
-        question_one = self.dataset.instances[0].fields['question'].as_tensor(padding_lengths)
-        question_two = self.dataset.instances[1].fields['question'].as_tensor(padding_lengths)
-        questions = torch.cat([question_one['tokens'].unsqueeze(0), question_two['tokens'].unsqueeze(0)], dim=0)
+        linking_scores = [[[0.6218093, 0.74813986],
+                           [0.82922572, 0.85793620],
+                           [0.11054164, 0.83972567],
+                           [0.72952926, 0.52519375],
+                           [0.34569067, 0.73687404],
+                           [0.30000000, 0.55145717]],
+                          [[0.61507487, 0.89550155],
+                           [0.74650306, 0.95761484],
+                           [0.51626843, 0.22729224],
+                           [0.52449512, 0.06206334],
+                           [0.24870688, 0.92492068],
+                           [0.8245101, 0.20058638]]]
+        linking_scores = Variable(torch.FloatTensor(linking_scores))
         question_mask = get_text_field_mask({'questions': questions}).float()
 
         # (batch_size, num_question_tokens, num_entities + 1)
         entity_probability = self.model._get_linking_probabilities(worlds, linking_scores, question_mask, tensor)
-        # Check for null entity probability
-        assert entity_probability.size(2) == num_entities+1
-        for batch_index, world in enumerate(worlds):
-            # Make sure the null entity has probability 0.
-            for question_index, _ in enumerate(entity_probability[batch_index]):
-                assert entity_probability.data[batch_index][question_index][0] == 0.0
 
-        for batch_index, world in enumerate(worlds):
-            cell_type_index, row_type_index = self.model._get_entity_index_by_type(world)
-            cell_type_index = [index + 1 for index in cell_type_index]
-            row_type_index = [index + 1 for index in row_type_index]
+        # The following properties in entity_probability are tested for by true_probability:
+        # It has probability 0.0 at the 0th entity index for the null entity.
+        # It has all 0.0 probabilities when there is no question token, as seen for the
+        # second word in the second batch.
+        # The probabilities for entities of the same type with the same question token
+        # should sum to 1. For example, in batch 0, question token 0, entity 1 and 2 are
+        # all the entities of one type, thus: 0.448331 + 0.551669 = 1
+        true_probability = torch.FloatTensor(
+                [[[0.0, 0.448331, 0.551669, 0.35001174, 0.64998823, 0.0, 0.0],
+                  [0.0, 0.47257844, 0.52742153, 0.57799107, 0.42200893, 0.0, 0.0]],
+                 [[0.0, 1., 1., 0.0, 0.0, 0.0, 0.0],
+                  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]])
+        assert torch.equal(entity_probability.data, true_probability)
 
-            # (num_entities_per_type, num_question_tokens)
-            transposed = torch.transpose(entity_probability[batch_index], 0, 1)
-            cell_type_probability = torch.index_select(transposed,
-                                                       0,
-                                                       Variable(tensor.data.new(cell_type_index)).long())
-            row_type_probability = torch.index_select(transposed,
-                                                      0,
-                                                      Variable(tensor.data.new(row_type_index)).long())
+    def get_fake_worlds(self):
+        # Generate a toy WikitablesWorld for testing the encoder.
+        FakeTable = namedtuple('FakeTable', ['entities', 'neighbors'])
+        FakeWorld = namedtuple('FakeWorld', ['table_graph'])
+        entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
+                    ['fb:cell.2012', 'fb:row.row.year']]
+        neighbors = [{'fb:cell.2010': ['fb:row.row.year', 'fb:row.row.year2'],
+                      'fb:cell.2011': ['fb:row.row.year', 'fb:row.row.year2'],
+                      'fb:row.row.year': ['fb:cell.2010', 'fb:cell.2011'],
+                      'fb:row.row.year2': ['fb:cell.2010', 'fb:cell.2011']
+                     },
+                     {'fb:cell.2012': ['fb:row.row.year'],
+                      'fb:row.row.year': ['fb:cell.2012'],
+                     }]
 
-            total_cell_probability_per_question_word = torch.sum(cell_type_probability, dim=0)
-            total_row_probability_per_question_word = torch.sum(row_type_probability, dim=0)
-            # Check that normalization worked and probabilities sum to 1.
-            for probability in total_cell_probability_per_question_word.data[0:len(world.question_tokens)]:
-                assert_almost_equal(probability, 1.0, decimal=5)
-            for probability in total_row_probability_per_question_word.data[0:len(world.question_tokens)]:
-                assert_almost_equal(probability, 1.0, decimal=5)
-
-            # Check that question mask results in 0 probabilities for padding question tokens.
-            for question_token_index, mask in enumerate(question_mask.data[batch_index]):
-                if mask == 0.0:
-                    for probability in entity_probability.data[batch_index][question_token_index]:
-                        assert probability == 0.0
-
+        worlds = [FakeWorld(FakeTable(entity_list, entity2neighbors))
+                  for entity_list, entity2neighbors in zip(entities, neighbors)]
+        num_entities = sum([len(entity_list) for entity_list in entities])
+        return worlds, num_entities
 
     def test_get_unique_elements(self):
         # pylint: disable=protected-access
