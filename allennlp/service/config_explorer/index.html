@@ -4,6 +4,16 @@
     <meta charset="utf-8">
     <title>AllenNLP Configuration Wizard</title>
     <style>
+        .bordered {
+            border: 1px solid black;
+            padding: 10px;
+        }
+
+        .invalid {
+            background-color: red;
+        }
+
+
     </style>
   </head>
   <body>
@@ -40,6 +50,22 @@
             }
         };
 
+        const label = (info) => {
+            console.log(info)
+            const defaultValue = info.defaultValue ?
+                                 "default: " + info.defaultValue :
+                                 "default: None";
+            const parenthetical = info.optional ?
+                                  defaultValue :
+                                  "required";
+
+            return (
+                <div className="label">
+                    {info.name}: ({info.annotation}, {parenthetical})
+                </div>
+            )
+        }
+
         class App extends React.Component {
             constructor(props) {
                 super(props);
@@ -57,13 +83,9 @@
                     {
                         Object.keys(this.state.config).map((key) => {
                             const info = this.state.config[key];
-                            const annotation = info['annotation'];
-
-                            if (annotation == 'str') {
-                                return <StringChooser info={info}/>
-                            } else {
-                                return <div>{key}: {JSON.stringify(info)}</div>
-                            }
+                            return (
+                                <ConfigItem info={info}/>
+                            )
                         })
                     }
                         <h1>Output</h1>
@@ -72,54 +94,291 @@
             }
         }
 
-        class StringChooser extends React.Component {
+        const TEXT_INPUT = {
+            'str': true,
+            'int': true,
+            'bool': true,
+            'float': true
+        }
+
+        class ConfigItem extends React.Component {
+            render() {
+                const {info} = this.props;
+                const annotation = info['annotation'];
+
+                if (TEXT_INPUT[annotation]) {
+                    return <TextInput info={info} fieldType={annotation}/>
+                } else if (TYPES[annotation]) {
+                    return <DropdownChooser info={info}/>
+                } else if (annotation[0] == 'dict') {
+                    const [_, keyType, valueType] = annotation;
+                    return <DictInput info={info} keyType={keyType} valueType={valueType}/>
+                } else if (annotation[0] == 'list') {
+                    const [_, valueType] = annotation;
+                    return <ListInput info={info} valueType={valueType}/>
+                } else {
+                    return <div>{info.name}: {JSON.stringify(info)}</div>
+                }
+            }
+        }
+
+        class ListInput extends React.Component {
+            constructor(props) {
+                super(props)
+
+                const {info, valueType} = this.props;
+
+                this.valueInfo = {
+                    "name": "value",
+                    "annotation": valueType
+                }
+
+                this.state = {
+                    children: []
+                }
+
+                this.addChild = this.addChild.bind(this);
+                this.remove = this.remove.bind(this);
+                this.next = 0;
+            }
+
+            remove(idx) {
+                return () => {
+                    let children = [];
+                    this.state.children.forEach((child) => {
+                        console.log(child);
+                        const childIdx = child.props.idx;
+                        if (childIdx != idx) {
+                            children.push(child)
+                        }
+                    })
+                    this.setState({children})
+                }
+            }
+
+            addChild() {
+                const valueInfo = Object.assign({}, this.valueInfo);
+
+                const children = this.state.children.slice(0);
+                const idx = this.next++;
+
+                children.push(
+                    <div idx={idx}>
+                        <ConfigItem info={valueInfo}/>
+                        <span onClick={this.remove(idx)}>X</span>
+                    </div>
+                )
+
+                this.setState({children})
+            }
+
+
+            render() {
+                return (
+                    <div>
+                        {label(this.props.info)}
+                        {this.state.children}
+                        <span onClick={this.addChild}>add</span>
+                    </div>
+                )
+            }
+        }
+
+        class DictInput extends React.Component {
+            constructor(props) {
+                super(props)
+
+                const {info, keyType, valueType} = this.props;
+                this.keyInfo = {
+                    "name": "key",
+                    "annotation": keyType
+                }
+
+                this.valueInfo = {
+                    "name": "value",
+                    "annotation": valueType
+                }
+
+                this.state = {
+                    children: []
+                }
+
+                this.addChild = this.addChild.bind(this);
+                this.remove = this.remove.bind(this);
+                this.next = 0;
+            }
+
+            remove(idx) {
+                return () => {
+                    let children = [];
+                    this.state.children.forEach((child) => {
+                        console.log(child);
+                        const childIdx = child.props.idx;
+                        if (childIdx != idx) {
+                            children.push(child)
+                        }
+                    })
+                    this.setState({children})
+                }
+            }
+
+            addChild() {
+                const keyInfo = Object.assign({}, this.keyInfo);
+                const valueInfo = Object.assign({}, this.valueInfo);
+
+                const children = this.state.children.slice(0);
+                const idx = this.next++;
+
+                children.push(
+                    <div idx={idx}>
+                        <ConfigItem info={keyInfo}/>
+                        <ConfigItem info={valueInfo}/>
+                        <span onClick={this.remove(idx)}>X</span>
+                    </div>
+                )
+
+                this.setState({children})
+            }
+
+
+            render() {
+                return (
+                    <div>
+                        {label(this.props.info)}
+                        {this.state.children}
+                        <span onClick={this.addChild}>add</span>
+                    </div>
+                )
+            }
+        }
+
+        class DropdownChooser extends React.Component {
             constructor(props) {
                 super(props);
 
                 const {info} = props;
                 const {name, annotation, optional, defaultValue} = info;
 
-                let choices = TYPES[annotation] && Object.keys(TYPES[annotation]);
-                if (choices) {
-                    choices = [''] + choices;
-                }
+                const choices = [''].concat(Object.keys(TYPES[annotation]));
 
                 this.state = {
-                    info,
                     choices: choices,
-                    children: null
+                    children: [],
+                    valid: false
                 }
 
                 this.handleListChange = this.handleListChange.bind(this);
             }
 
             handleListChange(e) {
-                if (e.target.value) {
-                    //
+                const name = e.target.value;
+                if (name) {
+                    const children = TYPES[this.props.info.annotation]
+                    const fullPath = children[name];
+                    const childInfo = INFOS[fullPath];
+                    this.setState({valid: true, children: (childInfo || [])})
                 } else {
-                    //
+                    this.setState({valid: false, children: []})
                 }
             }
 
             render() {
-                let dropdown;
-                if (this.state.choices) {
-                    dropdown = (
-                        <select>
+                const validClass = this.state.valid ? "valid" : "invalid";
+                return (
+                    <div className="bordered">
+                        {label(this.props.info)}
+                        <select className={validClass} onChange={this.handleListChange}>
                             {
                                 this.state.choices.map((choice) => {
                                     return (
-                                        <option value={choice} onChange={this.handleListChange}>{choice}</option>
+                                        <option value={choice}>{choice}</option>
                                     )
                                 })
                             }
                         </select>
-                    )
+                        {
+                            this.state.children.map(
+                                (info) => <ConfigItem info={info}/>
+                            )
+                        }
+                    </div>
+                )
+            }
+        }
+
+        class TextInput extends React.Component {
+            constructor(props) {
+                super(props);
+
+                const {info, fieldType} = props;
+                const {name, annotation, optional, defaultValue} = info;
+
+                this.state = {
+                    input: '',
+                    value: undefined,
+                    valid: optional
                 }
+
+                this.handleInputChange = this.handleInputChange.bind(this);
+            }
+
+            handleInputChange(e) {
+                const text = e.target.value;
+                const empty = !e.target.value;
+                const optional = this.props.info.optional;
+                let value;
+
+                switch (this.props.fieldType) {
+                    case 'str':
+                        this.setState({
+                            input: text,
+                            value: text || '',
+                            valid: optional || !empty
+                        })
+                        break;
+                    case 'int':
+                        value = parseInt(text);
+                        this.setState({
+                            input: text,
+                            value,
+                            valid: (optional && empty) || !isNaN(value)
+                        })
+                        break;
+                    case 'float':
+                        value = parseFloat(text);
+                        this.setState({
+                            input: text,
+                            value,
+                            valid: (optional && empty) || !isNaN(value)
+                        })
+                        break;
+                    case 'bool':
+                        let valid = optional && empty;
+                        if (text.toLowerCase() == "true") {
+                            value = true;
+                            valid = true;
+                        } else if (text.toLowerCase() == "false") {
+                            value = false;
+                            valid = true;
+                        }
+                        this.setState({
+                            input: text,
+                            value,
+                            valid
+                        })
+
+                }
+
+                console.log(this.state)
+            }
+
+            render() {
+                console.log(this.state)
+                const className = this.state.valid ? "valid" : "invalid";
                 return (
                     <div>
-                        <div>{name}: {JSON.stringify(this.state.info)}</div>
-                        {dropdown}
+                        {label(this.props.info)}
+                        <input className={className} type="text" value={this.state.text} onKeyUp={this.handleInputChange}/>
                     </div>
                 )
             }
