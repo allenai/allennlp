@@ -13,9 +13,10 @@ def enumerate_spans(sentence: List[T],
     Additionally, you can provide a maximum and minimum span width, which will be used
     to exclude spans outside of this range.
 
-    Finally, you can provide a function mapping ``List[Token] -> bool``, which will
+    Finally, you can provide a function mapping ``List[T] -> bool``, which will
     be applied to every span to decide whether that span should be included. This
-    allows filtering by length, regex matches, pos tags or any Spacy ``Token`` attribute.
+    allows filtering by length, regex matches, pos tags or any Spacy ``Token`` 
+    attributes, for example.
 
     Parameters
     ----------
