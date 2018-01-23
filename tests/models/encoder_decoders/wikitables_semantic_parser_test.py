@@ -65,8 +65,9 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                                                                 [0, 0]]]))
 
     def test_get_linking_probabilities_valid_probability_distribution(self):
-        worlds, _ = self.get_fake_worlds()
+        worlds, num_entities = self.get_fake_worlds()
         tensor = Variable(torch.FloatTensor([]))
+        _, entity_type_dict = self.model._get_type_vector(worlds, num_entities, tensor)
         questions = Variable(torch.LongTensor([[14, 40],
                                                [78, 0]]))
         # (batch_size, num_entities, num_question_tokens)
@@ -86,7 +87,8 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         question_mask = get_text_field_mask({'questions': questions}).float()
 
         # (batch_size, num_question_tokens, num_entities + 1)
-        entity_probability = self.model._get_linking_probabilities(worlds, linking_scores, question_mask, tensor)
+        entity_probability = self.model._get_linking_probabilities(worlds, linking_scores, question_mask,
+                                                                   entity_type_dict, tensor)
 
         # The following properties in entity_probability are tested for by true_probability:
         # It has probability 0.0 at the 0th entity index for the null entity.

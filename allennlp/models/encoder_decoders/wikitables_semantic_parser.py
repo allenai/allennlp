@@ -179,8 +179,8 @@ class WikiTablesSemanticParser(Model):
 
         # (batch_size, num_entities, embedding_dim)
         encoded_table = self._entity_encoder(embedded_table, table_mask)
-        # (batch_size, num_entities, num_entities)
-        neighbor_indices = self._get_neighbor_indexes(world, num_entities, encoded_table)
+        # (batch_size, num_entities, num_neighbors)
+        neighbor_indices = self._get_neighbor_indices(world, num_entities, encoded_table)
 
         # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
         # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
@@ -222,7 +222,7 @@ class WikiTablesSemanticParser(Model):
         linking_scores = question_table_similarity_max_score + self._linking_params(linking_features).squeeze(3)
 
         linking_probabilities = self._get_linking_probabilities(world, linking_scores, question_mask,
-                                                                encoded_table)
+                                                                entity_type_dict, encoded_table)
 
         null_entity_embedding = Variable(entity_embeddings.data.new(batch_size, 1, self._embedding_dim).fill_(0))
         # (batch_size, num_entities+1, embedding_dim)
@@ -319,53 +319,59 @@ class WikiTablesSemanticParser(Model):
             return outputs
 
     @staticmethod
-    def _get_neighbor_indexes(worlds: List[WikiTablesWorld],
+    def _get_neighbor_indices(worlds: List[WikiTablesWorld],
                               num_entities: int,
-                              tensor: torch.Tensor) -> Variable:
+                              tensor: Variable) -> torch.LongTensor:
         """
         This method returns the indices of each entity's neighbors. A tensor
-        is accepted as a parameter for copying purposes
+        is accepted as a parameter for copying purposes.
 
         Parameters
         ----------
         worlds : ``List[WikiTablesWorld]``
         num_entities : ``int``
-        tensor : ``torch.Tensor``
+        tensor : ``Variable``
             Used for copying the constructed list onto the right device.
 
         Returns
         -------
-        A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities, num_entities)``.
+        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_neighbors)``.
         Dimension 2 contains the indices for the neighbors of the entity represented by the
-        index of dimension 1. Dimension 2 is limited to num_entities as it is assumed that
-        each entity can have a number of neighbors at most equal to the total number of entities.
+        index of dimension 1. Dimension 2 is the maximum number of neighbors an entity has.
         """
-        batches_neighbors = []
+
+        num_neighbors = 0
+        for world in worlds:
+            for entity in world.table_graph.entities:
+                if len(world.table_graph.neighbors[entity]) > num_neighbors:
+                    num_neighbors = len(world.table_graph.neighbors[entity])
+
+        batch_neighbors = []
         for world in worlds:
             # Each batch instance has its own world, which has a corresponding table.
             entities = world.table_graph.entities
-            entity2indices = {entity: i for i, entity in enumerate(entities)}
+            entity2index = {entity: i for i, entity in enumerate(entities)}
             entity2neighbors = world.table_graph.neighbors
             neighbor_indexes = []
             for entity in entities:
-                entity_neighbors = [entity2indices[cn] for cn in entity2neighbors[entity]]
+                entity_neighbors = [entity2index[n] for n in entity2neighbors[entity]]
                 # Pad with -1 instead of 0, since 0 represents a neighbor index.
-                padded = pad_sequence_to_length(entity_neighbors, num_entities, lambda: -1)
+                padded = pad_sequence_to_length(entity_neighbors, num_neighbors, lambda: -1)
                 neighbor_indexes.append(padded)
             neighbor_indexes = pad_sequence_to_length(neighbor_indexes,
                                                       num_entities,
-                                                      lambda: [-1] * num_entities)
-            batches_neighbors.append(neighbor_indexes)
-        return Variable(tensor.data.new(batches_neighbors)).long()
+                                                      lambda: [-1] * num_neighbors)
+            batch_neighbors.append(neighbor_indexes)
+        return Variable(tensor.data.new(batch_neighbors)).long()
 
     @staticmethod
     def _get_type_vector(worlds: List[WikiTablesWorld],
                          num_entities: int,
-                         tensor: torch.Tensor) -> Tuple[Variable, Dict[int, int]]:
+                         tensor: Variable) -> Tuple[torch.LongTensor, Dict[int, int]]:
         """
         Produces the one hot encoding for each entity's type. In addition,
-        a map from index to type is returned to combine entity type operations
-        into one method.
+        a map from a flattened entity index to type is returned to combine
+        entity type operations into one method.
 
         Parameters
         ----------
@@ -376,9 +382,9 @@ class WikiTablesSemanticParser(Model):
 
         Returns
         -------
-        A ``torch.autograd.Variable`` with shape ``(batch_size, num_entities, num_types)``.
-        entity_types : ``Dict[int,str]``
-            This is a mapping from (batch_index, entity_index) to entity type id.
+        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_types)``.
+        entity_types : ``Dict[int, int]``
+            This is a mapping from ((batch_index * num_entities) + entity_index) to entity type id.
         """
         entity_types = {}
         batch_types = []
@@ -387,23 +393,24 @@ class WikiTablesSemanticParser(Model):
             for entity_index, entity in enumerate(world.table_graph.entities):
                 cell_type_one_hot = [1, 0]
                 row_type_one_hot = [0, 1]
-                types.append((cell_type_one_hot if entity.startswith('fb:cell') else row_type_one_hot))
+                entity_type = 0 if entity.startswith('fb:cell') else 1
+                types.append((cell_type_one_hot if entity_type == 0 else row_type_one_hot))
 
                 # For easier lookups later, we're actually using a _flattened_ version
                 # of (batch_index, entity_index) for the key, because this is how the
                 # linking scores are stored.
                 flattened_entity_index = batch_index * num_entities + entity_index
-                entity_type = 0 if entity.startswith('fb:cell') else 1
                 entity_types[flattened_entity_index] = entity_type
             padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0])
             batch_types.append(padded)
         return Variable(tensor.data.new(batch_types)), entity_types
 
-    def _get_linking_probabilities(self,
-                                   worlds: List[WikiTablesWorld],
+    @staticmethod
+    def _get_linking_probabilities(worlds: List[WikiTablesWorld],
                                    linking_scores: Variable,
                                    question_mask: Variable,
-                                   tensor: torch.Tensor) -> Variable:
+                                   entity_type_dict: Dict[int, int],
+                                   tensor: Variable) -> torch.FloatTensor:
         """
         Produces the probability of an entity given a question word and type. The logic below
         separates the entities by type since the softmax normalization term sums over entities
@@ -416,12 +423,14 @@ class WikiTablesSemanticParser(Model):
             Has shape (batch_size, num_entities, num_question_tokens).
         question_mask: ``torch.autograd.Variable``
             Has shape (batch_size, num_question_tokens).
+        entity_type_dict : ``Dict[int, int]``
+            This is a mapping from ((batch_index * num_entities) + entity_index) to entity type id.
         tensor : ``torch.Tensor``
             Used for copying the constructed list onto the right device.
 
         Returns
         -------
-        batch_probabilities : ``torch.autograd.Variable``
+        batch_probabilities : ``torch.FloatTensor``
             Has shape ``(batch_size, num_question_tokens, num_entities+1)``.
             Contains all the probabilities for an entity given a question word.
         """
@@ -429,8 +438,16 @@ class WikiTablesSemanticParser(Model):
         batch_probabilities = Variable(tensor.data.new(torch.zeros(batch_size,
                                                                    num_question_tokens,
                                                                    num_entities + 1)))
+
         for batch_index, world in enumerate(worlds):
-            cell_type_index, row_type_index = self._get_entity_index_by_type(world)
+            cell_type_index, row_type_index = [], []
+            entities = world.table_graph.entities
+            entity2index = {entity: entity_index for entity_index, entity in enumerate(entities)}
+            for entity_index, entity in enumerate(entities):
+                if entity_type_dict[batch_index * num_entities + entity_index] == 0:
+                    cell_type_index.append(entity2index[entity])
+                else:
+                    row_type_index.append(entity2index[entity])
 
             # Separate the scores by type, since normalization summed over types.
             # (num_entities_per_type, num_question_tokens)
@@ -459,26 +476,6 @@ class WikiTablesSemanticParser(Model):
                     probabilities_all[question_index, (entity_index+1)] = entity_probability
             batch_probabilities[batch_index] = probabilities_all
         return batch_probabilities
-
-    @staticmethod
-    def _get_entity_index_by_type(world: WikiTablesWorld) -> Tuple[List, List]:
-        """
-        Returns
-        -------
-        cell_type_index: ``List[int]``
-            Indexes for entities starting with fb:cell.
-        row_type_index: ``List[int]``
-            Indexes for entities not starting with fb:cell.
-        """
-        cell_type_index, row_type_index = [], []
-        entities = world.table_graph.entities
-        entity2index = {entity: entity_index for entity_index, entity in enumerate(entities)}
-        for entity in entities:
-            if entity.startswith('fb:cell'):
-                cell_type_index.append(entity2index[entity])
-            else:
-                row_type_index.append(entity2index[entity])
-        return cell_type_index, row_type_index
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
