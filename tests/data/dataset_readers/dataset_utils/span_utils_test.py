@@ -39,7 +39,6 @@ class SpanUtilsTest(AllenNlpTestCase):
                          (1, 3), (1, 4), (2, 2), (2, 3), (2, 4), (3, 3), (3, 4), (4, 4)]
 
         spans = span_utils.enumerate_spans(sentence, max_span_width=3, min_span_width=2)
-        print(spans)
         assert spans == [(0, 1), (0, 2), (1, 2), (1, 3), (2, 3), (2, 4), (3, 4)]
 
         spans = span_utils.enumerate_spans(sentence, max_span_width=3, min_span_width=2, offset=20)

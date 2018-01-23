@@ -15,7 +15,7 @@ def enumerate_spans(sentence: List[T],
 
     Finally, you can provide a function mapping ``List[T] -> bool``, which will
     be applied to every span to decide whether that span should be included. This
-    allows filtering by length, regex matches, pos tags or any Spacy ``Token`` 
+    allows filtering by length, regex matches, pos tags or any Spacy ``Token``
     attributes, for example.
 
     Parameters
@@ -28,22 +28,22 @@ def enumerate_spans(sentence: List[T],
         if the sentence is part of a larger structure, such as a document, which
         the indices need to respect.
     max_span_width : ``int``, optional (default = None)
-        The maximum length of spans which should be included.
+        The maximum length of spans which should be included. Defaults to len(sentence).
     min_span_width : ``int``, optional (default = None)
-        The minimum length of spans which should be included.
+        The minimum length of spans which should be included. Defaults to 1.
     filter_function : ``Callable[[List[T]], bool]``, optional (default = None)
-        A function mapping sequences of the passed type T to a boolean value,
-        dictating whether or not a particular span should be included in the
-        returned spans from the sentence.
+        A function mapping sequences of the passed type T to a boolean value.
+        If ``True``, the span is included in the returned spans from the
+        sentence, otherwise it is excluded..
     """
     max_span_width = max_span_width or len(sentence)
-    min_span_width = min_span_width or 0
+    min_span_width = min_span_width or 1
     filter_function = filter_function or bool
     spans: List[Tuple[int, int]] = []
 
     for start_index in range(len(sentence)):
         last_end_index = min(start_index + max_span_width, len(sentence))
-        first_end_index = min(max(start_index, start_index + min_span_width - 1), len(sentence))
+        first_end_index = min(start_index + min_span_width - 1, len(sentence))
         for end_index in range(first_end_index, last_end_index):
             start = offset + start_index
             end = offset + end_index
