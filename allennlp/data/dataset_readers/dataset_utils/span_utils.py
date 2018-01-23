@@ -6,7 +6,7 @@ T = TypeVar("T")
 def enumerate_spans(sentence: List[T],
                     offset: int = 0,
                     max_span_width: int = None,
-                    min_span_width: int = None,
+                    min_span_width: int = 1,
                     filter_function: Callable[[List[T]], bool] = None) -> List[Tuple[int, int]]:
     """
     Given a sentence, return all token spans within the sentence. Spans are `inclusive`.
@@ -29,7 +29,7 @@ def enumerate_spans(sentence: List[T],
         the indices need to respect.
     max_span_width : ``int``, optional (default = None)
         The maximum length of spans which should be included. Defaults to len(sentence).
-    min_span_width : ``int``, optional (default = None)
+    min_span_width : ``int``, optional (default = 1)
         The minimum length of spans which should be included. Defaults to 1.
     filter_function : ``Callable[[List[T]], bool]``, optional (default = None)
         A function mapping sequences of the passed type T to a boolean value.
@@ -37,8 +37,7 @@ def enumerate_spans(sentence: List[T],
         sentence, otherwise it is excluded..
     """
     max_span_width = max_span_width or len(sentence)
-    min_span_width = min_span_width or 1
-    filter_function = filter_function or bool
+    filter_function = filter_function or (lambda x: True)
     spans: List[Tuple[int, int]] = []
 
     for start_index in range(len(sentence)):
