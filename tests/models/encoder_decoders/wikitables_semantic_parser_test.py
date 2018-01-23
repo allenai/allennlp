@@ -25,39 +25,76 @@ class WikiTablesSemanticParserTest(ModelTestCase):
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    def test_correct_neighbor_indexes(self):
-        # Verify that 2nd entity has correct neighbor indexes.
-        worlds = []
-        for instance in self.dataset.instances:
-            worlds.append(instance.fields['world'].metadata)
-        num_entities = len(worlds[0].table_graph.entities)
+    def test_get_neighbor_indices(self):
+        FakeTable = namedtuple('FakeTable', ['entities', 'neighbors'])
+        FakeWorld = namedtuple('FakeWorld', ['table_graph'])
+        entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
+                    ['fb:cell.2012', 'fb:row.row.year']
+                    ]
+        neighbors = [{'fb:cell.2010': ['fb:row.row.year', 'fb:row.row.year2'],
+                     'fb:cell.2011': ['fb:row.row.year', 'fb:row.row.year2'],
+                     'fb:row.row.year': ['fb:cell.2010', 'fb:cell.2011'],
+                     'fb:row.row.year2': ['fb:cell.2010', 'fb:cell.2011']
+                       },
+                     {'fb:cell.2012': ['fb:row.row.year'],
+                       'fb:row.row.year': ['fb:cell.2012'],
+                     }]
+        worlds = [FakeWorld(FakeTable(entity_list, entity2neighbors))
+                  for entity_list, entity2neighbors in zip(entities, neighbors)]
+        num_entities = sum([len(entity_list) for entity_list in entities])
+        num_neighbors = max([len(entity2neighbors[entity]) for entity2neighbors in neighbors
+                             for entity in entity2neighbors])
         tensor = Variable(torch.LongTensor([]))
-        neighbor_indexes = self.model._get_neighbor_indexes(worlds, num_entities, tensor)
-        assert neighbor_indexes.size(1) == num_entities
-        assert neighbor_indexes.size(2) == num_entities
-        lst = [-1]*(num_entities)
-        lst[0], lst[1] = 45, 45
-        second_entity_neighbors = (torch.LongTensor(lst))
-        assert torch.equal(neighbor_indexes[0][1].data, second_entity_neighbors)
 
-    def test_all_types_present_in_type_vector(self):
-        # Verifies that at least 1 instance of every one hot vector
-        # is present. This guards against a bug where entity equality
-        # wasn't working since each entity is of type EntityType and
-        # not str. The result of this bug was the same one hot vector
-        # always picked regardless of type.
-        worlds = []
-        for instance in self.dataset.instances:
-            worlds.append(instance.fields['world'].metadata)
-        num_entities = max([len(world.table_graph.entities) for world in worlds])
+        neighbor_indexes = self.model._get_neighbor_indices(worlds, num_entities, tensor)
+
+        # Checks for the correct shape, padding of -1, and neighbor indices.
+        assert torch.equal(neighbor_indexes.data,torch.LongTensor([[[2,  3],
+                                                                    [2,  3],
+                                                                    [0,  1],
+                                                                    [0,  1],
+                                                                    [-1, -1],
+                                                                    [-1, -1]],
+                                                                   [[1, -1],
+                                                                    [0, -1],
+                                                                    [-1, -1],
+                                                                    [-1, -1],
+                                                                    [-1, -1],
+                                                                    [-1, -1]]]))
+
+    def test_get_type_vector(self):
+        FakeTable = namedtuple('FakeTable', ['entities', 'neighbors'])
+        FakeWorld = namedtuple('FakeWorld', ['table_graph'])
+        entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
+                    ['fb:cell.2012', 'fb:row.row.year']
+                    ]
+        neighbors = [{'fb:cell.2010': ['fb:row.row.year', 'fb:row.row.year2'],
+                      'fb:cell.2011': ['fb:row.row.year', 'fb:row.row.year2'],
+                      'fb:row.row.year': ['fb:cell.2010', 'fb:cell.2011'],
+                      'fb:row.row.year2': ['fb:cell.2010', 'fb:cell.2011']
+                      },
+                     {'fb:cell.2012': ['fb:row.row.year'],
+                      'fb:row.row.year': ['fb:cell.2012'],
+                      }]
+        worlds = [FakeWorld(FakeTable(entity_list, entity2neighbors))
+                  for entity_list, entity2neighbors in zip(entities, neighbors)]
+        num_entities = sum([len(entity_list) for entity_list in entities])
         tensor = Variable(torch.LongTensor([]))
+
         type_vector, _ = self.model._get_type_vector(worlds, num_entities, tensor)
-        # (batch_size, num_types)
-        sums = torch.sum(type_vector, dim=1)
-        x = torch.nonzero(sums.data)
-        # this means every element in sums is nonzero hence both 2 numbers
-        # representing its index will be in x
-        assert x.size(0) * x.size(1) == 2 * sums.size(0) * sums.size(1)
+
+        assert torch.equal(type_vector.data, torch.LongTensor([[[1, 0],
+                                                                [1, 0],
+                                                                [0, 1],
+                                                                [0, 1],
+                                                                [0, 0],
+                                                                [0, 0]],
+                                                               [[1, 0],
+                                                                [0, 1],
+                                                                [0, 0],
+                                                                [0, 0],
+                                                                [0, 0],
+                                                                [0, 0]]]))
 
     def test_get_linking_probabilities_valid_probability_distribution(self):
         worlds = []
