@@ -7,7 +7,6 @@ from torch.autograd import Variable
 
 from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
-from allennlp.common.checks import ConfigurationError
 
 
 class SpanField(Field[torch.Tensor]):

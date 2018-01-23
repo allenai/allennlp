@@ -2,7 +2,6 @@
 import numpy
 import pytest
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
 from allennlp.data.fields import TextField, SpanField
