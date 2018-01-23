@@ -308,7 +308,7 @@ def showPlot(points):
     ax.yaxis.set_major_locator(loc)
     plt.plot(points)
 
-def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, learning_rate=0.01):
+def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, save_every=10000, learning_rate=0.01):
     start = time.time()
     plot_losses = []
     print_loss_total = 0  # Reset every print_every
@@ -330,6 +330,10 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
                      decoder, encoder_optimizer, decoder_optimizer, criterion)
         print_loss_total += loss
         plot_loss_total += loss
+        
+        if iter % save_every == 0:
+            torch.save(encoder, 'encoder.{}.pt'.format(iter))
+            torch.save(decoder, 'decoder.{}.pt'.format(iter))
 
         if iter % print_every == 0:
             print('train accuracy: {}'.format(validateRandomSubset(encoder, decoder, pairs, 100)))
@@ -437,6 +441,8 @@ def main(argv):
         attn_decoder1 = attn_decoder1.cuda()
 
     trainIters(encoder1, attn_decoder1, 150000, print_every=1000)
+    torch.save(encoder1, 'encoder.final.pt')
+    torch.save(attn_decoder1, 'decoder.final.pt')
  
 
 if __name__ == "__main__":
