@@ -7,6 +7,7 @@ from allennlp.commands.serve import Serve
 from allennlp.commands.predict import Predict
 from allennlp.commands.train import Train
 from allennlp.commands.evaluate import Evaluate
+from allennlp.commands.make_vocab import MakeVocab
 from allennlp.commands.subcommand import Subcommand
 from allennlp.service.predictors import DemoModel
 
@@ -52,6 +53,7 @@ def main(prog: str = None,
             "evaluate": Evaluate(),
             "predict": Predict(predictor_overrides),
             "serve": Serve(model_overrides),
+            "make-vocab": MakeVocab(),
 
             # Superseded by overrides
             **subcommand_overrides
