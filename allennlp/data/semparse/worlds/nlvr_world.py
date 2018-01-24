@@ -5,13 +5,13 @@ which mainly contains an execution method and related helper methods.
 from collections import defaultdict
 import operator
 from typing import Any, List, Dict, Set, Callable, TypeVar, Union
-import pyparsing
 
 from nltk.sem.logic import Type
 from overrides import overrides
 
 from allennlp.common import util
 from allennlp.common.util import JsonDict
+from allennlp.data.semparse import util as semparse_util
 from allennlp.data.semparse.type_declarations import nlvr_type_declaration as types
 from allennlp.data.semparse.worlds.world import World
 
@@ -177,7 +177,7 @@ class NlvrWorld(World):
         if not logical_form.startswith("("):
             logical_form = "(%s)" % logical_form
         logical_form = logical_form.replace(",", " ")
-        expression_as_list = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(logical_form).asList()
+        expression_as_list = semparse_util.lisp_to_nested_expression(logical_form)
         # The whole expression has to be an assertion expression because it has to return a boolean.
         # TODO(pradeep): May want to make this more general and let the executor deal with questions.
         return self._execute_assertion(expression_as_list)

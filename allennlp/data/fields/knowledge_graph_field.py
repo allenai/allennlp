@@ -73,8 +73,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                  token_indexers: Dict[str, TokenIndexer],
                  feature_extractors: List[str] = None) -> None:
         self.knowledge_graph = knowledge_graph
-        self.entity_texts = [tokenizer.tokenize(knowledge_graph.entity_text[entity])
-                             for entity in knowledge_graph.entities]
+        entity_texts = [knowledge_graph.entity_text[entity] for entity in knowledge_graph.entities]
+        # TODO(mattg): Because we do tagging on each of these entities in addition to just
+        # tokenizations, this is quite slow, and about half of our data processing time just goes
+        # to this (~15 minutes when there are 7k instances).  The reason we do tagging is so that
+        # we can add lemma features.  If we can remove the need for lemma / other hand-written
+        # features, like with a CNN, we can cut down our data processing time by a factor of 2.
+        self.entity_texts = tokenizer.batch_tokenize(entity_texts)
         self.utterance_tokens = utterance_tokens
         self._tokenizer = tokenizer
         self._token_indexers: Dict[str, TokenIndexer] = token_indexers
