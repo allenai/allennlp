@@ -14,11 +14,6 @@ class TestIndexField(AllenNlpTestCase):
         self.text = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]],
                               {"words": SingleIdTokenIndexer("words")})
 
-    def test_index_field_inherits_padding_lengths_from_text_field(self):
-
-        index_field = IndexField(4, self.text)
-        assert index_field.get_padding_lengths() == {"num_options": 5}
-
     def test_as_tensor_converts_field_correctly(self):
         index_field = IndexField(4, self.text)
         tensor = index_field.as_tensor(index_field.get_padding_lengths()).data.cpu().numpy()
