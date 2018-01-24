@@ -18,7 +18,7 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         logical_form_true = "(assert_greater_equals (count (touch_corner (circle (all_objects)))) 1)"
         # Should evaluate to True.
         assert nlvr_world.execute(logical_form_true)
-        logical_form_false = "(assert_equals (count (touch_corner (circle(all_objects)))) 0)"
+        logical_form_false = "(assert_equals (count (touch_corner (circle (all_objects)))) 0)"
         # Should evaluate to False.
         assert not nlvr_world.execute(logical_form_false)
 
