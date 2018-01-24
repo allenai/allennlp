@@ -1,7 +1,7 @@
 """
 The ``make-vocab`` subcommand allows you to create a vocabulary from
 your dataset[s], which you can then reuse without recomputing it
-each training run
+each training run.
 
 .. code-block:: bash
 
