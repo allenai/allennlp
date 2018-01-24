@@ -6,7 +6,6 @@ from typing import Dict, List, Union
 import gzip
 import logging
 import os
-import pyparsing
 
 from overrides import overrides
 
@@ -25,7 +24,7 @@ from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -65,10 +64,11 @@ class WikiTablesDatasetReader(DatasetReader):
     max_dpd_tries : ``int`` (optional)
         Sometimes DPD just made bad choices about logical forms and gives us forms that we can't
         parse (most of the time these are very unlikely logical forms, because, e.g., it
-        halucinates a date or number from the table that's not in the question).  But we don't want
-        to spend our time trying to parse thousands of bad logical forms.  We will try to parse
-        only the ``max_dpd_tries`` logical forms before giving up.  Only applicable if
-        ``dpd_output_directory`` is given.  Default is 20.
+        hallucinates a date or number from the table that's not in the question).  But we don't
+        want to spend our time trying to parse thousands of bad logical forms.  We will try to
+        parse only the first ``max_dpd_tries`` logical forms before giving up.  This also speeds up
+        data loading time, because we don't go through the entire DPD file if it's huge.  Only
+        applicable if ``dpd_output_directory`` is given.  Default is 20.
     tokenizer : ``Tokenizer`` (optional)
         Tokenizer to use for the questions. Will default to ``WordTokenizer()`` with Spacy's tagger
         enabled, as we use lemma matches as features for entity linking.
@@ -121,34 +121,53 @@ class WikiTablesDatasetReader(DatasetReader):
 
     @overrides
     def read(self, file_path):
-        instances = []
+        questions = []
+        instance_info = []
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file: %s", file_path)
             num_dpd_missing = 0
             num_lines = 0
+            logger.info("First pass, just reading the data")
             for line in tqdm.tqdm(data_file.readlines()):
                 line = line.strip("\n")
                 if not line:
                     continue
                 num_lines += 1
-                parsed_info = self._parse_line_as_lisp(line)
+                parsed_info = self._parse_example_line(line)
                 question = parsed_info["question"]
                 # We want the TSV file, but the ``*.examples`` files typically point to CSV.
                 table_filename = os.path.join(self._tables_directory,
-                                              parsed_info["context"].replace(".csv", ".tsv"))
+                                              parsed_info["table_filename"].replace(".csv", ".tsv"))
                 dpd_output_filename = os.path.join(self._dpd_output_directory,
                                                    parsed_info["id"] + '.gz')
                 try:
-                    sempre_forms = [line.strip().decode('utf-8') for line in gzip.open(dpd_output_filename)]
+                    dpd_file = gzip.open(dpd_output_filename)
+                    sempre_forms = []
+                    for dpd_line in dpd_file:
+                        sempre_forms.append(dpd_line.strip().decode('utf-8'))
+                        if self._max_dpd_tries and len(sempre_forms) >= self._max_dpd_tries:
+                            # TODO(mattg): might want to sort by length here before truncating...
+                            break
                 except FileNotFoundError:
                     logger.debug(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
                     num_dpd_missing += 1
                     continue
-                instance = self.text_to_instance(question, table_filename, sempre_forms)
-                if instance is not None:
-                    # The DPD output might not actually give us usable logical forms for some
-                    # instances, and in those cases `text_to_instance` returns None.
-                    instances.append(instance)
+                questions.append(question)
+                instance_info.append((table_filename, sempre_forms))
+        logger.info("Batch tokenizing questions")
+        tokenized_questions = self._tokenizer.batch_tokenize(questions)
+        logger.info("Creating instances (including parsing logical forms)")
+        instances = []
+        iterator = tqdm.tqdm(zip(questions, tokenized_questions, instance_info), total=len(questions))
+        for question, tokenized_question, (table_filename, sempre_forms) in iterator:
+            instance = self.text_to_instance(question,
+                                             table_filename,
+                                             sempre_forms,
+                                             tokenized_question)
+            if instance is not None:
+                # The DPD output might not actually give us usable logical forms for some
+                # instances, and in those cases `text_to_instance` returns None.
+                instances.append(instance)
         logger.info(f"Missing DPD info for {num_dpd_missing} out of {num_lines} instances")
         num_instances = len(instances)
         num_with_dpd = num_lines - num_dpd_missing
@@ -165,7 +184,8 @@ class WikiTablesDatasetReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          question: str,
                          table_info: Union[str, JsonDict],
-                         dpd_output: List[str] = None) -> Instance:
+                         dpd_output: List[str] = None,
+                         tokenized_question: List[Token] = None) -> Instance:
         """
         Reads text inputs and makes an instance. WikitableQuestions dataset provides tables as TSV
         files, which we use for training. For running a demo, we may want to provide tables in a
@@ -183,9 +203,13 @@ class WikiTablesDatasetReader(DatasetReader):
         dpd_output : List[str] (optional)
             List of logical forms, produced by dynamic programming on denotations. Not required
             during test.
+        tokenized_question : ``List[Token]``
+            If you have already tokenized the question, you can pass that in here, so we don't
+            duplicate that work.  You might, for example, do batch processing on the questions in
+            the whole dataset, then pass the result in here.
         """
         # pylint: disable=arguments-differ
-        tokenized_question = self._tokenizer.tokenize(question)
+        tokenized_question = tokenized_question or self._tokenizer.tokenize(question)
         question_field = TextField(tokenized_question, self._question_token_indexers)
         if isinstance(table_info, str):
             table_knowledge_graph = TableKnowledgeGraph.read_from_file(table_info)
@@ -221,15 +245,16 @@ class WikiTablesDatasetReader(DatasetReader):
             action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
 
             action_sequence_fields: List[Field] = []
-            # TODO(mattg): might want to sort by length here before truncating...
-            for logical_form in dpd_output[:self._max_dpd_tries]:
+            for logical_form in dpd_output:
                 if not self._should_keep_logical_form(logical_form):
                     continue
                 try:
                     expression = world.parse_logical_form(logical_form)
                 except ParsingError as error:
                     logger.debug(f'Parsing error: {error.message}, skipping logical form')
+                    logger.debug(f'Question was: {question}')
                     logger.debug(f'Logical form was: {logical_form}')
+                    logger.debug(f'Table info was: {table_info}')
                     continue
                 except:
                     logger.error(logical_form)
@@ -258,7 +283,7 @@ class WikiTablesDatasetReader(DatasetReader):
         return Instance(fields)
 
     @staticmethod
-    def _parse_line_as_lisp(lisp_string: str) -> Dict[str, Union[str, List[str], None]]:
+    def _parse_example_line(lisp_string: str) -> Dict[str, Union[str, List[str], None]]:
         """
         Training data in WikitableQuestions comes with examples in the form of lisp strings in the format:
             (example (id <example-id>)
@@ -266,25 +291,15 @@ class WikiTablesDatasetReader(DatasetReader):
                      (context (graph tables.TableKnowledgeGraph <table-filename>))
                      (targetValue (list (description <answer1>) (description <answer2>) ...)))
 
-        We parse such strings and return the parsed information here.
+        We parse such strings and return the parsed information here.  We don't actually use the
+        target value right now, because we use a pre-computed set of logical forms.  So we don't
+        bother parsing it; we can change that if we ever need to.
         """
-        parsed_info = {}
-        input_nested_list = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(lisp_string).asList()[0]
-        # Skipping "example"
-        for key, value in input_nested_list[1:]:
-            if key == "id":
-                parsed_info["id"] = value
-            elif key == "utterance":
-                parsed_info["question"] = value.replace("\"", "")
-            elif key == "context":
-                # Skipping "graph" and "tables.TableKnowledgeGraph"
-                parsed_info["context"] = value[-1]
-            elif key == "targetValue":
-                # Skipping "list", and "description" within each nested list.
-                parsed_info["targetValue"] = [x[1] for x in value[1:]]
-        # targetValue may not be present if the answer is not provided.
-        assert all([x in parsed_info for x in ["id", "question", "context"]]), "Invalid format"
-        return parsed_info
+        id_piece, rest = lisp_string.split(') (utterance "')
+        example_id = id_piece.split('(id ')[1]
+        question, rest = rest.split('") (context (graph tables.TableKnowledgeGraph ')
+        table_filename, rest = rest.split(')) (targetValue (list')
+        return {'id': example_id, 'question': question, 'table_filename': table_filename}
 
     @staticmethod
     def _should_keep_logical_form(logical_form: str) -> bool:
