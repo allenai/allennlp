@@ -362,3 +362,12 @@ class TestWikiTablesDatasetReader(AllenNlpTestCase):
                            '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]', '<<#1,#2>,<#2,#1>> -> reverse',
                            '<e,r> -> fb:row.row.year', 'r -> [<e,r>, e]', '<e,r> -> fb:row.row.league',
                            'e -> fb:cell.usl_a_league']
+
+    def test_parse_example_line(self):
+        with open("tests/fixtures/data/wikitables/sample_data.examples") as filename:
+            lines = filename.readlines()
+        example_info = WikiTablesDatasetReader._parse_example_line(lines[0])
+        question = 'what was the last year where this team was a part of the usl a-league?'
+        assert example_info == {'id': 'nt-0',
+                                'question': question,
+                                'table_filename': 'tables/590.csv'}
