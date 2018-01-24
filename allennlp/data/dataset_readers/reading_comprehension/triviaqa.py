@@ -58,6 +58,7 @@ class TriviaQaReader(DatasetReader):
                  unfiltered_tarball_path: str = None,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super(TriviaQaReader, self).__init__()
         self._base_tarball_path = base_tarball_path
         self._unfiltered_tarball_path = unfiltered_tarball_path
         self._tokenizer = tokenizer or WordTokenizer()

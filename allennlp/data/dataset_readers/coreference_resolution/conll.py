@@ -79,6 +79,7 @@ class ConllCorefReader(DatasetReader):
     def __init__(self,
                  max_span_width: int,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super(ConllCorefReader, self).__init__()
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 

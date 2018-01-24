@@ -63,6 +63,7 @@ class Conll2003DatasetReader(DatasetReader):
                  token_indexers: Dict[str, TokenIndexer] = None,
                  tag_label: str = "ner",
                  feature_labels: Sequence[str] = ()) -> None:
+        super(Conll2003DatasetReader, self).__init__()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in _VALID_LABELS:
             raise ConfigurationError("unknown tag label type: {}".format(tag_label))

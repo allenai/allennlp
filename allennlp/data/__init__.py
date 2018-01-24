@@ -1,4 +1,4 @@
-from allennlp.data.dataset import InstanceCollection
+from allennlp.data.dataset import InstanceCollection, Dataset, LazyDataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.instance import Instance
