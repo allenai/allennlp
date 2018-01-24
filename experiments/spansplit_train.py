@@ -43,12 +43,12 @@ def main(argv):
         encoder1 = encoder1.cuda()
         attn_decoder1 = attn_decoder1.cuda()
 
-    chunking.trainIters(encoder1, attn_decoder1, input_lang, output_lang, 15, pairs, pairs_dev, MAX_LENGTH, print_every=5)
+    chunking.trainIters(encoder1, attn_decoder1, input_lang, output_lang, 150000, pairs, pairs_dev, MAX_LENGTH, print_every=1000)
     print("*** done training ***")
-    print(chunking.validate(encoder1, attn_decoder1, input_lang, output_lang, pairs_dev, MAX_LENGTH, 40))
+    print(chunking.validate(encoder1, attn_decoder1, input_lang, output_lang, pairs_dev, MAX_LENGTH, 4813))
     torch.save(encoder1, 'encoder.final.pt')
     torch.save(attn_decoder1, 'decoder.final.pt')
- 
+    
 
 if __name__ == "__main__":
     main(sys.argv)
