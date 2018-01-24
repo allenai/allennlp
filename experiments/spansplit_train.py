@@ -3,7 +3,7 @@ import torch
 import h5py
 import codecs
 sys.path.append('./python')
-from chunking import prepareData
+from chunking.main import prepareData
 import chunking
 
 use_cuda = torch.cuda.is_available()
@@ -27,15 +27,15 @@ def main(argv):
    
     print("*** compiling vocab ***")
     special_tokens = ['sos', 'eos', '[[[', ']]]', '<unk>']     
-    wordVecs = chunking.WordVectors(special_tokens, elmo_vecs)    
+    wordVecs = chunking.main.WordVectors(special_tokens, elmo_vecs)    
     input_lang, output_lang, pairs, MAX_LENGTH = prepareData('esrc', 'etgt', wordVecs)
     input_lang_dev, output_lang_dev, pairs_dev, MAX_LENGTH_DEV = prepareData('esrcd', 'etgtd', wordVecs)
     input_lang = wordVecs
     input_lang_dev = wordVecs
     
     hidden_size = 1029
-    encoder1 = chunking.EncoderRNN(input_lang.n_words, hidden_size, wordVecs)
-    attn_decoder1 = chunking.AttnDecoderRNN(hidden_size, output_lang.n_words, MAX_LENGTH,
+    encoder1 = chunking.main.EncoderRNN(input_lang.n_words, hidden_size, wordVecs)
+    attn_decoder1 = chunking.main.AttnDecoderRNN(hidden_size, output_lang.n_words, MAX_LENGTH,
                                1, dropout_p=0.1)
 
     if use_cuda:
@@ -43,9 +43,9 @@ def main(argv):
         encoder1 = encoder1.cuda()
         attn_decoder1 = attn_decoder1.cuda()
 
-    chunking.trainIters(encoder1, attn_decoder1, input_lang, output_lang, 150000, pairs, pairs_dev, MAX_LENGTH, print_every=1000)
+    chunking.main.trainIters(encoder1, attn_decoder1, input_lang, output_lang, 150000, pairs, pairs_dev, MAX_LENGTH, print_every=1000)
     print("*** done training ***")
-    print(chunking.validate(encoder1, attn_decoder1, input_lang, output_lang, pairs_dev, MAX_LENGTH, 4813))
+    print(chunking.main.validate(encoder1, attn_decoder1, input_lang, output_lang, pairs_dev, MAX_LENGTH, 4813))
     torch.save(encoder1, 'encoder.final.pt')
     torch.save(attn_decoder1, 'decoder.final.pt')
     
