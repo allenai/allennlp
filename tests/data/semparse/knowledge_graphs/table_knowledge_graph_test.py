@@ -101,10 +101,11 @@ class TestTableKnowledgeGraph(AllenNlpTestCase):
                 }
         graph = TableKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.town'])
-        assert neighbors == {'fb:cell.funningsfj_r_ur',
-                             'fb:cell.vi_arei_i',
-                             'fb:cell.fro_ba',
-                             }
+        assert neighbors == {
+                'fb:cell.funningsfj_r_ur',
+                'fb:cell.vi_arei_i',
+                'fb:cell.fro_ba',
+                }
 
         json = {
                 'columns': ['Fate'],
