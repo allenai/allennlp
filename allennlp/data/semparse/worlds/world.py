@@ -1,4 +1,5 @@
 from typing import List, Dict, Set
+import re
 
 from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
 
@@ -105,12 +106,31 @@ class World:
         """
         raise NotImplementedError
 
-    def parse_logical_form(self, logical_form: str) -> Expression:
+    def parse_logical_form(self,
+                           logical_form: str,
+                           remove_var_function: bool = True) -> Expression:
         """
         Takes a logical form as a string, maps its tokens using the mapping and returns a parsed expression.
+
+        Parameters
+        ----------
+        logical_form : ``str``
+            Logical form to parse
+        remove_var_function : ``bool`` (optional)
+            ``var`` is a special function that some languages use within lambda founctions to
+            indicate the usage of a variable. If your language uses it, and you do not want to
+            include it in the parsed expression, set this flag. You may want to do this if you are
+            generating an action sequence from this parsed expression, because it is easier to let
+            the decoder not produce this function due to the way constrained decoding is currently
+            implemented.
         """
         if not logical_form.startswith("("):
             logical_form = "(%s)" % logical_form
+        if remove_var_function:
+            # Replace "(x)" with "x"
+            logical_form = re.sub(r'\(([x-z])\)', r'\1', logical_form)
+            # Replace "(var x)" with "(x)"
+            logical_form = re.sub(r'\(var ([x-z])\)', r'(\1)', logical_form)
         parsed_lisp = semparse_util.lisp_to_nested_expression(logical_form)
         translated_string = self._process_nested_expression(parsed_lisp)
         type_signature = self.local_type_signatures.copy()
@@ -122,7 +142,39 @@ class World:
         Returns the sequence of actions (as strings) that resulted in the given expression.
         """
         # Starting with the type of the whole expression
-        return self._get_transitions(expression, ["%s -> %s" % (types.START_TYPE, expression.type)])
+        return self._get_transitions(expression,
+                                     ["%s -> %s" % (types.START_TYPE, expression.type)])
+
+    @classmethod
+    def _infer_num_arguments(cls, type_signature: str) -> int:
+        """
+        Takes a type signature and infers the number of arguments the corresponding function takes.
+        Examples:
+            e -> 0
+            <r,e> -> 1
+            <e,<e,t>> -> 2
+            <b,<<b,#1>,<#1,b>>> -> 3
+        """
+        if not "<" in type_signature:
+            return 0
+        # We need to find the return type from the signature. We do that by removing the outer most
+        # angular brackets and travering the remaining substring till the angular brackets (if any)
+        # balance. Once we hit a comma after the angular brackets are balanced, whatever is left
+        # after it is the return type.
+        type_signature = type_signature[1:-1]
+        num_brackets = 0
+        char_index = 0
+        for char in type_signature:
+            if char == '<':
+                num_brackets += 1
+            elif char == '>':
+                num_brackets -= 1
+            elif char == ',':
+                if num_brackets == 0:
+                    break
+            char_index += 1
+        return_type = type_signature[char_index+1:]
+        return 1 + cls._infer_num_arguments(return_type)
 
     def _process_nested_expression(self, nested_expression) -> str:
         """
