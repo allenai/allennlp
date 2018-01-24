@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import codecs
 import numpy as np
 import h5py
+import random
 
 import sys
 
