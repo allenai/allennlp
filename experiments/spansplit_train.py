@@ -429,7 +429,7 @@ def main(argv):
         attn_decoder1 = attn_decoder1.cuda()
 
     trainIters(encoder1, attn_decoder1, 150000, print_every=1000)
-    print("*** validating ***")
+    print("*** validating! ***")
     print(validate(encoder1, attn_decoder1, pairs_dev, 4813))
     
     
