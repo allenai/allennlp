@@ -94,6 +94,32 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str, overr
     return train_model(params, serialization_dir)
 
 
+def datasets_from_params(params: Params) -> Dict[str, InstanceCollection]:
+    """
+    Load all the datasets specified by the config.
+    """
+    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
+
+    train_data_path = params.pop('train_data_path')
+    logger.info("Reading training data from %s", train_data_path)
+    train_data = dataset_reader.read(train_data_path)
+
+    datasets: Dict[str, InstanceCollection] = {"train": train_data}
+
+    validation_data_path = params.pop('validation_data_path', None)
+    if validation_data_path is not None:
+        logger.info("Reading validation data from %s", validation_data_path)
+        validation_data = dataset_reader.read(validation_data_path)
+        datasets["validation"] = validation_data
+
+    test_data_path = params.pop("test_data_path", None)
+    if test_data_path is not None:
+        logger.info("Reading test data from %s", test_data_path)
+        test_data = dataset_reader.read(test_data_path)
+        datasets["test"] = test_data
+
+    return datasets
+
 def train_model(params: Params, serialization_dir: str) -> Model:
     """
     This function can be used as an entry point to running models in AllenNLP
@@ -125,31 +151,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     with open(os.path.join(serialization_dir, "model_params.json"), "w") as param_file:
         json.dump(serialization_params, param_file, indent=4)
 
-    # Now we begin assembling the required parts for the Trainer.
-    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
-
-    train_data_path = params.pop('train_data_path')
-    logger.info("Reading training data from %s", train_data_path)
-    train_data = dataset_reader.read(train_data_path)
-
-    all_datasets: Dict[str, InstanceCollection] = {"train": train_data}
-
-    validation_data_path = params.pop('validation_data_path', None)
-    if validation_data_path is not None:
-        logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = dataset_reader.read(validation_data_path)
-        all_datasets["validation"] = validation_data
-    else:
-        validation_data = None
-
-    test_data_path = params.pop("test_data_path", None)
-    if test_data_path is not None:
-        logger.info("Reading test data from %s", test_data_path)
-        test_data = dataset_reader.read(test_data_path)
-        all_datasets["test"] = test_data
-    else:
-        test_data = None
-
+    all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
     for dataset in datasets_for_vocab_creation:
@@ -165,6 +167,10 @@ def train_model(params: Params, serialization_dir: str) -> Model:
 
     model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
+
+    train_data = all_datasets['train']
+    validation_data = all_datasets.get('validation')
+    test_data = all_datasets.get('test')
 
     train_data.index_instances(vocab)
     if validation_data:

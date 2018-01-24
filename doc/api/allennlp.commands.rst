@@ -34,6 +34,7 @@ calls ``main()``.
 .. toctree::
     allennlp.commands.subcommand
     allennlp.commands.evaluate
+    allennlp.commands.make_vocab
     allennlp.commands.predict
     allennlp.commands.serve
     allennlp.commands.train
