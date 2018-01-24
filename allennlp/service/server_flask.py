@@ -155,10 +155,10 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
             return Response(response="", status=200)
 
         # Do log if no argument is specified
-        record_flag = not (request.args.get("record", "true").lower() == "false")
+        record_flag = not request.args.get("record", "true").lower() == "false"
 
         # Do use the cache if no argument is specified
-        cache_flag = not (request.args.get("cache", "true").lower() == "false")
+        cache_flag = not request.args.get("cache", "true").lower() == "false"
 
         model = app.predictors.get(model_name.lower())
         if model is None:
