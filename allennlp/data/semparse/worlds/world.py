@@ -1,9 +1,9 @@
 from typing import List, Dict, Set
-import pyparsing
 
 from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
 
 from allennlp.data.semparse.type_declarations import type_declaration as types
+from allennlp.data.semparse import util as semparse_util
 
 
 class ParsingError(Exception):
@@ -100,7 +100,7 @@ class World:
         """
         if not logical_form.startswith("("):
             logical_form = "(%s)" % logical_form
-        parsed_lisp = pyparsing.OneOrMore(pyparsing.nestedExpr()).parseString(logical_form).asList()
+        parsed_lisp = semparse_util.lisp_to_nested_expression(logical_form)
         translated_string = self._process_nested_expression(parsed_lisp)
         type_signature = self.local_type_signatures.copy()
         type_signature.update(self.global_type_signatures)

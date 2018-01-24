@@ -11,3 +11,4 @@ allennlp.data.semparse
    allennlp.data.semparse.knowledge_graphs
    allennlp.data.semparse.type_declarations
    allennlp.data.semparse.worlds
+   allennlp.data.semparse.util
