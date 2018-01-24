@@ -46,6 +46,7 @@ class DatasetReader(Registrable):
         The default implementation here raises a ``RuntimeError`` instead of a
         ``NotImplementedError``, because it is not required that a subclass implement this method.
         """
+        # pylint: disable=no-self-use,unused-argument
         raise RuntimeError("Not implemented!")
 
     def text_to_instance(self, *inputs) -> Instance:

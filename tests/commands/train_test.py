@@ -97,6 +97,7 @@ class TestTrain(AllenNlpTestCase):
 class LazyFakeReader(DatasetReader):
     # pylint: disable=abstract-method
     def __init__(self) -> None:
+        super().__init__()
         self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging'}))
 
     def _generator_for_file(self, file_path: str):
