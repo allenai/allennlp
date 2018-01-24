@@ -197,7 +197,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             linking_features_tensor = linking_features_tensor.cuda(cuda_device)
         return {'text': tensors, 'linking': linking_features_tensor}
 
-    def _compute_linking_features(self) -> List[List[float]]:
+    def _compute_linking_features(self) -> List[List[List[float]]]:
         linking_features = []
         for entity, entity_text in zip(self.knowledge_graph.entities, self.entity_texts):
             entity_features = []
