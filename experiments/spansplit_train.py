@@ -1,10 +1,3 @@
-from __future__ import unicode_literals, print_function, division
-from io import open
-import unicodedata
-import string
-import re
-import random
-
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -438,6 +431,7 @@ def main(argv):
     trainIters(encoder1, attn_decoder1, 150000, print_every=1000)
     print("*** validating ***")
     print(validate(encoder1, attn_decoder1, pairs_dev, 4813))
+    
     
     
 if __name__ == "__main__":
