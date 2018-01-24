@@ -20,7 +20,7 @@ import sys
 
 use_cuda = torch.cuda.is_available()
 
-__all__ = ['prepareData', 'WordVectors', 'EncoderRNN', 'AttnDecoderRNN', 'trainIters', 'validate', 'evaluate']
+__all__ = ['prepareData', 'WordVectors', 'EncoderRNN', 'AttnDecoderRNN', 'trainIters', 'validate', 'evaluate', 'NeuralChunker']
 
 
 SOS_token = 0
@@ -358,8 +358,6 @@ def evaluate(encoder, decoder, input_lang, output_lang, sentence, max_length):
             decoder_input, decoder_hidden, encoder_outputs)
         decoder_attentions[di] = decoder_attention.data
         topv, topi = decoder_output.data.topk(1)
-        print('topv: {}'.format(topv))
-        print('topi: {}'.format(topi))
         ni = topi[0][0]
         if ni == EOS_token:
             decoded_words.append('<EOS>')
@@ -371,6 +369,7 @@ def evaluate(encoder, decoder, input_lang, output_lang, sentence, max_length):
         decoder_input = decoder_input.cuda() if use_cuda else decoder_input
 
     return decoded_words, decoder_attentions[:di + 1]
+
 
 class NeuralChunker:
     def __init__(self, encoder_file, decoder_file, input_lang, output_lang, max_length):
