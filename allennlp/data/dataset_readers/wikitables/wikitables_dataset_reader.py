@@ -106,7 +106,8 @@ class WikiTablesDatasetReader(DatasetReader):
                  table_token_indexers: Dict[str, TokenIndexer] = None,
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
                  terminal_indexers: Dict[str, TokenIndexer] = None,
-                 linking_feature_extractors: List[str] = None) -> None:
+                 linking_feature_extractors: List[str] = None,
+                 include_table_metadata: bool = False) -> None:
         self._tables_directory = tables_directory
         self._dpd_output_directory = dpd_output_directory
         self._max_dpd_logical_forms = max_dpd_logical_forms
@@ -117,6 +118,7 @@ class WikiTablesDatasetReader(DatasetReader):
         self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
         self._terminal_indexers = terminal_indexers or {"token_characters": TokenCharactersIndexer()}
         self._linking_feature_extractors = linking_feature_extractors
+        self._include_table_metadata = include_table_metadata
         self._basic_types = set(str(type_) for type_ in wt_types.BASIC_TYPES)
 
     @overrides
@@ -213,12 +215,14 @@ class WikiTablesDatasetReader(DatasetReader):
         question_field = TextField(tokenized_question, self._question_token_indexers)
         if isinstance(table_info, str):
             table_knowledge_graph = TableKnowledgeGraph.read_from_file(table_info)
+            table_metadata = MetadataField(open(table_info).readlines())
         else:
             table_knowledge_graph = TableKnowledgeGraph.read_from_json(table_info)
+            table_metadata = MetadataField(table_info)
         table_field = KnowledgeGraphField(table_knowledge_graph,
                                           tokenized_question,
-                                          self._tokenizer,
-                                          self._table_token_indexers)
+                                          tokenizer=self._tokenizer,
+                                          token_indexers=self._table_token_indexers)
         world = WikiTablesWorld(table_knowledge_graph, tokenized_question)
         world_field = MetadataField(world)
 
@@ -236,6 +240,8 @@ class WikiTablesDatasetReader(DatasetReader):
                   'table': table_field,
                   'world': world_field,
                   'actions': action_field}
+        if self._include_table_metadata:
+            fields['table_metadata'] = table_metadata
 
         if dpd_output:
             # We'll make each target action sequence a List[IndexField], where the index is into
@@ -329,6 +335,7 @@ class WikiTablesDatasetReader(DatasetReader):
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
         table_token_indexers = TokenIndexer.dict_from_params(params.pop('table_token_indexers', {}))
         linking_feature_extracters = params.pop('linking_feature_extractors', None)
+        include_table_metadata = params.pop('include_table_metadata', False)
         params.assert_empty(cls.__name__)
         return WikiTablesDatasetReader(tables_directory=tables_directory,
                                        dpd_output_directory=dpd_output_directory,
@@ -337,4 +344,5 @@ class WikiTablesDatasetReader(DatasetReader):
                                        tokenizer=tokenizer,
                                        question_token_indexers=question_token_indexers,
                                        table_token_indexers=table_token_indexers,
-                                       linking_feature_extractors=linking_feature_extracters)
+                                       linking_feature_extractors=linking_feature_extracters,
+                                       include_table_metadata=include_table_metadata)
