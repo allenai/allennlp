@@ -1,8 +1,9 @@
 from typing import List, Tuple, Callable, TypeVar
 
 from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
+from allennlp.data.tokenizers.token import Token
 
-T = TypeVar("T")
+T = TypeVar("T", str, Token)
 def enumerate_spans(sentence: List[T],
                     offset: int = 0,
                     max_span_width: int = None,
