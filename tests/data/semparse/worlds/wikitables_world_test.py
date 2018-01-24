@@ -38,7 +38,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
 
     def test_parsing_logical_forms_fails_with_unmapped_names(self):
         with pytest.raises(ParsingError):
-            expression = self.world.parse_logical_form("(number 20)")
+            _ = self.world.parse_logical_form("(number 20)")
 
     def test_world_has_only_basic_numbers(self):
         valid_actions = self.world.get_valid_actions()
