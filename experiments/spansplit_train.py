@@ -38,6 +38,7 @@ def main(argv):
     attn_decoder1 = chunking.main.AttnDecoderRNN(hidden_size, output_lang.n_words, MAX_LENGTH,
                                1, dropout_p=0.1)
 
+    print("*** starting training ***")
     if use_cuda:
         print("*** using cuda to train ***")
         encoder1 = encoder1.cuda()
