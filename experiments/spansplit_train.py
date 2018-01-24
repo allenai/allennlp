@@ -163,7 +163,7 @@ class EncoderRNN(nn.Module):
         self.hidden_size = hidden_size
         self.embedding = nn.Embedding(input_size, hidden_size)
         self.embedding.weight.data.copy_(torch.from_numpy(wordVecs.dumpAsTensor()))
-        self.embedding.weight.requires_grad = False
+        #self.embedding.weight.requires_grad = False
         self.gru = nn.GRU(hidden_size, hidden_size)
 
     def forward(self, input, hidden):
@@ -313,8 +313,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
     plot_losses = []
     print_loss_total = 0  # Reset every print_every
     plot_loss_total = 0  # Reset every plot_every
-    parameters = filter(lambda p: p.requires_grad, encoder.parameters())
-    #parameters = encoder.parameters()
+    #parameters = filter(lambda p: p.requires_grad, encoder.parameters())
+    parameters = encoder.parameters()
     encoder_optimizer = optim.SGD(parameters, lr=learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
     training_pairs = [variablesFromPair(random.choice(pairs))
@@ -344,8 +344,7 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             plot_loss_avg = plot_loss_total / plot_every
             plot_losses.append(plot_loss_avg)
             plot_loss_total = 0
-
-    showPlot(plot_losses)
+            
 
 def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
     input_variable = variableFromSentence(input_lang, sentence)
@@ -437,7 +436,9 @@ def main(argv):
         attn_decoder1 = attn_decoder1.cuda()
 
     trainIters(encoder1, attn_decoder1, 150000, print_every=1000)
- 
-
+    print("*** validating ***")
+    print(validate(encoder1, attn_decoder1, pairs_dev, 4813))
+    
+    
 if __name__ == "__main__":
     main(sys.argv)
