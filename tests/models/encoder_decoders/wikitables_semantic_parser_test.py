@@ -74,7 +74,9 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         # The following properties in entity_probability are tested for by true_probability:
         # (1) It has all 0.0 probabilities when there is no question token, as seen for the
         #     second word in the second batch.
-        # (2) The probabilities for entities of the same type with the same question token should
+        # (2) It has 0.0 probabilities when an entity is masked, as seen in the last two entities
+        #     for the second batch instance.
+        # (3) The probabilities for entities of the same type with the same question token should
         #     sum to at most 1, but not necessarily 1, because some probability mass goes to the
         #     null entity.  We have two entity types here, so each row should sum to at most 2, and
         #     that number will approach 2 as the unnormalized linking scores for each entity get
