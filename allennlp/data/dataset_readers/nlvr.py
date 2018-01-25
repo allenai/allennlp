@@ -97,14 +97,14 @@ class NlvrDatasetReader(DatasetReader):
     @overrides
     def text_to_instance(self,
                          sentence: str,
-                         structured_representation: JsonDict,
+                         structured_representation: List[List[JsonDict]],
                          label: str = None) -> Instance:
         """
         Parameters
         ----------
         sentence : ``str``
             The query sentence.
-        structured_representation : ``JsonDict``
+        structured_representation : ``List[List[JsonDict]]``
             A Json representation of the context. See expected format in this class' docstring.
         label : ``str`` (optional)
             String representation of the label (true or false). Not required while testing.
