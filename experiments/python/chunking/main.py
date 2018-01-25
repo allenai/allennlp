@@ -314,8 +314,8 @@ def trainIters(encoder, decoder, input_lang, output_lang, n_iters, sent_pairs, s
         plot_loss_total += loss
         
         if iter % save_every == 0:
-            torch.save(encoder, 'encoder.{}.pt'.format(iter))
-            torch.save(decoder, 'decoder.{}.pt'.format(iter))
+            torch.save(encoder, 'encoder2.{}.pt'.format(iter))
+            torch.save(decoder, 'decoder2.{}.pt'.format(iter))
 
         if iter % print_every == 0:
             print('train accuracy: {}'.format(validateRandomSubset(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, 100)))
@@ -330,8 +330,6 @@ def trainIters(encoder, decoder, input_lang, output_lang, n_iters, sent_pairs, s
             plot_loss_avg = plot_loss_total / plot_every
             plot_losses.append(plot_loss_avg)
             plot_loss_total = 0
-
-    showPlot(plot_losses)
 
 def evaluate(encoder, decoder, input_lang, output_lang, sentence, max_length):
     input_variable = variableFromSentence(input_lang, sentence)
