@@ -41,6 +41,7 @@ awscli>=1.11.91
 # REST interface for models
 flask==0.12.1
 flask-cors==3.0.3
+gevent==1.2.2
 
 # Talk to postgres demo database
 psycopg2
@@ -57,9 +58,6 @@ tqdm
 
 # In SQuAD eval script, we use this to see if we likely have some tokenization problem.
 editdistance
-
-# Tutorial notebooks
-jupyter
 
 # For pretrained model weights
 h5py

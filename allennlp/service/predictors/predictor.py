@@ -1,4 +1,6 @@
-from typing import List
+from typing import List, Tuple
+import json
+
 from allennlp.common import Registrable
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
@@ -15,23 +17,42 @@ class Predictor(Registrable):
         self._model = model
         self._dataset_reader = dataset_reader
 
-    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
-        instance = self._json_to_instance(inputs)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
-        return sanitize(outputs)
-
-    def _json_to_instance(self, json: JsonDict) -> Instance:
+    def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
         """
-        Converts a JSON object into an :class:`~allennlp.data.instance.Instance`.
+        If your inputs are not in JSON-lines format (e.g. you have a CSV)
+        you can override this function to parse them correctly.
+        """
+        return json.loads(line)
+
+    def dump_line(self, outputs: JsonDict) -> str:  # pylint: disable=no-self-use
+        """
+        If you don't want your outputs in JSON-lines format
+        you can override this function to output them differently.
+        """
+        return json.dumps(outputs) + "\n"
+
+    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+        instance, return_dict = self._json_to_instance(inputs)
+        outputs = self._model.forward_on_instance(instance, cuda_device)
+        return_dict.update(outputs)
+        return sanitize(return_dict)
+
+    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+        """
+        Converts a JSON object into an :class:`~allennlp.data.instance.Instance`
+        and a ``JsonDict`` of information which the ``Predictor`` should pass through,
+        such as tokenised inputs.
         """
         raise NotImplementedError
 
     def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
-        instances = self._batch_json_to_instances(inputs)
+        instances, return_dicts = zip(*self._batch_json_to_instances(inputs))
         outputs = self._model.forward_on_instances(instances, cuda_device)
-        return sanitize(outputs)
+        for output, return_dict in zip(outputs, return_dicts):
+            return_dict.update(output)
+        return sanitize(return_dicts)
 
-    def _batch_json_to_instances(self, json: List[JsonDict]) -> List[Instance]:
+    def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Tuple[Instance, JsonDict]]:
         """
         Converts a list of JSON objects into a list of :class:`~allennlp.data.instance.Instance`s.
         By default, this expects that a "batch" consists of a list of JSON blobs which would
@@ -41,8 +62,8 @@ class Predictor(Registrable):
         directly.
         """
         instances = []
-        for blob in json:
-            instances.append(self._json_to_instance(blob))
+        for json_dict in json_dicts:
+            instances.append(self._json_to_instance(json_dict))
         return instances
 
     @classmethod

@@ -26,7 +26,7 @@ bc/cctv/00/cctv_0000   0   23         Hong   NNP         (NML*         -    -   
 bc/cctv/00/cctv_0000   0   24         Kong   NNP             *)        -    -   -   Speaker#1        *)     *      *             *            *            *    23)
 bc/cctv/00/cctv_0000   0   25        media   NNS         *)))))        -    -   -   Speaker#1        *      *      *             *            *)           *)    -
 bc/cctv/00/cctv_0000   0   26            .     .            *))        -    -   -   Speaker#1        *      *      *             *            *            *     -
-
+ 
 bc/cctv/00/cctv_0000   0    0         With     IN  (TOP(S(PP*       -    -   -   Speaker#1       *             *   (ARGM-MNR*        *      -
 bc/cctv/00/cctv_0000   0    1        their   PRP$        (NP*       -    -   -   Speaker#1       *             *            *        *    (18)
 bc/cctv/00/cctv_0000   0    2       unique     JJ           *       -    -   -   Speaker#1       *             *            *        *      -
@@ -51,7 +51,7 @@ bc/cctv/00/cctv_0000   0   20           of     IN        (PP*       -    -   -  
 bc/cctv/00/cctv_0000   0   21    worldwide     JJ        (NP*       -    -   -   Speaker#1       *             *            *        *      -
 bc/cctv/00/cctv_0000   0   22    attention     NN     *)))))))      -    -   -   Speaker#1       *             *            *)       *)     -
 bc/cctv/00/cctv_0000   0   23            .      .          *))      -    -   -   Speaker#1       *             *            *        *      -
-
+ 
 bc/cctv/00/cctv_0000   0    0       The    DT  (TOP(S(NP(NP*      -    -   -   Speaker#1           *        (ARG1*      -
 bc/cctv/00/cctv_0000   0    1     world    NN              *      -    -   -   Speaker#1           *             *      -
 bc/cctv/00/cctv_0000   0    2        's   POS              *)     -    -   -   Speaker#1           *             *      -
@@ -66,7 +66,7 @@ bc/cctv/00/cctv_0000   0   10       the    DT           (NP*      -    -   -   S
 bc/cctv/00/cctv_0000   0   11    public    NN             *))     -    -   -   Speaker#1           *             *)     -
 bc/cctv/00/cctv_0000   0   12      here    RB       (ADVP*)))     -    -   -   Speaker#1           *    (ARGM-LOC*)     -
 bc/cctv/00/cctv_0000   0   13         .     .             *))     -    -   -   Speaker#1           *             *      -
-
+ 
 #end document
 #begin document (bc/cctv/00/cctv_0000); part 003
 bc/cctv/00/cctv_0000   3    0           The     DT  (TOP(S(NP(NP*    -    -   -   Speaker#1            *   (ARG1*    -
@@ -83,20 +83,20 @@ bc/cctv/00/cctv_0000   3   10          plus     CC              *)   -    -   - 
 bc/cctv/00/cctv_0000   3   11        square     JJ              *    -    -   -   Speaker#1            *        *    -
 bc/cctv/00/cctv_0000   3   12    kilometers    NNS             *))   -    -   -   Speaker#1            *)       *)   -
 bc/cctv/00/cctv_0000   3   13             .      .             *))   -    -   -   Speaker#1            *        *    -
-
+ 
 bc/cctv/00/cctv_0000   3   0           The    DT  (TOP(S(NP*    -    -   -   Speaker#1   *    (ARG1*   -
 bc/cctv/00/cctv_0000   3   1    population    NN           *)   -    -   -   Speaker#1   *         *)  -
 bc/cctv/00/cctv_0000   3   2            is   VBZ        (VP*    be  01   1   Speaker#1   *       (V*)  -
 bc/cctv/00/cctv_0000   3   3         dense    JJ     (ADJP*))   -    -   -   Speaker#1   *    (ARG2*)  -
 bc/cctv/00/cctv_0000   3   4             .     .          *))   -    -   -   Speaker#1   *         *   -
-
+ 
 bc/cctv/00/cctv_0000   3   0       Natural    JJ  (TOP(S(NP*    -    -   -   Speaker#1   *   (ARG1*   -
 bc/cctv/00/cctv_0000   3   1     resources   NNS           *)   -    -   -   Speaker#1   *        *)  -
 bc/cctv/00/cctv_0000   3   2           are   VBP        (VP*    be  01   1   Speaker#1   *      (V*)  -
 bc/cctv/00/cctv_0000   3   3    relatively    RB      (ADJP*    -    -   -   Speaker#1   *   (ARG2*   -
 bc/cctv/00/cctv_0000   3   4        scarce    JJ          *))   -    -   -   Speaker#1   *        *)  -
 bc/cctv/00/cctv_0000   3   5             .     .          *))   -    -   -   Speaker#1   *        *   -
-
+ 
 bc/cctv/00/cctv_0000   3    0       However    RB   (TOP(S(ADVP*)        -    -   -   Speaker#1       *    (ARGM-DIS*)     *         *        *      -
 bc/cctv/00/cctv_0000   3    1             ,     ,              *         -    -   -   Speaker#1       *             *      *         *        *      -
 bc/cctv/00/cctv_0000   3    2           the    DT           (NP*         -    -   -   Speaker#1       *        (ARG0*      *         *   (ARG0*    (44
@@ -119,5 +119,5 @@ bc/cctv/00/cctv_0000   3   18          Kong   NNP              *)        -    - 
 bc/cctv/00/cctv_0000   3   19       tourism    NN              *         -    -   -   Speaker#1       *             *      *         *        *      -
 bc/cctv/00/cctv_0000   3   20      industry    NN         *))))))        -    -   -   Speaker#1       *             *)     *         *        *)     -
 bc/cctv/00/cctv_0000   3   21             .     .             *))        -    -   -   Speaker#1       *             *      *         *        *      -
-
+ 
 #end document

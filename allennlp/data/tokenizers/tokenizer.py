@@ -23,9 +23,16 @@ class Tokenizer(Registrable):
     """
     default_implementation = 'word'
 
+    def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
+        """
+        Batches together tokenization of several texts, in case that is faster for particular
+        tokenizers.
+        """
+        raise NotImplementedError
+
     def tokenize(self, text: str) -> List[Token]:
         """
-        The only public method for this class.  Actually implements splitting words into tokens.
+        Actually implements splitting words into tokens.
 
         Returns
         -------

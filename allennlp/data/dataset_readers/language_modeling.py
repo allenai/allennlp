@@ -105,7 +105,7 @@ class LanguageModelingReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'LanguageModelingReader':
-        tokens_per_instance = params.pop('tokens_per_instance', None)
+        tokens_per_instance = params.pop_int('tokens_per_instance', None)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         params.assert_empty(cls.__name__)

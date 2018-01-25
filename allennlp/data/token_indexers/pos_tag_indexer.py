@@ -73,6 +73,6 @@ class PosTagIndexer(TokenIndexer[int]):
     @classmethod
     def from_params(cls, params: Params) -> 'PosTagIndexer':
         namespace = params.pop('namespace', 'pos_tags')
-        coarse_tags = params.pop('coarse_tags', False)
+        coarse_tags = params.pop_bool('coarse_tags', False)
         params.assert_empty(cls.__name__)
         return cls(namespace=namespace, coarse_tags=coarse_tags)

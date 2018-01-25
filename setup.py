@@ -51,6 +51,7 @@ run chmod 600 ./pypirc so only you can read/write.
 
 """
 from setuptools import setup, find_packages
+from allennlp import version
 
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/
@@ -65,7 +66,7 @@ from setuptools import setup, find_packages
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
-VERSION = '0.3.1-unreleased'
+VERSION = version.VERSION
 
 
 setup(name='allennlp',
@@ -101,7 +102,6 @@ setup(name='allennlp',
           'requests>=2.18',
           'tqdm',
           'editdistance',
-          'jupyter',
           'h5py',
           'scikit-learn',
           'scipy',

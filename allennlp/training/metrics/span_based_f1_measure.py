@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 from collections import defaultdict
 
 import torch
@@ -7,6 +7,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, ones_like
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.training.metrics.metric import Metric
+from allennlp.data.dataset_readers.dataset_utils.span_utils import bio_tags_to_spans, TypedStringSpan
 
 
 @Metric.register("span_f1")
@@ -48,7 +49,7 @@ class SpanBasedF1Measure(Metric):
             spans in a BIO tagging scheme which are typically not included.
         """
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(tag_namespace)
-        self._ignore_classes = ignore_classes or []
+        self._ignore_classes: List[str] = ignore_classes or []
 
         # These will hold per label span counts.
         self._true_positives: Dict[str, int] = defaultdict(int)
@@ -111,91 +112,62 @@ class SpanBasedF1Measure(Metric):
                 # It is possible to call this metric with sequences which are
                 # completely padded. These contribute nothing, so we skip these rows.
                 continue
-            prediction_spans = self._extract_spans(sequence_prediction[:length].tolist())
-            gold_spans = self._extract_spans(sequence_gold_label[:length].tolist())
 
-            for span in prediction_spans:
+            predicted_string_labels = [self._label_vocabulary[label_id]
+                                       for label_id in sequence_prediction[:length].tolist()]
+            gold_string_labels = [self._label_vocabulary[label_id]
+                                  for label_id in sequence_gold_label[:length].tolist()]
+            predicted_spans = bio_tags_to_spans(predicted_string_labels, self._ignore_classes)
+            gold_spans = bio_tags_to_spans(gold_string_labels, self._ignore_classes)
+
+            predicted_spans = self._handle_continued_spans(predicted_spans)
+            gold_spans = self._handle_continued_spans(gold_spans)
+
+            for span in predicted_spans:
                 if span in gold_spans:
-                    self._true_positives[span[1]] += 1
+                    self._true_positives[span[0]] += 1
                     gold_spans.remove(span)
                 else:
-                    self._false_positives[span[1]] += 1
+                    self._false_positives[span[0]] += 1
             # These spans weren't predicted.
             for span in gold_spans:
-                self._false_negatives[span[1]] += 1
+                self._false_negatives[span[0]] += 1
 
-    def _extract_spans(self, tag_sequence: List[int]) -> Set[Tuple[Tuple[int, int], str]]:
+    @staticmethod
+    def _handle_continued_spans(spans: List[TypedStringSpan]) -> List[TypedStringSpan]:
         """
-        Given an integer tag sequence corresponding to BIO tags, extracts spans.
-        Spans are inclusive and can be of zero length, representing a single word span.
-        Ill-formed spans are also included (i.e those which do not start with a "B-LABEL"),
-        as otherwise it is possible to get a perfect precision score whilst still predicting
-        ill-formed spans in addition to the correct spans.
+        The official CONLL 2012 evaluation script for SRL treats continued spans (i.e spans which
+        have a `C-` prepended to another valid tag) as part of the span that they are continuing.
+        This is basically a massive hack to allow SRL models which produce a linear sequence of
+        predictions to do something close to structured prediction. However, this means that to
+        compute the metric, these continutation spans need to be merged into the span to which
+        they refer. The way this is done is to simply consider the span for the continued argument
+        to start at the start index of the first occurence of the span and end at the end index
+        of the last occurence of the span. Handling this is important, because predicting continued
+        spans is difficult and typically will effect overall average F1 score by ~ 2 points.
 
         Parameters
         ----------
-        tag_sequence : List[int], required.
-            The integer class labels for a sequence.
+        spans : ``List[TypedStringSpan]``, required.
+            A list of (label, (start, end)) spans.
 
         Returns
         -------
-        spans : Set[Tuple[Tuple[int, int], str]]
-            The typed, extracted spans from the sequence, in the format ((span_start, span_end), label).
-            Note that the label `does not` contain any BIO tag prefixes.
+        A ``List[TypedStringSpan]`` with continued arguments replaced with a single span.
         """
-        spans = set()
-        span_start = 0
-        span_end = 0
-        active_conll_tag = None
-        for index, integer_tag in enumerate(tag_sequence):
-            # Actual BIO tag.
-            string_tag = self._label_vocabulary[integer_tag]
-            bio_tag = string_tag[0]
-            conll_tag = string_tag[2:]
-            if bio_tag == "O" or conll_tag in self._ignore_classes:
-                # The span has ended.
-                if active_conll_tag:
-                    spans.add(((span_start, span_end), active_conll_tag))
-                active_conll_tag = None
-                # We don't care about tags we are
-                # told to ignore, so we do nothing.
-                continue
-            elif bio_tag == "U":
-                # The U tag is used to indicate a span of length 1,
-                # so if there's an active tag we end it, and then
-                # we add a "length 0" tag.
-                if active_conll_tag:
-                    spans.add(((span_start, span_end), active_conll_tag))
-                spans.add(((index, index), conll_tag))
-                active_conll_tag = None
-            elif bio_tag == "B":
-                # We are entering a new span; reset indices
-                # and active tag to new span.
-                if active_conll_tag:
-                    spans.add(((span_start, span_end), active_conll_tag))
-                active_conll_tag = conll_tag
-                span_start = index
-                span_end = index
-            elif bio_tag == "I" and conll_tag == active_conll_tag:
-                # We're inside a span.
-                span_end += 1
-            else:
-                # This is the case the bio label is an "I", but either:
-                # 1) the span hasn't started - i.e. an ill formed span.
-                # 2) The span is an I tag for a different conll annotation.
-                # We'll process the previous span if it exists, but also
-                # include this span. This is important, because otherwise,
-                # a model may get a perfect F1 score whilst still including
-                # false positive ill-formed spans.
-                if active_conll_tag:
-                    spans.add(((span_start, span_end), active_conll_tag))
-                active_conll_tag = conll_tag
-                span_start = index
-                span_end = index
-        # Last token might have been a part of a valid span.
-        if active_conll_tag:
-            spans.add(((span_start, span_end), active_conll_tag))
-        return spans
+        span_set: Set[TypedStringSpan] = set(spans)
+        continued_labels: List[str] = [label[2:] for (label, span) in span_set if label.startswith("C-")]
+        for label in continued_labels:
+            continued_spans = {span for span in span_set if label in span[0]}
+
+            span_start = min(span[1][0] for span in continued_spans)
+            span_end = max(span[1][1] for span in continued_spans)
+            replacement_span: TypedStringSpan = (label, (span_start, span_end))
+
+            span_set.difference_update(continued_spans)
+            span_set.add(replacement_span)
+
+        return list(span_set)
 
     def get_metric(self, reset: bool = False):
         """

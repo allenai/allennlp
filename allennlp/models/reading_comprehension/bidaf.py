@@ -6,7 +6,7 @@ from torch.autograd import Variable
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
+from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
@@ -94,27 +94,14 @@ class BidirectionalAttentionFlow(Model):
         span_end_input_dim = encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
 
-        # Bidaf has lots of layer dimensions which need to match up - these
-        # aren't necessarily obvious from the configuration files, so we check
-        # here.
-        if modeling_layer.get_input_dim() != 4 * encoding_dim:
-            raise ConfigurationError("The input dimension to the modeling_layer must be "
-                                     "equal to 4 times the encoding dimension of the phrase_layer. "
-                                     "Found {} and 4 * {} respectively.".format(modeling_layer.get_input_dim(),
-                                                                                encoding_dim))
-        if text_field_embedder.get_output_dim() != phrase_layer.get_input_dim():
-            raise ConfigurationError("The output dimension of the text_field_embedder (embedding_dim + "
-                                     "char_cnn) must match the input dimension of the phrase_encoder. "
-                                     "Found {} and {}, respectively.".format(text_field_embedder.get_output_dim(),
-                                                                             phrase_layer.get_input_dim()))
-
-        if span_end_encoder.get_input_dim() != encoding_dim * 4 + modeling_dim * 3:
-            raise ConfigurationError("The input dimension of the span_end_encoder should be equal to "
-                                     "4 * phrase_layer.output_dim + 3 * modeling_layer.output_dim. "
-                                     "Found {} and (4 * {} + 3 * {}) "
-                                     "respectively.".format(span_end_encoder.get_input_dim(),
-                                                            encoding_dim,
-                                                            modeling_dim))
+        # Bidaf has lots of layer dimensions which need to match up - these aren't necessarily
+        # obvious from the configuration files, so we check here.
+        check_dimensions_match(modeling_layer.get_input_dim(), 4 * encoding_dim,
+                               "modeling layer input dim", "4 * encoding dim")
+        check_dimensions_match(text_field_embedder.get_output_dim(), phrase_layer.get_input_dim(),
+                               "text field embedder output dim", "phrase layer input dim")
+        check_dimensions_match(span_end_encoder.get_input_dim(), 4 * encoding_dim + 3 * modeling_dim,
+                               "span end encoder input dim", "4 * encoding dim + 3 * modeling dim")
 
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
@@ -329,17 +316,17 @@ class BidirectionalAttentionFlow(Model):
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        num_highway_layers = params.pop("num_highway_layers")
+        num_highway_layers = params.pop_int("num_highway_layers")
         phrase_layer = Seq2SeqEncoder.from_params(params.pop("phrase_layer"))
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
         modeling_layer = Seq2SeqEncoder.from_params(params.pop("modeling_layer"))
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
-        dropout = params.pop('dropout', 0.2)
+        dropout = params.pop_float('dropout', 0.2)
 
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
-        mask_lstms = params.pop('mask_lstms', True)
+        mask_lstms = params.pop_bool('mask_lstms', True)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,

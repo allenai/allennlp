@@ -17,6 +17,15 @@ class WordSplitter(Registrable):
     """
     default_implementation = 'spacy'
 
+    def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
+        """
+        Spacy needs to do batch processing, or it can be really slow.  This method lets you take
+        advantage of that if you want.  Default implementation is to just iterate of the sentences
+        and call ``split_words``, but the ``SpacyWordSplitter`` will actually do batched
+        processing.
+        """
+        return [self.split_words(sentence) for sentence in sentences]
+
     def split_words(self, sentence: str) -> List[Token]:
         """
         Splits ``sentence`` into a list of :class:`Token` objects.
@@ -171,6 +180,10 @@ class SpacyWordSplitter(WordSplitter):
         self.spacy = get_spacy_model(language, pos_tags, parse, ner)
 
     @overrides
+    def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
+        return self.spacy.pipe(sentences, n_threads=-1)
+
+    @overrides
     def split_words(self, sentence: str) -> List[Token]:
         # This works because our Token class matches spacy's.
         return [t for t in self.spacy(sentence) if not t.is_space]
@@ -178,8 +191,8 @@ class SpacyWordSplitter(WordSplitter):
     @classmethod
     def from_params(cls, params: Params) -> 'WordSplitter':
         language = params.pop('language', 'en_core_web_sm')
-        pos_tags = params.pop('pos_tags', False)
-        parse = params.pop('parse', False)
-        ner = params.pop('ner', False)
+        pos_tags = params.pop_bool('pos_tags', False)
+        parse = params.pop_bool('parse', False)
+        ner = params.pop_bool('ner', False)
         params.assert_empty(cls.__name__)
         return cls(language, pos_tags, parse, ner)

@@ -136,10 +136,10 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
 
     @classmethod
     def from_params(cls, params: Params) -> 'IntraSentenceAttentionEncoder':
-        input_dim = params.pop('input_dim')
-        projection_dim = params.pop('projection_dim', None)
+        input_dim = params.pop_int('input_dim')
+        projection_dim = params.pop_int('projection_dim', None)
         similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
-        num_attention_heads = params.pop('num_attention_heads', 1)
+        num_attention_heads = params.pop_int('num_attention_heads', 1)
         combination = params.pop('combination', '1,2')
         params.assert_empty(cls.__name__)
         return cls(input_dim=input_dim,

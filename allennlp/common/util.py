@@ -3,8 +3,10 @@ Various utilities that don't fit anwhere else.
 """
 
 from itertools import zip_longest
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Tuple, TypeVar
 import random
+import resource
+import sys
 
 import torch
 import numpy
@@ -131,7 +133,7 @@ def namespace_match(pattern: str, namespace: str):
     return False
 
 
-def prepare_environment(params: Union[Params, Dict[str, Any]]):
+def prepare_environment(params: Params):
     """
     Sets random seeds for reproducible experiments. This may not work as expected
     if you use this from within a python project in which you have already imported Pytorch.
@@ -146,9 +148,9 @@ def prepare_environment(params: Union[Params, Dict[str, Any]]):
     params: Params object or dict, required.
         A ``Params`` object or dict holding the json parameters.
     """
-    seed = params.pop("random_seed", 13370)
-    numpy_seed = params.pop("numpy_seed", 1337)
-    torch_seed = params.pop("pytorch_seed", 133)
+    seed = params.pop_int("random_seed", 13370)
+    numpy_seed = params.pop_int("numpy_seed", 1337)
+    torch_seed = params.pop_int("pytorch_seed", 133)
 
     if seed is not None:
         random.seed(seed)
@@ -184,3 +186,28 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
         spacy_model = spacy.load(spacy_model_name, disable=disable)
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
+
+def peak_memory_mb() -> float:
+    """
+    Get peak memory usage for this process, as measured by
+    max-resident-set size:
+
+    https://unix.stackexchange.com/questions/30940/getrusage-system-call-what-is-maximum-resident-set-size
+
+    Only works on OSX and Linux, returns 0.0 otherwise.
+    """
+    if sys.platform not in ('linux', 'darwin'):
+        return 0.0
+
+    # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
+    # next line, but later versions (e.g. 0.530) are fine with it. Once we get that
+    # figured out, remove the type: ignore.
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
+
+    if sys.platform == 'darwin':
+        # On OSX the result is in bytes.
+        return peak / 1_000_000
+
+    else:
+        # On Linux the result is in kilobytes.
+        return peak / 1_000

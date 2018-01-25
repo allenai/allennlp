@@ -14,13 +14,14 @@ class TestCorefReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
         conll_reader = ConllCorefReader(max_span_width=self.span_width)
-        dataset = conll_reader.read('tests/fixtures/data/coref/sample.gold_conll')
+        dataset = conll_reader.read('tests/fixtures/coref/coref.gold_conll')
 
         assert len(dataset.instances) == 2
 
         instances = dataset.instances
         fields = instances[0].fields
         text = [x.text for x in fields["text"].tokens]
+
         assert text == ['In', 'the', 'summer', 'of', '2005', ',', 'a', 'picture', 'that',
                         'people', 'have', 'long', 'been', 'looking', 'forward', 'to',
                         'started', 'emerging', 'with', 'frequency', 'in', 'various', 'major',
@@ -59,6 +60,7 @@ class TestCorefReader(AllenNlpTestCase):
         span_ends = fields["span_ends"].field_list
 
         candidate_mentions = self.check_candidate_mentions_are_well_defined(span_starts, span_ends, text)
+
         gold_span_labels = fields["span_labels"]
         gold_indices_with_ids = [(i, x) for i, x in enumerate(gold_span_labels.labels) if x != -1]
         gold_mentions_with_ids: List[Tuple[List[str], int]] = [(candidate_mentions[i], x)

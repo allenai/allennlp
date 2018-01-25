@@ -8,6 +8,7 @@ allennlp.data.fields
 
 * :ref:`Field<field>`
 * :ref:`IndexField<index-field>`
+* :ref:`SpanField<span-field>`
 * :ref:`LabelField<label-field>`
 * :ref:`ListField<list-field>`
 * :ref:`MetadataField<metadata-field>`
@@ -24,6 +25,12 @@ allennlp.data.fields
 
 .. _index-field:
 .. automodule:: allennlp.data.fields.index_field
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _span-field:
+.. automodule:: allennlp.data.fields.span_field
    :members:
    :undoc-members:
    :show-inheritance:

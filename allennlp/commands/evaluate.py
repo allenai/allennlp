@@ -29,7 +29,7 @@ import tqdm
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import prepare_environment
-from allennlp.data import Dataset
+from allennlp.data import InstanceCollection
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
@@ -76,7 +76,7 @@ class Evaluate(Subcommand):
 
 
 def evaluate(model: Model,
-             dataset: Dataset,
+             dataset: InstanceCollection,
              iterator: DataIterator,
              cuda_device: int) -> Dict[str, Any]:
     model.eval()

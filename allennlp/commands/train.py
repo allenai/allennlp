@@ -32,7 +32,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.common.util import prepare_environment
-from allennlp.data import Dataset, Vocabulary
+from allennlp.data import InstanceCollection, Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.archival import archive_model
@@ -61,6 +61,11 @@ class Train(Subcommand):
                                    type=str,
                                    help=argparse.SUPPRESS)
 
+        subparser.add_argument('-o', '--overrides',
+                               type=str,
+                               default="",
+                               help='a HOCON structure used to override the experiment configuration')
+
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
@@ -70,10 +75,10 @@ def train_model_from_args(args: argparse.Namespace):
     """
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
-    train_model_from_file(args.param_path, args.serialization_dir)
+    train_model_from_file(args.param_path, args.serialization_dir, args.overrides)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Model:
+def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: str = "") -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -85,9 +90,35 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Mo
         The directory in which to save results and logs.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
-    params = Params.from_file(parameter_filename)
+    params = Params.from_file(parameter_filename, overrides)
     return train_model(params, serialization_dir)
 
+
+def datasets_from_params(params: Params) -> Dict[str, InstanceCollection]:
+    """
+    Load all the datasets specified by the config.
+    """
+    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
+
+    train_data_path = params.pop('train_data_path')
+    logger.info("Reading training data from %s", train_data_path)
+    train_data = dataset_reader.read(train_data_path)
+
+    datasets: Dict[str, InstanceCollection] = {"train": train_data}
+
+    validation_data_path = params.pop('validation_data_path', None)
+    if validation_data_path is not None:
+        logger.info("Reading validation data from %s", validation_data_path)
+        validation_data = dataset_reader.read(validation_data_path)
+        datasets["validation"] = validation_data
+
+    test_data_path = params.pop("test_data_path", None)
+    if test_data_path is not None:
+        logger.info("Reading test data from %s", test_data_path)
+        test_data = dataset_reader.read(test_data_path)
+        datasets["test"] = test_data
+
+    return datasets
 
 def train_model(params: Params, serialization_dir: str) -> Model:
     """
@@ -120,31 +151,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     with open(os.path.join(serialization_dir, "model_params.json"), "w") as param_file:
         json.dump(serialization_params, param_file, indent=4)
 
-    # Now we begin assembling the required parts for the Trainer.
-    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
-
-    train_data_path = params.pop('train_data_path')
-    logger.info("Reading training data from %s", train_data_path)
-    train_data = dataset_reader.read(train_data_path)
-
-    all_datasets: Dict[str, Dataset] = {"train": train_data}
-
-    validation_data_path = params.pop('validation_data_path', None)
-    if validation_data_path is not None:
-        logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = dataset_reader.read(validation_data_path)
-        all_datasets["validation"] = validation_data
-    else:
-        validation_data = None
-
-    test_data_path = params.pop("test_data_path", None)
-    if test_data_path is not None:
-        logger.info("Reading test data from %s", test_data_path)
-        test_data = dataset_reader.read(test_data_path)
-        all_datasets["test"] = test_data
-    else:
-        test_data = None
-
+    all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
     for dataset in datasets_for_vocab_creation:
@@ -153,13 +160,17 @@ def train_model(params: Params, serialization_dir: str) -> Model:
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
-                                   Dataset([instance for key, dataset in all_datasets.items()
-                                            for instance in dataset.instances
-                                            if key in datasets_for_vocab_creation]))
+                                   (instance for key, dataset in all_datasets.items()
+                                    for instance in dataset
+                                    if key in datasets_for_vocab_creation))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
+
+    train_data = all_datasets['train']
+    validation_data = all_datasets.get('validation')
+    test_data = all_datasets.get('test')
 
     train_data.index_instances(vocab)
     if validation_data:
@@ -173,7 +184,7 @@ def train_model(params: Params, serialization_dir: str) -> Model:
                                   validation_data,
                                   trainer_params)
 
-    evaluate_on_test = params.pop("evaluate_on_test", False)
+    evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
     trainer.train()
 

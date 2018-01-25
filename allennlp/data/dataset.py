@@ -5,10 +5,11 @@ For example, when you train a model, you will likely have a *training* dataset a
 
 import logging
 from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Iterable, Iterator, Callable
 
 import torch
 import tqdm
+from overrides import overrides
 
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
@@ -17,20 +18,43 @@ from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class Dataset:
+class InstanceCollection(Iterable):
     """
-    A collection of :class:`~allennlp.data.instance.Instance` objects.
-    The ``Instances`` have ``Fields``, and the fields
-    could be in an indexed or unindexed state - the ``Dataset`` has methods around indexing the
-    data and converting the data into arrays.
+    This is the abstract base class for :class:`~allennlp.data.instance.Dataset`
+    and :class:`~allennlp.data.instance.LazyDataset` objects. As its name indicates,
+    it's a collection of :class:`~allennlp.data.instance.Instance` objects
+    that can be iterated over. Depending on the subclass, the instances may be stored
+    in memory, or they may be generated (e.g. from disk) and discarded each iteration.
+    The ``Instances`` have ``Fields``, and the fields could be in an indexed or unindexed state -
+    the ``index_instances`` method indexes the data.
+    """
+    def __iter__(self) -> Iterator[Instance]:
+        """
+        Returns an iterator that ranges over every Instance in the Dataset.
+        """
+        raise NotImplementedError
+
+    def index_instances(self, vocab: Vocabulary) -> None:
+        """
+        Ensures that all ``Instances`` have been indexed using the provided vocabulary.
+        The indexing may or may not happen immediately, but it's guaranteed to happen
+        before your next iteration.
+        """
+        raise NotImplementedError
+
+
+class Dataset(InstanceCollection):
+    """
+    This class is used to represent both an entire dataset (that's small enough to fit in memory)
+    and also a batch from a larger dataset. In addition to the ``InstanceCollection`` methods,
+    it contains helper functions for converting the data into tensors.
     """
     def __init__(self, instances: List[Instance]) -> None:
         """
-        A Dataset just takes a list of instances in its constructor.  It's important that all
-        subclasses have an identical constructor to this (though possibly with different Instance
-        types).  If you change the constructor, you also have to override all methods in this base
-        class that call the constructor, such as `truncate()`.
+        A Dataset just takes a list of instances in its constructor and hangs onto them.
         """
+        super().__init__()
+
         all_instance_fields_and_types: List[Dict[str, str]] = [{k: v.__class__.__name__
                                                                 for k, v in x.fields.items()}
                                                                for x in instances]
@@ -40,20 +64,8 @@ class Dataset:
 
         self.instances = instances
 
-    def truncate(self, max_instances: int):
-        """
-        If there are more instances than ``max_instances`` in this dataset, we truncate the
-        instances to the first ``max_instances``.  This `modifies` the current object, and returns
-        nothing.
-        """
-        if len(self.instances) > max_instances:
-            self.instances = self.instances[:max_instances]
-
-    def index_instances(self, vocab: Vocabulary):
-        """
-        Converts all ``UnindexedFields`` in all ``Instances`` in this ``Dataset`` into
-        ``IndexedFields``.  This modifies the current object, it does not return a new object.
-        """
+    @overrides
+    def index_instances(self, vocab: Vocabulary) -> None:
         logger.info("Indexing dataset")
         for instance in tqdm.tqdm(self.instances):
             instance.index_fields(vocab)
@@ -170,3 +182,43 @@ class Dataset:
         for field_name, field_tensor_list in field_tensors.items():
             final_fields[field_name] = field_classes[field_name].batch_tensors(field_tensor_list)
         return final_fields
+
+    @overrides
+    def __iter__(self) -> Iterator[Instance]:
+        return iter(self.instances)
+
+
+
+class LazyDataset(InstanceCollection):
+    """
+    A Dataset that contains a way of generating instances, rather than a
+    concrete list of them.
+
+    Parameters
+    ----------
+    instance_generator: ``Callable[[], Iterator[Instance]])``
+        This function should be callable multiple times, and each time it should
+        return an iterator that ranges over all instances.
+    """
+    def __init__(self,
+                 instance_generator: Callable[[], Iterator[Instance]]) -> None:
+        super().__init__()
+        self.generator = instance_generator
+        self.vocab: Vocabulary = None
+
+    @overrides
+    def index_instances(self, vocab: Vocabulary) -> None:
+        """
+        A ``LazyDataset`` doesn't have a collection of instances ready to
+        iterate over; instead we'll need to call ``Instance.index_fields``
+        as the instances are generated. So here we just grab a reference to
+        the ``Vocabulary`` so that we can do the indexing at iteration time.
+        """
+        self.vocab = vocab
+
+    @overrides
+    def __iter__(self) -> Iterator[Instance]:
+        for instance in self.generator():
+            if self.vocab is not None:
+                instance.index_fields(self.vocab)
+            yield instance

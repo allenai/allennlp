@@ -1,4 +1,4 @@
-from typing import List
+from typing import Iterable
 import math
 import random
 
@@ -8,11 +8,10 @@ from allennlp.common import Params
 from allennlp.common.util import group_by_count
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.dataset import Dataset
-from allennlp.data.instance import Instance
 
 
 @DataIterator.register("basic")
-class BasicIterator(DataIterator):
+class BasicIterator(DataIterator[Dataset]):
     """
     A very basic iterator, which takes a dataset, pads all of its instances to the maximum lengths
     of the relevant fields across the whole dataset, and yields fixed size batches.
@@ -30,7 +29,7 @@ class BasicIterator(DataIterator):
         return math.ceil(len(dataset.instances) / self._batch_size)
 
     @overrides
-    def _create_batches(self, dataset: Dataset, shuffle: bool) -> List[List[Instance]]:
+    def _create_batches(self, dataset: Dataset, shuffle: bool) -> Iterable[Dataset]:
         instances = dataset.instances
         if shuffle:
             random.shuffle(instances)
@@ -38,10 +37,10 @@ class BasicIterator(DataIterator):
         # The last group might have not been full, so we check if any of the instances
         # are None, which is how group_by_count pads non-complete batches.
         grouped_instances[-1] = [instance for instance in grouped_instances[-1] if instance is not None]
-        return grouped_instances
+        return (Dataset(batch) for batch in grouped_instances)
 
     @classmethod
     def from_params(cls, params: Params) -> 'BasicIterator':
-        batch_size = params.pop('batch_size', 32)
+        batch_size = params.pop_int('batch_size', 32)
         params.assert_empty(cls.__name__)
         return cls(batch_size=batch_size)

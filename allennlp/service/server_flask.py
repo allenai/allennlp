@@ -16,12 +16,13 @@ from functools import lru_cache
 
 from flask import Flask, request, Response, jsonify, send_file, send_from_directory
 from flask_cors import CORS
+from gevent.wsgi import WSGIServer
 
 import psycopg2
 
 import pytz
 
-from allennlp.common.util import JsonDict
+from allennlp.common.util import JsonDict, peak_memory_mb
 from allennlp.service.db import DemoDatabase, PostgresDemoDatabase
 from allennlp.service.permalinks import int_to_slug, slug_to_int
 from allennlp.service.predictors import Predictor, DemoModel
@@ -66,7 +67,8 @@ def run(port: int,
         predictor = demo_model.predictor()
         app.predictors[name] = predictor
 
-    app.run(port=port, host="0.0.0.0")
+    http_server = WSGIServer(('0.0.0.0', port), app)
+    http_server.serve_forever()
 
 def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Flask:
     if build_dir is None:
@@ -239,6 +241,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
                 "start_time": start_time_str,
                 "uptime": uptime,
                 "git_version": git_version,
+                "peak_memory_mb": peak_memory_mb(),
                 "githubUrl": "http://github.com/allenai/allennlp/commit/" + git_version})
 
     # As a SPA, we need to return index.html for /model-name and /model-name/permalink
