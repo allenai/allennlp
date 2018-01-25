@@ -10,6 +10,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import DatasetReader, Vocabulary
+from allennlp.data.dataset import Batch
 from allennlp.models import BidirectionalAttentionFlow, Model
 
 
@@ -19,7 +20,9 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         self.set_up_model('tests/fixtures/bidaf/experiment.json', 'tests/fixtures/data/squad.json')
 
     def test_forward_pass_runs_correctly(self):
-        training_tensors = self.dataset.as_tensor_dict()
+        batch = Batch(self.generator())
+        batch.index_instances(self.vocab)
+        training_tensors = batch.as_tensor_dict()
         output_dict = self.model(**training_tensors)
 
         metrics = self.model.get_metrics(reset=True)
@@ -38,7 +41,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         span_start, span_end = tuple(output_dict['best_span'][0].data.numpy())
         assert span_start >= 0
         assert span_start <= span_end
-        assert span_end < self.dataset.instances[0].fields['passage'].sequence_length()
+        assert span_end < self.instances[0].fields['passage'].sequence_length()
         assert isinstance(output_dict['best_span_str'][0], str)
 
     # Some recent efficiency changes (using bmm for `weighted_sum`, the more efficient
@@ -59,16 +62,17 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         # pylint: disable=protected-access,attribute-defined-outside-init
 
         # Save some state.
-        saved_dataset = self.dataset
         saved_model = self.model
+        saved_generator = self.generator
 
         # Modify the state, run the test with modified state.
         params = Params.from_file(self.param_file)
         reader = DatasetReader.from_params(params['dataset_reader'])
         reader._token_indexers = {'tokens': reader._token_indexers['tokens']}
-        self.dataset = reader.read('tests/fixtures/data/squad.json')
-        vocab = Vocabulary.from_instances(self.dataset)
-        self.dataset.index_instances(vocab)
+        self.generator = reader.instance_generator('tests/fixtures/data/squad.json')
+        vocab = Vocabulary.from_instances(self.generator())
+        for instance in self.generator():
+            instance.index_fields(vocab)
         del params['model']['text_field_embedder']['token_characters']
         params['model']['phrase_layer']['input_size'] = 2
         self.model = Model.from_params(vocab, params['model'])
@@ -77,7 +81,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
 
         # Restore the state.
         self.model = saved_model
-        self.dataset = saved_dataset
+        self.generator = saved_generator
 
     def test_get_best_span(self):
         # pylint: disable=protected-access

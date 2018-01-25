@@ -65,11 +65,15 @@ class BucketIterator(BasicIterator):
     @overrides
     def _create_batches(self, generator: InstanceGenerator, shuffle: bool) -> Iterable[Batch]:
         instances = ensure_list(generator())
+        if self.vocab:
+            for instance in instances:
+                instance.index_fields(self.vocab)
+
         if self._sorting_keys:
             instances = self._sort_by_padding(instances,
                                               self._sorting_keys,
                                               self._padding_noise)
-        grouped_instances = list(super(BucketIterator, self)._create_batches(instances, shuffle=False))
+        grouped_instances = list(super(BucketIterator, self)._create_batches(lambda: instances, shuffle=False))
         if self._biggest_batch_first:
             # We'll actually pop the last _two_ batches, because the last one might not be full.
             last_batch = grouped_instances.pop()

@@ -7,8 +7,8 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestSrlReader(AllenNlpTestCase):
     def test_read_from_file(self):
         conll_reader = SrlReader()
-        dataset = conll_reader.read('tests/fixtures/conll_2012/')
-        instances = dataset.instances
+        generator = conll_reader.instance_generator('tests/fixtures/conll_2012/')
+        instances = list(generator())
 
         fields = instances[0].fields
         tokens = [t.text for t in fields['tokens'].tokens]

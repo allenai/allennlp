@@ -1,3 +1,4 @@
+import copy
 import os
 
 from numpy.testing import assert_allclose
@@ -22,12 +23,18 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(self.param_file)
 
         reader = DatasetReader.from_params(params['dataset_reader'])
-        dataset = reader.read(dataset_file)
-        vocab = Vocabulary.from_instances(dataset)
+        generator = reader.instance_generator(dataset_file)
+        vocab = Vocabulary.from_instances(generator())
         self.vocab = vocab
-        dataset.index_instances(vocab)
-        self.dataset = dataset
+        self.generator = generator
+        self.instances = [instance for instance in generator()]
         self.model = Model.from_params(self.vocab, params['model'])
+
+        # TODO(joelgrus) get rid of these
+        # (a lot of the model tests use them, so they'll have to be changed)
+        self.dataset = Batch(self.instances)
+        self.dataset.index_instances(self.vocab)
+
 
     def ensure_model_can_train_save_and_load(self,
                                              param_file: str,
@@ -48,8 +55,9 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(self.param_file)
         reader = DatasetReader.from_params(params['dataset_reader'])
 
+        # Need to duplicate params because Iterator.from_params will consume.
         iterator_params = params['iterator']
-        iterator_params2 = Params(iterator_params.as_dict())
+        iterator_params2 = Params(copy.deepcopy(iterator_params.as_dict()))
 
         iterator = DataIterator.from_params(iterator_params)
         iterator2 = DataIterator.from_params(iterator_params2)
@@ -140,13 +148,14 @@ class ModelTestCase(AllenNlpTestCase):
     def ensure_batch_predictions_are_consistent(self):
         self.model.eval()
         single_predictions = []
-        for i, instance in enumerate(self.dataset.instances):
+        instances = [instance for instance in self.generator()]
+        for i, instance in enumerate(instances):
             dataset = Batch([instance])
             tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
             result = self.model(**tensors)
             single_predictions.append(result)
-        full_dataset = Batch([instance for instance in self.dataset])
-        batch_tensors = full_dataset.as_tensor_dict(self.dataset.get_padding_lengths(), for_training=False)
+        full_dataset = Batch(instances)
+        batch_tensors = full_dataset.as_tensor_dict(full_dataset.get_padding_lengths(), for_training=False)
         batch_predictions = self.model(**batch_tensors)
         for i, instance_predictions in enumerate(single_predictions):
             for key, single_predicted in instance_predictions.items():

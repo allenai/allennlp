@@ -5,33 +5,35 @@ For example, when you train a model, you will likely have a *training* dataset a
 
 import logging
 from collections import defaultdict
-from typing import Dict, List, Union, Iterator
+from typing import Dict, List, Union, Iterator, Iterable
 
 import torch
 
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import ensure_list
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-class Batch:
+class Batch(Iterable):
     """
     A batch of Instances. In addition to containing the instances themselves,
     it contains helper functions for converting the data into tensors.
     """
-    def __init__(self, instances: List[Instance]) -> None:
+    def __init__(self, instances: Iterable[Instance]) -> None:
         """
-        A Dataset just takes a list of instances in its constructor and hangs onto them.
+        A Dataset just takes an iterable of instances in its constructor and hangs onto them
+        in a list.
         """
+        self.instances = ensure_list(instances)
+
         all_instance_fields_and_types: List[Dict[str, str]] = [{k: v.__class__.__name__
                                                                 for k, v in x.fields.items()}
-                                                               for x in instances]
+                                                               for x in self.instances]
         # Check all the field names and Field types are the same for every instance.
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
             raise ConfigurationError("You cannot construct a Dataset with non-homogeneous Instances.")
-
-        self.instances = instances
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """

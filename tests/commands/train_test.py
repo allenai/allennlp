@@ -1,12 +1,11 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
-from typing import Iterator
+from typing import Iterable
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import Train, train_model, train_model_from_args
-from allennlp.data import DatasetReader, Instance, InstanceCollection
-from allennlp.data.dataset import LazyDataset
+from allennlp.data import DatasetReader, Instance
 
 class TestTrain(AllenNlpTestCase):
     def test_train_model(self):
@@ -99,17 +98,11 @@ class LazyFakeReader(DatasetReader):
     def __init__(self) -> None:
         self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging'}))
 
-    def _generator_for_file(self, file_path: str):
-        def generator() -> Iterator[Instance]:
-            return (instance for instance in self.reader.read(file_path))
-
-        return generator
-
-    def read(self, file_path: str) -> InstanceCollection:
+    def read(self, file_path: str) -> Iterable[Instance]:
         """
         Actually reads some data from the `file_path` and returns a :class:`Dataset`.
         """
-        return LazyDataset(self._generator_for_file(file_path))
+        return self.reader.read(file_path)
 
     @classmethod
     def from_params(cls, params: Params) -> 'LazyTestReader':

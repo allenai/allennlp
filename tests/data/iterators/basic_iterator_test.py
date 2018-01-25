@@ -30,6 +30,7 @@ class IteratorTest(AllenNlpTestCase):
                 self.create_instance(["sentence"]),
                 ]
         self.dataset = Batch(self.instances)
+        self.generator = lambda: (instance for instance in self.instances)
 
     def create_instance(self, str_tokens: List[str]):
         tokens = [Token(t) for t in str_tokens]
@@ -50,7 +51,7 @@ class TestBasicIterator(IteratorTest):
     # We also test some of the stuff in `DataIterator` here.
     def test_yield_one_epoch_iterates_over_the_data_once(self):
         iterator = BasicIterator(batch_size=2)
-        batches = list(iterator(self.dataset, num_epochs=1))
+        batches = list(iterator(self.generator, num_epochs=1))
         # We just want to get the single-token array for the text field in the instance.
         instances = [tuple(instance.data.cpu().numpy())
                      for batch in batches
@@ -59,7 +60,7 @@ class TestBasicIterator(IteratorTest):
         self.assert_instances_are_correct(instances)
 
     def test_call_iterates_over_data_forever(self):
-        generator = BasicIterator(batch_size=2)(self.dataset)
+        generator = BasicIterator(batch_size=2)(self.generator)
         batches = [next(generator) for _ in range(18)]  # going over the data 6 times
         # We just want to get the single-token array for the text field in the instance.
         instances = [tuple(instance.data.cpu().numpy())
@@ -71,7 +72,7 @@ class TestBasicIterator(IteratorTest):
     def test_create_batches_groups_correctly(self):
         # pylint: disable=protected-access
         iterator = BasicIterator(batch_size=2)
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.generator, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[0], self.instances[1]],
                                      [self.instances[2], self.instances[3]],

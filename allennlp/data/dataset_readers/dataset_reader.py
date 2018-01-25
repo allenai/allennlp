@@ -19,14 +19,18 @@ class DatasetReader(Registrable):
         """
         iterable = self.read(file_path)
 
-        # Avoid making an unnecessary list copy
+        # If `iterable` is already a list, this is a no-op.
         instances = ensure_list(iterable)
 
+        # Each call to the returned `InstanceGenerator` just returns the list
+        # of instances. If you modify that list (e.g. by shuffling),
+        # those changes will persist to future calls.
         return lambda: instances
 
     def read(self, file_path: str) -> Iterable[Instance]:
         """
-        Actually reads some data from the `file_path` and returns a :class:`Dataset`.
+        Reads in the instances from the given file_path and returns an `Iterable`
+        (which could be a list or could be a generator).
         """
         raise NotImplementedError
 

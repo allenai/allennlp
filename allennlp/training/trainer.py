@@ -55,8 +55,8 @@ class Trainer:
                  model: Model,
                  optimizer: torch.optim.Optimizer,
                  iterator: DataIterator,
-                 train_generator: InstanceGenerator,
-                 validation_generator: Optional[InstanceGenerator] = None,
+                 train_dataset: InstanceGenerator,
+                 validation_dataset: Optional[InstanceGenerator] = None,
                  patience: int = 2,
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
@@ -119,8 +119,8 @@ class Trainer:
         self._model = model
         self._iterator = iterator
         self._optimizer = optimizer
-        self._train_data_generator = train_generator
-        self._validation_data_generator = validation_generator
+        self._train_data_generator = train_dataset
+        self._validation_data_generator = validation_dataset
 
         self._patience = patience
         self._num_epochs = num_epochs

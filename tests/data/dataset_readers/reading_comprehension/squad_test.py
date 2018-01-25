@@ -7,7 +7,8 @@ from allennlp.data.dataset_readers import SquadReader
 class TestSquadReader(AllenNlpTestCase):
     def test_read_from_file(self):
         reader = SquadReader()
-        instances = reader.read('tests/fixtures/data/squad.json').instances
+        generator = reader.instance_generator('tests/fixtures/data/squad.json')
+        instances = list(generator())
         assert len(instances) == 5
 
         assert [t.text for t in instances[0].fields["question"].tokens[:3]] == ["To", "whom", "did"]

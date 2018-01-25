@@ -8,7 +8,7 @@ class TestBucketIterator(IteratorTest):
     # pylint: disable=protected-access
     def test_create_batches_groups_correctly(self):
         iterator = BucketIterator(batch_size=2, padding_noise=0, sorting_keys=[('text', 'num_tokens')])
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.generator, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[4], self.instances[2]],
                                      [self.instances[0], self.instances[1]],
@@ -19,7 +19,7 @@ class TestBucketIterator(IteratorTest):
                                   padding_noise=0,
                                   sorting_keys=[('text', 'num_tokens')],
                                   biggest_batch_first=True)
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.generator, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[3]],
                                      [self.instances[0], self.instances[1]],

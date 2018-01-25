@@ -10,7 +10,8 @@ class TestTriviaQaReader(AllenNlpTestCase):
                 'base_tarball_path': 'tests/fixtures/data/triviaqa-sample.tgz',
                 })
         reader = TriviaQaReader.from_params(params)
-        instances = reader.read('web-train.json').instances
+        generator = reader.instance_generator('web-train.json')
+        instances = list(generator())
         assert len(instances) == 3
 
         assert [t.text for t in instances[0].fields["question"].tokens[:3]] == ["Which", "American", "-"]
