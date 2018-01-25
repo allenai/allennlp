@@ -432,11 +432,10 @@ class WikiTablesSemanticParser(Model):
                                                                            num_question_tokens,
                                                                            num_entities)))
 
-        mask_zeros = Variable(linking_scores.data.new(batch_size, 1).fill_(0).long())
         for batch_index, world in enumerate(worlds):
             cell_type_index, row_type_index = [0], [0]
             entities = world.table_graph.entities
-            for entity_index, entity in enumerate(entities):
+            for entity_index, _ in enumerate(entities):
                 if entity_type_dict[batch_index * num_entities + entity_index] == 0:
                     cell_type_index.append(entity_index)
                 else:
@@ -462,10 +461,12 @@ class WikiTablesSemanticParser(Model):
             probabilities_all = Variable(linking_scores.data.new(num_question_tokens, num_entities).fill_(0))
 
             for question_index in range(num_question_tokens):
-                for entity_index, entity_probability in list(zip(cell_type_index, probabilities_cell[question_index]))[1:]:
+                for entity_index, entity_probability in list(zip(cell_type_index,
+                                                                 probabilities_cell[question_index]))[1:]:
                     # Shift indexes by 1 to make sure null entity at index 0 gets 0 probability.
                     probabilities_all[question_index, (entity_index)] = entity_probability
-                for entity_index, entity_probability in list(zip(row_type_index, probabilities_row[question_index]))[1:]:
+                for entity_index, entity_probability in list(zip(row_type_index,
+                                                                 probabilities_row[question_index]))[1:]:
                     probabilities_all[question_index, (entity_index)] = entity_probability
             batch_probabilities[batch_index] = probabilities_all
         return batch_probabilities * question_mask.unsqueeze(-1).float()
