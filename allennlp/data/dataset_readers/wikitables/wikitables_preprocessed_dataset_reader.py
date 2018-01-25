@@ -77,6 +77,7 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
 
     @overrides
     def text_to_instance(self, json_obj: JsonDict) -> Instance:  # type: ignore
+        # pylint: disable=arguments-differ
         question_tokens = self._read_tokens_from_json_list(json_obj['question_tokens'])
         question_field = TextField(question_tokens, self._question_token_indexers)
         table_knowledge_graph = TableKnowledgeGraph.read_from_lines(json_obj['table_lines'])
