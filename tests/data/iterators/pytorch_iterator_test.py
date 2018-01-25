@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
-from typing import List, Callable, Iterator
+from typing import List, Callable, Iterator, Generic, TypeVar
+import itertools
 
 import torch.utils.data as data
 
@@ -24,7 +25,10 @@ class Dataset(data.Dataset):
 
 class LazyDataset(data.Dataset):
     """
-    This gets a list of *generators* (say, one per file)
+    This gets a list of *generators* (say, one per file).
+    Notably, each generator will be consumed all at once,
+    which means that no generator should produce more instances
+    than can fit in memory.
     """
     def __init__(self, generators: List[Callable[[], Iterator[Instance]]]) -> None:
         super().__init__()
@@ -46,10 +50,24 @@ def collate(batch: List[Instance]) -> Batch:
 def lazy_collate(batch: List[Iterator[Instance]]) -> Batch:
     """
     Collate instances from a lazy dataset,
-    where we're actually being handed a batch of generators
+    where we're actually being handed a batch of generators.
+    Notice that the Batch consists of all instances from all generators.
     """
     instances = [instance for iterator in batch for instance in iterator]
     return Batch(instances)
+
+class Minibatcher:
+    """
+    Convert a batch (e.g. from reading an entire generator)
+    into minibatches. This basically plays the role of the DataIterator here.
+    """
+    def __init__(self, batch_size: int = 32) -> None:
+        self.batch_size = batch_size
+
+    def __call__(self, batch: Batch) -> Iterator[Batch]:
+        instances = batch.instances
+        for i in range(0, len(instances), self.batch_size):
+            yield Batch(instances[i:(i+self.batch_size)])
 
 def tokens(instance: Instance) -> List[str]:
     """
@@ -108,7 +126,7 @@ class TestPytorchIterator(IteratorTest):
         loader = data.DataLoader(dataset, collate_fn=collate, shuffle=True)
         batches = [batch for batch in loader]
         instances = [instance for batch in batches for instance in batch]
-        assert instances != self.instances * 100
+        assert not same_instances(instances, self.instances * 100, same_order=True)
         assert same_instances(instances, self.instances * 100, same_order=False)
 
     def test_lazy_loader(self):
@@ -123,8 +141,21 @@ class TestPytorchIterator(IteratorTest):
         # Note: this batch_size of 2 means two *iterators* at a time
         loader = data.DataLoader(self.lazy_dataset, collate_fn=lazy_collate, batch_size=2, num_workers=0)
         batches = [batch for batch in loader]
+
         # 10 iterators / 2 at a time => 5 batches
         assert len(batches) == 5
         instances = [instance for batch in batches for instance in batch]
         assert len(instances) == 50  # 5 * 10
         assert same_instances(instances, self.instances * 10, same_order=False)
+
+    def test_minibatcher(self):
+        loader = data.DataLoader(self.lazy_dataset, collate_fn=lazy_collate, num_workers=2)
+
+        # Further divide each lazy batch into minibatches of size (at most) 3
+        minibatcher = Minibatcher(batch_size=3)
+        minibatches = [minibatch for batch in loader for minibatch in minibatcher(batch)]
+        assert len(minibatches) == 20 # 2 per generator
+
+        # Each batch/generator gets split into two minibatches of size 3 and 2
+        num_instances = [len(minibatch.instances) for minibatch in minibatches]
+        assert num_instances == [3, 2] * 10
