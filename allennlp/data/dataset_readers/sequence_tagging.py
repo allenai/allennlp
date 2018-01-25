@@ -48,7 +48,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
         self._token_delimiter = token_delimiter
 
     @overrides
-    def read(self, file_path):
+    def _read(self, file_path):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 

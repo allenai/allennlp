@@ -62,7 +62,7 @@ class Seq2SeqDatasetReader(DatasetReader):
         self._source_add_start_token = source_add_start_token
 
     @overrides
-    def read(self, file_path):
+    def _read(self, file_path):
         instances = []
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)

@@ -75,4 +75,4 @@ class Instance:
                                                   for_training=for_training)
         return tensors
 
-InstanceGenerator = Callable[[], Iterable[Instance]]
+InstanceGenerator = Callable[[], Iterable[Instance]]  # pylint: disable=invalid-name

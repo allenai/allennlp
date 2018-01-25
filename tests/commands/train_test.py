@@ -98,11 +98,11 @@ class LazyFakeReader(DatasetReader):
     def __init__(self) -> None:
         self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging'}))
 
-    def read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, file_path: str) -> Iterable[Instance]:
         """
-        Actually reads some data from the `file_path` and returns a :class:`Dataset`.
+        Reads some data from the `file_path` and returns the instances.
         """
-        return self.reader.read(file_path)
+        return self.reader.instance_generator(file_path)()
 
     @classmethod
     def from_params(cls, params: Params) -> 'LazyTestReader':

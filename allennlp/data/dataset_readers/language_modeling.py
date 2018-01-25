@@ -64,7 +64,7 @@ class LanguageModelingReader(DatasetReader):
             self._output_indexer = {"tokens": SingleIdTokenIndexer()}
 
     @overrides
-    def read(self, file_path: str):
+    def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 

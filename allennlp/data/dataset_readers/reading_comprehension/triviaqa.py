@@ -63,7 +63,7 @@ class TriviaQaReader(DatasetReader):
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @overrides
-    def read(self, file_path: str):
+    def _read(self, file_path: str):
         logger.info("Opening base tarball file at %s", self._base_tarball_path)
         base_tarball = tarfile.open(cached_path(self._base_tarball_path), 'r')
         if 'unfiltered' in file_path:

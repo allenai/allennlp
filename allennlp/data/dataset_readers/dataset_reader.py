@@ -7,17 +7,21 @@ from allennlp.common.util import ensure_list
 
 class DatasetReader(Registrable):
     """
-    A ``DatasetReader`` reads data from some location and constructs a :class:`Dataset`.  All
-    parameters necessary to read the data apart from the filepath should be passed to the
-    constructor of the ``DatasetReader``.
+    A ``DatasetReader`` reads data from some location and constructs an :class:`InstanceGenerator`
+    that returns an ``Iterable`` of the dataset's instances each time it's called. All parameters
+    necessary to _read the data apart from the filepath should be passed to the constructor of the
+    ``DatasetReader``.
     """
     def instance_generator(self, file_path) -> InstanceGenerator:
         """
-        The default implementation of this caches the instances in a list.
+        This default implementation caches all instances in a list.
+        If you want your dataset to be loaded in-memory all at once,
+        you just need to implement `_read()`.
+
         If you want a lazy dataset that doesn't get loaded into memory all
-        at once, you'll need to override this method.
+        at once, then you'll need to override this method.
         """
-        iterable = self.read(file_path)
+        iterable = self._read(file_path)
 
         # If `iterable` is already a list, this is a no-op.
         instances = ensure_list(iterable)
@@ -27,10 +31,10 @@ class DatasetReader(Registrable):
         # those changes will persist to future calls.
         return lambda: instances
 
-    def read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, file_path: str) -> Iterable[Instance]:
         """
-        Reads in the instances from the given file_path and returns an `Iterable`
-        (which could be a list or could be a generator).
+        Reads the instances from the given file_path and returns them as an
+        `Iterable` (which could be a list or could be a generator).
         """
         raise NotImplementedError
 
@@ -41,7 +45,7 @@ class DatasetReader(Registrable):
         :class:`~allennlp.service.predictors.predictor.Predictor`, which gets text input as a JSON
         object and needs to process it to be input to a model.
 
-        The intent here is to share code between :func:`read` and what happens at
+        The intent here is to share code between :func:`_read` and what happens at
         model serving time, or any other time you want to make a prediction from new data.  We need
         to process the data in the same way it was done at training time.  Allowing the
         ``DatasetReader`` to process new text lets us accomplish this, as we can just call

@@ -73,7 +73,7 @@ class Conll2003DatasetReader(DatasetReader):
         self.feature_labels = set(feature_labels)
 
     @overrides
-    def read(self, file_path):
+    def _read(self, file_path):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
