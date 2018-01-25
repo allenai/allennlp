@@ -32,13 +32,13 @@ class NlvrDatasetReader(DatasetReader):
 
     We process the json version of the dataset (http://lic.nlp.cornell.edu/nlvr/) here, to read in
     the structured representations of the synthetic images instead of dealing with the actual images
-    themselves. The format of each line in the jsonl file is:
-        ``{"sentence": <sentence>,
-           "label": <true/false>,
-           "identifier": <id>,
-           "evals": <dict containing all annotations>,
-           "structured_rep": <list of three box representations, where each box is a list of object
-           representation dicts, containing fields "x_loc", "y_loc", "color", "type", "size">}``
+    themselves. The format of each line in the jsonl file is
+    ``{"sentence": <sentence>,
+       "label": <true/false>,
+       "identifier": <id>,
+       "evals": <dict containing all annotations>,
+       "structured_rep": <list of three box representations, where each box is a list of object
+       representation dicts, containing fields "x_loc", "y_loc", "color", "type", "size">}``
 
     Parameters
     ----------
@@ -95,7 +95,7 @@ class NlvrDatasetReader(DatasetReader):
         return Dataset(instances)
 
     @overrides
-    def text_to_instance(self,
+    def text_to_instance(self,  # type: ignore
                          sentence: str,
                          structured_representation: List[List[JsonDict]],
                          label: str = None) -> Instance:

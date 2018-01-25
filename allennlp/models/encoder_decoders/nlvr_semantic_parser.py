@@ -68,7 +68,7 @@ class NlvrSemanticParser(Model):
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function)
     @overrides
-    def forward(self,
+    def forward(self,  # type: ignore
                 sentence: Dict[str, torch.LongTensor],
                 world: List[NlvrWorld],
                 actions: List[List[ProductionRuleArray]],
@@ -588,7 +588,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         self._decoder_cell = LSTMCell(input_dim, output_dim)
 
     @overrides
-    def take_step(self,
+    def take_step(self,  # type: ignore
                   state: NlvrDecoderState,
                   max_actions: int = None) -> List[NlvrDecoderState]:
         """
