@@ -6,8 +6,7 @@ from chunking.main import prepareData
 from chunking.main import NeuralChunker
 import chunking
 
-__all__ = ['initializeData', 'initializeChunker', 'EncoderRNN', 'AttnDecoderRNN', 'trainIters', 'validate', 'evaluate', 'NeuralChunker',
-           'variableFromSentence']
+__all__ = ['initializeData', 'initializeChunker']
 
 def initializeData():
     print("*** loading elmo vectors ***")
@@ -32,7 +31,7 @@ def initializeData():
     input_lang_dev, output_lang_dev, pairs_dev, MAX_LENGTH_DEV = prepareData('esrcd', 'etgtd', wordVecs)
     input_lang = wordVecs
     input_lang_dev = wordVecs
-    return input_lang, output_lang, pairs, pairs_dev, max_length    
+    return input_lang, output_lang, pairs, pairs_dev, MAX_LENGTH    
 
 def initializeChunker(encoderFile, decoderFile):
     input_lang, output_lang, pairs, pairs_dev, max_length = initializeData() 
