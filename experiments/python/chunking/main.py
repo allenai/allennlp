@@ -469,11 +469,10 @@ def lookForWrong(chunker, sent_pairs, not_that_wrong_thres = 0.1, num_to_eval=10
                 if min(probs) > not_that_wrong_thres:
                     not_that_wrong += 1
                 else:
-                    pretty_wrong += 1    
-                print(min(probs))
+                    pretty_wrong += 1   
             else:
                 correct += 1
-            if min(probs) < 0.5:
+            if min(probs) < not_that_wrong_thres:
                 visualizeSplitWithSent(pair[0], compileSplit(pair[0], pair[1], probs))
         except KeyError:
             pass
