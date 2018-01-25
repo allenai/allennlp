@@ -41,7 +41,7 @@ def to_json_line(instance: Instance):
         tokens = [{'text': token.text, 'lemma': token.lemma_} for token in entity_text]
         entity_texts.append(tokens)
     json_obj['entity_texts'] = entity_texts
-    json_obj['linking_features'] = instance.fields['table']._linking_features
+    json_obj['linking_features'] = instance.fields['table'].linking_features
     return json.dumps(json_obj)
 
 
