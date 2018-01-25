@@ -56,7 +56,9 @@ class SpanPruner(torch.nn.Module):
         span_mask = span_mask.unsqueeze(-1)
         num_spans = span_embeddings.size(1)
         # Shape: (batch_size, num_spans, 1)
+        print(span_embeddings.size())
         span_scores = self._scorer(span_embeddings)
+
 
         if span_scores.size(-1) != 1 or span_scores.dim() != 3:
             raise ConfigurationError(f"The scorer passed to SpanPruner must produce a tensor of shape"

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @Model.register("coref-v2")
-class CoreferenceResolver(Model):
+class CoreferenceResolverV2(Model):
     """
     This ``Model`` implements the coreference resolution model described "End-to-end Neural
     Coreference Resolution"
@@ -74,13 +74,14 @@ class CoreferenceResolver(Model):
                  lexical_dropout: float = 0.2,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(CoreferenceResolver, self).__init__(vocab, regularizer)
+        super(CoreferenceResolverV2, self).__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
         self._context_layer = context_layer
-        self._mention_feedforward = TimeDistributed(mention_feedforward)
         self._antecedent_feedforward = TimeDistributed(antecedent_feedforward)
-        self._mention_pruner = SpanPruner(TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1)))
+        feedforward_scorer = torch.nn.Sequential(TimeDistributed(mention_feedforward),
+                                                 TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1)))
+        self._mention_pruner = SpanPruner(feedforward_scorer)
         self._antecedent_scorer = TimeDistributed(torch.nn.Linear(antecedent_feedforward.get_output_dim(), 1))
         self._head_scorer = TimeDistributed(torch.nn.Linear(context_layer.get_output_dim(), 1))
 
@@ -176,6 +177,7 @@ class CoreferenceResolver(Model):
          top_span_indices, top_span_mention_scores) = self._mention_pruner(span_embeddings,
                                                                            span_mask.squeeze(-1),
                                                                            num_spans_to_keep)
+        top_span_mask = top_span_mask.unsqueeze(-1)
         # Shape: (batch_size * num_spans_to_keep)
         # torch.index_select only accepts 1D indices, but here
         # we need to select spans for each element in the batch.
@@ -227,7 +229,6 @@ class CoreferenceResolver(Model):
         span_pair_embeddings = self._compute_span_pair_embeddings(top_span_embeddings,
                                                                   candidate_antecedent_embeddings,
                                                                   valid_antecedent_offsets)
-
         # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents)
         coreference_scores = self._compute_coreference_scores(span_pair_embeddings,
                                                               top_span_mention_scores,

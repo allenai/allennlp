@@ -5,10 +5,10 @@ from torch.autograd import Variable
 from allennlp.common.testing import ModelTestCase
 
 
-class CorefTest(ModelTestCase):
+class CorefV2Test(ModelTestCase):
     def setUp(self):
-        super(CorefTest, self).setUp()
-        self.set_up_model('tests/fixtures/coref/experiment.json',
+        super(CorefV2Test, self).setUp()
+        self.set_up_model('tests/fixtures/coref/experiment_v2.json',
                           'tests/fixtures/coref/coref.gold_conll')
 
     def test_coref_model_can_train_save_and_load(self):
