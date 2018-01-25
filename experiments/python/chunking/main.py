@@ -363,8 +363,8 @@ def evaluate(encoder, decoder, input_lang, output_lang, sentence, max_length):
 
 
 def compute_prob(encoder, decoder, input_lang, output_lang, sentence, desired_output, max_length):
-    input_variable = chunking.main.variableFromSentence(input_lang, sentence)
-    desired_variable = list(chunking.main.variableFromSentence(output_lang, desired_output).data.view(-1))
+    input_variable = variableFromSentence(input_lang, sentence)
+    desired_variable = list(variableFromSentence(output_lang, desired_output).data.view(-1))
     input_length = input_variable.size()[0]
     encoder_hidden = encoder.initHidden()
     encoder_outputs = Variable(torch.zeros(max_length, encoder.hidden_size))
