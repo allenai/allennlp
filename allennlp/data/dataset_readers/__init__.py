@@ -6,6 +6,7 @@ The various subclasses know how to read specific filetypes
 and produce datasets in the formats required by specific models.
 """
 
+# pylint: disable=line-too-long
 from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
 from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReader
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
