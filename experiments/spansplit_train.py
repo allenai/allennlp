@@ -36,7 +36,7 @@ def main(argv):
     hidden_size = 1029
     encoder1 = chunking.main.EncoderRNN(input_lang.n_words, hidden_size, wordVecs, n_layers=2)
     attn_decoder1 = chunking.main.AttnDecoderRNN(hidden_size, output_lang.n_words, MAX_LENGTH,
-                               2, dropout_p=0.1)
+                               1, dropout_p=0.1)
 
     print("*** starting training ***")
     if use_cuda:
@@ -44,7 +44,7 @@ def main(argv):
         encoder1 = encoder1.cuda()
         attn_decoder1 = attn_decoder1.cuda()
 
-    chunking.main.trainIters(encoder1, attn_decoder1, input_lang, output_lang, 150000, pairs, pairs_dev, MAX_LENGTH, print_every=1000)
+    chunking.main.trainIters(encoder1, attn_decoder1, input_lang, output_lang, 300000, pairs, pairs_dev, MAX_LENGTH, print_every=1000)
     print("*** done training ***")
     print(chunking.main.validate(encoder1, attn_decoder1, input_lang, output_lang, pairs_dev, MAX_LENGTH, 4813))
     torch.save(encoder1, 'encoder.final.pt')
