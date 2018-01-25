@@ -61,6 +61,11 @@ class Train(Subcommand):
                                    type=str,
                                    help=argparse.SUPPRESS)
 
+        subparser.add_argument('--tqdm-newline',
+                               action='store_true',
+                               default=False,
+                               help='outputs each tqdm status update on a separate line')
+
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
@@ -70,10 +75,10 @@ def train_model_from_args(args: argparse.Namespace):
     """
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
-    train_model_from_file(args.param_path, args.serialization_dir)
+    train_model_from_file(args.param_path, args.serialization_dir, args.tqdm_newline)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Model:
+def train_model_from_file(parameter_filename: str, serialization_dir: str, tqdm_newline: bool = False) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -83,13 +88,15 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str) -> Mo
         A json parameter file specifying an AllenNLP experiment.
     serialization_dir: str, required
         The directory in which to save results and logs.
+    tqdm_newline: bool, optional
+        If true, tqdm outputs each status update on a separate line.  This is useful if stderr is redirected to a file.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename)
-    return train_model(params, serialization_dir)
+    return train_model(params, serialization_dir, tqdm_newline)
 
 
-def train_model(params: Params, serialization_dir: str) -> Model:
+def train_model(params: Params, serialization_dir: str, tqdm_newline: bool) -> Model:
     """
     This function can be used as an entry point to running models in AllenNLP
     directly from a JSON specification using a :class:`Driver`. Note that if
@@ -106,12 +113,14 @@ def train_model(params: Params, serialization_dir: str) -> Model:
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir: str, required
         The directory in which to save results and logs.
+    tqdm_newline: bool, optional
+        If true, tqdm outputs each status update on a separate line.  This is useful if stderr is redirected to a file.
     """
     prepare_environment(params)
 
     os.makedirs(serialization_dir, exist_ok=True)
-    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout)  # type: ignore
-    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), sys.stderr)  # type: ignore
+    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout, tqdm_newline)  # type: ignore
+    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), sys.stderr, tqdm_newline)  # type: ignore
     handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
