@@ -79,8 +79,9 @@ class CoreferenceResolverV2(Model):
         self._text_field_embedder = text_field_embedder
         self._context_layer = context_layer
         self._antecedent_feedforward = TimeDistributed(antecedent_feedforward)
-        feedforward_scorer = torch.nn.Sequential(TimeDistributed(mention_feedforward),
-                                                 TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1)))
+        feedforward_scorer = torch.nn.Sequential(
+                TimeDistributed(mention_feedforward),
+                TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1)))
         self._mention_pruner = SpanPruner(feedforward_scorer)
         self._antecedent_scorer = TimeDistributed(torch.nn.Linear(antecedent_feedforward.get_output_dim(), 1))
         self._head_scorer = TimeDistributed(torch.nn.Linear(context_layer.get_output_dim(), 1))
@@ -708,7 +709,7 @@ class CoreferenceResolverV2(Model):
         return coreference_scores
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> "CoreferenceResolver":
+    def from_params(cls, vocab: Vocabulary, params: Params) -> "CoreferenceResolverV2":
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         context_layer = Seq2SeqEncoder.from_params(params.pop("context_layer"))
