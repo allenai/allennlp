@@ -14,7 +14,6 @@ from allennlp.models import Model, WikiTablesSemanticParser
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderState
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderStep
 from allennlp.modules import SimilarityFunction
-from allennlp.nn.util import get_text_field_mask
 
 class WikiTablesSemanticParserTest(ModelTestCase):
     def setUp(self):
