@@ -189,7 +189,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                 padded_arrays.append(padded_array)
             tensor = Variable(torch.LongTensor(padded_arrays), volatile=not for_training)
             tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
-        padded_linking_features = util.pad_sequence_to_length(self._linking_features,
+        padded_linking_features = util.pad_sequence_to_length(self.linking_features,
                                                               desired_num_entities,
                                                               default_value=lambda: [])
         padded_linking_arrays = []
