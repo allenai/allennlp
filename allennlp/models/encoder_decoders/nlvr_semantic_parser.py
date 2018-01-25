@@ -58,8 +58,7 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
                                                  attention_function=attention_function,
                                                  embed_terminals=True)
 
-        nonterminal_embed_dim = nonterminal_embedder.get_output_dim()
-        action_embedding_dim = nonterminal_embed_dim * 2
+        action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
 
         # self._decoder_step would be set to ``WikiTablesDecoderStep``. Rewriting it.
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
@@ -89,13 +88,13 @@ class NlvrSemanticParser(WikiTablesSemanticParser):
 
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
         memory_cell = nn_util.new_variable_with_size(encoder_outputs,
-                                                     torch.Size((batch_size,
-                                                                 self._encoder.get_output_dim())), 0)
+                                                     (batch_size, self._encoder.get_output_dim()),
+                                                     0)
         attended_sentence, _ = self._decoder_step.attend_on_question(final_encoder_output,
                                                                      encoder_outputs, sentence_mask)
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
         # Get a mapping from production rules to global action ids.
-        agenda_mask = agenda.ne(-1)
+        agenda_mask = agenda != -1
         # (batch_size, agenda_size)
         initial_checklist = nn_util.new_variable_with_size(agenda, agenda.size(), 0).float()
         agenda_list = [agenda[i] for i in range(batch_size)]
@@ -218,9 +217,9 @@ class NlvrDecoderState(WikiTablesDecoderState):
     @classmethod
     def combine_states(cls, states) -> 'NlvrDecoderState':
         super_state = super(NlvrDecoderState, cls).combine_states(states)
-        agenda = [alist for state in states for alist in state.agenda]
+        agenda = [agenda_list for state in states for agenda_list in state.agenda]
         agenda_mask = [mask_list for state in states for mask_list in state.agenda_mask]
-        checklist = [clist for state in states for clist in state.checklist]
+        checklist = [checklist_list for state in states for checklist_list in state.checklist]
         return NlvrDecoderState(agenda,
                                 agenda_mask,
                                 checklist,
@@ -299,9 +298,9 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
         # batch_index -> [(group_index, action_index, action, checklist, score)]
         next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
         for group_index, (batch_index, instance_action_probs) in enumerate(zip(state.batch_indices, probs)):
-            instance_agenda = state.agenda[group_index]
-            instance_agenda_mask = state.agenda_mask[group_index]
-            instance_checklist = state.checklist[group_index]
+            instance_agenda = state.agenda[group_index]  # (agenda_size,)
+            instance_agenda_mask = state.agenda_mask[group_index]  # (agenda_size,)
+            instance_checklist = state.checklist[group_index]  # (agenda_size,)
             # action_prob is a Variable.
             for action_index, action_prob in enumerate(instance_action_probs):
                 # This is the actual index of the action from the original list of actions.
@@ -311,22 +310,21 @@ class NlvrDecoderStep(WikiTablesDecoderStep):
                     continue
                 # If action is not in instance_agenda, mask_variable, and checklist_addition will be
                 # all 0s.
-                checklist_mask = instance_agenda.eq(action)
-                checklist_addition = checklist_mask.float() * action_prob
-                new_checklist = instance_checklist + checklist_addition
+                checklist_mask = instance_agenda == action  # (agenda_size,)
+                checklist_addition = checklist_mask.float() * action_prob  # (agenda_size,)
+                new_checklist = instance_checklist + checklist_addition  # (agenda_size,)
                 new_score = cls.score_instance_checklist(new_checklist, instance_agenda_mask)
                 next_states_info[batch_index].append((group_index, action_index, action,
                                                       new_checklist, new_score))
         new_states = []
         for batch_index, states_info in next_states_info.items():
-            sorted_states_info = sorted(states_info, key=lambda x: x[-1].data.cpu().numpy()[0],
-                                        reverse=True)
+            # We need to sort states by scores. We batch all the scores first for efficient sorting.
+            batch_scores = torch.cat([state_info[-1] for state_info in states_info])
+            _, sorted_indices = batch_scores.sort(-1, descending=True)
+            sorted_states_info = [states_info[i] for i in sorted_indices.cpu().data.numpy()]
             if max_actions is not None:
                 sorted_states_info = sorted_states_info[:max_actions]
             for group_index, action_index, action, new_checklist, new_score in sorted_states_info:
-                if action == -1:
-                    # Padding
-                    continue
                 new_action_history = state.action_history[group_index] + [action]
                 action_embedding = action_embeddings[group_index, action_index, :]
                 left_side = state.possible_actions[batch_index][action]['left'][0]

@@ -93,9 +93,16 @@ class World:
         return sorted(all_actions)
 
     def get_basic_types(self) -> Set[Type]:
+        """
+        Returns the set of basic types (types of entities) in the world.
+        """
         raise NotImplementedError
 
     def get_valid_starting_types(self) -> Set[Type]:
+        """
+        Returns the set of all types t, such that actions ``@START@ -> t`` are valid. In other
+        words, these are all the possible types of complete logical forms in this world.
+        """
         raise NotImplementedError
 
     def parse_logical_form(self, logical_form: str) -> Expression:

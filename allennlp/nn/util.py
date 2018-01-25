@@ -504,11 +504,12 @@ def new_variable_with_data(original: Variable, data: torch.Tensor) -> Variable:
     return Variable(original.type(data_type).data.new(data))
 
 
-def new_variable_with_size(original: Variable, size: torch.Size, value) -> Variable:
+def new_variable_with_size(original: Variable, size: Tuple[int, ...], value) -> Variable:
     """
     Returns a new variable on the same device as the ``original``, but containing a tensor of provided
     ``size``, filled with the given ``value``.
     """
+    size = torch.Size(size)
     return Variable(original.data.new(size).fill_(value))
 
 

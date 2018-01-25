@@ -18,7 +18,6 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
-from allennlp.data.semparse.worlds.world import World
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
@@ -502,7 +501,7 @@ class WikiTablesSemanticParser(Model):
                 }
 
     @staticmethod
-    def _create_grammar_state(world: World,
+    def _create_grammar_state(world: WikiTablesWorld,
                               possible_actions: List[ProductionRuleArray]) -> GrammarState:
         valid_actions = world.get_valid_actions()
         action_mapping = {}
@@ -980,8 +979,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  attention_function: SimilarityFunction,
                  num_entity_types: int) -> None:
         super(WikiTablesDecoderStep, self).__init__()
-        self._entity_type_embedding = Embedding(num_entity_types,
-                                                action_embedding_dim) if num_entity_types > 0 else None
+        self._entity_type_embedding = Embedding(num_entity_types, action_embedding_dim)
         self._input_attention = Attention(attention_function)
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
