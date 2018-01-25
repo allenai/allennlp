@@ -414,7 +414,7 @@ class NeuralChunker:
 def readableToken(tok):
     if '__' in tok:
         tok.rfind('__')
-        return tok[2 + toks[0].rfind('__'):]
+        return tok[2 + tok.rfind('__'):]
     else:
         return tok
 
