@@ -23,7 +23,6 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
 
 import argparse
 from contextlib import ExitStack
-import json
 import sys
 from typing import Optional, IO, Dict
 
@@ -103,18 +102,18 @@ def _run(predictor: Predictor,
             results = predictor.predict_batch_json(batch_data, cuda_device)
 
         for model_input, output in zip(batch_data, results):
-            string_output = json.dumps(output)
+            string_output = predictor.dump_line(output)
             if print_to_console:
                 print("input: ", model_input)
                 print("prediction: ", string_output)
             if output_file:
-                output_file.write(string_output + "\n")
+                output_file.write(string_output)
 
     batch_json_data = []
     for line in input_file:
         if not line.isspace():
             # Collect batch size amount of data.
-            json_data = json.loads(line)
+            json_data = predictor.load_line(line)
             batch_json_data.append(json_data)
             if len(batch_json_data) == batch_size:
                 _run_predictor(batch_json_data)

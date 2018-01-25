@@ -22,7 +22,8 @@ from tensorboard import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import Dataset
+from allennlp.common.util import peak_memory_mb
+from allennlp.data import InstanceCollection
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
 from allennlp.nn import util
@@ -54,8 +55,8 @@ class Trainer:
                  model: Model,
                  optimizer: torch.optim.Optimizer,
                  iterator: DataIterator,
-                 train_dataset: Dataset,
-                 validation_dataset: Optional[Dataset] = None,
+                 train_dataset: InstanceCollection,
+                 validation_dataset: Optional[InstanceCollection] = None,
                  patience: int = 2,
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
@@ -192,6 +193,7 @@ class Trainer:
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
+        logger.info(f"Peak memory usage MB: {peak_memory_mb()}")
         train_loss = 0.0
         # Set the model to "train" mode.
         self._model.train()
@@ -268,10 +270,18 @@ class Trainer:
         """
         Sends all of the train metrics (and validation metrics, if provided) to tensorboard.
         """
-        for name, value in train_metrics.items():
-            self._tensorboard.add_train_scalar(name, value, epoch)
-            if val_metrics:
-                self._tensorboard.add_validation_scalar(name, val_metrics[name], epoch)
+        metric_names = set(train_metrics.keys())
+        if val_metrics is not None:
+            metric_names.update(val_metrics.keys())
+        val_metrics = val_metrics or {}
+
+        for name in metric_names:
+            train_metric = train_metrics.get(name)
+            if train_metric is not None:
+                self._tensorboard.add_train_scalar(name, train_metric, epoch)
+            val_metric = val_metrics.get(name)
+            if val_metric is not None:
+                self._tensorboard.add_validation_scalar(name, val_metric, epoch)
 
     def _metrics_to_console(self,  # pylint: disable=no-self-use
                             train_metrics: dict,
@@ -279,16 +289,24 @@ class Trainer:
         """
         Logs all of the train metrics (and validation metrics, if provided) to the console.
         """
-        if val_metrics:
-            message_template = "Training %s : %3f    Validation %s : %3f "
-        else:
-            message_template = "Training %s : %3f "
+        val_metrics = val_metrics or {}
+        dual_message_template = "Training %s : %3f    Validation %s : %3f "
+        message_template = "%s %s : %3f "
 
-        for name, value in train_metrics.items():
-            if val_metrics:
-                logger.info(message_template, name, value, name, val_metrics[name])
-            else:
-                logger.info(message_template, name, value)
+        metric_names = set(train_metrics.keys())
+        if val_metrics:
+            metric_names.update(val_metrics.keys())
+
+        for name in metric_names:
+            train_metric = train_metrics.get(name)
+            val_metric = val_metrics.get(name)
+
+            if val_metric is not None and train_metric is not None:
+                logger.info(dual_message_template, name, train_metric, name, val_metric)
+            elif val_metric is not None:
+                logger.info(message_template, "Validation", name, val_metric)
+            elif train_metric is not None:
+                logger.info(message_template, "Training", name, train_metric)
 
     def _update_learning_rate(self, epoch: int, val_metric: float = None) -> None:
         if not self._learning_rate_scheduler:
@@ -481,16 +499,16 @@ class Trainer:
                     model: Model,
                     serialization_dir: str,
                     iterator: DataIterator,
-                    train_dataset: Dataset,
-                    validation_dataset: Optional[Dataset],
+                    train_dataset: InstanceCollection,
+                    validation_dataset: Optional[InstanceCollection],
                     params: Params) -> 'Trainer':
 
-        patience = params.pop("patience", 2)
+        patience = params.pop_int("patience", 2)
         validation_metric = params.pop("validation_metric", "-loss")
-        num_epochs = params.pop("num_epochs", 20)
-        cuda_device = params.pop("cuda_device", -1)
-        grad_norm = params.pop("grad_norm", None)
-        grad_clipping = params.pop("grad_clipping", None)
+        num_epochs = params.pop_int("num_epochs", 20)
+        cuda_device = params.pop_int("cuda_device", -1)
+        grad_norm = params.pop_float("grad_norm", None)
+        grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
 
         if cuda_device >= 0:

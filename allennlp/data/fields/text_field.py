@@ -9,11 +9,12 @@ from spacy.tokens import Token as SpacyToken
 import torch
 from torch.autograd import Variable
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common.checks import ConfigurationError
+from allennlp.nn import util
 
 TokenList = List[TokenType]  # pylint: disable=invalid-name
 
@@ -127,3 +128,10 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         # for padding reasons in ListField.
         text_field._indexed_tokens = {name: [] for name in self._token_indexers.keys()}
         return text_field
+
+    @overrides
+    def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
+        # pylint: disable=no-self-use
+        # This is creating a dict of {token_indexer_key: batch_tensor} for each token indexer used
+        # to index this field.
+        return util.batch_tensor_dicts(tensor_list)

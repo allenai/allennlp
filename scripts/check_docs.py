@@ -13,6 +13,7 @@ MODULE_GLOB = 'allennlp/**/*.py'
 MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         # No docs at top level.
         'allennlp',
+        'allennlp.version',
 
         # No docs for custom extensions, which aren't even in python.
         'allennlp.custom_extensions',

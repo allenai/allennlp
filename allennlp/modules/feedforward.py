@@ -81,8 +81,8 @@ class FeedForward(torch.nn.Module):
 
     @classmethod
     def from_params(cls, params: Params):
-        input_dim = params.pop('input_dim')
-        num_layers = params.pop('num_layers')
+        input_dim = params.pop_int('input_dim')
+        num_layers = params.pop_int('num_layers')
         hidden_dims = params.pop('hidden_dims')
         activations = params.pop('activations')
         dropout = params.pop('dropout', 0.0)

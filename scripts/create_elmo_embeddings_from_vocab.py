@@ -83,9 +83,10 @@ def main(vocab_path: str,
     # Remove the embeddings associated with padding in the last batch.
     all_embeddings[-1] = all_embeddings[-1][:-last_batch_remainder, :]
 
-    embedding_weight = torch.cat(all_embeddings, 0).numpy()
+    embedding_weight = torch.cat(all_embeddings, 0).cpu().numpy()
 
     # Write out the embedding in a glove format.
+    os.makedirs(output_dir, exist_ok=True)
     with gzip.open(os.path.join(output_dir, "elmo_embeddings.txt.gz"), 'wb') as embeddings_file:
         for i, word in enumerate(tokens):
             string_array = " ".join([str(x) for x in list(embedding_weight[i, :])])

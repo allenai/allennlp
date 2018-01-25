@@ -9,7 +9,6 @@ from allennlp.data.iterators import BasicIterator
 from allennlp.data import DatasetReader
 from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
-from allennlp.nn.util import arrays_to_variables
 
 
 def main(serialization_directory, device):
@@ -34,19 +33,17 @@ def main(serialization_directory, device):
     # Load the evaluation data and index it.
     print("Reading evaluation data from {}".format(evaluation_data_path))
     dataset = dataset_reader.read(evaluation_data_path)
-    dataset.index_instances(model._vocab)
+    dataset.index_instances(model.vocab)
     iterator = BasicIterator(batch_size=32)
 
     model_predictions = []
-    for batch in tqdm.tqdm(iterator(dataset, num_epochs=1, shuffle=False)):
-        tensor_batch = arrays_to_variables(batch, device, for_training=False)
-        result = model(**tensor_batch)
+    for batch in tqdm.tqdm(iterator(dataset, num_epochs=1, shuffle=False, cuda_device=device, for_training=False)):
+        result = model(**batch)
         predictions = model.decode(result)
         model_predictions.extend(predictions["tags"])
 
     for instance, prediction in zip(dataset.instances, model_predictions):
         fields = instance.fields
-        predicted_tags = [model._vocab.get_token_from_index(x, namespace="labels") for x in prediction]
         try:
             # Most sentences have a verbal predicate, but not all.
             verb_index = fields["verb_indicator"].labels.index(1)
@@ -57,7 +54,7 @@ def main(serialization_directory, device):
         sentence = fields["tokens"].tokens
 
         write_to_conll_eval_file(prediction_file, gold_file,
-                                 verb_index, sentence, predicted_tags, gold_tags)
+                                 verb_index, sentence, prediction, gold_tags)
     prediction_file.close()
     gold_file.close()
 

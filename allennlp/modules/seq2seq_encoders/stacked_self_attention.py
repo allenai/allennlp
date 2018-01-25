@@ -104,6 +104,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         self.dropout = Dropout(dropout_prob)
         self._input_dim = input_dim
         self._output_dim = self._attention_layers[-1].get_output_dim()
+        self._output_layer_norm = LayerNorm(self._output_dim)
 
     @overrides
     def get_input_dim(self) -> int:
@@ -138,18 +139,18 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             # shape (batch_size, sequence_length, hidden_dim)
             attention_output = attention(layer_norm(feedforward_output), mask)
             output = self.dropout(attention_output) + feedforward_output
-        return output
+        return self._output_layer_norm(output)
 
     @classmethod
     def from_params(cls, params: Params):
-        input_dim = params.pop('input_dim')
-        hidden_dim = params.pop('hidden_dim')
-        projection_dim = params.pop('projection_dim', None)
-        feedforward_hidden_dim = params.pop("feedforward_hidden_dim")
-        num_layers = params.pop("num_layers", 2)
-        num_attention_heads = params.pop('num_attention_heads', 3)
-        use_positional_encoding = params.pop('use_positional_encoding', True)
-        dropout_prob = params.pop("dropout_prob", 0.2)
+        input_dim = params.pop_int('input_dim')
+        hidden_dim = params.pop_int('hidden_dim')
+        projection_dim = params.pop_int('projection_dim', None)
+        feedforward_hidden_dim = params.pop_int("feedforward_hidden_dim")
+        num_layers = params.pop_int("num_layers", 2)
+        num_attention_heads = params.pop_int('num_attention_heads', 3)
+        use_positional_encoding = params.pop_bool('use_positional_encoding', True)
+        dropout_prob = params.pop_float("dropout_prob", 0.2)
 
         return cls(input_dim=input_dim,
                    hidden_dim=hidden_dim,

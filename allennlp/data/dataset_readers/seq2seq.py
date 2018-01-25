@@ -106,7 +106,7 @@ class Seq2SeqDatasetReader(DatasetReader):
         target_tokenizer_type = params.pop('target_tokenizer', None)
         target_tokenizer = None if target_tokenizer_type is None else Tokenizer.from_params(target_tokenizer_type)
         source_indexers_type = params.pop('source_token_indexers', None)
-        source_add_start_token = params.pop('source_add_start_token', True)
+        source_add_start_token = params.pop_bool('source_add_start_token', True)
         if source_indexers_type is None:
             source_token_indexers = None
         else:

@@ -1,9 +1,7 @@
 <p align="center"><img width="40%" src="doc/static/allennlp-logo-dark.png" /></p>
 
-
-[![Build Status](https://travis-ci.org/allenai/allennlp.svg?branch=master)](https://travis-ci.org/allenai/allennlp)
+[![Build Status](http://build.allennlp.org/app/rest/builds/buildType:(id:AllenNLP_AllenNLPCommits)/statusIcon)](http://build.allennlp.org/viewType.html?buildTypeId=AllenNLP_AllenNLPCommits&guest=1)
 [![codecov](https://codecov.io/gh/allenai/allennlp/branch/master/graph/badge.svg)](https://codecov.io/gh/allenai/allennlp)
-[![docs](https://readthedocs.org/projects/allennlp/badge/?version=latest)](https://readthedocs.org/projects/allennlp/)
 [![docker](https://images.microbadger.com/badges/image/allennlp/allennlp.svg)](https://microbadger.com/images/allennlp/allennlp)
 
 An [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) NLP research library, built on PyTorch,

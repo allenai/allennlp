@@ -6,7 +6,8 @@ import torch
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.data import DataIterator, Dataset, DatasetReader, Vocabulary
+from allennlp.data import DataIterator, DatasetReader, Vocabulary
+from allennlp.data.dataset import Dataset
 from allennlp.models import Model, load_archive
 
 
@@ -22,13 +23,15 @@ class ModelTestCase(AllenNlpTestCase):
 
         reader = DatasetReader.from_params(params['dataset_reader'])
         dataset = reader.read(dataset_file)
-        vocab = Vocabulary.from_dataset(dataset)
+        vocab = Vocabulary.from_instances(dataset)
         self.vocab = vocab
         dataset.index_instances(vocab)
         self.dataset = dataset
         self.model = Model.from_params(self.vocab, params['model'])
 
-    def ensure_model_can_train_save_and_load(self, param_file: str, tolerance: float = 1e-6,
+    def ensure_model_can_train_save_and_load(self,
+                                             param_file: str,
+                                             tolerance: float = 1e-4,
                                              cuda_device: int = -1):
         save_dir = os.path.join(self.TEST_DIR, "save_and_load_test")
         archive_file = os.path.join(save_dir, "model.tar.gz")
@@ -60,16 +63,9 @@ class ModelTestCase(AllenNlpTestCase):
         self.check_model_computes_gradients_correctly(model, model_batch)
 
         # The datasets themselves should be identical.
+        assert model_batch.keys() == loaded_batch.keys()
         for key in model_batch.keys():
-            field = model_batch[key]
-            if isinstance(field, dict):
-                for subfield in field:
-                    self.assert_fields_equal(model_batch[key][subfield],
-                                             loaded_batch[key][subfield],
-                                             tolerance=tolerance,
-                                             name=key + '.' + subfield)
-            else:
-                self.assert_fields_equal(model_batch[key], loaded_batch[key], 1e-6, key)
+            self.assert_fields_equal(model_batch[key], loaded_batch[key], key, 1e-6)
 
         # Set eval mode, to turn off things like dropout, then get predictions.
         model.eval()
@@ -92,18 +88,31 @@ class ModelTestCase(AllenNlpTestCase):
         for key in model_predictions.keys():
             self.assert_fields_equal(model_predictions[key],
                                      loaded_model_predictions[key],
-                                     tolerance=1e-4,
-                                     name=key)
+                                     name=key,
+                                     tolerance=tolerance)
 
         return model, loaded_model
 
-    @staticmethod
-    def assert_fields_equal(field1, field2, tolerance: float = 1e-6, name: str = None) -> None:
+    def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
         if isinstance(field1, torch.autograd.Variable):
             assert_allclose(field1.data.cpu().numpy(),
                             field2.data.cpu().numpy(),
                             rtol=tolerance,
                             err_msg=name)
+        elif isinstance(field1, dict):
+            assert field1.keys() == field2.keys()
+            for key in field1:
+                self.assert_fields_equal(field1[key],
+                                         field2[key],
+                                         tolerance=tolerance,
+                                         name=name + '.' + key)
+        elif isinstance(field1, (list, tuple)):
+            assert len(field1) == len(field2)
+            for i, (subfield1, subfield2) in enumerate(zip(field1, field2)):
+                self.assert_fields_equal(subfield1,
+                                         subfield2,
+                                         tolerance=tolerance,
+                                         name=name + f"[{i}]")
         else:
             assert field1 == field2
 
@@ -130,7 +139,8 @@ class ModelTestCase(AllenNlpTestCase):
             tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
             result = self.model(**tensors)
             single_predictions.append(result)
-        batch_tensors = self.dataset.as_tensor_dict(self.dataset.get_padding_lengths(), for_training=False)
+        full_dataset = Dataset([instance for instance in self.dataset])
+        batch_tensors = full_dataset.as_tensor_dict(self.dataset.get_padding_lengths(), for_training=False)
         batch_predictions = self.model(**batch_tensors)
         for i, instance_predictions in enumerate(single_predictions):
             for key, single_predicted in instance_predictions.items():
