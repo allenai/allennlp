@@ -5,16 +5,15 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.testing import ModelTestCase
-from allennlp.common import Params
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.models import Model, WikiTablesSemanticParser
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderState
 from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderStep
 from allennlp.modules import SimilarityFunction
-
 
 class WikiTablesSemanticParserTest(ModelTestCase):
     def setUp(self):
@@ -24,6 +23,88 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
+
+    def test_get_neighbor_indices(self):
+        worlds, num_entities = self.get_fake_worlds()
+        tensor = Variable(torch.LongTensor([]))
+
+        neighbor_indexes = self.model._get_neighbor_indices(worlds, num_entities, tensor)
+
+        # Checks for the correct shape meaning dimension 2 has size num_neighbors,
+        # padding of -1 is used, and correct neighbor indices.
+        assert torch.equal(neighbor_indexes.data, torch.LongTensor([[[2, 3],
+                                                                     [2, 3],
+                                                                     [0, 1],
+                                                                     [0, 1]],
+                                                                    [[1, -1],
+                                                                     [0, -1],
+                                                                     [-1, -1],
+                                                                     [-1, -1]]]))
+
+    def test_get_type_vector(self):
+        worlds, num_entities = self.get_fake_worlds()
+        tensor = Variable(torch.LongTensor([]))
+        type_vector, _ = self.model._get_type_vector(worlds, num_entities, tensor)
+        # Verify that both types are present and padding used for non existent entities.
+        assert torch.equal(type_vector.data, torch.LongTensor([[[1, 0],
+                                                                [1, 0],
+                                                                [0, 1],
+                                                                [0, 1]],
+                                                               [[1, 0],
+                                                                [0, 1],
+                                                                [0, 0],
+                                                                [0, 0]]]))
+
+    def test_get_linking_probabilities(self):
+        worlds, num_entities = self.get_fake_worlds()
+        # (batch_size, num_question_tokens, num_entities)
+        linking_scores = [[[1, 0, -3, 2],
+                           [-1, 5, -3, 4]],
+                          [[1, 8, 10, 10],
+                           [2, -1, -2, 1]]]
+        linking_scores = Variable(torch.FloatTensor(linking_scores))
+        question_mask = Variable(torch.LongTensor([[1, 1], [1, 0]]))
+        _, entity_type_dict = self.model._get_type_vector(worlds, num_entities, linking_scores)
+
+        # (batch_size, num_question_tokens, num_entities)
+        entity_probability = self.model._get_linking_probabilities(worlds, linking_scores, question_mask,
+                                                                   entity_type_dict)
+
+        # The following properties in entity_probability are tested for by true_probability:
+        # (1) It has all 0.0 probabilities when there is no question token, as seen for the
+        #     second word in the second batch.
+        # (2) It has 0.0 probabilities when an entity is masked, as seen in the last two entities
+        #     for the second batch instance.
+        # (3) The probabilities for entities of the same type with the same question token should
+        #     sum to at most 1, but not necessarily 1, because some probability mass goes to the
+        #     null entity.  We have two entity types here, so each row should sum to at most 2, and
+        #     that number will approach 2 as the unnormalized linking scores for each entity get
+        #     higher.
+        true_probability = [[[0.5761169, 0.2119416, 0.0058998, 0.8756006],
+                             [0.0024561, 0.9908675, 0.0008947, 0.9811352]],
+                            [[0.7310586, 0.9996647, 0.0, 0.0],
+                             [0.0, 0.0, 0.0, 0.0]]]
+        assert_almost_equal(entity_probability.data.cpu().numpy(), true_probability)
+
+    def get_fake_worlds(self):
+        # Generate a toy WikitablesWorld.
+        FakeTable = namedtuple('FakeTable', ['entities', 'neighbors'])
+        FakeWorld = namedtuple('FakeWorld', ['table_graph'])
+        entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
+                    ['fb:cell.2012', 'fb:row.row.year']]
+        neighbors = [{'fb:cell.2010': ['fb:row.row.year', 'fb:row.row.year2'],
+                      'fb:cell.2011': ['fb:row.row.year', 'fb:row.row.year2'],
+                      'fb:row.row.year': ['fb:cell.2010', 'fb:cell.2011'],
+                      'fb:row.row.year2': ['fb:cell.2010', 'fb:cell.2011']
+                     },
+                     {'fb:cell.2012': ['fb:row.row.year'],
+                      'fb:row.row.year': ['fb:cell.2012'],
+                     }]
+
+        worlds = [FakeWorld(FakeTable(entity_list, entity2neighbors))
+                  for entity_list, entity2neighbors in zip(entities, neighbors)]
+        num_entities = max([len(entity_list) for entity_list in entities])
+        return worlds, num_entities
 
     def test_get_unique_elements(self):
         # pylint: disable=protected-access
