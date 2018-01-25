@@ -36,7 +36,7 @@ def main(argv):
     hidden_size = 1029
     encoder1 = chunking.main.EncoderRNN(input_lang.n_words, hidden_size, wordVecs, n_layers=2)
     attn_decoder1 = chunking.main.AttnDecoderRNN(hidden_size, output_lang.n_words, MAX_LENGTH,
-                               1, dropout_p=0.1)
+                               2, dropout_p=0.1)
 
     print("*** starting training ***")
     if use_cuda:
