@@ -12,24 +12,32 @@ class DatasetReader(Registrable):
     necessary to _read the data apart from the filepath should be passed to the constructor of the
     ``DatasetReader``.
     """
+    lazy = False
+
     def instance_generator(self, file_path) -> InstanceGenerator:
         """
-        This default implementation caches all instances in a list.
-        If you want your dataset to be loaded in-memory all at once,
-        you just need to implement `_read()`.
+        If ``self.lazy`` is False, this caches all the instances
+        from ``self._read()`` in a list and returns an ``InstanceGenerator``
+        that just returns the list each time it's called.
 
-        If you want a lazy dataset that doesn't get loaded into memory all
-        at once, then you'll need to override this method.
+        If ``self.lazy`` is True, this returns an ``InstanceGenerator``
+        that calls ``self._read()`` each time it's called. Note that this
+        will only be lazy if ``self._read()`` is; that is, if ``self._read()``
+        loads the entire file into memory, then you'd just be loading the
+        entire file into memory over and over again.
         """
-        iterable = self._read(file_path)
+        if self.lazy:
+            return lambda: self._read(file_path)
+        else:
+            iterable = self._read(file_path)
 
-        # If `iterable` is already a list, this is a no-op.
-        instances = ensure_list(iterable)
+            # If `iterable` is already a list, this is a no-op.
+            instances = ensure_list(iterable)
 
-        # Each call to the returned `InstanceGenerator` just returns the list
-        # of instances. If you modify that list (e.g. by shuffling),
-        # those changes will persist to future calls.
-        return lambda: instances
+            # Each call to the returned `InstanceGenerator` just returns
+            # the list of instances. If you modify that list (e.g. by shuffling),
+            # those changes will persist to future calls.
+            return lambda: instances
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
