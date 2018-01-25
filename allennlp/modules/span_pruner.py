@@ -4,6 +4,7 @@ from overrides import overrides
 import torch
 
 from allennlp.nn import util
+from allennlp.common.checks import ConfigurationError
 
 class SpanPruner(torch.nn.Module):
     """
@@ -16,7 +17,6 @@ class SpanPruner(torch.nn.Module):
         A function which, given a tensor of shape (batch_size, num_spans, embedding_size),
         produces a tensor of shape (batch_size, num_spans, 1), representing a scalar score
         per span in the tensor.
-
     """
     def __init__(self, scorer: Callable[[torch.FloatTensor], torch.FloatTensor]) -> None:
         super(SpanPruner, self).__init__()
@@ -26,7 +26,7 @@ class SpanPruner(torch.nn.Module):
     def forward(self, # pylint: disable=arguments-differ
                 span_embeddings: torch.FloatTensor,
                 span_mask: torch.LongTensor,
-                num_spans_to_keep: int) -> Tuple[torch.LongTensor, torch.FloatTensor]:
+                num_spans_to_keep: int) -> Tuple[torch.FloatTensor, torch.LongTensor, torch.LongTensor]:
         """
         The indices of the top-k scoring spans according to span_scores. We return the
         indices in their original order, not ordered by score, so that we can rely on
@@ -36,9 +36,9 @@ class SpanPruner(torch.nn.Module):
         span_embeddings : ``torch.FloatTensor``, required.
             A tensor of shape (batch_size, num_spans, embedding_size), representing
             the set of embedded span representations.
-
         num_spans_to_keep : ``int``, required.
             The number of spans to keep when pruning.
+
         Returns
         -------
         top_span_embeddings : ``torch.FloatTensor``, required.
@@ -54,6 +54,10 @@ class SpanPruner(torch.nn.Module):
         num_spans = span_embeddings.size(1)
         # Shape: (batch_size, num_spans, 1)
         span_scores = self._scorer(span_embeddings)
+
+        if span_scores.size(-1) != 1 or span_scores.dim() != 3:
+            raise ConfigurationError(f"The scorer passed to SpanPruner must produce a tensor of shape"
+                                     f"(batch_size, num_spans, 1), but found shape {span_scores.size()}")
         # Make sure that we don't select any masked spans by
         # setting their scores to be -inf.
         span_scores += span_mask.log()
@@ -70,9 +74,6 @@ class SpanPruner(torch.nn.Module):
         # we need to select spans for each element in the batch.
         flat_top_span_indices = util.flatten_and_batch_shift_indices(top_span_indices, num_spans)
 
-        print(flat_top_span_indices)
-        print(span_embeddings)
-        print(top_span_indices)
         # Shape: (batch_size, num_spans_to_keep, embedding_size)
         top_span_embeddings = util.batched_index_select(span_embeddings,
                                                         top_span_indices,
