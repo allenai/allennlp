@@ -410,6 +410,52 @@ class NeuralChunker:
         
     def chunk(self, input_sent):
         return evaluate(self.encoder, self.decoder, self.input_lang, self.output_lang, input_sent, self.max_length)[0]
+
+def readableToken(tok):
+    if '__' in tok:
+        tok.rfind('__')
+        return tok[2 + toks[0].rfind('__'):]
+    else:
+        return tok
+
+def readableSentenceTokens(sent):
+    return [readableToken(tok) for tok in sent.split()]
+
+def tokensToSplit(sent):
+    toks = readableSentenceTokens(sent)
+    open_tok = toks.index('[[[')
+    close_tok = toks.index(']]]')
+    return toks[open_tok+1:close_tok]
+
+def compileSplit(sent, split_str, probs):
+    split_markers = list(split_str.split()) + ['E']
+    zipped = [(x, y, z) for (x, (y, z)) in zip(tokensToSplit(sent), zip(split_markers, probs))]
+    return zipped
+
+
+
+def visualizeSplit(split):
+    result = ''
+    for (tok, split_marker, prob) in split:
+        result += ' {}'.format(tok)
+        if split_marker == 'X' and prob >= 0.5:
+            result += ' |'
+        elif split_marker == 'X':
+            result += ' !|!__{:.1f}%'.format(prob * 100)
+        elif split_marker == 'O' and prob >= 0.5:
+            result += '  '
+        elif split_marker == 'O':
+            result += ' ?|?__{:.1f}%'.format(prob * 100)
+        else:
+            result += '  '
+    return result.strip()
+
+def visualizeSplitWithSent(sent, split):
+    print('--')
+    print(' '.join(readableSentenceTokens(sent)))
+    print(visualizeSplit(split))
+    
+
     
     
 def lookForWrong(chunker, sent_pairs, not_that_wrong_thres = 0.1, num_to_eval=100):
@@ -428,10 +474,7 @@ def lookForWrong(chunker, sent_pairs, not_that_wrong_thres = 0.1, num_to_eval=10
             else:
                 correct += 1
             if min(probs) < 0.5:
-                print("---")
-                print(probs)
-                print(pair[0])
-                print(pair[1])
+                visualizeSplitWithSent(pair[0], compileSplit(pair[0], pair[1], probs))
         except KeyError:
             pass
     total = float(correct + not_that_wrong + pretty_wrong)
