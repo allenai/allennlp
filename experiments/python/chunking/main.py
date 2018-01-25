@@ -446,6 +446,25 @@ def lookForWrong(encoder, decoder, input_lang, output_lang, sent_pairs, max_leng
     print('pretty wrong: {}'.format(100 * pretty_wrong/total))
     
 
+def evaluateSents(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, num_to_eval=100):
+    num_sents = 0
+    prev_tokens = set()
+    num_correct = 0
+    still_correct = True
+    for pair in sent_pairs[:num_to_eval]:
+        output_words, attentions = evaluate(encoder, decoder, input_lang, output_lang, pair[0], max_length)        
+        output_sentence = ' '.join(output_words[:-1])
+        if pair[1] != output_sentence:
+            still_correct += False
+        tokens = set([tok for tok in pair[0].split() if '_' in tok])
+        if len(tokens & prev_tokens) == 0:
+            if still_correct:
+                num_correct += 1
+            num_sents += 1
+            prev_tokens = tokens
+            still_correct = True
+    return float(num_correct)/num_sents
+
 def validate(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, num_to_eval=100):
     num_correct = 0
     for pair in sent_pairs[:num_to_eval]:
