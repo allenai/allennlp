@@ -65,9 +65,6 @@ class BucketIterator(BasicIterator):
     @overrides
     def _create_batches(self, generator: InstanceGenerator, shuffle: bool) -> Iterable[Batch]:
         instances = ensure_list(generator())
-        if self.vocab:
-            for instance in instances:
-                instance.index_fields(self.vocab)
 
         if self._sorting_keys:
             instances = self._sort_by_padding(instances,
@@ -89,8 +86,8 @@ class BucketIterator(BasicIterator):
 
         return grouped_instances
 
-    @staticmethod
-    def _sort_by_padding(instances: List[Instance],
+    def _sort_by_padding(self,
+                         instances: List[Instance],
                          sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
                          padding_noise: float = 0.0) -> List[Instance]:
         """
@@ -100,6 +97,8 @@ class BucketIterator(BasicIterator):
         """
         instances_with_lengths = []
         for instance in instances:
+            # Make sure instance is indexed before calling .get_padding
+            instance.index_fields(self.vocab)
             padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
             if padding_noise > 0.0:
                 noisy_lengths = {}
