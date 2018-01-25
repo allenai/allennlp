@@ -334,7 +334,7 @@ def trainIters(encoder, decoder, input_lang, output_lang, n_iters, sent_pairs, s
     showPlot(plot_losses)
 
 def evaluate(encoder, decoder, input_lang, output_lang, sentence, max_length):
-    input_variable = chunking.main.variableFromSentence(input_lang, sentence)
+    input_variable = variableFromSentence(input_lang, sentence)
     input_length = input_variable.size()[0]
     encoder_hidden = encoder.initHidden()
     encoder_outputs = Variable(torch.zeros(max_length, encoder.hidden_size))
@@ -353,11 +353,6 @@ def evaluate(encoder, decoder, input_lang, output_lang, sentence, max_length):
             decoder_input, decoder_hidden, encoder_outputs)
         decoder_attentions[di] = decoder_attention.data
         topv, topi = decoder_output.data.topk(1)
-        (top3probs, top3) = decoder_output.data.topk(3)
-        import math
-        top3probs = [math.exp(x) for x in list(top3probs.view(-1))]
-        top3 = list(top3.view(-1))
-        print('top3: {} {}'.format(top3, top3probs))
         ni = topi[0][0]
         if ni == EOS_token:
             decoded_words.append('<EOS>')
@@ -367,6 +362,7 @@ def evaluate(encoder, decoder, input_lang, output_lang, sentence, max_length):
         decoder_input = Variable(torch.LongTensor([[ni]]))
         decoder_input = decoder_input.cuda() if use_cuda else decoder_input
     return decoded_words, decoder_attentions[:di + 1]
+
 
 def compute_prob(encoder, decoder, input_lang, output_lang, sentence, desired_output, max_length):
     input_variable = chunking.main.variableFromSentence(input_lang, sentence)
@@ -418,13 +414,13 @@ class NeuralChunker:
         return evaluate(self.encoder, self.decoder, self.input_lang, self.output_lang, input_sent, self.max_length)[0]
     
     
-def lookForWrong(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, not_that_wrong_thres = 0.1, num_to_eval=100):
+def lookForWrong(chunker, sent_pairs, not_that_wrong_thres = 0.1, num_to_eval=100):
     correct = 0
     not_that_wrong = 0
     pretty_wrong = 0
     for pair in sent_pairs[:num_to_eval]:
         try:
-            probs = compute_prob(encoder, decoder, input_lang, output_lang, pair[0], pair[1], max_length)        
+            probs = compute_prob(chunker.encoder, chunker.decoder, chunker.input_lang, chunker.output_lang, pair[0], pair[1], chunker.max_length)        
             if min(probs) < 0.5:                
                 if min(probs) > not_that_wrong_thres:
                     not_that_wrong += 1
