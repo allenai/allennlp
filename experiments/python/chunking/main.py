@@ -362,6 +362,44 @@ def evaluate(encoder, decoder, input_lang, output_lang, sentence, max_length):
     return decoded_words, decoder_attentions[:di + 1]
 
 
+def compute_prob(encoder, decoder, input_lang, output_lang, sentence, desired_output, max_length):
+    input_variable = chunking.main.variableFromSentence(input_lang, sentence)
+    desired_variable = list(chunking.main.variableFromSentence(output_lang, desired_output).data.view(-1))
+    input_length = input_variable.size()[0]
+    encoder_hidden = encoder.initHidden()
+    encoder_outputs = Variable(torch.zeros(max_length, encoder.hidden_size))
+    encoder_outputs = encoder_outputs.cuda() if use_cuda else encoder_outputs
+    for ei in range(input_length):
+        encoder_output, encoder_hidden = encoder(input_variable[ei],
+                                                 encoder_hidden)
+        encoder_outputs[ei] = encoder_outputs[ei] + encoder_output[0][0]
+    decoder_input = Variable(torch.LongTensor([[SOS_token]]))  # SOS
+    decoder_input = decoder_input.cuda() if use_cuda else decoder_input
+    decoder_hidden = encoder_hidden
+    decoded_words = []
+    decoder_attentions = torch.zeros(max_length, max_length)
+    for di in range(len(desired_variable)):
+        decoder_output, decoder_hidden, decoder_attention = decoder(
+            decoder_input, decoder_hidden, encoder_outputs)
+        decoder_attentions[di] = decoder_attention.data
+        desired_token = desired_variable[di]
+        (top5probs, top5) = decoder_output.data.topk(5)
+        import math
+        top5probs = [math.exp(x) for x in list(top5probs.view(-1))]
+        top5 = list(top5.view(-1))
+        prob_map = {k: v for (k,v) in zip(top5, top5probs)}
+        #print(prob_map)
+        topv, topi = decoder_output.data.topk(1)
+        ni = topi[0][0]
+        #print('prob of next prediction: {}'.format(prob_map[desired_token]))
+        decoded_words.append(prob_map[desired_token])
+        #print(desired_token)
+        decoder_input = Variable(torch.LongTensor([[desired_token]]))
+        decoder_input = decoder_input.cuda() if use_cuda else decoder_input
+    return decoded_words
+
+
+
 class NeuralChunker:
     def __init__(self, encoder_file, decoder_file, input_lang, output_lang, max_length):
         self.encoder = torch.load(encoder_file)
@@ -374,7 +412,52 @@ class NeuralChunker:
         return evaluate(self.encoder, self.decoder, self.input_lang, self.output_lang, input_sent, self.max_length)[0]
     
     
+def lookForWrong(chunker, sent_pairs, not_that_wrong_thres = 0.1, num_to_eval=100):
+    correct = 0
+    not_that_wrong = 0
+    pretty_wrong = 0
+    for pair in sent_pairs[:num_to_eval]:
+        try:
+            probs = compute_prob(chunker.encoder, chunker.decoder, chunker.input_lang, chunker.output_lang, pair[0], pair[1], chunker.max_length)        
+            if min(probs) < 0.5:                
+                if min(probs) > not_that_wrong_thres:
+                    not_that_wrong += 1
+                else:
+                    pretty_wrong += 1    
+                print(min(probs))
+            else:
+                correct += 1
+            #if min(probs) < 0.8:
+            #    print("---")
+            #    print(probs)
+            #    print(pair[0])
+            #    print(pair[1])
+        except KeyError:
+            pass
+    total = float(correct + not_that_wrong + pretty_wrong)
+    print('correct: {}'.format(100 * correct/total))
+    print('not that wrong (> {}%): {}'.format(100 * not_that_wrong_thres, 100 * not_that_wrong/total))
+    print('pretty wrong: {}'.format(100 * pretty_wrong/total))
     
+
+def evaluateSents(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, num_to_eval=100):
+    num_sents = 0
+    prev_tokens = set()
+    num_correct = 0
+    still_correct = True
+    for pair in sent_pairs[:num_to_eval]:
+        output_words, attentions = evaluate(encoder, decoder, input_lang, output_lang, pair[0], max_length)        
+        output_sentence = ' '.join(output_words[:-1])
+        if pair[1] != output_sentence:
+            still_correct += False
+        tokens = set([tok for tok in pair[0].split() if '_' in tok])
+        if len(tokens & prev_tokens) == 0:
+            if still_correct:
+                num_correct += 1
+            num_sents += 1
+            prev_tokens = tokens
+            still_correct = True
+    return float(num_correct)/num_sents
 
 def validate(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, num_to_eval=100):
     num_correct = 0
