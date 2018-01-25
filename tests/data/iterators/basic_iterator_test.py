@@ -4,7 +4,7 @@ from typing import List
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token, Vocabulary
-from allennlp.data.dataset import Dataset
+from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
@@ -29,7 +29,7 @@ class IteratorTest(AllenNlpTestCase):
                 self.create_instance(["this", "is", "a", "very", "very", "very", "very", "long", "sentence"]),
                 self.create_instance(["sentence"]),
                 ]
-        self.dataset = Dataset(self.instances)
+        self.dataset = Batch(self.instances)
 
     def create_instance(self, str_tokens: List[str]):
         tokens = [Token(t) for t in str_tokens]

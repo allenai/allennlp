@@ -10,7 +10,7 @@ from torch.autograd import Variable
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.dataset import Dataset
+from allennlp.data.dataset import Batch
 from allennlp.data.iterators import BasicIterator
 from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
 from allennlp.data.fields import TextField
@@ -41,7 +41,7 @@ class TestElmoBiLm(AllenNlpTestCase):
                 instance = Instance({"elmo": field})
                 instances.append(instance)
 
-        dataset = Dataset(instances)
+        dataset = Batch(instances)
         vocab = Vocabulary()
         dataset.index_instances(vocab)
 
@@ -116,7 +116,7 @@ class TestElmo(AllenNlpTestCase):
             instance = Instance({'elmo': field})
             instances.append(instance)
 
-        dataset = Dataset(instances)
+        dataset = Batch(instances)
         vocab = Vocabulary()
         dataset.index_instances(vocab)
         return dataset.as_tensor_dict()['elmo']['character_ids']

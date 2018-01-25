@@ -6,8 +6,9 @@ from typing import Callable, Dict, List, Tuple, Iterable
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.data.dataset import Dataset
-from allennlp.data.instance import Instance
+from allennlp.common.util import ensure_list
+from allennlp.data.dataset import Batch
+from allennlp.data.instance import Instance, InstanceGenerator
 from allennlp.data.iterators.bucket_iterator import BucketIterator
 from allennlp.data.iterators.data_iterator import DataIterator
 
@@ -94,37 +95,38 @@ class AdaptiveIterator(BucketIterator):
                                                batch_size=batch_size)
 
     @overrides
-    def get_num_batches(self, dataset: Dataset) -> int:
+    def get_num_batches(self, generator: InstanceGenerator) -> int:
         """
         This is a non-trivial operation with an ``AdaptiveIterator``, and it's only approximate,
         because the actual number of batches constructed depends on the padding noise.  Call this
         sparingly.
         """
-        return len(self._create_batches(dataset))
+        return len(self._create_batches(generator))
 
     @overrides
-    def _create_batches(self, dataset: Dataset, shuffle: bool) -> Iterable[Dataset]:
+    def _create_batches(self, generator: InstanceGenerator, shuffle: bool) -> Iterable[Batch]:
         if self._biggest_batch_first:
-            return super(AdaptiveIterator, self)._create_batches(dataset, shuffle)
+            return super(AdaptiveIterator, self)._create_batches(generator, shuffle)
+        instances = ensure_list(generator())
         if self._sorting_keys:
-            dataset = self._sort_dataset_by_padding(dataset,
-                                                    self._sorting_keys,
-                                                    self._padding_noise)
+            instances = self._sort_by_padding(instances,
+                                              self._sorting_keys,
+                                              self._padding_noise)
         # Group the instances into different sized batches, depending on how padded they are.
-        grouped_instances = self._adaptive_grouping(dataset)
+        grouped_instances = self._adaptive_grouping(instances)
         if shuffle:
             random.shuffle(grouped_instances)
         else:
             logger.warning("shuffle parameter is set to False,"
                            " while adaptive iterators by definition change the order of your data.")
-        return (Dataset(batch) for batch in grouped_instances)
+        return (Batch(batch) for batch in grouped_instances)
 
-    def _adaptive_grouping(self, dataset: Dataset) -> List[List[Instance]]:
+    def _adaptive_grouping(self, instances: List[Instance]) -> List[List[Instance]]:
         batches = []
         current_batch = []
         current_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
         logger.debug("Creating adaptive groups")
-        for instance in dataset.instances:
+        for instance in instances:
             current_batch.append(instance)
             instance_lengths = instance.get_padding_lengths()
             for field_name in instance_lengths:

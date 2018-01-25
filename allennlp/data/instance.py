@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Callable, Iterable
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
@@ -24,6 +24,7 @@ class Instance:
     """
     def __init__(self, fields: Dict[str, Field]) -> None:
         self.fields = fields
+        self.indexed = False
 
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
@@ -38,8 +39,11 @@ class Instance:
         Converts all ``UnindexedFields`` in this ``Instance`` to ``IndexedFields``, given the
         ``Vocabulary``.  This `mutates` the current object, it does not return a new ``Instance``.
         """
-        for field in self.fields.values():
-            field.index(vocab)
+        # index_fields is a no op if this instance has already been indexed
+        if not self.indexed:
+            self.indexed = True
+            for field in self.fields.values():
+                field.index(vocab)
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """
@@ -70,3 +74,5 @@ class Instance:
                                                   cuda_device=cuda_device,
                                                   for_training=for_training)
         return tensors
+
+InstanceGenerator = Callable[[], Iterable[Instance]]

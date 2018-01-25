@@ -5,7 +5,7 @@ import numpy
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token, Vocabulary
-from allennlp.data.dataset import Dataset, LazyDataset
+from allennlp.data.dataset import Batch, LazyDataset
 from allennlp.data.fields import TextField, LabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
@@ -25,7 +25,7 @@ class TestDataset(AllenNlpTestCase):
         instance1 = Instance({"tag": (LabelField(1, skip_indexing=True))})
         instance2 = Instance({"words": TextField([Token("hello")], {})})
         with pytest.raises(ConfigurationError):
-            _ = Dataset([instance1, instance2])
+            _ = Batch([instance1, instance2])
 
     def test_padding_lengths_uses_max_instance_lengths(self):
         dataset = self.get_dataset()
@@ -51,7 +51,7 @@ class TestDataset(AllenNlpTestCase):
         lazy_dataset.index_instances(self.vocab)
 
         for _ in range(10):
-            dataset = Dataset([instance for instance in lazy_dataset])
+            dataset = Batch([instance for instance in lazy_dataset])
             padding_lengths = dataset.get_padding_lengths()
             tensors = dataset.as_tensor_dict(padding_lengths)
             text1 = tensors["text1"]["tokens"].data.cpu().numpy()
@@ -73,7 +73,7 @@ class TestDataset(AllenNlpTestCase):
                            self.token_indexer)
         instances = [Instance({"text1": field1, "text2": field2}),
                      Instance({"text1": field3, "text2": field4})]
-        return Dataset(instances)
+        return Batch(instances)
 
     def get_lazy_dataset(self):
         instances = self.get_dataset().instances

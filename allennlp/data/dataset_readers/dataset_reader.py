@@ -1,8 +1,9 @@
-from allennlp.data.dataset import InstanceCollection
-from allennlp.data.instance import Instance
+from typing import Iterable
+
+from allennlp.data.instance import Instance, InstanceGenerator
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
-
+from allennlp.common.util import ensure_list
 
 class DatasetReader(Registrable):
     """
@@ -10,7 +11,20 @@ class DatasetReader(Registrable):
     parameters necessary to read the data apart from the filepath should be passed to the
     constructor of the ``DatasetReader``.
     """
-    def read(self, file_path: str) -> InstanceCollection:
+    def instance_generator(self, file_path) -> InstanceGenerator:
+        """
+        The default implementation of this caches the instances in a list.
+        If you want a lazy dataset that doesn't get loaded into memory all
+        at once, you'll need to override this method.
+        """
+        iterable = self.read(file_path)
+
+        # Avoid making an unnecessary list copy
+        instances = ensure_list(iterable)
+
+        return lambda: instances
+
+    def read(self, file_path: str) -> Iterable[Instance]:
         """
         Actually reads some data from the `file_path` and returns a :class:`Dataset`.
         """

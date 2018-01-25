@@ -29,7 +29,7 @@ import tqdm
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import prepare_environment
-from allennlp.data import InstanceCollection
+from allennlp.data.instance import InstanceGenerator
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
@@ -76,14 +76,14 @@ class Evaluate(Subcommand):
 
 
 def evaluate(model: Model,
-             dataset: InstanceCollection,
-             iterator: DataIterator,
+             instance_generator: InstanceGenerator,
+             data_iterator: DataIterator,
              cuda_device: int) -> Dict[str, Any]:
     model.eval()
 
-    generator = iterator(dataset, num_epochs=1, cuda_device=cuda_device, for_training=False)
+    iterator = data_iterator(instance_generator, num_epochs=1, cuda_device=cuda_device, for_training=False)
     logger.info("Iterating over dataset")
-    generator_tqdm = tqdm.tqdm(generator, total=iterator.get_num_batches(dataset))
+    generator_tqdm = tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instance_generator))
     for batch in generator_tqdm:
         model(**batch)
         metrics = model.get_metrics()
@@ -110,12 +110,12 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
     evaluation_data_path = args.evaluation_data_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
-    dataset = dataset_reader.read(evaluation_data_path)
-    dataset.index_instances(model.vocab)
+    instance_generator = dataset_reader.instance_generator(evaluation_data_path)
 
     iterator = DataIterator.from_params(config.pop("iterator"))
+    iterator.index_with(model.vocab)
 
-    metrics = evaluate(model, dataset, iterator, args.cuda_device)
+    metrics = evaluate(model, instance_generator, iterator, args.cuda_device)
 
     logger.info("Finished evaluating.")
     logger.info("Metrics:")
