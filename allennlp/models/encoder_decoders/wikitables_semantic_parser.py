@@ -13,15 +13,18 @@ from torch.nn.modules.linear import Linear
 from allennlp.common import Params
 from allennlp.common import util as common_util
 from allennlp.common.checks import check_dimensions_match
+from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.type_declarations import GrammarState
+from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.worlds import WikiTablesWorld
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
+from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
+from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules.time_distributed import TimeDistributed
+from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
 from allennlp.training.metrics import Average
@@ -54,6 +57,8 @@ class WikiTablesSemanticParser(Model):
         but they are structured the same way.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
+    entity_encoder : ``Seq2VecEncoder``
+        The encoder to used for averaging the words of an entity.
     decoder_trainer : ``DecoderTrainer``
         The structured learning algorithm used to train the decoder (which also trains the encoder,
         but it's applied to the decoder outputs).
@@ -81,6 +86,7 @@ class WikiTablesSemanticParser(Model):
                  nonterminal_embedder: TextFieldEmbedder,
                  terminal_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
+                 entity_encoder: Seq2VecEncoder,
                  decoder_trainer: DecoderTrainer,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
@@ -89,6 +95,7 @@ class WikiTablesSemanticParser(Model):
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
+        self._entity_encoder = TimeDistributed(entity_encoder)
         self._decoder_trainer = decoder_trainer
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
@@ -99,6 +106,8 @@ class WikiTablesSemanticParser(Model):
         self._action_sequence_accuracy = Average()
         self._embed_terminals = embed_terminals
 
+        check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
+                               "entity word average embedding dim", "question embedding dim")
         check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
                                "nonterminal embedding dim", "terminal embedding dim")
 
@@ -107,6 +116,11 @@ class WikiTablesSemanticParser(Model):
         self._action_padding_index = -1  # the padding value used by IndexField
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
         num_entity_types = 2  # TODO(mattg): get this in a more principled way somehow?
+        self._embedding_dim = question_embedder.get_output_dim()
+        self._type_params = torch.nn.Linear(num_entity_types, self._embedding_dim)
+        self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
+        self._linking_params = torch.nn.Linear(7, 1)  # TODO(mattg): use linking features param vector
+
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
@@ -122,7 +136,10 @@ class WikiTablesSemanticParser(Model):
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
         """
-        Decoder logic for producing the entire target sequence.
+        In this method we encode the table entities, link them to words in the question, then
+        encode the question. Then we set up the initial state for the decoder, and pass that
+        state off to either a DecoderTrainer, if we're training, or a BeamSearch for inference,
+        if we're not.
 
         Parameters
         ----------
@@ -147,41 +164,79 @@ class WikiTablesSemanticParser(Model):
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
         """
-        # (batch_size, question_length, embedding_dim)
-        embedded_input = self._question_embedder(question)
-        question_mask = util.get_text_field_mask(question).float()
-        batch_size = embedded_input.size(0)
 
-        # Actually a Dict[str, torch.LongTensor], but there is probably a single entry, with a
-        # tensor of shape (batch_size, num_entities, num_entity_tokens).
         table_text = table['text']
-        embedded_table_text = self._question_embedder(table_text)
-        # TODO(mattg): embed the table, similar to how the question is embedded (probably just
-        # using the question embedder), giving a tensor of shape (batch_size, num_entities,
-        # num_entity_tokens, embedding_dim).  Then encode that into shape (batch_size,
-        # num_entities, embedding_dim).
 
-        # (batch_size, num_entities, num_question_tokens, num_features)
-        linking_features = table['linking']  # pylint: disable=unused-variable
-        # TODO(mattg): multiply this by the feature weights, use this and the text embedding above
-        # to compute a linking scores.
+        # (batch_size, question_length, embedding_dim)
+        embedded_question = self._question_embedder(question)
+        question_mask = util.get_text_field_mask(question).float()
+        # (batch_size, num_entities, num_entity_tokens, embedding_dim)
+        embedded_table = self._question_embedder(table_text)
+        table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
-        # TODO(mattg): we need to actually compute this with the stuff mentioned above.  This
-        # represents how well each question token matches table entities.  I'm stubbing this out
-        # for now, so that I have a variable to pass to the decoder, because we need this there.
+        batch_size, num_entities, num_entity_tokens, _ = embedded_table.size()
+        num_question_tokens = embedded_question.size(1)
+
+        # (batch_size, num_entities, embedding_dim)
+        encoded_table = self._entity_encoder(embedded_table, table_mask)
+        # (batch_size, num_entities, num_neighbors)
+        neighbor_indices = self._get_neighbor_indices(world, num_entities, encoded_table)
+
+        # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
+        # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
+        # be added for the mask since that method expects 0 for padding.
+        # (batch_size, num_entities, num_entities, embedding_dim)
+        embedded_neighbors = util.batched_index_select(encoded_table, torch.abs(neighbor_indices))
+        neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices + 1},
+                                                 num_wrapping_dims=1).float()
+
+        # Encoder initialized to easily obtain a masked average.
+        neighbor_encoder = TimeDistributed(BagOfEmbeddingsEncoder(self._embedding_dim, averaged=True))
+        # (batch_size, num_entities, embedding_dim)
+        embedded_neighbors = neighbor_encoder(embedded_neighbors, neighbor_mask)
+
+        # entity_types: one-hot tensor with shape (batch_size, num_entities, num_types)
+        # entity_type_dict: Dict[int, int], mapping flattened_entity_index -> type_index
+        # These encode the same information, but for efficiency reasons later it's nice
+        # to have one version as a tensor and one that's accessible on the cpu.
+        entity_types, entity_type_dict = self._get_type_vector(world, num_entities, encoded_table)
+
+        entity_type_embeddings = self._type_params(entity_types.float())
+        projected_neighbor_embeddings = self._neighbor_params(embedded_neighbors.float())
+        # (batch_size, num_entities, embedding_dim)
+        entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
+
+        # Compute entity and question word similarity through a dot product.
+        question_table_similarity = torch.bmm(embedded_table.view(batch_size,
+                                                                  num_entities * num_entity_tokens,
+                                                                  self._embedding_dim),
+                                              torch.transpose(embedded_question, 1, 2))
+        question_table_similarity = question_table_similarity.view(batch_size,
+                                                                   num_entities,
+                                                                   num_entity_tokens,
+                                                                   num_question_tokens)
         # (batch_size, num_entities, num_question_tokens)
-        num_entities = embedded_table_text.size(1)
-        num_question_tokens = embedded_input.size(1)
-        linking_scores: torch.FloatTensor = Variable(torch.ones(batch_size, num_entities, num_question_tokens))
+        question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
+        # (batch_size, num_entities, num_question_tokens, num_features)
+        linking_features = table['linking']
+        linking_scores = question_table_similarity_max_score + self._linking_params(linking_features).squeeze(3)
+
+        # (batch_size, num_question_tokens, num_entities)
+        linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
+                                                                question_mask, entity_type_dict)
+
+        # (batch_size, num_question_tokens, embedding_dim)
+        link_embedding = util.weighted_sum(entity_embeddings, linking_probabilities)
+        encoder_input = torch.cat([link_embedding, embedded_question], 2)
 
         # (batch_size, question_length, encoder_output_dim)
-        encoder_outputs = self._encoder(embedded_input, question_mask)
+        encoder_outputs = self._encoder(encoder_input, question_mask)
 
         # This will be our initial hidden state and memory cell for the decoder LSTM.
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
         memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
 
-        initial_score = Variable(embedded_input.data.new(batch_size).fill_(0))
+        initial_score = Variable(embedded_question.data.new(batch_size).fill_(0))
         attended_question, _ = self._decoder_step.attend_on_question(final_encoder_output,
                                                                      encoder_outputs,
                                                                      question_mask)
@@ -192,17 +247,6 @@ class WikiTablesSemanticParser(Model):
         flattened_linking_scores, actions_to_entities = self._map_entity_productions(linking_scores,
                                                                                      world,
                                                                                      actions)
-
-        # This is a mapping from (batch_index, entity_index) to entity type id.  We just map
-        # "fb:cell" entities to type 0 and "fb:row" entities to type 1.  And for easier lookups
-        # later, we're actually using a _flattened_ version of (batch_index, entity_index) for the
-        # key, because this is how the linking scores are stored.
-        entity_types = {}
-        for batch_index in range(batch_size):
-            for entity_index, entity_name in enumerate(world[batch_index].table_graph.entities):
-                flattened_entity_index = batch_index * num_entities + entity_index
-                entity_type = 0 if entity_name.startswith('fb:cell') else 1
-                entity_types[flattened_entity_index] = entity_type
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
@@ -240,7 +284,7 @@ class WikiTablesSemanticParser(Model):
                                                possible_actions=actions,
                                                flattened_linking_scores=flattened_linking_scores,
                                                actions_to_entities=actions_to_entities,
-                                               entity_types=entity_types)
+                                               entity_types=entity_type_dict)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
@@ -270,6 +314,162 @@ class WikiTablesSemanticParser(Model):
             outputs['best_action_sequence'] = best_action_sequences
             # TODO(matt): compute accuracy here.
             return outputs
+
+    @staticmethod
+    def _get_neighbor_indices(worlds: List[WikiTablesWorld],
+                              num_entities: int,
+                              tensor: Variable) -> torch.LongTensor:
+        """
+        This method returns the indices of each entity's neighbors. A tensor
+        is accepted as a parameter for copying purposes.
+
+        Parameters
+        ----------
+        worlds : ``List[WikiTablesWorld]``
+        num_entities : ``int``
+        tensor : ``Variable``
+            Used for copying the constructed list onto the right device.
+
+        Returns
+        -------
+        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_neighbors)``. It is padded
+        with -1 instead of 0, since 0 is a valid neighbor index.
+        """
+
+        num_neighbors = 0
+        for world in worlds:
+            for entity in world.table_graph.entities:
+                if len(world.table_graph.neighbors[entity]) > num_neighbors:
+                    num_neighbors = len(world.table_graph.neighbors[entity])
+
+        batch_neighbors = []
+        for world in worlds:
+            # Each batch instance has its own world, which has a corresponding table.
+            entities = world.table_graph.entities
+            entity2index = {entity: i for i, entity in enumerate(entities)}
+            entity2neighbors = world.table_graph.neighbors
+            neighbor_indexes = []
+            for entity in entities:
+                entity_neighbors = [entity2index[n] for n in entity2neighbors[entity]]
+                # Pad with -1 instead of 0, since 0 represents a neighbor index.
+                padded = pad_sequence_to_length(entity_neighbors, num_neighbors, lambda: -1)
+                neighbor_indexes.append(padded)
+            neighbor_indexes = pad_sequence_to_length(neighbor_indexes,
+                                                      num_entities,
+                                                      lambda: [-1] * num_neighbors)
+            batch_neighbors.append(neighbor_indexes)
+        return Variable(tensor.data.new(batch_neighbors)).long()
+
+    @staticmethod
+    def _get_type_vector(worlds: List[WikiTablesWorld],
+                         num_entities: int,
+                         tensor: Variable) -> Tuple[torch.LongTensor, Dict[int, int]]:
+        """
+        Produces the one hot encoding for each entity's type. In addition,
+        a map from a flattened entity index to type is returned to combine
+        entity type operations into one method.
+
+        Parameters
+        ----------
+        worlds : ``List[WikiTablesWorld]``
+        num_entities : ``int``
+        tensor : ``torch.Tensor``
+            Used for copying the constructed list onto the right device.
+
+        Returns
+        -------
+        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_types)``.
+        entity_types : ``Dict[int, int]``
+            This is a mapping from ((batch_index * num_entities) + entity_index) to entity type id.
+        """
+        entity_types = {}
+        batch_types = []
+        for batch_index, world in enumerate(worlds):
+            types = []
+            for entity_index, entity in enumerate(world.table_graph.entities):
+                cell_type_one_hot = [1, 0]
+                row_type_one_hot = [0, 1]
+                entity_type = 0 if entity.startswith('fb:cell') else 1
+                types.append((cell_type_one_hot if entity_type == 0 else row_type_one_hot))
+
+                # For easier lookups later, we're actually using a _flattened_ version
+                # of (batch_index, entity_index) for the key, because this is how the
+                # linking scores are stored.
+                flattened_entity_index = batch_index * num_entities + entity_index
+                entity_types[flattened_entity_index] = entity_type
+            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0])
+            batch_types.append(padded)
+        return Variable(tensor.data.new(batch_types)), entity_types
+
+    @staticmethod
+    def _get_linking_probabilities(worlds: List[WikiTablesWorld],
+                                   linking_scores: torch.FloatTensor,
+                                   question_mask: torch.LongTensor,
+                                   entity_type_dict: Dict[int, int]) -> torch.FloatTensor:
+        """
+        Produces the probability of an entity given a question word and type. The logic below
+        separates the entities by type since the softmax normalization term sums over entities
+        of a single type.
+
+        Parameters
+        ----------
+        worlds : ``List[WikiTablesWorld]``
+        linking_scores : ``torch.FloatTensor``
+            Has shape (batch_size, num_question_tokens, num_entities).
+        question_mask: ``torch.LongTensor``
+            Has shape (batch_size, num_question_tokens).
+        entity_type_dict : ``Dict[int, int]``
+            This is a mapping from ((batch_index * num_entities) + entity_index) to entity type id.
+
+        Returns
+        -------
+        batch_probabilities : ``torch.FloatTensor``
+            Has shape ``(batch_size, num_question_tokens, num_entities)``.
+            Contains all the probabilities for an entity given a question word.
+        """
+        batch_size, num_question_tokens, num_entities = linking_scores.size()
+        batch_probabilities = Variable(linking_scores.data.new(torch.zeros(batch_size,
+                                                                           num_question_tokens,
+                                                                           num_entities)))
+
+        for batch_index, world in enumerate(worlds):
+            cell_type_index, row_type_index = [0], [0]
+            entities = world.table_graph.entities
+            for entity_index, _ in enumerate(entities):
+                if entity_type_dict[batch_index * num_entities + entity_index] == 0:
+                    cell_type_index.append(entity_index)
+                else:
+                    row_type_index.append(entity_index)
+
+            # Separate the scores by type, since normalization summed over types.
+            # (num_entities_per_type, num_question_tokens)
+            cell_type_scores = torch.index_select(linking_scores[batch_index],
+                                                  dim=1,
+                                                  index=Variable(linking_scores.data.new(cell_type_index)).long())
+            row_type_scores = torch.index_select(linking_scores[batch_index],
+                                                 dim=1,
+                                                 index=Variable(linking_scores.data.new(row_type_index)).long())
+
+            # (num_question_tokens, num_entities_per_type)
+            cell_type_scores[:, 0] = 0
+            row_type_scores[:, 0] = 0
+
+            probabilities_cell = torch.nn.functional.softmax(cell_type_scores)
+            probabilities_row = torch.nn.functional.softmax(row_type_scores)
+
+            # (num_question_tokens, num_entities)
+            probabilities_all = Variable(linking_scores.data.new(num_question_tokens, num_entities).fill_(0))
+
+            for question_index in range(num_question_tokens):
+                for entity_index, entity_probability in list(zip(cell_type_index,
+                                                                 probabilities_cell[question_index]))[1:]:
+                    # Shift indexes by 1 to make sure null entity at index 0 gets 0 probability.
+                    probabilities_all[question_index, (entity_index)] = entity_probability
+                for entity_index, entity_probability in list(zip(row_type_index,
+                                                                 probabilities_row[question_index]))[1:]:
+                    probabilities_all[question_index, (entity_index)] = entity_probability
+            batch_probabilities[batch_index] = probabilities_all
+        return batch_probabilities * question_mask.unsqueeze(-1).float()
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
@@ -457,7 +657,7 @@ class WikiTablesSemanticParser(Model):
         return nonterminals, terminals
 
     @staticmethod
-    def _map_entity_productions(linking_scores: torch.Tensor,
+    def _map_entity_productions(linking_scores: torch.FloatTensor,
                                 worlds: List[WikiTablesWorld],
                                 actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
                                                                                    Dict[Tuple[int, int], int]]:
@@ -536,6 +736,7 @@ class WikiTablesSemanticParser(Model):
     def from_params(cls, vocab, params: Params) -> 'WikiTablesSemanticParser':
         question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+        entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
         max_decoding_steps = params.pop("max_decoding_steps")
         nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
         terminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("terminal_embedder"))
@@ -555,6 +756,7 @@ class WikiTablesSemanticParser(Model):
                    nonterminal_embedder=nonterminal_embedder,
                    terminal_embedder=terminal_embedder,
                    encoder=encoder,
+                   entity_encoder=entity_encoder,
                    decoder_trainer=decoder_trainer,
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
@@ -617,7 +819,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
     possible_actions : ``List[List[ProductionRuleArray]]``
         The list of all possible actions that was passed to ``model.forward()``.  We need this so
         we can recover production strings, which we need to update grammar states.
-    flattened_linking_scores : ``torch.Tensor``
+    flattened_linking_scores : ``torch.FloatTensor``
         Linking scores between table entities and question tokens.  The unflattened version has
         shape ``(batch_size, num_entities, num_question_tokens)``, though this version is flattened
         to have shape ``(batch_size * num_entities, num_question_tokens)``, for easier lookups with
@@ -644,7 +846,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  action_embeddings: torch.Tensor,
                  action_indices: Dict[Tuple[int, int], int],
                  possible_actions: List[List[ProductionRuleArray]],
-                 flattened_linking_scores: torch.Tensor,
+                 flattened_linking_scores: torch.FloatTensor,
                  actions_to_entities: Dict[Tuple[int, int], int],
                  entity_types: Dict[int, int]) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
