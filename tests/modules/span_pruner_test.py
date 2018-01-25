@@ -30,7 +30,7 @@ class TestSpanPruner(AllenNlpTestCase):
         mask = Variable(torch.ones([3, 4]))
         spans[1, 0] = 0
         spans[1, 3] = 0
-        _, pruned_mask, pruned_indices = pruner(spans, mask, 2)
+        _, pruned_mask, pruned_indices, _ = pruner(spans, mask, 2)
 
         # Second element in the batch would have indices 2, 3, but
         # 3 and 0 are masked, so instead it has 1, 2.

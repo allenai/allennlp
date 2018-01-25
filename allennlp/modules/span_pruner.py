@@ -26,7 +26,8 @@ class SpanPruner(torch.nn.Module):
     def forward(self, # pylint: disable=arguments-differ
                 span_embeddings: torch.FloatTensor,
                 span_mask: torch.LongTensor,
-                num_spans_to_keep: int) -> Tuple[torch.FloatTensor, torch.LongTensor, torch.LongTensor]:
+                num_spans_to_keep: int) -> Tuple[torch.FloatTensor, torch.LongTensor,
+                                                 torch.LongTensor, torch.FloatTensor]:
         """
         The indices of the top-k scoring spans according to span_scores. We return the
         indices in their original order, not ordered by score, so that we can rely on
@@ -49,6 +50,8 @@ class SpanPruner(torch.nn.Module):
             (batch_size, num_spans_to_keep).
         top_span_indices : ``torch.IntTensor``, required.
             The indices of the top-k scoring spans. Has shape (batch_size, num_spans_to_keep).
+        top_span_scores : ``torch.FloatTensor``, required.
+            The values of the top-k scoring spans. Has shape (batch_size, num_spans_to_keep, 1).
         """
         span_mask = span_mask.unsqueeze(-1)
         num_spans = span_embeddings.size(1)
@@ -83,4 +86,9 @@ class SpanPruner(torch.nn.Module):
                                                   top_span_indices,
                                                   flat_top_span_indices)
 
-        return top_span_embeddings, top_span_mask.squeeze(-1), top_span_indices
+        # Shape: (batch_size, num_spans_to_keep, 1)
+        top_span_scores = util.batched_index_select(span_scores,
+                                                    top_span_indices,
+                                                    flat_top_span_indices)
+
+        return top_span_embeddings, top_span_mask.squeeze(-1), top_span_indices, top_span_scores

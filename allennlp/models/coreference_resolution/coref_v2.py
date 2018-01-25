@@ -12,7 +12,7 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding
 from allennlp.modules import FeedForward
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, SpanPruner
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import MentionRecall, ConllCorefScores
 
@@ -80,7 +80,7 @@ class CoreferenceResolver(Model):
         self._context_layer = context_layer
         self._mention_feedforward = TimeDistributed(mention_feedforward)
         self._antecedent_feedforward = TimeDistributed(antecedent_feedforward)
-        self._mention_scorer = TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1))
+        self._mention_pruner = SpanPruner(TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1)))
         self._antecedent_scorer = TimeDistributed(torch.nn.Linear(antecedent_feedforward.get_output_dim(), 1))
         self._head_scorer = TimeDistributed(torch.nn.Linear(context_layer.get_output_dim(), 1))
 
@@ -169,25 +169,13 @@ class CoreferenceResolver(Model):
                                                              text_mask,
                                                              span_starts,
                                                              span_ends)
-        # Compute a score for whether each span is a mention,
-        # making sure that masked spans have very low scores.
-        # Shape: (batch_size, num_spans, 1)
-        mention_scores = self._mention_scorer(self._mention_feedforward(span_embeddings))
-        mention_scores += span_mask.log()
-
         # Prune based on mention scores.
         num_spans_to_keep = int(math.floor(self._spans_per_word * document_length))
 
-        # Shape: (batch_size, num_spans_to_keep)
-        # These are indices (with values between 0 and num_spans) into
-        # the span_embeddings tensor.
-        top_span_indices = self._prune_and_sort_spans(mention_scores, num_spans_to_keep)
-
-        # Now that we've decided which spans are actually mentions the next
-        # few steps are reformatting all of our variables to be in terms of
-        # num_spans_to_keep instead of num_spans, so we don't waste computation
-        # on spans that we've already discarded.
-
+        (top_span_embeddings, top_span_mask,
+         top_span_indices, top_span_mention_scores) = self._mention_pruner(span_embeddings,
+                                                                           span_mask.squeeze(-1),
+                                                                           num_spans_to_keep)
         # Shape: (batch_size * num_spans_to_keep)
         # torch.index_select only accepts 1D indices, but here
         # we need to select spans for each element in the batch.
@@ -196,21 +184,6 @@ class CoreferenceResolver(Model):
         # the multiple calls to util.batched_index_select below more efficient.
         flat_top_span_indices = util.flatten_and_batch_shift_indices(top_span_indices, num_spans)
 
-        # Select the span embeddings corresponding to the
-        # top spans based on the mention scorer.
-        # Shape: (batch_size, num_spans_to_keep, embedding_size)
-        top_span_embeddings = util.batched_index_select(span_embeddings,
-                                                        top_span_indices,
-                                                        flat_top_span_indices)
-        # Shape: (batch_size, num_spans_to_keep, 1)
-        # TODO(Mark): If we parameterised the mention scorer to score things in (0, inf)
-        # I think we could get rid of the need for this mask entirely.
-        top_span_mask = util.batched_index_select(span_mask,
-                                                  top_span_indices,
-                                                  flat_top_span_indices)
-        top_span_mention_scores = util.batched_index_select(mention_scores,
-                                                            top_span_indices,
-                                                            flat_top_span_indices)
         top_span_starts = util.batched_index_select(span_starts,
                                                     top_span_indices,
                                                     flat_top_span_indices)
@@ -526,33 +499,6 @@ class CoreferenceResolver(Model):
                                      span_width_embeddings,
                                      attended_text_embeddings], -1)
         return span_embeddings
-
-    @staticmethod
-    def _prune_and_sort_spans(mention_scores: torch.FloatTensor,
-                              num_spans_to_keep: int) -> torch.IntTensor:
-        """
-        The indices of the top-k scoring spans according to span_scores. We return the
-        indices in their original order, not ordered by score, so that we can rely on
-        the ordering to consider the previous k spans as antecedents for each span later.
-
-        Parameters
-        ----------
-        mention_scores : ``torch.FloatTensor``, required.
-            The mention score for every candidate, with shape (batch_size, num_spans, 1).
-        num_spans_to_keep : ``int``, required.
-            The number of spans to keep when pruning.
-        Returns
-        -------
-        top_span_indices : ``torch.IntTensor``, required.
-            The indices of the top-k scoring spans. Has shape (batch_size, num_spans_to_keep).
-        """
-        # Shape: (batch_size, num_spans_to_keep, 1)
-        _, top_span_indices = mention_scores.topk(num_spans_to_keep, 1)
-        top_span_indices, _ = torch.sort(top_span_indices, 1)
-
-        # Shape: (batch_size, num_spans_to_keep)
-        top_span_indices = top_span_indices.squeeze(-1)
-        return top_span_indices
 
     @staticmethod
     def _generate_valid_antecedents(num_spans_to_keep: int,
