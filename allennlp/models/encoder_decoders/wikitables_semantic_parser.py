@@ -221,12 +221,9 @@ class WikiTablesSemanticParser(Model):
         linking_features = table['linking']
         linking_scores = question_table_similarity_max_score + self._linking_params(linking_features).squeeze(3)
 
-        linking_probabilities = self._get_linking_probabilities(world, linking_scores, question_mask,
-                                                                entity_type_dict, encoded_table)
-
-        null_entity_embedding = Variable(entity_embeddings.data.new(batch_size, 1, self._embedding_dim).fill_(0))
-        # (batch_size, num_entities+1, embedding_dim)
-        entity_embeddings = torch.cat([null_entity_embedding, entity_embeddings], 1)
+        # (batch_size, num_question_tokens, num_entities)
+        linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
+                                                                question_mask, entity_type_dict)
 
         # (batch_size, num_question_tokens, embedding_dim)
         link_embedding = util.weighted_sum(entity_embeddings, linking_probabilities)
@@ -408,8 +405,7 @@ class WikiTablesSemanticParser(Model):
     def _get_linking_probabilities(worlds: List[WikiTablesWorld],
                                    linking_scores: torch.FloatTensor,
                                    question_mask: torch.LongTensor,
-                                   entity_type_dict: Dict[int, int],
-                                   tensor: Variable) -> torch.FloatTensor:
+                                   entity_type_dict: Dict[int, int]) -> torch.FloatTensor:
         """
         Produces the probability of an entity given a question word and type. The logic below
         separates the entities by type since the softmax normalization term sums over entities
@@ -419,62 +415,60 @@ class WikiTablesSemanticParser(Model):
         ----------
         worlds : ``List[WikiTablesWorld]``
         linking_scores : ``torch.FloatTensor``
-            Has shape (batch_size, num_entities, num_question_tokens).
+            Has shape (batch_size, num_question_tokens, num_entities).
         question_mask: ``torch.LongTensor``
             Has shape (batch_size, num_question_tokens).
         entity_type_dict : ``Dict[int, int]``
             This is a mapping from ((batch_index * num_entities) + entity_index) to entity type id.
-        tensor : ``torch.Tensor``
-            Used for copying the constructed list onto the right device.
 
         Returns
         -------
         batch_probabilities : ``torch.FloatTensor``
-            Has shape ``(batch_size, num_question_tokens, num_entities+1)``.
+            Has shape ``(batch_size, num_question_tokens, num_entities)``.
             Contains all the probabilities for an entity given a question word.
         """
-        batch_size, num_entities, num_question_tokens = linking_scores.size()
-        batch_probabilities = Variable(tensor.data.new(torch.zeros(batch_size,
-                                                                   num_question_tokens,
-                                                                   num_entities + 1)))
+        batch_size, num_question_tokens, num_entities = linking_scores.size()
+        batch_probabilities = Variable(linking_scores.data.new(torch.zeros(batch_size,
+                                                                           num_question_tokens,
+                                                                           num_entities)))
 
+        mask_zeros = Variable(linking_scores.data.new(batch_size, 1).fill_(0).long())
         for batch_index, world in enumerate(worlds):
-            cell_type_index, row_type_index = [], []
+            cell_type_index, row_type_index = [0], [0]
             entities = world.table_graph.entities
-            entity2index = {entity: entity_index for entity_index, entity in enumerate(entities)}
             for entity_index, entity in enumerate(entities):
                 if entity_type_dict[batch_index * num_entities + entity_index] == 0:
-                    cell_type_index.append(entity2index[entity])
+                    cell_type_index.append(entity_index)
                 else:
-                    row_type_index.append(entity2index[entity])
+                    row_type_index.append(entity_index)
 
             # Separate the scores by type, since normalization summed over types.
             # (num_entities_per_type, num_question_tokens)
             cell_type_scores = torch.index_select(linking_scores[batch_index],
-                                                  dim=0,
-                                                  index=Variable(tensor.data.new(cell_type_index)).long())
+                                                  dim=1,
+                                                  index=Variable(linking_scores.data.new(cell_type_index)).long())
             row_type_scores = torch.index_select(linking_scores[batch_index],
-                                                 dim=0,
-                                                 index=Variable(tensor.data.new(row_type_index)).long())
+                                                 dim=1,
+                                                 index=Variable(linking_scores.data.new(row_type_index)).long())
 
             # (num_question_tokens, num_entities_per_type)
-            cell_type_scores = torch.transpose(cell_type_scores, 0, 1)
-            row_type_scores = torch.transpose(row_type_scores, 0, 1)
+            cell_type_scores[:, 0] = 0
+            row_type_scores[:, 0] = 0
 
-            probabilities_cell = util.masked_softmax(cell_type_scores, question_mask[batch_index].unsqueeze(-1))
-            probabilities_row = util.masked_softmax(row_type_scores, question_mask[batch_index].unsqueeze(-1))
+            probabilities_cell = torch.nn.functional.softmax(cell_type_scores)
+            probabilities_row = torch.nn.functional.softmax(row_type_scores)
 
-            # (num_question_tokens, num_entities+1)
-            probabilities_all = Variable(tensor.data.new(num_question_tokens, num_entities+1).fill_(0))
+            # (num_question_tokens, num_entities)
+            probabilities_all = Variable(linking_scores.data.new(num_question_tokens, num_entities).fill_(0))
 
             for question_index in range(num_question_tokens):
-                for entity_index, entity_probability in zip(cell_type_index, probabilities_cell[question_index]):
+                for entity_index, entity_probability in list(zip(cell_type_index, probabilities_cell[question_index]))[1:]:
                     # Shift indexes by 1 to make sure null entity at index 0 gets 0 probability.
-                    probabilities_all[question_index, (entity_index+1)] = entity_probability
-                for entity_index, entity_probability in zip(row_type_index, probabilities_row[question_index]):
-                    probabilities_all[question_index, (entity_index+1)] = entity_probability
+                    probabilities_all[question_index, (entity_index)] = entity_probability
+                for entity_index, entity_probability in list(zip(row_type_index, probabilities_row[question_index]))[1:]:
+                    probabilities_all[question_index, (entity_index)] = entity_probability
             batch_probabilities[batch_index] = probabilities_all
-        return batch_probabilities
+        return batch_probabilities * question_mask.unsqueeze(-1).float()
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:

@@ -36,13 +36,9 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         assert torch.equal(neighbor_indexes.data, torch.LongTensor([[[2, 3],
                                                                      [2, 3],
                                                                      [0, 1],
-                                                                     [0, 1],
-                                                                     [-1, -1],
-                                                                     [-1, -1]],
+                                                                     [0, 1]],
                                                                     [[1, -1],
                                                                      [0, -1],
-                                                                     [-1, -1],
-                                                                     [-1, -1],
                                                                      [-1, -1],
                                                                      [-1, -1]]]))
 
@@ -54,55 +50,40 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         assert torch.equal(type_vector.data, torch.LongTensor([[[1, 0],
                                                                 [1, 0],
                                                                 [0, 1],
-                                                                [0, 1],
-                                                                [0, 0],
-                                                                [0, 0]],
+                                                                [0, 1]],
                                                                [[1, 0],
                                                                 [0, 1],
-                                                                [0, 0],
-                                                                [0, 0],
                                                                 [0, 0],
                                                                 [0, 0]]]))
 
     def test_get_linking_probabilities(self):
         worlds, num_entities = self.get_fake_worlds()
-        tensor = Variable(torch.FloatTensor([]))
-        _, entity_type_dict = self.model._get_type_vector(worlds, num_entities, tensor)
-        questions = Variable(torch.LongTensor([[14, 40],
-                                               [78, 0]]))
-        # (batch_size, num_entities, num_question_tokens)
-        linking_scores = [[[0.6218093, 0.74813986],
-                           [0.82922572, 0.85793620],
-                           [0.11054164, 0.83972567],
-                           [0.72952926, 0.52519375],
-                           [0.34569067, 0.73687404],
-                           [0.30000000, 0.55145717]],
-                          [[0.61507487, 0.89550155],
-                           [0.74650306, 0.95761484],
-                           [0.51626843, 0.22729224],
-                           [0.52449512, 0.06206334],
-                           [0.24870688, 0.92492068],
-                           [0.8245101, 0.20058638]]]
+        # (batch_size, num_question_tokens, num_entities)
+        linking_scores = [[[1, 0, -3, 2],
+                           [-1, 5, -3, 4]],
+                          [[1, 8, 10, 10],
+                           [2, -1, -2, 1]]]
         linking_scores = Variable(torch.FloatTensor(linking_scores))
-        question_mask = get_text_field_mask({'questions': questions}).float()
+        question_mask = Variable(torch.LongTensor([[1, 1], [1, 0]]))
+        _, entity_type_dict = self.model._get_type_vector(worlds, num_entities, linking_scores)
 
-        # (batch_size, num_question_tokens, num_entities + 1)
+        # (batch_size, num_question_tokens, num_entities)
         entity_probability = self.model._get_linking_probabilities(worlds, linking_scores, question_mask,
-                                                                   entity_type_dict, tensor)
+                                                                   entity_type_dict)
 
         # The following properties in entity_probability are tested for by true_probability:
-        # It has probability 0.0 at the 0th entity index for the null entity.
-        # It has all 0.0 probabilities when there is no question token, as seen for the
-        # second word in the second batch.
-        # The probabilities for entities of the same type with the same question token
-        # should sum to 1. For example, in batch 0, question token 0, entity 1 and 2 are
-        # all the entities of one type, thus: 0.448331 + 0.551669 = 1
-        true_probability = torch.FloatTensor(
-                [[[0.0, 0.448331, 0.551669, 0.35001174, 0.64998823, 0.0, 0.0],
-                  [0.0, 0.47257844, 0.52742153, 0.57799107, 0.42200893, 0.0, 0.0]],
-                 [[0.0, 1., 1., 0.0, 0.0, 0.0, 0.0],
-                  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]])
-        assert torch.equal(entity_probability.data, true_probability)
+        # (1) It has all 0.0 probabilities when there is no question token, as seen for the
+        #     second word in the second batch.
+        # (2) The probabilities for entities of the same type with the same question token should
+        #     sum to at most 1, but not necessarily 1, because some probability mass goes to the
+        #     null entity.  We have two entity types here, so each row should sum to at most 2, and
+        #     that number will approach 2 as the unnormalized linking scores for each entity get
+        #     higher.
+        true_probability = [[[0.5761169, 0.2119416, 0.0058998, 0.8756006],
+                             [0.0024561, 0.9908675, 0.0008947, 0.9811352]],
+                            [[0.7310586, 0.9996647, 0.0, 0.0],
+                             [0.0, 0.0, 0.0, 0.0]]]
+        assert_almost_equal(entity_probability.data.cpu().numpy(), true_probability)
 
     def get_fake_worlds(self):
         # Generate a toy WikitablesWorld.
@@ -121,7 +102,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
         worlds = [FakeWorld(FakeTable(entity_list, entity2neighbors))
                   for entity_list, entity2neighbors in zip(entities, neighbors)]
-        num_entities = sum([len(entity_list) for entity_list in entities])
+        num_entities = max([len(entity_list) for entity_list in entities])
         return worlds, num_entities
 
     def test_get_unique_elements(self):
