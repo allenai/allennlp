@@ -427,11 +427,11 @@ def lookForWrong(chunker, sent_pairs, not_that_wrong_thres = 0.1, num_to_eval=10
                 print(min(probs))
             else:
                 correct += 1
-            #if min(probs) < 0.8:
-            #    print("---")
-            #    print(probs)
-            #    print(pair[0])
-            #    print(pair[1])
+            if min(probs) < 0.5:
+                print("---")
+                print(probs)
+                print(pair[0])
+                print(pair[1])
         except KeyError:
             pass
     total = float(correct + not_that_wrong + pretty_wrong)
