@@ -22,12 +22,12 @@ class TeeLogger:
 
     def write(self, message):
         self.terminal.write(message)
-        # We'll special case a particular thing that keras does, to make the log file more
-        # readable.  Keras uses ^H characters to get the training line to update for each batch
+        # We'll special case a particular thing that TQDM does, to make the log file more
+        # readable.  TQDM uses carriage returns to get the training line to update for each batch
         # without adding more lines to the terminal output.  Displaying those in a file won't work
         # correctly, so we'll just make sure that each batch shows up on its one line.
-        if '\x08' in message:
-            message = message.replace('\x08', '')
+        if '\r' in message:
+            message = message.replace('\r', '')
             if not message or message[-1] != '\n':
                 message += '\n'
         self.log.write(message)
