@@ -155,10 +155,10 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
             return Response(response="", status=200)
 
         # Do log if no argument is specified
-        record_flag = not request.args.get("record", "true").lower() == "false"
+        record_to_database = request.args.get("record", "true").lower() != "false"
 
         # Do use the cache if no argument is specified
-        cache_flag = not request.args.get("cache", "true").lower() == "false"
+        use_cache = request.args.get("cache", "true").lower() != "false"
 
         model = app.predictors.get(model_name.lower())
         if model is None:
@@ -168,44 +168,40 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
 
         log_blob = {"model": model_name, "inputs": data, "cached": False, "outputs": {}}
 
-        if cache_flag:
-            # See if we hit or not. In theory this could result in false positives.
-            pre_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
+        # Record the number of cache hits before we hit the cache so we can tell whether we hit or not.
+        # In theory this could result in false positives.
+        pre_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
 
+        try:
+            if use_cache and cache_size > 0:
+                # lru_cache insists that all function arguments be hashable,
+                # so unfortunately we have to stringify the data.
+                prediction = _caching_prediction(model, json.dumps(data))
+            else:
+                # if cache_size is 0, skip caching altogether
+                prediction = model.predict_json(data)
+        except KeyError as err:
+            raise ServerError("Required JSON field not found: " + err.args[0], status_code=400)
+
+        post_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
+
+        if record_to_database and demo_db is not None:
             try:
-                if cache_size > 0:
-                    # lru_cache insists that all function arguments be hashable,
-                    # so unfortunately we have to stringify the data.
-                    prediction = _caching_prediction(model, json.dumps(data))
-                else:
-                    # if cache_size is 0, skip caching altogether
-                    prediction = model.predict_json(data)
-            except KeyError as err:
-                raise ServerError("Required JSON field not found: " + err.args[0], status_code=400)
+                perma_id = None
+                perma_id = demo_db.add_result(headers=dict(request.headers),
+                                              model_name=model_name,
+                                              inputs=data,
+                                              outputs=prediction)
+                if perma_id is not None:
+                    slug = int_to_slug(perma_id)
+                    prediction["slug"] = slug
+                    log_blob["slug"] = slug
 
-            post_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
-        else:
-            prediction = model.predict_json(data)
+            except Exception:  # pylint: disable=broad-except
+                # TODO(joelgrus): catch more specific errors
+                logger.exception("Unable to add result to database", exc_info=True)
 
-        if record_flag:
-            # Add to database and get permalink
-            if demo_db is not None:
-                try:
-                    perma_id = None
-                    perma_id = demo_db.add_result(headers=dict(request.headers),
-                                                  model_name=model_name,
-                                                  inputs=data,
-                                                  outputs=prediction)
-                    if perma_id is not None:
-                        slug = int_to_slug(perma_id)
-                        prediction["slug"] = slug
-                        log_blob["slug"] = slug
-
-                except Exception:  # pylint: disable=broad-except
-                    # TODO(joelgrus): catch more specific errors
-                    logger.exception("Unable to add result to database", exc_info=True)
-
-        if cache_flag and post_hits > pre_hits:
+        if use_cache and post_hits > pre_hits:
             # Cache hit, so insert an artifical pause
             log_blob["cached"] = True
             time.sleep(0.25)
