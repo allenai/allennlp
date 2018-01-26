@@ -10,7 +10,7 @@ use_cuda = torch.cuda.is_available()
 
 def main(argv):
   
-    input_lang, output_lang, pairs, pairs_dev, max_length = initializeData('qbank.labeled.elmo.train.txt', 'qbank.labeled.elmo.dev.txt')  
+    input_lang, output_lang, pairs, pairs_dev, max_length = initializeData('data/qbank.labeled.elmo.train.txt', 'data/qbank.labeled.elmo.dev.txt')  
       
     hidden_size = 1029
     encoder1 = EncoderRNN(input_lang.n_words, hidden_size, input_lang, n_layers = 2)
@@ -23,7 +23,7 @@ def main(argv):
         encoder1 = encoder1.cuda()
         attn_decoder1 = attn_decoder1.cuda()
 
-    trainIters(encoder1, attn_decoder1, input_lang, output_lang, 10, pairs, pairs_dev, max_length, print_every=5)
+    trainIters(encoder1, attn_decoder1, input_lang, output_lang, 150000, pairs, pairs_dev, max_length, print_every=1000)
     print("*** done training ***")
     print(validate(encoder1, attn_decoder1, input_lang, output_lang, pairs_dev, max_length, 4813))
     torch.save(encoder1, 'encoder.final.pt')
