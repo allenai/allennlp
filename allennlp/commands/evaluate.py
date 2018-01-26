@@ -28,7 +28,7 @@ import logging
 import tqdm
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.util import prepare_environment, import_submodules
+from allennlp.common.util import prepare_environment
 from allennlp.data import InstanceCollection
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
@@ -70,12 +70,6 @@ class Evaluate(Subcommand):
                                default="",
                                help='a HOCON structure used to override the experiment configuration')
 
-        subparser.add_argument('--include-package',
-                               type=str,
-                               action='append',
-                               default=[],
-                               help='additional packages to include')
-
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
@@ -104,10 +98,6 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logging.getLogger('allennlp.common.params').disabled = True
     logging.getLogger('allennlp.nn.initializers').disabled = True
     logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
-
-    # Import any additional modules needed (to register custom classes)
-    for package_name in args.include_package:
-        import_submodules(package_name)
 
     # Load from archive
     archive = load_archive(args.archive_file, args.cuda_device, args.overrides)
