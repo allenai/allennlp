@@ -16,6 +16,7 @@ from allennlp.common.util import namespace_match
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
+from allennlp.common.tqdm import Tqdm
 from allennlp.data import instance as adi  # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -326,7 +327,7 @@ class Vocabulary:
         """
         logger.info("Fitting token dictionary from dataset.")
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        for instance in tqdm.tqdm(instances):
+        for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
 
         return Vocabulary(counter=namespace_token_counts,

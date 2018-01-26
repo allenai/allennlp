@@ -31,6 +31,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
+from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import prepare_environment
 from allennlp.data import InstanceCollection, Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -69,7 +70,7 @@ class Train(Subcommand):
         subparser.add_argument('--tqdm-newline',
                                action='store_true',
                                default=False,
-                               help='outputs each tqdm status update on a separate line')
+                               help='outputs each tqdm status update on a separate line and slows tqdm refresh rate')
 
         subparser.set_defaults(func=train_model_from_args)
 
@@ -95,6 +96,8 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str, overr
     serialization_dir: str, required
         The directory in which to save results and logs.
     """
+    if tqdm_newline:
+        Tqdm.set_default_mininterval(10.0)
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
     return train_model(params, serialization_dir, tqdm_newline)

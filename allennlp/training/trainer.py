@@ -17,12 +17,12 @@ import torch
 import torch.optim.lr_scheduler
 from torch.nn.utils.clip_grad import clip_grad_norm
 from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
-import tqdm
 from tensorboard import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import peak_memory_mb
+from allennlp.common.tqdm import Tqdm
 from allennlp.data import InstanceCollection
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
@@ -203,7 +203,7 @@ class Trainer:
                                          num_epochs=1,
                                          cuda_device=self._cuda_device)
         num_training_batches = self._iterator.get_num_batches(self._train_dataset)
-        train_generator_tqdm = tqdm.tqdm(train_generator,
+        train_generator_tqdm = Tqdm.tqdm(train_generator,
                                          total=num_training_batches)
         self._last_log = time.time()
         batch_num = 0
@@ -340,7 +340,7 @@ class Trainer:
                                        cuda_device=self._cuda_device,
                                        for_training=False)
         num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
-        val_generator_tqdm = tqdm.tqdm(val_generator,
+        val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batch_num = 0
         val_loss = 0

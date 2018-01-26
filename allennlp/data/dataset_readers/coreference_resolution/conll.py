@@ -3,11 +3,11 @@ import collections
 from typing import Any, Dict, List, Optional, Tuple, DefaultDict, Set
 
 from overrides import overrides
-from tqdm import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, ListField, TextField, IndexField, MetadataField, SequenceLabelField
@@ -89,7 +89,7 @@ class ConllCorefReader(DatasetReader):
 
         instances = []
         ontonotes_reader = Ontonotes()
-        for sentences in tqdm(ontonotes_reader.dataset_document_iterator(file_path)):
+        for sentences in Tqdm.tqdm(ontonotes_reader.dataset_document_iterator(file_path)):
             clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
 
             total_tokens = 0
