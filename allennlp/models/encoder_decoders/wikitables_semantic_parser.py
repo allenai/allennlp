@@ -462,8 +462,8 @@ class WikiTablesSemanticParser(Model):
             to_cat = [probabilities_cell[:, 1:], probabilities_row[:, 1:]]
             num_kept_entities = len(cell_type_index) + len(row_type_index) - 2
             if num_kept_entities != num_entities:
-                zeros = Variable(probabilities.data.new(num_question_tokens,
-                                                        num_entities - num_kept_entities).fill_(0))
+                zeros = Variable(linking_scores.data.new(num_question_tokens,
+                                                         num_entities - num_kept_entities).fill_(0))
                 to_cat.append(zeros)
 
             # (num_question_tokens, num_entities)
