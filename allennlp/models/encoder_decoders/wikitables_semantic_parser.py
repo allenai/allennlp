@@ -428,9 +428,7 @@ class WikiTablesSemanticParser(Model):
             Contains all the probabilities for an entity given a question word.
         """
         batch_size, num_question_tokens, num_entities = linking_scores.size()
-        batch_probabilities = Variable(linking_scores.data.new(torch.zeros(batch_size,
-                                                                           num_question_tokens,
-                                                                           num_entities)))
+        batch_probabilities = []
 
         for batch_index, world in enumerate(worlds):
             cell_type_index, row_type_index = [0], [0]
@@ -450,25 +448,28 @@ class WikiTablesSemanticParser(Model):
                                                  dim=1,
                                                  index=Variable(linking_scores.data.new(row_type_index)).long())
 
-            # (num_question_tokens, num_entities_per_type)
+            # (num_question_tokens, num_entities_per_type + 1)
             cell_type_scores[:, 0] = 0
             row_type_scores[:, 0] = 0
 
-            probabilities_cell = torch.nn.functional.softmax(cell_type_scores)
-            probabilities_row = torch.nn.functional.softmax(row_type_scores)
+            probabilities_cell = torch.nn.functional.softmax(cell_type_scores, dim=1)
+            probabilities_row = torch.nn.functional.softmax(row_type_scores, dim=1)
+
+            # NOTE: The way that we're doing this here relies on the fact that entities are
+            # implicitly sorted by their types when we sort them by name, and that "fb:cell" comes
+            # before "fb:row".  This is not a great assumption, and could easily break later, but
+            # it should work for now.
+            to_cat = [probabilities_cell[:, 1:], probabilities_row[:, 1:]]
+            num_kept_entities = len(cell_type_index) + len(row_type_index) - 2
+            if num_kept_entities != num_entities:
+                zeros = Variable(probabilities.data.new(num_question_tokens,
+                                                        num_entities - num_kept_entities).fill_(0))
+                to_cat.append(zeros)
 
             # (num_question_tokens, num_entities)
-            probabilities_all = Variable(linking_scores.data.new(num_question_tokens, num_entities).fill_(0))
-
-            for question_index in range(num_question_tokens):
-                for entity_index, entity_probability in list(zip(cell_type_index,
-                                                                 probabilities_cell[question_index]))[1:]:
-                    # Shift indexes by 1 to make sure null entity at index 0 gets 0 probability.
-                    probabilities_all[question_index, (entity_index)] = entity_probability
-                for entity_index, entity_probability in list(zip(row_type_index,
-                                                                 probabilities_row[question_index]))[1:]:
-                    probabilities_all[question_index, (entity_index)] = entity_probability
-            batch_probabilities[batch_index] = probabilities_all
+            probabilities = torch.cat(to_cat, dim=1)
+            batch_probabilities.append(probabilities)
+        batch_probabilities = torch.stack(batch_probabilities, dim=0)
         return batch_probabilities * question_mask.unsqueeze(-1).float()
 
     @staticmethod
