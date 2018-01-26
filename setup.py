@@ -51,7 +51,6 @@ run chmod 600 ./pypirc so only you can read/write.
 
 """
 from setuptools import setup, find_packages
-from allennlp import version
 
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/
@@ -66,11 +65,14 @@ from allennlp import version
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
-VERSION = version.VERSION
-
+# version.py defines the VERSION and VERSION_SHORT variables.
+# We use exec here so we don't import allennlp whilst setting up.
+VERSION = {}
+with open("allennlp/version.py", "r") as version_file:
+    exec(version_file.read(), VERSION)
 
 setup(name='allennlp',
-      version=VERSION,
+      version=VERSION["VERSION"],
       description='An open-source NLP research library, built on PyTorch.',
       classifiers=[
           'Intended Audience :: Science/Research',
