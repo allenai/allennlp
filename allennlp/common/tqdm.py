@@ -4,7 +4,7 @@ This wraps tqdm so we can add configurable global defaults for certain tqdm para
 from tqdm import tqdm as _tqdm
 
 class Tqdm:
-    default_mininterval: int = 1
+    default_mininterval: int = 0.1
 
     @staticmethod
     def set_default_mininterval(value: int) -> None:

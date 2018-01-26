@@ -24,9 +24,9 @@ class TeeLogger:
         sys.stdout = TeeLogger("stdout.log", sys.stdout)
         sys.stderr = TeeLogger("stdout.log", sys.stderr)
     """
-    def __init__(self, filename: str, terminal: TextIO, tqdm_newline: bool) -> None:
+    def __init__(self, filename: str, terminal: TextIO, clean_output: bool) -> None:
         self.terminal = terminal
-        self.tqdm_newline = tqdm_newline
+        self.clean_output = clean_output
         parent_directory = os.path.dirname(filename)
         os.makedirs(parent_directory, exist_ok=True)
         self.log = open(filename, 'a')
@@ -34,7 +34,7 @@ class TeeLogger:
     def write(self, message):
         cleaned = clean(message)
 
-        if self.tqdm_newline:
+        if self.clean_output:
             self.terminal.write(cleaned)
         else:
             self.terminal.write(message)

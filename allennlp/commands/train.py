@@ -67,7 +67,7 @@ class Train(Subcommand):
                                default="",
                                help='a HOCON structure used to override the experiment configuration')
 
-        subparser.add_argument('--tqdm-newline',
+        subparser.add_argument('--clean-output',
                                action='store_true',
                                default=False,
                                help='outputs each tqdm status update on a separate line and slows tqdm refresh rate')
@@ -81,11 +81,11 @@ def train_model_from_args(args: argparse.Namespace):
     """
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
-    train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.tqdm_newline)
+    train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.clean_output)
 
 
 def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: str = "",
-                          tqdm_newline: bool = False) -> Model:
+                          clean_output: bool = False) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -96,11 +96,11 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str, overr
     serialization_dir: str, required
         The directory in which to save results and logs.
     """
-    if tqdm_newline:
+    if clean_output:
         Tqdm.set_default_mininterval(10.0)
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
-    return train_model(params, serialization_dir, tqdm_newline)
+    return train_model(params, serialization_dir, clean_output)
 
 
 def datasets_from_params(params: Params) -> Dict[str, InstanceCollection]:
@@ -129,7 +129,7 @@ def datasets_from_params(params: Params) -> Dict[str, InstanceCollection]:
 
     return datasets
 
-def train_model(params: Params, serialization_dir: str, tqdm_newline: bool = False) -> Model:
+def train_model(params: Params, serialization_dir: str, clean_output: bool = False) -> Model:
     """
     This function can be used as an entry point to running models in AllenNLP
     directly from a JSON specification using a :class:`Driver`. Note that if
@@ -150,8 +150,8 @@ def train_model(params: Params, serialization_dir: str, tqdm_newline: bool = Fal
     prepare_environment(params)
 
     os.makedirs(serialization_dir, exist_ok=True)
-    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout, tqdm_newline)  # type: ignore
-    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), sys.stderr, tqdm_newline)  # type: ignore
+    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout, clean_output)  # type: ignore
+    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), sys.stderr, clean_output)  # type: ignore
     handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
