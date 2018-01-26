@@ -17,6 +17,8 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable
 import torch
 import torch.optim.lr_scheduler
 from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
+from torch.nn.parallel import replicate, parallel_apply
+from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from tensorboard import SummaryWriter
 from tensorboard.summary import histogram as tb_histogram
 
@@ -118,7 +120,7 @@ class Trainer:
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = None,
                  model_save_interval: float = None,
-                 cuda_device: int = -1,
+                 cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[PytorchLRScheduler] = None,
@@ -159,8 +161,7 @@ class Trainer:
             at the end of every epoch if ``serialization_dir`` is provided.
         cuda_device : int, optional (default = -1)
             An integer specifying the CUDA device to use. If -1, the CPU is used.
-            Multi-gpu training is not currently supported, but will be once the
-            Pytorch DataParallel API stabilises.
+            For multiple GPU training, specify a list of CUDA devices, e.g. [0, 1].
         grad_norm : float, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
         grad_clipping : ``float``, optional (default = ``None``).
@@ -191,7 +192,6 @@ class Trainer:
         self._serialized_paths: List[List[str]] = []
         self._model_save_interval = model_save_interval
 
-        self._cuda_device = cuda_device
         self._grad_norm = grad_norm
         self._batch_grad_norm = None
         self._grad_clipping = grad_clipping
@@ -204,8 +204,21 @@ class Trainer:
         self._validation_metric = validation_metric[1:]
         self._validation_metric_decreases = increase_or_decrease == "-"
 
-        if self._cuda_device >= 0:
-            self._model = self._model.cuda(self._cuda_device)
+        if not isinstance(cuda_device, int) and not isinstance(cuda_device, list):
+            raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
+        if isinstance(cuda_device, list):
+            self._multiple_gpu = True
+            self._cuda_devices = cuda_device
+            # data_parallel will take care of transfering to cuda devices,
+            # so the iterator keeps data on CPU.
+            self._iterator_device = -1
+        else:
+            self._multiple_gpu = False
+            self._cuda_devices = [cuda_device]
+            self._iterator_device = cuda_device
+
+        if self._cuda_devices[0] != -1:
+            self._model = self._model.cuda(self._cuda_devices[0])
 
         self._log_interval = 10  # seconds
         self._summary_interval = 100  # num batches between logging to tensorboard
@@ -278,12 +291,32 @@ class Trainer:
                                   if p.grad is not None]
             self._batch_grad_norm = sparse_clip_norm(parameters_to_clip, self._grad_norm)
 
+    def _data_parallel(self, batch):
+        """
+        Do the forward pass using multiple GPUs.  This is a simplification
+        of torch.nn.parallel.data_parallel to support the allennlp model
+        interface.
+        """
+        inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
+        used_device_ids = self._cuda_devices[:len(inputs)]
+        replicas = replicate(self._model, used_device_ids)
+        outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
+    
+        # need to gather each element of dict separately
+        # Only the 'loss' is needed
+        # a (num_gpu, ) tensor with loss on each GPU
+        losses = gather([output['loss'] for output in outputs], used_device_ids[0], 0)
+        return {'loss': losses.sum()}
+
     def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
         """
         Does a forward pass on the given batch and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
         """
-        output_dict = self._model(**batch)
+        if self._multiple_gpu:
+            output_dict = self._data_parallel(batch)
+        else:
+            output_dict = self._model(**batch)
 
         try:
             loss = output_dict["loss"]
@@ -519,7 +552,7 @@ class Trainer:
 
         val_generator = self._iterator(self._validation_data,
                                        num_epochs=1,
-                                       cuda_device=self._cuda_device,
+                                       cuda_device=self._iterator_device,
                                        for_training=False)
         num_validation_batches = self._iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
@@ -691,8 +724,8 @@ class Trainer:
         training_state_path = os.path.join(self._serialization_dir,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
 
-        model_state = torch.load(model_path, map_location=util.device_mapping(self._cuda_device))
-        training_state = torch.load(training_state_path, map_location=util.device_mapping(self._cuda_device))
+        model_state = torch.load(model_path, map_location=util.device_mapping(self._cuda_devices[0]))
+        training_state = torch.load(training_state_path, map_location=util.device_mapping(self._cuda_devices[0]))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
 

@@ -46,6 +46,21 @@ class TestTrainer(AllenNlpTestCase):
                           self.iterator, self.instances, num_epochs=2)
         trainer.train()
 
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
+    def test_trainer_can_run_cuda(self):
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.dataset, num_epochs=2,
+                          cuda_device=0)
+        trainer.train()
+
+    @pytest.mark.skipif(not torch.cuda.device_count() >= 2,
+                        reason="Need multiple GPUs.")
+    def test_trainer_can_run_multiple_gpu(self):
+        trainer = Trainer(self.model, self.optimizer,
+                          BasicIterator(batch_size=4), self.dataset, num_epochs=2,
+                          cuda_device=[0, 1])
+        trainer.train()
+
     def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.instances,

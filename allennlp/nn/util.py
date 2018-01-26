@@ -719,6 +719,7 @@ def get_range_vector(size: int, is_cuda: bool) -> torch.Tensor:
     Returns a range vector with the desired size, starting at 0. The CUDA implementation
     is meant to avoid copy data from CPU to GPU.
     """
+    # TODO: this might be the problem
     if is_cuda:
         indices = torch.cuda.LongTensor(size).fill_(1).cumsum(0) - 1
     else:
