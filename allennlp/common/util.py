@@ -199,7 +199,9 @@ def import_submodules(package_name: str) -> None:
     importlib.invalidate_caches()
 
     module = importlib.import_module(package_name)
-    for _, name, _ in pkgutil.walk_packages(module.__path__):
+    path = getattr(module, '__path__', '')
+
+    for _, name, _ in pkgutil.walk_packages(path):
         importlib.import_module(package_name + '.' + name)
 
 
