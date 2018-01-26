@@ -1,4 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
+import os
+import pathlib
+import shutil
+import sys
+import tempfile
+
 import torch
 
 from allennlp.common import util
@@ -24,3 +30,24 @@ class TestCommonUtils(AllenNlpTestCase):
     def test_sanitize(self):
         assert util.sanitize(torch.Tensor([1, 2])) == [1, 2]
         assert util.sanitize(torch.LongTensor([1, 2])) == [1, 2]
+
+    def test_import_submodules(self):
+        tempdir = tempfile.mkdtemp()
+
+        os.makedirs(os.path.join(tempdir, 'mymodule'))
+        pathlib.Path(os.path.join(tempdir, 'mymodule/__init__.py')).touch()
+        os.makedirs(os.path.join(tempdir, 'mymodule/submodule'))
+        pathlib.Path(os.path.join(tempdir, 'mymodule/submodule/__init__.py')).touch()
+
+        sys.path.insert(0, tempdir)
+
+        assert 'mymodule' not in sys.modules
+        assert 'mymodule.submodule' not in sys.modules
+
+        util.import_submodules('mymodule')
+
+        assert 'mymodule' in sys.modules
+        assert 'mymodule.submodule' in sys.modules
+
+        sys.path.remove(tempdir)
+        shutil.rmtree(tempdir)

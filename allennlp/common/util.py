@@ -4,6 +4,8 @@ Various utilities that don't fit anwhere else.
 
 from itertools import zip_longest
 from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable
+import importlib
+import pkgutil
 import random
 import resource
 import sys
@@ -186,6 +188,17 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
         spacy_model = spacy.load(spacy_model_name, disable=disable)
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
+
+def import_submodules(package_name: str) -> None:
+    """
+    Import all submodules under the given package.
+    Primarily useful so that people using AllenNLP as a library
+    can specify their own custom packages and have their custom
+    classes get loaded and registered.
+    """
+    module = importlib.import_module(package_name)
+    for _, name, _ in pkgutil.walk_packages(getattr(module, "__path__", "")):
+        importlib.import_module(package_name + '.' + name)
 
 def peak_memory_mb() -> float:
     """
