@@ -150,8 +150,10 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     prepare_environment(params)
 
     os.makedirs(serialization_dir, exist_ok=True)
-    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout, file_friendly_logging)  # type: ignore
-    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), sys.stderr, file_friendly_logging)  # type: ignore
+    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout,
+                           file_friendly_logging)  # type: ignore
+    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), sys.stderr,
+                           file_friendly_logging)  # type: ignore
     handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
