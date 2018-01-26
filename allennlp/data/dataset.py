@@ -26,6 +26,8 @@ class Batch(Iterable):
         A Dataset just takes an iterable of instances in its constructor and hangs onto them
         in a list.
         """
+        super().__init__()
+
         self.instances = ensure_list(instances)
 
         all_instance_fields_and_types: List[Dict[str, str]] = [{k: v.__class__.__name__
