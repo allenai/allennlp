@@ -284,10 +284,18 @@ class Trainer:
         """
         Sends all of the train metrics (and validation metrics, if provided) to tensorboard.
         """
-        for name, value in train_metrics.items():
-            self._tensorboard.add_train_scalar(name, value, epoch)
-            if val_metrics:
-                self._tensorboard.add_validation_scalar(name, val_metrics[name], epoch)
+        metric_names = set(train_metrics.keys())
+        if val_metrics is not None:
+            metric_names.update(val_metrics.keys())
+        val_metrics = val_metrics or {}
+
+        for name in metric_names:
+            train_metric = train_metrics.get(name)
+            if train_metric is not None:
+                self._tensorboard.add_train_scalar(name, train_metric, epoch)
+            val_metric = val_metrics.get(name)
+            if val_metric is not None:
+                self._tensorboard.add_validation_scalar(name, val_metric, epoch)
 
     def _metrics_to_console(self,  # pylint: disable=no-self-use
                             train_metrics: dict,
@@ -295,16 +303,24 @@ class Trainer:
         """
         Logs all of the train metrics (and validation metrics, if provided) to the console.
         """
-        if val_metrics:
-            message_template = "Training %s : %3f    Validation %s : %3f "
-        else:
-            message_template = "Training %s : %3f "
+        val_metrics = val_metrics or {}
+        dual_message_template = "Training %s : %3f    Validation %s : %3f "
+        message_template = "%s %s : %3f "
 
-        for name, value in train_metrics.items():
-            if val_metrics:
-                logger.info(message_template, name, value, name, val_metrics[name])
-            else:
-                logger.info(message_template, name, value)
+        metric_names = set(train_metrics.keys())
+        if val_metrics:
+            metric_names.update(val_metrics.keys())
+
+        for name in metric_names:
+            train_metric = train_metrics.get(name)
+            val_metric = val_metrics.get(name)
+
+            if val_metric is not None and train_metric is not None:
+                logger.info(dual_message_template, name, train_metric, name, val_metric)
+            elif val_metric is not None:
+                logger.info(message_template, "Validation", name, val_metric)
+            elif train_metric is not None:
+                logger.info(message_template, "Training", name, train_metric)
 
     def _update_learning_rate(self, epoch: int, val_metric: float = None) -> None:
         if not self._learning_rate_scheduler:
