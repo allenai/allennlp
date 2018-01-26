@@ -13,8 +13,8 @@ class Tqdm:
     @staticmethod
     def tqdm(*args, **kwargs):
         new_kwargs = {
-            **kwargs,
-            'mininterval': Tqdm.default_mininterval
+                **kwargs,
+                'mininterval': Tqdm.default_mininterval
         }
 
         return _tqdm(*args, **new_kwargs)
