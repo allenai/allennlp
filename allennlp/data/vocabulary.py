@@ -10,8 +10,6 @@ import logging
 import os
 import gzip
 
-import tqdm
-
 from allennlp.common.util import namespace_match
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
