@@ -70,7 +70,7 @@ class Train(Subcommand):
         subparser.add_argument('--clean-output',
                                action='store_true',
                                default=False,
-                               help='outputs tqdm status separate lines and slows tqdm refresh rate')
+                               help='outputs tqdm status on separate lines and slows tqdm refresh rate')
 
         subparser.set_defaults(func=train_model_from_args)
 
