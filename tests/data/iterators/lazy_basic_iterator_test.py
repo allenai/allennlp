@@ -3,6 +3,7 @@ from typing import List
 
 from allennlp.common import Params
 from allennlp.data import Instance, Token
+from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
 from allennlp.data.iterators.lazy_basic_iterator import LazyBasicIterator
 from tests.data.iterators.basic_iterator_test import IteratorTest
@@ -94,33 +95,33 @@ class TestLazyIterator(LazyBasicIteratorTest):
         assert grouped_instances == [[self.instances[0], self.instances[1]]]
 
 
-    # def test_multiple_cursors(self):
-    #     # pylint: disable=protected-access
-    #     generator1 = lambda: (i for i in self.instance_iterable)
-    #     generator2 = lambda: (i for i in self.instance_iterable)
+    def test_multiple_cursors(self):
+        # pylint: disable=protected-access
+        instances1 = _LazyInstances(lambda: (i for i in self.instance_iterable))
+        instances2 = _LazyInstances(lambda: (i for i in self.instance_iterable))
 
-    #     iterator = LazyBasicIterator(batch_size=1, instances_per_epoch=2)
-    #     iterator.index_with(self.vocab)
+        iterator = LazyBasicIterator(batch_size=1, instances_per_epoch=2)
+        iterator.index_with(self.vocab)
 
-    #     # First epoch through dataset1
-    #     batches = list(iterator._create_batches(generator1, shuffle=False))
-    #     grouped_instances = [batch.instances for batch in batches]
-    #     assert grouped_instances == [[self.instances[0]], [self.instances[1]]]
+        # First epoch through dataset1
+        batches = list(iterator._create_batches(instances1, shuffle=False))
+        grouped_instances = [batch.instances for batch in batches]
+        assert grouped_instances == [[self.instances[0]], [self.instances[1]]]
 
-    #     # First epoch through dataset2
-    #     batches = list(iterator._create_batches(generator2, shuffle=False))
-    #     grouped_instances = [batch.instances for batch in batches]
-    #     assert grouped_instances == [[self.instances[0]], [self.instances[1]]]
+        # First epoch through dataset2
+        batches = list(iterator._create_batches(instances2, shuffle=False))
+        grouped_instances = [batch.instances for batch in batches]
+        assert grouped_instances == [[self.instances[0]], [self.instances[1]]]
 
-    #     # Second epoch through dataset1
-    #     batches = list(iterator._create_batches(generator1, shuffle=False))
-    #     grouped_instances = [batch.instances for batch in batches]
-    #     assert grouped_instances == [[self.instances[2]], [self.instances[3]]]
+        # Second epoch through dataset1
+        batches = list(iterator._create_batches(instances1, shuffle=False))
+        grouped_instances = [batch.instances for batch in batches]
+        assert grouped_instances == [[self.instances[2]], [self.instances[3]]]
 
-    #     # Second epoch through dataset2
-    #     batches = list(iterator._create_batches(generator2, shuffle=False))
-    #     grouped_instances = [batch.instances for batch in batches]
-    #     assert grouped_instances == [[self.instances[2]], [self.instances[3]]]
+        # Second epoch through dataset2
+        batches = list(iterator._create_batches(instances2, shuffle=False))
+        grouped_instances = [batch.instances for batch in batches]
+        assert grouped_instances == [[self.instances[2]], [self.instances[3]]]
 
 
     def test_from_params(self):
