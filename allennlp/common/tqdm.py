@@ -1,6 +1,8 @@
 """
-This wraps tqdm so we can add configurable global defaults for certain tqdm parameters.
+:class:`~allennlp.common.tqdm.Tqdm` wraps tqdm so we can add configurable
+global defaults for certain tqdm parameters.
 """
+
 from tqdm import tqdm as _tqdm
 
 class Tqdm:
