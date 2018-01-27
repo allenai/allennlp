@@ -163,34 +163,24 @@ We don't *need* to, but we also make a few other changes
 
 At this point we're ready to train the model.
 In this case our new classes are part of the `allennlp` library,
-which means we can just use `python -m allennlp.run train`:
+which means we can just use `allennlp/run.py train`,
+but if you were to create your own model they wouldn't be.
 
-```bash
-$ python -m allennlp.run train \
-    tutorials/getting_started/crf_tagger.json \
-    -s /tmp/crf_model
-```
-
-If you were to create your own model outside of
-the allennlp codebase, they wouldn't be.
-
-In that case `allennlp.run` needs extra info to load the modules in which
+In that case `allennlp/run.py` never loads the modules in which
 you've defined your classes, they never get registered, and then
 AllenNLP is unable to instantiate them based on the configuration file.
 
-You can specify one more more extra packages using the
-`--include-packages` flag. For example, imagine that
-your model is in the module `myallennlp.model`
-and your dataset reader is in the module `myallennlp.dataset_reader`.
+In such a case you'll need to create your own such script.
+You can actually copy that one, the only change you need to make
+is to import all of your custom classes at the top:
 
-Then you would just
-```bash
-$ python -m allennlp.run train \
-    /path/to/your/model/configuration \
-    -s /path/to/serialization/dir \
-    --include-package myallennlp
+```python
+from myallennlp.data.dataset_readers import Conll2003DatasetReader
+from myallennlp.models import CrfTagger
 ```
 
-and (as long as your package is somewhere on the PATH
-where Python looks for packages), your custom classes
-will all get registered and used correctly.
+and so on. After which you're ready to train:
+
+```bash
+$ my_run.py train tutorials/getting_started/crf_tagger.json -s /tmp/crf_model
+```

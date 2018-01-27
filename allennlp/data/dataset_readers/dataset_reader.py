@@ -1,9 +1,21 @@
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Callable
 
 from allennlp.data.instance import Instance
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
 from allennlp.common.util import ensure_list
+
+class _LazyInstances(Iterable):
+    """
+    An ``Iterable`` that just wraps a thunk and calls it for
+    each call to ``__iter__``.
+    """
+    def __init__(self, thunk: Callable[[], Iterator[Instance]]) -> None:
+        super().__init__()
+        self.thunk = thunk
+
+    def __iter__(self) -> Iterator[Instance]:
+        return self.thunk()
 
 class DatasetReader(Registrable):
     """
@@ -16,31 +28,20 @@ class DatasetReader(Registrable):
 
     def instances(self, file_path) -> Iterable[Instance]:
         """
-        If ``self.lazy`` is False, this caches all the instances
-        from ``self._read()`` in a list and returns that list
+        If ``self.lazy`` is False, this calls ``self._read()`` once,
+        caches all the instances in a list and returns that list
         each time it's called.
 
         If ``self.lazy`` is True, this returns an object whose
-        ``__iter__`` method calls ``_read()`` each iteration.
+        ``__iter__`` method calls ``self._read()`` each iteration.
         """
         if self.lazy:
-            _read_thunk = lambda: self._read(file_path)
-
-            class _LazyIterable(Iterable):
-                def __iter__(self) -> Iterator[Instance]:
-                    return iter(_read_thunk())
-
-            return _LazyIterable()
+            return _LazyInstances(lambda: iter(self._read(file_path)))
         else:
             iterable = self._read(file_path)
 
             # If `iterable` is already a list, this is a no-op.
-            instances = ensure_list(iterable)
-
-            # Each call to the returned `InstanceGenerator` just returns
-            # the list of instances. If you modify that list (e.g. by shuffling),
-            # those changes will persist to future calls.
-            return instances
+            return ensure_list(iterable)
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """

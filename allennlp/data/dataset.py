@@ -28,8 +28,12 @@ class Batch(Iterable):
         """
         super().__init__()
 
-        self.instances = ensure_list(instances)
+        self.instances: List[Instance] = ensure_list(instances)
 
+    def _check_types(self) -> None:
+        """
+        Check that all the instances have the same types.
+        """
         all_instance_fields_and_types: List[Dict[str, str]] = [{k: v.__class__.__name__
                                                                 for k, v in x.fields.items()}
                                                                for x in self.instances]
