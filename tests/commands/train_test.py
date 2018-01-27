@@ -183,7 +183,7 @@ class LazyFakeReader(DatasetReader):
         """
         Reads some data from the `file_path` and returns the instances.
         """
-        return self.reader.instance_generator(file_path)()
+        return self.reader.instances(file_path)
 
     @classmethod
     def from_params(cls, params: Params) -> 'LazyTestReader':

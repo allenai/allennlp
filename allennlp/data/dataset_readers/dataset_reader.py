@@ -1,6 +1,6 @@
-from typing import Iterable
+from typing import Iterable, Iterator
 
-from allennlp.data.instance import Instance, InstanceGenerator
+from allennlp.data.instance import Instance
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
 from allennlp.common.util import ensure_list
@@ -14,20 +14,23 @@ class DatasetReader(Registrable):
     """
     lazy = False
 
-    def instance_generator(self, file_path) -> InstanceGenerator:
+    def instances(self, file_path) -> Iterable[Instance]:
         """
         If ``self.lazy`` is False, this caches all the instances
-        from ``self._read()`` in a list and returns an ``InstanceGenerator``
-        that just returns the list each time it's called.
+        from ``self._read()`` in a list and returns that list
+        each time it's called.
 
-        If ``self.lazy`` is True, this returns an ``InstanceGenerator``
-        that calls ``self._read()`` each time it's called. Note that this
-        will only be lazy if ``self._read()`` is; that is, if ``self._read()``
-        loads the entire file into memory, then you'd just be loading the
-        entire file into memory over and over again.
+        If ``self.lazy`` is True, this returns an object whose
+        ``__iter__`` method calls ``_read()`` each iteration.
         """
         if self.lazy:
-            return lambda: self._read(file_path)
+            _read_thunk = lambda: self._read(file_path)
+
+            class _LazyIterable(Iterable):
+                def __iter__(self) -> Iterator[Instance]:
+                    return iter(_read_thunk())
+
+            return _LazyIterable()
         else:
             iterable = self._read(file_path)
 
@@ -37,7 +40,7 @@ class DatasetReader(Registrable):
             # Each call to the returned `InstanceGenerator` just returns
             # the list of instances. If you modify that list (e.g. by shuffling),
             # those changes will persist to future calls.
-            return lambda: instances
+            return instances
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """

@@ -18,7 +18,7 @@ which to write the results.
     -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                             directory in which to save the model and its logs
 """
-from typing import Dict
+from typing import Dict, Iterable
 import argparse
 import json
 import logging
@@ -33,7 +33,7 @@ from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
 from allennlp.common.util import prepare_environment, import_submodules
 from allennlp.data import Vocabulary
-from allennlp.data.instance import InstanceGenerator
+from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.archival import archive_model
@@ -103,7 +103,7 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str, overr
     return train_model(params, serialization_dir)
 
 
-def datasets_from_params(params: Params) -> Dict[str, InstanceGenerator]:
+def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     """
     Load all the datasets specified by the config.
     """
@@ -111,21 +111,21 @@ def datasets_from_params(params: Params) -> Dict[str, InstanceGenerator]:
 
     train_data_path = params.pop('train_data_path')
     logger.info("Reading training data from %s", train_data_path)
-    train_generator = dataset_reader.instance_generator(train_data_path)
+    train_data = dataset_reader.instances(train_data_path)
 
-    datasets: Dict[str, InstanceGenerator] = {"train": train_generator}
+    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
 
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
-        validation_generator = dataset_reader.instance_generator(validation_data_path)
-        datasets["validation"] = validation_generator
+        validation_data = dataset_reader.instances(validation_data_path)
+        datasets["validation"] = validation_data
 
     test_data_path = params.pop("test_data_path", None)
     if test_data_path is not None:
         logger.info("Reading test data from %s", test_data_path)
-        test_generator = dataset_reader.instance_generator(test_data_path)
-        datasets["test"] = test_generator
+        test_data = dataset_reader.instances(test_data_path)
+        datasets["test"] = test_data
 
     return datasets
 
@@ -169,8 +169,8 @@ def train_model(params: Params, serialization_dir: str) -> Model:
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
-                                   (instance for key, generator in all_datasets.items()
-                                    for instance in generator()
+                                   (instance for key, instances in all_datasets.items()
+                                    for instance in instances
                                     if key in datasets_for_vocab_creation))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 

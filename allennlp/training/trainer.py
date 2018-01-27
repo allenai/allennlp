@@ -11,7 +11,7 @@ import logging
 import os
 import shutil
 import time
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, Iterable
 
 import torch
 import torch.optim.lr_scheduler
@@ -23,7 +23,7 @@ from tensorboard import SummaryWriter
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import peak_memory_mb
-from allennlp.data.instance import InstanceGenerator
+from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
 from allennlp.nn import util
@@ -55,8 +55,8 @@ class Trainer:
                  model: Model,
                  optimizer: torch.optim.Optimizer,
                  iterator: DataIterator,
-                 train_dataset: InstanceGenerator,
-                 validation_dataset: Optional[InstanceGenerator] = None,
+                 train_dataset: Iterable[Instance],
+                 validation_dataset: Optional[Iterable[Instance]] = None,
                  patience: int = 2,
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
@@ -119,8 +119,8 @@ class Trainer:
         self._model = model
         self._iterator = iterator
         self._optimizer = optimizer
-        self._train_data_generator = train_dataset
-        self._validation_data_generator = validation_dataset
+        self._train_data = train_dataset
+        self._validation_data = validation_dataset
 
         self._patience = patience
         self._num_epochs = num_epochs
@@ -207,10 +207,10 @@ class Trainer:
         self._model.train()
 
         # Get tqdm for the training batches
-        train_generator = self._iterator(self._train_data_generator,
+        train_generator = self._iterator(self._train_data,
                                          num_epochs=1,
                                          cuda_device=self._cuda_device)
-        num_training_batches = self._iterator.get_num_batches(self._train_data_generator)
+        num_training_batches = self._iterator.get_num_batches(self._train_data)
         train_generator_tqdm = tqdm.tqdm(train_generator,
                                          disable=self._no_tqdm,
                                          total=num_training_batches)
@@ -349,11 +349,11 @@ class Trainer:
 
         self._model.eval()
 
-        val_generator = self._iterator(self._validation_data_generator,
+        val_generator = self._iterator(self._validation_data,
                                        num_epochs=1,
                                        cuda_device=self._cuda_device,
                                        for_training=False)
-        num_validation_batches = self._iterator.get_num_batches(self._validation_data_generator)
+        num_validation_batches = self._iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = tqdm.tqdm(val_generator,
                                        disable=self._no_tqdm,
                                        total=num_validation_batches)
@@ -391,7 +391,7 @@ class Trainer:
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
-            if self._validation_data_generator is not None:
+            if self._validation_data is not None:
                 # We have a validation set, so compute all the metrics on it.
                 val_loss, num_batches = self._validation_loss()
                 val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
@@ -519,8 +519,8 @@ class Trainer:
                     model: Model,
                     serialization_dir: str,
                     iterator: DataIterator,
-                    train_data_generator: InstanceGenerator,
-                    validation_data_generator: Optional[InstanceGenerator],
+                    train_data: Iterable[Instance],
+                    validation_data: Optional[Iterable[Instance]],
                     params: Params) -> 'Trainer':
 
         patience = params.pop_int("patience", 2)
@@ -544,7 +544,7 @@ class Trainer:
 
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
-                       train_data_generator, validation_data_generator,
+                       train_data, validation_data,
                        patience=patience,
                        validation_metric=validation_metric,
                        num_epochs=num_epochs,

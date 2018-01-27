@@ -23,11 +23,10 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(self.param_file)
 
         reader = DatasetReader.from_params(params['dataset_reader'])
-        generator = reader.instance_generator(dataset_file)
-        vocab = Vocabulary.from_instances(generator())
+        instances = reader.instances(dataset_file)
+        vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
-        self.generator = generator
-        self.instances = [instance for instance in generator()]
+        self.instances = instances
         self.model = Model.from_params(self.vocab, params['model'])
 
         # TODO(joelgrus) get rid of these
@@ -64,11 +63,11 @@ class ModelTestCase(AllenNlpTestCase):
 
         # We'll check that even if we index the dataset with each model separately, we still get
         # the same result out.
-        model_dataset = reader.instance_generator(params['validation_data_path'])
+        model_dataset = reader.instances(params['validation_data_path'])
         iterator.index_with(model.vocab)
         model_batch = next(iterator(model_dataset, shuffle=False, cuda_device=cuda_device))
 
-        loaded_dataset = reader.instance_generator(params['validation_data_path'])
+        loaded_dataset = reader.instances(params['validation_data_path'])
         iterator2.index_with(loaded_model.vocab)
         loaded_batch = next(iterator2(loaded_dataset, shuffle=False, cuda_device=cuda_device))
 
@@ -148,13 +147,12 @@ class ModelTestCase(AllenNlpTestCase):
     def ensure_batch_predictions_are_consistent(self):
         self.model.eval()
         single_predictions = []
-        instances = [instance for instance in self.generator()]
-        for i, instance in enumerate(instances):
+        for i, instance in enumerate(self.instances):
             dataset = Batch([instance])
             tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
             result = self.model(**tensors)
             single_predictions.append(result)
-        full_dataset = Batch(instances)
+        full_dataset = Batch(self.instances)
         batch_tensors = full_dataset.as_tensor_dict(full_dataset.get_padding_lengths(), for_training=False)
         batch_predictions = self.model(**batch_tensors)
         for i, instance_predictions in enumerate(single_predictions):

@@ -87,8 +87,8 @@ def make_vocab_from_params(params: Params):
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = Vocabulary.from_params(Params({}),
-                                   (instance for key, generator in all_datasets.items()
-                                    for instance in generator()
+                                   (instance for key, instances in all_datasets.items()
+                                    for instance in instances
                                     if key in datasets_for_vocab_creation))
 
     vocab.save_to_files(vocab_dir)

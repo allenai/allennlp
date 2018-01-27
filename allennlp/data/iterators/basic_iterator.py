@@ -6,7 +6,7 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.util import group_by_count, ensure_list
-from allennlp.data.instance import InstanceGenerator
+from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.dataset import Batch
 
@@ -26,13 +26,13 @@ class BasicIterator(DataIterator):
         self._batch_size = batch_size
 
     @overrides
-    def get_num_batches(self, generator: InstanceGenerator) -> int:
-        instances = ensure_list(generator())
+    def get_num_batches(self, instances: Iterable[Instance]) -> int:
+        instances = ensure_list(instances)
         return math.ceil(len(instances) / self._batch_size)
 
     @overrides
-    def _create_batches(self, generator: InstanceGenerator, shuffle: bool) -> Iterable[Batch]:
-        instances = ensure_list(generator())
+    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
+        instances = ensure_list(instances)
         if shuffle:
             random.shuffle(instances)
         grouped_instances = group_by_count(instances, self._batch_size, None)

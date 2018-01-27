@@ -1,4 +1,4 @@
-from typing import Dict, Callable, Iterable
+from typing import Dict
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
@@ -74,5 +74,3 @@ class Instance:
                                                   cuda_device=cuda_device,
                                                   for_training=for_training)
         return tensors
-
-InstanceGenerator = Callable[[], Iterable[Instance]]  # pylint: disable=invalid-name

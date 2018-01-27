@@ -14,12 +14,12 @@ class LazyDatasetReader(DatasetReader):
     def __init__(self, instances: List[Instance], lazy: bool):
         super().__init__()
         self.lazy = lazy
-        self.instances = instances
+        self._instances = instances
         self.num_reads = 0
 
     def _read(self, _: str) -> Iterable[Instance]:
         self.num_reads += 1
-        return (instance for instance in self.instances)
+        return (instance for instance in self._instances)
 
 
 class TestLazyDatasetReader(AllenNlpTestCase):
@@ -42,11 +42,11 @@ class TestLazyDatasetReader(AllenNlpTestCase):
         reader = LazyDatasetReader(self.instances, lazy=True)
         assert reader.num_reads == 0
 
-        generator = reader.instance_generator('path/to/file')
+        instances = reader.instances('path/to/file')
 
         for _ in range(10):
-            instances = generator()
-            assert ensure_list(instances) == self.instances
+            _instances = (i for i in instances)
+            assert ensure_list(_instances) == self.instances
 
         assert reader.num_reads == 10
 
@@ -54,10 +54,10 @@ class TestLazyDatasetReader(AllenNlpTestCase):
         reader = LazyDatasetReader(self.instances, lazy=False)
         assert reader.num_reads == 0
 
-        generator = reader.instance_generator('path/to/file')
+        instances = reader.instances('path/to/file')
 
         for _ in range(10):
-            instances = generator()
-            assert ensure_list(instances) == self.instances
+            _instances = (i for i in instances)
+            assert ensure_list(_instances) == self.instances
 
         assert reader.num_reads == 1

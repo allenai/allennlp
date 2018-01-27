@@ -196,6 +196,8 @@ def import_submodules(package_name: str) -> None:
     can specify their own custom packages and have their custom
     classes get loaded and registered.
     """
+    importlib.invalidate_caches()
+
     module = importlib.import_module(package_name)
     for _, name, _ in pkgutil.walk_packages(getattr(module, "__path__", "")):
         importlib.import_module(package_name + '.' + name)

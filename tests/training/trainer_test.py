@@ -15,10 +15,9 @@ from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 class TestTrainer(AllenNlpTestCase):
     def setUp(self):
         super(TestTrainer, self).setUp()
-        generator = SequenceTaggingDatasetReader().instance_generator('tests/fixtures/data/sequence_tagging.tsv')
-        vocab = Vocabulary.from_instances(generator())
+        self.instances = SequenceTaggingDatasetReader().instances('tests/fixtures/data/sequence_tagging.tsv')
+        vocab = Vocabulary.from_instances(self.instances)
         self.vocab = vocab
-        self.generator = generator
         self.model_params = Params({
                 "text_field_embedder": {
                         "tokens": {
@@ -40,18 +39,18 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_can_run(self):
         trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.generator, num_epochs=2)
+                          self.iterator, self.instances, num_epochs=2)
         trainer.train()
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.generator,
-                          validation_dataset=self.generator,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
                           num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
         new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.generator,
-                              validation_dataset=self.generator,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR)
 
         epoch, val_metrics_per_epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
@@ -63,8 +62,8 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_increasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.generator,
-                              validation_dataset=self.generator,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="+test")
         assert new_trainer._should_stop_early([.5, .3, .2, .1, .4, .4]) #pylint: disable=protected-access
@@ -72,8 +71,8 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_decreasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.generator,
-                              validation_dataset=self.generator,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="-test")
         assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4]) #pylint: disable=protected-access
@@ -87,6 +86,6 @@ class TestTrainer(AllenNlpTestCase):
                 return {}
         with pytest.raises(ConfigurationError):
             trainer = Trainer(FakeModel(), self.optimizer,
-                              self.iterator, self.generator,
+                              self.iterator, self.instances,
                               num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()

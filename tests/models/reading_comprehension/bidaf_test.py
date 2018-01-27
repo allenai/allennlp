@@ -20,7 +20,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         self.set_up_model('tests/fixtures/bidaf/experiment.json', 'tests/fixtures/data/squad.json')
 
     def test_forward_pass_runs_correctly(self):
-        batch = Batch(self.generator())
+        batch = Batch(self.instances)
         batch.index_instances(self.vocab)
         training_tensors = batch.as_tensor_dict()
         output_dict = self.model(**training_tensors)
@@ -63,15 +63,15 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
 
         # Save some state.
         saved_model = self.model
-        saved_generator = self.generator
+        saved_instances = self.instances
 
         # Modify the state, run the test with modified state.
         params = Params.from_file(self.param_file)
         reader = DatasetReader.from_params(params['dataset_reader'])
         reader._token_indexers = {'tokens': reader._token_indexers['tokens']}
-        self.generator = reader.instance_generator('tests/fixtures/data/squad.json')
-        vocab = Vocabulary.from_instances(self.generator())
-        for instance in self.generator():
+        self.instances = reader.instances('tests/fixtures/data/squad.json')
+        vocab = Vocabulary.from_instances(self.instances)
+        for instance in self.instances:
             instance.index_fields(vocab)
         del params['model']['text_field_embedder']['token_characters']
         params['model']['phrase_layer']['input_size'] = 2
@@ -81,7 +81,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
 
         # Restore the state.
         self.model = saved_model
-        self.generator = saved_generator
+        self.instances = saved_instances
 
     def test_get_best_span(self):
         # pylint: disable=protected-access

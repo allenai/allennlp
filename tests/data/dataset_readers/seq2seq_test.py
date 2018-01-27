@@ -1,13 +1,14 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.data.dataset_readers import Seq2SeqDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 
 
 class TestSeq2SeqDatasetReader(AllenNlpTestCase):
     def test_default_format(self):
         reader = Seq2SeqDatasetReader()
-        generator = reader.instance_generator('tests/fixtures/data/seq2seq_copy.tsv')
-        instances = list(generator())
+        instances = reader.instances('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = ensure_list(instances)
 
         assert len(instances) == 3
         fields = instances[0].fields
@@ -28,8 +29,8 @@ class TestSeq2SeqDatasetReader(AllenNlpTestCase):
 
     def test_source_add_start_token(self):
         reader = Seq2SeqDatasetReader(source_add_start_token=False)
-        generator = reader.instance_generator('tests/fixtures/data/seq2seq_copy.tsv')
-        instances = list(generator())
+        instances = reader.instances('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = ensure_list(instances)
 
         assert len(instances) == 3
         fields = instances[0].fields

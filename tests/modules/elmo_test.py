@@ -42,12 +42,11 @@ class TestElmoBiLm(AllenNlpTestCase):
                 instances.append(instance)
 
         vocab = Vocabulary()
-        generator = lambda: instances
 
         # Now finally we can iterate through batches.
         iterator = BasicIterator(3)
         iterator.index_with(vocab)
-        for i, batch in enumerate(iterator(generator, num_epochs=1, shuffle=False)):
+        for i, batch in enumerate(iterator(instances, num_epochs=1, shuffle=False)):
             lm_embeddings = elmo_bilm(batch['elmo']['character_ids'])
             top_layer_embeddings, mask = remove_sentence_boundaries(
                     lm_embeddings['activations'][2],

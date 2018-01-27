@@ -4,7 +4,7 @@ from typing import Dict, Generator, Union, Iterable
 import numpy
 
 from allennlp.data.dataset import Batch
-from allennlp.data.instance import InstanceGenerator
+from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common import Params
 from allennlp.common.registrable import Registrable
@@ -20,7 +20,7 @@ class DataIterator(Registrable):
     vocab: Vocabulary = None
 
     def __call__(self,
-                 generator: InstanceGenerator,
+                 instances: Iterable[Instance],
                  num_epochs: int = None,
                  shuffle: bool = True,
                  cuda_device: int = -1,
@@ -32,7 +32,11 @@ class DataIterator(Registrable):
 
         Parameters
         ----------
-        dataset : ``Dataset``
+        instances : ``Iterable[Instance]``
+            The instances in the dataset. IMPORTANT: this must be able to be
+            iterated over *multiple times*. That is, it must be either a List
+            or some other object whose ``__iter__`` method returns a fresh iterator
+            each time it's called.
         num_epochs : ``int``, optional (default=``None``)
             How times should we iterate over this dataset?  If ``None``, we will iterate over it
             forever.
@@ -49,12 +53,12 @@ class DataIterator(Registrable):
         """
         if num_epochs is None:
             while True:
-                yield from self._yield_one_epoch(generator, shuffle, cuda_device, for_training)
+                yield from self._yield_one_epoch(instances, shuffle, cuda_device, for_training)
         else:
             for _ in range(num_epochs):
-                yield from self._yield_one_epoch(generator, shuffle, cuda_device, for_training)
+                yield from self._yield_one_epoch(instances, shuffle, cuda_device, for_training)
 
-    def get_num_batches(self, generator: InstanceGenerator) -> int:
+    def get_num_batches(self, instances: Iterable[Instance]) -> int:
         """
         Returns the number of batches that ``dataset`` will be split into; if you want to track
         progress through the batch with the generator produced by ``__call__``, this could be
@@ -62,8 +66,8 @@ class DataIterator(Registrable):
         """
         raise NotImplementedError
 
-    def _yield_one_epoch(self, generator: InstanceGenerator, shuffle: bool, cuda_device: int, for_training: bool):
-        batches = self._create_batches(generator, shuffle)
+    def _yield_one_epoch(self, instances: Iterable[Instance], shuffle: bool, cuda_device: int, for_training: bool):
+        batches = self._create_batches(instances, shuffle)
         for batch in batches:
             if self.vocab is not None:
                 batch.index_instances(self.vocab)
@@ -74,7 +78,7 @@ class DataIterator(Registrable):
                                        cuda_device=cuda_device,
                                        for_training=for_training)
 
-    def _create_batches(self, generator: InstanceGenerator, shuffle: bool) -> Iterable[Batch]:
+    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         """
         Creates batches of instances. Each batch is a small ``Dataset``.
         """

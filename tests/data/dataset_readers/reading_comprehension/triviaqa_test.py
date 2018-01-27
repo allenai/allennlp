@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 from allennlp.data.dataset_readers import TriviaQaReader
 
 
@@ -10,8 +11,8 @@ class TestTriviaQaReader(AllenNlpTestCase):
                 'base_tarball_path': 'tests/fixtures/data/triviaqa-sample.tgz',
                 })
         reader = TriviaQaReader.from_params(params)
-        generator = reader.instance_generator('web-train.json')
-        instances = list(generator())
+        instances = reader.instances('web-train.json')
+        instances = ensure_list(instances)
         assert len(instances) == 3
 
         assert [t.text for t in instances[0].fields["question"].tokens[:3]] == ["Which", "American", "-"]

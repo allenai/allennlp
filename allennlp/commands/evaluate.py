@@ -21,7 +21,7 @@ and report any metrics calculated by the model.
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
 """
-from typing import Dict, Any
+from typing import Dict, Any, Iterable
 import argparse
 import logging
 
@@ -29,7 +29,7 @@ import tqdm
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import prepare_environment, import_submodules
-from allennlp.data.instance import InstanceGenerator
+from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
@@ -82,14 +82,14 @@ class Evaluate(Subcommand):
 
 
 def evaluate(model: Model,
-             instance_generator: InstanceGenerator,
+             instances: Iterable[Instance],
              data_iterator: DataIterator,
              cuda_device: int) -> Dict[str, Any]:
     model.eval()
 
-    iterator = data_iterator(instance_generator, num_epochs=1, cuda_device=cuda_device, for_training=False)
+    iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device, for_training=False)
     logger.info("Iterating over dataset")
-    generator_tqdm = tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instance_generator))
+    generator_tqdm = tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
     for batch in generator_tqdm:
         model(**batch)
         metrics = model.get_metrics()
@@ -120,12 +120,12 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
     evaluation_data_path = args.evaluation_data_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
-    instance_generator = dataset_reader.instance_generator(evaluation_data_path)
+    instances = dataset_reader.instances(evaluation_data_path)
 
     iterator = DataIterator.from_params(config.pop("iterator"))
     iterator.index_with(model.vocab)
 
-    metrics = evaluate(model, instance_generator, iterator, args.cuda_device)
+    metrics = evaluate(model, instances, iterator, args.cuda_device)
 
     logger.info("Finished evaluating.")
     logger.info("Metrics:")

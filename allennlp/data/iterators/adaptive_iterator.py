@@ -8,7 +8,7 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.util import ensure_list
 from allennlp.data.dataset import Batch
-from allennlp.data.instance import Instance, InstanceGenerator
+from allennlp.data.instance import Instance
 from allennlp.data.iterators.bucket_iterator import BucketIterator
 from allennlp.data.iterators.data_iterator import DataIterator
 
@@ -95,19 +95,19 @@ class AdaptiveIterator(BucketIterator):
                                                batch_size=batch_size)
 
     @overrides
-    def get_num_batches(self, generator: InstanceGenerator) -> int:
+    def get_num_batches(self, instances: Iterable[Instance]) -> int:
         """
         This is a non-trivial operation with an ``AdaptiveIterator``, and it's only approximate,
         because the actual number of batches constructed depends on the padding noise.  Call this
         sparingly.
         """
-        return len(self._create_batches(generator))
+        return len(self._create_batches(instances))
 
     @overrides
-    def _create_batches(self, generator: InstanceGenerator, shuffle: bool) -> Iterable[Batch]:
+    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         if self._biggest_batch_first:
-            return super(AdaptiveIterator, self)._create_batches(generator, shuffle)
-        instances = ensure_list(generator())
+            return super(AdaptiveIterator, self)._create_batches(instances, shuffle)
+        instances = ensure_list(instances)
         if self._sorting_keys:
             instances = self._sort_by_padding(instances,
                                               self._sorting_keys,

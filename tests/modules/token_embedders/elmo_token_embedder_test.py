@@ -19,7 +19,7 @@ class TestElmoTokenEmbedder(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_tagger_with_elmo_token_embedder_forward_pass_runs_correctly(self):
-        dataset = Batch(self.generator())
+        dataset = Batch(self.instances)
         dataset.index_instances(self.vocab)
         training_tensors = dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)

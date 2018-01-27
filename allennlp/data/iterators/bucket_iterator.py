@@ -7,7 +7,7 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.util import add_noise_to_dict_values, ensure_list
 from allennlp.data.dataset import Batch
-from allennlp.data.instance import Instance, InstanceGenerator
+from allennlp.data.instance import Instance
 from allennlp.data.iterators.basic_iterator import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
 
@@ -63,14 +63,14 @@ class BucketIterator(BasicIterator):
         super(BucketIterator, self).__init__(batch_size)
 
     @overrides
-    def _create_batches(self, generator: InstanceGenerator, shuffle: bool) -> Iterable[Batch]:
-        instances = ensure_list(generator())
+    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
+        instances = ensure_list(instances)
 
         if self._sorting_keys:
             instances = self._sort_by_padding(instances,
                                               self._sorting_keys,
                                               self._padding_noise)
-        grouped_instances = list(super(BucketIterator, self)._create_batches(lambda: instances, shuffle=False))
+        grouped_instances = list(super(BucketIterator, self)._create_batches(instances, shuffle=False))
         if self._biggest_batch_first:
             # We'll actually pop the last _two_ batches, because the last one might not be full.
             last_batch = grouped_instances.pop()
