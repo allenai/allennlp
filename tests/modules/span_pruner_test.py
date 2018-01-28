@@ -10,13 +10,6 @@ from allennlp.common.checks import ConfigurationError
 
 
 class TestSpanPruner(AllenNlpTestCase):
-    def test_forward_works_on_simple_input(self):
-        scorer = torch.nn.Linear(5, 1)
-        pruner = SpanPruner(scorer=scorer)
-        spans = Variable(torch.randn([3, 20, 5]))
-        mask = Variable(torch.ones([3, 20]))
-        _ = pruner(spans, mask, 2)
-
     def test_span_pruner_selects_top_scored_spans_and_respects_masking(self):
         # Really simple scorer - sum up the embedding_dim.
         scorer = lambda tensor: tensor.sum(-1).unsqueeze(-1)
