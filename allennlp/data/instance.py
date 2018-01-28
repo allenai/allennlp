@@ -14,8 +14,8 @@ class Instance:
     as outputs.
 
     The ``Fields`` in an ``Instance`` can start out either indexed or un-indexed.  During the data
-    processing pipeline, all fields will end up as ``IndexedFields``, and will then be converted
-    into padded arrays by a ``DataGenerator``.
+    processing pipeline, all fields will be indexed, after multiple instances can be combined into
+    a ``Batch`` and then converted into padded arrays.
 
     Parameters
     ----------
@@ -38,8 +38,9 @@ class Instance:
         """
         Converts all ``UnindexedFields`` in this ``Instance`` to ``IndexedFields``, given the
         ``Vocabulary``.  This `mutates` the current object, it does not return a new ``Instance``.
+        A ``DataIterator`` will call this on each pass through a dataset; we use the ``indexed``
+        flag to make sure that indexing only happens once.
         """
-        # index_fields is a no op if this instance has already been indexed
         if not self.indexed:
             self.indexed = True
             for field in self.fields.values():

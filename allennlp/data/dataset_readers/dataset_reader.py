@@ -26,22 +26,32 @@ class DatasetReader(Registrable):
     """
     lazy = False
 
-    def instances(self, file_path) -> Iterable[Instance]:
+    def instances(self, file_path: str) -> Iterable[Instance]:
         """
-        If ``self.lazy`` is False, this calls ``self._read()`` once,
-        caches all the instances in a list and returns that list
-        each time it's called.
+        Returns an ``Iterable`` containing all the instances
+        in the specified dataset.
+
+        If ``self.lazy`` is False, this calls ``self._read()``,
+        calls ``ensure_list`` on the result (which is a no-op if
+        self._read() returns a list, which most of the existing
+        dataset readers do), and returns the resulting list.
 
         If ``self.lazy`` is True, this returns an object whose
         ``__iter__`` method calls ``self._read()`` each iteration.
+        Note that if your implementation of ``_read()`` is not lazy
+        (i.e. it loads all instances into memory at once), then your
+        "lazy" dataset reader is just loading the entire dataset into
+        a list each time you iterate over it, which is probably not
+        what you want.
+
+        In either case, the returned ``Iterable`` can be iterated
+        over multiple times. It's unlikely you want to override this function,
+        but if you do your result should likewise be repeatedly iterable.
         """
         if self.lazy:
             return _LazyInstances(lambda: iter(self._read(file_path)))
         else:
-            iterable = self._read(file_path)
-
-            # If `iterable` is already a list, this is a no-op.
-            return ensure_list(iterable)
+            return ensure_list(self._read(file_path))
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
