@@ -31,10 +31,10 @@ class TestSpanPruner(AllenNlpTestCase):
                                                                                    [2, 3]]))
         numpy.testing.assert_array_equal(pruned_mask.data.numpy(), numpy.ones([3, 2]))
 
-        # embeddings should be the result of index_selecting the pruned_indices. 
+        # embeddings should be the result of index_selecting the pruned_indices.
         correct_embeddings = batched_index_select(spans, pruned_indices)
         numpy.testing.assert_array_equal(correct_embeddings.data.numpy(),
-                                        pruned_embeddings.data.numpy())
+                                         pruned_embeddings.data.numpy())
         # scores should be the sum of the correct embedding elements.
         numpy.testing.assert_array_equal(correct_embeddings.sum(-1).unsqueeze(-1).data.numpy(),
                                          pruned_scores.data.numpy())

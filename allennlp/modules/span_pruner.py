@@ -50,7 +50,7 @@ class SpanPruner(torch.nn.Module):
             The span representations of the top-k scoring spans.
             Has shape (batch_size, num_spans_to_keep, embedding_size).
         top_span_mask : ``torch.LongTensor``
-            The coresponding mask for ``top_span_embeddings``. 
+            The coresponding mask for ``top_span_embeddings``.
             Has shape (batch_size, num_spans_to_keep).
         top_span_indices : ``torch.IntTensor``
             The indices of the top-k scoring spans into the original ``span_embeddings``
