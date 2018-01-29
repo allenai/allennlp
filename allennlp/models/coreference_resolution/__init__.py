@@ -1,1 +1,2 @@
 from allennlp.models.coreference_resolution.coref import CoreferenceResolver
+from allennlp.models.coreference_resolution.coref_v2 import CoreferenceResolverV2
