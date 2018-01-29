@@ -3,8 +3,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 import argparse
-import tqdm
 from allennlp.common import Params
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.iterators import BasicIterator
 from allennlp.data import DatasetReader
 from allennlp.models import Model
@@ -37,7 +37,8 @@ def main(serialization_directory, device):
     iterator.index_with(model.vocab)
 
     model_predictions = []
-    for batch in tqdm.tqdm(iterator(instances, num_epochs=1, shuffle=False, cuda_device=device, for_training=False)):
+    batches = iterator(instances, num_epochs=1, shuffle=False, cuda_device=device, for_training=False)
+    for batch in Tqdm.tqdm(batches):
         result = model(**batch)
         predictions = model.decode(result)
         model_predictions.extend(predictions["tags"])

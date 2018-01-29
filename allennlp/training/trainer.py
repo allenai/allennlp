@@ -17,12 +17,12 @@ import torch
 import torch.optim.lr_scheduler
 from torch.nn.utils.clip_grad import clip_grad_norm
 from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
-import tqdm
 from tensorboard import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import peak_memory_mb
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
@@ -64,8 +64,7 @@ class Trainer:
                  cuda_device: int = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 learning_rate_scheduler: Optional[PytorchLRScheduler] = None,
-                 no_tqdm: bool = False) -> None:
+                 learning_rate_scheduler: Optional[PytorchLRScheduler] = None) -> None:
         """
         Parameters
         ----------
@@ -109,12 +108,6 @@ class Trainer:
             this schedule at the end of each epoch. If you use
             :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`, this will use the ``validation_metric``
             provided to determine if learning has plateaued.
-        no_tqdm : ``bool``, optional (default=False)
-            We use ``tqdm`` for logging, which will print a nice progress bar that updates in place
-            after every batch.  This is nice if you're running training on a local shell, but can
-            cause problems with log files from, e.g., a docker image running on kubernetes.  If
-            ``no_tqdm`` is ``True``, we will not use tqdm, and instead log batch statistics using
-            ``logger.info``, outputting a line at most every 10 seconds.
         """
         self._model = model
         self._iterator = iterator
@@ -136,7 +129,6 @@ class Trainer:
                                      "or decrease by pre-pending the metric name with a +/-.")
         self._validation_metric = validation_metric[1:]
         self._validation_metric_decreases = increase_or_decrease == "-"
-        self._no_tqdm = no_tqdm
 
         if self._cuda_device >= 0:
             self._model = self._model.cuda(self._cuda_device)
@@ -211,8 +203,7 @@ class Trainer:
                                          num_epochs=1,
                                          cuda_device=self._cuda_device)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
-        train_generator_tqdm = tqdm.tqdm(train_generator,
-                                         disable=self._no_tqdm,
+        train_generator_tqdm = Tqdm.tqdm(train_generator,
                                          total=num_training_batches)
         self._last_log = time.time()
         batch_num = 0
@@ -256,11 +247,6 @@ class Trainer:
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
                 self._metrics_to_tensorboard(batch_num_total,
                                              {"epoch_metrics/" + k: v for k, v in metrics.items()})
-
-            # Log progress in no-tqdm case
-            if self._no_tqdm and time.time() - self._last_log > self._log_interval:
-                logger.info("Batch %d/%d: %s", batch_num, num_training_batches, description)
-                self._last_log = time.time()
 
         return self._get_metrics(train_loss, batch_num, reset=True)
 
@@ -354,8 +340,7 @@ class Trainer:
                                        cuda_device=self._cuda_device,
                                        for_training=False)
         num_validation_batches = self._iterator.get_num_batches(self._validation_data)
-        val_generator_tqdm = tqdm.tqdm(val_generator,
-                                       disable=self._no_tqdm,
+        val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batch_num = 0
         val_loss = 0
@@ -369,11 +354,6 @@ class Trainer:
             val_metrics = self._get_metrics(val_loss, batch_num)
             description = self._description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description)
-
-            # Log progress in the no-tqdm case
-            if self._no_tqdm and time.time() - self._last_log > self._log_interval:
-                logger.info("Batch %d/%d: %s", batch_num, num_validation_batches, description)
-                self._last_log = time.time()
 
         return val_loss, batch_num
 
@@ -540,7 +520,6 @@ class Trainer:
             scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
         else:
             scheduler = None
-        no_tqdm = params.pop_bool("no_tqdm", False)
 
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
@@ -552,5 +531,4 @@ class Trainer:
                        cuda_device=cuda_device,
                        grad_norm=grad_norm,
                        grad_clipping=grad_clipping,
-                       learning_rate_scheduler=scheduler,
-                       no_tqdm=no_tqdm)
+                       learning_rate_scheduler=scheduler)

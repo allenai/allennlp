@@ -5,11 +5,11 @@ import tarfile
 from typing import Dict, List, Tuple
 
 from overrides import overrides
-from tqdm import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
@@ -79,7 +79,7 @@ class TriviaQaReader(DatasetReader):
 
         logger.info("Reading the dataset")
         instances = []
-        for question_json in tqdm(data_json['Data']):
+        for question_json in Tqdm.tqdm(data_json['Data']):
             question_text = question_json['Question']
             question_tokens = self._tokenizer.tokenize(question_text)
 
