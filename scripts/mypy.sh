@@ -2,6 +2,5 @@
 # Run type checking over the python code.
 
 set -e
-echo 'Starting mypy checks'
-mypy allennlp --ignore-missing-imports
+./scripts/verify.py --checks mypy
 echo -e "mypy checks passed\n"
