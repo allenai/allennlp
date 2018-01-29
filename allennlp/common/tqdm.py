@@ -6,6 +6,7 @@ global defaults for certain tqdm parameters.
 from tqdm import tqdm as _tqdm
 
 class Tqdm:
+    # These defaults are the same as the argument defaults in tqdm.
     default_mininterval: float = 0.1
 
     @staticmethod

@@ -5,11 +5,14 @@ A logger that maintains logs of both stdout and stderr when models are run.
 from typing import TextIO
 import os
 
-def clean(message: str):
-    # We'll special case a particular thing that TQDM does, to make the log file more
-    # readable.  TQDM uses carriage returns to get the training line to update for each batch
-    # without adding more lines to the terminal output.  Displaying those in a file won't work
-    # correctly, so we'll just make sure that each batch shows up on its one line.
+def replace_cr_with_newline(message: str):
+    """
+    TQDM and requests use carriage returns to get the training line to update for each batch
+    without adding more lines to the terminal output.  Displaying those in a file won't work
+    correctly, so we'll just make sure that each batch shows up on its one line.
+    :param message: the message to permute
+    :return: the message with carriage returns replaced with newlines
+    """
     if '\r' in message:
         message = message.replace('\r', '')
         if not message or message[-1] != '\n':
@@ -32,7 +35,7 @@ class TeeLogger:
         self.log = open(filename, 'a')
 
     def write(self, message):
-        cleaned = clean(message)
+        cleaned = replace_cr_with_newline(message)
 
         if self.file_friendly_terminal_output:
             self.terminal.write(cleaned)
