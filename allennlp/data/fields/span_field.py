@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use
+# pylint: disable=access-member-before-definition
 from typing import Dict
 
 from overrides import overrides
@@ -43,7 +43,7 @@ class SpanField(Field[torch.Tensor]):
                              f"{span_end} and {self.sequence_field.sequence_length() - 1} respectively.")
 
     @overrides
-    def get_padding_lengths(self) -> Dict[str, int]:
+    def get_padding_lengths(self) -> Dict[str, int]: #pylint: disable=no-self-use
         return {}
 
     @overrides
