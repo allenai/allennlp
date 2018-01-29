@@ -16,7 +16,7 @@ class EndpointSpanExtractor(SpanExtractor):
     The following types of representation are supported, assuming that
     ``x = span_start_embeddings`` and ``y = span_end_embeddings``.
 
-    ``x``, ``y``, ``x*y``, ``x+y``, ``x-y``, ``x/y``, where each of those binary operations 
+    ``x``, ``y``, ``x*y``, ``x+y``, ``x-y``, ``x/y``, where each of those binary operations
     is performed elementwise.  You can list as many combinations as you want, comma separated.
     For example, you might give ``x,y,x*y`` as the ``combination`` parameter to this class.
     The computed similarity function would then be ``[x; y; x*y]``, which can then be optionally
@@ -30,11 +30,11 @@ class EndpointSpanExtractor(SpanExtractor):
     span_width_embedding : ``Embedding``, optional (default = None).
         If passed, an embedded span width feature is concatenated onto
         the final span representation.
-    """    
-    def __init__(self, 
-                 combination: str = "x-y", 
+    """
+    def __init__(self,
+                 combination: str = "x-y",
                  span_width_embedding: Embedding = None):
-        super().__init__(self)
+        super().__init__()
         self._combination = combination
         self._span_width_embedding = span_width_embedding
 
@@ -43,7 +43,7 @@ class EndpointSpanExtractor(SpanExtractor):
                 sequence_tensor: torch.FloatTensor,
                 indicies: torch.LongTensor) -> None:
         # shape (batch_size, num_spans)
-        span_starts, span_ends = [index.squeeze(-1) for index in indicies.split(2, dim=-1)]
+        span_starts, span_ends = [index.squeeze(-1) for index in indicies.split(1, dim=-1)]
         start_embeddings = batched_index_select(sequence_tensor, span_starts)
         end_embeddings = batched_index_select(sequence_tensor, span_ends)
 
@@ -56,7 +56,7 @@ class EndpointSpanExtractor(SpanExtractor):
         return combined_tensors
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> "EndpointSpanExtractor":
         combination = params.pop("combination", "x-y")
         span_width_embedding_params = params.pop("span_width_embedding", None)
 
