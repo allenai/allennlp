@@ -1,6 +1,6 @@
 """
-A :class:`~Dataset` represents a collection of data suitable for feeding into a model.
-For example, when you train a model, you will likely have a *training* dataset and a *validation* dataset.
+A :class:`~Batch` represents a collection of ``Instance`` s to be fed
+through a model.
 """
 
 import logging
@@ -23,7 +23,7 @@ class Batch(Iterable):
     """
     def __init__(self, instances: Iterable[Instance]) -> None:
         """
-        A Dataset just takes an iterable of instances in its constructor and hangs onto them
+        A Batch just takes an iterable of instances in its constructor and hangs onto them
         in a list.
         """
         super().__init__()
@@ -39,16 +39,16 @@ class Batch(Iterable):
                                                                for x in self.instances]
         # Check all the field names and Field types are the same for every instance.
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
-            raise ConfigurationError("You cannot construct a Dataset with non-homogeneous Instances.")
+            raise ConfigurationError("You cannot construct a Batch with non-homogeneous Instances.")
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """
-        Gets the maximum padding lengths from all ``Instances`` in this dataset.  Each ``Instance``
+        Gets the maximum padding lengths from all ``Instances`` in this batch.  Each ``Instance``
         has multiple ``Fields``, and each ``Field`` could have multiple things that need padding.
         We look at all fields in all instances, and find the max values for each (field_name,
         padding_key) pair, returning them in a dictionary.
 
-        This can then be used to convert this dataset into arrays of consistent length, or to set
+        This can then be used to convert this batch into arrays of consistent length, or to set
         model parameters, etc.
         """
         padding_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
@@ -74,9 +74,9 @@ class Batch(Iterable):
         # This complex return type is actually predefined elsewhere as a DataArray,
         # but we can't use it because mypy doesn't like it.
         """
-        This method converts this ``Dataset`` into a set of pytorch Tensors that can be passed
+        This method converts this ``Batch`` into a set of pytorch Tensors that can be passed
         through a model.  In order for the tensors to be valid tensors, all ``Instances`` in this
-        dataset need to be padded to the same lengths wherever padding is necessary, so we do that
+        batch need to be padded to the same lengths wherever padding is necessary, so we do that
         first, then we combine all of the tensors for each field in each instance into a set of
         batched tensors for each field.
 
@@ -97,8 +97,8 @@ class Batch(Iterable):
             which disables gradient computations in the graph.  This makes inference more efficient
             (particularly in memory usage), but is incompatible with training models.
         verbose : ``bool``, optional (default=``False``)
-            Should we output logging information when we're doing this padding?  If the dataset is
-            large, this is nice to have, because padding a large dataset could take a long time.
+            Should we output logging information when we're doing this padding?  If the batch is
+            large, this is nice to have, because padding a large batch could take a long time.
             But if you're doing this inside of a data generator, having all of this output per
             batch is a bit obnoxious (and really slow).
 
@@ -123,7 +123,7 @@ class Batch(Iterable):
         # given a max length for a particular field and padding key.  If we were, we use that
         # instead of the instance-based one.
         if verbose:
-            logger.info("Padding dataset of size %d to lengths %s", len(self.instances), str(padding_lengths))
+            logger.info("Padding batch of size %d to lengths %s", len(self.instances), str(padding_lengths))
             logger.info("Getting max lengths from instances")
         instance_padding_lengths = self.get_padding_lengths()
         if verbose:
@@ -147,7 +147,7 @@ class Batch(Iterable):
         # Finally, we combine the tensors that we got for each instance into one big tensor (or set
         # of tensors) per field.  The `Field` classes themselves have the logic for batching the
         # tensors together, so we grab a dictionary of field_name -> field class from the first
-        # instance in the dataset.
+        # instance in the batch.
         field_classes = self.instances[0].fields
         final_fields = {}
         for field_name, field_tensor_list in field_tensors.items():
