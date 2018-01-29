@@ -427,7 +427,7 @@ class WikiTablesSemanticParser(Model):
             Has shape ``(batch_size, num_question_tokens, num_entities)``.
             Contains all the probabilities for an entity given a question word.
         """
-        batch_size, num_question_tokens, num_entities = linking_scores.size()
+        _, num_question_tokens, num_entities = linking_scores.size()
         batch_probabilities = []
 
         for batch_index, world in enumerate(worlds):
