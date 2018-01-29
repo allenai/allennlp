@@ -6,7 +6,7 @@ allennlp.modules.span_extractors
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.modules.seq2seq_encoders.span_extractor
+.. automodule:: allennlp.modules.span_extractors.span_extractor
    :members:
    :undoc-members:
    :show-inheritance:

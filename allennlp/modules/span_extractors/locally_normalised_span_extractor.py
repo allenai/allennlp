@@ -9,7 +9,7 @@ from allennlp.nn import util
 @SpanExtractor.register("locally_normalised")
 class LocallyNormalisedSpanExtractor(SpanExtractor):
     """
-    Computes span representations by generating an unnormalized attention score for each 
+    Computes span representations by generating an unnormalized attention score for each
     word in the document, compute distributions over every span with respect to these
     scores by normalising the attention scores for words inside the span.
 
@@ -26,8 +26,8 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
     -------
     attended_text_embeddings : ``torch.FloatTensor``
         A tensor of shape (batch_size, num_spans, input_dim), which each span representation
-        is formed by locally normalising a global attention over the sequence. The only way 
-        in which the attention distribution differs over different spans is in the set of words 
+        is formed by locally normalising a global attention over the sequence. The only way
+        in which the attention distribution differs over different spans is in the set of words
         over which they are normalized.
     """
     def __init__(self,
@@ -47,7 +47,7 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
 
         # We need to know the maximum span width so we can
         # generate indices to extract the spans from the sequence tensor.
-        # These indices will then get masked below, such that if the length 
+        # These indices will then get masked below, such that if the length
         # of a given span is smaller than the max, the rest of the values
         # are masked.
         max_batch_span_width = int(span_widths.max().data) + 1
