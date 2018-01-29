@@ -1,4 +1,5 @@
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Tuple
+from collections import defaultdict
 import re
 
 from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
@@ -81,6 +82,52 @@ class World:
                                        self.get_basic_types(),
                                        valid_starting_types=self.get_valid_starting_types(),
                                        num_nested_lambdas=self._num_nested_lambdas)
+
+    def get_paths_to_root(self,
+                          action: str,
+                          max_path_length: int = 20,
+                          beam_size: int = 30,
+                          max_num_paths: int = 10) -> List[List[str]]:
+        """
+        For a given action, returns at most ``max_num_paths`` paths to the root (production with
+        ``@START@``) that are not longer than ``max_path_length``.
+        """
+        all_actions = self.all_possible_actions()
+        rhs_indexed_actions: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
+        for possible_action in all_actions:
+            lhs, rhs = possible_action.split(' -> ')
+            if '[' not in rhs:
+                rhs_indexed_actions[rhs].append((lhs, possible_action))
+            else:
+                rhs_parts = rhs[1:-1].split(', ')
+                for rhs_part in rhs_parts:
+                    rhs_indexed_actions[rhs_part].append((lhs, possible_action))
+        action_lhs, _ = action.split(' -> ')
+        lists_to_expand: List[Tuple[str, List[str]]] = [(action_lhs, [action])]
+        completed_paths = []
+        while lists_to_expand:
+            need_to_expand = False
+            for lhs, path in lists_to_expand:
+                if lhs == types.START_SYMBOL:
+                    completed_paths.append(path)
+                else:
+                    need_to_expand = True
+            if not need_to_expand or len(completed_paths) >= max_num_paths:
+                break
+            new_lists = []
+            for lhs, actions in lists_to_expand:
+                for next_lhs, next_action in rhs_indexed_actions[lhs]:
+                    if next_action in actions:
+                        # Ignoring paths with loops (of size 1)
+                        continue
+                    new_actions = list(actions)
+                    new_actions.append(next_action)
+                    # Ignoring lists that are too long, and have too many repetitions.
+                    path_length = len(new_actions)
+                    if path_length <= max_path_length or next_lhs == types.START_SYMBOL:
+                        new_lists.append((next_lhs, new_actions))
+            lists_to_expand = new_lists[:beam_size]
+        return completed_paths[:max_num_paths]
 
     def all_possible_actions(self) -> List[str]:
         all_actions = set()
