@@ -2,11 +2,11 @@ from typing import Dict, List
 import logging
 
 from overrides import overrides
-import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField
@@ -57,7 +57,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
             instances = []
             logger.info("Reading instances from lines in file at: %s", file_path)
-            for line in tqdm.tqdm(data_file):
+            for line in Tqdm.tqdm(data_file):
                 line = line.strip("\n")
 
                 # skip blank lines
