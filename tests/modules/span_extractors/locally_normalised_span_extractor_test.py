@@ -8,7 +8,7 @@ from allennlp.common.params import Params
 
 class TestLocallyNormalisedSpanExtractor:
     def test_locally_normalised_span_extractor_can_build_from_params(self):
-        params = Params({"type": "locally_normalised", "input_dim": 5, "max_span_width": 10})
+        params = Params({"type": "locally_normalised", "input_dim": 5})
         extractor = SpanExtractor.from_params(params)
         assert isinstance(extractor, LocallyNormalisedSpanExtractor)
 
@@ -16,7 +16,7 @@ class TestLocallyNormalisedSpanExtractor:
         input_dim = 7
         sequence_tensor = Variable(torch.randn([2, 5, input_dim]))
         # concatentate start and end points together to form our representation.
-        extractor = LocallyNormalisedSpanExtractor(input_dim=input_dim, max_span_width=10)
+        extractor = LocallyNormalisedSpanExtractor(input_dim=input_dim)
 
         # In order to test the attention, we'll make the weight which computes the logits
         # zero, so the attention distribution is uniform over the sentence. This lets

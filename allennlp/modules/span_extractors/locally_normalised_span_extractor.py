@@ -1,4 +1,3 @@
-
 import torch
 from overrides import overrides
 
@@ -10,18 +9,31 @@ from allennlp.nn import util
 @SpanExtractor.register("locally_normalised")
 class LocallyNormalisedSpanExtractor(SpanExtractor):
     """
-    Represents spans as a function of the embeddings of their endpoints. Additionally,
-    the width of the spans can be embedded and concatenated on to the final combination.
+    Computes span representations by generating an unnormalized attention score for each 
+    word in the document, compute distributions over every span with respect to these
+    scores by normalising the attention scores for words inside the span.
+
+    Given these attention distributions over every span, weight the corresponding vector
+    representations of the words in the span by this distribution, returning a weighted
+    representation of each span.
 
     Parameters
     ----------
+    input_dim : ``int``, required.
+        The last dimension of the sequence representations.
+
+    Returns
+    -------
+    attended_text_embeddings : ``torch.FloatTensor``
+        A tensor of shape (batch_size, num_spans, input_dim), which each span representation
+        is formed by locally normalising a global attention over the sequence. The only way 
+        in which the attention distribution differs over different spans is in the set of words 
+        over which they are normalized.
     """
     def __init__(self,
-                 input_dim: int,
-                 max_span_width: int):
+                 input_dim: int):
         super().__init__()
         self._global_attention = TimeDistributed(torch.nn.Linear(input_dim, 1))
-        self._max_span_width = max_span_width
 
     @overrides
     def forward(self, # pylint: disable=arguments-differ
@@ -33,14 +45,20 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
         # shape (batch_size, num_spans, 1)
         span_widths = span_ends - span_starts
 
+        # We need to know the maximum span width so we can
+        # generate indices to extract the spans from the sequence tensor.
+        # These indices will then get masked below, such that if the length 
+        # of a given span is smaller than the max, the rest of the values
+        # are masked.
+        max_batch_span_width = int(span_widths.max().data) + 1
+
         # shape (batch_size, sequence_length, 1)
         global_attention_logits = self._global_attention(sequence_tensor)
 
-        # Shape: (1, 1, max_span_width)
-        max_span_range_indices = util.get_range_vector(self._max_span_width,
+        # Shape: (1, 1, max_batch_span_width)
+        max_span_range_indices = util.get_range_vector(max_batch_span_width,
                                                        sequence_tensor.is_cuda).view(1, 1, -1)
-
-        # Shape: (batch_size, num_spans, max_span_width)
+        # Shape: (batch_size, num_spans, max_batch_span_width)
         # This is a broadcasted comparison - for each span we are considering,
         # we are creating a range vector of size max_span_width, but masking values
         # which are greater than the actual length of the span.
@@ -48,21 +66,21 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
         raw_span_indices = span_ends - max_span_range_indices
         # We also don't want to include span indices which are less than zero,
         # which happens because some spans near the beginning of the sequence
-        # are of a smaller width than max_span_width, so we add this to the mask here.
+        # are of a smaller width than max_batch_span_width, so we add this to the mask here.
         span_mask = span_mask * (raw_span_indices >= 0).float()
         span_indices = torch.nn.functional.relu(raw_span_indices.float()).long()
 
-        # Shape: (batch_size * num_spans * max_span_width)
+        # Shape: (batch_size * num_spans * max_batch_span_width)
         flat_span_indices = util.flatten_and_batch_shift_indices(span_indices, sequence_tensor.size(1))
 
-        # Shape: (batch_size, num_spans, max_span_width, embedding_dim)
+        # Shape: (batch_size, num_spans, max_batch_span_width, embedding_dim)
         span_embeddings = util.batched_index_select(sequence_tensor, span_indices, flat_span_indices)
 
-        # Shape: (batch_size, num_spans, max_span_width)
+        # Shape: (batch_size, num_spans, max_batch_span_width)
         span_attention_logits = util.batched_index_select(global_attention_logits,
                                                           span_indices,
                                                           flat_span_indices).squeeze(-1)
-        # Shape: (batch_size, num_spans, max_span_width)
+        # Shape: (batch_size, num_spans, max_batch_span_width)
         span_attention_weights = util.last_dim_softmax(span_attention_logits, span_mask)
 
         # Do a weighted sum of the embedded spans with
@@ -75,6 +93,4 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
     @classmethod
     def from_params(cls, params: Params) -> "LocallyNormalisedSpanExtractor":
         input_dim = params.pop_int("input_dim")
-        max_span_width = params.pop_int("max_span_width")
-        return LocallyNormalisedSpanExtractor(input_dim=input_dim,
-                                              max_span_width=max_span_width)
+        return LocallyNormalisedSpanExtractor(input_dim=input_dim)
