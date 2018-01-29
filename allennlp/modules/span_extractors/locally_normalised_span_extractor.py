@@ -31,7 +31,7 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
         over which they are normalized.
     """
     def __init__(self,
-                 input_dim: int):
+                 input_dim: int) -> None:
         super().__init__()
         self._global_attention = TimeDistributed(torch.nn.Linear(input_dim, 1))
 

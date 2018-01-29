@@ -6,6 +6,7 @@ from allennlp.common.params import Params
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.nn.util import batched_index_select, combine_tensors
+from allennlp.data.vocabulary import Vocabulary
 
 @SpanExtractor.register("endpoint")
 class EndpointSpanExtractor(SpanExtractor):
@@ -33,7 +34,7 @@ class EndpointSpanExtractor(SpanExtractor):
     """
     def __init__(self,
                  combination: str = "x-y",
-                 span_width_embedding: Embedding = None):
+                 span_width_embedding: Embedding = None) -> None:
         super().__init__()
         self._combination = combination
         self._span_width_embedding = span_width_embedding
@@ -59,9 +60,11 @@ class EndpointSpanExtractor(SpanExtractor):
     def from_params(cls, params: Params) -> "EndpointSpanExtractor":
         combination = params.pop("combination", "x-y")
         span_width_embedding_params = params.pop("span_width_embedding", None)
-
         if span_width_embedding_params:
-            span_width_embedding = Embedding.from_params(span_width_embedding_params)
+            # Embedding the span widths with a vocabulary doesn't really have any meaning,
+            # so we just pass an empty one, which raises the relevant errors if you don't
+            # specify the correct embedding sizes in the config.
+            span_width_embedding = Embedding.from_params(Vocabulary(), span_width_embedding_params)
         else:
             span_width_embedding = None
 
