@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use
+# pylint: disable=access-member-before-definition,no-self-use
 from typing import Dict
 
 from overrides import overrides

@@ -2,20 +2,24 @@ from typing import Iterable, Iterator, Callable
 
 from allennlp.data.instance import Instance
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
 from allennlp.common.util import ensure_list
 
 class _LazyInstances(Iterable):
     """
-    An ``Iterable`` that just wraps a thunk and calls it for
+    An ``Iterable`` that just wraps a thunk for generating instances and calls it for
     each call to ``__iter__``.
     """
-    def __init__(self, thunk: Callable[[], Iterator[Instance]]) -> None:
+    def __init__(self, instance_generator: Callable[[], Iterator[Instance]]) -> None:
         super().__init__()
-        self.thunk = thunk
+        self.instance_generator = instance_generator
 
     def __iter__(self) -> Iterator[Instance]:
-        return self.thunk()
+        instances = self.instance_generator()
+        if isinstance(instances, list):
+            raise ConfigurationError("For a lazy dataset reader, _read() must return a generator")
+        return instances
 
 class DatasetReader(Registrable):
     """
@@ -26,8 +30,15 @@ class DatasetReader(Registrable):
 
     All parameters necessary to _read the data apart from the filepath should be passed
     to the constructor of the ``DatasetReader``.
+
+    Parameters
+    ----------
+    lazy : ``bool``, optional (default=False)
+        If this is true, ``instances()`` will return an object whose ``__iter__`` method
+        reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.
     """
-    lazy = False
+    def __init__(self, lazy: bool = False) -> None:
+        self.lazy = lazy
 
     def instances(self, file_path: str) -> Iterable[Instance]:
         """
