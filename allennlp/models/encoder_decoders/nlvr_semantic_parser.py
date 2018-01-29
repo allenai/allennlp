@@ -18,9 +18,10 @@ from allennlp.data.semparse.worlds import NlvrWorld
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.nn.decoding import DecoderState, DecoderStep, DecoderTrainer, BeamSearch
+from allennlp.nn.decoding import DecoderState, DecoderStep, DecoderTrainer
 from allennlp.nn import util as nn_util
 from allennlp.models.model import Model
+from allennlp.training.metrics import Average
 
 
 @Model.register("nlvr_parser")
@@ -44,12 +45,13 @@ class NlvrSemanticParser(Model):
                  terminal_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  decoder_trainer: DecoderTrainer,
-                 decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction) -> None:
         super(NlvrSemanticParser, self).__init__(vocab=vocab)
 
         self._sentence_embedder = sentence_embedder
+        self._action_sequence_validity = Average()
+        self._denotation_accuracy = Average()
         check_dimensions_match(nonterminal_embedder.get_output_dim(),
                                terminal_embedder.get_output_dim(),
                                "nonterminal embedding dim",
@@ -58,7 +60,6 @@ class NlvrSemanticParser(Model):
         self._terminal_embedder = terminal_embedder
         self._encoder = encoder
         self._decoder_trainer = decoder_trainer
-        self._decoder_beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._attention_function = attention_function
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
@@ -145,13 +146,7 @@ class NlvrSemanticParser(Model):
 
         outputs = self._decoder_trainer.decode(initial_state, self._decoder_step,  # type: ignore
                                                self._max_decoding_steps)
-        if not self.training:
-            best_final_states = self._decoder_beam_search.search(self._max_decoding_steps,
-                                                                 initial_state,
-                                                                 self._decoder_step)
-            best_action_sequences = [best_final_states[i][0].action_history for i in
-                                     range(batch_size)]
-            outputs['best_action_sequence'] = best_action_sequences
+
         return outputs
 
     @staticmethod
@@ -347,7 +342,6 @@ class NlvrSemanticParser(Model):
         nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
         terminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("terminal_embedder"))
         decoder_trainer = DecoderTrainer.from_params(params.pop("decoder_trainer"))
-        decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         attention_function_type = params.pop("attention_function", None)
         if attention_function_type is not None:
             attention_function = SimilarityFunction.from_params(attention_function_type)
@@ -360,7 +354,6 @@ class NlvrSemanticParser(Model):
                    terminal_embedder=terminal_embedder,
                    encoder=encoder,
                    decoder_trainer=decoder_trainer,
-                   decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function)
 
@@ -567,7 +560,18 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     def __init__(self,
                  encoder_output_dim: int,
                  action_embedding_dim: int,
-                 attention_function: SimilarityFunction) -> None:
+                 attention_function: SimilarityFunction,
+                 checklist_weight: float = 0.5) -> None:
+        """
+        Parameters
+        ----------
+        encoder_output_dim : ``int``
+        action_embedding_dim : ``int``
+        attention_function : ``SimilarityFunction``
+        checklist_weight : ``float`` (optional)
+            Weight assigned to checklist score when computing the final score. The final score will
+            be ``checklist_weight * checklist_score + (1 - checklist_weight) * action_prob``.
+        """
         super(NlvrDecoderStep, self).__init__()
         self._input_attention = Attention(attention_function)
 
@@ -586,13 +590,17 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
 
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
+        self._checklist_weight = checklist_weight
 
     @overrides
     def take_step(self,  # type: ignore
                   state: NlvrDecoderState,
                   max_actions: int = None) -> List[NlvrDecoderState]:
         """
-        This method is very similar to ``WikiTablesDecoderStep._take_step``. The differences are..
+        Given a ``NlvrDecoderState``, returns a list of next states that are sorted by their scores.
+        This method is very similar to ``WikiTablesDecoderStep._take_step``. The differences are
+        that we do not have a notion of "allowed actions" here, and we do not perform entity linking
+        here.
         """
         # Outline here: first we'll construct the input to the decoder, which is a concatenation of
         # an embedding of the decoder input (the last action taken) and an attention over the
@@ -674,6 +682,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                         action_embeddings,
                                         attended_sentence,
                                         considered_actions,
+                                        self._checklist_weight,
                                         max_actions)
 
     def attend_on_sentence(self,
@@ -754,6 +763,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                             action_embeddings: torch.Tensor,
                             attended_sentence: torch.Tensor,
                             considered_actions: List[List[int]],
+                            checklist_weight: float,
                             max_actions: int = None) -> List[NlvrDecoderState]:
         """
         This method is very similar to ``WikiTabledDecoderStep._compute_new_states``.
@@ -785,7 +795,9 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 checklist_mask = instance_agenda == action  # (agenda_size,)
                 checklist_addition = checklist_mask.float() * action_prob  # (agenda_size,)
                 new_checklist = instance_checklist + checklist_addition  # (agenda_size,)
-                new_score = cls.score_instance_checklist(new_checklist, instance_agenda_mask)
+                checklist_score = cls.score_instance_checklist(new_checklist, instance_agenda_mask)
+                new_score = checklist_weight * checklist_score + \
+                            (1 - checklist_weight) * action_prob
                 next_states_info[batch_index].append((group_index, action_index, action,
                                                       new_checklist, new_score))
         new_states = []
@@ -827,9 +839,10 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     def score_instance_checklist(checklist: Variable, agenda_mask: Variable) -> Variable:
         """
         Takes a checklist and agenda's mask (that shows which of the agenda items are not actually
-        padding), and scores the checklist. For now, the score is simply the average of checklist
-        probabilities.
+        padding), and scores the checklist. We want each of the scores on the checklist to be as
+        close to 1.0 as possible.
         """
-        # TODO(pradeep): Is there a better alternative to mean of agenda probabilities?
         float_mask = agenda_mask.float()
-        return torch.sum(checklist * float_mask) / float_mask.sum()
+        agenda_item_probs = checklist * float_mask
+        score = -torch.sum((float_mask - agenda_item_probs) ** 2)
+        return score

@@ -39,7 +39,7 @@ class BeamSearchTrainer(DecoderTrainer):
                     finished_states.append(finished)
                 if not_finished is not None:
                     next_states.append(not_finished)
-            states = next_states[:self._beam_size]
+            states = self._prune_beam(next_states)
             num_steps += 1
 
         batch_scores = self._group_scores_by_batch(finished_states)
@@ -47,7 +47,11 @@ class BeamSearchTrainer(DecoderTrainer):
         for scores in batch_scores.values():
             # TODO(pradeep): Minimizing the mean. Should we minimize max instead?
             loss += -torch.mean(torch.cat(scores))
-        return {'loss': loss / len(batch_scores)}
+
+        best_action_sequences: Dict[int, List[int]] = defaultdict(list)
+        for state in finished_states:
+            best_action_sequences[state.batch_indices[0]].append(state.action_history)
+        return {'loss': loss / len(batch_scores), 'best_action_sequence': best_action_sequences}
 
     @staticmethod
     def _group_scores_by_batch(finished_states: List[DecoderState]) -> Dict[int, List[Variable]]:
@@ -56,6 +60,21 @@ class BeamSearchTrainer(DecoderTrainer):
             for score, batch_index in zip(state.score, state.batch_indices):
                 batch_scores[batch_index].append(score)
         return batch_scores
+
+    def _prune_beam(self, states: List[DecoderState]) -> List[DecoderState]:
+        """
+        Prunes a beam, and keeps at most ``self._beam_size`` states per instance. We
+        assume that the ``states`` are grouped, with a group size of 1.
+        """
+        num_states_per_instance: Dict[int, int] = defaultdict(int)
+        pruned_states = []
+        for state in states:
+            assert len(state.batch_indices) == 1
+            batch_index = state.batch_indices[0]
+            if num_states_per_instance[batch_index] < self._beam_size:
+                pruned_states.append(state)
+                num_states_per_instance[batch_index] += 1
+        return pruned_states
 
     @classmethod
     def from_params(cls, params: Params) -> 'BeamSearchTrainer':
