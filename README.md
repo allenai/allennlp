@@ -14,7 +14,7 @@ just run `docker run -it --rm allennlp/allennlp` to get an environment that will
 
 Now you can do any of the following:
 
-* Run a model on example sentences with `allennlp/run bulk`.
+* Run a model on example sentences with `allennlp/run predict`.
 * Start a web service to host our models with `allennlp/run serve`.
 * Interactively code against AllenNLP from the Python interpreter with `python`.
 
