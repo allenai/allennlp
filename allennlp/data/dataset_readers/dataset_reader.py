@@ -19,10 +19,13 @@ class _LazyInstances(Iterable):
 
 class DatasetReader(Registrable):
     """
-    A ``DatasetReader`` reads data from some location and constructs an :class:`InstanceGenerator`
-    that returns an ``Iterable`` of the dataset's instances each time it's called. All parameters
-    necessary to _read the data apart from the filepath should be passed to the constructor of the
-    ``DatasetReader``.
+    A ``DatasetReader`` knows how to turn a file containing a dataset into a collection
+    of ``Instance`` s.  To implement your own, just override the `_read(file_path)` method
+    to return an ``Iterable`` of the instances. This could be a list containing the instances
+    or a lazy generator that returns them one at a time.
+
+    All parameters necessary to _read the data apart from the filepath should be passed
+    to the constructor of the ``DatasetReader``.
     """
     lazy = False
 
@@ -56,7 +59,8 @@ class DatasetReader(Registrable):
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
         Reads the instances from the given file_path and returns them as an
-        `Iterable` (which could be a list or could be a generator).
+        `Iterable` (which could be a list or could be a generator). Your ``DatasetReader``
+        subclasses should override this method.
         """
         raise NotImplementedError
 
