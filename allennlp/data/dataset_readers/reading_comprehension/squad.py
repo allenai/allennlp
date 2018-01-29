@@ -3,11 +3,11 @@ import logging
 from typing import Dict, List, Tuple
 
 from overrides import overrides
-from tqdm import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -56,7 +56,7 @@ class SquadReader(DatasetReader):
             dataset = dataset_json['data']
         logger.info("Reading the dataset")
         instances = []
-        for article in tqdm(dataset):
+        for article in Tqdm.tqdm(dataset):
             for paragraph_json in article['paragraphs']:
                 paragraph = paragraph_json["context"]
                 tokenized_paragraph = self._tokenizer.tokenize(paragraph)
