@@ -18,10 +18,12 @@ def main(checks):
     if "pylint" in checks:
         print("Linter (pylint):", flush=True)
         run("pylint -d locally-disabled,locally-enabled -f colorized allennlp tests", shell=True, check=True)
+        print("pylint checks passed")
 
     if "mypy" in checks:
         print("Typechecker (mypy):", flush=True)
         run("mypy allennlp --ignore-missing-imports", shell=True, check=True)
+        print("mypy checks passed")
 
     if "build-docs" in checks:
         print("Documentation (build):", flush=True)
