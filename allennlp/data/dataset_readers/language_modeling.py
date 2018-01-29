@@ -2,11 +2,11 @@ from typing import Dict
 import logging
 
 from overrides import overrides
-import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
@@ -78,7 +78,7 @@ class LanguageModelingReader(DatasetReader):
             num_tokens = self._tokens_per_instance + 1
             tokenized_strings = []
             logger.info("Creating dataset from all text in file: %s", file_path)
-            for index in tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens - 1)):
+            for index in Tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens - 1)):
                 tokenized_strings.append(tokenized_text[index:(index + num_tokens)])
         else:
             tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]

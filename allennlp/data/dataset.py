@@ -8,12 +8,12 @@ from collections import defaultdict
 from typing import Dict, List, Union, Iterable, Iterator, Callable
 
 import torch
-import tqdm
 from overrides import overrides
 
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -67,7 +67,7 @@ class Dataset(InstanceCollection):
     @overrides
     def index_instances(self, vocab: Vocabulary) -> None:
         logger.info("Indexing dataset")
-        for instance in tqdm.tqdm(self.instances):
+        for instance in Tqdm.tqdm(self.instances):
             instance.index_fields(vocab)
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:

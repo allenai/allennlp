@@ -25,10 +25,9 @@ from typing import Dict, Any
 import argparse
 import logging
 
-import tqdm
-
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import prepare_environment
+from allennlp.common.tqdm import Tqdm
 from allennlp.data import InstanceCollection
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
@@ -83,7 +82,7 @@ def evaluate(model: Model,
 
     generator = iterator(dataset, num_epochs=1, cuda_device=cuda_device, for_training=False)
     logger.info("Iterating over dataset")
-    generator_tqdm = tqdm.tqdm(generator, total=iterator.get_num_batches(dataset))
+    generator_tqdm = Tqdm.tqdm(generator, total=iterator.get_num_batches(dataset))
     for batch in generator_tqdm:
         model(**batch)
         metrics = model.get_metrics()
