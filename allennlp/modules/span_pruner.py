@@ -12,12 +12,12 @@ class SpanPruner(torch.nn.Module):
 
     Parameters
     ----------
-    scorer : ``Callable[[torch.FloatTensor], torch.FloatTensor]``, required.
-        A function which, given a tensor of shape (batch_size, num_spans, embedding_size),
+    scorer : ``torch.nn.Module``, required.
+        A module which, given a tensor of shape (batch_size, num_spans, embedding_size),
         produces a tensor of shape (batch_size, num_spans, 1), representing a scalar score
         per span in the tensor.
     """
-    def __init__(self, scorer: Callable[[torch.FloatTensor], torch.FloatTensor]) -> None:
+    def __init__(self, scorer: torch.nn.Module) -> None:
         super(SpanPruner, self).__init__()
         self._scorer = scorer
 

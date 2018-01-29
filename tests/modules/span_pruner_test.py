@@ -42,7 +42,7 @@ class TestSpanPruner(AllenNlpTestCase):
     def test_span_scorer_raises_with_incorrect_scorer_spec(self):
         # Mis-configured scorer - doesn't produce a tensor with 1 as it's final dimension.
         scorer = lambda tensor: tensor.sum(-1)
-        pruner = SpanPruner(scorer=scorer)
+        pruner = SpanPruner(scorer=scorer) # type: ignore
         spans = Variable(torch.randn([3, 4, 5])).clamp(min=0.0, max=1.0)
         mask = Variable(torch.ones([3, 4]))
 
@@ -52,7 +52,7 @@ class TestSpanPruner(AllenNlpTestCase):
     def test_span_scorer_works_for_completely_masked_rows(self):
         # Really simple scorer - sum up the embedding_dim.
         scorer = lambda tensor: tensor.sum(-1).unsqueeze(-1)
-        pruner = SpanPruner(scorer=scorer)
+        pruner = SpanPruner(scorer=scorer) # type: ignore
 
         spans = Variable(torch.randn([3, 4, 5])).clamp(min=0.0, max=1.0)
         spans[0, :2, :] = 1
