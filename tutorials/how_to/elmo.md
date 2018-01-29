@@ -7,7 +7,7 @@ language models provide large improvements for nearly all supervised
 NLP tasks.
 
 This document describes how to add ELMo representations to your model using `allennlp`.
-We also have a tensorflow implementation [here](https://github.com/allenai/bilm-tf).
+We also have a [tensorflow implementation](https://github.com/allenai/bilm-tf).
 
 For more detail about ELMo, please see the publication ["Deep contextualized word representations"](https://openreview.net/forum?id=S1p31z-Ab).
 
