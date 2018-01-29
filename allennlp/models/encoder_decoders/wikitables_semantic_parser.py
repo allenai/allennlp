@@ -431,6 +431,8 @@ class WikiTablesSemanticParser(Model):
         batch_probabilities = []
 
         for batch_index, world in enumerate(worlds):
+            # This index of 0 is for the null entity for each type, representing the case where a
+            # word doesn't link to any entity.
             cell_type_index, row_type_index = [0], [0]
             entities = world.table_graph.entities
             for entity_index, _ in enumerate(entities):
@@ -439,8 +441,12 @@ class WikiTablesSemanticParser(Model):
                 else:
                     row_type_index.append(entity_index)
 
-            # Separate the scores by type, since normalization summed over types.
-            # (num_entities_per_type, num_question_tokens)
+            # We separate the scores by type, since normalization is done per type.  There's an
+            # extra "null" entity per type, also, so we have `num_entities_per_type + 1`.  We're
+            # selecting from a (num_question_tokens, num_entities) linking tensor on _dimension 1_,
+            # so we get back something of shape (num_question_tokens,) for each index we're
+            # selecting.  All of the selected indices together then make a tensor of shape
+            # (num_question_tokens, num_entities_per_type + 1).
             cell_type_scores = torch.index_select(linking_scores[batch_index],
                                                   dim=1,
                                                   index=Variable(linking_scores.data.new(cell_type_index)).long())
@@ -448,10 +454,12 @@ class WikiTablesSemanticParser(Model):
                                                  dim=1,
                                                  index=Variable(linking_scores.data.new(row_type_index)).long())
 
-            # (num_question_tokens, num_entities_per_type + 1)
+            # We used index 0 for the null entity, so this will actually have some values in it.
+            # But we want the null entity's score to be 0, so we set that here.
             cell_type_scores[:, 0] = 0
             row_type_scores[:, 0] = 0
 
+            # No need for a mask here, as this is done per batch instance, with no padding.
             probabilities_cell = torch.nn.functional.softmax(cell_type_scores, dim=1)
             probabilities_row = torch.nn.functional.softmax(row_type_scores, dim=1)
 
@@ -459,15 +467,18 @@ class WikiTablesSemanticParser(Model):
             # implicitly sorted by their types when we sort them by name, and that "fb:cell" comes
             # before "fb:row".  This is not a great assumption, and could easily break later, but
             # it should work for now.
-            to_cat = [probabilities_cell[:, 1:], probabilities_row[:, 1:]]
-            num_kept_entities = len(cell_type_index) + len(row_type_index) - 2
-            if num_kept_entities != num_entities:
+            all_probabilities = [probabilities_cell[:, 1:], probabilities_row[:, 1:]]
+
+            # We need to add padding here if we don't have the right number of entities.  The -2
+            # removes the scores for the null entities.
+            num_entities_in_instance = len(cell_type_index) + len(row_type_index) - 2
+            if num_entities_in_instance != num_entities:
                 zeros = Variable(linking_scores.data.new(num_question_tokens,
-                                                         num_entities - num_kept_entities).fill_(0))
-                to_cat.append(zeros)
+                                                         num_entities - num_entities_in_instance).fill_(0))
+                all_probabilities.append(zeros)
 
             # (num_question_tokens, num_entities)
-            probabilities = torch.cat(to_cat, dim=1)
+            probabilities = torch.cat(all_probabilities, dim=1)
             batch_probabilities.append(probabilities)
         batch_probabilities = torch.stack(batch_probabilities, dim=0)
         return batch_probabilities * question_mask.unsqueeze(-1).float()
