@@ -1,4 +1,4 @@
-from typing import Callable, Tuple
+from typing import Tuple
 
 from overrides import overrides
 import torch
