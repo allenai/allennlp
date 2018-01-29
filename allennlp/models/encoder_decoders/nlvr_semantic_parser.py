@@ -146,8 +146,48 @@ class NlvrSemanticParser(Model):
 
         outputs = self._decoder_trainer.decode(initial_state, self._decoder_step,  # type: ignore
                                                self._max_decoding_steps)
-
+        best_action_sequences = outputs['best_action_sequence']
+        get_action_string = lambda rule: "%s -> %s" % (rule["left"][0], rule["right"][0])
+        action_string_sequences = []
+        for batch_actions, batch_best_sequences in zip(actions,
+                                                       best_action_sequences):
+            if not batch_best_sequences:
+                action_string_sequences.append([])
+            else:
+                action_string_sequences.append([get_action_string(batch_actions[rule_id]) for rule_id in
+                                                batch_best_sequences[0]])
+        for instance_actions, instance_label, instance_world in zip(action_string_sequences,
+                                                                    label,
+                                                                    world):
+            label_string = self.vocab.get_token_from_index(int(instance_label.data.cpu()),
+                                                           "denotations")
+            sequence_is_valid, sequence_is_correct = self._check_denotation(instance_actions,
+                                                                            label_string,
+                                                                            instance_world)
+            if sequence_is_valid:
+                self._action_sequence_validity(1)
+            if sequence_is_correct:
+                self._denotation_accuracy(1)
         return outputs
+
+    @staticmethod
+    def _check_denotation(best_action_sequence: List[str],
+                          label: str,
+                          world: NlvrWorld) -> Tuple[bool, bool]:
+        try:
+            logical_form = world.get_logical_form(best_action_sequence)
+            denotation = world.execute(logical_form)
+            denotation_is_correct = str(denotation).lower() == label.lower()
+            return True, denotation_is_correct
+        except (RuntimeError, AssertionError, TypeError):
+            return False, False
+
+    @overrides
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return {
+                'sequence_validity': self._action_sequence_validity.get_metric(reset),
+                'denotation_accuracy': self._denotation_accuracy.get_metric(reset)
+        }
 
     @staticmethod
     def _create_grammar_state(world: NlvrWorld,
