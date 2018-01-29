@@ -20,8 +20,8 @@ class TestSpanPruner(AllenNlpTestCase):
         spans[2, 2:, :] = 1
 
         mask = Variable(torch.ones([3, 4]))
-        spans[1, 0] = 0
-        spans[1, 3] = 0
+        mask[1, 0] = 0
+        mask[1, 3] = 0
         pruned_embeddings, pruned_mask, pruned_indices, pruned_scores = pruner(spans, mask, 2)
 
         # Second element in the batch would have indices 2, 3, but
@@ -48,3 +48,38 @@ class TestSpanPruner(AllenNlpTestCase):
 
         with pytest.raises(ValueError):
             _ = pruner(spans, mask, 2)
+
+    def test_span_scorer_works_for_completely_masked_rows(self):
+        # Really simple scorer - sum up the embedding_dim.
+        scorer = lambda tensor: tensor.sum(-1).unsqueeze(-1)
+        pruner = SpanPruner(scorer=scorer)
+
+        spans = Variable(torch.randn([3, 4, 5])).clamp(min=0.0, max=1.0)
+        spans[0, :2, :] = 1
+        spans[1, 2:, :] = 1
+        spans[2, 2:, :] = 1
+
+        mask = Variable(torch.ones([3, 4]))
+        mask[1, 0] = 0
+        mask[1, 3] = 0
+        mask[2, :] = 0 # fully masked last batch element.
+
+        pruned_embeddings, pruned_mask, pruned_indices, pruned_scores = pruner(spans, mask, 2)
+
+        # We can't check the last row here, because it's completely masked.
+        # Instead we'll check that the scores for these elements are -inf.
+        numpy.testing.assert_array_equal(pruned_indices[:2].data.numpy(), numpy.array([[0, 1],
+                                                                                       [1, 2]]))
+        numpy.testing.assert_array_equal(pruned_mask.data.numpy(), numpy.array([[1, 1],
+                                                                                [1, 1],
+                                                                                [0, 0]]))
+        # embeddings should be the result of index_selecting the pruned_indices.
+        correct_embeddings = batched_index_select(spans, pruned_indices)
+        numpy.testing.assert_array_equal(correct_embeddings.data.numpy(),
+                                         pruned_embeddings.data.numpy())
+        # scores should be the sum of the correct embedding elements, with
+        # masked elements equal to -inf.
+        correct_scores = correct_embeddings.sum(-1).unsqueeze(-1).data.numpy()
+        correct_scores[2, :] = float("-inf")
+        numpy.testing.assert_array_equal(correct_scores,
+                                         pruned_scores.data.numpy())
