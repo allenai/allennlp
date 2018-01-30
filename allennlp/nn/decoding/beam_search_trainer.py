@@ -42,6 +42,12 @@ class BeamSearchTrainer(DecoderTrainer):
             states = self._prune_beam(next_states)
             num_steps += 1
 
+        # ``finished_states`` contains states that were finished over multiple decoding steps. So
+        # they're not sorted. Let's do that now.
+        finished_scores = torch.cat([state.score[0] for state in finished_states])
+        _, sorted_indices = finished_scores.sort(-1, descending=True)
+        finished_states = [finished_states[i] for i in sorted_indices.cpu().data.numpy()]
+
         batch_scores = self._group_scores_by_batch(finished_states)
         loss = 0
         for scores in batch_scores.values():
@@ -64,7 +70,8 @@ class BeamSearchTrainer(DecoderTrainer):
     def _prune_beam(self, states: List[DecoderState]) -> List[DecoderState]:
         """
         Prunes a beam, and keeps at most ``self._beam_size`` states per instance. We
-        assume that the ``states`` are grouped, with a group size of 1.
+        assume that the ``states`` are grouped, with a group size of 1, and that they're already
+        sorted.
         """
         num_states_per_instance: Dict[int, int] = defaultdict(int)
         pruned_states = []
