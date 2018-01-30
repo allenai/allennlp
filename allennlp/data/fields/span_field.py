@@ -43,7 +43,7 @@ class SpanField(Field[torch.Tensor]):
                              f"{span_end} and {self.sequence_field.sequence_length() - 1} respectively.")
 
     @overrides
-    def get_padding_lengths(self) -> Dict[str, int]: #pylint: disable=no-self-use
+    def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
         return {}
 
     @overrides
