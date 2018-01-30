@@ -58,12 +58,17 @@ class NlvrDatasetReader(DatasetReader):
         Indexers for terminals in production rules. The default is to index terminals and
         non-terminals in the same way, but you may want to change it.
         Default is ``{"tokens": SingleIdTokenIndexer("rule_labels")}``
+    add_paths_to_agenda : ``bool`` (optional)
+        If set to true, the agenda will also contain the non-terminal productions in the path from
+        the root node to each of the desired terminal productions. We do an approximate heuristic
+        search while computing the paths to avoid infinitely long ones (containing cycles).
     """
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  sentence_token_indexers: Dict[str, TokenIndexer] = None,
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
-                 terminal_indexers: Dict[str, TokenIndexer] = None) -> None:
+                 terminal_indexers: Dict[str, TokenIndexer] = None,
+                 add_paths_to_agenda: bool = True) -> None:
         self._tokenizer = tokenizer or WordTokenizer()
         self._sentence_token_indexers = sentence_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._nonterminal_indexers = nonterminal_indexers or {"tokens":
@@ -72,6 +77,7 @@ class NlvrDatasetReader(DatasetReader):
         # Mapping from terminal strings to productions that produce them.
         # Eg.: "yellow" -> "<o,o> -> yellow", "<b,<<b,e>,<e,b>>> -> filter_greater" etc.
         self._terminal_productions: Dict[str, str] = {}
+        self._add_paths_to_agenda = add_paths_to_agenda
         for constant in nlvr_types.COMMON_NAME_MAPPING:
             alias = nlvr_types.COMMON_NAME_MAPPING[constant]
             if alias in nlvr_types.COMMON_TYPE_SIGNATURE:
@@ -142,7 +148,7 @@ class NlvrDatasetReader(DatasetReader):
             fields["label"] = label_field
         return Instance(fields)
 
-    def _get_agenda_for_sentence(self, sentence: str, world: NlvrWorld) -> List[str]:
+    def _get_agenda_for_sentence(self, sentence: str, world: NlvrWorld = None) -> List[str]:
         """
         Given a ``sentence``, and a corresponding ``NlvrWorld`` returns a list of actions the
         sentence triggers. The model tries to include as many of these actions in the decoded
@@ -184,7 +190,9 @@ class NlvrDatasetReader(DatasetReader):
             agenda.append(self._terminal_productions["count"])
         for production in number_productions:
             agenda.append(production)
-        agenda = self._add_nonterminal_productions(agenda, world)
+        if self._add_paths_to_agenda:
+            assert world is not None, "Pass a world if you want to add paths to the agenda"
+            agenda = self._add_nonterminal_productions(agenda, world)
         return agenda
 
     @staticmethod
@@ -225,8 +233,10 @@ class NlvrDatasetReader(DatasetReader):
         sentence_token_indexers = TokenIndexer.dict_from_params(params.pop('sentence_token_indexers', {}))
         terminal_indexers = TokenIndexer.dict_from_params(params.pop('terminal_indexers', {}))
         nonterminal_indexers = TokenIndexer.dict_from_params(params.pop('nonterminal_indexers', {}))
+        add_paths_to_agenda = params.pop("add_paths_to_agenda")
         params.assert_empty(cls.__name__)
         return NlvrDatasetReader(tokenizer=tokenizer,
                                  sentence_token_indexers=sentence_token_indexers,
                                  terminal_indexers=terminal_indexers,
-                                 nonterminal_indexers=nonterminal_indexers)
+                                 nonterminal_indexers=nonterminal_indexers,
+                                 add_paths_to_agenda=add_paths_to_agenda)
