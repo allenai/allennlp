@@ -4,7 +4,6 @@ import logging
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -55,7 +54,6 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
         with open(file_path, "r") as data_file:
 
-            instances = []
             logger.info("Reading instances from lines in file at: %s", file_path)
             for line in Tqdm.tqdm(data_file):
                 line = line.strip("\n")
@@ -71,12 +69,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
                 sequence = TextField(tokens, self._token_indexers)
                 sequence_tags = SequenceLabelField(tags, sequence)
-                instances.append(Instance({'tokens': sequence,
-                                           'tags': sequence_tags}))
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return instances
+                yield Instance({'tokens': sequence,
+                                'tags': sequence_tags})
 
     def text_to_instance(self, tokens: List[Token]) -> Instance:  # type: ignore
         """

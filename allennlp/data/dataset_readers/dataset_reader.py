@@ -65,13 +65,18 @@ class DatasetReader(Registrable):
         if self.lazy:
             return _LazyInstances(lambda: iter(self._read(file_path)))
         else:
-            return ensure_list(self._read(file_path))
+            instances = ensure_list(self._read(file_path))
+            if not instances:
+                raise ConfigurationError("No instances were read from the given filepath {}. "
+                                         "Is the path correct?".format(file_path))
+            return instances
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
         Reads the instances from the given file_path and returns them as an
-        `Iterable` (which could be a list or could be a generator). Your ``DatasetReader``
-        subclasses should override this method.
+        `Iterable` (which could be a list or could be a generator).
+        You are strongly encouraged to use a generator, so that users can
+        read dataset in a lazy way, if they so choose.
         """
         raise NotImplementedError
 

@@ -5,7 +5,6 @@ from typing import Dict, List, Tuple
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -55,7 +54,6 @@ class SquadReader(DatasetReader):
             dataset_json = json.load(dataset_file)
             dataset = dataset_json['data']
         logger.info("Reading the dataset")
-        instances = []
         for article in Tqdm.tqdm(dataset):
             for paragraph_json in article['paragraphs']:
                 paragraph = paragraph_json["context"]
@@ -71,11 +69,7 @@ class SquadReader(DatasetReader):
                                                      zip(span_starts, span_ends),
                                                      answer_texts,
                                                      tokenized_paragraph)
-                    instances.append(instance)
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return instances
+                    yield instance
 
     @overrides
     def text_to_instance(self,  # type: ignore

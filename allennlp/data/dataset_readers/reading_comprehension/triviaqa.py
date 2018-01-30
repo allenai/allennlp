@@ -7,7 +7,6 @@ from typing import Dict, List, Tuple
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -78,7 +77,6 @@ class TriviaQaReader(DatasetReader):
             data_json = json.loads(base_tarball.extractfile(path).read().decode('utf-8'))
 
         logger.info("Reading the dataset")
-        instances = []
         for question_json in Tqdm.tqdm(data_json['Data']):
             question_text = question_json['Question']
             question_tokens = self._tokenizer.tokenize(question_text)
@@ -111,11 +109,7 @@ class TriviaQaReader(DatasetReader):
                                                  answer_texts,
                                                  question_tokens,
                                                  paragraph_tokens)
-                instances.append(instance)
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return instances
+                yield instance
 
     def pick_paragraphs(self,
                         evidence_files: List[List[str]],

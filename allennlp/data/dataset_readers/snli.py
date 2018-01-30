@@ -5,7 +5,6 @@ import logging
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -45,7 +44,6 @@ class SnliReader(DatasetReader):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
-        instances = []
         with open(file_path, 'r') as snli_file:
             logger.info("Reading SNLI instances from jsonl dataset at: %s", file_path)
             for line in Tqdm.tqdm(snli_file):
@@ -59,11 +57,8 @@ class SnliReader(DatasetReader):
 
                 premise = example["sentence1"]
                 hypothesis = example["sentence2"]
-                instances.append(self.text_to_instance(premise, hypothesis, label))
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return instances
+
+                yield self.text_to_instance(premise, hypothesis, label)
 
     @overrides
     def text_to_instance(self,  # type: ignore

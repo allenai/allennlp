@@ -78,8 +78,6 @@ class Conll2003DatasetReader(DatasetReader):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
-        instances = []
-
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
 
@@ -113,12 +111,8 @@ class Conll2003DatasetReader(DatasetReader):
                     elif self.tag_label == 'chunk':
                         instance_fields['tags'] = SequenceLabelField(chunk_tags, sequence)
 
-                    instances.append(Instance(instance_fields))
+                    yield Instance(instance_fields)
 
-        if not instances:
-            raise ConfigurationError("reading {} resulted in an empty Dataset".format(file_path))
-
-        return instances
 
     def text_to_instance(self, tokens: List[Token]) -> Instance:  # type: ignore
         """

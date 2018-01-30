@@ -63,7 +63,6 @@ class Seq2SeqDatasetReader(DatasetReader):
 
     @overrides
     def _read(self, file_path):
-        instances = []
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
             for line_num, line in enumerate(Tqdm.tqdm(data_file)):
@@ -76,10 +75,7 @@ class Seq2SeqDatasetReader(DatasetReader):
                 if len(line_parts) != 2:
                     raise ConfigurationError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
                 source_sequence, target_sequence = line_parts
-                instances.append(self.text_to_instance(source_sequence, target_sequence))
-        if not instances:
-            raise ConfigurationError("No instances read!")
-        return instances
+                yield self.text_to_instance(source_sequence, target_sequence)
 
     @overrides
     def text_to_instance(self, source_string: str, target_string: str = None) -> Instance:  # type: ignore
