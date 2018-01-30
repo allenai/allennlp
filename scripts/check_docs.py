@@ -25,7 +25,9 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         # the cffi part is causing problems.
         'allennlp.modules.alternating_highway_lstm',
         # Private base class, no docs needed.
-        'allennlp.modules.encoder_base'
+        'allennlp.modules.encoder_base',
+        # TODO(Mark): remove this once the coref model is switched over.
+        'allennlp.models.coreference_resolution.coref_v2'
 }
 
 DOCS_THAT_NEED_NO_MODULES: Set[str] = {
