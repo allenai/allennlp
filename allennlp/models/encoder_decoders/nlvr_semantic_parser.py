@@ -152,6 +152,8 @@ class NlvrSemanticParser(Model):
         for i in range(batch_size):
             batch_actions = actions[i]
             batch_best_sequences = best_action_sequences[i]
+            sequence_is_valid = False
+            sequence_is_correct = False
             if batch_best_sequences:
                 action_strings = [get_action_string(batch_actions[rule_id]) for rule_id in
                                   batch_best_sequences[0][0]]
@@ -160,10 +162,8 @@ class NlvrSemanticParser(Model):
                 sequence_is_valid, sequence_is_correct = self._check_denotation(action_strings,
                                                                                 label_string,
                                                                                 instance_world)
-                if sequence_is_valid:
-                    self._action_sequence_validity(1)
-                if sequence_is_correct:
-                    self._denotation_accuracy(1)
+            self._action_sequence_validity(1 if sequence_is_valid else 0)
+            self._denotation_accuracy(1 if sequence_is_correct else 0)
         return outputs
 
     @staticmethod
@@ -176,6 +176,7 @@ class NlvrSemanticParser(Model):
             denotation_is_correct = str(denotation).lower() == label.lower()
             return True, denotation_is_correct
         except (RuntimeError, AssertionError, TypeError):
+            # TODO (pradeep): Fix the type declaration to make this try-except unnecessary.
             return False, False
 
     @overrides
