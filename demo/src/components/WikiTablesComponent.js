@@ -134,38 +134,54 @@ render() {
 
 class WikiTablesOutput extends React.Component {
     render() {
-      const { answer, logicalForm, actions } = this.props;
-      const actionList = actions.map((action, index) =>
-        <li key={`${action}_${index}`}>{action}</li>
-      );
+      const { answer, logicalForm, actions, linking_scores, entities, question_tokens } = this.props;
 
       return (
         <div className="model__content">
           <div className="form__field">
             <label>Answer</label>
-            <div className="model__content__summary">{ answer }</div>
+            <div className="model__content__summary">{ answer } Logical form execution (to actually get an answer) not yet supported</div>
           </div>
 
           <div className="form__field">
             <label>Logical Form</label>
-            <div className="model__content__summary">{ logicalForm }</div>
-          </div>
-
-          <div className="form__field">
-            <label>Actions</label>
-            <div className="model__content__summary">
-              <ul>{actionList}</ul>
-            </div>
+            <div className="model__content__summary">{ logicalForm } Logical form recovery coming soon</div>
           </div>
 
           <div className="form__field">
             <Collapsible trigger="Model internals (beta)">
+              <Collapsible trigger="Predicted actions">
+                {actions.map((action, action_index) => (
+                  <Collapsible key={"action_" + action_index} trigger={action['predicted_action']}>
+                    <ActionInfo action={action} />
+                  </Collapsible>
+                ))}
+              </Collapsible>
+              <Collapsible trigger="Entity linking scores">
+                  <HeatMap xLabels={question_tokens} yLabels={entities} data={linking_scores} xLabelWidth="250px" />
+              </Collapsible>
             </Collapsible>
           </div>
         </div>
       );
     }
   }
+
+
+class ActionInfo extends React.Component {
+  render() {
+    const { action } = this.props;
+    const action_string = action['predicted_action'];
+    const considered_actions = action['considered_actions'];
+    const action_probs = action['action_probabilities'].map(x => [x]);
+
+    return (
+      <div className="heatmap">
+        <HeatMap xLabels={['-']} yLabels={considered_actions} data={action_probs} xLabelWidth="250px" />
+      </div>
+    )
+  }
+}
 
 
 /*******************************************************************************
@@ -228,7 +244,11 @@ class _WikiTablesComponent extends React.Component {
       const table = requestData && requestData.table;
       const question = requestData && requestData.question;
       const answer = responseData && responseData.answer;
+      const logicalForm = responseData && responseData.logical_form;
       const actions = responseData && responseData.predicted_actions;
+      const linking_scores = responseData && responseData.linking_scores;
+      const entities = responseData && responseData.entities;
+      const question_tokens = responseData && responseData.question_tokens;
 
       return (
         <div className="pane model">
@@ -239,7 +259,13 @@ class _WikiTablesComponent extends React.Component {
                              question={question}/>
           </PaneLeft>
           <PaneRight outputState={this.state.outputState}>
-            <WikiTablesOutput answer={answer} actions={actions}/>
+            <WikiTablesOutput answer={answer}
+                              logicalForm={logicalForm}
+                              actions={actions}
+                              linking_scores={linking_scores}
+                              entities={entities}
+                              question_tokens={question_tokens}
+            />
           </PaneRight>
         </div>
       );
