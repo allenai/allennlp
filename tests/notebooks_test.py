@@ -3,20 +3,16 @@ import os
 import nbformat
 from nbconvert.preprocessors.execute import CellExecutionError
 from nbconvert.preprocessors import ExecutePreprocessor
-import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 
 class TestNotebooks(AllenNlpTestCase):
-    @pytest.mark.skip()
     def test_vocabulary_tutorial(self):
         assert self.execute_notebook("tutorials/notebooks/vocabulary.ipynb")
 
-    @pytest.mark.skip()
     def test_data_pipeline_tutorial(self):
         assert self.execute_notebook("tutorials/notebooks/data_pipeline.ipynb")
 
-    @pytest.mark.skip()
     def test_embedding_tokens_tutorial(self):
         assert self.execute_notebook("tutorials/notebooks/embedding_tokens.ipynb")
 

@@ -1,10 +1,13 @@
 from typing import Iterable, Iterator, Callable
+import logging
 
 from allennlp.data.instance import Instance
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
 from allennlp.common.util import ensure_list
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class _LazyInstances(Iterable):
     """
@@ -52,17 +55,20 @@ class DatasetReader(Registrable):
 
         If ``self.lazy`` is True, this returns an object whose
         ``__iter__`` method calls ``self._read()`` each iteration.
-        Note that if your implementation of ``_read()`` is not lazy
-        (i.e. it loads all instances into memory at once), then your
-        "lazy" dataset reader is just loading the entire dataset into
-        a list each time you iterate over it, which is probably not
-        what you want.
+        In this case your implementation of ``_read()`` must also be lazy
+        (that is, not load all instances into memory at once), otherwise
+        you will get a ``ConfigurationError``.
 
         In either case, the returned ``Iterable`` can be iterated
         over multiple times. It's unlikely you want to override this function,
         but if you do your result should likewise be repeatedly iterable.
         """
-        if self.lazy:
+        lazy = getattr(self, 'lazy', None)
+        if lazy is None:
+            logger.warning("DatasetReader.lazy is not set, "
+                           "did you forget to call the superclass constructor?")
+
+        if lazy:
             return _LazyInstances(lambda: iter(self._read(file_path)))
         else:
             instances = ensure_list(self._read(file_path))
@@ -76,7 +82,7 @@ class DatasetReader(Registrable):
         Reads the instances from the given file_path and returns them as an
         `Iterable` (which could be a list or could be a generator).
         You are strongly encouraged to use a generator, so that users can
-        read dataset in a lazy way, if they so choose.
+        read a dataset in a lazy way, if they so choose.
         """
         raise NotImplementedError
 
