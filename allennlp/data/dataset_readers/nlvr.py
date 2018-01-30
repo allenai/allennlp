@@ -233,7 +233,7 @@ class NlvrDatasetReader(DatasetReader):
         sentence_token_indexers = TokenIndexer.dict_from_params(params.pop('sentence_token_indexers', {}))
         terminal_indexers = TokenIndexer.dict_from_params(params.pop('terminal_indexers', {}))
         nonterminal_indexers = TokenIndexer.dict_from_params(params.pop('nonterminal_indexers', {}))
-        add_paths_to_agenda = params.pop("add_paths_to_agenda")
+        add_paths_to_agenda = params.pop("add_paths_to_agenda", True)
         params.assert_empty(cls.__name__)
         return NlvrDatasetReader(tokenizer=tokenizer,
                                  sentence_token_indexers=sentence_token_indexers,
