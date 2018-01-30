@@ -307,7 +307,11 @@ class WikiTablesSemanticParser(Model):
                                                 target_action_sequences,
                                                 target_mask)
         else:
-            outputs = {}
+            action_mapping = {}
+            for batch_index, batch_actions in enumerate(actions):
+                for action_index, action in enumerate(batch_actions):
+                    action_mapping[(batch_index, action_index)] = f"{action['left'][0]} -> {action['right'][0]}"
+            outputs = {'action_mapping': action_mapping}
             if target_action_sequences is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
@@ -324,12 +328,12 @@ class WikiTablesSemanticParser(Model):
                 # isn't long enough (or if the model is not trained enough and gets into an
                 # infinite action loop).
                 if i in best_final_states:
-                    predicted = best_final_states[i][0].action_history
+                    predicted = best_final_states[i][0].action_history[0]
                     credit = 0
                     if target_action_sequences is not None:
                         # Use a Tensor, not a Variable, to avoid a memory leak.
                         targets = target_action_sequences[i].data
-                        credit = self._action_history_match(predicted[0], targets)
+                        credit = self._action_history_match(predicted, targets)
                     self._action_sequence_accuracy(credit)
                     best_action_sequences.append(predicted)
             outputs['best_action_sequence'] = best_action_sequences
@@ -757,12 +761,13 @@ class WikiTablesSemanticParser(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
-        best_action_indices = output_dict["best_action_sequence"][0]
+        action_mapping = output_dict['action_mapping']
+        best_action_indices = output_dict["best_action_sequence"]
         action_strings = []
-        for action_index in best_action_indices:
-            action_strings.append(self.vocab.get_token_from_index(action_index,
-                                                                  namespace=self._action_namespace))
-        output_dict["predicted_actions"] = [action_strings]
+        for batch_index, action_indices in enumerate(best_action_indices):
+            action_strings.append([action_mapping[(batch_index, action_index)]
+                                   for action_index in action_indices])
+        output_dict["predicted_actions"] = action_strings
         return output_dict
 
     @classmethod
