@@ -38,7 +38,7 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         self.tokenizer = WordTokenizer(SpacyWordSplitter(pos_tags=True))
         self.utterance = self.tokenizer.tokenize("Where is Mersin?")
         self.token_indexers = {"tokens": SingleIdTokenIndexer("tokens")}
-        self.field = KnowledgeGraphField(self.graph, self.utterance, self.tokenizer, self.token_indexers)
+        self.field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
 
         super(KnowledgeGraphFieldTest, self).setUp()
 
@@ -143,7 +143,7 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
     def test_lemma_feature_extractor(self):
         # pylint: disable=protected-access
         utterance = self.tokenizer.tokenize("Names in English")
-        field = KnowledgeGraphField(self.graph, utterance, self.tokenizer, self.token_indexers)
+        field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
         entity = 'fb:row.row.name_in_english'
         assert field._contains_lemma_match(entity, field._entity_text_map[entity], utterance[0]) == 1
 
