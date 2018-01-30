@@ -148,26 +148,22 @@ class NlvrSemanticParser(Model):
                                                self._max_decoding_steps)
         best_action_sequences = outputs['best_action_sequence']
         get_action_string = lambda rule: "%s -> %s" % (rule["left"][0], rule["right"][0])
-        action_string_sequences = []
-        for batch_actions, batch_best_sequences in zip(actions,
-                                                       best_action_sequences):
-            if not batch_best_sequences:
-                action_string_sequences.append([])
-            else:
-                action_string_sequences.append([get_action_string(batch_actions[rule_id]) for rule_id in
-                                                batch_best_sequences[0]])
-        for instance_actions, instance_label, instance_world in zip(action_string_sequences,
-                                                                    label,
-                                                                    world):
-            label_string = self.vocab.get_token_from_index(int(instance_label.data.cpu()),
-                                                           "denotations")
-            sequence_is_valid, sequence_is_correct = self._check_denotation(instance_actions,
-                                                                            label_string,
-                                                                            instance_world)
-            if sequence_is_valid:
-                self._action_sequence_validity(1)
-            if sequence_is_correct:
-                self._denotation_accuracy(1)
+        labels_data = label.data.cpu()
+        for i in range(batch_size):
+            batch_actions = actions[i]
+            batch_best_sequences = best_action_sequences[i]
+            if batch_best_sequences:
+                action_strings = [get_action_string(batch_actions[rule_id]) for rule_id in
+                                  batch_best_sequences[0][0]]
+                label_string = self.vocab.get_token_from_index(int(labels_data[i]), "denotations")
+                instance_world = world[i]
+                sequence_is_valid, sequence_is_correct = self._check_denotation(action_strings,
+                                                                                label_string,
+                                                                                instance_world)
+                if sequence_is_valid:
+                    self._action_sequence_validity(1)
+                if sequence_is_correct:
+                    self._denotation_accuracy(1)
         return outputs
 
     @staticmethod
