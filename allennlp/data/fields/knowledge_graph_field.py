@@ -69,19 +69,24 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
     def __init__(self,
                  knowledge_graph: KnowledgeGraph,
                  utterance_tokens: List[Token],
-                 tokenizer: Tokenizer,
                  token_indexers: Dict[str, TokenIndexer],
-                 feature_extractors: List[str] = None) -> None:
+                 tokenizer: Tokenizer = None,
+                 feature_extractors: List[str] = None,
+                 entity_tokens: List[List[Token]] = None,
+                 linking_features: List[List[List[float]]] = None) -> None:
         self.knowledge_graph = knowledge_graph
-        entity_texts = [knowledge_graph.entity_text[entity] for entity in knowledge_graph.entities]
-        # TODO(mattg): Because we do tagging on each of these entities in addition to just
-        # tokenizations, this is quite slow, and about half of our data processing time just goes
-        # to this (~15 minutes when there are 7k instances).  The reason we do tagging is so that
-        # we can add lemma features.  If we can remove the need for lemma / other hand-written
-        # features, like with a CNN, we can cut down our data processing time by a factor of 2.
-        self.entity_texts = tokenizer.batch_tokenize(entity_texts)
+        if not entity_tokens:
+            entity_texts = [knowledge_graph.entity_text[entity] for entity in knowledge_graph.entities]
+            # TODO(mattg): Because we do tagging on each of these entities in addition to just
+            # tokenizations, this is quite slow, and about half of our data processing time just
+            # goes to this (~15 minutes when there are 7k instances).  The reason we do tagging is
+            # so that we can add lemma features.  If we can remove the need for lemma / other
+            # hand-written features, like with a CNN, we can cut down our data processing time by a
+            # factor of 2.
+            self.entity_texts = tokenizer.batch_tokenize(entity_texts)
+        else:
+            self.entity_texts = entity_tokens
         self.utterance_tokens = utterance_tokens
-        self._tokenizer = tokenizer
         self._token_indexers: Dict[str, TokenIndexer] = token_indexers
         self._indexed_entity_texts: Dict[str, TokenList] = None
 
@@ -101,19 +106,23 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                 raise ConfigurationError(f"Invalid feature extractor name: {feature_extractor_name}")
             self._feature_extractors.append(extractor)
 
-        # For quicker lookups in our feature functions, we'll additionally store some dictionaries
-        # that map entity strings to useful information about the entity.
-        self._entity_text_map: Dict[str, List[Token]] = {}
-        for entity, entity_text in zip(knowledge_graph.entities, self.entity_texts):
-            self._entity_text_map[entity] = entity_text
+        if not linking_features:
+            # For quicker lookups in our feature functions, we'll additionally store some
+            # dictionaries that map entity strings to useful information about the entity.
+            self._entity_text_map: Dict[str, List[Token]] = {}
+            for entity, entity_text in zip(knowledge_graph.entities, self.entity_texts):
+                self._entity_text_map[entity] = entity_text
 
-        self._entity_text_exact_text: Dict[str, Set[str]] = {}
-        for entity, entity_text in zip(knowledge_graph.entities, self.entity_texts):
-            self._entity_text_exact_text[entity] = set(e.text for e in entity_text)
+            self._entity_text_exact_text: Dict[str, Set[str]] = {}
+            for entity, entity_text in zip(knowledge_graph.entities, self.entity_texts):
+                self._entity_text_exact_text[entity] = set(e.text for e in entity_text)
 
-        self._entity_text_lemmas: Dict[str, Set[str]] = {}
-        for entity, entity_text in zip(knowledge_graph.entities, self.entity_texts):
-            self._entity_text_lemmas[entity] = set(e.lemma_ for e in entity_text)
+            self._entity_text_lemmas: Dict[str, Set[str]] = {}
+            for entity, entity_text in zip(knowledge_graph.entities, self.entity_texts):
+                self._entity_text_lemmas[entity] = set(e.lemma_ for e in entity_text)
+            self.linking_features = self._compute_linking_features()
+        else:
+            self.linking_features = linking_features
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
@@ -180,17 +189,23 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                 padded_arrays.append(padded_array)
             tensor = Variable(torch.LongTensor(padded_arrays), volatile=not for_training)
             tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
-        linking_features = self._compute_linking_features(desired_num_entities,
+        padded_linking_features = util.pad_sequence_to_length(self.linking_features,
+                                                              desired_num_entities,
+                                                              default_value=lambda: [])
+        padded_linking_arrays = []
+        default_feature_value = lambda: [0.0] * len(self._feature_extractors)
+        for linking_features in padded_linking_features:
+            padded_features = util.pad_sequence_to_length(linking_features,
                                                           desired_num_utterance_tokens,
-                                                          cuda_device,
-                                                          for_training)
-        return {'text': tensors, 'linking': linking_features}
+                                                          default_value=default_feature_value)
+            padded_linking_arrays.append(padded_features)
+        linking_features_tensor = Variable(torch.FloatTensor(padded_linking_arrays),
+                                           volatile=not for_training)
+        if cuda_device != -1:
+            linking_features_tensor = linking_features_tensor.cuda(cuda_device)
+        return {'text': tensors, 'linking': linking_features_tensor}
 
-    def _compute_linking_features(self,
-                                  num_entities: int,
-                                  num_utterance_tokens: int,
-                                  cuda_device: int,
-                                  for_training: bool) -> torch.Tensor:
+    def _compute_linking_features(self) -> List[List[List[float]]]:
         linking_features = []
         for entity, entity_text in zip(self.knowledge_graph.entities, self.entity_texts):
             entity_features = []
@@ -199,20 +214,12 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                 for feature_extractor in self._feature_extractors:
                     token_features.append(feature_extractor(entity, entity_text, token))
                 entity_features.append(token_features)
-            for _ in range(num_utterance_tokens - len(entity_features)):
-                entity_features.append([0.0] * len(self._feature_extractors))
             linking_features.append(entity_features)
-        for _ in range(num_entities - len(linking_features)):
-            padded_entity = []
-            for _ in range(num_utterance_tokens):
-                padded_entity.append([0.0] * len(self._feature_extractors))
-            linking_features.append(padded_entity)
-        tensor = Variable(torch.FloatTensor(linking_features), volatile=not for_training)
-        return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+        return linking_features
 
     @overrides
     def empty_field(self) -> 'KnowledgeGraphField':
-        return KnowledgeGraphField(KnowledgeGraph(set(), {}), [], self._tokenizer, self._token_indexers)
+        return KnowledgeGraphField(KnowledgeGraph(set(), {}), [], self._token_indexers)
 
     @overrides
     def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
