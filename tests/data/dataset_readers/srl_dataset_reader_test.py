@@ -2,13 +2,14 @@
 
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 
 
 class TestSrlReader(AllenNlpTestCase):
     def test_read_from_file(self):
         conll_reader = SrlReader()
-        dataset = conll_reader.read('tests/fixtures/conll_2012/')
-        instances = dataset.instances
+        instances = conll_reader.read('tests/fixtures/conll_2012/')
+        instances = ensure_list(instances)
 
         fields = instances[0].fields
         tokens = [t.text for t in fields['tokens'].tokens]

@@ -18,7 +18,7 @@ import torch
 from torch.autograd import Variable
 import h5py
 
-from allennlp.data.dataset import Dataset
+from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
@@ -40,7 +40,7 @@ def batch_to_ids(batch):
         instance = Instance({"elmo": field})
         instances.append(instance)
 
-    dataset = Dataset(instances)
+    dataset = Batch(instances)
     vocab = Vocabulary()
     dataset.index_instances(vocab)
     return dataset.as_tensor_dict()['elmo']['character_ids']

@@ -3,7 +3,7 @@ Various utilities that don't fit anwhere else.
 """
 
 from itertools import zip_longest
-from typing import Any, Callable, Dict, List, Tuple, TypeVar
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable
 import importlib
 import pkgutil
 import random
@@ -229,3 +229,13 @@ def peak_memory_mb() -> float:
     else:
         # On Linux the result is in kilobytes.
         return peak / 1_000
+
+def ensure_list(iterable: Iterable[A]) -> List[A]:
+    """
+    An Iterable may be a list or a generator.
+    This ensures we get a list without making an unnecessary copy.
+    """
+    if isinstance(iterable, list):
+        return iterable
+    else:
+        return list(iterable)
