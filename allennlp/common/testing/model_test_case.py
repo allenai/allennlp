@@ -23,7 +23,7 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(self.param_file)
 
         reader = DatasetReader.from_params(params['dataset_reader'])
-        instances = reader.instances(dataset_file)
+        instances = reader.read(dataset_file)
         vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
@@ -63,11 +63,11 @@ class ModelTestCase(AllenNlpTestCase):
 
         # We'll check that even if we index the dataset with each model separately, we still get
         # the same result out.
-        model_dataset = reader.instances(params['validation_data_path'])
+        model_dataset = reader.read(params['validation_data_path'])
         iterator.index_with(model.vocab)
         model_batch = next(iterator(model_dataset, shuffle=False, cuda_device=cuda_device))
 
-        loaded_dataset = reader.instances(params['validation_data_path'])
+        loaded_dataset = reader.read(params['validation_data_path'])
         iterator2.index_with(loaded_model.vocab)
         loaded_batch = next(iterator2(loaded_dataset, shuffle=False, cuda_device=cuda_device))
 

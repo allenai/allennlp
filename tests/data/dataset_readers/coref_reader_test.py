@@ -14,7 +14,7 @@ class TestCorefReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
         conll_reader = ConllCorefReader(max_span_width=self.span_width)
-        instances = conll_reader.instances('tests/fixtures/coref/coref.gold_conll')
+        instances = conll_reader.read('tests/fixtures/coref/coref.gold_conll')
 
         assert len(instances) == 2
 

@@ -8,7 +8,7 @@ from allennlp.common.util import ensure_list
 class TestSrlReader(AllenNlpTestCase):
     def test_read_from_file(self):
         conll_reader = SrlReader()
-        instances = conll_reader.instances('tests/fixtures/conll_2012/')
+        instances = conll_reader.read('tests/fixtures/conll_2012/')
         instances = ensure_list(instances)
 
         fields = instances[0].fields

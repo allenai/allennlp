@@ -112,20 +112,20 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
 
     train_data_path = params.pop('train_data_path')
     logger.info("Reading training data from %s", train_data_path)
-    train_data = dataset_reader.instances(train_data_path)
+    train_data = dataset_reader.read(train_data_path)
 
     datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
 
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = dataset_reader.instances(validation_data_path)
+        validation_data = dataset_reader.read(validation_data_path)
         datasets["validation"] = validation_data
 
     test_data_path = params.pop("test_data_path", None)
     if test_data_path is not None:
         logger.info("Reading test data from %s", test_data_path)
-        test_data = dataset_reader.instances(test_data_path)
+        test_data = dataset_reader.read(test_data_path)
         datasets["test"] = test_data
 
     return datasets

@@ -109,7 +109,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
     evaluation_data_path = args.evaluation_data_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
-    instances = dataset_reader.instances(evaluation_data_path)
+    instances = dataset_reader.read(evaluation_data_path)
 
     iterator = DataIterator.from_params(config.pop("iterator"))
     iterator.index_with(model.vocab)

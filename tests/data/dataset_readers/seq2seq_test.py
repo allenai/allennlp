@@ -7,7 +7,7 @@ from allennlp.common.util import ensure_list
 class TestSeq2SeqDatasetReader(AllenNlpTestCase):
     def test_default_format(self):
         reader = Seq2SeqDatasetReader()
-        instances = reader.instances('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
         instances = ensure_list(instances)
 
         assert len(instances) == 3
@@ -29,7 +29,7 @@ class TestSeq2SeqDatasetReader(AllenNlpTestCase):
 
     def test_source_add_start_token(self):
         reader = Seq2SeqDatasetReader(source_add_start_token=False)
-        instances = reader.instances('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
         instances = ensure_list(instances)
 
         assert len(instances) == 3

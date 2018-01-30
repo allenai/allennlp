@@ -11,7 +11,7 @@ class TestTriviaQaReader(AllenNlpTestCase):
                 'base_tarball_path': 'tests/fixtures/data/triviaqa-sample.tgz',
                 })
         reader = TriviaQaReader.from_params(params)
-        instances = reader.instances('web-train.json')
+        instances = reader.read('web-train.json')
         instances = ensure_list(instances)
         assert len(instances) == 3
 

@@ -40,7 +40,7 @@ class DatasetReader(Registrable):
     def __init__(self, lazy: bool = False) -> None:
         self.lazy = lazy
 
-    def instances(self, file_path: str) -> Iterable[Instance]:
+    def read(self, file_path: str) -> Iterable[Instance]:
         """
         Returns an ``Iterable`` containing all the instances
         in the specified dataset.

@@ -42,7 +42,7 @@ class TestLazyDatasetReader(AllenNlpTestCase):
         reader = LazyDatasetReader(self.instances, lazy=True)
         assert reader.num_reads == 0
 
-        instances = reader.instances('path/to/file')
+        instances = reader.read('path/to/file')
 
         for _ in range(10):
             _instances = (i for i in instances)
@@ -54,7 +54,7 @@ class TestLazyDatasetReader(AllenNlpTestCase):
         reader = LazyDatasetReader(self.instances, lazy=False)
         assert reader.num_reads == 0
 
-        instances = reader.instances('path/to/file')
+        instances = reader.read('path/to/file')
 
         for _ in range(10):
             _instances = (i for i in instances)

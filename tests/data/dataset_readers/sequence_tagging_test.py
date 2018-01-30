@@ -7,7 +7,7 @@ from allennlp.common.util import ensure_list
 class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
     def test_default_format(self):
         reader = SequenceTaggingDatasetReader()
-        instances = reader.instances('tests/fixtures/data/sequence_tagging.tsv')
+        instances = reader.read('tests/fixtures/data/sequence_tagging.tsv')
         instances = ensure_list(instances)
 
         assert len(instances) == 4
@@ -26,7 +26,7 @@ class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
 
     def test_brown_corpus_format(self):
         reader = SequenceTaggingDatasetReader(word_tag_delimiter='/')
-        instances = reader.instances('tests/fixtures/data/brown_corpus.txt')
+        instances = reader.read('tests/fixtures/data/brown_corpus.txt')
         instances = ensure_list(instances)
 
         assert len(instances) == 4
