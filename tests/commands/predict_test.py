@@ -4,18 +4,22 @@ import csv
 import io
 import json
 import os
+import pathlib
 import shutil
 import sys
 import tempfile
-from unittest import TestCase
 
+import pytest
+
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands import main
 from allennlp.commands.predict import Predict, DEFAULT_PREDICTORS
 from allennlp.service.predictors import Predictor, BidafPredictor
 
 
-class TestPredict(TestCase):
+class TestPredict(AllenNlpTestCase):
 
     def test_add_predict_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
@@ -167,6 +171,108 @@ class TestPredict(TestCase):
                                           "best_span_str", "overridden"}
 
         shutil.rmtree(tempdir)
+
+
+    def test_can_specify_predictor(self):
+
+        @Predictor.register('bidaf-explicit')  # pylint: disable=unused-variable
+        class Bidaf3Predictor(BidafPredictor):
+            """same as bidaf predictor but with an extra field"""
+            def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+                result = super().predict_json(inputs)
+                result["explicit"] = True
+                return result
+
+        tempdir = tempfile.mkdtemp()
+        infile = os.path.join(tempdir, "inputs.txt")
+        outfile = os.path.join(tempdir, "outputs.txt")
+
+        with open(infile, 'w') as f:
+            f.write("""{"passage": "the seahawks won the super bowl in 2016", """
+                    """ "question": "when did the seahawks win the super bowl?"}\n""")
+            f.write("""{"passage": "the mariners won the super bowl in 2037", """
+                    """ "question": "when did the mariners win the super bowl?"}\n""")
+
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    "tests/fixtures/bidaf/serialization/model.tar.gz",
+                    infile,     # input_file
+                    "--output-file", outfile,
+                    "--predictor", "bidaf-explicit",
+                    "--silent"]
+
+        main()
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'r') as f:
+            results = [json.loads(line) for line in f]
+
+        assert len(results) == 2
+        # Overridden predictor should output extra field
+        for result in results:
+            assert set(result.keys()) == {"span_start_logits", "span_end_logits",
+                                          "span_start_probs", "span_end_probs", "best_span",
+                                          "best_span_str", "explicit"}
+
+        shutil.rmtree(tempdir)
+
+    def test_other_modules(self):
+        # Create a new package in a temporary dir
+        packagedir = os.path.join(self.TEST_DIR, 'testpackage')
+        pathlib.Path(packagedir).mkdir()
+        pathlib.Path(os.path.join(packagedir, '__init__.py')).touch()
+
+        # And add that directory to the path
+        sys.path.insert(0, self.TEST_DIR)
+
+        # Write out a duplicate predictor there, but registered under a different name.
+        from allennlp.service.predictors import bidaf
+        with open(bidaf.__file__) as f:
+            code = f.read().replace("""@Predictor.register('machine-comprehension')""",
+                                    """@Predictor.register('duplicate-test-predictor')""")
+
+        with open(os.path.join(packagedir, 'predictor.py'), 'w') as f:
+            f.write(code)
+
+        infile = os.path.join(self.TEST_DIR, "inputs.txt")
+        outfile = os.path.join(self.TEST_DIR, "outputs.txt")
+
+        with open(infile, 'w') as f:
+            f.write("""{"passage": "the seahawks won the super bowl in 2016", """
+                    """ "question": "when did the seahawks win the super bowl?"}\n""")
+            f.write("""{"passage": "the mariners won the super bowl in 2037", """
+                    """ "question": "when did the mariners win the super bowl?"}\n""")
+
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    "tests/fixtures/bidaf/serialization/model.tar.gz",
+                    infile,     # input_file
+                    "--output-file", outfile,
+                    "--predictor", "duplicate-test-predictor",
+                    "--silent"]
+
+        # Should raise ConfigurationError, because predictor is unknown
+        with pytest.raises(ConfigurationError):
+            main()
+
+        # But once we include testpackage, it should be known
+        sys.argv.extend(["--include-package", "testpackage"])
+        main()
+
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'r') as f:
+            results = [json.loads(line) for line in f]
+
+        assert len(results) == 2
+        # Overridden predictor should output extra field
+        for result in results:
+            assert set(result.keys()) == {"span_start_logits", "span_end_logits",
+                                          "span_start_probs", "span_end_probs", "best_span",
+                                          "best_span_str"}
+
+        sys.path.remove(self.TEST_DIR)
+
 
     def test_alternative_file_formats(self):
         tempdir = tempfile.mkdtemp()
