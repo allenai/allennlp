@@ -34,9 +34,13 @@ class TableKnowledgeGraph(KnowledgeGraph):
         we read "Nation", "Olympics" and "Medals" as column headers, "USA" and "China" as cells under the
         "Nation" column and so on.
         """
+        return cls.read_from_lines(open(filename).readlines())
+
+    @classmethod
+    def read_from_lines(cls, lines: List[str]) -> 'TableKnowledgeGraph':
         cells = []
         # We assume the first row is column names.
-        for row_index, line in enumerate(open(filename)):
+        for row_index, line in enumerate(lines):
             line = line.rstrip('\n')
             if row_index == 0:
                 columns = line.split('\t')
