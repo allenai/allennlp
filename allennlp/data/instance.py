@@ -40,6 +40,9 @@ class Instance:
         This `mutates` the current object, it does not return a new ``Instance``.
         A ``DataIterator`` will call this on each pass through a dataset; we use the ``indexed``
         flag to make sure that indexing only happens once.
+
+        This means that if for some reason you modify your vocabulary after you've
+        indexed your instances, you might get unexpected behavior.
         """
         if not self.indexed:
             self.indexed = True
