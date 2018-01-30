@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SOURCES_ARG="--source squad.2:/squad --source glove.1:/glove"
+SOURCES_ARG="--source wikitables_preprocessed_7k:/wikitables_preprocessed"
 RESULT_ARG="--result-path /output"
 GPU_ARG="--gpu-count=1"
 DETACH_ARG="--detach"  # or ""
