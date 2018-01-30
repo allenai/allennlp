@@ -27,7 +27,6 @@ class TestDataset(AllenNlpTestCase):
         instance2 = Instance({"words": TextField([Token("hello")], {})})
         with pytest.raises(ConfigurationError):
             batch = Batch([instance1, instance2])
-            batch._check_types()  # pylint: disable=protected-access
 
     def test_padding_lengths_uses_max_instance_lengths(self):
         dataset = Batch(self.instances)

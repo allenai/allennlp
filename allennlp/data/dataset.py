@@ -29,6 +29,7 @@ class Batch(Iterable):
         super().__init__()
 
         self.instances: List[Instance] = ensure_list(instances)
+        self._check_types()
 
     def _check_types(self) -> None:
         """
