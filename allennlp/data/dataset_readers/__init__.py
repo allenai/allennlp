@@ -15,3 +15,5 @@ from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.dataset_readers.seq2seq import Seq2SeqDatasetReader
 from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReader
+from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankDatasetReader
+
