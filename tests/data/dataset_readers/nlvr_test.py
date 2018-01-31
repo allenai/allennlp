@@ -16,12 +16,14 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         expected_tokens = ['There', 'is', 'a', 'circle', 'closely', 'touching', 'a', 'corner', 'of',
                            'a', 'box', '.']
         assert [t.text for t in sentence_tokens] == expected_tokens
-        agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
-        assert agenda == [56, 32, 121, 64]
-        world = instance.fields["world"].as_tensor({})
-        assert isinstance(world, NlvrWorld)
         actions = [action.rule for action in instance.fields["actions"].field_list]
         assert len(actions) == 126
+        agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
+        agenda_actions = [actions[i] for i in agenda]
+        assert agenda_actions == ['<o,o> -> circle', '<e,<e,t>> -> assert_greater_equals',
+                                  't -> [<b,t>, b]', '<o,o> -> touch_corner']
+        world = instance.fields["world"].as_tensor({})
+        assert isinstance(world, NlvrWorld)
         label = instance.fields["label"].label
         assert label == "true"
 
