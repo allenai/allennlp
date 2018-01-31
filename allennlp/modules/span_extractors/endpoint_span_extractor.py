@@ -31,30 +31,30 @@ class EndpointSpanExtractor(SpanExtractor):
     combination : str, optional (default = "x-y").
         The method used to combine the ``start_embedding`` and ``end_embedding``
         representations. See above for a full description.
-    num_width_buckets : ``int``, optional (default = None).
+    num_width_embeddings : ``int``, optional (default = None).
         Specifies the number of buckets to use when representing
         span width features.
     span_width_embedding_dim : ``int``, optional (default = None).
         The embedding size for the span_width features.
-    use_bucket_widths : ``int``, optional (default = False).
+    bucket_widths : ``bool``, optional (default = False).
         Whether to bucket the span widths into log-space buckets. If ``False``,
         the raw span widths are used.
     """
     def __init__(self,
                  input_dim: int,
                  combination: str = "x-y",
-                 num_width_buckets: int = None,
+                 num_width_embeddings: int = None,
                  span_width_embedding_dim: int = None,
-                 use_bucket_widths: bool = False) -> None:
+                 bucket_widths: bool = False) -> None:
         super().__init__()
         self._input_dim = input_dim
         self._combination = combination
-        self._num_width_buckets = num_width_buckets
-        self._use_bucket_widths = use_bucket_widths
+        self._num_width_embeddings = num_width_embeddings
+        self._bucket_widths = bucket_widths
 
-        if num_width_buckets is not None and span_width_embedding_dim is not None:
-            self._span_width_embedding = Embedding(num_width_buckets, span_width_embedding_dim)
-        elif not all([num_width_buckets is None, span_width_embedding_dim is None]):
+        if num_width_embeddings is not None and span_width_embedding_dim is not None:
+            self._span_width_embedding = Embedding(num_width_embeddings, span_width_embedding_dim)
+        elif not all([num_width_embeddings is None, span_width_embedding_dim is None]):
             raise ConfigurationError("To use a span width embedding representation, you must"
                                      "specify both num_width_buckets and span_width_embedding_dim.")
         else:
@@ -64,7 +64,10 @@ class EndpointSpanExtractor(SpanExtractor):
         return self._input_dim
 
     def get_output_dim(self) -> int:
-        return get_combined_dim(self._combination, [self._input_dim, self._input_dim])
+        combined_dim = get_combined_dim(self._combination, [self._input_dim, self._input_dim])
+        if self._span_width_embedding is not None:
+            return combined_dim + self._span_width_embedding.get_output_dim()
+        return combined_dim
 
     @overrides
     def forward(self, # pylint: disable=arguments-differ
@@ -78,9 +81,9 @@ class EndpointSpanExtractor(SpanExtractor):
         combined_tensors = combine_tensors(self._combination, [start_embeddings, end_embeddings])
         if self._span_width_embedding is not None:
             # Embed the span widths and concatenate to the rest of the representations.
-            if self._use_bucket_widths:
+            if self._bucket_widths:
                 span_widths = bucket_values(span_ends - span_starts,
-                                            num_total_buckets=self._num_width_buckets)
+                                            num_total_buckets=self._num_width_embeddings)
             else:
                 span_widths = span_ends - span_starts
 
@@ -93,10 +96,11 @@ class EndpointSpanExtractor(SpanExtractor):
     def from_params(cls, params: Params) -> "EndpointSpanExtractor":
         input_dim = params.pop_int("input_dim")
         combination = params.pop("combination", "x-y")
-        num_width_buckets = params.pop_int("num_width_buckets", None)
+        num_width_embeddings = params.pop_int("num_width_embeddings", None)
         span_width_embedding_dim = params.pop_int("span_width_embedding_dim", None)
-
+        bucket_widths = params.pop_bool("bucket_widths", False)
         return EndpointSpanExtractor(input_dim=input_dim,
                                      combination=combination,
-                                     num_width_buckets=num_width_buckets,
-                                     span_width_embedding_dim=span_width_embedding_dim)
+                                     num_width_embeddings=num_width_embeddings,
+                                     span_width_embedding_dim=span_width_embedding_dim,
+                                     bucket_widths=bucket_widths)
