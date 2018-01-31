@@ -15,3 +15,8 @@ allennlp.models.encoder_decoders
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.models.encoder_decoders.nlvr_semantic_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:

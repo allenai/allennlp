@@ -117,7 +117,7 @@ class ModelTestCase(AllenNlpTestCase):
                 self.assert_fields_equal(field1[key],
                                          field2[key],
                                          tolerance=tolerance,
-                                         name=name + '.' + key)
+                                         name=name + '.' + str(key))
         elif isinstance(field1, (list, tuple)):
             assert len(field1) == len(field2)
             for i, (subfield1, subfield2) in enumerate(zip(field1, field2)):
@@ -140,7 +140,7 @@ class ModelTestCase(AllenNlpTestCase):
                 assert parameter.grad is not None, f"Missing gradient for parameter {name}"
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
-                assert (parameter.grad.data.cpu() != zeros).any()
+                assert (parameter.grad.data.cpu() != zeros).any(), f"Zero grad for parameter {name}"
             else:
                 assert parameter.grad is None
 
