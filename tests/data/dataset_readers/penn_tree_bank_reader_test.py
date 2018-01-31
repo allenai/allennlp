@@ -17,10 +17,9 @@ class TestPennTreeBankReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
         ptb_reader = PennTreeBankDatasetReader()
-        dataset = ptb_reader.read('tests/fixtures/data/example_ptb.trees')
+        instances = ptb_reader.read('tests/fixtures/data/example_ptb.trees')
 
-        assert len(dataset.instances) == 2
-        instances = dataset.instances
+        assert len(instances) == 2
 
         fields = instances[0].fields
         tokens = [x.text for x in fields["tokens"].tokens]

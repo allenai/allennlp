@@ -10,9 +10,7 @@ from nltk.corpus.reader.bracket_parse import BracketParseCorpusReader # pylint: 
 from nltk.tree import Tree
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset import Dataset
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SpanField, SequenceLabelField, ListField, Field
@@ -39,10 +37,11 @@ class PennTreeBankDatasetReader(DatasetReader):
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super().__init__(lazy=False)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @overrides
-    def read(self, file_path):
+    def _read(self, file_path):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
@@ -51,14 +50,8 @@ class PennTreeBankDatasetReader(DatasetReader):
         logger.info("Reading instances from lines in file at: %s", file_path)
         parses: List[Tree] = BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents()
 
-        instances = []
         for parse in Tqdm.tqdm(parses):
-            instances.append(self.text_to_instance(parse.leaves(), [x[1] for x in parse.pos()], parse))
-
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return Dataset(instances)
+            yield self.text_to_instance(parse.leaves(), [x[1] for x in parse.pos()], parse)
 
     @overrides
     def text_to_instance(self, # pylint: disable=arguments-differ
