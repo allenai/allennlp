@@ -14,16 +14,32 @@ class TestBucketIterator(IteratorTest):
                                      [self.instances[0], self.instances[1]],
                                      [self.instances[3]]]
 
-    def test_biggest_batch_first_works(self):
+    def test_create_batches_groups_correctly_lazy(self):
+        # Because max_instances_in_memory is 3, we bucket the first three,
+        # yield the two batches, then bucket the next 2, and yield that batch.
+        # Since the original order was 4 -> 2 -> 0 -> 1 -> 3,
+        # we should get [2, 0] -> [1] -> [4, 3]
         iterator = BucketIterator(batch_size=2,
                                   padding_noise=0,
                                   sorting_keys=[('text', 'num_tokens')],
-                                  biggest_batch_first=True)
+                                  max_instances_in_memory=3)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
-        assert grouped_instances == [[self.instances[3]],
-                                     [self.instances[0], self.instances[1]],
-                                     [self.instances[4], self.instances[2]]]
+        assert grouped_instances == [[self.instances[2], self.instances[0]],
+                                     [self.instances[1]],
+                                     [self.instances[4], self.instances[3]]]
+
+    def test_biggest_batch_first_works(self):
+        for test_instances in [self.instances]:
+            iterator = BucketIterator(batch_size=2,
+                                      padding_noise=0,
+                                      sorting_keys=[('text', 'num_tokens')],
+                                      biggest_batch_first=True)
+            batches = list(iterator._create_batches(test_instances, shuffle=False))
+            grouped_instances = [batch.instances for batch in batches]
+            assert grouped_instances == [[self.instances[3]],
+                                         [self.instances[0], self.instances[1]],
+                                         [self.instances[4], self.instances[2]]]
 
     def test_from_params(self):
         # pylint: disable=protected-access
