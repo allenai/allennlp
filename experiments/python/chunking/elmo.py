@@ -111,7 +111,9 @@ def batch_to_ids(batch):
 
     dataset = Dataset(instances)
     vocab = Vocabulary()
-    dataset.index_instances(vocab)
+    for instance in dataset.instances:
+        instance.index_fields(vocab)
+    #dataset.index_instances(vocab)        #replaced by above, so there's no progress bar
     return dataset.as_tensor_dict()['elmo']['character_ids']
 
 def elmo_variable_from_sentence(sent):
