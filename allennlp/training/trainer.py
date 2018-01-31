@@ -227,7 +227,8 @@ class Trainer:
             # Update the description with the latest metrics
             metrics = self._get_metrics(train_loss, batch_num)
             description = self._description_from_metrics(metrics)
-            train_generator_tqdm.set_description(description)
+
+            train_generator_tqdm.set_description(description, refresh=False)
 
             # Log parameter values to Tensorboard
             batch_num_total = num_training_batches * epoch + batch_num
