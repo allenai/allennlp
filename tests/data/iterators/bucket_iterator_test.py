@@ -14,7 +14,7 @@ class TestBucketIterator(IteratorTest):
                                      [self.instances[0], self.instances[1]],
                                      [self.instances[3]]]
 
-    def test_create_batches_groups_correctly_lazy(self):
+    def test_create_batches_groups_correctly_with_max_instances(self):
         # Because max_instances_in_memory is 3, we bucket the first three,
         # yield the two batches, then bucket the next 2, and yield that batch.
         # Since the original order was 4 -> 2 -> 0 -> 1 -> 3,
@@ -23,11 +23,12 @@ class TestBucketIterator(IteratorTest):
                                   padding_noise=0,
                                   sorting_keys=[('text', 'num_tokens')],
                                   max_instances_in_memory=3)
-        batches = list(iterator._create_batches(self.instances, shuffle=False))
-        grouped_instances = [batch.instances for batch in batches]
-        assert grouped_instances == [[self.instances[2], self.instances[0]],
-                                     [self.instances[1]],
-                                     [self.instances[4], self.instances[3]]]
+        for test_instances in (self.instances, self.lazy_instances):
+            batches = list(iterator._create_batches(test_instances, shuffle=False))
+            grouped_instances = [batch.instances for batch in batches]
+            assert grouped_instances == [[self.instances[2], self.instances[0]],
+                                         [self.instances[1]],
+                                         [self.instances[4], self.instances[3]]]
 
     def test_biggest_batch_first_works(self):
         iterator = BucketIterator(batch_size=2,
