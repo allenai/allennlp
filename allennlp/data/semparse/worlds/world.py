@@ -1,4 +1,5 @@
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Tuple
+from collections import defaultdict
 import re
 
 from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
@@ -66,6 +67,7 @@ class World:
                                       "most three nested lambda expressions")
         self._logic_parser = types.DynamicTypeLogicParser(constant_type_prefixes=type_prefixes,
                                                           type_signatures=self.global_type_signatures)
+        self._right_side_indexed_actions: Dict[str, List[Tuple[str, str]]] = None
 
     def get_name_mapping(self) -> Dict[str, str]:
         # Python 3.5 syntax for merging two dictionaries.
@@ -82,6 +84,50 @@ class World:
                                        valid_starting_types=self.get_valid_starting_types(),
                                        num_nested_lambdas=self._num_nested_lambdas)
 
+    def get_paths_to_root(self,
+                          action: str,
+                          max_path_length: int = 20,
+                          beam_size: int = 30,
+                          max_num_paths: int = 10) -> List[List[str]]:
+        """
+        For a given action, returns at most ``max_num_paths`` paths to the root (production with
+        ``@START@``) that are not longer than ``max_path_length``.
+        """
+        action_left_side, _ = action.split(' -> ')
+        right_side_indexed_actions = self._get_right_side_indexed_actions()
+        lists_to_expand: List[Tuple[str, List[str]]] = [(action_left_side, [action])]
+        completed_paths = []
+        while lists_to_expand:
+            need_to_expand = False
+            for left_side, path in lists_to_expand:
+                if left_side == types.START_SYMBOL:
+                    completed_paths.append(path)
+                else:
+                    need_to_expand = True
+            if not need_to_expand or len(completed_paths) >= max_num_paths:
+                break
+            # We keep track of finished and unfinished lists separately because we truncate the beam
+            # later, and we want the finished lists to be at the top of the beam.
+            finished_new_lists = []
+            unfinished_new_lists = []
+            for left_side, actions in lists_to_expand:
+                for next_left_side, next_action in right_side_indexed_actions[left_side]:
+                    if next_action in actions:
+                        # Ignoring paths with loops (of size 1)
+                        continue
+                    new_actions = list(actions)
+                    new_actions.append(next_action)
+                    # Ignoring lists that are too long, and have too many repetitions.
+                    path_length = len(new_actions)
+                    if path_length <= max_path_length or next_left_side == types.START_SYMBOL:
+                        if next_left_side == types.START_SYMBOL:
+                            finished_new_lists.append((next_left_side, new_actions))
+                        else:
+                            unfinished_new_lists.append((next_left_side, new_actions))
+            new_lists = finished_new_lists + unfinished_new_lists
+            lists_to_expand = new_lists[:beam_size]
+        return completed_paths[:max_num_paths]
+
     def all_possible_actions(self) -> List[str]:
         all_actions = set()
         for action_set in self.get_valid_actions().values():
@@ -92,6 +138,21 @@ class World:
                 production = f"{basic_type} -> {lambda_var}"
                 all_actions.add(production)
         return sorted(all_actions)
+
+    def _get_right_side_indexed_actions(self):
+        if not self._right_side_indexed_actions:
+            self._right_side_indexed_actions = defaultdict(list)
+            all_actions = self.all_possible_actions()
+            for possible_action in all_actions:
+                left_side, right_side = possible_action.split(' -> ')
+                if '[' not in right_side:
+                    self._right_side_indexed_actions[right_side].append((left_side, possible_action))
+                else:
+                    right_side_parts = right_side[1:-1].split(', ')
+                    for right_side_part in right_side_parts:
+                        self._right_side_indexed_actions[right_side_part].append((left_side,
+                                                                                  possible_action))
+        return self._right_side_indexed_actions
 
     def get_basic_types(self) -> Set[Type]:
         """
