@@ -1,11 +1,12 @@
 
 from collections import OrderedDict
-from typing import Dict, List, Tuple
+from typing import Dict, List
 import logging
 import os
 
 from overrides import overrides
-from nltk.corpus.reader.bracket_parse import BracketParseCorpusReader
+# NLTK is so performance orientated (ha ha) that they have lazy imports. Why? Who knows.
+from nltk.corpus.reader.bracket_parse import BracketParseCorpusReader # pylint: disable=no-name-in-module
 from nltk.tree import Tree
 
 from allennlp.common import Params
@@ -60,7 +61,7 @@ class PennTreeBankDatasetReader(DatasetReader):
         return Dataset(instances)
 
     @overrides
-    def text_to_instance(self,
+    def text_to_instance(self, # pylint: disable=arguments-differ
                          tokens: List[str],
                          pos_tags: List[str],
                          gold_tree: Tree = None) -> Instance:  # type: ignore
@@ -94,7 +95,7 @@ class PennTreeBankDatasetReader(DatasetReader):
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
         pos_tag_field = SequenceLabelField(pos_tags, text_field, "pos_tags")
         fields = {"tokens": text_field, "pos_tags": pos_tag_field}
-        spans : List[Field]= []
+        spans: List[Field] = []
         gold_labels = []
 
         if gold_tree is not None:
