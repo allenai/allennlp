@@ -14,7 +14,7 @@ class TestEndpointSpanExtractor:
                 "input_dim": 7,
                 "num_width_buckets": 5,
                 "span_width_embedding_dim": 3
-            })
+                })
         extractor = SpanExtractor.from_params(params)
         assert isinstance(extractor, EndpointSpanExtractor)
         assert extractor.get_output_dim() == 10
