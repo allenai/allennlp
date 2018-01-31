@@ -302,11 +302,10 @@ class Trainer:
         replicas = replicate(self._model, used_device_ids)
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
     
-        # need to gather each element of dict separately
-        # Only the 'loss' is needed
+        # Only the 'loss' is needed.
         # a (num_gpu, ) tensor with loss on each GPU
         losses = gather([output['loss'] for output in outputs], used_device_ids[0], 0)
-        return {'loss': losses.sum()}
+        return {'loss': losses.mean()}
 
     def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
         """
