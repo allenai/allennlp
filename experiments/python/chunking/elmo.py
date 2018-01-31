@@ -20,29 +20,38 @@ elmo_bilm = _ElmoBiLm(options_file, weight_file)
 
 indexer = ELMoTokenCharactersIndexer()
 
-__all__ = ['elmo_bilm', 'embed_sentence', 'ElmoEmbedder', 'variablesFromPairElmo']
+__all__ = ['elmo_bilm', 'embed_sentence', 'ElmoEmbedder', 'variablesFromPairElmo', 'elmo_variable_from_sentence']
 
 class ElmoEmbedder(Module):
     def __init__(self, elmo_bilm, special_tokens, device):
         super(ElmoEmbedder, self).__init__()
         self.elmo_bilm = elmo_bilm
+        self.device = device
         self.special_tokens = special_tokens
         self.elmo_id_to_special_token = {tuple(token_to_elmo_id(tok).view(-1).data): tok_id for (tok_id, tok) in enumerate(special_tokens)}
         self.special_token_to_id = {tok: i for (i, tok) in enumerate(special_tokens)}
         self.dimension = len(special_tokens) + 1024
-        self.device = device
-
+        self.cached_embedding = (-1, None)
+        
     def forward(self, input, token_index):
+        input_code = tuple([tuple(input[0][i].data) for i in range(input.shape[1])])
         token_code = tuple(input[0][token_index].data)
         if token_code in self.elmo_id_to_special_token:
             tok_id = self.elmo_id_to_special_token[token_code]
             return Variable(torch.from_numpy(np.eye(self.dimension)[tok_id]).float())
-        else:
-            embedded = embed_numerical_sent(input, elmo_bilm, self.device)  
+        elif input_code == self.cached_embedding[0]:
+            embedded = self.cached_embedding[1]
             result = torch.cat([Variable(torch.from_numpy(np.zeros(len(self.special_tokens))).float()), 
                                 Variable(embedded[token_index])])            
             return result
-        
+
+        else:
+            embedded = embed_numerical_sent(input, elmo_bilm, self.device) 
+            self.cached_embedding = (input_code, embedded)
+            result = torch.cat([Variable(torch.from_numpy(np.zeros(len(self.special_tokens))).float()), 
+                                Variable(embedded[token_index])])            
+            return result
+
 def character_ids_to_embeddings(character_ids, elmo_bilm, device):
     # returns (batch_size, 3, num_times, 1024) embeddings and (batch_size, num_times) mask
     if device >= 0:

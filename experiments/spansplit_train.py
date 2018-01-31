@@ -25,7 +25,7 @@ def main(argv):
 
     trainItersElmo(encoder1, attn_decoder1, input_lang, output_lang, 15, pairs, pairs_dev, max_length, print_every=5)
     print("*** done training ***")
-    print(validate(encoder1, attn_decoder1, input_lang, output_lang, pairs_dev, max_length, 4813))
+    print(validate(encoder1, attn_decoder1, output_lang, pairs_dev, max_length, 4813))
     torch.save(encoder1, 'encoder.final.pt')
     torch.save(attn_decoder1, 'decoder.final.pt')
     

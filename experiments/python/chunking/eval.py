@@ -5,6 +5,7 @@ import codecs
 import random
 from chunking.data import variableFromSentence
 from torch.autograd import Variable
+from chunking.elmo import elmo_variable_from_sentence
 
 
 __all__ = ['validate', 'evaluate', 'NeuralChunker']
@@ -26,15 +27,16 @@ class NeuralChunker:
         return evaluate(self.encoder, self.decoder, self.input_lang, self.output_lang, input_sent, self.max_length)[0]
 
 
-def evaluate(encoder, decoder, input_lang, output_lang, sentence, max_length):
-    input_variable = variableFromSentence(input_lang, sentence)
-    input_length = input_variable.size()[0]
+def evaluate(encoder, decoder, output_lang, sentence, max_length):
+    input_variable = elmo_variable_from_sentence(sentence)
     encoder_hidden = encoder.initHidden()
     encoder_outputs = Variable(torch.zeros(max_length, encoder.hidden_size))
     encoder_outputs = encoder_outputs.cuda() if use_cuda else encoder_outputs
+    input_length = input_variable.size()[1]
     for ei in range(input_length):
-        encoder_output, encoder_hidden = encoder(input_variable[ei],
-                                                 encoder_hidden)
+        encoder_output, encoder_hidden = encoder(
+            input_variable, ei, encoder_hidden)
+        #encoder_outputs[ei] = encoder_output[0][0]
         encoder_outputs[ei] = encoder_outputs[ei] + encoder_output[0][0]
     decoder_input = Variable(torch.LongTensor([[SOS_token]]))  # SOS
     decoder_input = decoder_input.cuda() if use_cuda else decoder_input
@@ -183,11 +185,11 @@ def evaluateSents(encoder, decoder, input_lang, output_lang, sent_pairs, max_len
             still_correct = True
     return float(num_correct)/num_sents
 
-def validate(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, num_to_eval=100):
+def validate(encoder, decoder, output_lang, sent_pairs, max_length, num_to_eval=100):
     num_correct = 0
     for pair in sent_pairs[:num_to_eval]:
         try:
-            output_words, attentions = evaluate(encoder, decoder, input_lang, output_lang, pair[0], max_length)        
+            output_words, attentions = evaluate(encoder, decoder, output_lang, pair[0], max_length)        
             output_sentence = ' '.join(output_words[:-1])
             if pair[1] == output_sentence:
                 num_correct += 1
@@ -197,12 +199,12 @@ def validate(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, 
     accuracy = float(num_correct)/num_to_eval
     return accuracy
 
-def validateRandomSubset(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, num_to_eval=100):
+def validateRandomSubset(encoder, decoder, output_lang, sent_pairs, max_length, num_to_eval=100):
     num_correct = 0
     for i in range(num_to_eval):
         pair = random.choice(sent_pairs)
         try:
-            output_words, attentions = evaluate(encoder, decoder, input_lang, output_lang, pair[0], max_length)        
+            output_words, attentions = evaluate(encoder, decoder, output_lang, pair[0], max_length)        
             output_sentence = ' '.join(output_words[:-1])
             if pair[1] == output_sentence:
                 num_correct += 1
@@ -212,12 +214,12 @@ def validateRandomSubset(encoder, decoder, input_lang, output_lang, sent_pairs, 
     accuracy = float(num_correct)/num_to_eval
     return accuracy
 
-def evaluateRandomly(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, n=10):
+def evaluateRandomly(encoder, decoder, output_lang, sent_pairs, max_length, n=10):
     for i in range(n):
         pair = random.choice(sent_pairs)
         print('>', pair[0])
         print('=', pair[1])
-        output_words, attentions = evaluate(encoder, decoder, input_lang, output_lang, pair[0], max_length)
+        output_words, attentions = evaluate(encoder, decoder, output_lang, pair[0], max_length)
         output_sentence = ' '.join(output_words[:-1])
         print('<', output_sentence)
         print('')
