@@ -100,14 +100,17 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         action_sequence = nlvr_world.get_action_sequence(parsed_logical_form)
         reconstructed_logical_form = nlvr_world.get_logical_form(action_sequence)
         parsed_reconstructed_logical_form = nlvr_world.parse_logical_form(reconstructed_logical_form)
-        # It makes more sense to compare parsed logical forms instead of actual logical forms.
+        # It makes more sense to compare parsed logical forms instead of actual logical forms
+        # because there can be slight differences between the actual logical form strings, like
+        # extra set of parentheses or spaces, which neither the type inference logic nor the
+        # executor cares about. So the test shouldn't either.
         assert parsed_logical_form == parsed_reconstructed_logical_form
         assert nlvr_world.execute(logical_form) == nlvr_world.execute(reconstructed_logical_form)
+
         logical_form = "(assert_equals (color (circle (touch_wall (all_objects)))) color_black)"
         parsed_logical_form = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(parsed_logical_form)
         reconstructed_logical_form = nlvr_world.get_logical_form(action_sequence)
-        print(reconstructed_logical_form)
         parsed_reconstructed_logical_form = nlvr_world.parse_logical_form(reconstructed_logical_form)
         assert parsed_logical_form == parsed_reconstructed_logical_form
         assert nlvr_world.execute(logical_form) == nlvr_world.execute(reconstructed_logical_form)

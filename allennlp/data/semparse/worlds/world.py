@@ -158,7 +158,7 @@ class World:
         if not "<" in type_signature:
             return 0
         # We need to find the return type from the signature. We do that by removing the outer most
-        # angular brackets and travering the remaining substring till the angular brackets (if any)
+        # angular brackets and traversing the remaining substring till the angular brackets (if any)
         # balance. Once we hit a comma after the angular brackets are balanced, whatever is left
         # after it is the return type.
         type_signature = type_signature[1:-1]

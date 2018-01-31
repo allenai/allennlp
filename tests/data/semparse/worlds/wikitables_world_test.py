@@ -102,9 +102,9 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                        "(number 1) (fb:row.row.league fb:cell.usl_a_league) (reverse (lambda x "
                        "((reverse fb:row.row.index) (var x)))))))")
         expression = self.world.parse_logical_form(sempre_form)
-        actions_with_var = self.world.get_action_sequence(expression)
-        assert '<#1,#1> -> var' not in actions_with_var
-        assert 'r -> x' in actions_with_var
+        actions_without_var = self.world.get_action_sequence(expression)
+        assert '<#1,#1> -> var' not in actions_without_var
+        assert 'r -> x' in actions_without_var
 
     @pytest.mark.skip(reason="fibonacci recursion currently going on here")
     def test_with_deeply_nested_logical_form(self):

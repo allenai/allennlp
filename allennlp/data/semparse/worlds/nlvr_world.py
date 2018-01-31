@@ -150,24 +150,24 @@ class NlvrWorld(World):
         # figure out a way to deal with it cleanly, this should go in ``World``.
         split_actions = [action.split(" -> ") for action in action_sequence]
         terminals: List[Tuple[str, int]] = []  # terminal name and the number of arguments it takes
-        for lhs, rhs in split_actions:
-            rhs_is_number = False
+        for left_side, right_side in split_actions:
+            right_side_is_number = False
             try:
-                float(rhs)
-                rhs_is_number = True
+                float(right_side)
+                right_side_is_number = True
             except ValueError:
                 pass
-            if '[' in rhs:
-                if 'lambda ' in rhs:
+            if '[' in right_side:
+                if 'lambda ' in right_side:
                     # "lambda x/y/...". Removing single quotes surrounding the string.
-                    terminals.append((rhs[1:-1].split(', ')[0].replace("'", ""),
-                                      self._infer_num_arguments(lhs)))
-            elif len(rhs) > 1 or rhs in ['x', 'y', 'z'] or rhs_is_number:
-                if rhs == "var" and add_var_function:
+                    terminals.append((right_side[1:-1].split(', ')[0].replace("'", ""),
+                                      self._infer_num_arguments(left_side)))
+            elif len(right_side) > 1 or right_side in ['x', 'y', 'z'] or right_side_is_number:
+                if right_side == "var" and add_var_function:
                     raise RuntimeError("You wanted to add var, but you didn't need to!")
-                if rhs in ['x', 'y', 'z'] and add_var_function:
-                    rhs = f"(var {rhs})"
-                terminals.append((rhs, self._infer_num_arguments(lhs)))
+                if right_side in ['x', 'y', 'z'] and add_var_function:
+                    right_side = f"(var {right_side})"
+                terminals.append((right_side, self._infer_num_arguments(left_side)))
         partial_logical_forms = []
         for terminal, num_args in reversed(terminals):
             if num_args == 0:
