@@ -5,10 +5,11 @@
 
 import argparse
 
-from subprocess import run
-from subprocess import CalledProcessError
 import os
 import shutil
+from subprocess import run
+from subprocess import CalledProcessError
+import sys
 
 def main(checks):
     try:
@@ -37,7 +38,7 @@ def main(checks):
 
     except CalledProcessError:
         # squelch
-        pass
+        sys.exit(1)
 
 if __name__ == "__main__":
     checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs']
