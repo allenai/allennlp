@@ -194,7 +194,7 @@ add_common_name_with_type("big", "Z2", OBJECT_FILTER_TYPE)
 add_common_name_with_type("negate_filter", "N", NEGATE_FILTER_TYPE)
 
 # Adding numbers because they commonly occur in utterances. They're usually between 1 and 9. Since
-# they're not too many of these productions, we're adding them to the global mapping instead of a
+# there are not too many of these productions, we're adding them to the global mapping instead of a
 # local mapping in each world.
 for num in range(1, 10):
     num_string = str(num)
