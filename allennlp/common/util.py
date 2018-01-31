@@ -3,7 +3,9 @@ Various utilities that don't fit anwhere else.
 """
 
 from itertools import zip_longest
-from typing import Any, Callable, Dict, List, Tuple, TypeVar
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable
+import importlib
+import pkgutil
 import random
 import resource
 import sys
@@ -187,6 +189,22 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
 
+def import_submodules(package_name: str) -> None:
+    """
+    Import all submodules under the given package.
+    Primarily useful so that people using AllenNLP as a library
+    can specify their own custom packages and have their custom
+    classes get loaded and registered.
+    """
+    importlib.invalidate_caches()
+
+    module = importlib.import_module(package_name)
+    path = getattr(module, '__path__', '')
+
+    for _, name, _ in pkgutil.walk_packages(path):
+        importlib.import_module(package_name + '.' + name)
+
+
 def peak_memory_mb() -> float:
     """
     Get peak memory usage for this process, as measured by
@@ -211,3 +229,13 @@ def peak_memory_mb() -> float:
     else:
         # On Linux the result is in kilobytes.
         return peak / 1_000
+
+def ensure_list(iterable: Iterable[A]) -> List[A]:
+    """
+    An Iterable may be a list or a generator.
+    This ensures we get a list without making an unnecessary copy.
+    """
+    if isinstance(iterable, list):
+        return iterable
+    else:
+        return list(iterable)
