@@ -54,7 +54,8 @@ class TestAdaptiveIterator(IteratorTest):
 
         param_dict = {
                 "adaptive_memory_usage_constant": 10,
-                "padding_memory_scaling": lambda x: 2.4
+                "padding_memory_scaling": lambda x: 2.4,
+                "sorting_keys": ["tokens"]
         }
 
         iterator = AdaptiveIterator.from_params(Params(param_dict))
