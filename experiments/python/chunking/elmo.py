@@ -22,6 +22,9 @@ indexer = ELMoTokenCharactersIndexer()
 
 __all__ = ['elmo_bilm', 'embed_sentence', 'ElmoEmbedder', 'variablesFromPairElmo', 'elmo_variable_from_sentence']
 
+use_cuda = torch.cuda.is_available()
+
+
 class ElmoEmbedder(Module):
     def __init__(self, elmo_bilm, special_tokens, device):
         super(ElmoEmbedder, self).__init__()
@@ -38,20 +41,21 @@ class ElmoEmbedder(Module):
         token_code = tuple(input[0][token_index].data)
         if token_code in self.elmo_id_to_special_token:
             tok_id = self.elmo_id_to_special_token[token_code]
-            return Variable(torch.from_numpy(np.eye(self.dimension)[tok_id]).float())
+            result = Variable(torch.from_numpy(np.eye(self.dimension)[tok_id]).float())
         elif input_code == self.cached_embedding[0]:
             embedded = self.cached_embedding[1]
             result = torch.cat([Variable(torch.from_numpy(np.zeros(len(self.special_tokens))).float()), 
                                 Variable(embedded[token_index])])            
-            return result
-
         else:
             embedded = embed_numerical_sent(input, elmo_bilm, self.device) 
             self.cached_embedding = (input_code, embedded)
             result = torch.cat([Variable(torch.from_numpy(np.zeros(len(self.special_tokens))).float()), 
-                                Variable(embedded[token_index])])            
+                                Variable(embedded[token_index])])
+        if use_cuda:
+            return result.cuda()
+        else:
             return result
-
+ 
 def character_ids_to_embeddings(character_ids, elmo_bilm, device):
     # returns (batch_size, 3, num_times, 1024) embeddings and (batch_size, num_times) mask
     if device >= 0:

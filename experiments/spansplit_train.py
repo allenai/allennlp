@@ -13,7 +13,7 @@ def main(argv):
     input_lang, output_lang, pairs, pairs_dev, max_length = initializeData('data/qbank.labeled.elmo.train.txt', 'data/qbank.labeled.elmo.dev.txt')  
       
     hidden_size = 1029
-    encoder1 = EncoderRNNElmo(hidden_size, device=-1, n_layers = 3) #change for cuda
+    encoder1 = EncoderRNNElmo(hidden_size, device=0, n_layers = 2) #change for cuda
     attn_decoder1 = AttnDecoderRNN(hidden_size, output_lang.n_words, max_length,
                                1, dropout_p=0.1)
 
