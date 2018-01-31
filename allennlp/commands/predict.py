@@ -28,6 +28,7 @@ from typing import Optional, IO, Dict
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import import_submodules
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
@@ -73,17 +74,32 @@ class Predict(Subcommand):
                                default="",
                                help='a HOCON structure used to override the experiment configuration')
 
+        subparser.add_argument('--include-package',
+                               type=str,
+                               action='append',
+                               default=[],
+                               help='additional packages to include')
+
+        subparser.add_argument('--predictor',
+                               type=str,
+                               help='optionally specify a specific predictor to use')
+
         subparser.set_defaults(func=_predict(self.predictors))
 
         return subparser
 
 def _get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Predictor:
     archive = load_archive(args.archive_file, cuda_device=args.cuda_device, overrides=args.overrides)
+
+    if args.predictor:
+        # Predictor explicitly specified, so use it
+        return Predictor.from_archive(archive, args.predictor)
+
+    # Otherwise, use the mapping
     model_type = archive.config.get("model").get("type")
     if model_type not in predictors:
         raise ConfigurationError("no known predictor for model type {}".format(model_type))
-    predictor = Predictor.from_archive(archive, predictors[model_type])
-    return predictor
+    return Predictor.from_archive(archive, predictors[model_type])
 
 def _run(predictor: Predictor,
          input_file: IO,
@@ -127,6 +143,10 @@ def _run(predictor: Predictor,
 
 def _predict(predictors: Dict[str, str]):
     def predict_inner(args: argparse.Namespace) -> None:
+        # Import any additional modules needed (to register custom classes)
+        for package_name in args.include_package:
+            import_submodules(package_name)
+
         predictor = _get_predictor(args, predictors)
         output_file = None
 

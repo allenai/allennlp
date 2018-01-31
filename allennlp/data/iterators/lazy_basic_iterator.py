@@ -6,13 +6,13 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.data.dataset import LazyDataset, Dataset
+from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 @DataIterator.register("lazy-basic")
-class LazyBasicIterator(DataIterator[LazyDataset]):
+class LazyBasicIterator(DataIterator):
     """
     A very basic lazy iterator, which takes a dataset and yields fixed size batches.
     Each batch is padded to the maximum length within that batch.
@@ -34,10 +34,10 @@ class LazyBasicIterator(DataIterator[LazyDataset]):
 
         # As you might use this iterator with multiple datasets,
         # you need to store a cursor for each one.
-        self._cursors: Dict[LazyDataset, Iterator[Instance]] = {}
+        self._cursors: Dict[Iterable[Instance], Iterator[Instance]] = {}
 
     @overrides
-    def get_num_batches(self, _: LazyDataset) -> int:
+    def get_num_batches(self, _: Iterable[Instance]) -> int:
         # pylint: disable=no-self-use
         # TODO(joelgrus): Figure out the right way to handle this when `instances_per_epoch`
         #   is not provided. This is definitely not right, but currently this is only used for tqdm,
@@ -45,13 +45,13 @@ class LazyBasicIterator(DataIterator[LazyDataset]):
         #   will show as a count rather than as a progress bar.
         return self._instances_per_epoch // self._batch_size if self._instances_per_epoch else 1
 
-    def _take_instances(self, dataset: LazyDataset, max_instances: int) -> Iterator[Instance]:
+    def _take_instances(self, instances: Iterable[Instance], max_instances: int) -> Iterator[Instance]:
         """
         Take the next `max_instances` instances from the given dataset.
         If you get to the end of the dataset, start again from the beginning.
         """
         # If we don't have a cursor for this dataset, create one.
-        iterator = self._cursors.get(dataset, iter(dataset))
+        iterator = self._cursors.get(instances, iter(instances))
 
         while max_instances > 0:
             try:
@@ -61,22 +61,22 @@ class LazyBasicIterator(DataIterator[LazyDataset]):
                 max_instances -= 1
             except StopIteration:
                 # None left, so start over again at the beginning of the dataset.
-                iterator = iter(dataset)
+                iterator = iter(instances)
 
         # We may have a new iterator, so update the cursor.
-        self._cursors[dataset] = iterator
+        self._cursors[instances] = iterator
 
     @overrides
-    def _create_batches(self, dataset: LazyDataset, shuffle: bool) -> Iterable[Dataset]:
+    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         if shuffle:
             # TODO(joelgrus): figure out how to configure this and then raise ConfigurationError
             logger.warning("cannot shuffle a lazy dataset")
 
         # Get an iterator for the next epoch
         if self._instances_per_epoch is None:
-            iterator = iter(dataset)
+            iterator = iter(instances)
         else:
-            iterator = self._take_instances(dataset, self._instances_per_epoch)
+            iterator = self._take_instances(instances, self._instances_per_epoch)
 
         # Create batches. This usage of `iter` calls the provided function repeatedly,
         # yielding the resulting values until it reaches the provided sentinel.
@@ -86,7 +86,7 @@ class LazyBasicIterator(DataIterator[LazyDataset]):
                 lambda: list(itertools.islice(iterator, 0, self._batch_size)),
                 [])
 
-        return (Dataset(batch) for batch in batches)
+        return (Batch(batch) for batch in batches)
 
     @classmethod
     def from_params(cls, params: Params) -> 'LazyBasicIterator':
