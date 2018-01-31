@@ -283,8 +283,8 @@ def trainItersElmo(encoder, decoder, input_lang, output_lang, n_iters, sent_pair
             torch.save(decoder, 'decoder2.{}.pt'.format(iter))
 
         if iter % print_every == 0:
-            print('train accuracy: {}'.format(validateRandomSubset(encoder, decoder, output_lang, sent_pairs, max_length, 10)))
-            print('dev accuracy: {}'.format(validateRandomSubset(encoder, decoder, output_lang, sent_pairs_dev, max_length, 10)))
+            print('train accuracy: {}'.format(validateRandomSubset(encoder, decoder, output_lang, sent_pairs, max_length, 100)))
+            print('dev accuracy: {}'.format(validateRandomSubset(encoder, decoder, output_lang, sent_pairs_dev, max_length, 100)))
             evaluateRandomly(encoder, decoder, output_lang, sent_pairs, max_length, 3)
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
