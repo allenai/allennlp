@@ -3,6 +3,7 @@ import os
 import pathlib
 import sys
 
+import pytest
 import torch
 
 from allennlp.common import util
@@ -12,6 +13,15 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestCommonUtils(AllenNlpTestCase):
     def test_group_by_count(self):
         assert util.group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 20) == [[1, 2, 3], [4, 5, 6], [7, 20, 20]]
+
+    def test_lazy_groups_of(self):
+        xs = [1, 2, 3, 4, 5, 6, 7]
+        groups = util.lazy_groups_of(iter(xs), group_size=3)
+        assert next(groups) == [1, 2, 3]
+        assert next(groups) == [4, 5, 6]
+        assert next(groups) == [7]
+        with pytest.raises(StopIteration):
+            _ = next(groups)
 
     def test_pad_sequence_to_length(self):
         assert util.pad_sequence_to_length([1, 2, 3], 5) == [1, 2, 3, 0, 0]
