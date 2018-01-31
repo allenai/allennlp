@@ -9,14 +9,14 @@ from allennlp.nn.util import batched_index_select
 
 class TestEndpointSpanExtractor:
     def test_endpoint_span_extractor_can_build_from_params(self):
-        params = Params({"type": "endpoint"})
+        params = Params({"type": "endpoint", "input_dim": 7})
         extractor = SpanExtractor.from_params(params)
         assert isinstance(extractor, EndpointSpanExtractor)
 
     def test_correct_sequence_elements_are_embedded(self):
         sequence_tensor = Variable(torch.randn([2, 5, 7]))
         # concatentate start and end points together to form our representation.
-        extractor = EndpointSpanExtractor("x,y")
+        extractor = EndpointSpanExtractor(7, "x,y")
 
         indices = Variable(torch.LongTensor([[[1, 3],
                                               [2, 4]],
@@ -25,6 +25,8 @@ class TestEndpointSpanExtractor:
         span_representations = extractor(sequence_tensor, indices)
 
         assert list(span_representations.size()) == [2, 2, 14]
+        assert extractor.get_output_dim() == 14
+        assert extractor.get_input_dim() == 7
 
         start_indices, end_indices = indices.split(1, -1)
         # We just concatenated the start and end embeddings together, so

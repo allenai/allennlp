@@ -6,25 +6,25 @@ from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 
-@SpanExtractor.register("locally_normalised")
-class LocallyNormalisedSpanExtractor(SpanExtractor):
+@SpanExtractor.register("self_attentive")
+class SelfAttentiveSpanExtractor(SpanExtractor):
     """
     Computes span representations by generating an unnormalized attention score for each
-    word in the document, compute distributions over every span with respect to these
+    word in the document. Spans representations are computed with respect to these
     scores by normalising the attention scores for words inside the span.
 
-    Given these attention distributions over every span, weight the corresponding vector
-    representations of the words in the span by this distribution, returning a weighted
-    representation of each span.
+    Given these attention distributions over every span, this module weights the
+    corresponding vector representations of the words in the span by this distribution,
+    returning a weighted representation of each span.
 
     Parameters
     ----------
     input_dim : ``int``, required.
-        The last dimension of the sequence representations.
+        The final dimension of the ``sequence_tensor``.
 
     Returns
     -------
-    attended_text_embeddings : ``torch.FloatTensor``
+    attended_text_embeddings : ``torch.FloatTensor``.
         A tensor of shape (batch_size, num_spans, input_dim), which each span representation
         is formed by locally normalising a global attention over the sequence. The only way
         in which the attention distribution differs over different spans is in the set of words
@@ -33,7 +33,14 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
     def __init__(self,
                  input_dim: int) -> None:
         super().__init__()
+        self._input_dim = input_dim
         self._global_attention = TimeDistributed(torch.nn.Linear(input_dim, 1))
+
+    def get_input_dim(self) -> int:
+        return self._input_dim
+
+    def get_output_dim(self) -> int:
+        return self._input_dim
 
     @overrides
     def forward(self, # pylint: disable=arguments-differ
@@ -43,6 +50,7 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
         span_starts, span_ends = indicies.split(1, dim=-1)
 
         # shape (batch_size, num_spans, 1)
+        # These span widths are off by 1, because the span ends are `inclusive`.
         span_widths = span_ends - span_starts
 
         # We need to know the maximum span width so we can
@@ -62,11 +70,16 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
         # This is a broadcasted comparison - for each span we are considering,
         # we are creating a range vector of size max_span_width, but masking values
         # which are greater than the actual length of the span.
+        #
+        # We're using <= here (and for the mask below) because the span ends are
+        # inclusive, so we want to include indices which are equal to span_widths rather
+        # than using it as a non-inclusive upper bound.
+        # TODO(Mark): Make this class able to take inclusive or exclusive end indices.
         span_mask = (max_span_range_indices <= span_widths).float()
         raw_span_indices = span_ends - max_span_range_indices
         # We also don't want to include span indices which are less than zero,
         # which happens because some spans near the beginning of the sequence
-        # are of a smaller width than max_batch_span_width, so we add this to the mask here.
+        # have an end index < max_batch_span_width, so we add this to the mask here.
         span_mask = span_mask * (raw_span_indices >= 0).float()
         span_indices = torch.nn.functional.relu(raw_span_indices.float()).long()
 
@@ -91,6 +104,6 @@ class LocallyNormalisedSpanExtractor(SpanExtractor):
         return attended_text_embeddings
 
     @classmethod
-    def from_params(cls, params: Params) -> "LocallyNormalisedSpanExtractor":
+    def from_params(cls, params: Params) -> "SelfAttentiveSpanExtractor":
         input_dim = params.pop_int("input_dim")
-        return LocallyNormalisedSpanExtractor(input_dim=input_dim)
+        return SelfAttentiveSpanExtractor(input_dim=input_dim)

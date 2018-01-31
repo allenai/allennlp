@@ -8,10 +8,14 @@ from allennlp.common.params import Params
 class SpanExtractor(torch.nn.Module, Registrable):
     """
     Many NLP models deal with representations of spans inside a sentence.
-    SpanExtractor's define methods for extracting and representing spans
+    SpanExtractors define methods for extracting and representing spans
     from a sentence.
-    """
 
+    SpanExtractors take a sequence tensor of shape (batch_size, timetsteps, embedding_dim)
+    and indices of shape (batch_size, num_spans, 2) and return a tensor of
+    shape (batch_size, num_spans, ...), forming some representation of the
+    spans.
+    """
     @overrides
     def forward(self, # pylint: disable=arguments-differ
                 sequence_tensor: torch.FloatTensor,
@@ -20,7 +24,7 @@ class SpanExtractor(torch.nn.Module, Registrable):
         Given a sequence tensor, extract spans and return representations of
         them. Span representation can be computed in many different ways,
         such as concatenation of the start and end spans, attention over the
-        vectors contained inside the span etc.
+        vectors contained inside the span, etc.
 
         Parameters
         ----------
@@ -38,6 +42,19 @@ class SpanExtractor(torch.nn.Module, Registrable):
         where ``embedded_span_size`` depends on the way spans are represented.
         """
         raise NotImplementedError
+
+    def get_input_dim(self) -> int:
+        """
+        Returns the expected final dimension of the ``sequence_tensor``.
+        """
+        raise NotImplementedError
+    
+    def get_output_dim(self) -> int:
+        """
+        Returns the expected final dimension of the returned span representation.
+        """
+        raise NotImplementedError
+
 
     @classmethod
     def from_params(cls, params: Params) -> "SpanExtractor":

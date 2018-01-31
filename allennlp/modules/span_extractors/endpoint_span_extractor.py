@@ -5,13 +5,14 @@ from overrides import overrides
 from allennlp.common.params import Params
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.token_embedders.embedding import Embedding
-from allennlp.nn.util import batched_index_select, combine_tensors
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.nn.util import batched_index_select, combine_tensors, bucket_values, get_combined_dim
+from allennlp.common.checks import ConfigurationError
+
 
 @SpanExtractor.register("endpoint")
 class EndpointSpanExtractor(SpanExtractor):
     """
-    Represents spans as a function of the embeddings of their endpoints. Additionally,
+    Represents spans as a combination of the embeddings of their endpoints. Additionally,
     the width of the spans can be embedded and concatenated on to the final combination.
 
     The following types of representation are supported, assuming that
@@ -25,19 +26,45 @@ class EndpointSpanExtractor(SpanExtractor):
 
     Parameters
     ----------
+    input_dim : ``int``, required.
+        The final dimension of the ``sequence_tensor``.
     combination : str, optional (default = "x-y").
         The method used to combine the ``start_embedding`` and ``end_embedding``
         representations. See above for a full description.
-    span_width_embedding : ``Embedding``, optional (default = None).
-        If passed, an embedded span width feature is concatenated onto
-        the final span representation.
+    num_width_buckets : ``int``, optional (default = None).
+        Specifies the number of buckets to use when representing
+        span width features.
+    span_width_embedding_dim : ``int``, optional (default = None).
+        The embedding size for the span_width features.
+    use_bucket_widths : ``int``, optional (default = False).
+        Whether to bucket the span widths into log-space buckets. If ``False``,
+        the raw span widths are used.
     """
     def __init__(self,
+                 input_dim : int,
                  combination: str = "x-y",
-                 span_width_embedding: Embedding = None) -> None:
+                 num_width_buckets: int = None,
+                 span_width_embedding_dim: int = None,
+                 use_bucket_widths: bool = False) -> None:
         super().__init__()
+        self._input_dim = input_dim
         self._combination = combination
-        self._span_width_embedding = span_width_embedding
+        self._num_width_buckets = num_width_buckets
+        self._use_bucket_widths = use_bucket_widths
+
+        if num_width_buckets is not None and span_width_embedding_dim is not None:
+            self._span_width_embedding = Embedding(num_width_buckets, span_width_embedding_dim)
+        elif not all([num_width_buckets is None, span_width_embedding_dim is None]):
+            raise ConfigurationError("To use a span width embedding representation, you must"
+                                     "specify both num_width_buckets and span_width_embedding_dim.")
+        else:
+            self._span_width_embedding = None
+
+    def get_input_dim(self) -> int:
+        return self._input_dim
+
+    def get_output_dim(self) -> int:
+        return get_combined_dim(self._combination, [self._input_dim, self._input_dim])
 
     @overrides
     def forward(self, # pylint: disable=arguments-differ
@@ -51,22 +78,25 @@ class EndpointSpanExtractor(SpanExtractor):
         combined_tensors = combine_tensors(self._combination, [start_embeddings, end_embeddings])
         if self._span_width_embedding is not None:
             # Embed the span widths and concatenate to the rest of the representations.
-            span_width_embeddings = self._span_width_embedding(span_ends - span_starts)
+            if self._use_bucket_widths:
+                span_widths = bucket_values(span_ends - span_starts,
+                                            num_total_buckets=self._num_width_buckets)
+            else:
+                span_widths = span_ends - span_starts
+
+            span_width_embeddings = self._span_width_embedding(span_widths)
             return torch.cat([combined_tensors, span_width_embeddings], -1)
 
         return combined_tensors
 
     @classmethod
     def from_params(cls, params: Params) -> "EndpointSpanExtractor":
+        input_dim = params.pop_int("input_dim")
         combination = params.pop("combination", "x-y")
-        span_width_embedding_params = params.pop("span_width_embedding", None)
-        if span_width_embedding_params:
-            # Embedding the span widths with a vocabulary doesn't really have any meaning,
-            # so we just pass an empty one, which raises the relevant errors if you don't
-            # specify the correct embedding sizes in the config.
-            span_width_embedding = Embedding.from_params(Vocabulary(), span_width_embedding_params)
-        else:
-            span_width_embedding = None
+        num_width_buckets = params.pop_int("num_width_buckets", None)
+        span_width_embedding_dim = params.pop_int("span_width_embedding_dim", None)
 
-        return EndpointSpanExtractor(combination=combination,
-                                     span_width_embedding=span_width_embedding)
+        return EndpointSpanExtractor(input_dim=input_dim,
+                                     combination=combination,
+                                     num_width_buckets=num_width_buckets,
+                                     span_width_embedding_dim=span_width_embedding_dim)
