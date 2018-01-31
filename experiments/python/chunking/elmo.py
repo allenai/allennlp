@@ -24,7 +24,6 @@ __all__ = ['elmo_bilm', 'embed_sentence', 'ElmoEmbedder', 'variablesFromPairElmo
 
 use_cuda = torch.cuda.is_available()
 
-
 class ElmoEmbedder(Module):
     def __init__(self, elmo_bilm, special_tokens, device):
         super(ElmoEmbedder, self).__init__()
