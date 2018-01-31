@@ -1,105 +1,12 @@
-from typing import Optional
-from overrides import overrides
+from nltk.sem.logic import TRUTH_TYPE, EntityType, ComplexType, ANY_TYPE
 
-from nltk.sem.logic import TRUTH_TYPE, EntityType, Type, ComplexType, ANY_TYPE
-
-from allennlp.data.semparse.type_declarations.type_declaration import NamedBasicType, PlaceholderType, IdentityType
+from allennlp.data.semparse.type_declarations.type_declaration import NamedBasicType
 
 
-class BoxFilterType(PlaceholderType):
-    """
-    This is the type of the functions that filter boxes. The corresponding Python function takes three
-    arguments, and looks like ``filter(initial_set_of_boxes, attribute_function, target_attribute)`` .
-    Hence, the signature of the filter function is <b,<<b,#1>,<#1,b>>>.
-    """
-    @property
-    def _signature(self) -> str:
-        return "<b,<<b,#1>,<#1,b>>>"
-
-    @overrides
-    def resolve(self, other: Type) -> Optional[Type]:
-        if not isinstance(other, ComplexType):
-            return None
-        if not isinstance(other.second, ComplexType):
-            return None
-        if not isinstance(other.second.first, ComplexType) or not isinstance(other.second.second, ComplexType):
-            return None
-        resolved_type = other.resolve(ComplexType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, ANY_TYPE),
-                                                                        ComplexType(ANY_TYPE, BOX_TYPE))))
-        if not resolved_type:
-            return None
-        first_placeholder = resolved_type.second.first.second
-        second_placeholder = resolved_type.second.second.first
-        resolved_placeholder = first_placeholder.resolve(second_placeholder)
-        if not resolved_placeholder:
-            return None
-        return BoxFilterType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, resolved_placeholder),
-                                                   ComplexType(resolved_placeholder, BOX_TYPE)))
-
-    @overrides
-    def get_application_type(self, argument_type: Type) -> Type:
-        return self.second
-
-
-class AssertType(PlaceholderType):
-    """
-    This is the type of assert operations. Corresponding Python function looks like
-    ``assert(attribute, target_attribute)`` , where the attribute and target attribute can either be numbers,
-    shapes or colors, and the return type is boolean. So the signature of the function is <#1,<#1,t>>.
-    """
-    @property
-    def _signature(self) -> str:
-        return "<#1,<#1,t>>"
-
-    @overrides
-    def resolve(self, other: Type) -> Optional[Type]:
-        if not isinstance(other, ComplexType):
-            return None
-        if not isinstance(other.second, ComplexType):
-            return None
-        resolved_type = other.resolve(ComplexType(ANY_TYPE, ComplexType(ANY_TYPE, TRUTH_TYPE)))
-        if not resolved_type:
-            return None
-        resolved_placeholder = resolved_type.first.resolve(resolved_type.second.first)
-        if not resolved_placeholder:
-            return None
-        return AssertType(resolved_placeholder, ComplexType(resolved_type, TRUTH_TYPE))
-
-    @overrides
-    def get_application_type(self, argument_type: Type) -> Type:
-        return ComplexType(argument_type, TRUTH_TYPE)
-
-
-class CountType(PlaceholderType):
-    """
-    This is the type of the count function. Corresponding Python function looks like ``count(entities)`` ,
-    where entities are either objects or boxes. Type signature is <#1,e>.
-    """
-    @property
-    def _signature(self) -> str:
-        return "<#1,e>"
-
-    @overrides
-    def resolve(self, other: Type) -> Optional[Type]:
-        if not isinstance(other, ComplexType):
-            return None
-        resolved_type = other.resolve(ComplexType(ANY_TYPE, NUM_TYPE))
-        if not resolved_type:
-            return None
-        resolved_placeholder = resolved_type.first
-        if not resolved_placeholder:
-            return None
-        return CountType(resolved_placeholder, NUM_TYPE)
-
-    @overrides
-    def get_application_type(self, argument_type: Type) -> Type:
-        return NUM_TYPE
-
-
-# All constants default to ``EntityType`` in NLTK. For domains where constants of different types appear in the
-# logical forms, we have a way of specifying ``constant_type_prefixes`` and passing them to the constructor
-# of ``World``. However, in the NLVR language we defined, we see constants of just one type, number. So we
-# let them default to ``EntityType``.
+# All constants default to ``EntityType`` in NLTK. For domains where constants of different types
+# appear in the logical forms, we have a way of specifying ``constant_type_prefixes`` and passing
+# them to the constructor of ``World``. However, in the NLVR language we defined, we see constants
+# of just one type, number. So we let them default to ``EntityType``.
 NUM_TYPE = EntityType()
 BOX_TYPE = NamedBasicType("BOX")
 OBJECT_TYPE = NamedBasicType("OBJECT")
@@ -111,18 +18,24 @@ NEGATE_FILTER_TYPE = ComplexType(ComplexType(OBJECT_TYPE, OBJECT_TYPE),
 BOX_MEMBERSHIP_TYPE = ComplexType(BOX_TYPE, OBJECT_TYPE)
 COLOR_FUNCTION_TYPE = ComplexType(OBJECT_TYPE, COLOR_TYPE)
 SHAPE_FUNCTION_TYPE = ComplexType(OBJECT_TYPE, SHAPE_TYPE)
-COUNT_FUNCTION_TYPE = CountType(ANY_TYPE, NUM_TYPE)
-BOX_FILTER_TYPE = BoxFilterType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, ANY_TYPE),
-                                                      ComplexType(ANY_TYPE, BOX_TYPE)))
-BOX_FILTER_NUM_TYPE = ComplexType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, NUM_TYPE),
-                                                        ComplexType(NUM_TYPE, BOX_TYPE)))
-ASSERT_TYPE = AssertType(ANY_TYPE, ComplexType(ANY_TYPE, TRUTH_TYPE))
-ASSERT_NUM_TYPE = ComplexType(NUM_TYPE, ComplexType(NUM_TYPE, TRUTH_TYPE))
-IDENTITY_TYPE = IdentityType(ANY_TYPE, ANY_TYPE)
+
+BOX_COLOR_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, COLOR_TYPE),
+                                                          ComplexType(COLOR_TYPE, BOX_TYPE)))
+BOX_SHAPE_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, SHAPE_TYPE),
+                                                          ComplexType(SHAPE_TYPE, BOX_TYPE)))
+BOX_COUNT_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, NUM_TYPE),
+                                                          ComplexType(NUM_TYPE, BOX_TYPE)))
+ASSERT_COLOR_TYPE = ComplexType(OBJECT_TYPE, ComplexType(COLOR_TYPE, TRUTH_TYPE))
+ASSERT_SHAPE_TYPE = ComplexType(OBJECT_TYPE, ComplexType(SHAPE_TYPE, TRUTH_TYPE))
+ASSERT_BOX_COUNT_TYPE = ComplexType(BOX_TYPE, ComplexType(NUM_TYPE, TRUTH_TYPE))
+ASSERT_OBJECT_COUNT_TYPE = ComplexType(OBJECT_TYPE, ComplexType(NUM_TYPE, TRUTH_TYPE))
+
+BOX_EXISTS_TYPE = ComplexType(BOX_TYPE, TRUTH_TYPE)
+OBJECT_EXISTS_TYPE = ComplexType(OBJECT_TYPE, TRUTH_TYPE)
 
 
-COMMON_NAME_MAPPING = {"lambda": "\\", "var": "V", "x": "X"}
-COMMON_TYPE_SIGNATURE = {"V": IDENTITY_TYPE, "X": ANY_TYPE}
+COMMON_NAME_MAPPING = {"lambda": "\\", "x": "X"}
+COMMON_TYPE_SIGNATURE = {"X": ANY_TYPE}
 
 BASIC_TYPES = {NUM_TYPE, BOX_TYPE, OBJECT_TYPE, COLOR_TYPE, SHAPE_TYPE}
 
@@ -146,26 +59,39 @@ add_common_name_with_type("shape_circle", "S2", SHAPE_TYPE)
 # Attribute functions
 add_common_name_with_type("color", "C", COLOR_FUNCTION_TYPE)
 add_common_name_with_type("shape", "S", SHAPE_FUNCTION_TYPE)
-add_common_name_with_type("count", "L", COUNT_FUNCTION_TYPE)
 add_common_name_with_type("object_in_box", "I", BOX_MEMBERSHIP_TYPE)
 
 
 # Assert functions
-add_common_name_with_type("assert_equals", "A0", ASSERT_TYPE)
-add_common_name_with_type("assert_not_equals", "A1", ASSERT_TYPE)
-add_common_name_with_type("assert_greater", "A2", ASSERT_NUM_TYPE)
-add_common_name_with_type("assert_greater_equals", "A3", ASSERT_NUM_TYPE)
-add_common_name_with_type("assert_lesser", "A4", ASSERT_NUM_TYPE)
-add_common_name_with_type("assert_lesser_equals", "A5", ASSERT_NUM_TYPE)
+add_common_name_with_type("color_equals", "A0", ASSERT_COLOR_TYPE)
+add_common_name_with_type("color_not_equals", "A1", ASSERT_COLOR_TYPE)
+add_common_name_with_type("shape_equals", "A2", ASSERT_SHAPE_TYPE)
+add_common_name_with_type("shape_not_equals", "A3", ASSERT_SHAPE_TYPE)
+add_common_name_with_type("box_count_equals", "A4", ASSERT_BOX_COUNT_TYPE)
+add_common_name_with_type("box_count_not_equals", "A5", ASSERT_BOX_COUNT_TYPE)
+add_common_name_with_type("box_count_greater", "A6", ASSERT_BOX_COUNT_TYPE)
+add_common_name_with_type("box_count_greater_equals", "A7", ASSERT_BOX_COUNT_TYPE)
+add_common_name_with_type("box_count_lesser", "A8", ASSERT_BOX_COUNT_TYPE)
+add_common_name_with_type("box_count_lesser_equals", "A9", ASSERT_BOX_COUNT_TYPE)
+add_common_name_with_type("object_count_equals", "A10", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_count_not_equals", "A11", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_count_greater", "A12", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_count_greater_equals", "A13", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_count_lesser", "A14", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_count_lesser_equals", "A15", ASSERT_OBJECT_COUNT_TYPE)
 
 
 # Box filter functions
-add_common_name_with_type("filter_equals", "F0", BOX_FILTER_TYPE)
-add_common_name_with_type("filter_not_equals", "F1", BOX_FILTER_TYPE)
-add_common_name_with_type("filter_greater", "F2", BOX_FILTER_NUM_TYPE)
-add_common_name_with_type("filter_greater_equals", "F3", BOX_FILTER_NUM_TYPE)
-add_common_name_with_type("filter_lesser", "F4", BOX_FILTER_NUM_TYPE)
-add_common_name_with_type("filter_lesser_equals", "F5", BOX_FILTER_NUM_TYPE)
+add_common_name_with_type("filter_count_equals", "F0", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("filter_count_not_equals", "F1", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("filter_shape_equals", "F2", BOX_SHAPE_FILTER_TYPE)
+add_common_name_with_type("filter_shape_not_equals", "F3", BOX_SHAPE_FILTER_TYPE)
+add_common_name_with_type("filter_color_equals", "F4", BOX_COLOR_FILTER_TYPE)
+add_common_name_with_type("filter_color_not_equals", "F5", BOX_COLOR_FILTER_TYPE)
+add_common_name_with_type("filter_count_greater", "F6", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("filter_count_greater_equals", "F7", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("filter_count_lesser", "F8", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("filter_count_lesser_equals", "F9", BOX_COUNT_FILTER_TYPE)
 
 
 # Object filter functions
@@ -190,6 +116,9 @@ add_common_name_with_type("bottom", "L3", OBJECT_FILTER_TYPE)
 add_common_name_with_type("small", "Z0", OBJECT_FILTER_TYPE)
 add_common_name_with_type("medium", "Z1", OBJECT_FILTER_TYPE)
 add_common_name_with_type("big", "Z2", OBJECT_FILTER_TYPE)
+
+add_common_name_with_type("box_exists", "E0", BOX_EXISTS_TYPE)
+add_common_name_with_type("object_exists", "E1", OBJECT_EXISTS_TYPE)
 
 add_common_name_with_type("negate_filter", "N", NEGATE_FILTER_TYPE)
 
