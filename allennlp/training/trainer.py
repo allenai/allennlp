@@ -354,7 +354,7 @@ class Trainer:
             # Update the description with the latest metrics
             val_metrics = self._get_metrics(val_loss, batch_num)
             description = self._description_from_metrics(val_metrics)
-            val_generator_tqdm.set_description(description)
+            val_generator_tqdm.set_description(description, refresh=False)
 
         return val_loss, batch_num
 
