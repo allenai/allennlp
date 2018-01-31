@@ -14,7 +14,7 @@ from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset import Dataset
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, SpanField, SequenceLabelField, ListField
+from allennlp.data.fields import TextField, SpanField, SequenceLabelField, ListField, Field
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
@@ -94,7 +94,7 @@ class PennTreeBankDatasetReader(DatasetReader):
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
         pos_tag_field = SequenceLabelField(pos_tags, text_field, "pos_tags")
         fields = {"tokens": text_field, "pos_tags": pos_tag_field}
-        spans = []
+        spans : List[Field]= []
         gold_labels = []
 
         if gold_tree is not None:
@@ -112,18 +112,17 @@ class PennTreeBankDatasetReader(DatasetReader):
                 else:
                     gold_labels.append("NO-LABEL")
 
-
-        fields["spans"] = ListField(spans)
+        span_list_field: ListField = ListField(spans)
+        fields["spans"] = span_list_field
         if gold_tree is not None:
-            fields["span_labels"] = SequenceLabelField(gold_labels, fields["spans"])
+            fields["span_labels"] = SequenceLabelField(gold_labels, span_list_field)
 
         return Instance(fields)
 
-    def _get_gold_spans(self,
+    def _get_gold_spans(self, # pylint: disable=arguments-differ
                         tree: Tree,
                         index: int,
-                        typed_spans: Dict[Tuple[int, int], str]) -> Tuple[Tuple[int, int],
-                                                                          Dict[Tuple[int, int], str]]:
+                        typed_spans: OrderedDict) -> OrderedDict:
         """
         Recursively construct the gold spans from an nltk ``Tree``.
         Spans are inclusive.
