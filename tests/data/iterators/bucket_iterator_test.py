@@ -30,16 +30,15 @@ class TestBucketIterator(IteratorTest):
                                      [self.instances[4], self.instances[3]]]
 
     def test_biggest_batch_first_works(self):
-        for test_instances in [self.instances]:
-            iterator = BucketIterator(batch_size=2,
-                                      padding_noise=0,
-                                      sorting_keys=[('text', 'num_tokens')],
-                                      biggest_batch_first=True)
-            batches = list(iterator._create_batches(test_instances, shuffle=False))
-            grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[3]],
-                                         [self.instances[0], self.instances[1]],
-                                         [self.instances[4], self.instances[2]]]
+        iterator = BucketIterator(batch_size=2,
+                                  padding_noise=0,
+                                  sorting_keys=[('text', 'num_tokens')],
+                                  biggest_batch_first=True)
+        batches = list(iterator._create_batches(self.instances, shuffle=False))
+        grouped_instances = [batch.instances for batch in batches]
+        assert grouped_instances == [[self.instances[3]],
+                                     [self.instances[0], self.instances[1]],
+                                     [self.instances[4], self.instances[2]]]
 
     def test_from_params(self):
         # pylint: disable=protected-access
