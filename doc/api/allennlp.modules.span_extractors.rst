@@ -16,7 +16,7 @@ allennlp.modules.span_extractors
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.modules.span_extractors.locally_normalised_span_extractor
+.. automodule:: allennlp.modules.span_extractors.self_attentive_span_extractor
    :members:
    :undoc-members:
    :show-inheritance:
