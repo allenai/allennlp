@@ -148,36 +148,6 @@ class TestBasicIterator(IteratorTest):
                                          [self.instances[2]],
                                          [self.instances[3], self.instances[4]]]
 
-    def test_small_epochs(self):
-        # pylint: disable=protected-access
-        iterator = BasicIterator(batch_size=2, instances_per_epoch=2)
-
-        for test_instances in [self.instances, self.lazy_instances]:
-            # We should loop around when we get to the end
-            batches = list(iterator._create_batches(test_instances, shuffle=False))
-            grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[0], self.instances[1]]]
-
-            batches = list(iterator._create_batches(test_instances, shuffle=False))
-            grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[2], self.instances[3]]]
-
-            batches = list(iterator._create_batches(test_instances, shuffle=False))
-            grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[4], self.instances[0]]]
-
-            batches = list(iterator._create_batches(test_instances, shuffle=False))
-            grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[1], self.instances[2]]]
-
-            batches = list(iterator._create_batches(test_instances, shuffle=False))
-            grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[3], self.instances[4]]]
-
-            batches = list(iterator._create_batches(test_instances, shuffle=False))
-            grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[0], self.instances[1]]]
-
     def test_multiple_cursors(self):
         # pylint: disable=protected-access
         lazy_instances1 = _LazyInstances(lambda: (i for i in self.instances))
