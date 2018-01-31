@@ -115,7 +115,7 @@ class PennTreeBankDatasetReader(DatasetReader):
 
         fields["spans"] = ListField(spans)
         if gold_tree is not None:
-            fields["span_labels"] = gold_labels
+            fields["span_labels"] = SequenceLabelField(gold_labels, fields["spans"])
 
         return Instance(fields)
 

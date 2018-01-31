@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 from collections import OrderedDict
 
 from nltk.tree import Tree
@@ -26,6 +26,7 @@ class TestPennTreeBankReader(AllenNlpTestCase):
         tokens = [x.text for x in fields["tokens"].tokens]
         pos_tags = fields["pos_tags"].labels
         spans = [(x.span_start, x.span_end) for x in fields["spans"].field_list]
+        span_labels = fields["span_labels"].labels
 
         assert tokens == ['Also', ',', 'because', 'UAL', 'Chairman', 'Stephen', 'Wolf',
                           'and', 'other', 'UAL', 'executives', 'have', 'joined', 'the',
@@ -38,12 +39,26 @@ class TestPennTreeBankReader(AllenNlpTestCase):
                             'NNS', 'IN', 'NN', 'TO', 'VB', 'JJ', 'TO', 'JJ', 'NNS', '.']
 
         assert spans == enumerate_spans(tokens)
+        gold_tree = Tree.fromstring("(VROOT(S(ADVP(RB Also))(, ,)(SBAR-PRP(IN because)"
+                                    "(S(NP-SBJ(NP(NNP UAL)(NNP Chairman)(NNP Stephen)(NNP Wolf))"
+                                    "(CC and)(NP(JJ other)(NNP UAL)(NNS executives)))(VP(VBP have)"
+                                    "(VP(VBN joined)(NP(NP(DT the)(NNS pilots)(POS '))(NN bid))))))"
+                                    "(, ,)(NP-SBJ(DT the)(NN board))(VP(MD might)(VP(VB be)(VP(VBN "
+                                    "forced)(S(VP(TO to)(VP(VB exclude)(NP(PRP him))(PP-CLR(IN from)"
+                                    "(NP(PRP$ its)(NNS deliberations)))(SBAR-PRP(IN in)(NN order)(S("
+                                    "VP(TO to)(VP(VB be)(ADJP-PRD(JJ fair)(PP(TO to)(NP(JJ other)(NNS "
+                                    "bidders))))))))))))))(. .)))")
+        correct_spans_and_labels = ptb_reader._get_gold_spans(gold_tree, 0, OrderedDict())
+        for span, label in zip(spans, span_labels):
+            if label != "NO-LABEL":
+                assert correct_spans_and_labels[span] == label
+
 
         fields = instances[1].fields
         tokens = [x.text for x in fields["tokens"].tokens]
         pos_tags = fields["pos_tags"].labels
         spans = [(x.span_start, x.span_end) for x in fields["spans"].field_list]
-
+        span_labels = fields["span_labels"].labels
 
         assert tokens == ['That', 'could', 'cost', 'him', 'the', 'chance',
                           'to', 'influence', 'the', 'outcome', 'and', 'perhaps',
@@ -55,8 +70,16 @@ class TestPennTreeBankReader(AllenNlpTestCase):
 
         assert spans == enumerate_spans(tokens)
 
-    def test_get_gold_spans_correctly_extracts_spans(self):
+        gold_tree = Tree.fromstring("(VROOT(S(NP-SBJ(DT That))(VP(MD could)(VP(VB cost)(NP(PRP him))"
+                                    "(NP(DT the)(NN chance)(S(VP(TO to)(VP(VP(VB influence)(NP(DT the)"
+                                    "(NN outcome)))(CC and)(VP(ADVP(RB perhaps))(VB join)(NP(DT the)"
+                                    "(VBG winning)(NN bidder)))))))))(. .)))")
+        correct_spans_and_labels = ptb_reader._get_gold_spans(gold_tree, 0, OrderedDict())
+        for span, label in zip(spans, span_labels):
+            if label != "NO-LABEL":
+                assert correct_spans_and_labels[span] == label
 
+    def test_get_gold_spans_correctly_extracts_spans(self):
         ptb_reader = PennTreeBankDatasetReader()
         tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         spans = list(ptb_reader._get_gold_spans(tree, 0, OrderedDict()).items()) # pylint: disable=protected-access
