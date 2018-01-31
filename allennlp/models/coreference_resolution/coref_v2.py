@@ -88,9 +88,9 @@ class CoreferenceResolverV2(Model):
 
         self._endpoint_span_extractor = EndpointSpanExtractor(context_layer.get_output_dim(),
                                                               combination="x,y",
-                                                              num_width_buckets=max_span_width,
+                                                              num_width_embeddings=max_span_width,
                                                               span_width_embedding_dim=feature_size,
-                                                              use_bucket_widths=False)
+                                                              bucket_widths=False)
         self._attentive_span_extractor = SelfAttentiveSpanExtractor(input_dim=text_field_embedder.get_output_dim())
 
         # 10 possible distance buckets.

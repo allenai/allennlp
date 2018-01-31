@@ -12,7 +12,7 @@ class TestEndpointSpanExtractor:
         params = Params({
                 "type": "endpoint",
                 "input_dim": 7,
-                "num_width_buckets": 5,
+                "num_width_embeddings": 5,
                 "span_width_embedding_dim": 3
                 })
         extractor = SpanExtractor.from_params(params)
