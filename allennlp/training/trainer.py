@@ -98,8 +98,9 @@ class TensorboardWriter:
         if self._train_log is not None:
             # SummaryWriter.add_histogram doesn't pass global step, so
             # need to access file_writer directly
+            values_to_write = values.data.cpu().numpy().flatten()
             self._train_log.file_writer.add_summary(
-                    tb_histogram(name, values.cpu().numpy().flatten()), global_step
+                    tb_histogram(name, values_to_write), global_step
             )
 
     def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
@@ -261,19 +262,19 @@ class Trainer:
                         if isinstance(outputs, torch.autograd.Variable):
                             log_name = log_prefix
                             self._tensorboard.add_train_histogram(log_name,
-                                                                  outputs.data,
+                                                                  outputs,
                                                                   self._batch_num_total)
                         elif isinstance(outputs, (list, tuple)):
                             for i, output in enumerate(outputs):
                                 log_name = "{0}_{1}".format(log_prefix, i)
                                 self._tensorboard.add_train_histogram(log_name,
-                                                                      output.data,
+                                                                      output,
                                                                       self._batch_num_total)
                         elif isinstance(outputs, dict):
                             for k, tensor in outputs.items():
                                 log_name = "{0}_{1}".format(log_prefix, k)
                                 self._tensorboard.add_train_histogram(log_name,
-                                                                      tensor.data,
+                                                                      tensor,
                                                                       self._batch_num_total)
                         else:
                             # skip it
@@ -391,13 +392,13 @@ class Trainer:
 
             if self._should_log_histogram:
                 # get the magnitude of parameter updates for logging
-                param_updates = {name: param.clone()
+                param_updates = {name: param.clone().detach()
                     for name, param in self._model.named_parameters()
                         if name in histogram_parameters}
                 self._optimizer.step()
                 for name, param in self._model.named_parameters():
                     if name in histogram_parameters:
-                        param_updates[name].sub_(param)
+                        param_updates[name].sub_(param.detach())
                         update_norm = torch.norm(param_updates[name].view(-1, ))
                         param_norm = torch.norm(param.view(-1, ))
                         self._tensorboard.add_train_scalar("gradient_update/" + name,
@@ -444,7 +445,7 @@ class Trainer:
                 for name, param in self._model.named_parameters():
                     if name in histogram_parameters:
                         self._tensorboard.add_train_histogram("parameter_histogram/" + name,
-                                                          param.data,
+                                                          param,
                                                           batch_num_total)
 
             # Save model if needed.
