@@ -445,14 +445,14 @@ def get_valid_actions(name_mapping: Dict[str, str],
     # placeholder types for now.
     for i in range(num_nested_lambdas):
         lambda_var = chr(ord('x') + i)
-        for key, values in valid_actions.items():
-            # We'll only allow lambdas to be functions that take and return basic types as their
-            # arguments, for now.  This is also how we treat lambda variable generation at the
-            # moment, so this check is just enforcing some consistency.  If we need more general
-            # handling of lambdas we'll need to rethink a few things.
-            if isinstance(key, ComplexType) and key.first in basic_types and key.second in basic_types:
-                production_string = _make_production_string(key, ['lambda ' + lambda_var, key.second])
-                values.add(production_string)
+        # We'll only allow lambdas to be functions that take and return basic types as their
+        # arguments, for now.  Also, we're doing this for all possible complex types where
+        # the first and second types are basic types. So we may be overgenerating a bit.
+        for first_type in basic_types:
+            for second_type in basic_types:
+                key = ComplexType(first_type, second_type)
+                production_string = _make_production_string(key, ['lambda ' + lambda_var, second_type])
+                valid_actions[key].add(production_string)
 
     valid_action_strings = {str(key): sorted(value) for key, value in valid_actions.items()}
     return valid_action_strings
