@@ -8,7 +8,7 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestNlvrWorldRepresentation(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        test_filename = "tests/fixtures/data/nlvr/sample_data.json"
+        test_filename = "tests/fixtures/data/nlvr/sample_data.jsonl"
         data = [json.loads(line)["structured_rep"] for line in open(test_filename).readlines()]
         self.worlds = [NlvrWorld(rep) for rep in data]
 
