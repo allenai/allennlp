@@ -179,17 +179,18 @@ class TypedConstantExpression(ConstantExpression):
 
 class DynamicTypeApplicationExpression(ApplicationExpression):
     """
-    NLTK's ``ApplicationExpression`` (which represents function applications like P(x)) has two limitations,
-    which we overcome by inheriting from ``ApplicationExpression`` and overriding two methods.
+    NLTK's ``ApplicationExpression`` (which represents function applications like P(x)) has two
+    limitations, which we overcome by inheriting from ``ApplicationExpression`` and overriding two
+    methods.
 
     Firstly, ``ApplicationExpression`` does not handle the case where P's type involves placeholders
     (R, V, !=, etc.), which are special cases because their return types depend on the type of their
     arguments (x). We override the property ``type`` to redefine the type of the application.
 
-    Secondly, NLTK's variables only bind to entities, and thus the variable types are 'e' by default. We
-    get around this issue by replacing x with a function V(X), whose initial type is ANY_TYPE, and later
-    gets resolved based on the type signature of the function whose scope the variable appears in. This
-    variable binding operation is implemented by overriding ``_set_type`` below.
+    Secondly, NLTK's variables only bind to entities, and thus the variable types are 'e' by
+    default. We get around this issue by replacing x with X, whose initial type is ANY_TYPE, and
+    later gets resolved based on the type signature of the function whose scope the variable appears
+    in. This variable binding operation is implemented by overriding ``_set_type`` below.
     """
     def __init__(self, function: Expression, argument: Expression, variables_with_placeholders: Set[str]) -> None:
         super(DynamicTypeApplicationExpression, self).__init__(function, argument)
@@ -209,23 +210,30 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
 
     def _set_type(self, other_type: Type = ANY_TYPE, signature=None) -> None:
         """
-        We override this method to do just one thing on top of ``ApplicationExpression._set_type``. In
-        lambda expressions of the form /x F(x), where the function is F and the argument is x, we can use
-        the type of F to infer the type of x. That is, if F is of type <a, b>, we can resolve the type of
-        x against a. We do this as the additional step after setting the type of F(x).
+        We override this method to do just one thing on top of ``ApplicationExpression._set_type``.
+        In lambda expressions of the form /x F(x), where the function is F and the argument is x, we
+        can use the type of F to infer the type of x. That is, if F is of type <a, b>, we can
+        resolve the type of x against a. We do this as the additional step after setting the type of
+        F(x).
 
-        So why does NLTK not already do this? NLTK assumes all variables (x) are of type entity (e). So it
-        does not have to resolve the type of x anymore. However, this would cause type inference failures in
-        our case since x can bind to rows, numbers or cells, each of which has a different type. To deal with
-        this issue, we replaced x with V(X) ((var x) in Sempre) and made X of type ANY_TYPE, and V of type
-        <#1, #1>. We cannot leave X as ANY_TYPE because that would propagate up the tree. We need to set its
-        type when we have the information about F. Hence this method.
+        So why does NLTK not already do this? NLTK assumes all variables (x) are of type entity (e).
+        So it does not have to resolve the type of x anymore. However, this would cause type
+        inference failures in our case since x can bind to rows, numbers or cells, each of which has
+        a different type. To deal with this issue, we made X of type ANY_TYPE. Also, LambdaDCS (and
+        some other languages) contain a var function that indicate the usage of variables within
+        lambda functions. We map var to V, and made it of type <#1, #1>. We cannot leave X as
+        ANY_TYPE because that would propagate up the tree. We need to set its type when we have the
+        information about F. Hence this method. Note that the language may or may not contain the
+        var function. We deal with both cases below.
         """
         super(DynamicTypeApplicationExpression, self)._set_type(other_type, signature)
         # TODO(pradeep): Assuming the mapping of "var" function is "V". Do something better.
         if isinstance(self.argument, ApplicationExpression) and str(self.argument.function) == "V":
             # pylint: disable=protected-access
             self.argument.argument._set_type(self.function.type.first)
+        if str(self.argument) == "X" and str(self.function) != "V":
+            # pylint: disable=protected-access
+            self.argument._set_type(self.function.type.first)
 
 
 class DynamicTypeLogicParser(LogicParser):
@@ -420,7 +428,14 @@ def get_valid_actions(name_mapping: Dict[str, str],
 
     complex_types = set()
     for name, alias in name_mapping.items():
-        if name in ["lambda", "x", "y", "z"]:
+        # Lambda functions and variables associated with them get produced in specific contexts. So
+        # we do not add them to ``valid_actions`` here, and let ``GrammarState`` deal with it.
+        # ``var`` is a special function that some languages (like LambdaDCS) use within lambda
+        # functions to indicate the use of a variable (eg.: ``(lambda x (fb:row.row.year (var x)))``)
+        # We do not have to produce this function outside the scope of lambda. Even within lambdas,
+        # it is a lot easier to not do it, and let the action sequence to logical form transformation
+        # logic add it to the output logical forms instead.
+        if name in ["lambda", "var", "x", "y", "z"]:
             continue
         name_type = type_signatures[alias]
         # Type to terminal productions.
