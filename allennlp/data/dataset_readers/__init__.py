@@ -22,3 +22,4 @@ from allennlp.data.dataset_readers.stanford_sentiment_tree_bank import (
         StanfordSentimentTreeBankDatasetReader)
 from allennlp.data.dataset_readers.wikitables.wikitables_dataset_reader import WikitablesDatasetReader
 from allennlp.data.dataset_readers.wikitables.wikitables_preprocessed_dataset_reader import WikiTablesPreprocessedDatasetReader
+from allennlp.data.dataset_readers.nlvr import NlvrDatasetReader

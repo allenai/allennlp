@@ -97,7 +97,8 @@ class GrammarState:
         ``action`` is ``d -> [<e,d>, e]``, the resulting stack will be ``["r", "<e,r>", "e",
         "<e,d>"]``.
         """
-        assert self._nonterminal_stack[-1] == left_side
+        assert self._nonterminal_stack[-1] == left_side, (f"Tried to expand {self._nonterminal_stack[-1]}"
+                                                          "but got rule f{left_side}->f{right_side}")
         new_stack = self._nonterminal_stack[:-1]
         new_lambda_stacks = deepcopy(self._lambda_stacks)
         for key, lambda_stack in new_lambda_stacks.items():

@@ -100,6 +100,10 @@ class WikiTablesWorld(World):
         return types.BASIC_TYPES
 
     @overrides
+    def get_valid_starting_types(self) -> Set[Type]:
+        return types.BASIC_TYPES
+
+    @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         if name not in types.COMMON_NAME_MAPPING and name not in self.local_name_mapping:
             if not keep_mapping:

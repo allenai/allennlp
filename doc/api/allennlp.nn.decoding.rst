@@ -30,3 +30,8 @@ allennlp.nn.decoding
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.nn.decoding.beam_search_trainer
+   :members:
+   :undoc-members:
+   :show-inheritance:

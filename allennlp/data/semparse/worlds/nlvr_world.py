@@ -95,7 +95,8 @@ class NlvrWorld(World):
     # TODO(pradeep): Define more spatial relationship methods: above, below, left_of, right_of..
     def __init__(self, world_representation: List[List[JsonDict]]) -> None:
         super(NlvrWorld, self).__init__(global_type_signatures=types.COMMON_TYPE_SIGNATURE,
-                                        global_name_mapping=types.COMMON_NAME_MAPPING)
+                                        global_name_mapping=types.COMMON_NAME_MAPPING,
+                                        num_nested_lambdas=1)
         self._boxes = set([Box(object_list, "box%d" % index)
                            for index, object_list in enumerate(world_representation)])
         self._objects: Set[Object] = set()
@@ -105,6 +106,10 @@ class NlvrWorld(World):
     @overrides
     def get_basic_types(self) -> Set[Type]:
         return types.BASIC_TYPES
+
+    @overrides
+    def get_valid_starting_types(self) -> Set[Type]:
+        return {types.TRUTH_TYPE}
 
     @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
