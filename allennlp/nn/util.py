@@ -503,6 +503,27 @@ def ones_like(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.clone().fill_(1)
 
 
+def new_variable_with_data(original: Variable, data: torch.Tensor) -> Variable:
+    """
+    ``Variable.clone`` does not necessarily make a new variable on the same device as the original.
+    This method takes a variable and some data and makes a new variable on the same device as the original
+    variable, but with the provided data. Note that the returned variable will be the same type as the
+    passed data, which may be different from the original variable's type.
+    """
+    # We cast the variable to the type of the data first before filling it with new data.
+    data_type = data.type()
+    return Variable(original.type(data_type).data.new(data))
+
+
+def new_variable_with_size(original: Variable, size: Tuple[int, ...], value) -> Variable:
+    """
+    Returns a new variable on the same device as the ``original``, but containing a tensor of provided
+    ``size``, filled with the given ``value``.
+    """
+    size = torch.Size(size)
+    return Variable(original.data.new(size).fill_(value))
+
+
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
     """
     Combines a list of tensors using element-wise operations and concatenation, specified by a
