@@ -87,7 +87,7 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
 
         action_fields = instance.fields['actions'].field_list
         action_fields.sort(key=lambda x: x.rule)
-        assert len(action_fields) == 174
+        assert len(action_fields) == 173
 
         # Here we're making sure that we're deciding which things are "nonterminals" correctly
         # (where "nonterminal" in this setting means "part of the global grammar", including things
@@ -97,29 +97,29 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
         # of the global grammar.
 
         # Before the "<e,r> -> fb:row.row.[column]" block.
-        for i in range(55):
+        for i in range(54):
             assert action_fields[i]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
         # Start of the "<e,r> -> fb:row.row.[column]" block.
-        for i in range(55, 58):
+        for i in range(54, 57):
             assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
         # This is the null column, right in the middle of the other columns.
-        assert action_fields[58]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
+        assert action_fields[57]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
         # End of the "<e,r> -> fb:row.row.[column]" block.
-        for i in range(59, 63):
+        for i in range(58, 62):
             assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
         # In between the column and the cell blocks.
-        for i in range(63, 117):
+        for i in range(62, 116):
             assert action_fields[i]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
         # Start of the "e -> fb:cell.[column]" block.
-        for i in range(117, 152):
+        for i in range(116, 151):
             assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
         # This is the null cell, right in the middle of the other cells.
-        assert action_fields[152]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
+        assert action_fields[151]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
         # End of the "e -> fb:cell.[column]" block.
-        for i in range(153, 158):
+        for i in range(152, 157):
             assert action_fields[i]._right_is_nonterminal is False, f"{i}, {action_fields[i].rule}"
         # After the "e -> fb:cell.[column]" block.
-        for i in range(158, 174):
+        for i in range(157, 173):
             assert action_fields[i]._right_is_nonterminal is True, f"{i}, {action_fields[i].rule}"
 
         # This is going to be long, but I think it's worth it, to be sure that all of the actions
@@ -129,7 +129,6 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
                 # Placeholder types
                 "<#1,#1> -> !=",
                 "<#1,#1> -> fb:type.object.type",
-                "<#1,#1> -> var",
                 "<#1,<#1,#1>> -> and",
                 "<#1,<#1,#1>> -> or",
                 "<#1,d> -> count",

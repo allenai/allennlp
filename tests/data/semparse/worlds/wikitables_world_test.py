@@ -88,6 +88,24 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                   '<e,r> -> fb:row.row.league', 'e -> fb:cell.usl_a_league']
         assert actions == target_action_sequence
 
+    def test_world_returns_correct_actions_with_lambda_with_var(self):
+        sempre_form = ("((reverse fb:cell.cell.date) ((reverse fb:row.row.year) (argmax (number 1) "
+                       "(number 1) (fb:row.row.league fb:cell.usl_a_league) (reverse (lambda x "
+                       "((reverse fb:row.row.index) (var x)))))))")
+        expression = self.world.parse_logical_form(sempre_form, remove_var_function=False)
+        actions_with_var = self.world.get_action_sequence(expression)
+        assert '<#1,#1> -> var' in actions_with_var
+        assert 'r -> x' in actions_with_var
+
+    def test_world_returns_correct_actions_with_lambda_without_var(self):
+        sempre_form = ("((reverse fb:cell.cell.date) ((reverse fb:row.row.year) (argmax (number 1) "
+                       "(number 1) (fb:row.row.league fb:cell.usl_a_league) (reverse (lambda x "
+                       "((reverse fb:row.row.index) (var x)))))))")
+        expression = self.world.parse_logical_form(sempre_form)
+        actions_without_var = self.world.get_action_sequence(expression)
+        assert '<#1,#1> -> var' not in actions_without_var
+        assert 'r -> x' in actions_without_var
+
     @pytest.mark.skip(reason="fibonacci recursion currently going on here")
     def test_with_deeply_nested_logical_form(self):
         table_kg = TableKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/tables/109.tsv")
