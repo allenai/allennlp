@@ -7,7 +7,7 @@ from tqdm import tqdm as _tqdm
 
 class Tqdm:
     # These defaults are the same as the argument defaults in tqdm.
-    default_mininterval: float = 0.1
+    default_mininterval: int = 0.1
 
     @staticmethod
     def set_default_mininterval(value: float) -> None:
