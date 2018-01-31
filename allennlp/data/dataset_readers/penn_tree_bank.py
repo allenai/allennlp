@@ -54,10 +54,10 @@ class PennTreeBankDatasetReader(DatasetReader):
             yield self.text_to_instance(parse.leaves(), [x[1] for x in parse.pos()], parse)
 
     @overrides
-    def text_to_instance(self, # pylint: disable=arguments-differ
+    def text_to_instance(self, # type: ignore
                          tokens: List[str],
                          pos_tags: List[str],
-                         gold_tree: Tree = None) -> Instance:  # type: ignore
+                         gold_tree: Tree = None) -> Instance:
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
 
@@ -85,6 +85,7 @@ class PennTreeBankDatasetReader(DatasetReader):
                 respect to a gold parse tree. If a span is not contained
                 within the tree, a span will have a ``NO-LABEL`` label.
         """
+        # pylint: disable=arguments-differ
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
         pos_tag_field = SequenceLabelField(pos_tags, text_field, "pos_tags")
         fields = {"tokens": text_field, "pos_tags": pos_tag_field}
