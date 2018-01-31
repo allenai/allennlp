@@ -48,7 +48,7 @@ class SpanExtractor(torch.nn.Module, Registrable):
         Returns the expected final dimension of the ``sequence_tensor``.
         """
         raise NotImplementedError
-    
+
     def get_output_dim(self) -> int:
         """
         Returns the expected final dimension of the returned span representation.

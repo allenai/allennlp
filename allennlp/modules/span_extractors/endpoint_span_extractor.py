@@ -41,7 +41,7 @@ class EndpointSpanExtractor(SpanExtractor):
         the raw span widths are used.
     """
     def __init__(self,
-                 input_dim : int,
+                 input_dim: int,
                  combination: str = "x-y",
                  num_width_buckets: int = None,
                  span_width_embedding_dim: int = None,
