@@ -64,7 +64,6 @@ class NlvrSemanticParser(Model):
         self._attention_function = attention_function
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
 
-        # self._decoder_step would be set to ``WikiTablesDecoderStep``. Rewriting it.
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function)
@@ -75,14 +74,14 @@ class NlvrSemanticParser(Model):
                 actions: List[List[ProductionRuleArray]],
                 agenda: torch.LongTensor,
                 label: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ,unused-argument
+        # pylint: disable=arguments-differ
         """
         Decoder logic for producing type constrained target sequences, that maximize coverage of
         their respective agendas. This will change soon, to include a denotation based score as
         well, once we have a way to transform action sequences into logical forms that can be
         executed to produce denotations.
         """
-        # TODO(pradeep): Use labels.
+        # TODO(pradeep): Use labels for loss computation.
         embedded_input = self._sentence_embedder(sentence)
         # (batch_size, sentence_length)
         sentence_mask = nn_util.get_text_field_mask(sentence).float()
