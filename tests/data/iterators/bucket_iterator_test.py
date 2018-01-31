@@ -15,10 +15,10 @@ class TestBucketIterator(IteratorTest):
                                      [self.instances[3]]]
 
     def test_create_batches_groups_correctly_with_max_instances(self):
-        # Because max_instances_in_memory is 3, we bucket the first three,
-        # yield the two batches, then bucket the next 2, and yield that batch.
-        # Since the original order was 4 -> 2 -> 0 -> 1 -> 3,
-        # we should get [2, 0] -> [1] -> [4, 3]
+        # If we knew all the instances, the correct order is 4 -> 2 -> 0 -> 1 -> 3.
+        # Here max_instances_in_memory is 3, so we load instances [0, 1, 2]
+        # and then bucket them by size into batches of size 2 to get [2, 0] -> [1].
+        # Then we load the remaining instances and bucket them by size to get [4, 3].
         iterator = BucketIterator(batch_size=2,
                                   padding_noise=0,
                                   sorting_keys=[('text', 'num_tokens')],

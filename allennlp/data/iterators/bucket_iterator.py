@@ -74,7 +74,7 @@ class BucketIterator(BasicIterator):
                                                       self._sorting_keys,
                                                       self._padding_noise)
 
-            grouped_instances = list(super(BucketIterator, self)._create_batches(instance_list, shuffle=False))
+            grouped_instances = list(super()._create_batches(instance_list, shuffle=False))
             move_to_front = self._biggest_batch_first and len(grouped_instances) > 1
             if move_to_front:
                 # We'll actually pop the last _two_ batches, because the last one might not be full.

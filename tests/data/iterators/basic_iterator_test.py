@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 from typing import List
+from collections import Counter
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
@@ -136,6 +137,26 @@ class TestBasicIterator(IteratorTest):
                                          [self.instances[4], self.instances[0]],
                                          [self.instances[1], self.instances[2]],
                                          [self.instances[3]]]
+
+    def test_shuffle(self):
+        # pylint: disable=protected-access
+        for test_instances in (self.instances, self.lazy_instances):
+
+            iterator = BasicIterator(batch_size=2, instances_per_epoch=100)
+
+            in_order_batches = list(iterator._create_batches(test_instances, shuffle=False))
+            shuffled_batches = list(iterator._create_batches(test_instances, shuffle=True))
+
+            assert len(in_order_batches) == len(shuffled_batches)
+
+            # With 100 instances, shuffling better change the order.
+            assert in_order_batches != shuffled_batches
+
+            # But not the counts of the instances.
+            in_order_counts = Counter(instance for batch in in_order_batches for instance in batch)
+            shuffled_counts = Counter(instance for batch in shuffled_batches for instance in batch)
+            assert in_order_counts == shuffled_counts
+
 
     def test_max_instances_in_memory(self):
         # pylint: disable=protected-access
