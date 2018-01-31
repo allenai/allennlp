@@ -37,7 +37,7 @@ def main(checks):
             run("./script/check_docs.py", shell=True, check=True)
 
     except CalledProcessError:
-        # squelch
+        # squelch the exception stacktrace
         sys.exit(1)
 
 if __name__ == "__main__":
