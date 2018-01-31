@@ -16,11 +16,11 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
                            'a', 'box', '.']
         assert [t.text for t in sentence_tokens] == expected_tokens
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
-        assert agenda == [57, 33, 118]
+        assert agenda == [56, 32, 112]
         world = instance.fields["world"].as_tensor({})
         assert isinstance(world, NlvrWorld)
         actions = [action.rule for action in instance.fields["actions"].field_list]
-        assert len(actions) == 123
+        assert len(actions) == 117
         label = instance.fields["label"].label
         assert label == "true"
 
