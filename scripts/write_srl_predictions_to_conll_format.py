@@ -32,17 +32,18 @@ def main(serialization_directory, device):
 
     # Load the evaluation data and index it.
     print("Reading evaluation data from {}".format(evaluation_data_path))
-    dataset = dataset_reader.read(evaluation_data_path)
-    dataset.index_instances(model.vocab)
+    instances = dataset_reader.read(evaluation_data_path)
     iterator = BasicIterator(batch_size=32)
+    iterator.index_with(model.vocab)
 
     model_predictions = []
-    for batch in Tqdm.tqdm(iterator(dataset, num_epochs=1, shuffle=False, cuda_device=device, for_training=False)):
+    batches = iterator(instances, num_epochs=1, shuffle=False, cuda_device=device, for_training=False)
+    for batch in Tqdm.tqdm(batches):
         result = model(**batch)
         predictions = model.decode(result)
         model_predictions.extend(predictions["tags"])
 
-    for instance, prediction in zip(dataset.instances, model_predictions):
+    for instance, prediction in zip(instances, model_predictions):
         fields = instance.fields
         try:
             # Most sentences have a verbal predicate, but not all.

@@ -14,7 +14,7 @@ just run `docker run -it --rm allennlp/allennlp` to get an environment that will
 
 Now you can do any of the following:
 
-* Run a model on example sentences with `allennlp/run bulk`.
+* Run a model on example sentences with `allennlp/run predict`.
 * Start a web service to host our models with `allennlp/run serve`.
 * Interactively code against AllenNLP from the Python interpreter with `python`.
 
@@ -147,7 +147,7 @@ cd allennlp
 
 4. Visit http://pytorch.org/ and install the relevant pytorch package.
 
-You should now be able to test your installation with `pytest -v`.  Congratulations!
+You should now be able to test your installation with `./scripts/verify.py --all`.  Congratulations!
 
 ### Setting up a Docker development environment
 
@@ -197,7 +197,7 @@ You can run the image with `docker run --rm -it allennlp/allennlp`.  The `--rm` 
 
 The Docker environment uses Conda to install Python and automatically enters the Conda environment "allennlp".
 
-You can test your installation by running  `pytest -v`.
+You can test your installation by running  `./scripts/verify.py --all`.
 
 
 ### Setting up a Kubernetes development environment

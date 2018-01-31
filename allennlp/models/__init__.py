@@ -12,3 +12,4 @@ from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFl
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.models.coreference_resolution.coref import CoreferenceResolver
+from allennlp.models.coreference_resolution.coref_v2 import CoreferenceResolverV2

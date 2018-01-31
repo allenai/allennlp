@@ -3,7 +3,7 @@ from typing import List
 
 from allennlp.common import Params
 from allennlp.data import Instance, Token
-from allennlp.data.dataset import LazyDataset
+from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
 from allennlp.data.iterators.lazy_basic_iterator import LazyBasicIterator
 from tests.data.iterators.basic_iterator_test import IteratorTest
@@ -11,7 +11,14 @@ from tests.data.iterators.basic_iterator_test import IteratorTest
 class LazyBasicIteratorTest(IteratorTest):
     def setUp(self):
         super(LazyBasicIteratorTest, self).setUp()
-        self.dataset = LazyDataset(lambda: iter(self.instances))
+
+        instances = self.instances[:]
+
+        class LazyIterable:
+            def __iter__(self):
+                return (instance for instance in instances)
+
+        self.instance_iterable = LazyIterable()
 
     def create_instance(self, str_tokens: List[str]):
         tokens = [Token(t) for t in str_tokens]
@@ -31,7 +38,7 @@ class LazyBasicIteratorTest(IteratorTest):
 class TestLazyIterator(LazyBasicIteratorTest):
     def test_yield_one_epoch_iterates_over_the_data_once(self):
         iterator = LazyBasicIterator(batch_size=2)
-        batches = list(iterator(self.dataset, num_epochs=1))
+        batches = list(iterator(self.instance_iterable, num_epochs=1))
         # We just want to get the single-token array for the text field in the instance.
         instances = [tuple(instance.data.cpu().numpy())
                      for batch in batches
@@ -40,7 +47,7 @@ class TestLazyIterator(LazyBasicIteratorTest):
         self.assert_instances_are_correct(instances)
 
     def test_call_iterates_over_data_forever(self):
-        generator = LazyBasicIterator(batch_size=2)(self.dataset)
+        generator = LazyBasicIterator(batch_size=2)(self.instance_iterable)
         batches = [next(generator) for _ in range(18)]  # going over the data 6 times
         # We just want to get the single-token array for the text field in the instance.
         instances = [tuple(instance.data.cpu().numpy())
@@ -52,7 +59,7 @@ class TestLazyIterator(LazyBasicIteratorTest):
     def test_create_batches_groups_correctly(self):
         # pylint: disable=protected-access
         iterator = LazyBasicIterator(batch_size=2)
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.instance_iterable, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[0], self.instances[1]],
                                      [self.instances[2], self.instances[3]],
@@ -63,57 +70,56 @@ class TestLazyIterator(LazyBasicIteratorTest):
         iterator = LazyBasicIterator(batch_size=2, instances_per_epoch=2)
 
         # We should loop around when we get to the end
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.instance_iterable, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[0], self.instances[1]]]
 
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.instance_iterable, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[2], self.instances[3]]]
 
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.instance_iterable, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[4], self.instances[0]]]
 
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.instance_iterable, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[1], self.instances[2]]]
 
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.instance_iterable, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[3], self.instances[4]]]
 
-        batches = list(iterator._create_batches(self.dataset, shuffle=False))
+        batches = list(iterator._create_batches(self.instance_iterable, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[0], self.instances[1]]]
 
+
     def test_multiple_cursors(self):
         # pylint: disable=protected-access
-        dataset1 = LazyDataset(lambda: iter(self.instances))
-        dataset1.index_instances(self.vocab)
-
-        dataset2 = LazyDataset(lambda: iter(self.instances))
-        dataset2.index_instances(self.vocab)
+        instances1 = _LazyInstances(lambda: (i for i in self.instance_iterable))
+        instances2 = _LazyInstances(lambda: (i for i in self.instance_iterable))
 
         iterator = LazyBasicIterator(batch_size=1, instances_per_epoch=2)
+        iterator.index_with(self.vocab)
 
         # First epoch through dataset1
-        batches = list(iterator._create_batches(dataset1, shuffle=False))
+        batches = list(iterator._create_batches(instances1, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[0]], [self.instances[1]]]
 
         # First epoch through dataset2
-        batches = list(iterator._create_batches(dataset2, shuffle=False))
+        batches = list(iterator._create_batches(instances2, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[0]], [self.instances[1]]]
 
         # Second epoch through dataset1
-        batches = list(iterator._create_batches(dataset1, shuffle=False))
+        batches = list(iterator._create_batches(instances1, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[2]], [self.instances[3]]]
 
         # Second epoch through dataset2
-        batches = list(iterator._create_batches(dataset2, shuffle=False))
+        batches = list(iterator._create_batches(instances2, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[2]], [self.instances[3]]]
 

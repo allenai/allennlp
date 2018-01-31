@@ -27,4 +27,5 @@ allennlp.modules
    allennlp.modules.token_embedders
    allennlp.modules.scalar_mix
    allennlp.modules.layer_norm
+   allennlp.modules.span_pruner
 
