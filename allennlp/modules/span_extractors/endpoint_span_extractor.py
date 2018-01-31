@@ -64,7 +64,10 @@ class EndpointSpanExtractor(SpanExtractor):
         return self._input_dim
 
     def get_output_dim(self) -> int:
-        return get_combined_dim(self._combination, [self._input_dim, self._input_dim])
+        combined_dim = get_combined_dim(self._combination, [self._input_dim, self._input_dim])
+        if self._span_width_embedding is not None:
+            return combined_dim + self._span_width_embedding.get_output_dim()
+        return combined_dim
 
     @overrides
     def forward(self, # pylint: disable=arguments-differ

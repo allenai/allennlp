@@ -9,9 +9,15 @@ from allennlp.nn.util import batched_index_select
 
 class TestEndpointSpanExtractor:
     def test_endpoint_span_extractor_can_build_from_params(self):
-        params = Params({"type": "endpoint", "input_dim": 7})
+        params = Params({
+                "type": "endpoint",
+                "input_dim": 7,
+                "num_width_buckets": 5,
+                "span_width_embedding_dim": 3
+            })
         extractor = SpanExtractor.from_params(params)
         assert isinstance(extractor, EndpointSpanExtractor)
+        assert extractor.get_output_dim() == 10
 
     def test_correct_sequence_elements_are_embedded(self):
         sequence_tensor = Variable(torch.randn([2, 5, 7]))
