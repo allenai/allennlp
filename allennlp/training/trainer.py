@@ -12,7 +12,7 @@ import os
 import shutil
 import time
 import re
-from typing import Dict, Optional, List, Tuple, Union, Iterable
+from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 
 import torch
 import torch.optim.lr_scheduler
@@ -213,7 +213,7 @@ class Trainer:
         self._serialization_dir = serialization_dir
         self._num_serialized_models_to_keep = num_serialized_models_to_keep
         self._keep_serialized_model_every_num_seconds = keep_serialized_model_every_num_seconds
-        self._serialized_paths: List[List[str]] = []
+        self._serialized_paths: List[Any] = []
         self._last_permanent_saved_checkpoint_time = time.time()
         self._model_save_interval = model_save_interval
 
@@ -249,7 +249,7 @@ class Trainer:
         self._summary_interval = 100  # num batches between logging to tensorboard
         self._histogram_interval = histogram_interval
         self._should_log_histogram = False
-        self._batch_num_total = None
+        self._batch_num_total = 0
 
         self._last_log = 0.0  # time of last logging
 

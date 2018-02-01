@@ -209,7 +209,6 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
     if test_data and evaluate_on_test:
-        test_data.index_instances(vocab)
         evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
 
     elif test_data:
