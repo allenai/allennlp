@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def is_sparse(tensor):
     return tensor.data.is_sparse
 
+
 def sparse_clip_norm(parameters, max_norm, norm_type=2):
     """Clips gradient norm of an iterable of parameters.
 
@@ -392,16 +393,16 @@ class Trainer:
 
             if self._should_log_histogram:
                 # get the magnitude of parameter updates for logging
-                param_updates = {name: param.clone().detach()
-                    for name, param in self._model.named_parameters()
-                        if name in histogram_parameters}
+                # We need a copy of current parameters to compute magnitude of updates,
+                # and copy them to CPU so large models won't go OOM on the GPU.
+                param_updates = {name: param.clone().detach().data.cpu()
+                    for name, param in self._model.named_parameters()}
                 self._optimizer.step()
                 for name, param in self._model.named_parameters():
-                    if name in histogram_parameters:
-                        param_updates[name].sub_(param.detach())
-                        update_norm = torch.norm(param_updates[name].view(-1, ))
-                        param_norm = torch.norm(param.view(-1, ))
-                        self._tensorboard.add_train_scalar("gradient_update/" + name,
+                    param_updates[name].sub_(param.detach().data.cpu())
+                    update_norm = torch.norm(param_updates[name].view(-1, ))
+                    param_norm = torch.norm(param.view(-1, ))
+                    self._tensorboard.add_train_scalar("gradient_update/" + name,
                                                        update_norm / (param_norm + 1e-7),
                                                        batch_num_total)
             else:
