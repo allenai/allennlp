@@ -211,10 +211,17 @@ class WikiTablesSemanticParser(Model):
                                                                   num_entities * num_entity_tokens,
                                                                   self._embedding_dim),
                                               torch.transpose(embedded_question, 1, 2))
+
+        # We divide the similarity scores by the embedding dim to reduce the variance of these
+        # scores, and put the similarity scores into the same ballpark range as the linking
+        # features and other scores in the model.  Glove vectors have average absolute magnitude on
+        # the order of 1, which means that a 200-dimensional vector would have a dot product with
+        # itself on the order of 200.  This is not reasonable to have as input to a softmax, which
+        # we do later, so we need to scale by the number of dimensions.
         question_table_similarity = question_table_similarity.view(batch_size,
                                                                    num_entities,
                                                                    num_entity_tokens,
-                                                                   num_question_tokens)
+                                                                   num_question_tokens) / self._embedding_dim
         # (batch_size, num_entities, num_question_tokens)
         question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
         # (batch_size, num_entities, num_question_tokens, num_features)
