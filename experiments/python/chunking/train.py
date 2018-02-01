@@ -21,12 +21,11 @@ import time
 import math
 #import matplotlib.pyplot as plt
 #import matplotlib.ticker as ticker
-import numpy as np
 
 from chunking.eval import validateRandomSubset, evaluate, evaluateRandomly
-from chunking.data import variablesFromPair
+from chunking.data import variablesFromPair, target_variable_from_sentences
 from chunking.elmo import ElmoEmbedder
-from chunking.elmo import elmo_bilm, variablesFromPairElmo
+from chunking.elmo import elmo_bilm, variablesFromPairElmo, elmo_variable_from_sentences
 
 
 use_cuda = torch.cuda.is_available()
@@ -184,7 +183,7 @@ def timeSince(since, percent):
 
 
 
-def trainItersElmo(encoder, decoder, input_lang, output_lang, n_iters, sent_pairs, sent_pairs_dev, max_length, print_every=1000, plot_every=100, save_every=10000, learning_rate=0.01):
+def trainItersElmo(encoder, decoder, output_lang, n_iters, minibatch_size, sent_pairs, sent_pairs_dev, max_length, print_every=1000, plot_every=100, save_every=10000, learning_rate=0.01):
     start = time.time()
     plot_losses = []
     print_loss_total = 0  # Reset every print_every
@@ -194,16 +193,21 @@ def trainItersElmo(encoder, decoder, input_lang, output_lang, n_iters, sent_pair
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
     criterion = nn.NLLLoss()
 
+
     for iter in range(1, n_iters + 1):
+        print('starting epoch {}'.format(iter))
+        
+        training_pairs = [sent_pairs[k] for k in np.random.choice(range(len(sent_pairs)), size=minibatch_size)]
+        input_vars = elmo_variable_from_sentences([pair[0] for pair in training_pairs])
+        target_vars = target_variable_from_sentences(output_lang, [pair[1] for pair in training_pairs])
 
-        training_pair = variablesFromPairElmo(random.choice(sent_pairs), output_lang)
-        input_variable = training_pair[0]
-        target_variable = training_pair[1]
-
-        loss = train(input_variable, target_variable, encoder,
+        for j in range(minibatch_size):
+            input_variable = torch.unsqueeze(input_vars[j], 0)
+            target_variable = torch.unsqueeze(target_vars[j], 1)
+            loss = train(input_variable, target_variable, encoder,
                      decoder, encoder_optimizer, decoder_optimizer, criterion, max_length)
-        print_loss_total += loss
-        plot_loss_total += loss
+            print_loss_total += loss
+            plot_loss_total += loss
         
         if iter % save_every == 0:
             torch.save(encoder, 'encoder2.{}.pt'.format(iter))

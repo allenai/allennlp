@@ -12,8 +12,6 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.nn.util import remove_sentence_boundaries
 from allennlp.modules.elmo import _ElmoBiLm
 
-from chunking.data import variableFromSentence
-
 options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
 weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 elmo_bilm = _ElmoBiLm(options_file, weight_file)
@@ -54,7 +52,8 @@ class ElmoEmbedder(Module):
             return result.cuda()
         else:
             return result
- 
+        
+        
 def character_ids_to_embeddings(character_ids, elmo_bilm, device):
     # returns (batch_size, 3, num_times, 1024) embeddings and (batch_size, num_times) mask
     if device >= 0:
@@ -126,3 +125,12 @@ def variablesFromPairElmo(pair, output_lang):
     target_variable = variableFromSentence(output_lang, pair[1])
     return (input_variable, target_variable)
 
+def pad(tokens, desired_length, padder):
+    padding = [padder] * (desired_length - len(tokens))
+    return tokens + padding
+
+def elmo_variable_from_sentences(sents):
+    tokens = [sent.split() for sent in sents]
+    max_size = max([len(x) for x in tokens]) + 1
+    padded = [pad(tok, max_size, padder='eos') for tok in tokens]
+    return batch_to_ids(padded)
