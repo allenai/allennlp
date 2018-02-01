@@ -312,10 +312,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         batch_indices = [0, 1, 0]
         action_history = [[1], [3, 4], []]
         score = [Variable(torch.FloatTensor([x])) for x in [.1, 1.1, 2.2]]
-        hidden_state = [torch.FloatTensor([i, i]) for i in range(len(batch_indices))]
-        memory_cell = [torch.FloatTensor([i, i]) for i in range(len(batch_indices))]
-        previous_action_embedding = [torch.FloatTensor([i, i]) for i in range(len(batch_indices))]
-        attended_question = [torch.FloatTensor([i, i]) for i in range(len(batch_indices))]
+        hidden_state = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
+        memory_cell = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
+        previous_action_embedding = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
+        attended_question = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
         grammar_state = [GrammarState(['e'], {}, {}, {}) for _ in batch_indices]
         self.encoder_outputs = torch.FloatTensor([[1, 2], [3, 4], [5, 6]])
         self.encoder_output_mask = Variable(torch.FloatTensor([[1, 1], [1, 0], [1, 1]]))
@@ -495,9 +495,9 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         step_action_embeddings = torch.FloatTensor([[[1, 1], [9, 9], [2, 2], [3, 3]],
                                                     [[4, 4], [9, 9], [3, 3], [9, 9]],
                                                     [[1, 1], [2, 2], [5, 5], [9, 9]]])
-        new_hidden_state = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(allowed_actions))]
-        new_memory_cell = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(allowed_actions))]
-        new_attended_question = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(allowed_actions))]
+        new_hidden_state = torch.FloatTensor([[i + 1, i + 1] for i in range(len(allowed_actions))])
+        new_memory_cell = torch.FloatTensor([[i + 1, i + 1] for i in range(len(allowed_actions))])
+        new_attended_question = torch.FloatTensor([[i + 1, i + 1] for i in range(len(allowed_actions))])
         new_states = WikiTablesDecoderStep._compute_new_states(self.state,
                                                                log_probs,
                                                                new_hidden_state,
@@ -569,9 +569,9 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         step_action_embeddings = torch.FloatTensor([[[1, 1], [9, 9], [2, 2], [3, 3]],
                                                     [[4, 4], [9, 9], [3, 3], [9, 9]],
                                                     [[1, 1], [2, 2], [5, 5], [9, 9]]])
-        new_hidden_state = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(considered_actions))]
-        new_memory_cell = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(considered_actions))]
-        new_attended_question = [torch.FloatTensor([i + 1, i + 1]) for i in range(len(considered_actions))]
+        new_hidden_state = torch.FloatTensor([[i + 1, i + 1] for i in range(len(considered_actions))])
+        new_memory_cell = torch.FloatTensor([[i + 1, i + 1] for i in range(len(considered_actions))])
+        new_attended_question = torch.FloatTensor([[i + 1, i + 1] for i in range(len(considered_actions))])
         new_states = WikiTablesDecoderStep._compute_new_states(self.state,
                                                                log_probs,
                                                                new_hidden_state,
