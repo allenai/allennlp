@@ -357,7 +357,7 @@ class Trainer:
 
         return val_loss, batch_num
 
-    def train(self) -> None:
+    def train(self) -> dict:
         """
         Trains the supplied model with the supplied parameters.
         """
@@ -366,6 +366,9 @@ class Trainer:
 
         logger.info("Beginning training.")
 
+        train_metrics = {}
+        val_metrics = {}
+        epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
@@ -407,6 +410,21 @@ class Trainer:
                     ((self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
                 formatted_time = time.strftime("%H:%M:%S", time.gmtime(estimated_time_remaining))
                 logger.info("Estimated training time remaining: %s", formatted_time)
+
+            epochs_trained += 1
+
+        training_elapsed_time = time.time() - training_start_time
+        metrics = {
+            "training_duration": time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time)),
+            "training_start_epoch": epoch_counter,
+            "training_epochs": epochs_trained
+        }
+        for k, v in train_metrics.items():
+            metrics["training_" + k] = v
+        for k, v in val_metrics.items():
+            metrics["validation_" + k] = v
+
+        return metrics
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
