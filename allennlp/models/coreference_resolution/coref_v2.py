@@ -13,6 +13,7 @@ from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding
 from allennlp.modules import FeedForward
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, SpanPruner
+from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import MentionRecall, ConllCorefScores
 
@@ -84,12 +85,17 @@ class CoreferenceResolverV2(Model):
                 TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1)))
         self._mention_pruner = SpanPruner(feedforward_scorer)
         self._antecedent_scorer = TimeDistributed(torch.nn.Linear(antecedent_feedforward.get_output_dim(), 1))
-        self._head_scorer = TimeDistributed(torch.nn.Linear(context_layer.get_output_dim(), 1))
+
+        self._endpoint_span_extractor = EndpointSpanExtractor(context_layer.get_output_dim(),
+                                                              combination="x,y",
+                                                              num_width_embeddings=max_span_width,
+                                                              span_width_embedding_dim=feature_size,
+                                                              bucket_widths=False)
+        self._attentive_span_extractor = SelfAttentiveSpanExtractor(input_dim=text_field_embedder.get_output_dim())
 
         # 10 possible distance buckets.
         self._num_distance_buckets = 10
         self._distance_embedding = Embedding(self._num_distance_buckets, feature_size)
-        self._span_width_embedding = Embedding(max_span_width, feature_size)
 
         self._max_span_width = max_span_width
         self._spans_per_word = spans_per_word
@@ -165,12 +171,19 @@ class CoreferenceResolverV2(Model):
         # consider a masked span.
         span_starts = F.relu(span_starts.float()).long()
         span_ends = F.relu(span_ends.float()).long()
+        # Shape: (batch_size, num_spans, 2)
+        span_indices = torch.cat([span_starts, span_ends], -1)
 
-        # Shape: (batch_size, num_spans, embedding_size)
-        span_embeddings = self._compute_span_representations(text_embeddings,
-                                                             text_mask,
-                                                             span_starts,
-                                                             span_ends)
+        # Shape: (batch_size, document_length, encoding_dim)
+        contextualized_embeddings = self._context_layer(text_embeddings, text_mask)
+        # Shape: (batch_size, num_spans, 2 * encoding_dim + feature_size)
+        endpoint_span_embeddings = self._endpoint_span_extractor(contextualized_embeddings, span_indices)
+        # Shape: (batch_size, num_spans, emebedding_size)
+        attended_span_embeddings = self._attentive_span_extractor(text_embeddings, span_indices)
+
+        # Shape: (batch_size, num_spans, emebedding_size + 2 * encoding_dim + feature_size)
+        span_embeddings = torch.cat([endpoint_span_embeddings, attended_span_embeddings], -1)
+
         # Prune based on mention scores.
         num_spans_to_keep = int(math.floor(self._spans_per_word * document_length))
 
@@ -373,134 +386,6 @@ class CoreferenceResolverV2(Model):
                 "coref_recall": coref_recall,
                 "coref_f1": coref_f1,
                 "mention_recall": mention_recall}
-
-    def _create_attended_span_representations(self,
-                                              head_scores: torch.FloatTensor,
-                                              text_embeddings: torch.FloatTensor,
-                                              span_ends: torch.IntTensor,
-                                              span_widths: torch.IntTensor) -> torch.FloatTensor:
-        """
-        Given a tensor of unnormalized attention scores for each word in the document, compute
-        distributions over every span with respect to these scores by normalising the headedness
-        scores for words inside the span.
-
-        Given these headedness distributions over every span, weight the corresponding vector
-        representations of the words in the span by this distribution, returning a weighted
-        representation of each span.
-
-        Parameters
-        ----------
-        head_scores : ``torch.FloatTensor``, required.
-            Unnormalized headedness scores for every word. This score is shared for every
-            candidate. The only way in which the headedness scores differ over different
-            spans is in the set of words over which they are normalized.
-        text_embeddings: ``torch.FloatTensor``, required.
-            The embeddings with shape  (batch_size, document_length, embedding_size)
-            over which we are computing a weighted sum.
-        span_ends: ``torch.IntTensor``, required.
-            A tensor of shape (batch_size, num_spans, 1), representing the end indices
-            of each span.
-        span_widths : ``torch.IntTensor``, required.
-            A tensor of shape (batch_size, num_spans, 1) representing the width of each
-            span candidates.
-        Returns
-        -------
-        attended_text_embeddings : ``torch.FloatTensor``
-            A tensor of shape (batch_size, num_spans, embedding_dim) - the result of
-            applying attention over all words within each candidate span.
-        """
-        # Shape: (1, 1, max_span_width)
-        max_span_range_indices = util.get_range_vector(self._max_span_width,
-                                                       text_embeddings.is_cuda).view(1, 1, -1)
-
-        # Shape: (batch_size, num_spans, max_span_width)
-        # This is a broadcasted comparison - for each span we are considering,
-        # we are creating a range vector of size max_span_width, but masking values
-        # which are greater than the actual length of the span.
-        span_mask = (max_span_range_indices <= span_widths).float()
-        raw_span_indices = span_ends - max_span_range_indices
-        # We also don't want to include span indices which are less than zero,
-        # which happens because some spans near the beginning of the document
-        # are of a smaller width than max_span_width, so we add this to the mask here.
-        span_mask = span_mask * (raw_span_indices >= 0).float()
-        # Spans
-        span_indices = F.relu(raw_span_indices.float()).long()
-
-        # Shape: (batch_size * num_spans * max_span_width)
-        flat_span_indices = util.flatten_and_batch_shift_indices(span_indices, text_embeddings.size(1))
-
-        # Shape: (batch_size, num_spans, max_span_width, embedding_dim)
-        span_text_embeddings = util.batched_index_select(text_embeddings, span_indices, flat_span_indices)
-
-        # Shape: (batch_size, num_spans, max_span_width)
-        span_head_scores = util.batched_index_select(head_scores, span_indices, flat_span_indices).squeeze(-1)
-
-        # Shape: (batch_size, num_spans, max_span_width)
-        span_head_weights = util.last_dim_softmax(span_head_scores, span_mask)
-
-        # Do a weighted sum of the embedded spans with
-        # respect to the normalised head score distributions.
-        # Shape: (batch_size, num_spans, embedding_dim)
-        attended_text_embeddings = util.weighted_sum(span_text_embeddings, span_head_weights)
-
-        return attended_text_embeddings
-
-    def _compute_span_representations(self,
-                                      text_embeddings: torch.FloatTensor,
-                                      text_mask: torch.FloatTensor,
-                                      span_starts: torch.IntTensor,
-                                      span_ends: torch.IntTensor) -> torch.FloatTensor:
-        """
-        Computes an embedded representation of every candidate span. This is a concatenation
-        of the contextualized endpoints of the span, an embedded representation of the width of
-        the span and a representation of the span's predicted head.
-
-        Parameters
-        ----------
-        text_embeddings : ``torch.FloatTensor``, required.
-            The embedded document of shape (batch_size, document_length, embedding_dim)
-            over which we are computing a weighted sum.
-        text_mask : ``torch.FloatTensor``, required.
-            A mask of shape (batch_size, document_length) representing non-padding entries of
-            ``text_embeddings``.
-        span_starts : ``torch.IntTensor``, required.
-            A tensor of shape (batch_size, num_spans) representing the start of each span candidate.
-        span_ends : ``torch.IntTensor``, required.
-            A tensor of shape (batch_size, num_spans) representing the end of each span candidate.
-        Returns
-        -------
-        span_embeddings : ``torch.FloatTensor``
-            An embedded representation of every candidate span with shape:
-            (batch_size, num_spans, context_layer.get_output_dim() * 2 + embedding_size + feature_size)
-        """
-        # Shape: (batch_size, document_length, encoding_dim)
-        contextualized_embeddings = self._context_layer(text_embeddings, text_mask)
-
-        # Shape: (batch_size, num_spans, encoding_dim)
-        start_embeddings = util.batched_index_select(contextualized_embeddings, span_starts.squeeze(-1))
-        end_embeddings = util.batched_index_select(contextualized_embeddings, span_ends.squeeze(-1))
-
-        # Compute and embed the span_widths (strictly speaking the span_widths - 1)
-        # Shape: (batch_size, num_spans, 1)
-        span_widths = span_ends - span_starts
-        # Shape: (batch_size, num_spans, encoding_dim)
-        span_width_embeddings = self._span_width_embedding(span_widths.squeeze(-1))
-
-        # Shape: (batch_size, document_length, 1)
-        head_scores = self._head_scorer(contextualized_embeddings)
-
-        # Shape: (batch_size, num_spans, embedding_dim)
-        # Note that we used the original text embeddings, not the contextual ones here.
-        attended_text_embeddings = self._create_attended_span_representations(head_scores,
-                                                                              text_embeddings,
-                                                                              span_ends,
-                                                                              span_widths)
-        # (batch_size, num_spans, context_layer.get_output_dim() * 2 + embedding_dim + feature_dim)
-        span_embeddings = torch.cat([start_embeddings,
-                                     end_embeddings,
-                                     span_width_embeddings,
-                                     attended_text_embeddings], -1)
-        return span_embeddings
 
     @staticmethod
     def _generate_valid_antecedents(num_spans_to_keep: int,

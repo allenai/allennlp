@@ -11,7 +11,7 @@ import logging
 import os
 import shutil
 import time
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, Iterable
 
 import torch
 import torch.optim.lr_scheduler
@@ -23,7 +23,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import peak_memory_mb
 from allennlp.common.tqdm import Tqdm
-from allennlp.data import InstanceCollection
+from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
 from allennlp.nn import util
@@ -55,8 +55,8 @@ class Trainer:
                  model: Model,
                  optimizer: torch.optim.Optimizer,
                  iterator: DataIterator,
-                 train_dataset: InstanceCollection,
-                 validation_dataset: Optional[InstanceCollection] = None,
+                 train_dataset: Iterable[Instance],
+                 validation_dataset: Optional[Iterable[Instance]] = None,
                  patience: int = 2,
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
@@ -112,8 +112,8 @@ class Trainer:
         self._model = model
         self._iterator = iterator
         self._optimizer = optimizer
-        self._train_dataset = train_dataset
-        self._validation_dataset = validation_dataset
+        self._train_data = train_dataset
+        self._validation_data = validation_dataset
 
         self._patience = patience
         self._num_epochs = num_epochs
@@ -199,10 +199,10 @@ class Trainer:
         self._model.train()
 
         # Get tqdm for the training batches
-        train_generator = self._iterator(self._train_dataset,
+        train_generator = self._iterator(self._train_data,
                                          num_epochs=1,
                                          cuda_device=self._cuda_device)
-        num_training_batches = self._iterator.get_num_batches(self._train_dataset)
+        num_training_batches = self._iterator.get_num_batches(self._train_data)
         train_generator_tqdm = Tqdm.tqdm(train_generator,
                                          total=num_training_batches)
         self._last_log = time.time()
@@ -227,7 +227,8 @@ class Trainer:
             # Update the description with the latest metrics
             metrics = self._get_metrics(train_loss, batch_num)
             description = self._description_from_metrics(metrics)
-            train_generator_tqdm.set_description(description)
+
+            train_generator_tqdm.set_description(description, refresh=False)
 
             # Log parameter values to Tensorboard
             batch_num_total = num_training_batches * epoch + batch_num
@@ -335,11 +336,11 @@ class Trainer:
 
         self._model.eval()
 
-        val_generator = self._iterator(self._validation_dataset,
+        val_generator = self._iterator(self._validation_data,
                                        num_epochs=1,
                                        cuda_device=self._cuda_device,
                                        for_training=False)
-        num_validation_batches = self._iterator.get_num_batches(self._validation_dataset)
+        num_validation_batches = self._iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batch_num = 0
@@ -353,7 +354,7 @@ class Trainer:
             # Update the description with the latest metrics
             val_metrics = self._get_metrics(val_loss, batch_num)
             description = self._description_from_metrics(val_metrics)
-            val_generator_tqdm.set_description(description)
+            val_generator_tqdm.set_description(description, refresh=False)
 
         return val_loss, batch_num
 
@@ -371,7 +372,7 @@ class Trainer:
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
-            if self._validation_dataset is not None:
+            if self._validation_data is not None:
                 # We have a validation set, so compute all the metrics on it.
                 val_loss, num_batches = self._validation_loss()
                 val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
@@ -499,8 +500,8 @@ class Trainer:
                     model: Model,
                     serialization_dir: str,
                     iterator: DataIterator,
-                    train_dataset: InstanceCollection,
-                    validation_dataset: Optional[InstanceCollection],
+                    train_data: Iterable[Instance],
+                    validation_data: Optional[Iterable[Instance]],
                     params: Params) -> 'Trainer':
 
         patience = params.pop_int("patience", 2)
@@ -523,7 +524,7 @@ class Trainer:
 
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
-                       train_dataset, validation_dataset,
+                       train_data, validation_data,
                        patience=patience,
                        validation_metric=validation_metric,
                        num_epochs=num_epochs,

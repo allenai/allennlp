@@ -21,14 +21,14 @@ and report any metrics calculated by the model.
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
 """
-from typing import Dict, Any
+from typing import Dict, Any, Iterable
 import argparse
 import logging
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import prepare_environment, import_submodules
 from allennlp.common.tqdm import Tqdm
-from allennlp.data import InstanceCollection
+from allennlp.data import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
@@ -81,19 +81,19 @@ class Evaluate(Subcommand):
 
 
 def evaluate(model: Model,
-             dataset: InstanceCollection,
-             iterator: DataIterator,
+             instances: Iterable[Instance],
+             data_iterator: DataIterator,
              cuda_device: int) -> Dict[str, Any]:
     model.eval()
 
-    generator = iterator(dataset, num_epochs=1, cuda_device=cuda_device, for_training=False)
+    iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device, for_training=False)
     logger.info("Iterating over dataset")
-    generator_tqdm = Tqdm.tqdm(generator, total=iterator.get_num_batches(dataset))
+    generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
     for batch in generator_tqdm:
         model(**batch)
         metrics = model.get_metrics()
         description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
-        generator_tqdm.set_description(description)
+        generator_tqdm.set_description(description, refresh=False)
 
     return model.get_metrics()
 
@@ -119,12 +119,12 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
     evaluation_data_path = args.evaluation_data_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
-    dataset = dataset_reader.read(evaluation_data_path)
-    dataset.index_instances(model.vocab)
+    instances = dataset_reader.read(evaluation_data_path)
 
     iterator = DataIterator.from_params(config.pop("iterator"))
+    iterator.index_with(model.vocab)
 
-    metrics = evaluate(model, dataset, iterator, args.cuda_device)
+    metrics = evaluate(model, instances, iterator, args.cuda_device)
 
     logger.info("Finished evaluating.")
     logger.info("Metrics:")

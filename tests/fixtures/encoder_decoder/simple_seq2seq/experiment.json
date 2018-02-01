@@ -76,7 +76,8 @@
   "iterator": {
     "type": "bucket",
     "padding_noise": 0.0,
-    "batch_size" : 80
+    "batch_size" : 80,
+    "sorting_keys": [["source_tokens", "num_tokens"]]
   },
   "trainer": {
     "num_epochs": 2,
