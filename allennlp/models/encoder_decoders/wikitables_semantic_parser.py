@@ -226,7 +226,8 @@ class WikiTablesSemanticParser(Model):
         question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_table_similarity_max_score + self._linking_params(linking_features).squeeze(3)
+        feature_scores = self._linking_params(linking_features).squeeze(3)
+        linking_scores = question_table_similarity_max_score + feature_scores
 
         # (batch_size, num_question_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
@@ -321,6 +322,8 @@ class WikiTablesSemanticParser(Model):
             outputs['debug_info'] = []
             outputs['entities'] = []
             outputs['linking_scores'] = linking_scores
+            outputs['feature_scores'] = feature_scores
+            outputs['similarity_scores'] = question_table_similarity_max_score
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
