@@ -12,6 +12,8 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.nn.util import remove_sentence_boundaries
 from allennlp.modules.elmo import _ElmoBiLm
 
+from chunking.data import variableFromSentence
+
 options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
 weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 elmo_bilm = _ElmoBiLm(options_file, weight_file)

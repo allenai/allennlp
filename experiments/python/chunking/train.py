@@ -182,8 +182,50 @@ def timeSince(since, percent):
     return '%s (- %s)' % (asMinutes(s), asMinutes(rs))
 
 
+def trainItersElmo(encoder, decoder, output_lang, n_iters, sent_pairs, sent_pairs_dev, max_length, print_every=1000, plot_every=100, save_every=10000, learning_rate=0.01):
+    start = time.time()
+    plot_losses = []
+    print_loss_total = 0  # Reset every print_every
+    plot_loss_total = 0  # Reset every plot_every
 
-def trainItersElmo(encoder, decoder, output_lang, n_iters, minibatch_size, sent_pairs, sent_pairs_dev, max_length, print_every=1000, plot_every=100, save_every=10000, learning_rate=0.01):
+    encoder_optimizer = optim.SGD(encoder.trainableParameters(), lr=learning_rate)
+    decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
+    criterion = nn.NLLLoss()
+
+    for iter in range(1, n_iters + 1):
+
+        training_pair = variablesFromPairElmo(random.choice(sent_pairs), output_lang)
+        input_variable = training_pair[0]
+        target_variable = training_pair[1]
+
+        loss = train(input_variable, target_variable, encoder,
+                     decoder, encoder_optimizer, decoder_optimizer, criterion, max_length)
+        print_loss_total += loss
+        plot_loss_total += loss
+        
+        if iter % save_every == 0:
+            torch.save(encoder, 'encoder2.{}.pt'.format(iter))
+            torch.save(decoder, 'decoder2.{}.pt'.format(iter))
+
+        if iter % print_every == 0:
+            print('train accuracy: {}'.format(validateRandomSubset(encoder, decoder, output_lang, sent_pairs, max_length, 100)))
+            print('dev accuracy: {}'.format(validateRandomSubset(encoder, decoder, output_lang, sent_pairs_dev, max_length, 100)))
+            evaluateRandomly(encoder, decoder, output_lang, sent_pairs, max_length, 3)
+            print_loss_avg = print_loss_total / print_every
+            print_loss_total = 0
+            print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
+                                         iter, iter / n_iters * 100, print_loss_avg))
+
+        if iter % plot_every == 0:
+            plot_loss_avg = plot_loss_total / plot_every
+            plot_losses.append(plot_loss_avg)
+            plot_loss_total = 0
+
+
+
+
+
+def trainItersElmoExperimental(encoder, decoder, output_lang, n_iters, minibatch_size, sent_pairs, sent_pairs_dev, max_length, print_every=1000, plot_every=100, save_every=10000, learning_rate=0.01):
     start = time.time()
     plot_losses = []
     print_loss_total = 0  # Reset every print_every
