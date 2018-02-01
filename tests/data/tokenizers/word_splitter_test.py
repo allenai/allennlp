@@ -106,7 +106,7 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
     def test_tokenize_handles_contraction(self):
         # note that "would've" is kept together, while "ain't" is not.
         sentence = "it ain't joe's problem; would've been yesterday"
-        expected_tokens = ["it", "ai", "n't", "joe", "'s", "problem", ";", "would've", "been",
+        expected_tokens = ["it", "ai", "n't", "joe", "'s", "problem", ";", "would", "'ve", "been",
                            "yesterday"]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
