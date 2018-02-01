@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SOURCES_ARG="--source squad.latest:/squad --source glove.latest:/glove"
+SOURCES_ARG="--source squad.2:/squad --source glove.1:/glove"
 RESULT_ARG="--result-path /output"
 GPU_ARG="--gpu-count=1"
 DETACH_ARG="--detach"  # or ""
@@ -41,6 +41,6 @@ CONFIG_DATASET_ID=$(beaker dataset create --quiet $PARAM_FILE)
 FILENAME=$(basename $PARAM_FILE)
 SOURCES_ARG="$SOURCES_ARG --source $CONFIG_DATASET_ID:/config.json"
 
-CMD="allennlp/run train /config.json -s /output"
+CMD="allennlp/run train /config.json -s /output --file-friendly-logging"
 
 beaker experiment run $SOURCES_ARG $RESULT_ARG $EXPERIMENT_DESC_ARG $GPU_ARG $DETACH_ARG $IMAGE $CMD

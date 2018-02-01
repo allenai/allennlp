@@ -4,8 +4,9 @@ from typing import List, Tuple, Dict, cast, Iterable
 
 from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common import Params
-from allennlp.common.util import add_noise_to_dict_values, ensure_list
+from allennlp.common.util import add_noise_to_dict_values
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.basic_iterator import BasicIterator
@@ -25,7 +26,7 @@ class BucketIterator(BasicIterator):
 
     Parameters
     ----------
-    sorting_keys : List[Tuple[str, str]], optional (default = [])
+    sorting_keys : List[Tuple[str, str]]
         To bucket inputs into batches, we want to group the instances by padding length, so that we
         minimize the amount of padding necessary per batch. In order to do this, we need to know
         which fields need what type of padding, and in what order.
@@ -35,10 +36,6 @@ class BucketIterator(BasicIterator):
         "sentence1" field, then by the "num_tokens" of the "sentence2" field, and finally by the
         "num_token_characters" of the "sentence1" field.  TODO(mattg): we should have some
         documentation somewhere that gives the standard padding keys used by different fields.
-
-        By default, the list of sorting keys is empty, meaning the dataset won't be sorted and
-        batches will just be padded using the max lengths of all fields requiring padding
-        calculated per batch.
     padding_noise : float, optional (default=.1)
         When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
         isn't deterministic.  This parameter determines how much noise we add, as a percentage of
@@ -48,43 +45,57 @@ class BucketIterator(BasicIterator):
         This will let you try out the largest batch that you have in the data `first`, so that if
         you're going to run out of memory, you know it early, instead of waiting through the whole
         epoch to find out at the end that you're going to crash.
+
+        Note that if you specify ``max_instances_in_memory``, the first batch will only be the
+        biggest from among the first "max instances in memory" instances.
     batch_size : int, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
+    instances_per_epoch : int, optional, (default = None)
+        See :class:`BasicIterator`.
+    max_instances_in_memory : int, optional, (default = None)
+        See :class:`BasicIterator`.
     """
 
     def __init__(self,
-                 sorting_keys: List[Tuple[str, str]] = None,
+                 sorting_keys: List[Tuple[str, str]],
                  padding_noise: float = 0.1,
                  biggest_batch_first: bool = False,
-                 batch_size: int = 32) -> None:
-        self._sorting_keys = sorting_keys or []
+                 batch_size: int = 32,
+                 instances_per_epoch: int = None,
+                 max_instances_in_memory: int = None) -> None:
+        if not sorting_keys:
+            raise ConfigurationError("BucketIterator requires sorting_keys to be specified")
+
+        self._sorting_keys = sorting_keys
         self._padding_noise = padding_noise
         self._biggest_batch_first = biggest_batch_first
-        super(BucketIterator, self).__init__(batch_size)
+        super(BucketIterator, self).__init__(batch_size=batch_size,
+                                             instances_per_epoch=instances_per_epoch,
+                                             max_instances_in_memory=max_instances_in_memory)
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
-        instances = ensure_list(instances)
+        for instance_list in self._memory_sized_lists(instances):
+            instance_list = self._sort_by_padding(instance_list,
+                                                  self._sorting_keys,
+                                                  self._padding_noise)
 
-        if self._sorting_keys:
-            instances = self._sort_by_padding(instances,
-                                              self._sorting_keys,
-                                              self._padding_noise)
-        grouped_instances = list(super(BucketIterator, self)._create_batches(instances, shuffle=False))
-        if self._biggest_batch_first:
-            # We'll actually pop the last _two_ batches, because the last one might not be full.
-            last_batch = grouped_instances.pop()
-            penultimate_batch = grouped_instances.pop()
-        if shuffle:
-            random.shuffle(grouped_instances)
-        else:
-            logger.warning("shuffle parameter is set to False,"
-                           " while bucket iterators by definition change the order of your data.")
-        if self._biggest_batch_first:
-            grouped_instances.insert(0, penultimate_batch)
-            grouped_instances.insert(0, last_batch)
+            grouped_instances = list(super()._create_batches(instance_list, shuffle=False))
+            move_to_front = self._biggest_batch_first and len(grouped_instances) > 1
+            if move_to_front:
+                # We'll actually pop the last _two_ batches, because the last one might not be full.
+                last_batch = grouped_instances.pop()
+                penultimate_batch = grouped_instances.pop()
+            if shuffle:
+                random.shuffle(grouped_instances)
+            else:
+                logger.warning("shuffle parameter is set to False,"
+                               " while bucket iterators by definition change the order of your data.")
+            if move_to_front:
+                grouped_instances.insert(0, penultimate_batch)
+                grouped_instances.insert(0, last_batch)
 
-        return grouped_instances
+            yield from grouped_instances
 
     def _sort_by_padding(self,
                          instances: List[Instance],
@@ -114,12 +125,16 @@ class BucketIterator(BasicIterator):
 
     @classmethod
     def from_params(cls, params: Params) -> 'BucketIterator':
-        sorting_keys = params.pop('sorting_keys', [])
+        sorting_keys = params.pop('sorting_keys')
         padding_noise = params.pop_float('padding_noise', 0.1)
         biggest_batch_first = params.pop_bool('biggest_batch_first', False)
         batch_size = params.pop_int('batch_size', 32)
+        instances_per_epoch = params.pop_int('instances_per_epoch', None)
+        max_instances_in_memory = params.pop_int('max_instances_in_memory', None)
         params.assert_empty(cls.__name__)
         return cls(sorting_keys=sorting_keys,
                    padding_noise=padding_noise,
                    biggest_batch_first=biggest_batch_first,
-                   batch_size=batch_size)
+                   batch_size=batch_size,
+                   instances_per_epoch=instances_per_epoch,
+                   max_instances_in_memory=max_instances_in_memory)

@@ -208,7 +208,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 "dataset_reader": {"type": "lazy-test"},
                 "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "iterator": {"type": "lazy-basic", "batch_size": 2},
+                "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
                         "optimizer": "adam"
@@ -239,7 +239,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 "test_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
                 "evaluate_on_test": True,
-                "iterator": {"type": "lazy-basic", "batch_size": 2},
+                "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
                         "optimizer": "adam"

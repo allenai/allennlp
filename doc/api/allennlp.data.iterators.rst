@@ -10,7 +10,6 @@ allennlp.data.iterators
 * :ref:`AdaptiveIterator<adaptive-iterator>`
 * :ref:`BasicIterator<basic-iterator>`
 * :ref:`BucketIterator<bucket-iterator>`
-* :ref:`LazyBasicIterator<lazy-basic-iterator>`
 
 .. _data-iterator:
 .. automodule:: allennlp.data.iterators.data_iterator
@@ -35,10 +34,3 @@ allennlp.data.iterators
    :members:
    :undoc-members:
    :show-inheritance:
-
-.. _lazy-basic-iterator:
-.. automodule:: allennlp.data.iterators.lazy_basic_iterator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-

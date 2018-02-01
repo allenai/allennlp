@@ -93,7 +93,7 @@ def evaluate(model: Model,
         model(**batch)
         metrics = model.get_metrics()
         description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
-        generator_tqdm.set_description(description)
+        generator_tqdm.set_description(description, refresh=False)
 
     return model.get_metrics()
 
