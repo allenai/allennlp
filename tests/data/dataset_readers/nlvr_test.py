@@ -9,8 +9,9 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
     def test_reader_reads(self):
         test_file = "tests/fixtures/data/nlvr/sample_data.jsonl"
         dataset = NlvrDatasetReader(add_paths_to_agenda=False).read(test_file)
-        assert len(dataset.instances) == 3
-        instance = dataset.instances[0]
+        instances = list(dataset)
+        assert len(instances) == 3
+        instance = instances[0]
         assert instance.fields.keys() == {'sentence', 'agenda', 'world', 'actions', 'label'}
         sentence_tokens = instance.fields["sentence"].tokens
         expected_tokens = ['There', 'is', 'a', 'circle', 'closely', 'touching', 'a', 'corner', 'of',
@@ -31,7 +32,8 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         reader = NlvrDatasetReader(add_paths_to_agenda=False)
         test_file = "tests/fixtures/data/nlvr/sample_data.jsonl"
         dataset = reader.read(test_file)
-        instance = dataset.instances[0]
+        instances = list(dataset)
+        instance = instances[0]
         sentence_tokens = instance.fields["sentence"].tokens
         sentence = " ".join([t.text for t in sentence_tokens])
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
@@ -45,7 +47,8 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         reader = NlvrDatasetReader()
         test_file = "tests/fixtures/data/nlvr/sample_data.jsonl"
         dataset = reader.read(test_file)
-        instance = dataset.instances[0]
+        instances = list(dataset)
+        instance = instances[0]
         sentence_tokens = instance.fields["sentence"].tokens
         sentence = " ".join([t.text for t in sentence_tokens])
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
