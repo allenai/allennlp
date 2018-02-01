@@ -134,7 +134,7 @@ render() {
 
 class WikiTablesOutput extends React.Component {
     render() {
-      const { answer, logicalForm, actions, linking_scores, entities, question_tokens } = this.props;
+      const { answer, logicalForm, actions, linking_scores, feature_scores, similarity_scores, entities, question_tokens } = this.props;
 
       return (
         <div className="model__content">
@@ -159,6 +159,12 @@ class WikiTablesOutput extends React.Component {
               </Collapsible>
               <Collapsible trigger="Entity linking scores">
                   <HeatMap xLabels={question_tokens} yLabels={entities} data={linking_scores} xLabelWidth="250px" />
+              </Collapsible>
+              <Collapsible trigger="Entity linking scores (features only)">
+                  <HeatMap xLabels={question_tokens} yLabels={entities} data={feature_scores} xLabelWidth="250px" />
+              </Collapsible>
+              <Collapsible trigger="Entity linking scores (similarity only)">
+                  <HeatMap xLabels={question_tokens} yLabels={entities} data={similarity_scores} xLabelWidth="250px" />
               </Collapsible>
             </Collapsible>
           </div>
@@ -247,6 +253,8 @@ class _WikiTablesComponent extends React.Component {
       const logicalForm = responseData && responseData.logical_form;
       const actions = responseData && responseData.predicted_actions;
       const linking_scores = responseData && responseData.linking_scores;
+      const feature_scores = responseData && responseData.feature_scores;
+      const similarity_scores = responseData && responseData.similarity_scores;
       const entities = responseData && responseData.entities;
       const question_tokens = responseData && responseData.question_tokens;
 
@@ -263,6 +271,8 @@ class _WikiTablesComponent extends React.Component {
                               logicalForm={logicalForm}
                               actions={actions}
                               linking_scores={linking_scores}
+                              feature_scores={feature_scores}
+                              similarity_scores={similarity_scores}
                               entities={entities}
                               question_tokens={question_tokens}
             />
