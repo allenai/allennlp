@@ -9,7 +9,8 @@ from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
-from allennlp.data import Token, Vocabulary, Dataset, Instance
+from allennlp.data import Token, Vocabulary, Instance
+from allennlp.data.dataset import Batch
 from allennlp.data.iterators import BasicIterator
 from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
 from allennlp.data.fields import TextField
@@ -40,13 +41,12 @@ class TestElmoBiLm(AllenNlpTestCase):
                 instance = Instance({"elmo": field})
                 instances.append(instance)
 
-        dataset = Dataset(instances)
         vocab = Vocabulary()
-        dataset.index_instances(vocab)
 
         # Now finally we can iterate through batches.
         iterator = BasicIterator(3)
-        for i, batch in enumerate(iterator(dataset, num_epochs=1, shuffle=False)):
+        iterator.index_with(vocab)
+        for i, batch in enumerate(iterator(instances, num_epochs=1, shuffle=False)):
             lm_embeddings = elmo_bilm(batch['elmo']['character_ids'])
             top_layer_embeddings, mask = remove_sentence_boundaries(
                     lm_embeddings['activations'][2],
@@ -115,7 +115,7 @@ class TestElmo(AllenNlpTestCase):
             instance = Instance({'elmo': field})
             instances.append(instance)
 
-        dataset = Dataset(instances)
+        dataset = Batch(instances)
         vocab = Vocabulary()
         dataset.index_instances(vocab)
         return dataset.as_tensor_dict()['elmo']['character_ids']

@@ -1,11 +1,12 @@
-from typing import Dict, DefaultDict, List, Optional, Iterator, Set, Tuple
+from typing import DefaultDict, List, Optional, Iterator, Set, Tuple
 from collections import defaultdict
 import codecs
 import os
 import logging
 
 from nltk import Tree
-import tqdm
+
+from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -45,7 +46,7 @@ class OntonotesSentence:
         and Web Log data. When not available the rows are marked with an "-".
     named_entities : ``List[str]``
         The BIO tags for named entities in the sentence.
-    srl_frames : ``Dict[str, List[str]]``
+    srl_frames : ``List[Tuple[str, List[str]]]``
         A dictionary keyed by the verb in the sentence for the given
         Propbank frame labels, in a BIO format.
     coref_spans : ``Set[TypedSpan]``
@@ -64,7 +65,7 @@ class OntonotesSentence:
                  word_senses: List[Optional[float]],
                  speakers: List[Optional[str]],
                  named_entities: List[str],
-                 srl_frames: Dict[str, List[str]],
+                 srl_frames: List[Tuple[str, List[str]]],
                  coref_spans: Set[TypedSpan]) -> None:
 
         self.document_id = document_id
@@ -174,7 +175,7 @@ class Ontonotes:
         Co-reference chain information encoded in a parenthesis structure. For documents that do
          not have co-reference annotations, each line is represented with a "-".
     """
-    def dataset_iterator(self, file_path) -> Iterator[OntonotesSentence]:
+    def dataset_iterator(self, file_path: str) -> Iterator[OntonotesSentence]:
         """
         An iterator over the entire dataset, yielding all sentences processed.
         """
@@ -188,7 +189,7 @@ class Ontonotes:
         containing CONLL-formatted files.
         """
         logger.info("Reading CONLL sentences from dataset files at: %s", file_path)
-        for root, _, files in tqdm.tqdm(list(os.walk(file_path))):
+        for root, _, files in Tqdm.tqdm(list(os.walk(file_path))):
             for data_file in files:
                 # These are a relic of the dataset pre-processing. Every
                 # file will be duplicated - one file called filename.gold_skel
@@ -198,22 +199,40 @@ class Ontonotes:
 
                 yield os.path.join(root, data_file)
 
+    def dataset_document_iterator(self, file_path: str) -> Iterator[List[OntonotesSentence]]:
+        """
+        An iterator over CONLL formatted files which yields documents, regardless
+        of the number of document annotations in a particular file. This is useful
+        for conll data which has been preprocessed, such as the preprocessing which
+        takes place for the 2012 CONLL Coreference Resolution task.
+        """
+        with codecs.open(file_path, 'r', encoding='utf8') as open_file:
+            conll_rows = []
+            document: List[OntonotesSentence] = []
+            for line in open_file:
+                line = line.strip()
+                if line != '' and not line.startswith('#'):
+                    # Non-empty line. Collect the annotation.
+                    conll_rows.append(line)
+                else:
+                    if conll_rows:
+                        document.append(self._conll_rows_to_sentence(conll_rows))
+                        conll_rows = []
+                if line.startswith("#end document"):
+                    yield document
+                    document = []
+            if document:
+                # Collect any stragglers or files which might not
+                # have the '#end document' format for the end of the file.
+                yield document
+
     def sentence_iterator(self, file_path: str) -> Iterator[OntonotesSentence]:
         """
         An iterator over the sentences in an individual CONLL formatted file.
         """
-        with codecs.open(file_path, 'r', encoding='utf8') as open_file:
-            conll_rows = []
-            for line in open_file:
-                line = line.strip()
-                if line != '' and not line.startswith('#'):
-                    conll_rows.append(line)
-                else:
-                    if not conll_rows:
-                        continue
-                    else:
-                        yield self._conll_rows_to_sentence(conll_rows)
-                        conll_rows = []
+        for document in self.dataset_document_iterator(file_path):
+            for sentence in document:
+                yield sentence
 
     def _conll_rows_to_sentence(self, conll_rows: List[str]) -> OntonotesSentence:
         document_id: str = None
@@ -318,8 +337,8 @@ class Ontonotes:
             speakers.append(speaker if speaker != "-" else None)
 
         named_entities = span_labels[0]
-        srl_frames = {predicate: labels for predicate, labels
-                      in zip(verbal_predicates, span_labels[1:])}
+        srl_frames = [(predicate, labels) for predicate, labels
+                      in zip(verbal_predicates, span_labels[1:])]
 
         if all(parse_pieces):
             parse_tree = Tree.fromstring("".join(parse_pieces))
@@ -430,81 +449,3 @@ class Ontonotes:
             # Exiting a span, so we reset the current span label for this annotation.
             if ")" in annotation:
                 current_span_labels[annotation_index] = None
-
-
-def bio_tags_to_spans(tag_sequence: List[str],
-                      classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
-    """
-    Given a sequence corresponding to BIO tags, extracts spans.
-    Spans are inclusive and can be of zero length, representing a single word span.
-    Ill-formed spans are also included (i.e those which do not start with a "B-LABEL"),
-    as otherwise it is possible to get a perfect precision score whilst still predicting
-    ill-formed spans in addition to the correct spans.
-
-    Parameters
-    ----------
-    tag_sequence : List[str], required.
-        The integer class labels for a sequence.
-    classes_to_ignore : List[str], optional (default = None).
-        A list of string class labels `excluding` the bio tag
-        which should be ignored when extracting spans.
-
-    Returns
-    -------
-    spans : List[TypedStringSpan]
-        The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
-        Note that the label `does not` contain any BIO tag prefixes.
-    """
-    classes_to_ignore = classes_to_ignore or []
-    spans = set()
-    span_start = 0
-    span_end = 0
-    active_conll_tag = None
-    for index, string_tag in enumerate(tag_sequence):
-        # Actual BIO tag.
-        bio_tag = string_tag[0]
-        conll_tag = string_tag[2:]
-        if bio_tag == "O" or conll_tag in classes_to_ignore:
-            # The span has ended.
-            if active_conll_tag:
-                spans.add((active_conll_tag, (span_start, span_end)))
-            active_conll_tag = None
-            # We don't care about tags we are
-            # told to ignore, so we do nothing.
-            continue
-        elif bio_tag == "U":
-            # The U tag is used to indicate a span of length 1,
-            # so if there's an active tag we end it, and then
-            # we add a "length 0" tag.
-            if active_conll_tag:
-                spans.add((active_conll_tag, (span_start, span_end)))
-            spans.add((conll_tag, (index, index)))
-            active_conll_tag = None
-        elif bio_tag == "B":
-            # We are entering a new span; reset indices
-            # and active tag to new span.
-            if active_conll_tag:
-                spans.add((active_conll_tag, (span_start, span_end)))
-            active_conll_tag = conll_tag
-            span_start = index
-            span_end = index
-        elif bio_tag == "I" and conll_tag == active_conll_tag:
-            # We're inside a span.
-            span_end += 1
-        else:
-            # This is the case the bio label is an "I", but either:
-            # 1) the span hasn't started - i.e. an ill formed span.
-            # 2) The span is an I tag for a different conll annotation.
-            # We'll process the previous span if it exists, but also
-            # include this span. This is important, because otherwise,
-            # a model may get a perfect F1 score whilst still including
-            # false positive ill-formed spans.
-            if active_conll_tag:
-                spans.add((active_conll_tag, (span_start, span_end)))
-            active_conll_tag = conll_tag
-            span_start = index
-            span_end = index
-    # Last token might have been a part of a valid span.
-    if active_conll_tag:
-        spans.add((active_conll_tag, (span_start, span_end)))
-    return list(spans)

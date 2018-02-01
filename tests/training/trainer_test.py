@@ -15,11 +15,9 @@ from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 class TestTrainer(AllenNlpTestCase):
     def setUp(self):
         super(TestTrainer, self).setUp()
-        dataset = SequenceTaggingDatasetReader().read('tests/fixtures/data/sequence_tagging.tsv')
-        vocab = Vocabulary.from_dataset(dataset)
+        self.instances = SequenceTaggingDatasetReader().read('tests/fixtures/data/sequence_tagging.tsv')
+        vocab = Vocabulary.from_instances(self.instances)
         self.vocab = vocab
-        dataset.index_instances(vocab)
-        self.dataset = dataset
         self.model_params = Params({
                 "text_field_embedder": {
                         "tokens": {
@@ -37,21 +35,22 @@ class TestTrainer(AllenNlpTestCase):
         self.model = SimpleTagger.from_params(self.vocab, self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01)
         self.iterator = BasicIterator(batch_size=2)
+        self.iterator.index_with(vocab)
 
     def test_trainer_can_run(self):
         trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.dataset, num_epochs=2)
+                          self.iterator, self.instances, num_epochs=2)
         trainer.train()
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.dataset,
-                          validation_dataset=self.dataset,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
                           num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
         new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.dataset,
-                              validation_dataset=self.dataset,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR)
 
         epoch, val_metrics_per_epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
@@ -63,8 +62,8 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_increasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.dataset,
-                              validation_dataset=self.dataset,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="+test")
         assert new_trainer._should_stop_early([.5, .3, .2, .1, .4, .4]) #pylint: disable=protected-access
@@ -72,8 +71,8 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_decreasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.dataset,
-                              validation_dataset=self.dataset,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="-test")
         assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4]) #pylint: disable=protected-access
@@ -87,6 +86,6 @@ class TestTrainer(AllenNlpTestCase):
                 return {}
         with pytest.raises(ConfigurationError):
             trainer = Trainer(FakeModel(), self.optimizer,
-                              self.iterator, self.dataset,
+                              self.iterator, self.instances,
                               num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()

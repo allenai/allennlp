@@ -73,6 +73,14 @@ class WordTokenizer(Tokenizer):
         stemming or stopword removal, depending on the parameters given to the constructor.
         """
         words = self._word_splitter.split_words(text)
+        return self._filter_and_stem(words)
+
+    @overrides
+    def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
+        batched_words = self._word_splitter.batch_split_words(texts)
+        return [self._filter_and_stem(words) for words in batched_words]
+
+    def _filter_and_stem(self, words: List[Token]) -> List[Token]:
         filtered_words = self._word_filter.filter_words(words)
         stemmed_words = [self._word_stemmer.stem_word(word) for word in filtered_words]
         for start_token in self._start_tokens:

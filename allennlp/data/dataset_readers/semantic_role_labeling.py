@@ -4,9 +4,7 @@ from typing import Dict, List
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField
 from allennlp.data.instance import Instance
@@ -44,13 +42,13 @@ class SrlReader(DatasetReader):
 
     """
     def __init__(self, token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super().__init__()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
-    def read(self, file_path: str):
+    def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
-        instances = []
         ontonotes_reader = Ontonotes()
         logger.info("Reading SRL instances from dataset files at: %s", file_path)
 
@@ -60,16 +58,11 @@ class SrlReader(DatasetReader):
                 # Sentence contains no predicates.
                 tags = ["O" for _ in tokens]
                 verb_label = [0 for _ in tokens]
-                instances.append(self.text_to_instance(tokens, verb_label, tags))
+                yield self.text_to_instance(tokens, verb_label, tags)
             else:
-                for tags in sentence.srl_frames.values():
+                for (_, tags) in sentence.srl_frames:
                     verb_indicator = [1 if label[-2:] == "-V" else 0 for label in tags]
-                    instances.append(self.text_to_instance(tokens, verb_indicator, tags))
-
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return Dataset(instances)
+                    yield self.text_to_instance(tokens, verb_indicator, tags)
 
     def text_to_instance(self,  # type: ignore
                          tokens: List[Token],

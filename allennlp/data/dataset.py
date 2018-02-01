@@ -1,71 +1,55 @@
 """
-A :class:`~Dataset` represents a collection of data suitable for feeding into a model.
-For example, when you train a model, you will likely have a *training* dataset and a *validation* dataset.
+A :class:`~Batch` represents a collection of ``Instance`` s to be fed
+through a model.
 """
 
 import logging
 from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Iterator, Iterable
 
 import torch
-import tqdm
 
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import ensure_list
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-
-class Dataset:
+class Batch(Iterable):
     """
-    A collection of :class:`~allennlp.data.instance.Instance` objects.
-    The ``Instances`` have ``Fields``, and the fields
-    could be in an indexed or unindexed state - the ``Dataset`` has methods around indexing the
-    data and converting the data into arrays.
+    A batch of Instances. In addition to containing the instances themselves,
+    it contains helper functions for converting the data into tensors.
     """
-    def __init__(self, instances: List[Instance]) -> None:
+    def __init__(self, instances: Iterable[Instance]) -> None:
         """
-        A Dataset just takes a list of instances in its constructor.  It's important that all
-        subclasses have an identical constructor to this (though possibly with different Instance
-        types).  If you change the constructor, you also have to override all methods in this base
-        class that call the constructor, such as `truncate()`.
+        A Batch just takes an iterable of instances in its constructor and hangs onto them
+        in a list.
+        """
+        super().__init__()
+
+        self.instances: List[Instance] = ensure_list(instances)
+        self._check_types()
+
+    def _check_types(self) -> None:
+        """
+        Check that all the instances have the same types.
         """
         all_instance_fields_and_types: List[Dict[str, str]] = [{k: v.__class__.__name__
                                                                 for k, v in x.fields.items()}
-                                                               for x in instances]
+                                                               for x in self.instances]
         # Check all the field names and Field types are the same for every instance.
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
-            raise ConfigurationError("You cannot construct a Dataset with non-homogeneous Instances.")
-
-        self.instances = instances
-
-    def truncate(self, max_instances: int):
-        """
-        If there are more instances than ``max_instances`` in this dataset, we truncate the
-        instances to the first ``max_instances``.  This `modifies` the current object, and returns
-        nothing.
-        """
-        if len(self.instances) > max_instances:
-            self.instances = self.instances[:max_instances]
-
-    def index_instances(self, vocab: Vocabulary):
-        """
-        Converts all ``UnindexedFields`` in all ``Instances`` in this ``Dataset`` into
-        ``IndexedFields``.  This modifies the current object, it does not return a new object.
-        """
-        logger.info("Indexing dataset")
-        for instance in tqdm.tqdm(self.instances):
-            instance.index_fields(vocab)
+            raise ConfigurationError("You cannot construct a Batch with non-homogeneous Instances.")
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """
-        Gets the maximum padding lengths from all ``Instances`` in this dataset.  Each ``Instance``
+        Gets the maximum padding lengths from all ``Instances`` in this batch.  Each ``Instance``
         has multiple ``Fields``, and each ``Field`` could have multiple things that need padding.
         We look at all fields in all instances, and find the max values for each (field_name,
         padding_key) pair, returning them in a dictionary.
 
-        This can then be used to convert this dataset into arrays of consistent length, or to set
+        This can then be used to convert this batch into arrays of consistent length, or to set
         model parameters, etc.
         """
         padding_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
@@ -91,9 +75,9 @@ class Dataset:
         # This complex return type is actually predefined elsewhere as a DataArray,
         # but we can't use it because mypy doesn't like it.
         """
-        This method converts this ``Dataset`` into a set of pytorch Tensors that can be passed
+        This method converts this ``Batch`` into a set of pytorch Tensors that can be passed
         through a model.  In order for the tensors to be valid tensors, all ``Instances`` in this
-        dataset need to be padded to the same lengths wherever padding is necessary, so we do that
+        batch need to be padded to the same lengths wherever padding is necessary, so we do that
         first, then we combine all of the tensors for each field in each instance into a set of
         batched tensors for each field.
 
@@ -114,8 +98,8 @@ class Dataset:
             which disables gradient computations in the graph.  This makes inference more efficient
             (particularly in memory usage), but is incompatible with training models.
         verbose : ``bool``, optional (default=``False``)
-            Should we output logging information when we're doing this padding?  If the dataset is
-            large, this is nice to have, because padding a large dataset could take a long time.
+            Should we output logging information when we're doing this padding?  If the batch is
+            large, this is nice to have, because padding a large batch could take a long time.
             But if you're doing this inside of a data generator, having all of this output per
             batch is a bit obnoxious (and really slow).
 
@@ -140,7 +124,7 @@ class Dataset:
         # given a max length for a particular field and padding key.  If we were, we use that
         # instead of the instance-based one.
         if verbose:
-            logger.info("Padding dataset of size %d to lengths %s", len(self.instances), str(padding_lengths))
+            logger.info("Padding batch of size %d to lengths %s", len(self.instances), str(padding_lengths))
             logger.info("Getting max lengths from instances")
         instance_padding_lengths = self.get_padding_lengths()
         if verbose:
@@ -164,9 +148,16 @@ class Dataset:
         # Finally, we combine the tensors that we got for each instance into one big tensor (or set
         # of tensors) per field.  The `Field` classes themselves have the logic for batching the
         # tensors together, so we grab a dictionary of field_name -> field class from the first
-        # instance in the dataset.
+        # instance in the batch.
         field_classes = self.instances[0].fields
         final_fields = {}
         for field_name, field_tensor_list in field_tensors.items():
             final_fields[field_name] = field_classes[field_name].batch_tensors(field_tensor_list)
         return final_fields
+
+    def __iter__(self) -> Iterator[Instance]:
+        return iter(self.instances)
+
+    def index_instances(self, vocab: Vocabulary) -> None:
+        for instance in self.instances:
+            instance.index_fields(vocab)

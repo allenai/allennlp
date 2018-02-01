@@ -1,7 +1,6 @@
 <p align="center"><img width="40%" src="doc/static/allennlp-logo-dark.png" /></p>
 
-
-[![Build Status](https://travis-ci.org/allenai/allennlp.svg?branch=master)](https://travis-ci.org/allenai/allennlp)
+[![Build Status](http://build.allennlp.org/app/rest/builds/buildType:(id:AllenNLP_AllenNLPCommits)/statusIcon)](http://build.allennlp.org/viewType.html?buildTypeId=AllenNLP_AllenNLPCommits&guest=1)
 [![codecov](https://codecov.io/gh/allenai/allennlp/branch/master/graph/badge.svg)](https://codecov.io/gh/allenai/allennlp)
 [![docker](https://images.microbadger.com/badges/image/allennlp/allennlp.svg)](https://microbadger.com/images/allennlp/allennlp)
 
@@ -15,7 +14,7 @@ just run `docker run -it --rm allennlp/allennlp` to get an environment that will
 
 Now you can do any of the following:
 
-* Run a model on example sentences with `allennlp/run bulk`.
+* Run a model on example sentences with `allennlp/run predict`.
 * Start a web service to host our models with `allennlp/run serve`.
 * Interactively code against AllenNLP from the Python interpreter with `python`.
 
@@ -148,7 +147,7 @@ cd allennlp
 
 4. Visit http://pytorch.org/ and install the relevant pytorch package.
 
-You should now be able to test your installation with `pytest -v`.  Congratulations!
+You should now be able to test your installation with `./scripts/verify.py --all`.  Congratulations!
 
 ### Setting up a Docker development environment
 
@@ -198,7 +197,7 @@ You can run the image with `docker run --rm -it allennlp/allennlp`.  The `--rm` 
 
 The Docker environment uses Conda to install Python and automatically enters the Conda environment "allennlp".
 
-You can test your installation by running  `pytest -v`.
+You can test your installation by running  `./scripts/verify.py --all`.
 
 
 ### Setting up a Kubernetes development environment

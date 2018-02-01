@@ -1,3 +1,4 @@
+import copy
 import os
 
 from numpy.testing import assert_allclose
@@ -6,7 +7,8 @@ import torch
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.data import DataIterator, Dataset, DatasetReader, Vocabulary
+from allennlp.data import DataIterator, DatasetReader, Vocabulary
+from allennlp.data.dataset import Batch
 from allennlp.models import Model, load_archive
 
 
@@ -21,12 +23,17 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(self.param_file)
 
         reader = DatasetReader.from_params(params['dataset_reader'])
-        dataset = reader.read(dataset_file)
-        vocab = Vocabulary.from_dataset(dataset)
+        instances = reader.read(dataset_file)
+        vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
-        dataset.index_instances(vocab)
-        self.dataset = dataset
+        self.instances = instances
         self.model = Model.from_params(self.vocab, params['model'])
+
+        # TODO(joelgrus) get rid of these
+        # (a lot of the model tests use them, so they'll have to be changed)
+        self.dataset = Batch(self.instances)
+        self.dataset.index_instances(self.vocab)
+
 
     def ensure_model_can_train_save_and_load(self,
                                              param_file: str,
@@ -46,16 +53,23 @@ class ModelTestCase(AllenNlpTestCase):
                             err_msg=key)
         params = Params.from_file(self.param_file)
         reader = DatasetReader.from_params(params['dataset_reader'])
-        iterator = DataIterator.from_params(params['iterator'])
+
+        # Need to duplicate params because Iterator.from_params will consume.
+        iterator_params = params['iterator']
+        iterator_params2 = Params(copy.deepcopy(iterator_params.as_dict()))
+
+        iterator = DataIterator.from_params(iterator_params)
+        iterator2 = DataIterator.from_params(iterator_params2)
 
         # We'll check that even if we index the dataset with each model separately, we still get
         # the same result out.
         model_dataset = reader.read(params['validation_data_path'])
-        model_dataset.index_instances(model.vocab)
+        iterator.index_with(model.vocab)
         model_batch = next(iterator(model_dataset, shuffle=False, cuda_device=cuda_device))
+
         loaded_dataset = reader.read(params['validation_data_path'])
-        loaded_dataset.index_instances(loaded_model.vocab)
-        loaded_batch = next(iterator(loaded_dataset, shuffle=False, cuda_device=cuda_device))
+        iterator2.index_with(loaded_model.vocab)
+        loaded_batch = next(iterator2(loaded_dataset, shuffle=False, cuda_device=cuda_device))
 
         # Check gradients are None for non-trainable parameters and check that
         # trainable parameters receive some gradient if they are trainable.
@@ -133,12 +147,13 @@ class ModelTestCase(AllenNlpTestCase):
     def ensure_batch_predictions_are_consistent(self):
         self.model.eval()
         single_predictions = []
-        for i, instance in enumerate(self.dataset.instances):
-            dataset = Dataset([instance])
+        for i, instance in enumerate(self.instances):
+            dataset = Batch([instance])
             tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
             result = self.model(**tensors)
             single_predictions.append(result)
-        batch_tensors = self.dataset.as_tensor_dict(self.dataset.get_padding_lengths(), for_training=False)
+        full_dataset = Batch(self.instances)
+        batch_tensors = full_dataset.as_tensor_dict(full_dataset.get_padding_lengths(), for_training=False)
         batch_predictions = self.model(**batch_tensors)
         for i, instance_predictions in enumerate(single_predictions):
             for key, single_predicted in instance_predictions.items():

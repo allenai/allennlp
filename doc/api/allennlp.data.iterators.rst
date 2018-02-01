@@ -34,5 +34,3 @@ allennlp.data.iterators
    :members:
    :undoc-members:
    :show-inheritance:
-
-
