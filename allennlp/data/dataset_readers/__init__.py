@@ -11,13 +11,12 @@ from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
 from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReader
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.language_modeling import LanguageModelingReader
+from allennlp.data.dataset_readers.nlvr import NlvrDatasetReader
+from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankConstituencySpanDatasetReader
 from allennlp.data.dataset_readers.reading_comprehension import SquadReader, TriviaQaReader
-from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatasetReader
-from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.dataset_readers.seq2seq import Seq2SeqDatasetReader
-from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReader
-from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankConstituencySpanDatasetReader
-from allennlp.data.dataset_readers.wikitables.wikitables_dataset_reader import WikitablesDatasetReader
+from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatasetReader
+from allennlp.data.dataset_readers.snli import SnliReader
+from allennlp.data.dataset_readers.wikitables.wikitables_dataset_reader import WikiTablesDatasetReader
 from allennlp.data.dataset_readers.wikitables.wikitables_preprocessed_dataset_reader import WikiTablesPreprocessedDatasetReader
-from allennlp.data.dataset_readers.nlvr import NlvrDatasetReader
