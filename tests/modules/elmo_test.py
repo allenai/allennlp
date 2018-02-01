@@ -13,6 +13,7 @@ from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.dataset import Batch
 from allennlp.data.iterators import BasicIterator
 from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
+from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.data.fields import TextField
 from allennlp.nn.util import remove_sentence_boundaries
 
@@ -161,6 +162,37 @@ class TestElmo(AllenNlpTestCase):
                     embeddings_4d['elmo_representations'][0][:, k, :, :].data.numpy(),
                     embeddings_3d[k]['elmo_representations'][0].data.numpy()
             )
+
+
+class TestElmoRequiresGrad(AllenNlpTestCase):
+    def _run_test(self, requires_grad):
+        options_file = os.path.join(FIXTURES, 'options.json')
+        weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
+        embedder = ElmoTokenEmbedder(options_file, weight_file, requires_grad=requires_grad)
+        batch_size = 3
+        seq_len = 4
+        char_ids = Variable(torch.from_numpy(numpy.random.randint(0, 262, (batch_size, seq_len, 50))))
+        embeddings = embedder(char_ids)
+        loss = embeddings.sum()
+        loss.backward()
+
+        # All of the elmo grads should be None.  The embedder has additional trainable parameters
+        # that are always present.
+
+        elmo_grads = [param.grad for name, param in embedder.named_parameters() if '_elmo_lstm' in name]
+        if requires_grad:
+            # None of the elmo grads should be None.
+            assert all([grad is not None for grad in elmo_grads])
+        else:
+            # All of the elmo grads should be None.
+            assert all([grad is None for grad in elmo_grads])
+
+    def test_elmo_requires_grad(self):
+        self._run_test(True)
+
+    def test_elmo_does_not_require_grad(self):
+        self._run_test(False)
+
 
 class TestElmoTokenRepresentation(AllenNlpTestCase):
     def test_elmo_token_representation(self):
