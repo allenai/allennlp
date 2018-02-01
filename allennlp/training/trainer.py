@@ -121,6 +121,7 @@ class Trainer:
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = None,
+                 keep_serialized_model_every_num_seconds: int = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
@@ -156,7 +157,13 @@ class Trainer:
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
         num_serialized_models_to_keep: int, optional (default=None)
-            Number of previous model checpoints to retain.  Default is to keep all epochs.
+            Number of previous model checkpoints to retain.  Default is to keep all checkpoints.
+        keep_serialized_model_every_num_seconds: int, optional (default=None)
+            If num_serialized_models_to_keep is not None, then occasionally it's useful to
+            save models at a given interval in addition to the last num_serialized_models_to_keep.
+            To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
+            between permanently saved checkpoints.  Note that this option is only used if 
+            num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
         model_save_interval : float, optional (default=None)
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
@@ -164,6 +171,7 @@ class Trainer:
         cuda_device : int, optional (default = -1)
             An integer specifying the CUDA device to use. If -1, the CPU is used.
             For multiple GPU training, specify a list of CUDA devices, e.g. [0, 1].
+            Note, multiple GPU training is still experimental and not fully supported.
         grad_norm : float, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
         grad_clipping : ``float``, optional (default = ``None``).
@@ -179,6 +187,19 @@ class Trainer:
             updates the learning rate given the batch number.
         histogram_interval : ``int``, optional, (default = ``None``)
             If not None, then log histograms to tensorboard every ``histogram_interval`` batches.
+            When this parameter is specified, the following additional logging is enabled:
+                * Histograms of model parameters
+                * The ratio of parameter update norm to parameter norm
+                * Histogram of layer activations
+            By default, we log histograms of every model parameter.  However, clients can
+            optionally provide an attribute ``histogram_parameters`` on the ``Model`` that
+            is a list of parameters.  If this is provided, then only those parameters are logged.
+            The layer activations are logged for any modules in the ``Model`` that have
+            the attribute ``should_log_activations`` set to ``True``.  Logging
+            histograms requires a number of GPU-CPU copies during training and is typically
+            slow, so we recommend logging histograms relatively infrequently.
+            Finally, deadlocking can cause the training process to hang when logging histograms
+            with multiple GPU training, so we do not recommend using this option in that setting.
         """
         self._model = model
         self._iterator = iterator
@@ -191,7 +212,9 @@ class Trainer:
 
         self._serialization_dir = serialization_dir
         self._num_serialized_models_to_keep = num_serialized_models_to_keep
+        self._keep_serialized_model_every_num_seconds = keep_serialized_model_every_num_seconds
         self._serialized_paths: List[List[str]] = []
+        self._last_permanent_saved_checkpoint_time = time.time()
         self._model_save_interval = model_save_interval
 
         self._grad_norm = grad_norm
@@ -664,11 +687,23 @@ class Trainer:
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
 
             if self._num_serialized_models_to_keep:
-                self._serialized_paths.append([model_path, training_path])
+                self._serialized_paths.append([time.time(), model_path, training_path])
                 if len(self._serialized_paths) > self._num_serialized_models_to_keep:
                     paths_to_remove = self._serialized_paths.pop(0)
-                    for fname in paths_to_remove:
-                        os.remove(fname)
+                    # Check to see if we should keep this checkpoint, if it has been longer
+                    # then self._keep_serialized_model_every_num_seconds since the last
+                    # kept checkpoint.
+                    remove_path = True
+                    if self._keep_serialized_model_every_num_seconds is not None:
+                        save_time = paths_to_remove[0]
+                        time_since_checkpoint_kept = save_time - self._last_permanent_saved_checkpoint_time
+                        if time_since_checkpoint_kept > self._keep_serialized_model_every_num_seconds: 
+                            # We want to keep this checkpoint.
+                            remove_path = False
+                            self._last_permanent_saved_checkpoint_time = save_time
+                    if remove_path:
+                        for fname in paths_to_remove[1:]:
+                            os.remove(fname)
 
     def _restore_checkpoint(self) -> Tuple[int, List[float]]:
         """

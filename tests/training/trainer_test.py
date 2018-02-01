@@ -2,6 +2,7 @@
 import glob
 import os
 import re
+import time
 
 import torch
 import pytest
@@ -122,6 +123,33 @@ class TestTrainer(AllenNlpTestCase):
             epochs = [int(re.search(r"_([0-9])\.th", fname).group(1))
                       for fname in file_names]
             assert sorted(epochs) == [2, 3, 4]
+
+    def test_trainer_respects_keep_serialized_model_every_num_seconds(self):
+        # To test:
+        #   Create an iterator that sleeps for 0.5 second per epoch, so the total training
+        #       time for one epoch is slightly greater then 0.5 seconds.
+        #   Run for 6 epochs, keeping the last 2 models, models also kept every 1 second.
+        #   Check the resulting checkpoints.  Should then have models at epochs
+        #       2, 4, plus the last two at 5 and 6.
+        class WaitingIterator(BasicIterator):
+            def _create_batches(self, *args, **kwargs):
+                time.sleep(0.5)
+                return super(WaitingIterator, self)._create_batches(*args, **kwargs)
+
+        trainer = Trainer(self.model, self.optimizer,
+                          WaitingIterator(batch_size=2), self.dataset, num_epochs=6,
+                          serialization_dir=self.TEST_DIR,
+                          num_serialized_models_to_keep=2,
+                          keep_serialized_model_every_num_seconds=1)
+        trainer.train()
+
+        # Now check the serialized files
+        for prefix in ['model_state_epoch_*', 'training_state_epoch_*']:
+            file_names = glob.glob(os.path.join(self.TEST_DIR, prefix))
+            epochs = [int(re.search(r"_([0-9])\.th", fname).group(1))
+                      for fname in file_names]
+            # epoch N has N-1 in file name
+            assert sorted(epochs) == [1, 3, 4, 5]
 
     def test_trainer_saves_models_at_specified_interval(self):
         trainer = Trainer(self.model, self.optimizer,
