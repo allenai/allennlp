@@ -10,36 +10,12 @@ __all__ = ['initializeData', 'initializeChunker', 'prepareData', 'WordVectors', 
 
 EOS_token = 1
 use_cuda = torch.cuda.is_available()
-
-
-class WordVectors:
-    def __init__(self, special_tokens, elmo_vectors):
-        self.special_tokens = special_tokens
-        self.special_token_to_id = {tok: i for (i, tok) in enumerate(special_tokens)}
-        self.dimension = len(special_tokens) + 1024
-        self.elmo_vectors = {k: v for (k, v) in elmo_vectors}
-        self.words = self.special_tokens + [tok for (tok, v) in elmo_vectors]
-        self.index2word = {k: v for (k, v) in enumerate(self.words)}
-        self.word2index = {v: k for (k, v) in enumerate(self.words)}
-        self.n_words = len(self.words)
-
-    def dumpAsTensor(self):
-        veclist = [self.getWordVector(self.index2word[i]) for i in range(self.n_words)]
-        return np.concatenate(veclist, axis=0).reshape(-1, self.dimension)
-    
-    def getWordVector(self, word):
-        if word in self.special_token_to_id:
-            return np.eye(self.dimension)[self.special_token_to_id[word]]
-        else:
-            return np.concatenate([np.zeros(len(self.special_tokens)), self.elmo_vectors[word]], axis=0)
     
 class TargetLang:
-    def __init__(self, wordVectors):
-        self.word2index = {v: k for (k, v) in enumerate(wordVectors.special_tokens)}
-        self.index2word = {k: v for (k, v) in enumerate(wordVectors.special_tokens)}
-        self.n_words = len(wordVectors.special_tokens)
-        self.wordVectors = wordVectors
-        self.dimension = wordVectors.dimension
+    def __init__(self, special_tokens):
+        self.word2index = {v: k for (k, v) in enumerate(special_tokens)}
+        self.index2word = {k: v for (k, v) in enumerate(special_tokens)}
+        self.n_words = len(special_tokens)
 
     def addSentence(self, sentence):
         for word in sentence.split(' '):
@@ -51,13 +27,13 @@ class TargetLang:
             self.index2word[self.n_words] = word
             self.n_words += 1
 
-def prepareData(train_file, wordVecs):
+def prepareData(train_file, special_tokens):
     print("Reading lines...")
     # Read the file and split into lines
     lines = codecs.open(train_file, encoding='utf-8').read().strip().split('\n')
     # Split every line into pairs and normalize
     pairs = [[s.strip() for s in l.split('\t')] for l in lines]
-    output_lang = TargetLang(wordVecs)
+    output_lang = TargetLang(special_tokens)
     print("Read %s sentence pairs" % len(pairs))
     print("Counting words...")
     max_encoding_length = 1
@@ -91,34 +67,32 @@ def variablesFromPair(pair, input_lang, output_lang):
     target_variable = variableFromSentence(output_lang, pair[1])
     return (input_variable, target_variable)
 
-def initializeData(train_file = 'data/esrc-etgt.txt', dev_file = 'data/esrcd-etgtd.txt'):
-    print("*** loading elmo vectors ***")
-    elmo_vecs = []
-    with h5py.File('data/question_bank_elmo_embeddings.hdf5', 'r') as open_file:
-        with codecs.open('data/qbank.tokens.txt', encoding='utf-8') as qbank_sents:
-            for (sent_id, sent) in enumerate(qbank_sents):
-                sentence_embedding = open_file[str(sent_id)][...]
-                a = torch.from_numpy(sentence_embedding[0])
-                b = torch.from_numpy(sentence_embedding[1])
-                c = torch.from_numpy(sentence_embedding[2])
-                result = (a + b + c) / 3.0
-                sent_toks = sent.strip().split()
-                for (tok_id, tok) in enumerate(sent_toks):
-                    canonical_tok = '{}__{}__{}'.format(tok_id, sent_id, tok)
-                    elmo_vecs.append((canonical_tok, result[tok_id]))
-   
-    print("*** compiling vocab ***")
+def initializeData(train_file, dev_file):   
+    print("*** compiling target vocab ***")
     special_tokens = ['sos', 'eos', '[[[', ']]]', '<unk>']     
-    wordVecs = WordVectors(special_tokens, elmo_vecs)    
-    output_lang, pairs, MAX_LENGTH = prepareData(train_file, wordVecs)
-    output_lang_dev, pairs_dev, MAX_LENGTH_DEV = prepareData(dev_file, wordVecs)
-    input_lang = wordVecs
-    input_lang_dev = wordVecs
-    return input_lang, output_lang, pairs, pairs_dev, MAX_LENGTH    
+    output_lang, pairs, MAX_LENGTH = prepareData(train_file, special_tokens)
+    output_lang_dev, pairs_dev, MAX_LENGTH_DEV = prepareData(dev_file, special_tokens)
+    return output_lang, pairs, pairs_dev, MAX_LENGTH    
 
-def initializeChunker(encoderFile, decoderFile):
-    input_lang, output_lang, pairs, pairs_dev, max_length = initializeData() 
-    chunker = NeuralChunker(encoderFile, decoderFile, input_lang, output_lang, max_length)
-    return chunker, pairs, pairs_dev
+def pad(tokens, desired_length, padder):
+    padding = [padder] * (desired_length - len(tokens))
+    return tokens + padding
+
+# Maps the sentence into a PyTorch vector (containing the token ids).
+def target_variable_from_sentences(lang, sentences):
+    indexes = [indexesFromSentence(lang, sent) for sent in sentences]
+    max_size = max([len(x) for x in indexes]) + 1
+    padded = [torch.LongTensor(pad(index, max_size, padder=EOS_token)) for index in indexes]
+    
+    result = Variable(torch.stack(padded))
+    if use_cuda:
+        return result.cuda()
+    else:
+        return result
+    
+#def initializeChunker(encoderFile, decoderFile):
+#    input_lang, output_lang, pairs, pairs_dev, max_length = initializeData() 
+#    chunker = NeuralChunker(encoderFile, decoderFile, input_lang, output_lang, max_length)
+#    return chunker, pairs, pairs_dev
 
 
