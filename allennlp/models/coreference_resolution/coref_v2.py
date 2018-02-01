@@ -391,8 +391,8 @@ class CoreferenceResolverV2(Model):
     def _generate_valid_antecedents(num_spans_to_keep: int,
                                     max_antecedents: int,
                                     device: int) -> Tuple[torch.IntTensor,
-                                                         torch.IntTensor,
-                                                         torch.FloatTensor]:
+                                                          torch.IntTensor,
+                                                          torch.FloatTensor]:
         """
         This method generates possible antecedents per span which survived the pruning
         stage. This procedure is `generic across the batch`. The reason this is the case is

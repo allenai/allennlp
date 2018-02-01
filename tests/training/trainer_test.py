@@ -54,7 +54,7 @@ class TestTrainer(AllenNlpTestCase):
                           cuda_device=0)
         trainer.train()
 
-    @pytest.mark.skipif(not torch.cuda.device_count() >= 2,
+    @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
         trainer = Trainer(self.model, self.optimizer,
@@ -132,6 +132,7 @@ class TestTrainer(AllenNlpTestCase):
         #   Check the resulting checkpoints.  Should then have models at epochs
         #       2, 4, plus the last two at 5 and 6.
         class WaitingIterator(BasicIterator):
+            # pylint: disable=arguments-differ
             def _create_batches(self, *args, **kwargs):
                 time.sleep(0.5)
                 return super(WaitingIterator, self)._create_batches(*args, **kwargs)
@@ -184,7 +185,7 @@ class TestTrainer(AllenNlpTestCase):
                                   self.iterator, self.instances, num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
                                   model_save_interval=0.0001)
-        epoch, _ = restore_trainer._restore_checkpoint()
+        epoch, _ = restore_trainer._restore_checkpoint() # pylint: disable=protected-access
         assert epoch == 2
 
 
@@ -202,8 +203,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         assert is_sparse(embedding.weight.grad)
 
         # Now try to clip the gradients.
-        grad_norm = sparse_clip_norm([embedding.weight], 1.5)
+        _ = sparse_clip_norm([embedding.weight], 1.5)
         # Final norm should be 1.5
         grad = embedding.weight.grad.data.coalesce()
-        self.assertAlmostEqual(grad._values().norm(2.0), 1.5, places=5)
-
+        self.assertAlmostEqual(grad._values().norm(2.0), 1.5, places=5) # pylint: disable=protected-access

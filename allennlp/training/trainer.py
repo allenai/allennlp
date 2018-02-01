@@ -56,6 +56,7 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2):
     Returns:
         Total norm of the parameters (viewed as a single vector).
     """
+    # pylint: disable=invalid-name,protected-access
     parameters = list(filter(lambda p: p.grad is not None, parameters))
     max_norm = float(max_norm)
     norm_type = float(norm_type)
@@ -162,7 +163,7 @@ class Trainer:
             If num_serialized_models_to_keep is not None, then occasionally it's useful to
             save models at a given interval in addition to the last num_serialized_models_to_keep.
             To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
-            between permanently saved checkpoints.  Note that this option is only used if 
+            between permanently saved checkpoints.  Note that this option is only used if
             num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
         model_save_interval : float, optional (default=None)
             If provided, then serialize models every ``model_save_interval``
@@ -274,7 +275,7 @@ class Trainer:
         Log activations to tensorboard
         """
         if self._histogram_interval is not None:
-            for name, module in self._model.named_modules():
+            for _, module in self._model.named_modules():
                 if not getattr(module, 'should_log_activations', False):
                     # skip it
                     continue
@@ -326,7 +327,7 @@ class Trainer:
         used_device_ids = self._cuda_devices[:len(inputs)]
         replicas = replicate(self._model, used_device_ids)
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
-    
+
         # Only the 'loss' is needed.
         # a (num_gpu, ) tensor with loss on each GPU
         losses = gather([output['loss'] for output in outputs], used_device_ids[0], 0)
@@ -419,7 +420,7 @@ class Trainer:
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
                 param_updates = {name: param.detach().data.cpu().clone()
-                    for name, param in self._model.named_parameters()}
+                                 for name, param in self._model.named_parameters()}
                 self._optimizer.step()
                 for name, param in self._model.named_parameters():
                     param_updates[name].sub_(param.detach().data.cpu())
@@ -446,6 +447,7 @@ class Trainer:
                     self._tensorboard.add_train_scalar("parameter_std/" + name, param.data.std(), batch_num_total)
                     if param.grad is not None:
                         if is_sparse(param.grad):
+                            # pylint: disable=protected-access
                             grad_data = param.grad.data._values()
                         else:
                             grad_data = param.grad.data
@@ -469,8 +471,8 @@ class Trainer:
                 for name, param in self._model.named_parameters():
                     if name in histogram_parameters:
                         self._tensorboard.add_train_histogram("parameter_histogram/" + name,
-                                                          param,
-                                                          batch_num_total)
+                                                              param,
+                                                              batch_num_total)
 
             # Save model if needed.
             if self._model_save_interval is not None and (
@@ -697,7 +699,7 @@ class Trainer:
                     if self._keep_serialized_model_every_num_seconds is not None:
                         save_time = paths_to_remove[0]
                         time_since_checkpoint_kept = save_time - self._last_permanent_saved_checkpoint_time
-                        if time_since_checkpoint_kept > self._keep_serialized_model_every_num_seconds: 
+                        if time_since_checkpoint_kept > self._keep_serialized_model_every_num_seconds:
                             # We want to keep this checkpoint.
                             remove_path = False
                             self._last_permanent_saved_checkpoint_time = save_time
