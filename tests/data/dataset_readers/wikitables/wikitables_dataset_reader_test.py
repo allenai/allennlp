@@ -10,14 +10,15 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
         # it is so long?
         tables_directory = "tests/fixtures/data/wikitables"
         dpd_output_directory = "tests/fixtures/data/wikitables/dpd_output"
-        reader = WikiTablesDatasetReader(tables_directory, dpd_output_directory)
+        reader = WikiTablesDatasetReader(False, tables_directory, dpd_output_directory)
         dataset = reader.read("tests/fixtures/data/wikitables/sample_data.examples")
         self.assert_dataset_correct(dataset)
 
     def assert_dataset_correct(self, dataset):
         # pylint: disable=no-self-use,protected-access
-        assert len(dataset.instances) == 2
-        instance = dataset.instances[0]
+        instances = list(dataset)
+        assert len(instances) == 2
+        instance = instances[0]
 
         assert instance.fields.keys() == {'question', 'table', 'world', 'actions',
                                           'target_action_sequences'}
@@ -366,6 +367,7 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
                            'e -> fb:cell.usl_a_league']
 
     def test_parse_example_line(self):
+        # pylint: disable=no-self-use,protected-access
         with open("tests/fixtures/data/wikitables/sample_data.examples") as filename:
             lines = filename.readlines()
         example_info = WikiTablesDatasetReader._parse_example_line(lines[0])

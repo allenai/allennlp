@@ -9,12 +9,8 @@ import os
 
 from overrides import overrides
 
-import tqdm
-
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListField
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
@@ -51,6 +47,9 @@ class WikiTablesDatasetReader(DatasetReader):
 
     Parameters
     ----------
+    lazy : ``bool`` (optional, default=False)
+        Passed to ``DatasetReader``.  If this is ``True``, training will start sooner, but will
+        take longer per batch.
     tables_directory : ``str`` (optional)
         Prefix for the path to the directory in which the tables reside. For example,
         ``*.examples`` files contain paths like ``csv/204-csv/590.csv``, this is the directory that
@@ -97,6 +96,7 @@ class WikiTablesDatasetReader(DatasetReader):
         available feature extractors.
     """
     def __init__(self,
+                 lazy: bool = False,
                  tables_directory: str = None,
                  dpd_output_directory: str = None,
                  max_dpd_logical_forms: int = 10,
@@ -108,6 +108,7 @@ class WikiTablesDatasetReader(DatasetReader):
                  terminal_indexers: Dict[str, TokenIndexer] = None,
                  linking_feature_extractors: List[str] = None,
                  include_table_metadata: bool = False) -> None:
+        super().__init__(lazy=lazy)
         self._tables_directory = tables_directory
         self._dpd_output_directory = dpd_output_directory
         self._max_dpd_logical_forms = max_dpd_logical_forms
@@ -122,15 +123,12 @@ class WikiTablesDatasetReader(DatasetReader):
         self._basic_types = set(str(type_) for type_ in wt_types.BASIC_TYPES)
 
     @overrides
-    def read(self, file_path):
-        questions = []
-        instance_info = []
+    def _read(self, file_path: str):
         with open(file_path, "r") as data_file:
-            logger.info("Reading instances from lines in file: %s", file_path)
             num_dpd_missing = 0
             num_lines = 0
-            logger.info("First pass, just reading the data")
-            for line in tqdm.tqdm(data_file.readlines()):
+            num_instances = 0
+            for line in data_file.readlines():
                 line = line.strip("\n")
                 if not line:
                     continue
@@ -154,33 +152,20 @@ class WikiTablesDatasetReader(DatasetReader):
                     logger.debug(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
                     num_dpd_missing += 1
                     continue
-                questions.append(question)
-                instance_info.append((table_filename, sempre_forms))
-        logger.info("Batch tokenizing questions")
-        tokenized_questions = self._tokenizer.batch_tokenize(questions)
-        logger.info("Creating instances (including parsing logical forms)")
-        instances = []
-        iterator = tqdm.tqdm(zip(questions, tokenized_questions, instance_info), total=len(questions))
-        for question, tokenized_question, (table_filename, sempre_forms) in iterator:
-            instance = self.text_to_instance(question,
-                                             table_filename,
-                                             sempre_forms,
-                                             tokenized_question)
-            if instance is not None:
-                # The DPD output might not actually give us usable logical forms for some
-                # instances, and in those cases `text_to_instance` returns None.
-                instances.append(instance)
+                instance = self.text_to_instance(question,
+                                                 table_filename,
+                                                 sempre_forms)
+                if instance is not None:
+                    num_instances += 1
+                    yield instance
+
         logger.info(f"Missing DPD info for {num_dpd_missing} out of {num_lines} instances")
-        num_instances = len(instances)
         num_with_dpd = num_lines - num_dpd_missing
         num_bad_lfs = num_with_dpd - num_instances
         logger.info(f"DPD output was bad for {num_bad_lfs} out of {num_with_dpd} instances")
         if num_bad_lfs > 0:
             logger.info("Re-run with log level set to debug to see the un-parseable logical forms")
         logger.info(f"Kept {num_instances} instances")
-        if not instances:
-            raise ConfigurationError("No instances read!")
-        return Dataset(instances)
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -289,7 +274,7 @@ class WikiTablesDatasetReader(DatasetReader):
         return Instance(fields)
 
     @staticmethod
-    def _parse_example_line(lisp_string: str) -> Dict[str, Union[str, List[str], None]]:
+    def _parse_example_line(lisp_string: str) -> Dict[str, str]:
         """
         Training data in WikitableQuestions comes with examples in the form of lisp strings in the format:
             (example (id <example-id>)
@@ -326,7 +311,8 @@ class WikiTablesDatasetReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'WikiTablesDatasetReader':
-        tables_directory = params.pop('tables_directory')
+        lazy = params.pop('lazy', False)
+        tables_directory = params.pop('tables_directory', None)
         dpd_output_directory = params.pop('dpd_output_directory', None)
         max_dpd_logical_forms = params.pop('max_dpd_logical_forms', 10)
         max_dpd_tries = params.pop('max_dpd_tries', 20)
@@ -337,7 +323,8 @@ class WikiTablesDatasetReader(DatasetReader):
         linking_feature_extracters = params.pop('linking_feature_extractors', None)
         include_table_metadata = params.pop('include_table_metadata', False)
         params.assert_empty(cls.__name__)
-        return WikiTablesDatasetReader(tables_directory=tables_directory,
+        return WikiTablesDatasetReader(lazy=lazy,
+                                       tables_directory=tables_directory,
                                        dpd_output_directory=dpd_output_directory,
                                        max_dpd_logical_forms=max_dpd_logical_forms,
                                        max_dpd_tries=max_dpd_tries,

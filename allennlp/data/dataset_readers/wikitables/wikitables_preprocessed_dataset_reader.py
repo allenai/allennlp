@@ -8,11 +8,8 @@ import json
 
 from overrides import overrides
 
-import tqdm
-
 from allennlp.common import Params
 from allennlp.common.util import JsonDict
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListField
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
@@ -35,6 +32,9 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
 
     Parameters
     ----------
+    lazy : ``bool`` (optional, default=False)
+        Passed to ``DatasetReader``.  If this is ``True``, training will start sooner, but will
+        take longer per batch.
     question_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
         Token indexers for questions. Will default to ``{"tokens": SingleIdTokenIndexer()}``.
     table_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
@@ -56,24 +56,23 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
         that is not just a vocabulary lookup.
     """
     def __init__(self,
+                 lazy: bool = False,
                  question_token_indexers: Dict[str, TokenIndexer] = None,
                  table_token_indexers: Dict[str, TokenIndexer] = None,
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
                  terminal_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super().__init__(lazy)
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
         self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
         self._terminal_indexers = terminal_indexers or {"token_characters": TokenCharactersIndexer()}
 
     @overrides
-    def read(self, file_path):
-        instances = []
+    def _read(self, file_path: str):
         with open(file_path, "r") as data_file:
-            logger.info("Reading instances from lines in file: %s", file_path)
-            for line in tqdm.tqdm(data_file.readlines()):
+            for line in data_file.readlines():
                 json_obj = json.loads(line)
-                instances.append(self.text_to_instance(json_obj))
-        return Dataset(instances)
+                yield self.text_to_instance(json_obj)
 
     @overrides
     def text_to_instance(self, json_obj: JsonDict) -> Instance:  # type: ignore
@@ -124,8 +123,10 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'WikiTablesPreprocessedDatasetReader':
+        lazy = params.pop('lazy', False)
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
         table_token_indexers = TokenIndexer.dict_from_params(params.pop('table_token_indexers', {}))
         params.assert_empty(cls.__name__)
-        return WikiTablesPreprocessedDatasetReader(question_token_indexers=question_token_indexers,
+        return WikiTablesPreprocessedDatasetReader(lazy=lazy,
+                                                   question_token_indexers=question_token_indexers,
                                                    table_token_indexers=table_token_indexers)
