@@ -50,7 +50,7 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.dataset, num_epochs=2,
+                          self.iterator, self.instances, num_epochs=2,
                           cuda_device=0)
         trainer.train()
 
@@ -58,7 +58,7 @@ class TestTrainer(AllenNlpTestCase):
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
         trainer = Trainer(self.model, self.optimizer,
-                          BasicIterator(batch_size=4), self.dataset, num_epochs=2,
+                          BasicIterator(batch_size=4), self.instances, num_epochs=2,
                           cuda_device=[0, 1])
         trainer.train()
 
@@ -112,7 +112,7 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_respects_num_serialized_models_to_keep(self):
         trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.dataset, num_epochs=5,
+                          self.iterator, self.instances, num_epochs=5,
                           serialization_dir=self.TEST_DIR,
                           num_serialized_models_to_keep=3)
         trainer.train()
@@ -136,8 +136,11 @@ class TestTrainer(AllenNlpTestCase):
                 time.sleep(0.5)
                 return super(WaitingIterator, self)._create_batches(*args, **kwargs)
 
+        iterator = WaitingIterator(batch_size=2)
+        iterator.index_with(self.vocab)
+
         trainer = Trainer(self.model, self.optimizer,
-                          WaitingIterator(batch_size=2), self.dataset, num_epochs=6,
+                          iterator, self.instances, num_epochs=6,
                           serialization_dir=self.TEST_DIR,
                           num_serialized_models_to_keep=2,
                           keep_serialized_model_every_num_seconds=1)
@@ -153,7 +156,7 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_saves_models_at_specified_interval(self):
         trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.dataset, num_epochs=2,
+                          self.iterator, self.instances, num_epochs=2,
                           serialization_dir=self.TEST_DIR,
                           model_save_interval=0.0001)
         trainer.train()
@@ -178,7 +181,7 @@ class TestTrainer(AllenNlpTestCase):
         os.remove(os.path.join(self.TEST_DIR, 'best.th'))
 
         restore_trainer = Trainer(self.model, self.optimizer,
-                                  self.iterator, self.dataset, num_epochs=2,
+                                  self.iterator, self.instances, num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
                                   model_save_interval=0.0001)
         epoch, _ = restore_trainer._restore_checkpoint()

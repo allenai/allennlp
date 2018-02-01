@@ -375,7 +375,7 @@ class Trainer:
         # Get tqdm for the training batches
         train_generator = self._iterator(self._train_data,
                                          num_epochs=1,
-                                         cuda_device=self._cuda_device)
+                                         cuda_device=self._iterator_device)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
         train_generator_tqdm = Tqdm.tqdm(train_generator,
                                          total=num_training_batches)
