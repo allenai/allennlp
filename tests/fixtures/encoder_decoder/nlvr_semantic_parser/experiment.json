@@ -19,18 +19,18 @@
     },
     "nonterminal_embedder": {
       "tokens": {
-	"type": "embedding",
-	"vocab_namespace": "rule_labels",
-	"embedding_dim": 25,
-	"trainable": true
+        "type": "embedding",
+        "vocab_namespace": "rule_labels",
+        "embedding_dim": 25,
+        "trainable": true
       }
     },
     "terminal_embedder": {
       "tokens": {
-	"type": "embedding",
-	"vocab_namespace": "rule_labels",
-	"embedding_dim": 25,
-	"trainable": true
+        "type": "embedding",
+        "vocab_namespace": "rule_labels",
+        "embedding_dim": 25,
+        "trainable": true
       }
     },
     "encoder": {
@@ -48,6 +48,7 @@
   },
   "iterator": {
     "type": "bucket",
+    "sorting_keys": [["sentence", "num_tokens"]],
     "padding_noise": 0.0,
     "batch_size" : 2
   },

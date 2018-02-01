@@ -6,14 +6,12 @@ from overrides import overrides
 import tqdm
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict
 from allennlp.data.instance import Instance
 from allennlp.data.fields import Field, TextField, ListField, IndexField, LabelField
 from allennlp.data.fields import ProductionRuleField, MetadataField
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.semparse.type_declarations import type_declaration as types
 from allennlp.data.semparse.type_declarations import nlvr_type_declaration as nlvr_types
@@ -45,6 +43,9 @@ class NlvrDatasetReader(DatasetReader):
 
     Parameters
     ----------
+    lazy : ``bool`` (optional, default=False)
+        Passed to ``DatasetReader``.  If this is ``True``, training will start sooner, but will
+        take longer per batch.
     tokenizer : ``Tokenizer`` (optional)
         The tokenizer used for sentences in NLVR. Default is ``WordTokenizer``
     sentence_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
@@ -64,11 +65,13 @@ class NlvrDatasetReader(DatasetReader):
         search while computing the paths to avoid infinitely long ones (containing cycles).
     """
     def __init__(self,
+                 lazy: bool = False,
                  tokenizer: Tokenizer = None,
                  sentence_token_indexers: Dict[str, TokenIndexer] = None,
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
                  terminal_indexers: Dict[str, TokenIndexer] = None,
                  add_paths_to_agenda: bool = True) -> None:
+        super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._sentence_token_indexers = sentence_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._nonterminal_indexers = nonterminal_indexers or {"tokens":
@@ -86,8 +89,7 @@ class NlvrDatasetReader(DatasetReader):
                     self._terminal_productions[constant] = "%s -> %s" % (constant_type, constant)
 
     @overrides
-    def read(self, file_path):
-        instances = []
+    def _read(self, file_path: str):
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file: %s", file_path)
             for line in tqdm.tqdm(data_file):
@@ -98,10 +100,7 @@ class NlvrDatasetReader(DatasetReader):
                 sentence = data["sentence"]
                 label = data["label"]
                 structured_representation = data["structured_rep"]
-                instances.append(self.text_to_instance(sentence, structured_representation, label))
-        if not instances:
-            raise ConfigurationError("No instances read!")
-        return Dataset(instances)
+                yield self.text_to_instance(sentence, structured_representation, label)
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -229,13 +228,15 @@ class NlvrDatasetReader(DatasetReader):
 
     @classmethod
     def from_params(cls, params: Params) -> 'NlvrDatasetReader':
+        lazy = params.pop('lazy', False)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         sentence_token_indexers = TokenIndexer.dict_from_params(params.pop('sentence_token_indexers', {}))
         terminal_indexers = TokenIndexer.dict_from_params(params.pop('terminal_indexers', {}))
         nonterminal_indexers = TokenIndexer.dict_from_params(params.pop('nonterminal_indexers', {}))
         add_paths_to_agenda = params.pop("add_paths_to_agenda", True)
         params.assert_empty(cls.__name__)
-        return NlvrDatasetReader(tokenizer=tokenizer,
+        return NlvrDatasetReader(lazy=lazy,
+                                 tokenizer=tokenizer,
                                  sentence_token_indexers=sentence_token_indexers,
                                  terminal_indexers=terminal_indexers,
                                  nonterminal_indexers=nonterminal_indexers,
