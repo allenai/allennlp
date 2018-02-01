@@ -1,6 +1,5 @@
 
-from collections import OrderedDict
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import logging
 import os
 
@@ -24,9 +23,12 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("ptb_trees")
-class PennTreeBankDatasetReader(DatasetReader):
+class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     """
     Reads constituency parses from the WSJ part of the Penn Tree Bank from the LDC.
+    This ``DatasetReader`` is designed for use with a span labelling model, so
+    it enumerates all possible spans in the sentence and returns them, along with gold
+    labels for the relevant spans present in a gold tree, if provided.
 
     Parameters
     ----------
@@ -34,23 +36,23 @@ class PennTreeBankDatasetReader(DatasetReader):
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
+    lazy : ``bool``, optional, (default = ``False``)
+        Whether or not instances can be consumed lazily.
     """
     def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__(lazy=False)
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
+        super().__init__(lazy=lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @overrides
     def _read(self, file_path):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
-
         directory, filename = os.path.split(file_path)
-
         logger.info("Reading instances from lines in file at: %s", file_path)
-        parses: List[Tree] = BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents()
 
-        for parse in Tqdm.tqdm(parses):
+        for parse in Tqdm.tqdm(BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents()):
             yield self.text_to_instance(parse.leaves(), [x[1] for x in parse.pos()], parse)
 
     @overrides
@@ -93,9 +95,10 @@ class PennTreeBankDatasetReader(DatasetReader):
         gold_labels = []
 
         if gold_tree is not None:
-            gold_spans_with_pos_tags = self._get_gold_spans(gold_tree, 0, OrderedDict()).items()
+            gold_spans_with_pos_tags: Dict[Tuple[int, int], str] = {}
+            self._get_gold_spans(gold_tree, 0, gold_spans_with_pos_tags)
             gold_spans = {span: label for (span, label)
-                          in gold_spans_with_pos_tags if "-POS" not in label}
+                          in gold_spans_with_pos_tags.items() if "-POS" not in label}
         else:
             gold_spans = None
         for start, end in enumerate_spans(tokens):
@@ -117,7 +120,7 @@ class PennTreeBankDatasetReader(DatasetReader):
     def _get_gold_spans(self, # pylint: disable=arguments-differ
                         tree: Tree,
                         index: int,
-                        typed_spans: OrderedDict) -> OrderedDict:
+                        typed_spans: Dict[Tuple[int, int], str]) -> int:
         """
         Recursively construct the gold spans from an nltk ``Tree``.
         Spans are inclusive.
@@ -128,13 +131,13 @@ class PennTreeBankDatasetReader(DatasetReader):
             An NLTK parse tree to extract spans from.
         index : ``int``, required.
             The index of the current span in the sentence being considered.
-        typed_spans : ``OrderedDict[Tuple[int, int], str]``, required.
-            A ordered dictionary mapping spans to span labels.
+        typed_spans : ``Dict[Tuple[int, int], str]``, required.
+            A dictionary mapping spans to span labels.
 
         Returns
         -------
-        typed_spans : ``OrderedDict[Tuple[int, int], str]``, required.
-            A ordered dictionary mapping all subtree spans in the parse tree
+        typed_spans : ``Dict[Tuple[int, int], str]``.
+            A dictionary mapping all subtree spans in the parse tree
             to their constituency labels. Leaf nodes have POS tag spans, which
             are denoted by a label of "LABEL-POS".
         """
@@ -147,27 +150,22 @@ class PennTreeBankDatasetReader(DatasetReader):
             # indexing more straightforward, so we'll collect them
             # and filter them out below. We subtract 1 from the end
             # index so the spans are inclusive.
-            typed_spans[(index, index + len(tree) - 1)] = tree.label() + "-POS"
+            end = index + len(tree)
+            typed_spans[(index, end - 1)] = tree.label() + "-POS"
         else:
             # otherwise, the tree has children.
-            first = True
+            child_start = index
             for child in tree:
-                typed_spans = self._get_gold_spans(child, index, typed_spans)
-                # OrderedDicts are implemented via a
-                # doubly linked list, so this reversal is O(1).
-                last_appended_span = next(reversed(typed_spans))
-                # Set the end index of the current span to
-                # the last appended index + 1, as the span was inclusive.
-                index = last_appended_span[1] + 1
-                if first:
-                    start = last_appended_span[0]
-                    first = False
-            end = index
-            typed_spans[(start, end - 1)] = tree.label()
-        return typed_spans
+                # typed_spans is being updated inplace.
+                end = self._get_gold_spans(child, child_start, typed_spans)
+                child_start = end
+            # Set the end index of the current span to
+            # the last appended index - 1, as the span is inclusive.
+            typed_spans[(index, end - 1)] = tree.label()
+        return end
 
     @classmethod
-    def from_params(cls, params: Params) -> 'PennTreeBankDatasetReader':
+    def from_params(cls, params: Params) -> 'PennTreeBankConstituencySpanDatasetReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         params.assert_empty(cls.__name__)
-        return PennTreeBankDatasetReader(token_indexers=token_indexers)
+        return PennTreeBankConstituencySpanDatasetReader(token_indexers=token_indexers)

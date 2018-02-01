@@ -1,22 +1,21 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
-from collections import OrderedDict
 
 from nltk.tree import Tree
 
-from allennlp.data.dataset_readers import PennTreeBankDatasetReader
+from allennlp.data.dataset_readers import PennTreeBankConstituencySpanDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spans
 
 
-class TestPennTreeBankReader(AllenNlpTestCase):
+class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
 
     def setUp(self):
-        super(TestPennTreeBankReader, self).setUp()
+        super(TestPennTreeBankConstituencySpanReader, self).setUp()
         self.span_width = 5
 
     def test_read_from_file(self):
 
-        ptb_reader = PennTreeBankDatasetReader()
+        ptb_reader = PennTreeBankConstituencySpanDatasetReader()
         instances = ptb_reader.read('tests/fixtures/data/example_ptb.trees')
 
         assert len(instances) == 2
@@ -47,7 +46,9 @@ class TestPennTreeBankReader(AllenNlpTestCase):
                                     "(NP(PRP$ its)(NNS deliberations)))(SBAR-PRP(IN in)(NN order)(S("
                                     "VP(TO to)(VP(VB be)(ADJP-PRD(JJ fair)(PP(TO to)(NP(JJ other)(NNS "
                                     "bidders))))))))))))))(. .)))")
-        correct_spans_and_labels = ptb_reader._get_gold_spans(gold_tree, 0, OrderedDict())
+
+        correct_spans_and_labels = {}
+        ptb_reader._get_gold_spans(gold_tree, 0, correct_spans_and_labels)
         for span, label in zip(spans, span_labels):
             if label != "NO-LABEL":
                 assert correct_spans_and_labels[span] == label
@@ -73,15 +74,20 @@ class TestPennTreeBankReader(AllenNlpTestCase):
                                     "(NP(DT the)(NN chance)(S(VP(TO to)(VP(VP(VB influence)(NP(DT the)"
                                     "(NN outcome)))(CC and)(VP(ADVP(RB perhaps))(VB join)(NP(DT the)"
                                     "(VBG winning)(NN bidder)))))))))(. .)))")
-        correct_spans_and_labels = ptb_reader._get_gold_spans(gold_tree, 0, OrderedDict())
+
+        correct_spans_and_labels = {}
+        ptb_reader._get_gold_spans(gold_tree, 0, correct_spans_and_labels)
         for span, label in zip(spans, span_labels):
             if label != "NO-LABEL":
                 assert correct_spans_and_labels[span] == label
 
     def test_get_gold_spans_correctly_extracts_spans(self):
-        ptb_reader = PennTreeBankDatasetReader()
+        ptb_reader = PennTreeBankConstituencySpanDatasetReader()
         tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
-        spans = list(ptb_reader._get_gold_spans(tree, 0, OrderedDict()).items()) # pylint: disable=protected-access
+
+        span_dict = {}
+        ptb_reader._get_gold_spans(tree, 0, span_dict)
+        spans = list(span_dict.items()) # pylint: disable=protected-access
         assert spans == [((0, 0), 'D-POS'), ((1, 1), 'N-POS'), ((0, 1), 'NP'),
                          ((2, 2), 'V-POS'), ((3, 3), 'D-POS'), ((4, 4), 'N-POS'),
                          ((3, 4), 'NP'), ((2, 4), 'VP'), ((0, 4), 'S')]
