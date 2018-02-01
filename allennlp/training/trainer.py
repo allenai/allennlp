@@ -395,7 +395,7 @@ class Trainer:
                 # get the magnitude of parameter updates for logging
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
-                param_updates = {name: param.clone().detach().data.cpu()
+                param_updates = {name: param.detach().data.cpu().clone()
                     for name, param in self._model.named_parameters()}
                 self._optimizer.step()
                 for name, param in self._model.named_parameters():
