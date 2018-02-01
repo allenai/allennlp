@@ -3,12 +3,10 @@ import collections
 from typing import Any, Dict, List, Optional, Tuple, DefaultDict, Set
 
 from overrides import overrides
-from tqdm import tqdm
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset import Dataset
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, ListField, TextField, IndexField, MetadataField, SequenceLabelField
 from allennlp.data.instance import Instance
@@ -79,17 +77,17 @@ class ConllCorefReader(DatasetReader):
     def __init__(self,
                  max_span_width: int,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super().__init__()
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
-    def read(self, file_path: str):
+    def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
-        instances = []
         ontonotes_reader = Ontonotes()
-        for sentences in tqdm(ontonotes_reader.dataset_document_iterator(file_path)):
+        for sentences in Tqdm.tqdm(ontonotes_reader.dataset_document_iterator(file_path)):
             clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
 
             total_tokens = 0
@@ -104,13 +102,7 @@ class ConllCorefReader(DatasetReader):
                 total_tokens += len(sentence.words)
 
             canonical_clusters = canonicalize_clusters(clusters)
-            instance = self.text_to_instance([s.words for s in sentences], canonical_clusters)
-            instances.append(instance)
-
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return Dataset(instances)
+            yield self.text_to_instance([s.words for s in sentences], canonical_clusters)
 
     @overrides
     def text_to_instance(self,  # type: ignore

@@ -14,11 +14,10 @@ class TestCorefReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
         conll_reader = ConllCorefReader(max_span_width=self.span_width)
-        dataset = conll_reader.read('tests/fixtures/coref/coref.gold_conll')
+        instances = conll_reader.read('tests/fixtures/coref/coref.gold_conll')
 
-        assert len(dataset.instances) == 2
+        assert len(instances) == 2
 
-        instances = dataset.instances
         fields = instances[0].fields
         text = [x.text for x in fields["text"].tokens]
 

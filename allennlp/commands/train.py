@@ -18,7 +18,7 @@ which to write the results.
     -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                             directory in which to save the model and its logs
 """
-from typing import Dict
+from typing import Dict, Iterable
 import argparse
 import json
 import logging
@@ -31,8 +31,10 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tee_logger import TeeLogger
-from allennlp.common.util import prepare_environment
-from allennlp.data import InstanceCollection, Vocabulary
+from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import prepare_environment, import_submodules
+from allennlp.data import Vocabulary
+from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.archival import archive_model
@@ -66,19 +68,33 @@ class Train(Subcommand):
                                default="",
                                help='a HOCON structure used to override the experiment configuration')
 
+        subparser.add_argument('--include-package',
+                               type=str,
+                               action='append',
+                               default=[],
+                               help='additional packages to include')
+
+        subparser.add_argument('--file-friendly-logging',
+                               action='store_true',
+                               default=False,
+                               help='outputs tqdm status on separate lines and slows tqdm refresh rate')
+
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
-
 
 def train_model_from_args(args: argparse.Namespace):
     """
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
-    train_model_from_file(args.param_path, args.serialization_dir, args.overrides)
+    # Import any additional modules needed (to register custom classes)
+    for package_name in args.include_package:
+        import_submodules(package_name)
+    train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.file_friendly_logging)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: str = "") -> Model:
+def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: str = "",
+                          file_friendly_logging: bool = False) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -89,12 +105,14 @@ def train_model_from_file(parameter_filename: str, serialization_dir: str, overr
     serialization_dir: str, required
         The directory in which to save results and logs.
     """
+    if file_friendly_logging:
+        Tqdm.set_default_mininterval(10.0)
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
-    return train_model(params, serialization_dir)
+    return train_model(params, serialization_dir, file_friendly_logging)
 
 
-def datasets_from_params(params: Params) -> Dict[str, InstanceCollection]:
+def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     """
     Load all the datasets specified by the config.
     """
@@ -104,7 +122,7 @@ def datasets_from_params(params: Params) -> Dict[str, InstanceCollection]:
     logger.info("Reading training data from %s", train_data_path)
     train_data = dataset_reader.read(train_data_path)
 
-    datasets: Dict[str, InstanceCollection] = {"train": train_data}
+    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
 
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
@@ -120,7 +138,7 @@ def datasets_from_params(params: Params) -> Dict[str, InstanceCollection]:
 
     return datasets
 
-def train_model(params: Params, serialization_dir: str) -> Model:
+def train_model(params: Params, serialization_dir: str, file_friendly_logging: bool = False) -> Model:
     """
     This function can be used as an entry point to running models in AllenNLP
     directly from a JSON specification using a :class:`Driver`. Note that if
@@ -141,8 +159,10 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     prepare_environment(params)
 
     os.makedirs(serialization_dir, exist_ok=True)
-    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), sys.stdout)  # type: ignore
-    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), sys.stderr)  # type: ignore
+    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
+                           sys.stdout, file_friendly_logging)
+    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
+                           sys.stderr, file_friendly_logging)
     handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
@@ -167,14 +187,11 @@ def train_model(params: Params, serialization_dir: str) -> Model:
 
     model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
+    iterator.index_with(vocab)
 
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
     test_data = all_datasets.get('test')
-
-    train_data.index_instances(vocab)
-    if validation_data:
-        validation_data.index_instances(vocab)
 
     trainer_params = params.pop("trainer")
     trainer = Trainer.from_params(model,
@@ -192,7 +209,6 @@ def train_model(params: Params, serialization_dir: str) -> Model:
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
     if test_data and evaluate_on_test:
-        test_data.index_instances(vocab)
         evaluate(model, test_data, iterator, cuda_device=trainer._cuda_device)  # pylint: disable=protected-access
 
     elif test_data:

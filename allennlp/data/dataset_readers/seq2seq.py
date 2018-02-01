@@ -3,11 +3,9 @@ import logging
 
 from overrides import overrides
 
-import tqdm
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.dataset import Dataset
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
@@ -56,6 +54,7 @@ class Seq2SeqDatasetReader(DatasetReader):
                  source_token_indexers: Dict[str, TokenIndexer] = None,
                  target_token_indexers: Dict[str, TokenIndexer] = None,
                  source_add_start_token: bool = True) -> None:
+        super().__init__()
         self._source_tokenizer = source_tokenizer or WordTokenizer()
         self._target_tokenizer = target_tokenizer or self._source_tokenizer
         self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
@@ -63,11 +62,10 @@ class Seq2SeqDatasetReader(DatasetReader):
         self._source_add_start_token = source_add_start_token
 
     @overrides
-    def read(self, file_path):
-        instances = []
+    def _read(self, file_path):
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
-            for line_num, line in enumerate(tqdm.tqdm(data_file)):
+            for line_num, line in enumerate(Tqdm.tqdm(data_file)):
                 line = line.strip("\n")
 
                 if not line:
@@ -77,10 +75,7 @@ class Seq2SeqDatasetReader(DatasetReader):
                 if len(line_parts) != 2:
                     raise ConfigurationError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
                 source_sequence, target_sequence = line_parts
-                instances.append(self.text_to_instance(source_sequence, target_sequence))
-        if not instances:
-            raise ConfigurationError("No instances read!")
-        return Dataset(instances)
+                yield self.text_to_instance(source_sequence, target_sequence)
 
     @overrides
     def text_to_instance(self, source_string: str, target_string: str = None) -> Instance:  # type: ignore
