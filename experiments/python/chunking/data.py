@@ -27,7 +27,7 @@ class TargetLang:
             self.index2word[self.n_words] = word
             self.n_words += 1
 
-def prepareData(train_file, special_tokens):
+def prepareData(train_file, special_tokens, max_length = -1):
     print("Reading lines...")
     # Read the file and split into lines
     lines = codecs.open(train_file, encoding='utf-8').read().strip().split('\n')
@@ -37,14 +37,21 @@ def prepareData(train_file, special_tokens):
     print("Read %s sentence pairs" % len(pairs))
     print("Counting words...")
     max_encoding_length = 1
+    output_pairs = []
     for pair in pairs:
-        if len(pair[0].split(' ')) > max_encoding_length:
-            max_encoding_length = len(pair[0].split(' '))
-        output_lang.addSentence(pair[1])
+        input_toks = pair[0].split(' ')
+        if len(input_toks) > max_encoding_length:
+            max_encoding_length = len(input_toks)
+        if max_length < 0 or len(input_toks) < max_length:
+            output_pairs.append(pair)
+            output_lang.addSentence(pair[1])
+    if max_encoding_length > 0:
+        max_encoding_length = max_length + 1
     print("Max encoding length: %s" % max_encoding_length)
+    print("Filtered down to %s sentence pairs" % len(output_pairs))
     print("Counted target words: {}".format(output_lang.n_words))
     print(output_lang.index2word)
-    return output_lang, pairs, max_encoding_length + 5
+    return output_lang, output_pairs, max_encoding_length + 5
 
 
 # Maps the sentence tokens into their ids.
@@ -67,12 +74,13 @@ def variablesFromPair(pair, input_lang, output_lang):
     target_variable = variableFromSentence(output_lang, pair[1])
     return (input_variable, target_variable)
 
-def initializeData(train_file, dev_file):   
+def initializeData(train_file, dev_file, max_input_length = -1):   
     print("*** compiling target vocab ***")
     special_tokens = ['sos', 'eos', '[[[', ']]]', '<unk>']     
-    output_lang, pairs, MAX_LENGTH = prepareData(train_file, special_tokens)
-    output_lang_dev, pairs_dev, MAX_LENGTH_DEV = prepareData(dev_file, special_tokens)
-    return output_lang, pairs, pairs_dev, MAX_LENGTH    
+    output_lang, pairs, MAX_LENGTH = prepareData(train_file, special_tokens, max_input_length)
+    output_lang_dev, pairs_dev, MAX_LENGTH_DEV = prepareData(dev_file, special_tokens, max_input_length)
+    max_length = max(MAX_LENGTH, MAX_LENGTH_DEV)
+    return output_lang, pairs, pairs_dev, max_length
 
 def pad(tokens, desired_length, padder):
     padding = [padder] * (desired_length - len(tokens))
