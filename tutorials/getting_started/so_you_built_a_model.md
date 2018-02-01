@@ -51,14 +51,26 @@ class PaperClassifierPredictor(Predictor):
         abstract = json_dict['paperAbstract']
         instance = self._dataset_reader.text_to_instance(title=title, abstract=abstract)
 
-        return instance, {}
+        # label_dict will be like {0: "ACL", 1: "AI", ...}
+        label_dict = self._model.vocab.get_index_to_token_vocabulary('labels')
+        # Convert it to list ["ACL", "AI", ...]
+        all_labels = [label_dict[i] for i in range(len(label_dict))]
+
+        return instance, {"all_labels": all_labels}
 ```
 
 As you can see, it just pulls the `"title"` and `"paperAbstract"` fields out of the input JSON
-and feeds them to `text_to_instance`. (The second return parameter is an output dict
-that the results of `Model.forward_on_instance` will get added to.  Here we use an empty dict,
-but if you wanted (for example) the `title` included in the output, you could make
-that happen here.)
+and feeds them to `text_to_instance`.
+
+We also want to return the list of all possible labels
+(this will be useful later when we want to visualize the results).
+We first get the mapping from indices to labels, and then we convert
+it to a list where position 0 is label 0, and so on.
+
+The second element we return is an output dict
+that the results of `Model.forward_on_instance` will get added to.
+Often you'd just use an empty dict, but here we want the `all_labels`
+in our result, so we include them.
 
 ## Testing the Predictor
 
@@ -207,4 +219,97 @@ that the predictor is expecting, or the demo won't work!
 
 ## Customizing the Demo
 
-TODO
+Our JSON "visualization" is not particularly impressive.
+We can customize it by providing our own `index.html`
+and calling `server_simple` with that path.
+
+```bash
+python -m allennlp.service.server_simple \
+    --archive-path tests/fixtures/model.tar.gz \
+    --predictor paper-classifier \
+    --include-package my_library \
+    --static-dir static_html
+```
+
+Notice that in this case we don't need to provide a title
+or field names, as those are all expected to be handled
+by the HTML page itself.
+
+The simplest way to get started is to just "view source" on the demo
+and save the resulting file in some directory. (That file has a lot
+of embedded CSS, in this example I split that out into its own `demo.css`
+file as well.)
+
+We'll use a library called [chart.js](http://www.chartjs.org/docs/latest/getting-started/usage.html)
+to visualize a pie chart of the predicted class probabilities.
+
+We'll start by adding a `script` tag to load the chart.js code
+right above our code:
+
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.3.0/Chart.bundle.js"></script>
+```
+
+Now, if you look at our HTML, the output starts off with a placeholder:
+
+```html
+<div id="output" class="output">
+    <div class="placeholder">
+        <div class="placeholder__content">
+            <p>Run model to view results</p>
+        </div>
+    </div>
+</div>
+```
+
+And the JavaScript code just has a callback that runs when it
+gets a prediction back from the server:
+
+```javascript
+document.getElementById("output").innerHTML = htmlResults;
+```
+
+Which means we just need to fix up that part of the code. If you look at the
+`chart.js` documentation, we'll need to have a `canvas` element
+for our chart, so we'll start by placing that inside our `output` div:
+
+```javascript
+var canvas = '<canvas id="myChart" width="400" height="400"></canvas>';
+document.getElementById("output").innerHTML = canvas;
+```
+
+We also want to parse the prediction response into JSON:
+
+```javascript
+var response = JSON.parse(xhr.responseText);
+```
+
+And finally we just need to follow their docs for creating a pie chart:
+
+```javascript
+var ctx = document.getElementById("myChart");
+var pieChart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+        labels: response['all_labels'],
+        datasets: [{
+            data: response['class_probabilities'],
+            backgroundColor: ['red', 'green', 'blue']
+        }]
+    }
+});
+```
+
+Now when we run our demo we get a brilliant pie chart
+with mouseovers and everything:
+
+![demo screenshot](best_paper_pie.png)
+
+While you can use this to impress your boss,
+it can also be valuable for debugging misbehaving models.
+Just modify your `Model.forward()` to output whatever
+model internals you're curious about, and use
+a custom demo to visualize those internals on
+different inputs.
+
+Happy demo-ing!
