@@ -1344,6 +1344,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                             considered_actions: List[List[int]],
                             allowed_actions: List[Set[int]],
                             max_actions: int = None) -> List[WikiTablesDecoderState]:
+        # Each group index here might get accessed multiple times, and doing the slicing operation
+        # each time is more expensive than doing it once upfront.  These three lines give about a
+        # 10% speedup in training time.  I also tried this with sorted_log_probs and
+        # action_embeddings, but those get accessed for _each action_, so doing the splits there
+        # didn't help.
+        hidden_state = [x.squeeze(0) for x in hidden_state.split(1, 0)]
+        memory_cell = [x.squeeze(0) for x in memory_cell.split(1, 0)]
+        attended_question = [x.squeeze(0) for x in attended_question.split(1, 0)]
+
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
         if max_actions is not None:
             # We might need a version of `sorted_log_probs` on the CPU later, but only if we need
