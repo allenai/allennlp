@@ -22,7 +22,6 @@ from torch.autograd import Variable
 import h5py
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
