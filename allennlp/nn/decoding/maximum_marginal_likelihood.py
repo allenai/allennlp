@@ -121,6 +121,9 @@ class MaximumMarginalLikelihood(DecoderTrainer):
             action_history = grouped_state.action_history[i]
             for allowed_action in allowed_actions[i]:
                 expected_histories.add((batch_index, tuple(action_history + [allowed_action])))
+        if action_histories != expected_histories:
+            print('action histories', action_histories)
+            print('expected histories', expected_histories)
         assert action_histories == expected_histories
 
     @staticmethod
