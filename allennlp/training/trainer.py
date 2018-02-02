@@ -102,7 +102,10 @@ class TensorboardWriter:
         if self._train_log is not None:
             # SummaryWriter.add_histogram doesn't pass global step, so
             # need to access file_writer directly
-            values_to_write = values.cpu().data.numpy().flatten()
+            if isinstance(values, torch.nn.utils.rnn.PackedSequence):
+                values_to_write = values.data.cpu().data.numpy().flatten()
+            else:
+                values_to_write = values.cpu().data.numpy().flatten()
             self._train_log.file_writer.add_summary(
                     tb_histogram(name, values_to_write), global_step
             )
