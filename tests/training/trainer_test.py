@@ -200,7 +200,7 @@ class TestTrainer(AllenNlpTestCase):
         epoch, _ = restore_trainer._restore_checkpoint() # pylint: disable=protected-access
         assert epoch == 2
         # Two batches per epoch.
-        assert restore_trainer._batch_num_total == 4
+        assert restore_trainer._batch_num_total == 4 # pylint: disable=protected-access
 
 
 class TestSparseClipGrad(AllenNlpTestCase):
