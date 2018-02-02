@@ -6,15 +6,17 @@ for something. In this tutorial we'll cover both
 * How to make predictions using your model, and
 * How to run a web demonstration of your model
 
-Here we'll be working the S2 classification model
+Here we'll be working the paper classification model
 we developed in the [Using AllenNLP in your Project](using_in_your_repo.md)
 tutorial. The code for that model is [on GitHub](https://github.com/allenai/allennlp-as-a-library-example).
 You can either train it yourself or download a
-[trained model](https://s3-us-west-2.amazonaws.com/allennlp/models/tutorial-s2-classification-model-2018-02-01.tar.gz).
+[trained model](https://s3-us-west-2.amazonaws.com/allennlp/models/tutorial-s2-classification-model-2018-02-01.tar.gz),
+although in this tutorial we'll just use the tiny junk model that's included
+[as a test fixture](https://github.com/allenai/allennlp-as-a-library-example/tree/master/tests/fixtures).
 
 ## Creating a Predictor
 
-At the core of our classification model is our `forward()` function:
+At the core of the paper classification model is our `forward()` function, which looks like
 
 ```python
     def forward(self,
@@ -24,22 +26,23 @@ At the core of our classification model is our `forward()` function:
 ```
 
 It takes a Tensor-ized title and abstract (and possibly a label)
-and returns some Tensor outputs.
-That's usually less than helpful
+and returns some Tensor outputs. That's great for computing loss functions
+and performance metrics, but it's less helpful
 for making predictions and serving up demos.
-Instead, we'll want to take in JSON inputs and return JSON results.
+For these purposes we'll want to be able to
+accept JSON inputs and return JSON results.
 
 AllenNLP provides a [`Predictor`](https://github.com/allenai/allennlp/blob/master/allennlp/service/predictors/predictor.py)
-abstraction to do precisely this.
-Most of the needed functionality is already implemented in the base class.
-In most cases you'll only need to implement the `_json_to_instance` function,
-which specifies how to turn a JSON dict of inputs into an
+abstraction that wraps a model and does precisely this.
+Most of the functionality you need for a `Predictor` is already implemented in the base class.
+Usually you only need to implement the `_json_to_instance` function,
+which specifies how to turn a JSON dict of inputs into an AllenNLP
 [`Instance`](https://allenai.github.io/allennlp-docs/api/allennlp.data.instance.html).
-Our `DatasetReader` already has a
+And our `DatasetReader` already has a
 [`text_to_instance`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/dataset_readers/semantic_scholar_papers.py#L73)
-method, and so all we have to do is extract what it needs from the JSON.
+method, which means all we have to do is extract what that method needs from the JSON.
 
-So our predictor can be very simple:
+This means our predictor [can be very simple](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/predictors/paper_classifier_predictor.py):
 
 ```python
 @Predictor.register('paper-classifier')
@@ -59,18 +62,21 @@ class PaperClassifierPredictor(Predictor):
         return instance, {"all_labels": all_labels}
 ```
 
-As you can see, it just pulls the `"title"` and `"paperAbstract"` fields out of the input JSON
-and feeds them to `text_to_instance`.
+To create each `Instance` it just pulls the `"title"` and `"paperAbstract"` fields
+out of the input JSON and feeds them to `text_to_instance`.
 
-We also want to return the list of all possible labels
+In this example we also would like to return the list of all possible labels
 (this will be useful later when we want to visualize the results).
 We first get the mapping from indices to labels, and then we convert
 it to a list where position 0 is label 0, and so on.
 
-The second element we return is an output dict
-that the results of `Model.forward_on_instance` will get added to.
-Often you'd just use an empty dict, but here we want the `all_labels`
-in our result, so we include them.
+`_json_to_instance` returns a tuple, where the first element is
+the `Instance` and the second element is a `dict` that the elements
+of `Model.forward_on_instance` will be added to. Anything that we want
+in our JSON output that's not produced by `forward()` goes in it.
+
+Here that's just the list of `all_labels`, so that's what we put in the `dict`.
+If we didn't need that, we'd just use an empty `dict` there.
 
 ## Testing the Predictor
 
@@ -80,8 +86,9 @@ that our predictor is doing the right thing.
 The main gotcha here is that our test will (implicitly)
 need to instantiate our model, dataset reader, and predictor
 by name, which means that they need to be registered before
-our test runs. As they're all imported in `my_library/__init__.py`
-we just have to import that package:
+our test runs. I added them all as imports in
+[`my_library/__init__.py`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/__init__.py),
+so we just have to import that package:
 
 ```python
 import my_library
@@ -131,22 +138,36 @@ This test passes, so we can feel reasonably good about our predictor.
 
 ## Making Predictions
 
-We can make predictions using the command
+Once we have a predictor, we can make predictions using the command
 
 ```bash
 python -m allennlp.run predict
 ```
 
-It requires (at the least) an archive file (that is, a trained model)
-and a file of inputs (in JSON lines format).
+If you ask it for `--help` you'll see:
 
-Here we're using a custom model and predictor, so we'll need to specify
+```
+usage: python -m allennlp.run [command] predict [-h]
+                                                [--output-file OUTPUT_FILE]
+                                                [--batch-size BATCH_SIZE]
+                                                [--silent]
+                                                [--cuda-device CUDA_DEVICE]
+                                                [-o OVERRIDES]
+                                                [--include-package INCLUDE_PACKAGE]
+                                                [--predictor PREDICTOR]
+                                                archive_file input_file
+```
+
+Notice that it requires both an archive file (that is, a trained model)
+and an input file (with one JSON input per line).
+
+Here we're using a custom model and predictor, so we'll also need to specify
 
 ```
 --include-package my_library
 ```
 
-just as we did during training, and also
+just as we did during training, and
 
 ```
 --predictor paper-classifier
@@ -154,9 +175,8 @@ just as we did during training, and also
 
 so that AllenNLP knows which predictor to use.
 
-As a simple example, there are 10 papers in JSONL format at
-`tests/fixtures/s2_papers.jsonl`, so you could predict on those
-using the test fixture model with:
+There are 10 papers in JSONL format at
+`tests/fixtures/s2_papers.jsonl`, so let's make some predictions on those:
 
 ```bash
 python -m allennlp.run predict \
@@ -169,16 +189,11 @@ python -m allennlp.run predict \
 When you run this it will print the ten test inputs and their predictions, each of which looks like:
 
 ```
-prediction:  {"logits": [0.008737504482269287, 0.22074833512306213, -0.005263201892375946], "class_probabilities": [0.31034138798713684, 0.38363200426101685, 0.3060266375541687], "label": "ACL"}
+prediction:  {"all_labels": ["AI", "ACL", "ML"], "logits": [0.008737504482269287, 0.22074833512306213, -0.005263201892375946], "class_probabilities": [0.31034138798713684, 0.38363200426101685, 0.3060266375541687], "label": "ACL"}
 ```
 
-If you want your predictions to go to a file instead, there is an `--output-file` option
-you can use.
-
-It's also possible to use inputs in other formats; for example, if you had CSV data
-you wanted to make predictions on. In this case your `Predictor` would need to
-override `load_line` and `dump_line`, which specify how to turn each input line
-into a JsonDict and vice versa.
+If you want your predictions to go to a file instead,
+you just need to specify an `--output-file`.
 
 ## Running a Web Demo
 
@@ -200,8 +215,8 @@ Let's ignore the `--static-dir` flag for now and serve up the test fixture model
 python -m allennlp.service.server_simple \
     --archive-path tests/fixtures/model.tar.gz \
     --predictor paper-classifier \
-    --title "Academic Paper Classifier" \
     --include-package my_library \
+    --title "Academic Paper Classifier" \
     --field-name title \
     --field-name paperAbstract
 ```
@@ -236,21 +251,24 @@ or field names, as those are all expected to be handled
 by the HTML page itself.
 
 The simplest way to get started is to just "view source" on the demo
-and save the resulting file in some directory. (That file has a lot
-of embedded CSS, in this example I split that out into its own `demo.css`
-file as well.)
+and save the resulting file in some directory. I called my directory
+[`static_html`](https://github.com/allenai/allennlp-as-a-library-example/tree/master/static_html).
+The HTML file I saved had a lot of embedded CSS in it, so I split that out into
+[its own file](https://github.com/allenai/allennlp-as-a-library-example/blob/master/static_html/demo.css).
 
-We'll use a library called [chart.js](http://www.chartjs.org/docs/latest/getting-started/usage.html)
-to visualize a pie chart of the predicted class probabilities.
+As simple customization, we'll replace the ugly JSON output
+with a beautiful pie chart of the predicted class probabilities,
+using a library called
+[chart.js](http://www.chartjs.org/docs/latest/getting-started/usage.html).
 
-We'll start by adding a `script` tag to load the chart.js code
-right above our code:
+To start with, we need to [add a `script` tag to load chart.js](https://github.com/allenai/allennlp-as-a-library-example/blob/master/static_html/index.html#L47).
 
 ```html
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.3.0/Chart.bundle.js"></script>
 ```
 
-Now, if you look at our HTML, the output starts off with a placeholder:
+If you look at the original HTML, the output starts off
+[with a placeholder](https://github.com/allenai/allennlp/blob/master/allennlp/service/server_simple.py#L186):
 
 ```html
 <div id="output" class="output">
@@ -262,16 +280,18 @@ Now, if you look at our HTML, the output starts off with a placeholder:
 </div>
 ```
 
-And the JavaScript code just has a callback that runs when it
-gets a prediction back from the server:
+And the JavaScript code just
+[has a callback](https://github.com/allenai/allennlp/blob/master/allennlp/service/server_simple.py#L214)
+that runs when it gets a prediction back from the server:
 
 ```javascript
 document.getElementById("output").innerHTML = htmlResults;
 ```
 
-Which means we just need to fix up that part of the code. If you look at the
-`chart.js` documentation, we'll need to have a `canvas` element
-for our chart, so we'll start by placing that inside our `output` div:
+Which means we just need to make a few changes to those parts of our code.
+If you look at the `chart.js` documentation, we'll need to have a `canvas` element
+for our chart, so we'll start by
+[placing that inside our `output` div](https://github.com/allenai/allennlp-as-a-library-example/blob/master/static_html/index.html#L61):
 
 ```javascript
 var canvas = '<canvas id="myChart" width="400" height="400"></canvas>';
@@ -305,11 +325,15 @@ with mouseovers and everything:
 
 ![demo screenshot](best_paper_pie.png)
 
-While you can use this to impress your boss,
+This pie chart was a very simple example.
+If you like writing HTML and CSS and JavaScript,
+the sky is the limit for what you can customize.
+
+And while you can certainly use this to impress your boss,
 it can also be valuable for debugging misbehaving models.
 Just modify your `Model.forward()` to output whatever
-model internals you're curious about, and use
+model internals you're curious about, and then use
 a custom demo to visualize those internals on
-different inputs.
+a variety of different inputs.
 
 Happy demo-ing!
