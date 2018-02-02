@@ -105,7 +105,7 @@ class TensorboardWriter:
             if isinstance(values, torch.autograd.Variable):
                 values_to_write = values.cpu().data.numpy().flatten()
                 self._train_log.file_writer.add_summary(
-                    tb_histogram(name, values_to_write), global_step
+                        tb_histogram(name, values_to_write), global_step
                 )
 
     def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
@@ -174,8 +174,6 @@ class Trainer:
             at the end of every epoch if ``serialization_dir`` is provided.
         cuda_device : int, optional (default = -1)
             An integer specifying the CUDA device to use. If -1, the CPU is used.
-            For multiple GPU training, specify a list of CUDA devices, e.g. [0, 1].
-            Note, multiple GPU training is still experimental and not fully supported.
         grad_norm : float, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
         grad_clipping : ``float``, optional (default = ``None``).
@@ -202,8 +200,6 @@ class Trainer:
             the attribute ``should_log_activations`` set to ``True``.  Logging
             histograms requires a number of GPU-CPU copies during training and is typically
             slow, so we recommend logging histograms relatively infrequently.
-            Finally, deadlocking can cause the training process to hang when logging histograms
-            with multiple GPU training, so we do not recommend using this option in that setting.
         """
         self._model = model
         self._iterator = iterator
@@ -235,7 +231,10 @@ class Trainer:
 
         if not isinstance(cuda_device, int) and not isinstance(cuda_device, list):
             raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
+
         if isinstance(cuda_device, list):
+            logger.info(f"WARNING: Multiple GPU support is experimental not recommended for use. "
+                        "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
             # data_parallel will take care of transfering to cuda devices,
