@@ -19,8 +19,8 @@ import torch.optim.lr_scheduler
 from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
 from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
+import tensorboard
 from tensorboard import SummaryWriter
-from tensorboard.summary import histogram as tb_histogram
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -46,13 +46,11 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2):
     concatenated into a single vector. Gradients are modified in-place.
     Supports sparse gradients.
 
-    Arguments
+    Parameters
     ---------
-        parameters (Iterable[Variable]): an iterable of Variables that will have
-            gradients normalized
-        max_norm (float or int): max norm of the gradients
-        norm_type (float or int): type of the used p-norm. Can be ``'inf'`` for
-            infinity norm.
+    parameters : ``(Iterable[Variable])`` an iterable of Variables that will have gradients normalized
+    max_norm : ``float`` max norm of the gradients
+    norm_type : ``float`` type of the used p-norm. Can be ``'inf'`` for infinity norm.
 
     Returns
     -------
@@ -105,7 +103,7 @@ class TensorboardWriter:
             if isinstance(values, torch.autograd.Variable):
                 values_to_write = values.cpu().data.numpy().flatten()
                 self._train_log.file_writer.add_summary(
-                        tb_histogram(name, values_to_write), global_step
+                        tensorboard.summary.histogram(name, values_to_write), global_step
                 )
 
     def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
@@ -160,27 +158,27 @@ class Trainer:
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-        num_serialized_models_to_keep: int, optional (default=None)
+        num_serialized_models_to_keep : ``int``, optional (default=None)
             Number of previous model checkpoints to retain.  Default is to keep all checkpoints.
-        keep_serialized_model_every_num_seconds: int, optional (default=None)
+        keep_serialized_model_every_num_seconds : ``int``, optional (default=None)
             If num_serialized_models_to_keep is not None, then occasionally it's useful to
             save models at a given interval in addition to the last num_serialized_models_to_keep.
             To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
             between permanently saved checkpoints.  Note that this option is only used if
             num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
-        model_save_interval : float, optional (default=None)
+        model_save_interval : ``float``, optional (default=None)
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
             at the end of every epoch if ``serialization_dir`` is provided.
-        cuda_device : int, optional (default = -1)
+        cuda_device : ``int``, optional (default = -1)
             An integer specifying the CUDA device to use. If -1, the CPU is used.
-        grad_norm : float, optional, (default = None).
+        grad_norm : ``float``, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
         grad_clipping : ``float``, optional (default = ``None``).
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
-        learning_rate_scheduler : PytorchLRScheduler, optional, (default = None)
+        learning_rate_scheduler : ``PytorchLRScheduler``, optional, (default = None)
             A Pytorch learning rate scheduler. The learning rate will be decayed with respect to
             this schedule at the end of each epoch. If you use
             :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`, this will use the ``validation_metric``
@@ -251,7 +249,7 @@ class Trainer:
         self._log_interval = 10  # seconds
         self._summary_interval = 100  # num batches between logging to tensorboard
         self._histogram_interval = histogram_interval
-        self._should_log_histogram = False
+        self._log_histograms_this_batch = False
         self._batch_num_total = 0
 
         self._last_log = 0.0  # time of last logging
@@ -285,7 +283,7 @@ class Trainer:
                 def hook(module_, inputs, outputs):
                     # pylint: disable=unused-argument,cell-var-from-loop
                     log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
-                    if self._should_log_histogram:
+                    if self._log_histograms_this_batch:
                         if isinstance(outputs, torch.autograd.Variable):
                             log_name = log_prefix
                             self._tensorboard.add_train_histogram(log_name,
@@ -401,7 +399,7 @@ class Trainer:
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
-            self._should_log_histogram = self._histogram_interval is not None and (
+            self._log_histograms_this_batch = self._histogram_interval is not None and (
                     batch_num_total % self._histogram_interval == 0)
 
             self._optimizer.zero_grad()
@@ -417,7 +415,7 @@ class Trainer:
 
             self._update_learning_rate(None, batch_num_total=batch_num_total)
 
-            if self._should_log_histogram:
+            if self._log_histograms_this_batch:
                 # get the magnitude of parameter updates for logging
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
@@ -469,7 +467,7 @@ class Trainer:
                                                        batch_num_total)
 
             # Histogram logging
-            if self._should_log_histogram:
+            if self._log_histograms_this_batch:
                 for name, param in self._model.named_parameters():
                     if name in histogram_parameters:
                         self._tensorboard.add_train_histogram("parameter_histogram/" + name,
@@ -667,7 +665,8 @@ class Trainer:
         Parameters
         ----------
         epoch : Union[int, str], required.
-            The epoch of training.
+            The epoch of training.  If the checkpoint is saved in the middle
+            of an epoch, the parameter is a string with the epoch and timestamp.
         is_best: bool, optional (default = None)
             A flag which causes the model weights at the given epoch to
             be copied to a "best.th" file. The value of this flag should
