@@ -6,12 +6,12 @@ for something. In this tutorial we'll cover both
 * How to make predictions using your model, and
 * How to run a web demonstration of your model
 
-Here we'll be working the paper classification model
-we developed in the [Using AllenNLP in your Project](using_in_your_repo.md)
-tutorial. The code for that model is [on GitHub](https://github.com/allenai/allennlp-as-a-library-example).
+Here we'll be working with the paper classification model
+we developed in the ["Using AllenNLP in your Project"](using_in_your_repo.md)
+tutorial. All the code for that model is [on GitHub](https://github.com/allenai/allennlp-as-a-library-example).
 You can either train it yourself or download a
 [trained model](https://s3-us-west-2.amazonaws.com/allennlp/models/tutorial-s2-classification-model-2018-02-01.tar.gz),
-although in this tutorial we'll just use the tiny junk model that's included
+although in this tutorial we'll just use the tiny model that's included
 [as a test fixture](https://github.com/allenai/allennlp-as-a-library-example/tree/master/tests/fixtures).
 
 ## Creating a Predictor
@@ -29,7 +29,7 @@ It takes a Tensor-ized title and abstract (and possibly a label)
 and returns some Tensor outputs. That's great for computing loss functions
 and performance metrics, but it's less helpful
 for making predictions and serving up demos.
-For these purposes we'll want to be able to
+For those purposes we'll want to be able to
 accept JSON inputs and return JSON results.
 
 AllenNLP provides a [`Predictor`](https://github.com/allenai/allennlp/blob/master/allennlp/service/predictors/predictor.py)
@@ -39,7 +39,7 @@ Usually you only need to implement the `_json_to_instance` function,
 which specifies how to turn a JSON dict of inputs into an AllenNLP
 [`Instance`](https://allenai.github.io/allennlp-docs/api/allennlp.data.instance.html).
 And our `DatasetReader` already has a
-[`text_to_instance`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/dataset_readers/semantic_scholar_papers.py#L73)
+[`text_to_instance`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/dataset_readers/semantic_scholar_papers.py#L68)
 method, which means all we have to do is extract what that method needs from the JSON.
 
 This means our predictor [can be very simple](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/predictors/paper_classifier_predictor.py):
@@ -235,28 +235,19 @@ that the predictor is expecting, or the demo won't work!
 ## Customizing the Demo
 
 Our JSON "visualization" is not particularly impressive.
-We can customize it by providing our own `index.html`
-and calling `server_simple` with that path.
-
-```bash
-python -m allennlp.service.server_simple \
-    --archive-path tests/fixtures/model.tar.gz \
-    --predictor paper-classifier \
-    --include-package my_library \
-    --static-dir static_html
-```
-
-Notice that in this case we don't need to provide a title
-or field names, as those are all expected to be handled
-by the HTML page itself.
+We can customize it by putting our own `index.html`
+(and any other files we need) in some directory
+and calling `server_simple` with the `--static-dir` flag.
+In this case we don't need to provide a title or field names,
+as those will be implicitly provided by the HTML code.
 
 The simplest way to get started is to just "view source" on the demo
 and save the resulting file in some directory. I called my directory
-[`static_html`](https://github.com/allenai/allennlp-as-a-library-example/tree/master/static_html).
-The HTML file I saved had a lot of embedded CSS in it, so I split that out into
+[`static_html`](https://github.com/allenai/allennlp-as-a-library-example/tree/master/static_html)
+and saved `index.html` there. The original page had a lot of embedded CSS, which I split out into
 [its own file](https://github.com/allenai/allennlp-as-a-library-example/blob/master/static_html/demo.css).
 
-As simple customization, we'll replace the ugly JSON output
+For our customization, we'll replace the ugly JSON output
 with a beautiful pie chart of the predicted class probabilities,
 using a library called
 [chart.js](http://www.chartjs.org/docs/latest/getting-started/usage.html).
@@ -320,12 +311,22 @@ var pieChart = new Chart(ctx, {
 });
 ```
 
-Now when we run our demo we get a brilliant pie chart
-with mouseovers and everything:
+Now we can run our custom demo:
+
+```bash
+python -m allennlp.service.server_simple \
+    --archive-path tests/fixtures/model.tar.gz \
+    --predictor paper-classifier \
+    --include-package my_library \
+    --static-dir static_html
+```
+
+
+And we get a brilliant pie chart with mouseovers and everything:
 
 ![demo screenshot](best_paper_pie.png)
 
-This pie chart was a very simple example.
+This was a very simple example.
 If you like writing HTML and CSS and JavaScript,
 the sky is the limit for what you can customize.
 
