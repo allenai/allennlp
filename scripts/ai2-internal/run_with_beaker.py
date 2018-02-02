@@ -5,14 +5,28 @@
 import argparse
 import os
 import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))))
+
+from allennlp.commands.train import Train
+from allennlp.common.params import Params
 
 #TODO(michaels): add CLI support for mounting datasets.
 
 def main(param_file, description):
-    ecr_repository="896129387501.dkr.ecr.us-west-2.amazonaws.com"
+    ecr_repository = "896129387501.dkr.ecr.us-west-2.amazonaws.com"
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
+    image = f"{ecr_repository}/allennlp/allennlp:{commit}"
+    overrides = ""
 
-    commit=subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
-    image=f"{ecr_repository}/allennlp/allennlp:{commit}"
+    # Read params and set environment
+    params = Params.from_file(param_file, overrides)
+    flat_params = params.as_flat_dict()
+    env = []
+    for k, v in flat_params.items():
+        k = str(k).replace('.', '_')
+        env.append(f"--env={k}={v}")
 
     # Get temporary ecr login. For this command to work, you need the python awscli
     # package with a version more recent than 1.11.91.
@@ -29,25 +43,31 @@ def main(param_file, description):
     filename = os.path.basename(param_file)
 
     allennlp_command = [
-            "./scripts/ai2-internal/beaker-train-wrapper.sh",
+            "python",
+            "-m",
+            "allennlp.run",
+            "train",
             "/config.json",
             "-s",
             "/output",
             "--file-friendly-logging"
         ]
 
+    # TODO(michaels): add back in the env list.
+    # Presently this makes the Beaker UI unusably cluttered.
     command = [
-            'beaker',
+            '/usr/local/bin/beaker',
             'experiment',
             'run',
-            '--result-path /output',
-            '--desc={description}',
+            '--result-path',
+            '/output',
+            "--source",
+            f"{config_dataset_id}:/config.json",
+            f'--desc={description}',
             '--gpu-count=1',
-            '--detach',
-            image
-        ] + allennlp_command
+            '--detach'] + [image] + allennlp_command
     print(' '.join(command))
-    subprocess.run('command', shell=True, check=True)
+    subprocess.run(command, check=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
