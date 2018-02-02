@@ -29,6 +29,13 @@ class TestParams(AllenNlpTestCase):
         assert model_params.pop("type") == "BAR"
         assert model_params["text_field_embedder.tokens.type"] == "BAZ"
 
+    def test_as_flast_dict(self):
+        filename = 'tests/fixtures/bidaf/experiment.json'
+        params = Params.from_file(filename)
+
+        assert "dataset_reader.type" in params
+        assert "dataset_reader.token_indexers.tokens.lowercase_tokens" in params
+        assert "model.text_field_embedder.tokens.type" in params
 
     def test_add_file_to_archive(self):
         # Some nested classes just to exercise the ``from_params``
