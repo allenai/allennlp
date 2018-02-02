@@ -22,7 +22,7 @@ from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.semparse import ParsingError
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
+from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder, CnnEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import Embedding
@@ -172,7 +172,12 @@ class WikiTablesSemanticParser(Model):
         embedded_question = self._question_embedder(question)
         question_mask = util.get_text_field_mask(question).float()
         # (batch_size, num_entities, num_entity_tokens, embedding_dim)
-        embedded_table = self._question_embedder(table_text)
+        # table_embedder = TimeDistributed(self._question_embedder)
+        tokens_tensor = table_text['tokens'].view(-1, table_text['tokens'].size(2))
+        token_characters_tensor = table_text['token_characters'].view(-1, table_text['token_characters'].size(2), table_text['token_characters'].size(3))
+        embedded_table = self._question_embedder({'tokens': tokens_tensor, 'token_characters':token_characters_tensor})
+        embedded_table = embedded_table.view(embedded_question.size(0),-1,embedded_table.size(1),embedded_table.size(2))
+
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
         batch_size, num_entities, num_entity_tokens, _ = embedded_table.size()
