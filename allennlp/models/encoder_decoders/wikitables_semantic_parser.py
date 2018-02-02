@@ -19,6 +19,7 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.worlds import WikiTablesWorld
+from allennlp.data.semparse import ParsingError
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
@@ -300,14 +301,15 @@ class WikiTablesSemanticParser(Model):
         else:
             outputs = {}
             if target_action_sequences is not None:
-                num_steps = target_action_sequences.size(-1) - 1
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
                                                                target_action_sequences,
                                                                target_mask)['loss']
-            else:
-                num_steps = self._max_decoding_steps
-            best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)
+            num_steps = self._max_decoding_steps
+            best_final_states = self._beam_search.search(num_steps,
+                                                         initial_state,
+                                                         self._decoder_step,
+                                                         keep_final_unfinished_states=False)
             best_action_sequences = []
             for i in range(batch_size):
                 predicted = best_final_states[i][0].action_history

@@ -1,11 +1,14 @@
 from typing import List, Dict, Set, Tuple
 from collections import defaultdict
+import logging
 import re
 
 from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
 
 from allennlp.data.semparse.type_declarations import type_declaration as types
 from allennlp.data.semparse import util as semparse_util
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class ParsingError(Exception):
@@ -241,7 +244,7 @@ class World:
                     # "lambda x/y/...". Removing single quotes surrounding the string.
                     terminals.append((right_side[1:-1].split(', ')[0].replace("'", ""),
                                       self._infer_num_arguments(left_side)))
-            elif len(right_side) > 1 or right_side in ['x', 'y', 'z'] or right_side_is_number:
+            elif len(right_side) > 1 or right_side in ['x', 'y', 'z', '<', '-'] or right_side_is_number:
                 if right_side == "var" and add_var_function:
                     raise RuntimeError("You wanted to add var, but you didn't need to!")
                 if right_side in ['x', 'y', 'z'] and add_var_function:
@@ -261,11 +264,18 @@ class World:
                 partial_logical_forms.append(terminal)
             else:
                 args = []
-                assert len(partial_logical_forms) >= num_args, f"Not enough arguments for {terminal}"
+                if len(partial_logical_forms) < num_args:
+                    logger.error("Not enough arguments for: %s", terminal)
+                    logger.error("Partial logical forms were: %s", partial_logical_forms)
+                    logger.error("Action sequence was: %s", action_sequence)
+                    raise ParsingError("Can't produce logical form from action sequence")
                 for _ in range(num_args):
                     args.append(partial_logical_forms.pop())
                 partial_logical_forms.append("(%s %s)" % (terminal, " ".join(args)))
-        assert len(partial_logical_forms) == 1, "Incomplete action sequence!"
+        if len(partial_logical_forms) != 1:
+            logger.error("Incomplete action sequence (or parsing error): %s", action_sequence)
+            logger.error("Partial logical forms were: %s", partial_logical_forms)
+            raise ParsingError("Can't produce logical form from action sequence")
         return partial_logical_forms[0]
 
     @classmethod

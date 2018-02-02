@@ -145,6 +145,17 @@ class WorldTest(AllenNlpTestCase):
         parsed_reconstructed_logical_form = world.parse_logical_form(reconstructed_logical_form)
         assert parsed_logical_form == parsed_reconstructed_logical_form
 
+    def test_get_logical_form_handles_length_one_terminal_functions(self):
+        world = self.wikitables_world
+        logical_form = ("(- ((reverse fb:cell.cell.number) ((reverse fb:row.row.league) "
+                        "(fb:row.row.year fb:cell.usl_a_league))) (number 1))")
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        action_sequence = world.get_action_sequence(parsed_logical_form)
+        reconstructed_logical_form = world.get_logical_form(action_sequence)
+        parsed_reconstructed_logical_form = world.parse_logical_form(reconstructed_logical_form)
+        assert parsed_logical_form == parsed_reconstructed_logical_form
+
+
     def test_get_logical_form_with_decoded_action_sequence(self):
         # This is identical to the previous test except that we are testing it on a real action
         # sequence the decoder produced.
