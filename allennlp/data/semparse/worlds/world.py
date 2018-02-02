@@ -250,7 +250,7 @@ class World:
                 if right_side in ['x', 'y', 'z'] and add_var_function:
                     right_side = f"(var {right_side})"
                 terminals.append((right_side, self._infer_num_arguments(left_side)))
-        partial_logical_forms = []
+        partial_logical_forms: List[str] = []
         terminals = list(reversed(terminals))
         for i, (terminal, num_args) in enumerate(terminals):
             if i < len(terminals) - 1 and terminals[i + 1][0] == 'reverse':

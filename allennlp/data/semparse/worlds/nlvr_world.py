@@ -4,7 +4,7 @@ which mainly contains an execution method and related helper methods.
 """
 from collections import defaultdict
 import operator
-from typing import Any, List, Dict, Set, Tuple, Callable, TypeVar, Union
+from typing import Any, List, Dict, Set, Callable, TypeVar, Union
 
 from nltk.sem.logic import Type
 from overrides import overrides

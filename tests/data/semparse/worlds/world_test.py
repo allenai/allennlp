@@ -4,7 +4,7 @@ import json
 from overrides import overrides
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.semparse import World
+from allennlp.data.semparse import ParsingError, World
 from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 from allennlp.data.semparse.worlds import NlvrWorld, WikiTablesWorld
 from allennlp.data.tokenizers import Token
@@ -174,14 +174,14 @@ class WorldTest(AllenNlpTestCase):
         nlvr_world = self.nlvr_world
         action_sequence = ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> [<#1,<#1,t>>, b]',
                            '<#1,<#1,t>> -> assert_not_equals']
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ParsingError):
             nlvr_world.get_logical_form(action_sequence)
 
     def test_get_logical_form_fails_with_action_sequence_in_wrong_order(self):
         nlvr_world = self.nlvr_world
         action_sequence = ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> [<#1,<#1,t>>, b]',
                            'b -> all_boxes', '<#1,<#1,t>> -> assert_not_equals', 'b -> all_boxes']
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ParsingError):
             nlvr_world.get_logical_form(action_sequence)
 
     def test_get_logical_form_adds_var_correctly(self):
