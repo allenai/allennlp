@@ -177,7 +177,7 @@ class TestTrainer(AllenNlpTestCase):
         # Now check the serialized files for models saved during the epoch.
         prefix = 'model_state_epoch_*'
         file_names = sorted(glob.glob(os.path.join(self.TEST_DIR, prefix)))
-        epochs = [re.search(r"_([0-9\.]+)\.th", fname).group(1)
+        epochs = [re.search(r"_([0-9\.\-]+)\.th", fname).group(1)
                   for fname in file_names]
         # We should have checkpoints at the end of each epoch and during each, e.g.
         # [0.timestamp, 0, 1.timestamp, 1]

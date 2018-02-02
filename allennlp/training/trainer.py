@@ -12,6 +12,7 @@ import os
 import shutil
 import time
 import re
+import datetime
 from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 
 import torch
@@ -110,7 +111,23 @@ class TensorboardWriter:
         if self._validation_log is not None:
             self._validation_log.add_scalar(name, value, global_step)
 
+def time_to_str(timestamp: int) -> str:
+    """
+    Convert seconds past Epoch to human readable string.
+    """
+    datetimestamp = datetime.datetime.fromtimestamp(int(time.time()))
+    return '{:04d}-{:02d}-{:02d}-{:02d}-{:02d}-{:02d}'.format(
+            datetimestamp.year, datetimestamp.month, datetimestamp.day,
+            datetimestamp.hour, datetimestamp.minute, datetimestamp.second
+    )
 
+def str_to_time(time_str: str) -> datetime.datetime:
+    """
+    Convert human readable string to datetime.datetime.
+    """
+    pieces = [int(piece) for piece in time_str.split('-')]
+    return datetime.datetime(*pieces)
+    
 class Trainer:
     def __init__(self,
                  model: Model,
@@ -487,7 +504,7 @@ class Trainer:
             ):
                 last_save_time = time.time()
                 self._save_checkpoint(
-                        '{0}.{1}'.format(epoch, int(last_save_time)), [], is_best=False
+                        '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
 
         return self._get_metrics(train_loss, batch_num, reset=True)
@@ -744,21 +761,21 @@ class Trainer:
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
         # Get the last checkpoint file.  Epochs are specified as either an
         # int (for end of epoch files) or with epoch and timestamp for
-        # within epoch checkpoints.  5.1512684016
+        # within epoch checkpoints, e.g. 5.2018-02-02-15-33-42
         found_epochs = [
                 # pylint: disable=anomalous-backslash-in-string
-                re.search("model_state_epoch_([0-9\.]+)\.th", x).group(1)
+                re.search("model_state_epoch_([0-9\.\-]+)\.th", x).group(1)
                 for x in model_checkpoints
         ]
         int_epochs = []
         for epoch in found_epochs:
-            pieces = [int(piece) for piece in epoch.split('.')]
+            pieces = epoch.split('.')
             if len(pieces) == 1:
                 # Just a single epoch without timestamp
-                int_epochs.append([pieces[0], 0])
+                int_epochs.append([int(pieces[0]), 0])
             else:
                 # has a timestamp
-                int_epochs.append(pieces)
+                int_epochs.append([int(pieces[0]), pieces[1]])
         last_epoch = sorted(int_epochs, reverse=True)[0]
         if last_epoch[1] == 0:
             epoch_to_load = str(last_epoch[0])
