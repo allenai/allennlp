@@ -9,10 +9,6 @@ import subprocess
 #TODO(michaels): add CLI support for mounting datasets.
 
 def main(param_file, description):
-    result_arg="--result-path /output"
-    gpu_arg="--gpu-count=1"
-    detach_arg="--detach"
-
     ecr_repository="896129387501.dkr.ecr.us-west-2.amazonaws.com"
 
     commit=subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
@@ -32,10 +28,25 @@ def main(param_file, description):
     config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
     filename = os.path.basename(param_file)
 
-    allennlp_command="allennlp/run train /config.json -s /output --file-friendly-logging"
+    allennlp_command = [
+            "./scripts/ai2-internal/beaker-train-wrapper.sh",
+            "/config.json",
+            "-s",
+            "/output",
+            "--file-friendly-logging"
+        ]
 
-    command = f'beaker experiment run {result_arg} {description} {gpu_arg} {detach_arg} {image} {allennlp_command}'
-    print(command)
+    command = [
+            'beaker',
+            'experiment',
+            'run',
+            '--result-path /output',
+            '--desc={description}',
+            '--gpu-count=1',
+            '--detach',
+            image
+        ] + allennlp_command
+    print(' '.join(command))
     subprocess.run('command', shell=True, check=True)
 
 if __name__ == "__main__":
