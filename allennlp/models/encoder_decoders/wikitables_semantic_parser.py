@@ -334,6 +334,7 @@ class WikiTablesSemanticParser(Model):
             outputs['linking_scores'] = linking_scores
             outputs['feature_scores'] = feature_scores
             outputs['similarity_scores'] = question_table_similarity_max_score
+            outputs['logical_form'] = []
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
@@ -346,8 +347,13 @@ class WikiTablesSemanticParser(Model):
                         targets = target_action_sequences[i].data
                         credit = self._action_history_match(predicted, targets)
                     self._action_sequence_accuracy(credit)
-                    best_action_sequences.append(predicted)
-                    outputs['best_action_sequence'].append(predicted)
+                    action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
+                    try:
+                        logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
+                    except ParsingError:
+                        logical_form = 'Error producing logical form'
+                    outputs['best_action_sequence'].append(action_strings)
+                    outputs['logical_form'].append(logical_form)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])
                     outputs['entities'].append(world[i].table_graph.entities)
             return outputs
@@ -774,14 +780,14 @@ class WikiTablesSemanticParser(Model):
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
         action_mapping = output_dict['action_mapping']
-        best_action_indices = output_dict["best_action_sequence"]
+        best_actions = output_dict["best_action_sequence"]
         debug_infos = output_dict['debug_info']
         batch_action_info = []
-        for batch_index, (action_indices, debug_info) in enumerate(zip(best_action_indices, debug_infos)):
+        for batch_index, (predicted_actions, debug_info) in enumerate(zip(best_actions, debug_infos)):
             instance_action_info = []
-            for action_index, action_debug_info in zip(action_indices, debug_info):
+            for predicted_action, action_debug_info in zip(predicted_actions, debug_info):
                 action_info = {}
-                action_info['predicted_action'] = action_mapping[(batch_index, action_index)]
+                action_info['predicted_action'] = predicted_action
                 considered_actions = action_debug_info['considered_actions']
                 probabilities = action_debug_info['probabilities']
                 actions = []
@@ -792,6 +798,7 @@ class WikiTablesSemanticParser(Model):
                 considered_actions, probabilities = zip(*actions)
                 action_info['considered_actions'] = considered_actions
                 action_info['action_probabilities'] = probabilities
+                action_info['question_attention'] = action_debug_info['question_attention']
                 instance_action_info.append(action_info)
             batch_action_info.append(instance_action_info)
         output_dict["predicted_actions"] = batch_action_info
@@ -1129,6 +1136,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                         memory_cell,
                                         action_embeddings,
                                         attended_question,
+                                        attention_weights,
                                         considered_actions,
                                         allowed_actions,
                                         max_actions)
@@ -1393,6 +1401,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                             memory_cell: torch.Tensor,
                             action_embeddings: torch.Tensor,
                             attended_question: torch.Tensor,
+                            attention_weights: torch.Tensor,
                             considered_actions: List[List[int]],
                             allowed_actions: List[Set[int]],
                             max_actions: int = None) -> List[WikiTablesDecoderState]:
@@ -1458,6 +1467,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 if state.debug_info is not None:
                     debug_info = {
                             'considered_actions': considered_actions[group_index],
+                            'question_attention': attention_weights[group_index],
                             'probabilities': probs_cpu[group_index],
                             }
                     new_debug_info = [state.debug_info[group_index] + [debug_info]]
