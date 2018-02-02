@@ -5,11 +5,21 @@ import codecs
 import numpy as np
 from torch.autograd import Variable
 
-
 __all__ = ['initializeData', 'initializeChunker', 'prepareData', 'WordVectors', 'variableFromSentence', 'variablesFromPair']
 
 EOS_token = 1
 use_cuda = torch.cuda.is_available()
+    
+class NeuralChunker:
+    def __init__(self, encoder_file, decoder_file, output_lang, max_length):
+        self.encoder = torch.load(encoder_file)
+        self.decoder = torch.load(decoder_file)
+        self.output_lang = output_lang
+        self.max_length = max_length
+        
+    def chunk(self, input_sent):
+        return evaluate(self.encoder, self.decoder, self.output_lang, input_sent, self.max_length)[0]
+
     
 class TargetLang:
     def __init__(self, special_tokens):
