@@ -832,7 +832,7 @@ class Trainer:
 
         if cuda_device >= 0:
             model = model.cuda(cuda_device)
-        parameters = [p for p in model.parameters() if p.requires_grad]
+        parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
         if lr_scheduler_params:
