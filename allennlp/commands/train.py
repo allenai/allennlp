@@ -43,14 +43,43 @@ from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 class Train(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Train the specified model on the specified dataset.'''
         subparser = parser.add_parser(
                 name, description=description, help='Train a model')
+        subparser.add_argument('param_path',
+                               type=str,
+                               help='path to parameter file describing the model to be trained')
 
-        add_arguments(subparser)
+        # This is necessary to preserve backward compatibility
+        serialization = subparser.add_mutually_exclusive_group(required=True)
+        serialization.add_argument('-s', '--serialization-dir',
+                                   type=str,
+                                   help='directory in which to save the model and its logs')
+        serialization.add_argument('--serialization_dir',
+                                   type=str,
+                                   help=argparse.SUPPRESS)
+
+        subparser.add_argument('-o', '--overrides',
+                               type=str,
+                               default="",
+                               help='a HOCON structure used to override the experiment configuration')
+
+        subparser.add_argument('--include-package',
+                               type=str,
+                               action='append',
+                               default=[],
+                               help='additional packages to include')
+
+        subparser.add_argument('--file-friendly-logging',
+                               action='store_true',
+                               default=False,
+                               help='outputs tqdm status on separate lines and slows tqdm refresh rate')
+
+        subparser.set_defaults(func=train_model_from_args)
 
         return subparser
 
@@ -174,55 +203,16 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
-    metrics = trainer.train()
+    trainer.train()
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
     if test_data and evaluate_on_test:
-        test_metrics = evaluate(model, test_data, iterator, cuda_device=trainer._cuda_device)  # pylint: disable=protected-access
-        for k, v in test_metrics.items():
-            metrics["test_" + k] = v
+        evaluate(model, test_data, iterator, cuda_device=trainer._cuda_device)  # pylint: disable=protected-access
 
     elif test_data:
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
 
-    metrics_json = json.dumps(metrics, indent=2)
-    with open(os.path.join(serialization_dir, "metrics.json"), "w") as f:
-        f.write(metrics_json)
-    logger.info("Metrics: " + metrics_json)
-
     return model
-
-def add_arguments(parser: argparse.ArgumentParser):
-    parser.add_argument('param_path',
-                           type=str,
-                           help='path to parameter file describing the model to be trained')
-
-    # This is necessary to preserve backward compatibility
-    serialization = parser.add_mutually_exclusive_group(required=True)
-    serialization.add_argument('-s', '--serialization-dir',
-                               type=str,
-                               help='directory in which to save the model and its logs')
-    serialization.add_argument('--serialization_dir',
-                               type=str,
-                               help=argparse.SUPPRESS)
-
-    parser.add_argument('-o', '--overrides',
-                           type=str,
-                           default="",
-                           help='a HOCON structure used to override the experiment configuration')
-
-    parser.add_argument('--include-package',
-                           type=str,
-                           action='append',
-                           default=[],
-                           help='additional packages to include')
-
-    parser.add_argument('--file-friendly-logging',
-                           action='store_true',
-                           default=False,
-                           help='outputs tqdm status on separate lines and slows tqdm refresh rate')
-
-    parser.set_defaults(func=train_model_from_args)
