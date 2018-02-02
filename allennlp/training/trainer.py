@@ -198,6 +198,8 @@ class Trainer:
             the attribute ``should_log_activations`` set to ``True``.  Logging
             histograms requires a number of GPU-CPU copies during training and is typically
             slow, so we recommend logging histograms relatively infrequently.
+            Note: only Modules that return tensors, tuples of tensors or dicts
+            with tensors as values currently support activation logging.
         """
         self._model = model
         self._iterator = iterator
@@ -275,6 +277,11 @@ class Trainer:
         Log activations to tensorboard
         """
         if self._histogram_interval is not None:
+            # To log activation histograms to the forward pass, we register
+            # a hook on forward to capture the output tensors.
+            # This uses a closure on self._log_histograms_this_batch to
+            # determine whether to send the activations to tensorboard,
+            # since we don't want them on every call.
             for _, module in self._model.named_modules():
                 if not getattr(module, 'should_log_activations', False):
                     # skip it
