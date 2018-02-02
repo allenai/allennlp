@@ -145,7 +145,7 @@ class WikiTablesOutput extends React.Component {
 
           <div className="form__field">
             <label>Logical Form</label>
-            <div className="model__content__summary">{ logicalForm } Logical form recovery coming soon</div>
+            <div className="model__content__summary">{ logicalForm }</div>
           </div>
 
           <div className="form__field">
@@ -153,7 +153,7 @@ class WikiTablesOutput extends React.Component {
               <Collapsible trigger="Predicted actions">
                 {actions.map((action, action_index) => (
                   <Collapsible key={"action_" + action_index} trigger={action['predicted_action']}>
-                    <ActionInfo action={action} />
+                    <ActionInfo action={action} question_tokens={question_tokens}/>
                   </Collapsible>
                 ))}
               </Collapsible>
@@ -176,14 +176,20 @@ class WikiTablesOutput extends React.Component {
 
 class ActionInfo extends React.Component {
   render() {
-    const { action } = this.props;
+    const { action, question_tokens } = this.props;
     const action_string = action['predicted_action'];
+    const question_attention = action['question_attention'].map(x => [x]);
     const considered_actions = action['considered_actions'];
     const action_probs = action['action_probabilities'].map(x => [x]);
 
     return (
-      <div className="heatmap">
-        <HeatMap xLabels={['-']} yLabels={considered_actions} data={action_probs} xLabelWidth="250px" />
+      <div>
+        <div className="heatmap">
+          <HeatMap xLabels={['Prob']} yLabels={considered_actions} data={action_probs} xLabelWidth="250px" />
+        </div>
+        <div className="heatmap">
+          <HeatMap xLabels={['Prob']} yLabels={question_tokens} data={question_attention} xLabelWidth="70px" />
+        </div>
       </div>
     )
   }
