@@ -47,11 +47,13 @@ def prepareData(train_file, special_tokens, max_length = -1):
             output_lang.addSentence(pair[1])
     if max_encoding_length > 0:
         max_encoding_length = max_length + 1
+    else:
+        max_encoding_length += 1
     print("Max encoding length: %s" % max_encoding_length)
     print("Filtered down to %s sentence pairs" % len(output_pairs))
     print("Counted target words: {}".format(output_lang.n_words))
     print(output_lang.index2word)
-    return output_lang, output_pairs, max_encoding_length + 5
+    return output_lang, output_pairs, max_encoding_length
 
 
 # Maps the sentence tokens into their ids.
@@ -98,9 +100,9 @@ def target_variable_from_sentences(lang, sentences):
     else:
         return result
     
-#def initializeChunker(encoderFile, decoderFile):
-#    input_lang, output_lang, pairs, pairs_dev, max_length = initializeData() 
-#    chunker = NeuralChunker(encoderFile, decoderFile, input_lang, output_lang, max_length)
-#    return chunker, pairs, pairs_dev
+def initializeChunker(encoderFile, decoderFile, train_file, dev_file, max_input_length):
+    output_lang, pairs, pairs_dev, max_length = initializeData(train_file, dev_file, max_input_length = max_input_length)  
+    chunker = NeuralChunker(encoderFile, decoderFile, input_lang, output_lang, max_length)
+    return chunker, pairs, pairs_dev
 
 

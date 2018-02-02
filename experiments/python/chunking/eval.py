@@ -16,15 +16,14 @@ use_cuda = torch.cuda.is_available()
 
 
 class NeuralChunker:
-    def __init__(self, encoder_file, decoder_file, input_lang, output_lang, max_length):
+    def __init__(self, encoder_file, decoder_file, output_lang, max_length):
         self.encoder = torch.load(encoder_file)
         self.decoder = torch.load(decoder_file)
-        self.input_lang = input_lang
         self.output_lang = output_lang
         self.max_length = max_length
         
     def chunk(self, input_sent):
-        return evaluate(self.encoder, self.decoder, self.input_lang, self.output_lang, input_sent, self.max_length)[0]
+        return evaluate(self.encoder, self.decoder, self.output_lang, input_sent, self.max_length)[0]
 
 
 def evaluate(encoder, decoder, output_lang, sentence, max_length):
@@ -59,8 +58,8 @@ def evaluate(encoder, decoder, output_lang, sentence, max_length):
     return decoded_words, decoder_attentions[:di + 1]
 
 
-def compute_prob(encoder, decoder, input_lang, output_lang, sentence, desired_output, max_length):
-    input_variable = variableFromSentence(input_lang, sentence)
+def compute_prob(encoder, decoder, output_lang, sentence, desired_output, max_length):
+    input_variable = elmo_variable_from_sentence(sentence)
     desired_variable = list(variableFromSentence(output_lang, desired_output).data.view(-1))
     input_length = input_variable.size()[0]
     encoder_hidden = encoder.initHidden()
@@ -148,7 +147,7 @@ def lookForWrong(chunker, sent_pairs, not_that_wrong_thres = 0.1, num_to_eval=10
     pretty_wrong = 0
     for pair in sent_pairs[:num_to_eval]:
         try:
-            probs = compute_prob(chunker.encoder, chunker.decoder, chunker.input_lang, chunker.output_lang, pair[0], pair[1], chunker.max_length)        
+            probs = compute_prob(chunker.encoder, chunker.decoder, chunker.output_lang, pair[0], pair[1], chunker.max_length)        
             if min(probs) < 0.5:                
                 if min(probs) > not_that_wrong_thres:
                     not_that_wrong += 1
@@ -166,13 +165,13 @@ def lookForWrong(chunker, sent_pairs, not_that_wrong_thres = 0.1, num_to_eval=10
     print('pretty wrong: {}'.format(100 * pretty_wrong/total))
     
 
-def evaluateSents(encoder, decoder, input_lang, output_lang, sent_pairs, max_length, num_to_eval=100):
+def evaluateSents(encoder, decoder, output_lang, sent_pairs, max_length, num_to_eval=100):
     num_sents = 0
     prev_tokens = set()
     num_correct = 0
     still_correct = True
     for pair in sent_pairs[:num_to_eval]:
-        output_words, attentions = evaluate(encoder, decoder, input_lang, output_lang, pair[0], max_length)        
+        output_words, attentions = evaluate(encoder, decoder, output_lang, pair[0], max_length)        
         output_sentence = ' '.join(output_words[:-1])
         if pair[1] != output_sentence:
             still_correct += False
