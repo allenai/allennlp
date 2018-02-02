@@ -366,8 +366,8 @@ class Trainer:
 
         logger.info("Beginning training.")
 
-        train_metrics = {}
-        val_metrics = {}
+        train_metrics = None
+        val_metrics = None
         epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
@@ -419,10 +419,12 @@ class Trainer:
             "training_start_epoch": epoch_counter,
             "training_epochs": epochs_trained
         }
-        for k, v in train_metrics.items():
-            metrics["training_" + k] = v
-        for k, v in val_metrics.items():
-            metrics["validation_" + k] = v
+        if train_metrics:
+            for k, v in train_metrics.items():
+                metrics["training_" + k] = v
+        if val_metrics:
+            for k, v in val_metrics.items():
+                metrics["validation_" + k] = v
 
         return metrics
 
