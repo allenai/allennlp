@@ -172,7 +172,9 @@ class WikiTablesSemanticParser(Model):
         embedded_question = self._question_embedder(question)
         question_mask = util.get_text_field_mask(question).float()
         # (batch_size, num_entities, num_entity_tokens, embedding_dim)
+        # TODO(rajas): get timedistributed to work with a dictionary
         # table_embedder = TimeDistributed(self._question_embedder)
+        # embedded_table = table_embedder(table_text)
         tokens_tensor = table_text['tokens'].view(-1, table_text['tokens'].size(2))
         token_characters_tensor = table_text['token_characters'].view(-1, table_text['token_characters'].size(2), table_text['token_characters'].size(3))
         embedded_table = self._question_embedder({'tokens': tokens_tensor, 'token_characters':token_characters_tensor})
