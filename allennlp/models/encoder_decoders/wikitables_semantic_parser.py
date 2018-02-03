@@ -330,12 +330,12 @@ class WikiTablesSemanticParser(Model):
                 # isn't long enough (or if the model is not trained enough and gets into an
                 # infinite action loop).
                 if i in best_final_states:
-                    predicted = best_final_states[i][0].action_history[0]
+                    best_action_indices = best_final_states[i][0].action_history[0]
                     credit = 0
                     if target_action_sequences is not None:
                         # Use a Tensor, not a Variable, to avoid a memory leak.
                         targets = target_action_sequences[i].data
-                        credit = self._action_history_match(predicted, targets)
+                        credit = self._action_history_match(best_action_indices, targets)
                     self._action_sequence_accuracy(credit)
                     action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
                     try:
