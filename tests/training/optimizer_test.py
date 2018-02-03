@@ -1,6 +1,4 @@
 # pylint: disable=invalid-name
-import torch
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
@@ -32,8 +30,8 @@ class TestOptimizer(AllenNlpTestCase):
 
     def test_optimizer_basic(self):
         optimizer_params = Params({
-            "type": "sgd",
-            "lr": 1
+                "type": "sgd",
+                "lr": 1
         })
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, optimizer_params)
@@ -43,14 +41,14 @@ class TestOptimizer(AllenNlpTestCase):
 
     def test_optimizer_parameter_groups(self):
         optimizer_params = Params({
-            "type": "sgd",
-            "lr": 1,
-            "momentum": 5,
-            "parameter_groups": [
-                # the repeated "bias_" checks a corner case
-                [["weight_i", "bias_", "bias_"], {'lr': 2}],
-                [["tag_projection_layer"], {'lr': 3}],
-            ]
+                "type": "sgd",
+                "lr": 1,
+                "momentum": 5,
+                "parameter_groups": [
+                        # the repeated "bias_" checks a corner case
+                        [["weight_i", "bias_", "bias_"], {'lr': 2}],
+                        [["tag_projection_layer"], {'lr': 3}],
+                ]
         })
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, optimizer_params)
