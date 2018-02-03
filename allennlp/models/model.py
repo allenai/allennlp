@@ -61,6 +61,13 @@ class Model(torch.nn.Module, Registrable):
         else:
             return self._regularizer(self)
 
+    def get_parameters_for_histogram_tensorboard_logging( # pylint: disable=invalid-name
+            self) -> List[str]:
+        """
+        Returns the name of model parameters used for logging histograms to tensorboard.
+        """
+        return [name for name, _ in self.named_parameters()]
+
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
         Defines the forward pass of the model. In addition, to facilitate easy training,

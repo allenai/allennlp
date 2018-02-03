@@ -211,9 +211,8 @@ class Trainer:
                 * Histograms of model parameters
                 * The ratio of parameter update norm to parameter norm
                 * Histogram of layer activations
-            By default, we log histograms of every model parameter.  However, clients can
-            optionally provide an attribute ``histogram_parameters`` on the ``Model`` that
-            is a list of parameters.  If this is provided, then only those parameters are logged.
+            We log histograms of the parameters returned by
+            ``model.get_parameters_for_histogram_tensorboard_logging``.
             The layer activations are logged for any modules in the ``Model`` that have
             the attribute ``should_log_activations`` set to ``True``.  Logging
             histograms requires a number of GPU-CPU copies during training and is typically
@@ -415,10 +414,7 @@ class Trainer:
             self._batch_num_total = 0
 
         if self._histogram_interval is not None:
-            if hasattr(self._model, 'histogram_parameters'):
-                histogram_parameters = set(self._model.histogram_parameters)
-            else:
-                histogram_parameters = set([name for name, param in self._model.named_parameters()])
+            histogram_parameters = set(self._model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
         for batch in train_generator_tqdm:
