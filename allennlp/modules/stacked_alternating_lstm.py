@@ -100,7 +100,8 @@ class StackedAlternatingLstm(torch.nn.Module):
 
         output_sequence = inputs
         final_states = []
-        for layer, state in zip(self.lstm_layers, hidden_states):
+        for i, state in enumerate(hidden_states):
+            layer = getattr(self, 'layer_{}'.format(i))
             # The state is duplicated to mirror the Pytorch API for LSTMs.
             output_sequence, final_state = layer(output_sequence, state)
             final_states.append(final_state)
