@@ -176,9 +176,6 @@ class TestElmoRequiresGrad(AllenNlpTestCase):
         loss = embeddings.sum()
         loss.backward()
 
-        # All of the elmo grads should be None.  The embedder has additional trainable parameters
-        # that are always present.
-
         elmo_grads = [param.grad for name, param in embedder.named_parameters() if '_elmo_lstm' in name]
         if requires_grad:
             # None of the elmo grads should be None.
