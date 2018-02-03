@@ -16,7 +16,6 @@ from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
-from allennlp.data import Vocabulary
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
 
 # pylint: disable=attribute-defined-outside-init

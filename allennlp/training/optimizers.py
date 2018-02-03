@@ -49,7 +49,7 @@ class Optimizer(Registrable):
             # last entry is for the parameters not in any regex
             parameter_groups = [{'params': []} for _ in range(len(groups) + 1)]
             # add the group specific kwargs
-            for k in range(len(groups)):
+            for k in range(len(groups)): # pylint: disable=consider-using-enumerate
                 parameter_groups[k].update(groups[k][1].as_dict())
 
             for name, param in model_parameters:
