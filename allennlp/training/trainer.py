@@ -115,7 +115,7 @@ def time_to_str(timestamp: int) -> str:
     """
     Convert seconds past Epoch to human readable string.
     """
-    datetimestamp = datetime.datetime.fromtimestamp(int(time.time()))
+    datetimestamp = datetime.datetime.fromtimestamp(timestamp)
     return '{:04d}-{:02d}-{:02d}-{:02d}-{:02d}-{:02d}'.format(
             datetimestamp.year, datetimestamp.month, datetimestamp.day,
             datetimestamp.hour, datetimestamp.minute, datetimestamp.second
@@ -125,9 +125,9 @@ def str_to_time(time_str: str) -> datetime.datetime:
     """
     Convert human readable string to datetime.datetime.
     """
-    pieces = [int(piece) for piece in time_str.split('-')]
+    pieces: Any = [int(piece) for piece in time_str.split('-')]
     return datetime.datetime(*pieces)
-    
+
 class Trainer:
     def __init__(self,
                  model: Model,
@@ -767,7 +767,7 @@ class Trainer:
                 re.search("model_state_epoch_([0-9\.\-]+)\.th", x).group(1)
                 for x in model_checkpoints
         ]
-        int_epochs = []
+        int_epochs: Any = []
         for epoch in found_epochs:
             pieces = epoch.split('.')
             if len(pieces) == 1:
