@@ -76,6 +76,10 @@ class AdaptiveIterator(BucketIterator):
         See :class:`BucketIterator`.
     padding_noise : List[Tuple[str, str]]
         See :class:`BucketIterator`.
+    instances_per_epoch : int, optional, (default = None)
+        See :class:`BasicIterator`.
+    max_instances_in_memory : int, optional, (default = None)
+        See :class:`BasicIterator`.
     """
     def __init__(self,
                  adaptive_memory_usage_constant: float,
@@ -112,10 +116,9 @@ class AdaptiveIterator(BucketIterator):
             if self._biggest_batch_first:
                 yield from super(AdaptiveIterator, self)._create_batches(instance_list, shuffle)
             else:
-                if self._sorting_keys:
-                    instance_list = self._sort_by_padding(instance_list,
-                                                          self._sorting_keys,
-                                                          self._padding_noise)
+                instance_list = self._sort_by_padding(instance_list,
+                                                      self._sorting_keys,
+                                                      self._padding_noise)
                 # Group the instances into different sized batches, depending on how padded they are.
                 grouped_instances = self._adaptive_grouping(instance_list)
                 if shuffle:

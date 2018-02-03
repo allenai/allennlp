@@ -24,6 +24,13 @@ class BasicIterator(DataIterator):
     ----------
     batch_size : int, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
+    instances_per_epoch : int, optional, (default = None)
+        If specified, each epoch will consist of precisely this many instances.
+        If not specified, each epoch will consist of a single pass through the dataset.
+    max_instances_in_memory : int, optional, (default = None)
+        If specified, the iterator will load this many instances at a time into an
+        in-memory list and then produce batches from one such list at a time. This
+        could be useful if your instances are read lazily from disk.
     """
     def __init__(self,
                  batch_size: int = 32,

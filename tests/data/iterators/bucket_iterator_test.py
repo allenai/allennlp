@@ -1,5 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
+
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.iterators import BucketIterator
 from tests.data.iterators.basic_iterator_test import IteratorTest
 
@@ -44,13 +47,19 @@ class TestBucketIterator(IteratorTest):
     def test_from_params(self):
         # pylint: disable=protected-access
         params = Params({})
+
+        with pytest.raises(ConfigurationError):
+            iterator = BucketIterator.from_params(params)
+
+        sorting_keys = [("s1", "nt"), ("s2", "nt2")]
+        params['sorting_keys'] = sorting_keys
         iterator = BucketIterator.from_params(params)
-        assert iterator._sorting_keys == []
+
+        assert iterator._sorting_keys == sorting_keys
         assert iterator._padding_noise == 0.1
         assert not iterator._biggest_batch_first
         assert iterator._batch_size == 32
 
-        sorting_keys = [("s1", "nt"), ("s2", "nt2")]
         params = Params({
                 "sorting_keys": sorting_keys,
                 "padding_noise": 0.5,
