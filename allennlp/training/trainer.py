@@ -416,16 +416,16 @@ class Trainer:
 
         training_elapsed_time = time.time() - training_start_time
         metrics = {
-            "training_duration": time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time)),
-            "training_start_epoch": epoch_counter,
-            "training_epochs": epochs_trained
+                "training_duration": time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time)),
+                "training_start_epoch": epoch_counter,
+                "training_epochs": epochs_trained
         }
         if train_metrics:
-            for k, v in train_metrics.items():
-                metrics["training_" + k] = v
+            for key, value in train_metrics.items():
+                metrics["training_" + key] = value
         if val_metrics:
-            for k, v in val_metrics.items():
-                metrics["validation_" + k] = v
+            for key, value in val_metrics.items():
+                metrics["validation_" + key] = value
 
         return metrics
 

@@ -211,7 +211,7 @@ class Params(MutableMapping):
         log_recursively(self.params, self.history)
         return self.params
 
-    def as_flat_dict(self, quiet=False):
+    def as_flat_dict(self):
         """
         Returns the parameters of a flat dictionary from keys to values.
         Nested structure is collapsed with periods.
