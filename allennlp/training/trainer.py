@@ -49,9 +49,12 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2):
 
     Parameters
     ----------
-    parameters : ``(Iterable[Variable])`` an iterable of Variables that will have gradients normalized
-    max_norm : ``float`` max norm of the gradients
-    norm_type : ``float`` type of the used p-norm. Can be ``'inf'`` for infinity norm.
+    parameters : ``(Iterable[Variable])``
+        An iterable of Variables that will have gradients normalized.
+    max_norm : ``float``
+        The max norm of the gradients.
+    norm_type : ``float``
+        The type of the used p-norm. Can be ``'inf'`` for infinity norm.
 
     Returns
     -------
