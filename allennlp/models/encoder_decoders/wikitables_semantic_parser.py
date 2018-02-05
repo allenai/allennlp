@@ -19,6 +19,7 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.worlds import WikiTablesWorld
+from allennlp.data.semparse import ParsingError
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
@@ -313,7 +314,7 @@ class WikiTablesSemanticParser(Model):
             num_steps = self._max_decoding_steps
             # This tells the state to start keeping track of debug info, which we'll pass along in
             # our output dictionary.
-            initial_state.debug_info = [[]]
+            initial_state.debug_info = [[] for _ in range(batch_size)]
             best_final_states = self._beam_search.search(num_steps,
                                                          initial_state,
                                                          self._decoder_step,
@@ -346,6 +347,8 @@ class WikiTablesSemanticParser(Model):
                     outputs['logical_form'].append(logical_form)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])
                     outputs['entities'].append(world[i].table_graph.entities)
+                else:
+                    outputs['logical_form'].append('')
             return outputs
 
     @staticmethod
