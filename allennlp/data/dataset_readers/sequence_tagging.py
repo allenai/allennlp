@@ -41,8 +41,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
     def __init__(self,
                  word_tag_delimiter: str = DEFAULT_WORD_TAG_DELIMITER,
                  token_delimiter: str = None,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__()
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._word_tag_delimiter = word_tag_delimiter
         self._token_delimiter = token_delimiter
@@ -84,7 +85,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         word_tag_delimiter = params.pop("word_tag_delimiter", DEFAULT_WORD_TAG_DELIMITER)
         token_delimiter = params.pop("token_delimiter", None)
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return SequenceTaggingDatasetReader(token_indexers=token_indexers,
                                             word_tag_delimiter=word_tag_delimiter,
-                                            token_delimiter=token_delimiter)
+                                            token_delimiter=token_delimiter,
+                                            lazy=lazy)

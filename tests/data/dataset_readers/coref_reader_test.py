@@ -1,20 +1,18 @@
 # pylint: disable=no-self-use,invalid-name
-
 from typing import List, Tuple
+
+import pytest
+
 from allennlp.data.dataset_readers import ConllCorefReader
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 
+class TestCorefReader:
+    span_width = 5
 
-class TestCorefReader(AllenNlpTestCase):
-
-    def setUp(self):
-        super(TestCorefReader, self).setUp()
-        self.span_width = 5
-
-    def test_read_from_file(self):
-
-        conll_reader = ConllCorefReader(max_span_width=self.span_width)
-        instances = conll_reader.read('tests/fixtures/coref/coref.gold_conll')
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_read_from_file(self, lazy):
+        conll_reader = ConllCorefReader(max_span_width=self.span_width, lazy=lazy)
+        instances = ensure_list(conll_reader.read('tests/fixtures/coref/coref.gold_conll'))
 
         assert len(instances) == 2
 

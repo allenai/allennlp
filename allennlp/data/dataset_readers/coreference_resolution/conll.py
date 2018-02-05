@@ -75,8 +75,9 @@ class ConllCorefReader(DatasetReader):
     """
     def __init__(self,
                  max_span_width: int,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__()
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
@@ -180,8 +181,9 @@ class ConllCorefReader(DatasetReader):
     def from_params(cls, params: Params) -> "ConllCorefReader":
         token_indexers = TokenIndexer.dict_from_params(params.pop("token_indexers", {}))
         max_span_width = params.pop_int("max_span_width")
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
-        return cls(token_indexers=token_indexers, max_span_width=max_span_width)
+        return cls(token_indexers=token_indexers, max_span_width=max_span_width, lazy=lazy)
 
     @staticmethod
     def _normalize_word(word):

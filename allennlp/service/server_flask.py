@@ -155,6 +155,12 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
         if request.method == "OPTIONS":
             return Response(response="", status=200)
 
+        # Do log if no argument is specified
+        record_to_database = request.args.get("record", "true").lower() != "false"
+
+        # Do use the cache if no argument is specified
+        use_cache = request.args.get("cache", "true").lower() != "false"
+
         model = app.predictors.get(model_name.lower())
         if model is None:
             raise ServerError("unknown model: {}".format(model_name), status_code=400)
@@ -163,11 +169,12 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
 
         log_blob = {"model": model_name, "inputs": data, "cached": False, "outputs": {}}
 
-        # See if we hit or not. In theory this could result in false positives.
+        # Record the number of cache hits before we hit the cache so we can tell whether we hit or not.
+        # In theory this could result in false positives.
         pre_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
 
         try:
-            if cache_size > 0:
+            if use_cache and cache_size > 0:
                 # lru_cache insists that all function arguments be hashable,
                 # so unfortunately we have to stringify the data.
                 prediction = _caching_prediction(model, json.dumps(data))
@@ -179,9 +186,9 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
 
         post_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
 
-        # Add to database and get permalink
-        if demo_db is not None:
+        if record_to_database and demo_db is not None:
             try:
+                perma_id = None
                 perma_id = demo_db.add_result(headers=dict(request.headers),
                                               model_name=model_name,
                                               inputs=data,
@@ -195,7 +202,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
                 # TODO(joelgrus): catch more specific errors
                 logger.exception("Unable to add result to database", exc_info=True)
 
-        if post_hits > pre_hits:
+        if use_cache and post_hits > pre_hits:
             # Cache hit, so insert an artifical pause
             log_blob["cached"] = True
             time.sleep(0.25)
