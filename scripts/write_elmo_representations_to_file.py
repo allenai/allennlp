@@ -13,11 +13,15 @@ used in the output file.
 """
 
 import argparse
+import logging
+import os
+import sys
 
 import torch
 from torch.autograd import Variable
 import h5py
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
@@ -25,6 +29,7 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.nn.util import remove_sentence_boundaries
 from allennlp.modules.elmo import _ElmoBiLm
 
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', level=logging.INFO)
 
 indexer = ELMoTokenCharactersIndexer()
 
@@ -119,10 +124,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--vocab_path', type=str, help='A path to a vocabulary file to generate '
                                                        'representations for.')
-    parser.add_argument('--options_file', type=str, help='The path to the ELMo options file.')
-    parser.add_argument('--weight_file', type=str, help='The path to the ELMo weight file.')
-    parser.add_argument('--input_file', type=str, help='The input text file')
-    parser.add_argument('--output_file', type=str, help='The output hdf5 file')
+    parser.add_argument('--options_file', type=str, required=True, help='The path to the ELMo options file.')
+    parser.add_argument('--weight_file', type=str, required=True, help='The path to the ELMo weight file.')
+    parser.add_argument('--input_file', type=str, required=True, help='The input text file')
+    parser.add_argument('--output_file', type=str, required=True, help='The output hdf5 file')
     parser.add_argument('--batch_size', type=int, default=64, help='The batch size to use.')
     parser.add_argument('--device', type=int, default=-1, help='The device to run on.')
     parser.add_argument('--use_sentence_key', default=False, action='store_true')
