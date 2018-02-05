@@ -51,7 +51,7 @@ def run(port: int,
         trained_models: Dict[str, DemoModel],
         static_dir: str = None) -> None:
     """Run the server programatically"""
-    logger.info("Starting a flask server on port {}.".format(port))
+    logger.info("Starting a flask server on port %i.", port)
 
     if port != 8000:
         logger.warning("The demo requires the API to be run on port 8000.")
@@ -68,7 +68,7 @@ def run(port: int,
         app.predictors[name] = predictor
 
     http_server = WSGIServer(('0.0.0.0', port), app)
-    logger.info(f"Server started on port {port}.  Please visit: http://localhost:{port}")
+    logger.info("Server started on port %i.  Please visit: http://localhost:%i", port, port)
     http_server.serve_forever()
 
 def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> Flask:
