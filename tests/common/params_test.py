@@ -31,11 +31,22 @@ class TestParams(AllenNlpTestCase):
 
     def test_as_flat_dict(self):
         filename = 'tests/fixtures/bidaf/experiment.json'
-        params = Params.from_file(filename).as_flat_dict()
+        params = Params({
+            'a': 10,
+            'b': {
+                'c': 20,
+                'd': 'stuff'
+            }
+        }).as_flat_dict()
 
-        assert "dataset_reader.type" in params
-        assert "dataset_reader.token_indexers.tokens.lowercase_tokens" in params
-        assert "model.text_field_embedder.tokens.type" in params
+        assert "a" in params
+        assert params["a"] == 10
+
+        assert "b.c" in params
+        assert params["b.c"] == 20
+
+        assert "b.d" in params
+        assert params["b.d"] == 'stuff'
 
     def test_add_file_to_archive(self):
         # Some nested classes just to exercise the ``from_params``
