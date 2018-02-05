@@ -211,6 +211,23 @@ class Params(MutableMapping):
         log_recursively(self.params, self.history)
         return self.params
 
+    def as_flat_dict(self):
+        """
+        Returns the parameters of a flat dictionary from keys to values.
+        Nested structure is collapsed with periods.
+        """
+        flat_params = {}
+        def recurse(parameters, path):
+            for key, value in parameters.items():
+                newpath = path + [key]
+                if isinstance(value, dict):
+                    recurse(value, newpath)
+                else:
+                    flat_params['.'.join(newpath)] = value
+
+        recurse(self.params, [])
+        return flat_params
+
     def duplicate(self) -> 'Params':
         """
         Uses ``copy.deepcopy()`` to create a duplicate (but fully distinct)

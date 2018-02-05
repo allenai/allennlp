@@ -45,8 +45,9 @@ class LanguageModelingReader(DatasetReader):
     def __init__(self,
                  tokens_per_instance: int = None,
                  tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__()
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._tokens_per_instance = tokens_per_instance
@@ -101,7 +102,9 @@ class LanguageModelingReader(DatasetReader):
         tokens_per_instance = params.pop_int('tokens_per_instance', None)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return LanguageModelingReader(tokens_per_instance=tokens_per_instance,
                                       tokenizer=tokenizer,
-                                      token_indexers=token_indexers)
+                                      token_indexers=token_indexers,
+                                      lazy=lazy)

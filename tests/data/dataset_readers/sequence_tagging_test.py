@@ -1,12 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
+
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ensure_list
 
-
-class TestSequenceTaggingDatasetReader(AllenNlpTestCase):
-    def test_default_format(self):
-        reader = SequenceTaggingDatasetReader()
+class TestSequenceTaggingDatasetReader():
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_default_format(self, lazy):
+        reader = SequenceTaggingDatasetReader(lazy=lazy)
         instances = reader.read('tests/fixtures/data/sequence_tagging.tsv')
         instances = ensure_list(instances)
 
