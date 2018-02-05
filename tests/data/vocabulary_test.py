@@ -7,7 +7,7 @@ from copy import deepcopy
 import pytest
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token
-from allennlp.data.dataset import Dataset
+from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
@@ -22,7 +22,7 @@ class TestVocabulary(AllenNlpTestCase):
         text_field = TextField([Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]],
                                {"tokens": token_indexer})
         self.instance = Instance({"text": text_field})
-        self.dataset = Dataset([self.instance])
+        self.dataset = Batch([self.instance])
         super(TestVocabulary, self).setUp()
 
     def test_from_dataset_respects_min_count(self):
@@ -251,7 +251,7 @@ class TestVocabulary(AllenNlpTestCase):
         token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer)
         tokens = [Token(t) for t in ["Øyvind", "für", "汉字"]]
         text_field = TextField(tokens, {"characters": token_indexer})
-        dataset = Dataset([Instance({"sentence": text_field})])
+        dataset = Batch([Instance({"sentence": text_field})])
         vocab = Vocabulary.from_instances(dataset)
         text_field.index(vocab)
         indexed_tokens = deepcopy(text_field._indexed_tokens)  # pylint: disable=protected-access

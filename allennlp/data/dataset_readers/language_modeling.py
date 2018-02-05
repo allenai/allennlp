@@ -4,10 +4,8 @@ import logging
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
-from allennlp.data.dataset import Dataset
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers import WordTokenizer
@@ -48,6 +46,7 @@ class LanguageModelingReader(DatasetReader):
                  tokens_per_instance: int = None,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super().__init__()
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._tokens_per_instance = tokens_per_instance
@@ -65,7 +64,7 @@ class LanguageModelingReader(DatasetReader):
             self._output_indexer = {"tokens": SingleIdTokenIndexer()}
 
     @overrides
-    def read(self, file_path: str):
+    def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
@@ -83,17 +82,11 @@ class LanguageModelingReader(DatasetReader):
         else:
             tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]
 
-        instances = []
         for tokenized_string in tokenized_strings:
             input_field = TextField(tokenized_string[:-1], self._token_indexers)
             output_field = TextField(tokenized_string[1:], self._output_indexer)
-            instances.append(Instance({'input_tokens': input_field,
-                                       'output_tokens': output_field}))
-
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return Dataset(instances)
+            yield Instance({'input_tokens': input_field,
+                            'output_tokens': output_field})
 
     @overrides
     def text_to_instance(self, sentence: str) -> Instance:  # type: ignore

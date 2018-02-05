@@ -4,10 +4,8 @@ import logging
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.instance import Instance
@@ -44,18 +42,18 @@ class SequenceTaggingDatasetReader(DatasetReader):
                  word_tag_delimiter: str = DEFAULT_WORD_TAG_DELIMITER,
                  token_delimiter: str = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
+        super().__init__()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._word_tag_delimiter = word_tag_delimiter
         self._token_delimiter = token_delimiter
 
     @overrides
-    def read(self, file_path):
+    def _read(self, file_path):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
         with open(file_path, "r") as data_file:
 
-            instances = []
             logger.info("Reading instances from lines in file at: %s", file_path)
             for line in Tqdm.tqdm(data_file):
                 line = line.strip("\n")
@@ -71,12 +69,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
                 sequence = TextField(tokens, self._token_indexers)
                 sequence_tags = SequenceLabelField(tags, sequence)
-                instances.append(Instance({'tokens': sequence,
-                                           'tags': sequence_tags}))
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return Dataset(instances)
+                yield Instance({'tokens': sequence,
+                                'tags': sequence_tags})
 
     def text_to_instance(self, tokens: List[Token]) -> Instance:  # type: ignore
         """
