@@ -39,6 +39,8 @@ class Optimizer(Registrable):
         if groups:
             # input to optimizer is list of dict
             # each dict contains {'params': [list of parameters], 'lr': 1e-3, ...}
+            # Any config option not specified in the additional options (e.g.
+            # for the default group) is inherited from the top level config.
             # see: http://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options
             #
             # groups contains something like:
@@ -46,7 +48,12 @@ class Optimizer(Registrable):
             #       [['regex1', 'regex2'], {'lr': 1e-3},
             #        ['regex3'], {'lr': 1e-4}]
             #]
-            # last entry is for the parameters not in any regex
+            #
+            # The last entry of this list is for the parameters not in any regex.
+            #
+            # This is typed as as Any since the dict values other then
+            # the params key are passed to the Optimizer constructor and
+            # can be any type it accepts.
             parameter_groups: Any = [{'params': []} for _ in range(len(groups) + 1)]
             # add the group specific kwargs
             for k in range(len(groups)): # pylint: disable=consider-using-enumerate
