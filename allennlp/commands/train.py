@@ -203,16 +203,23 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
-    trainer.train()
+    metrics = trainer.train()
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
     if test_data and evaluate_on_test:
-        evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        test_metrics = evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        for key, value in test_metrics.items():
+            metrics["test_" + key] = value
 
     elif test_data:
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
+
+    metrics_json = json.dumps(metrics, indent=2)
+    with open(os.path.join(serialization_dir, "metrics.json"), "w") as metrics_file:
+        metrics_file.write(metrics_json)
+    logger.info("Metrics: %s", metrics_json)
 
     return model
