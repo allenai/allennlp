@@ -379,7 +379,7 @@ class Trainer:
 
         return loss
 
-    def _get_metrics(self, total_loss: float, batch_num: int, reset: bool = False) -> dict:
+    def _get_metrics(self, total_loss: float, batch_num: int, reset: bool = False) -> Dict[str, float]:
         """
         Gets the metrics but sets ``"loss"`` to
         the total loss divided by the ``batch_num`` so that
@@ -389,7 +389,7 @@ class Trainer:
         metrics["loss"] = float(total_loss / batch_num)
         return metrics
 
-    def _train_epoch(self, epoch: int) -> dict:
+    def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
         Trains one epoch and returns metrics.
         """
@@ -621,7 +621,7 @@ class Trainer:
 
         return val_loss, batch_num
 
-    def train(self) -> None:
+    def train(self) -> Dict[str, object]:
         """
         Trains the supplied model with the supplied parameters.
         """
@@ -631,6 +631,9 @@ class Trainer:
 
         logger.info("Beginning training.")
 
+        train_metrics: Dict[str, float] = {}
+        val_metrics: Dict[str, float] = {}
+        epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
@@ -656,7 +659,8 @@ class Trainer:
             else:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
-                val_metrics = this_epoch_val_metric = None
+                val_metrics = {}
+                this_epoch_val_metric = None
 
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
@@ -672,6 +676,21 @@ class Trainer:
                     ((self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
                 formatted_time = time.strftime("%H:%M:%S", time.gmtime(estimated_time_remaining))
                 logger.info("Estimated training time remaining: %s", formatted_time)
+
+            epochs_trained += 1
+
+        training_elapsed_time = time.time() - training_start_time
+        metrics = {
+                "training_duration": time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time)),
+                "training_start_epoch": epoch_counter,
+                "training_epochs": epochs_trained
+        }
+        for key, value in train_metrics.items():
+            metrics["training_" + key] = value
+        for key, value in val_metrics.items():
+            metrics["validation_" + key] = value
+
+        return metrics
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use

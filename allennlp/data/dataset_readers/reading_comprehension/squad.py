@@ -39,8 +39,9 @@ class SquadReader(DatasetReader):
     """
     def __init__(self,
                  tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__()
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
@@ -111,5 +112,6 @@ class SquadReader(DatasetReader):
     def from_params(cls, params: Params) -> 'SquadReader':
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
-        return cls(tokenizer=tokenizer, token_indexers=token_indexers)
+        return cls(tokenizer=tokenizer, token_indexers=token_indexers, lazy=lazy)

@@ -12,8 +12,6 @@ from allennlp.commands.train import train_model_from_file, train_model
 from allennlp.common import Params
 
 def train_fixture(config_file: str, serialization_dir: str) -> None:
-    params = Params.from_file(config_file)
-
     # train the model
     train_model_from_file(config_file, serialization_dir)
 
@@ -44,3 +42,4 @@ if __name__ == "__main__":
         train_fixture("tests/fixtures/decomposable_attention/experiment.json", "tests/fixtures/decomposable_attention/serialization")
         train_fixture("tests/fixtures/bidaf/experiment.json", "tests/fixtures/bidaf/serialization")
         train_fixture("tests/fixtures/srl/experiment.json", "tests/fixtures/srl/serialization")
+        train_fixture("tests/fixtures/coref/experiment.json", "tests/fixtures/coref/serialization")
