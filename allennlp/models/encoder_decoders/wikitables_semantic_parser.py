@@ -300,24 +300,29 @@ class WikiTablesSemanticParser(Model):
         else:
             outputs = {}
             if target_action_sequences is not None:
-                num_steps = target_action_sequences.size(-1) - 1
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
                                                                target_action_sequences,
                                                                target_mask)['loss']
-            else:
-                num_steps = self._max_decoding_steps
-            best_final_states = self._beam_search.search(num_steps, initial_state, self._decoder_step)
+            num_steps = self._max_decoding_steps
+            best_final_states = self._beam_search.search(num_steps,
+                                                         initial_state,
+                                                         self._decoder_step,
+                                                         keep_final_unfinished_states=False)
             best_action_sequences = []
             for i in range(batch_size):
-                predicted = best_final_states[i][0].action_history
-                credit = 0
-                if target_action_sequences is not None:
-                    # Use a Tensor, not a Variable, to avoid a memory leak.
-                    targets = target_action_sequences[i].data
-                    credit = self._action_history_match(predicted[0], targets)
-                self._action_sequence_accuracy(credit)
-                best_action_sequences.append(predicted)
+                # Decoding may not have terminated with any completed logical forms, if `num_steps`
+                # isn't long enough (or if the model is not trained enough and gets into an
+                # infinite action loop).
+                if i in best_final_states:
+                    predicted = best_final_states[i][0].action_history
+                    credit = 0
+                    if target_action_sequences is not None:
+                        # Use a Tensor, not a Variable, to avoid a memory leak.
+                        targets = target_action_sequences[i].data
+                        credit = self._action_history_match(predicted[0], targets)
+                    self._action_sequence_accuracy(credit)
+                    best_action_sequences.append(predicted)
             outputs['best_action_sequence'] = best_action_sequences
             # TODO(matt): compute accuracy here.
             return outputs
