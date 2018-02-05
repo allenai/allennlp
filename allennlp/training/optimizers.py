@@ -14,7 +14,7 @@ The available optimizers are
 
 import logging
 import re
-from typing import List, Any
+from typing import List, Any, Dict
 
 import torch
 
@@ -62,8 +62,8 @@ class Optimizer(Registrable):
             for k in range(len(groups)): # pylint: disable=consider-using-enumerate
                 parameter_groups[k].update(groups[k][1].as_dict())
 
-            regex_use_counts = {}
-            parameter_group_names = [set() for _ in range(len(groups) + 1)]
+            regex_use_counts: Dict[str, int] = {}
+            parameter_group_names: List[set] = [set() for _ in range(len(groups) + 1)]
             for name, param in model_parameters:
                 # Determine the group for this parameter.
                 group_index = None
@@ -97,7 +97,7 @@ class Optimizer(Registrable):
             for regex, count in regex_use_counts.items():
                 if count == 0:
                     logger.warning("When constructing parameter groups, "
-                                   " {} not match any parameter name".format(regex))
+                                   " %s not match any parameter name", regex)
 
         else:
             parameter_groups = [param for name, param in model_parameters]
