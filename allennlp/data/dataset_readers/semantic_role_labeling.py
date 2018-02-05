@@ -45,9 +45,9 @@ class SrlReader(DatasetReader):
 
     """
     def __init__(self,
-                token_indexers: Dict[str, TokenIndexer] = None,
-                domain_identifier: str = None,
-                lazy: bool = False) -> None:
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 domain_identifier: str = None,
+                 lazy: bool = False) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
@@ -58,6 +58,8 @@ class SrlReader(DatasetReader):
         file_path = cached_path(file_path)
         ontonotes_reader = Ontonotes()
         logger.info("Reading SRL instances from dataset files at: %s", file_path)
+        if self._domain_identifier is not None:
+            logger.info("Filtering to only include file paths containing the %s domain", self._domain_identifier)
 
         for sentence in self._ontonotes_subset(ontonotes_reader, file_path, self._domain_identifier):
             tokens = [Token(t) for t in sentence.words]
@@ -71,10 +73,10 @@ class SrlReader(DatasetReader):
                     verb_indicator = [1 if label[-2:] == "-V" else 0 for label in tags]
                     yield self.text_to_instance(tokens, verb_indicator, tags)
 
-    def _ontonotes_subset(self,
-                         ontonotes_reader: Ontonotes,
-                         file_path: str, 
-                         domain_identifier: str) -> Iterable[OntonotesSentence]:
+    @staticmethod
+    def _ontonotes_subset(ontonotes_reader: Ontonotes,
+                          file_path: str,
+                          domain_identifier: str) -> Iterable[OntonotesSentence]:
         """
         Iterates over the Ontonotes 5.0 dataset using an optional domain identifier.
         If the domain identifier is present, only examples which contain the domain
