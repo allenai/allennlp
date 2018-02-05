@@ -41,8 +41,8 @@ class SrlReader(DatasetReader):
     A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
 
     """
-    def __init__(self, token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__()
+    def __init__(self, token_indexers: Dict[str, TokenIndexer] = None, lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
@@ -85,5 +85,6 @@ class SrlReader(DatasetReader):
     @classmethod
     def from_params(cls, params: Params) -> 'SrlReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
-        return SrlReader(token_indexers=token_indexers)
+        return SrlReader(token_indexers=token_indexers, lazy=lazy)

@@ -61,8 +61,9 @@ class Conll2003DatasetReader(DatasetReader):
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  tag_label: str = "ner",
-                 feature_labels: Sequence[str] = ()) -> None:
-        super().__init__()
+                 feature_labels: Sequence[str] = (),
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in _VALID_LABELS:
             raise ConfigurationError("unknown tag label type: {}".format(tag_label))
@@ -126,6 +127,7 @@ class Conll2003DatasetReader(DatasetReader):
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         tag_label = params.pop('tag_label', None)
         feature_labels = params.pop('feature_labels', ())
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return Conll2003DatasetReader(token_indexers=token_indexers,
                                       tag_label=tag_label,
