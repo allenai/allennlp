@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Union, List, Dict, Any
 
 import torch
@@ -18,6 +19,8 @@ from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
 from allennlp.data import Vocabulary
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # pylint: disable=attribute-defined-outside-init
 
@@ -57,6 +60,8 @@ class Elmo(torch.nn.Module):
                  do_layer_norm: bool = False,
                  dropout: float = 0.5) -> None:
         super(Elmo, self).__init__()
+
+        logging.info("Initializing ELMo")
 
         self._elmo_lstm = _ElmoBiLm(options_file, weight_file)
         self._dropout = Dropout(p=dropout)
@@ -100,7 +105,8 @@ class Elmo(torch.nn.Module):
 
         # compute the elmo representations
         representations = []
-        for scalar_mix in self._scalar_mixes:
+        for i in range(len(self._scalar_mixes)):
+            scalar_mix = getattr(self, 'scalar_mix_{}'.format(i))
             representation_with_bos_eos = scalar_mix(layer_activations, mask_with_bos_eos)
             representation_without_bos_eos, mask_without_bos_eos = remove_sentence_boundaries(
                     representation_with_bos_eos, mask_with_bos_eos
@@ -242,7 +248,8 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         # (batch_size * sequence_length, embed_dim, max_chars_per_token)
         character_embedding = torch.transpose(character_embedding, 1, 2)
         convs = []
-        for conv in self._convolutions:
+        for i in range(len(self._convolutions)):
+            conv = getattr(self, 'char_conv_{}'.format(i))
             convolved = conv(character_embedding)
             # (batch_size * sequence_length, n_filters for this width)
             convolved, _ = torch.max(convolved, dim=-1)

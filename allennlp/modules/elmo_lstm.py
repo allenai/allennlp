@@ -194,9 +194,10 @@ class ElmoLstm(_EncoderBase):
 
         final_states = []
         sequence_outputs = []
-        for layer_index, (forward_layer, backward_layer, state) in enumerate(zip(self.forward_layers,
-                                                                                 self.backward_layers,
-                                                                                 hidden_states)):
+        for layer_index, state in enumerate(hidden_states):
+            forward_layer = getattr(self, 'forward_layer_{}'.format(layer_index))
+            backward_layer = getattr(self, 'backward_layer_{}'.format(layer_index))
+
             forward_cache = forward_output_sequence
             backward_cache = backward_output_sequence
 

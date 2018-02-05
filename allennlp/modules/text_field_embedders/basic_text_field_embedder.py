@@ -43,7 +43,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         keys = sorted(text_field_input.keys())
         for key in keys:
             tensor = text_field_input[key]
-            embedder = self._token_embedders[key]
+            # Note: need to use getattr here so that the pytorch voodoo
+            # with submodules works with multiple GPUs.
+            embedder = getattr(self, 'token_embedder_{}'.format(key))
             token_vectors = embedder(tensor)
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)

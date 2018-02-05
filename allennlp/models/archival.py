@@ -100,14 +100,20 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
     # redirect to the cache, if necessary
     archive_file = cached_path(archive_file)
 
-    # Extract archive to temp dir
-    tempdir = tempfile.mkdtemp()
-    logger.info("extracting archive file %s to temp dir %s", archive_file, tempdir)
-    with tarfile.open(archive_file, 'r:gz') as archive:
-        archive.extractall(tempdir)
+    tempdir = None
+    if os.path.isdir(archive_file):
+        serialization_dir = archive_file
+    else:
+        # Extract archive to temp dir
+        tempdir = tempfile.mkdtemp()
+        logger.info("extracting archive file %s to temp dir %s", archive_file, tempdir)
+        with tarfile.open(archive_file, 'r:gz') as archive:
+            archive.extractall(tempdir)
+
+        serialization_dir = tempdir
 
     # Check for supplemental files in archive
-    fta_filename = os.path.join(tempdir, _FTA_NAME)
+    fta_filename = os.path.join(serialization_dir, _FTA_NAME)
     if os.path.exists(fta_filename):
         with open(fta_filename, 'r') as fta_file:
             files_to_archive = json.loads(fta_file.read())
@@ -115,7 +121,7 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
         # Add these replacements to overrides
         replacement_hocon = pyhocon.ConfigTree(root=True)
         for key, _ in files_to_archive.items():
-            replacement_filename = os.path.join(tempdir, f"fta/{key}")
+            replacement_filename = os.path.join(serialization_dir, f"fta/{key}")
             replacement_hocon.put(key, replacement_filename)
 
         overrides_hocon = pyhocon.ConfigFactory.parse_string(overrides)
@@ -123,16 +129,17 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
         overrides = json.dumps(combined_hocon)
 
     # Load config
-    config = Params.from_file(os.path.join(tempdir, _CONFIG_NAME), overrides)
+    config = Params.from_file(os.path.join(serialization_dir, _CONFIG_NAME), overrides)
     config.loading_from_archive = True
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),
-                       weights_file=os.path.join(tempdir, _WEIGHTS_NAME),
-                       serialization_dir=tempdir,
+                       weights_file=os.path.join(serialization_dir, _WEIGHTS_NAME),
+                       serialization_dir=serialization_dir,
                        cuda_device=cuda_device)
 
-    # Clean up temp dir
-    shutil.rmtree(tempdir)
+    if tempdir:
+        # Clean up temp dir
+        shutil.rmtree(tempdir)
 
     return Archive(model=model, config=config)

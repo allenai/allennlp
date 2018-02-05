@@ -140,11 +140,10 @@ With our test in hand, we're now ready to actually write the `DatasetReader` its
 as a [file in
 `my_library.dataset_readers`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/dataset_readers/semantic_scholar_papers.py).
 
-To understand what's going on in this class, let's look at the `read` method first:
+To understand what's going on in this class, let's look at the `_read` method first:
 
 ```python
-    def read(self, file_path):
-        instances = []
+    def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
             for line_num, line in enumerate(Tqdm.tqdm(data_file.readlines())):
@@ -155,10 +154,7 @@ To understand what's going on in this class, let's look at the `read` method fir
                 title = paper_json['title']
                 abstract = paper_json['paperAbstract']
                 venue = paper_json['venue']
-                instances.append(self.text_to_instance(title, abstract, venue))
-        if not instances:
-            raise ConfigurationError("No instances read!")
-        return Dataset(instances)
+                yield self.text_to_instance(title, abstract, venue)
 ```
 
 The `cached_path` method inside of the `with open()` call allows the path we specify to be a web
