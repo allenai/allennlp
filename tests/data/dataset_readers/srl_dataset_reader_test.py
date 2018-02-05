@@ -15,32 +15,32 @@ class TestSrlReader(AllenNlpTestCase):
             fields = instances[0].fields
             tokens = [t.text for t in fields['tokens'].tokens]
             assert tokens == ["Mali", "government", "officials", "say", "the", "woman", "'s",
-                            "confession", "was", "forced", "."]
+                              "confession", "was", "forced", "."]
             assert fields["verb_indicator"].labels[3] == 1
             assert fields["tags"].labels == ['B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
-                                            'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
+                                             'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
 
             fields = instances[1].fields
             tokens = [t.text for t in fields['tokens'].tokens]
             assert tokens == ["Mali", "government", "officials", "say", "the", "woman", "'s",
-                            "confession", "was", "forced", "."]
+                              "confession", "was", "forced", "."]
             assert fields["verb_indicator"].labels[8] == 1
             assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'B-ARG1', 'I-ARG1',
-                                            'I-ARG1', 'I-ARG1', 'B-V', 'B-ARG2', 'O']
+                                             'I-ARG1', 'I-ARG1', 'B-V', 'B-ARG2', 'O']
 
             fields = instances[2].fields
             tokens = [t.text for t in fields['tokens'].tokens]
             assert tokens == ['The', 'prosecution', 'rested', 'its', 'case', 'last', 'month', 'after',
-                            'four', 'months', 'of', 'hearings', '.']
+                              'four', 'months', 'of', 'hearings', '.']
             assert fields["verb_indicator"].labels[2] == 1
             assert fields["tags"].labels == ['B-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', 'B-ARGM-TMP',
-                                            'I-ARGM-TMP', 'B-ARGM-TMP', 'I-ARGM-TMP', 'I-ARGM-TMP',
-                                            'I-ARGM-TMP', 'I-ARGM-TMP', 'O']
+                                             'I-ARGM-TMP', 'B-ARGM-TMP', 'I-ARGM-TMP', 'I-ARGM-TMP',
+                                             'I-ARGM-TMP', 'I-ARGM-TMP', 'O']
 
             fields = instances[3].fields
             tokens = [t.text for t in fields['tokens'].tokens]
             assert tokens == ['The', 'prosecution', 'rested', 'its', 'case', 'last', 'month', 'after',
-                            'four', 'months', 'of', 'hearings', '.']
+                              'four', 'months', 'of', 'hearings', '.']
             assert fields["verb_indicator"].labels[11] == 1
             assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B-V', 'O']
 

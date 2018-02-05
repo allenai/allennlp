@@ -12,20 +12,20 @@ class TestSnliReader(AllenNlpTestCase):
             instances = ensure_list(instances)
 
             instance1 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
-                                    "down", "airplane", "."],
-                        "hypothesis": ["A", "person", "is", "training", "his", "horse", "for", "a",
+                                     "down", "airplane", "."],
+                         "hypothesis": ["A", "person", "is", "training", "his", "horse", "for", "a",
                                         "competition", "."],
-                        "label": "neutral"}
+                         "label": "neutral"}
 
             instance2 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
-                                    "down", "airplane", "."],
-                        "hypothesis": ["A", "person", "is", "at", "a", "diner", ",", "ordering", "an",
+                                     "down", "airplane", "."],
+                         "hypothesis": ["A", "person", "is", "at", "a", "diner", ",", "ordering", "an",
                                         "omelette", "."],
-                        "label": "contradiction"}
+                         "label": "contradiction"}
             instance3 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
-                                    "down", "airplane", "."],
-                        "hypothesis": ["A", "person", "is", "outdoors", ",", "on", "a", "horse", "."],
-                        "label": "entailment"}
+                                     "down", "airplane", "."],
+                         "hypothesis": ["A", "person", "is", "outdoors", ",", "on", "a", "horse", "."],
+                         "label": "entailment"}
 
             assert len(instances) == 3
             fields = instances[0].fields

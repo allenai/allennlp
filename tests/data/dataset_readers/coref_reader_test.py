@@ -3,6 +3,7 @@
 from typing import List, Tuple
 from allennlp.data.dataset_readers import ConllCorefReader
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 
 
 class TestCorefReader(AllenNlpTestCase):
@@ -14,8 +15,8 @@ class TestCorefReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
         for lazy in (True, False):
-            conll_reader = ConllCorefReader(max_span_width=self.span_width)
-            instances = conll_reader.read('tests/fixtures/coref/coref.gold_conll')
+            conll_reader = ConllCorefReader(max_span_width=self.span_width, lazy=lazy)
+            instances = ensure_list(conll_reader.read('tests/fixtures/coref/coref.gold_conll'))
 
             assert len(instances) == 2
 
@@ -39,7 +40,7 @@ class TestCorefReader(AllenNlpTestCase):
             gold_span_labels = fields["span_labels"]
             gold_indices_with_ids = [(i, x) for i, x in enumerate(gold_span_labels.labels) if x != -1]
             gold_mentions_with_ids: List[Tuple[List[str], int]] = [(candidate_mentions[i], x)
-                                                                for i, x in gold_indices_with_ids]
+                                                                   for i, x in gold_indices_with_ids]
 
             assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
             gold_mentions_with_ids.remove((["Hong", "Kong"], 0))
@@ -64,7 +65,7 @@ class TestCorefReader(AllenNlpTestCase):
             gold_span_labels = fields["span_labels"]
             gold_indices_with_ids = [(i, x) for i, x in enumerate(gold_span_labels.labels) if x != -1]
             gold_mentions_with_ids: List[Tuple[List[str], int]] = [(candidate_mentions[i], x)
-                                                                for i, x in gold_indices_with_ids]
+                                                                   for i, x in gold_indices_with_ids]
 
             assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
             gold_mentions_with_ids.remove((["Hong", "Kong"], 0))

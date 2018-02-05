@@ -131,4 +131,5 @@ class Conll2003DatasetReader(DatasetReader):
         params.assert_empty(cls.__name__)
         return Conll2003DatasetReader(token_indexers=token_indexers,
                                       tag_label=tag_label,
-                                      feature_labels=feature_labels)
+                                      feature_labels=feature_labels,
+                                      lazy=lazy)
