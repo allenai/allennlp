@@ -60,10 +60,11 @@ def make_app(predictor: Predictor,
     (e.g. by removing probabilities or logits)
     you can do that by passing in a ``sanitizer`` function.
     """
-
-    if static_dir is not None and not os.path.exists(static_dir):
-        logger.error("app directory %s does not exist, aborting", static_dir)
-        sys.exit(-1)
+    if static_dir is not None:
+        static_dir = os.path.abspath(static_dir)
+        if not os.path.exists(static_dir):
+            logger.error("app directory %s does not exist, aborting", static_dir)
+            sys.exit(-1)
     elif static_dir is None and field_names is None:
         logger.error("must specify either build_dir or field_names")
         sys.exit(-1)
