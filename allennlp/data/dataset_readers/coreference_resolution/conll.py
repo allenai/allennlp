@@ -8,7 +8,7 @@ from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, ListField, TextField, IndexField, MetadataField, SequenceLabelField
+from allennlp.data.fields import Field, ListField, TextField, SpanField, MetadataField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
@@ -59,9 +59,8 @@ class ConllCorefReader(DatasetReader):
     into the correct format.
 
     Returns a ``Dataset`` where the ``Instances`` have four fields: ``text``, a ``TextField``
-    containing the full document text, ``span_starts``, a ``ListField[IndexField]`` of inclusive
-    start indices for span candidates, ``span_ends``, a ``ListField[IndexField]`` of inclusive end
-    indices for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's
+    containing the full document text, ``spans``, a ``ListField[SpanField]`` of inclusive start and
+    end indices for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's
     original text. For data with gold cluster labels, we also include the original ``clusters``
     (a list of list of index pairs) and a ``SequenceLabelField`` of cluster ids for every span
     candidate.
@@ -125,17 +124,14 @@ class ConllCorefReader(DatasetReader):
         An ``Instance`` containing the following ``Fields``:
             text : ``TextField``
                 The text of the full document.
-            span_starts : ``ListField[IndexField]``
-                A ListField containing the span starts represented as ``IndexFields``
-                with respect to the document text.
-            span_ends : ``ListField[IndexField]``
-                A ListField containing the span ends represented as ``IndexFields``
+            spans : ``ListField[SpanField]``
+                A ListField containing the spans represented as ``SpanFields``
                 with respect to the document text.
             span_labels : ``SequenceLabelField``, optional
                 The id of the cluster which each possible span belongs to, or -1 if it does
                  not belong to a cluster. As these labels have variable length (it depends on
                  how many spans we are considering), we represent this a as a ``SequenceLabelField``
-                 with respect to the ``span_starts`` ``ListField``.
+                 with respect to the ``spans ``ListField``.
         """
         flattened_sentences = [self._normalize_word(word)
                                for sentence in sentences
@@ -153,8 +149,7 @@ class ConllCorefReader(DatasetReader):
                 for mention in cluster:
                     cluster_dict[tuple(mention)] = cluster_id
 
-        span_starts: List[Field] = []
-        span_ends: List[Field] = []
+        spans: List[Field] = []
         span_labels: Optional[List[int]] = [] if gold_clusters is not None else None
 
         sentence_offset = 0
@@ -168,20 +163,17 @@ class ConllCorefReader(DatasetReader):
                     else:
                         span_labels.append(-1)
 
-                span_starts.append(IndexField(start, text_field))
-                span_ends.append(IndexField(end, text_field))
+                spans.append(SpanField(start, end, text_field))
             sentence_offset += len(sentence)
 
-        span_starts_field = ListField(span_starts)
-        span_ends_field = ListField(span_ends)
+        span_field = ListField(spans)
         metadata_field = MetadataField(metadata)
 
         fields: Dict[str, Field] = {"text": text_field,
-                                    "span_starts": span_starts_field,
-                                    "span_ends": span_ends_field,
+                                    "spans": span_field,
                                     "metadata": metadata_field}
         if span_labels is not None:
-            fields["span_labels"] = SequenceLabelField(span_labels, span_starts_field)
+            fields["span_labels"] = SequenceLabelField(span_labels, span_field)
 
         return Instance(fields)
 

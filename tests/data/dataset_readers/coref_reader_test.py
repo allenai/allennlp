@@ -28,8 +28,8 @@ class TestCorefReader:
                         'attention', '.', 'The', 'world', "'s", 'fifth', 'Disney', 'park',
                         'will', 'soon', 'open', 'to', 'the', 'public', 'here', '.']
 
-        span_starts = fields["span_starts"].field_list
-        span_ends = fields["span_ends"].field_list
+        spans = fields["spans"].field_list
+        span_starts, span_ends = zip(*[(field.span_start, field.span_end) for field in spans])
 
         candidate_mentions = self.check_candidate_mentions_are_well_defined(span_starts, span_ends, text)
 
@@ -53,8 +53,8 @@ class TestCorefReader:
                         'Hong', 'Kong', 'people', 'will', 'utilize', 'all', 'resources', 'they', 'have',
                         'created', 'for', 'developing', 'the', 'Hong', 'Kong', 'tourism', 'industry', '.']
 
-        span_starts = fields["span_starts"].field_list
-        span_ends = fields["span_ends"].field_list
+        spans = fields["spans"].field_list
+        span_starts, span_ends = zip(*[(field.span_start, field.span_end) for field in spans])
 
         candidate_mentions = self.check_candidate_mentions_are_well_defined(span_starts, span_ends, text)
 
@@ -73,7 +73,7 @@ class TestCorefReader:
         candidate_mentions = []
         for start, end in zip(span_starts, span_ends):
             # Spans are inclusive.
-            text_span = text[start.sequence_index: end.sequence_index + 1]
+            text_span = text[start: end + 1]
             candidate_mentions.append(text_span)
 
         # Check we aren't considering zero length spans and all
