@@ -221,7 +221,7 @@ class CoreferenceResolver(Model):
         # (1, max_antecedents),
         # (1, num_spans_to_keep, max_antecedents)
         valid_antecedent_indices, valid_antecedent_offsets, valid_antecedent_log_mask = \
-            self._generate_valid_antecedents(num_spans_to_keep, max_antecedents, text_mask.is_cuda)
+            self._generate_valid_antecedents(num_spans_to_keep, max_antecedents, util.get_device_of(text_mask))
         # Select tensors relating to the antecedent spans.
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         candidate_antecedent_embeddings = util.flattened_index_select(top_span_embeddings,
@@ -379,9 +379,9 @@ class CoreferenceResolver(Model):
     @staticmethod
     def _generate_valid_antecedents(num_spans_to_keep: int,
                                     max_antecedents: int,
-                                    is_cuda: bool) -> Tuple[torch.IntTensor,
-                                                            torch.IntTensor,
-                                                            torch.FloatTensor]:
+                                    device: int) -> Tuple[torch.IntTensor,
+                                                          torch.IntTensor,
+                                                          torch.FloatTensor]:
         """
         This method generates possible antecedents per span which survived the pruning
         stage. This procedure is `generic across the batch`. The reason this is the case is
@@ -398,8 +398,8 @@ class CoreferenceResolver(Model):
             The number of spans that were kept while pruning.
         max_antecedents : ``int``, required.
             The maximum number of antecedent spans to consider for every span.
-        is_cuda : ``bool``, required.
-            Whether the computation is being done on the GPU or not.
+        device: ``int``, required.
+            The CUDA device to use.
 
         Returns
         -------
@@ -417,10 +417,10 @@ class CoreferenceResolver(Model):
             Has shape ``(1, num_spans_to_keep, max_antecedents)``.
         """
         # Shape: (num_spans_to_keep, 1)
-        target_indices = util.get_range_vector(num_spans_to_keep, is_cuda).unsqueeze(1)
+        target_indices = util.get_range_vector(num_spans_to_keep, device).unsqueeze(1)
 
         # Shape: (1, max_antecedents)
-        valid_antecedent_offsets = (util.get_range_vector(max_antecedents, is_cuda) + 1).unsqueeze(0)
+        valid_antecedent_offsets = (util.get_range_vector(max_antecedents, device) + 1).unsqueeze(0)
 
         # This is a broadcasted subtraction.
         # Shape: (num_spans_to_keep, max_antecedents)
