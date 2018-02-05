@@ -10,7 +10,7 @@ class TestOntonotes(AllenNlpTestCase):
 
     def test_dataset_iterator(self):
         reader = Ontonotes()
-        annotated_sentences = list(reader.dataset_iterator('tests/fixtures/conll_2012/'))
+        annotated_sentences = list(reader.dataset_iterator('tests/fixtures/conll_2012/subdomain/'))
         annotation = annotated_sentences[0]
         assert annotation.document_id == "test/test/01/test_001"
         assert annotation.sentence_id == 0
@@ -122,7 +122,8 @@ class TestOntonotes(AllenNlpTestCase):
     def test_dataset_path_iterator(self):
         reader = Ontonotes()
         files = list(reader.dataset_path_iterator('tests/fixtures/conll_2012/'))
-        assert files == ['tests/fixtures/conll_2012/example.gold_conll']
+        assert files == ['tests/fixtures/conll_2012/subdomain/example.gold_conll',
+                         'tests/fixtures/conll_2012/subdomain2/example.gold_conll']
 
     def test_ontonotes_can_read_conll_file_with_multiple_documents(self):
         reader = Ontonotes()
