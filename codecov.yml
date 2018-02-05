@@ -1,13 +1,19 @@
 coverage:
-  precision: 0
+  precision: 2
   round: down
+  range: "70...100"
+
   status:
-    patch:
-      default:
-        target: 90
     project:
-      default:
-        threshold: 1%
-    changes: false
-comment: false
-ignore: allennlp/custom_extensions
+      default: on
+    patch:
+      default: on
+    changes:
+      default: off
+
+comment:
+  layout: "header, reach, diff, flags, files, footer"
+  behavior: default
+  require_changes: no
+  require_base: no
+  require_head: yes
