@@ -97,23 +97,19 @@ class SniffTest(AllenNlpTestCase):
     def test_coreference_resolution(self):
         predictor = DEFAULT_MODELS['coreference-resolution'].predictor()
 
-        document = "We 're not going to skimp on quality , but we are very focused to make next year . The only problem is that some of the fabrics are wearing out - since I was a newbie I skimped on some of the fabric and the poor quality ones are developing holes . For some , an awareness of this exit strategy permeates the enterprise , allowing them to skimp on the niceties they would more or less have to extend toward a person they were likely to meet again ."
+        document = "We 're not going to skimp on quality , but we are very focused to make next year . The only problem is that some of the fabrics are wearing out - since I was a newbie I skimped on some of the fabric and the poor quality ones are developing holes ."
 
         result = predictor.predict_json({"document": document})
+        print(result)
         assert result['clusters'] == [[[0, 0], [10, 10]],
                                       [[33, 33], [37, 37]],
-                                      [[26, 27], [42, 43]],
-                                      [[63, 64], [67, 67], [73, 73], [84, 84]],
-                                      [[5, 5], [69, 69]]]
+                                      [[26, 27], [42, 43]]]
+                                      
         assert result["document"] == ['We', "'re", 'not', 'going', 'to', 'skimp', 'on', 'quality', ',', 'but', 'we', 'are',
                                       'very', 'focused', 'to', 'make', 'next', 'year', '.', 'The', 'only', 'problem', 'is',
                                       'that', 'some', 'of', 'the', 'fabrics', 'are', 'wearing', 'out', '-', 'since', 'I', 'was',
                                       'a', 'newbie', 'I', 'skimped', 'on', 'some', 'of', 'the', 'fabric', 'and', 'the', 'poor',
-                                      'quality', 'ones', 'are', 'developing', 'holes', '.', 'For', 'some', ',', 'an',
-                                      'awareness', 'of', 'this', 'exit', 'strategy', 'permeates', 'the', 'enterprise', ',',
-                                      'allowing', 'them', 'to', 'skimp', 'on', 'the', 'niceties', 'they', 'would', 'more', 'or',
-                                      'less', 'have', 'to', 'extend', 'toward', 'a', 'person', 'they', 'were', 'likely', 'to',
-                                      'meet', 'again', '.']
+                                      'quality', 'ones', 'are', 'developing', 'holes', '.']
 
 
     def test_ner(self):
