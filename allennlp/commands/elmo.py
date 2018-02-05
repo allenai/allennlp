@@ -15,15 +15,13 @@ used in the output file.
 """
 
 import argparse
-import io
-import os
-import sys
-from typing import Optional, IO, Dict
+from typing import IO
 
-import torch
 import h5py
+import logging
+import torch
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
@@ -32,12 +30,15 @@ from allennlp.nn.util import remove_sentence_boundaries
 from allennlp.modules.elmo import _ElmoBiLm
 from allennlp.commands.subcommand import Subcommand
 
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+DEFAULT_OPTIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+DEFAULT_WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
+
 class Elmo(Subcommand):
-    default_options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
-    default_weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        description = '''Create word vectors with ELMo.'''
+        description = '''Create word vectors using ELMo.'''
         subparser = parser.add_parser(
                 name, description=description, help='Use a trained model to make predictions.')
 
@@ -48,27 +49,23 @@ class Elmo(Subcommand):
         subparser.add_argument(
             '--options_file',
             type=str,
-            default=self.default_options_file,
+            default=DEFAULT_OPTIONS_FILE,
             help='The path to the ELMo options file.')
         subparser.add_argument(
             '--weight_file',
             type=str,
-            default=self.default_weight_file,
+            default=DEFAULT_WEIGHT_FILE,
             help='The path to the ELMo weight file.')
         subparser.add_argument('--batch_size', type=int, default=64, help='The batch size to use.')
         subparser.add_argument('--cuda_device', type=int, default=-1, help='The cuda_device to run on.')
         subparser.add_argument('--use_sentence_key', default=False, action='store_true')
-        # TODO(michaels): add ELMO subcommands
 
         subparser.set_defaults(func=elmo_command)
 
         return subparser
 
 
-indexer = ELMoTokenCharactersIndexer()
-
-
-def batch_to_ids(batch):
+def batch_to_ids(indexer, batch):
     """
     Given a batch (as list of tokenized sentences), return a batch
     of padded character ids.
@@ -86,9 +83,9 @@ def batch_to_ids(batch):
     return dataset.as_tensor_dict()['elmo']['character_ids']
 
 
-def batch_to_embeddings(batch, elmo_bilm, cuda_device):
+def batch_to_embeddings(indexer, batch, elmo_bilm, cuda_device):
     # returns (batch_size, 3, num_times, 1024) embeddings and (batch_size, num_times) mask
-    character_ids = batch_to_ids(batch)
+    character_ids = batch_to_ids(indexer, batch)
     if cuda_device >= 0:
         character_ids = character_ids.cuda(cuda_device=cuda_device)
 
@@ -105,8 +102,8 @@ def batch_to_embeddings(batch, elmo_bilm, cuda_device):
     return activations, mask
 
 
-def write_batch(batch, keys, elmo_bilm, cuda_device, fout):
-    embeddings, mask = batch_to_embeddings(batch, elmo_bilm, cuda_device)
+def write_batch(indexer, batch, keys, elmo_bilm, cuda_device, fout):
+    embeddings, mask = batch_to_embeddings(indexer, batch, elmo_bilm, cuda_device)
     for i, key in enumerate(keys):
         length = int(mask[i, :].sum())
         sentence_embeds = embeddings[i, :, :length, :].data.cpu().numpy()
@@ -135,16 +132,19 @@ def elmo(options_file: str,
          cuda_device: int,
          use_sentence_key: bool = False):
 
+    logger.info("Initializing ELMo.")
     elmo_bilm = _ElmoBiLm(options_file, weight_file)
+    indexer = ELMoTokenCharactersIndexer()
     if cuda_device >= 0:
         elmo_bilm.cuda(cuda_device=cuda_device)
 
+    logger.info("Processing sentences.")
     with h5py.File(output_file_path, 'w') as fout:
         batch = []
         keys = []
         line_no = 0
 
-        for line in input_file:
+        for line in Tqdm.tqdm(input_file):
             tokens = line.strip().split()
 
             if use_sentence_key:
@@ -157,11 +157,11 @@ def elmo(options_file: str,
 
             if len(batch) >= batch_size:
                 # run biLM and save to file
-                write_batch(batch, keys, elmo_bilm, cuda_device, fout)
+                write_batch(indexer, batch, keys, elmo_bilm, cuda_device, fout)
                 batch = []
                 keys = []
 
         if len(batch) > 0:
-            write_batch(batch, keys, elmo_bilm, cuda_device, fout)
+            write_batch(indexer, batch, keys, elmo_bilm, cuda_device, fout)
 
     input_file.close()
