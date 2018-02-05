@@ -42,8 +42,8 @@ class ElmoLstm(_EncoderBase):
         :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`.
     num_layers : ``int``, required
         The number of bidirectional LSTMs to use.
-    require_grad: ``bool``, optional
-        Compute gradients of model parameters?
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
     recurrent_dropout_probability: ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks

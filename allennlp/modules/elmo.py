@@ -44,6 +44,8 @@ class Elmo(torch.nn.Module):
         ELMo hdf5 weight file
     num_output_representations: ``int``, required.
         The number of ELMo representation layers to output.
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
     do_layer_norm : ``bool``, optional, (default=False).
         Should we apply layer normalization (passed to ``ScalarMix``)?
     dropout : ``float``, optional, (default = 0.5).
@@ -156,6 +158,8 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         ELMo JSON options file
     weight_file : ``str``
         ELMo hdf5 weight file
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
 
     The relevant section of the options file is something like:
     .. example-code::
@@ -383,6 +387,8 @@ class _ElmoBiLm(torch.nn.Module):
         ELMo JSON options file
     weight_file : ``str``
         ELMo hdf5 weight file
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
     """
     def __init__(self,
                  options_file: str,

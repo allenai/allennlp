@@ -25,6 +25,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
         Should we apply layer normalization (passed to ``ScalarMix``)?
     dropout : ``float``, optional.
         The dropout value to be applied to the ELMo representations.
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
     """
     def __init__(self,
                  options_file: str,
