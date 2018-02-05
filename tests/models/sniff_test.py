@@ -104,7 +104,6 @@ class SniffTest(AllenNlpTestCase):
         assert result['clusters'] == [[[0, 0], [10, 10]],
                                       [[33, 33], [37, 37]],
                                       [[26, 27], [42, 43]]]
-                                      
         assert result["document"] == ['We', "'re", 'not', 'going', 'to', 'skimp', 'on', 'quality', ',', 'but', 'we', 'are',
                                       'very', 'focused', 'to', 'make', 'next', 'year', '.', 'The', 'only', 'problem', 'is',
                                       'that', 'some', 'of', 'the', 'fabrics', 'are', 'wearing', 'out', '-', 'since', 'I', 'was',
