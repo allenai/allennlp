@@ -72,9 +72,8 @@ def main(param_file, description):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    # TODO(michaels): rename to param-file
-    parser.add_argument('params', type=str, help='The model configuration file.')
+    parser.add_argument('param_file', type=str, help='The model configuration file.')
     parser.add_argument('description', type=str, help='A description for the experiment.')
 
     args = parser.parse_args()
-    main(args.params, args.description)
+    main(args.param_file, args.description)
