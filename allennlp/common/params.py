@@ -219,10 +219,11 @@ class Params(MutableMapping):
         flat_params = {}
         def recurse(parameters, path):
             for key, value in parameters.items():
+                newpath = path + [key]
                 if isinstance(value, dict):
-                    recurse(value, path + [key])
+                    recurse(value, newpath)
                 else:
-                    flat_params['.'.join(path + [key])] = value
+                    flat_params['.'.join(newpath)] = value
 
         recurse(self.params, [])
         return flat_params

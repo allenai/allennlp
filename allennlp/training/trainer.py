@@ -621,7 +621,7 @@ class Trainer:
 
         return val_loss, batch_num
 
-    def train(self) -> dict:
+    def train(self) -> Dict[str, float]:
         """
         Trains the supplied model with the supplied parameters.
         """
