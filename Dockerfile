@@ -14,7 +14,7 @@ ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 LABEL com.nvidia.volumes.needed="nvidia_driver"
 
-WORKDIR /stage
+WORKDIR /stage/allennlp
 
 # Install base packages.
 RUN apt-get update --fix-missing && apt-get install -y \
@@ -55,6 +55,7 @@ COPY .pylintrc .pylintrc
 COPY scripts/ scripts/
 COPY tutorials/ tutorials/
 COPY training_config training_config/
+COPY setup.py setup.py
 
 # Add model caching
 ARG CACHE_MODELS=false

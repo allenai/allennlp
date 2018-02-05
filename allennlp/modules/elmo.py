@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Union, List, Dict, Any
 
 import torch
@@ -18,6 +19,8 @@ from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
 from allennlp.data import Vocabulary
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # pylint: disable=attribute-defined-outside-init
 
@@ -57,6 +60,8 @@ class Elmo(torch.nn.Module):
                  do_layer_norm: bool = False,
                  dropout: float = 0.5) -> None:
         super(Elmo, self).__init__()
+
+        logging.info("Initializing ELMo")
 
         self._elmo_lstm = _ElmoBiLm(options_file, weight_file)
         self._dropout = Dropout(p=dropout)
