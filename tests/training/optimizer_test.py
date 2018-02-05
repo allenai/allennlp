@@ -46,13 +46,15 @@ class TestOptimizer(AllenNlpTestCase):
                 "momentum": 5,
                 "parameter_groups": [
                         # the repeated "bias_" checks a corner case
-                        [["weight_i", "bias_", "bias_"], {'lr': 2}],
+                        # NOT_A_VARIABLE_NAME displays a warning but does not raise an exception
+                        [["weight_i", "bias_", "bias_", "NOT_A_VARIABLE_NAME"], {'lr': 2}],
                         [["tag_projection_layer"], {'lr': 3}],
                 ]
         })
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, optimizer_params)
         param_groups = optimizer.param_groups
+
         assert len(param_groups) == 3
         assert param_groups[0]['lr'] == 2
         assert param_groups[1]['lr'] == 3
@@ -60,3 +62,10 @@ class TestOptimizer(AllenNlpTestCase):
         assert param_groups[2]['lr'] == 1
         for k in range(3):
             assert param_groups[k]['momentum'] == 5
+
+        # all LSTM parameters except recurrent connections (those with weight_h in name)
+        assert len(param_groups[0]['params']) == 6
+        # just the projection weight and bias
+        assert len(param_groups[1]['params']) == 2
+        # the embedding + recurrent connections left in the default group
+        assert len(param_groups[2]['params']) == 3

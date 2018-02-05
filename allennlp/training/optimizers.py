@@ -12,12 +12,15 @@ The available optimizers are
 * `"rmsprop <http://pytorch.org/docs/master/optim.html#torch.optim.RMSprop>`_
 """
 
+import logging
 import re
 from typing import List, Any
 
 import torch
 
 from allennlp.common import Params, Registrable
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Optimizer(Registrable):
@@ -59,21 +62,43 @@ class Optimizer(Registrable):
             for k in range(len(groups)): # pylint: disable=consider-using-enumerate
                 parameter_groups[k].update(groups[k][1].as_dict())
 
+            regex_use_counts = {}
+            parameter_group_names = [set() for _ in range(len(groups) + 1)]
             for name, param in model_parameters:
                 # Determine the group for this parameter.
                 group_index = None
                 for k, group_regexes in enumerate(groups):
                     for regex in group_regexes[0]:
+                        if regex not in regex_use_counts:
+                            regex_use_counts[regex] = 0
                         if re.search(regex, name):
                             if group_index is not None and group_index != k:
                                 raise ValueError("{} was specified in two separate parameter groups".format(name))
                             group_index = k
+                            regex_use_counts[regex] += 1
 
                 if group_index is not None:
-                    parameter_groups[k]['params'].append(param)
+                    parameter_groups[group_index]['params'].append(param)
+                    parameter_group_names[group_index].add(name)
                 else:
                     # the default group
                     parameter_groups[-1]['params'].append(param)
+                    parameter_group_names[-1].add(name)
+
+            # log the parameter groups
+            logger.info("Done constructing parameter groups.")
+            for k in range(len(groups) + 1):
+                group_options = {key: val for key, val in parameter_groups[k].items()
+                                 if key != 'params'}
+                print("Group {0}: {1}, {2}".format(k,
+                                                   list(parameter_group_names[k]),
+                                                   group_options))
+            # check for unused regex
+            for regex, count in regex_use_counts.items():
+                if count == 0:
+                    logger.warning("When constructing parameter groups, "
+                                   " {} not match any parameter name".format(regex))
+
         else:
             parameter_groups = [param for name, param in model_parameters]
 
