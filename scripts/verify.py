@@ -35,6 +35,7 @@ def main(checks):
         if "check-docs" in checks:
             print("Documentation (check):", flush=True)
             run("./scripts/check_docs.py", shell=True, check=True)
+            print("check docs passed")
 
     except CalledProcessError:
         # squelch the exception stacktrace
