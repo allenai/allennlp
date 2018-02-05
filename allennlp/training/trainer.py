@@ -631,8 +631,8 @@ class Trainer:
 
         logger.info("Beginning training.")
 
-        train_metrics = None
-        val_metrics = None
+        train_metrics = {}
+        val_metrics = {}
         epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
@@ -659,7 +659,8 @@ class Trainer:
             else:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
-                val_metrics = this_epoch_val_metric = None
+                val_metrics = {}
+                this_epoch_val_metric = None
 
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
@@ -684,12 +685,10 @@ class Trainer:
                 "training_start_epoch": epoch_counter,
                 "training_epochs": epochs_trained
         }
-        if train_metrics:
-            for key, value in train_metrics.items():
-                metrics["training_" + key] = value
-        if val_metrics:
-            for key, value in val_metrics.items():
-                metrics["validation_" + key] = value
+        for key, value in train_metrics.items():
+            metrics["training_" + key] = value
+        for key, value in val_metrics.items():
+            metrics["validation_" + key] = value
 
         return metrics
 
