@@ -83,18 +83,20 @@ If you need to include ELMo at multiple layers in a task model or you have other
 ```python
 # Compute multiple layers of ELMo representations from raw text
 
+import logging
+
 from allennlp.modules.elmo import Elmo
 from allennlp.data.dataset import Dataset
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', level=logging.INFO)
 
 options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
 weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 
 use_gpu = False
-
 
 indexer = ELMoTokenCharactersIndexer()
 def batch_to_ids(batch):
