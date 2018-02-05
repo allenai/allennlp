@@ -631,8 +631,8 @@ class Trainer:
 
         logger.info("Beginning training.")
 
-        train_metrics = {} #type: Dict[str, float]
-        val_metrics = {} #type: Dict[str, float]
+        train_metrics: Dict[str, float] = {}
+        val_metrics: Dict[str, float] = {}
         epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
