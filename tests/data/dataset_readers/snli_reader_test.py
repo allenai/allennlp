@@ -1,13 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
+
 from allennlp.data.dataset_readers import SnliReader
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ensure_list
 
-
-class TestSnliReader(AllenNlpTestCase):
-    def test_read_from_file(self):
-
-        reader = SnliReader()
+class TestSnliReader():
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_read_from_file(self, lazy):
+        reader = SnliReader(lazy=lazy)
         instances = reader.read('tests/fixtures/data/snli.jsonl')
         instances = ensure_list(instances)
 

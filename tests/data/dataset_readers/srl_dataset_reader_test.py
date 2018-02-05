@@ -1,13 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
 
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ensure_list
 
-
-class TestSrlReader(AllenNlpTestCase):
-    def test_read_from_file(self):
-        conll_reader = SrlReader()
+class TestSrlReader:
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_read_from_file(self, lazy):
+        conll_reader = SrlReader(lazy=lazy)
         instances = conll_reader.read('tests/fixtures/conll_2012/')
         instances = ensure_list(instances)
 

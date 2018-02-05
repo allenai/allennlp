@@ -1,12 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
+
 from allennlp.data.dataset_readers import Seq2SeqDatasetReader
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ensure_list
 
-
-class TestSeq2SeqDatasetReader(AllenNlpTestCase):
-    def test_default_format(self):
-        reader = Seq2SeqDatasetReader()
+class TestSeq2SeqDatasetReader:
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_default_format(self, lazy):
+        reader = Seq2SeqDatasetReader(lazy=lazy)
         instances = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
         instances = ensure_list(instances)
 
