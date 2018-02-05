@@ -30,23 +30,15 @@ class TestParams(AllenNlpTestCase):
         assert model_params["text_field_embedder.tokens.type"] == "BAZ"
 
     def test_as_flat_dict(self):
-        filename = 'tests/fixtures/bidaf/experiment.json'
         params = Params({
-            'a': 10,
-            'b': {
-                'c': 20,
-                'd': 'stuff'
-            }
+                'a': 10,
+                'b': {
+                        'c': 20,
+                        'd': 'stuff'
+                }
         }).as_flat_dict()
 
-        assert "a" in params
-        assert params["a"] == 10
-
-        assert "b.c" in params
-        assert params["b.c"] == 20
-
-        assert "b.d" in params
-        assert params["b.d"] == 'stuff'
+        assert params == {'a': 10, 'b.c': 20, 'b.d': 'stuff'}
 
     def test_add_file_to_archive(self):
         # Some nested classes just to exercise the ``from_params``
