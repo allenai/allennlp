@@ -55,8 +55,9 @@ class TriviaQaReader(DatasetReader):
                  base_tarball_path: str,
                  unfiltered_tarball_path: str = None,
                  tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
-        super().__init__()
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._base_tarball_path = base_tarball_path
         self._unfiltered_tarball_path = unfiltered_tarball_path
         self._tokenizer = tokenizer or WordTokenizer()
@@ -159,8 +160,10 @@ class TriviaQaReader(DatasetReader):
         unfiltered_tarball_path = params.pop('unfiltered_tarball_path', None)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return cls(base_tarball_path=base_tarball_path,
                    unfiltered_tarball_path=unfiltered_tarball_path,
                    tokenizer=tokenizer,
-                   token_indexers=token_indexers)
+                   token_indexers=token_indexers,
+                   lazy=lazy)
