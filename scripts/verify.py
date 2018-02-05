@@ -30,11 +30,11 @@ def main(checks):
 
         if "build-docs" in checks:
             print("Documentation (build):", flush=True)
-            run("cd docs; make html-strict", shell=True, check=True)
+            run("cd doc; make html-strict", shell=True, check=True)
 
-        if "checks-docs" in checks:
+        if "check-docs" in checks:
             print("Documentation (check):", flush=True)
-            run("./script/check_docs.py", shell=True, check=True)
+            run("./scripts/check_docs.py", shell=True, check=True)
 
     except CalledProcessError:
         # squelch the exception stacktrace
