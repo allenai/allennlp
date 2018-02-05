@@ -3,7 +3,7 @@ import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.semparse import ParsingError
-from allennlp.data.semparse.knowledge_graphs.table_knowledge_graph import TableKnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.tokenizers import Token
 
