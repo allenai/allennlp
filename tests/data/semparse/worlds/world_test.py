@@ -155,7 +155,6 @@ class WorldTest(AllenNlpTestCase):
         parsed_reconstructed_logical_form = world.parse_logical_form(reconstructed_logical_form)
         assert parsed_logical_form == parsed_reconstructed_logical_form
 
-
     def test_get_logical_form_with_decoded_action_sequence(self):
         # This is identical to the previous test except that we are testing it on a real action
         # sequence the decoder produced.

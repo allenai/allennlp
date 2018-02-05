@@ -228,8 +228,6 @@ class World:
              not produce these functions. In that case, setting this flag adds the function in the
              logical form even though it is not present in the action sequence.
         """
-        # TODO(mattg,pradeep): The way "reverse" is handled here is a mess.  To make this more
-        # general, we need to fix some things in the type system.
         split_actions = [action.split(" -> ") for action in action_sequence]
         terminals: List[Tuple[str, int]] = []  # terminal name and the number of arguments it takes
         for left_side, right_side in split_actions:
@@ -251,6 +249,16 @@ class World:
                     right_side = f"(var {right_side})"
                 terminals.append((right_side, self._infer_num_arguments(left_side)))
         partial_logical_forms: List[str] = []
+
+        # We'll handle "reverse" here by looking at the prior terminal to see if it's "reverse"
+        # (and because we're iterating over this backwards, "prior" actually means "next").  If it
+        # is, we'll create a new "terminal" that's the application of "reverse" to that terminal.
+        # This works for most cases, but there are a few edge cases where this breaks, particularly
+        # when there's a lambda involved.  We have a hack to try to handle lambdas, but it doesn't
+        # always work.  TODO(mattg,pradeep): to make this logic more general and remove the need to
+        # special-case reverse, we need to fix some things in the type system.  In particular, we
+        # should remove currying in our action sequences.  If each production accurately reflected
+        # the number of arguments to a function, we could remove most of this logic.
         terminals = list(reversed(terminals))
         for i, (terminal, num_args) in enumerate(terminals):
             if i < len(terminals) - 1 and terminals[i + 1][0] == 'reverse':
