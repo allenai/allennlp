@@ -88,7 +88,7 @@ def variablesFromPair(pair, input_lang, output_lang):
 
 def initializeData(train_file, dev_file, max_input_length = -1):   
     print("*** compiling target vocab ***")
-    special_tokens = ['sos', 'eos', '[[[', ']]]', '<unk>']     
+    special_tokens = ['sos', 'eos', '<?>', '<unk>']
     output_lang, pairs, MAX_LENGTH = prepareData(train_file, special_tokens, max_input_length)
     output_lang_dev, pairs_dev, MAX_LENGTH_DEV = prepareData(dev_file, special_tokens, max_input_length)
     max_length = max(MAX_LENGTH, MAX_LENGTH_DEV)
