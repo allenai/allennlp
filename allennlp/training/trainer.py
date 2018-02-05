@@ -379,7 +379,7 @@ class Trainer:
 
         return loss
 
-    def _get_metrics(self, total_loss: float, batch_num: int, reset: bool = False) -> dict:
+    def _get_metrics(self, total_loss: float, batch_num: int, reset: bool = False) -> Dict[str, float]:
         """
         Gets the metrics but sets ``"loss"`` to
         the total loss divided by the ``batch_num`` so that
@@ -389,7 +389,7 @@ class Trainer:
         metrics["loss"] = float(total_loss / batch_num)
         return metrics
 
-    def _train_epoch(self, epoch: int) -> dict:
+    def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
         Trains one epoch and returns metrics.
         """
@@ -621,7 +621,7 @@ class Trainer:
 
         return val_loss, batch_num
 
-    def train(self) -> Dict[str, float]:
+    def train(self) -> Dict[str, object]:
         """
         Trains the supplied model with the supplied parameters.
         """
@@ -631,8 +631,8 @@ class Trainer:
 
         logger.info("Beginning training.")
 
-        train_metrics = {}
-        val_metrics = {}
+        train_metrics = {} #type: Dict[str, float]
+        val_metrics = {} #type: Dict[str, float]
         epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):

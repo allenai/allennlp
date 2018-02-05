@@ -220,6 +220,6 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     metrics_json = json.dumps(metrics, indent=2)
     with open(os.path.join(serialization_dir, "metrics.json"), "w") as metrics_file:
         metrics_file.write(metrics_json)
-    logger.info("Metrics: " + metrics_json)
+    logger.info("Metrics: %s", metrics_json)
 
     return model
