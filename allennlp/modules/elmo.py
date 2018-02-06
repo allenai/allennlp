@@ -17,7 +17,6 @@ from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
-from allennlp.data import Vocabulary
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -48,6 +47,8 @@ class Elmo(torch.nn.Module):
         ELMo hdf5 weight file
     num_output_representations: ``int``, required.
         The number of ELMo representation layers to output.
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
     do_layer_norm : ``bool``, optional, (default=False).
         Should we apply layer normalization (passed to ``ScalarMix``)?
     dropout : ``float``, optional, (default = 0.5).
@@ -57,13 +58,13 @@ class Elmo(torch.nn.Module):
                  options_file: str,
                  weight_file: str,
                  num_output_representations: int,
+                 requires_grad: bool = False,
                  do_layer_norm: bool = False,
                  dropout: float = 0.5) -> None:
         super(Elmo, self).__init__()
 
         logging.info("Initializing ELMo")
-
-        self._elmo_lstm = _ElmoBiLm(options_file, weight_file)
+        self._elmo_lstm = _ElmoBiLm(options_file, weight_file, requires_grad=requires_grad)
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
@@ -132,11 +133,13 @@ class Elmo(torch.nn.Module):
 
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
+        requires_grad = params.pop('requires_grad', False)
         num_output_representations = params.pop('num_output_representations')
         do_layer_norm = params.pop_bool('do_layer_norm', False)
         params.assert_empty(cls.__name__)
 
-        return cls(options_file, weight_file, num_output_representations, do_layer_norm)
+        return cls(options_file, weight_file, num_output_representations,
+                   requires_grad=requires_grad, do_layer_norm=do_layer_norm)
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
@@ -159,6 +162,8 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         ELMo JSON options file
     weight_file : ``str``
         ELMo hdf5 weight file
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
 
     The relevant section of the options file is something like:
     .. example-code::
@@ -177,7 +182,8 @@ class _ElmoCharacterEncoder(torch.nn.Module):
     """
     def __init__(self,
                  options_file: str,
-                 weight_file: str) -> None:
+                 weight_file: str,
+                 requires_grad: bool = False) -> None:
         super(_ElmoCharacterEncoder, self).__init__()
 
         with open(cached_path(options_file), 'r') as fin:
@@ -185,6 +191,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         self._weight_file = weight_file
 
         self.output_dim = self._options['lstm']['projection_dim']
+        self.requires_grad = requires_grad
 
         self._load_weights()
 
@@ -290,7 +297,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         weights[1:, :] = char_embed_weights
 
         self._char_embedding_weights = torch.nn.Parameter(
-                torch.FloatTensor(weights), requires_grad=False
+                torch.FloatTensor(weights), requires_grad=self.requires_grad
         )
 
     def _load_cnn_weights(self):
@@ -317,8 +324,8 @@ class _ElmoCharacterEncoder(torch.nn.Module):
             conv.weight.data.copy_(torch.FloatTensor(w_reshaped))
             conv.bias.data.copy_(torch.FloatTensor(bias))
 
-            conv.weight.requires_grad = False
-            conv.bias.requires_grad = False
+            conv.weight.requires_grad = self.requires_grad
+            conv.bias.requires_grad = self.requires_grad
 
             convolutions.append(conv)
             self.add_module('char_conv_{}'.format(i), conv)
@@ -346,13 +353,13 @@ class _ElmoCharacterEncoder(torch.nn.Module):
                 w_carry = -1.0 * numpy.transpose(fin['CNN_high_{}'.format(k)]['W_carry'][...])
                 weight = numpy.concatenate([w_transform, w_carry], axis=0)
                 self._highways._layers[k].weight.data.copy_(torch.FloatTensor(weight))
-                self._highways._layers[k].weight.requires_grad = False
+                self._highways._layers[k].weight.requires_grad = self.requires_grad
 
                 b_transform = fin['CNN_high_{}'.format(k)]['b_transform'][...]
                 b_carry = -1.0 * fin['CNN_high_{}'.format(k)]['b_carry'][...]
                 bias = numpy.concatenate([b_transform, b_carry], axis=0)
                 self._highways._layers[k].bias.data.copy_(torch.FloatTensor(bias))
-                self._highways._layers[k].bias.requires_grad = False
+                self._highways._layers[k].bias.requires_grad = self.requires_grad
 
     def _load_projection(self):
         cnn_options = self._options['char_cnn']
@@ -366,16 +373,8 @@ class _ElmoCharacterEncoder(torch.nn.Module):
             self._projection.weight.data.copy_(torch.FloatTensor(numpy.transpose(weight)))
             self._projection.bias.data.copy_(torch.FloatTensor(bias))
 
-            self._projection.weight.requires_grad = False
-            self._projection.bias.requires_grad = False
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> '_ElmoCharacterEncoder':
-        # pylint: disable=unused-argument
-        options_file = params.pop('options_file')
-        weight_file = params.pop('weight_file')
-        params.assert_empty(cls.__name__)
-        return cls(options_file, weight_file)
+            self._projection.weight.requires_grad = self.requires_grad
+            self._projection.bias.requires_grad = self.requires_grad
 
 
 class _ElmoBiLm(torch.nn.Module):
@@ -392,13 +391,16 @@ class _ElmoBiLm(torch.nn.Module):
         ELMo JSON options file
     weight_file : ``str``
         ELMo hdf5 weight file
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
     """
     def __init__(self,
                  options_file: str,
-                 weight_file: str) -> None:
+                 weight_file: str,
+                 requires_grad: bool = False) -> None:
         super(_ElmoBiLm, self).__init__()
 
-        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file)
+        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
 
         with open(cached_path(options_file), 'r') as fin:
             options = json.load(fin)
@@ -409,7 +411,8 @@ class _ElmoBiLm(torch.nn.Module):
                                    cell_size=options['lstm']['dim'],
                                    num_layers=options['lstm']['n_layers'],
                                    memory_cell_clip_value=options['lstm']['cell_clip'],
-                                   state_projection_clip_value=options['lstm']['proj_clip'])
+                                   state_projection_clip_value=options['lstm']['proj_clip'],
+                                   requires_grad=requires_grad)
         self._elmo_lstm.load_weights(weight_file)
         # Number of representation layers including context independent layer
         self.num_layers = options['lstm']['n_layers'] + 1

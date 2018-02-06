@@ -42,6 +42,8 @@ class ElmoLstm(_EncoderBase):
         :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`.
     num_layers : ``int``, required
         The number of bidirectional LSTMs to use.
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
     recurrent_dropout_probability: ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
@@ -56,6 +58,7 @@ class ElmoLstm(_EncoderBase):
                  hidden_size: int,
                  cell_size: int,
                  num_layers: int,
+                 requires_grad: bool = False,
                  recurrent_dropout_probability: float = 0.0,
                  memory_cell_clip_value: Optional[float] = None,
                  state_projection_clip_value: Optional[float] = None) -> None:
@@ -66,6 +69,7 @@ class ElmoLstm(_EncoderBase):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.cell_size = cell_size
+        self.requires_grad = requires_grad
 
         forward_layers = []
         backward_layers = []
@@ -241,9 +245,9 @@ class ElmoLstm(_EncoderBase):
     def load_weights(self, weight_file: str) -> None:
         """
         Load the pre-trained weights from the file.
-
-        Note that this method also sets ``requires_grad=False`` to all class parameters.
         """
+        requires_grad = self.requires_grad
+
         with h5py.File(cached_path(weight_file), 'r') as fin:
             for i_layer, lstms in enumerate(
                     zip(self.forward_layers, self.backward_layers)
@@ -277,8 +281,8 @@ class ElmoLstm(_EncoderBase):
 
                     lstm.input_linearity.weight.data.copy_(torch.FloatTensor(input_weights))
                     lstm.state_linearity.weight.data.copy_(torch.FloatTensor(recurrent_weights))
-                    lstm.input_linearity.weight.requires_grad = False
-                    lstm.state_linearity.weight.requires_grad = False
+                    lstm.input_linearity.weight.requires_grad = requires_grad
+                    lstm.state_linearity.weight.requires_grad = requires_grad
 
                     # the bias weights
                     tf_bias = dataset['B'][...]
@@ -291,9 +295,9 @@ class ElmoLstm(_EncoderBase):
                     torch_bias[(2 * cell_size):(3 * cell_size)
                               ] = tf_bias[(1 * cell_size):(2 * cell_size)]
                     lstm.state_linearity.bias.data.copy_(torch.FloatTensor(torch_bias))
-                    lstm.state_linearity.bias.requires_grad = False
+                    lstm.state_linearity.bias.requires_grad = requires_grad
 
                     # the projection weights
                     proj_weights = numpy.transpose(dataset['W_P_0'][...])
                     lstm.state_projection.weight.data.copy_(torch.FloatTensor(proj_weights))
-                    lstm.state_projection.weight.requires_grad = False
+                    lstm.state_projection.weight.requires_grad = requires_grad
