@@ -168,10 +168,14 @@ class TestTrainer(AllenNlpTestCase):
             assert sorted(epochs) == [1, 3, 4, 5]
 
     def test_trainer_saves_models_at_specified_interval(self):
+        iterator = BasicIterator(batch_size=4)
+        iterator.index_with(self.vocab)
+
         trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances, num_epochs=2,
+                          iterator, self.instances, num_epochs=2,
                           serialization_dir=self.TEST_DIR,
                           model_save_interval=0.0001)
+
         trainer.train()
 
         # Now check the serialized files for models saved during the epoch.
@@ -199,8 +203,8 @@ class TestTrainer(AllenNlpTestCase):
                                   model_save_interval=0.0001)
         epoch, _ = restore_trainer._restore_checkpoint() # pylint: disable=protected-access
         assert epoch == 2
-        # Two batches per epoch.
-        assert restore_trainer._batch_num_total == 4 # pylint: disable=protected-access
+        # One batch per epoch.
+        assert restore_trainer._batch_num_total == 2 # pylint: disable=protected-access
 
 
 class TestSparseClipGrad(AllenNlpTestCase):
