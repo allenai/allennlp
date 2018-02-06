@@ -1,4 +1,4 @@
-from nltk.sem.logic import TRUTH_TYPE, EntityType, ComplexType, ANY_TYPE
+from nltk.sem.logic import TRUTH_TYPE, EntityType, ComplexType
 
 from allennlp.data.semparse.type_declarations.type_declaration import NamedBasicType
 
@@ -19,12 +19,13 @@ BOX_MEMBERSHIP_TYPE = ComplexType(BOX_TYPE, OBJECT_TYPE)
 COLOR_FUNCTION_TYPE = ComplexType(OBJECT_TYPE, COLOR_TYPE)
 SHAPE_FUNCTION_TYPE = ComplexType(OBJECT_TYPE, SHAPE_TYPE)
 
-BOX_COLOR_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, COLOR_TYPE),
-                                                          ComplexType(COLOR_TYPE, BOX_TYPE)))
-BOX_SHAPE_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, SHAPE_TYPE),
-                                                          ComplexType(SHAPE_TYPE, BOX_TYPE)))
-BOX_COUNT_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(ComplexType(BOX_TYPE, NUM_TYPE),
-                                                          ComplexType(NUM_TYPE, BOX_TYPE)))
+BOX_COLOR_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(COLOR_TYPE, BOX_TYPE))
+BOX_SHAPE_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(SHAPE_TYPE, BOX_TYPE))
+BOX_COUNT_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(NUM_TYPE, BOX_TYPE))
+# This box filter returns boxes where a specified attribute is same or different
+BOX_ATTRIBUTE_SAME_FILTER_TYPE = ComplexType(BOX_TYPE, BOX_TYPE)
+
+
 ASSERT_COLOR_TYPE = ComplexType(OBJECT_TYPE, ComplexType(COLOR_TYPE, TRUTH_TYPE))
 ASSERT_SHAPE_TYPE = ComplexType(OBJECT_TYPE, ComplexType(SHAPE_TYPE, TRUTH_TYPE))
 ASSERT_BOX_COUNT_TYPE = ComplexType(BOX_TYPE, ComplexType(NUM_TYPE, TRUTH_TYPE))
@@ -34,8 +35,8 @@ BOX_EXISTS_TYPE = ComplexType(BOX_TYPE, TRUTH_TYPE)
 OBJECT_EXISTS_TYPE = ComplexType(OBJECT_TYPE, TRUTH_TYPE)
 
 
-COMMON_NAME_MAPPING = {"lambda": "\\", "x": "X"}
-COMMON_TYPE_SIGNATURE = {"X": ANY_TYPE}
+COMMON_NAME_MAPPING = {}
+COMMON_TYPE_SIGNATURE = {}
 
 BASIC_TYPES = {NUM_TYPE, BOX_TYPE, OBJECT_TYPE, COLOR_TYPE, SHAPE_TYPE}
 
@@ -63,10 +64,12 @@ add_common_name_with_type("object_in_box", "I", BOX_MEMBERSHIP_TYPE)
 
 
 # Assert functions
-add_common_name_with_type("color_equals", "A0", ASSERT_COLOR_TYPE)
-add_common_name_with_type("color_not_equals", "A1", ASSERT_COLOR_TYPE)
-add_common_name_with_type("shape_equals", "A2", ASSERT_SHAPE_TYPE)
-add_common_name_with_type("shape_not_equals", "A3", ASSERT_SHAPE_TYPE)
+add_common_name_with_type("object_color_all_equals", "A0", ASSERT_COLOR_TYPE)
+add_common_name_with_type("object_color_any_equals", "A28", ASSERT_COLOR_TYPE)
+add_common_name_with_type("object_color_none_equals", "A1", ASSERT_COLOR_TYPE)
+add_common_name_with_type("object_shape_all_equals", "A2", ASSERT_SHAPE_TYPE)
+add_common_name_with_type("object_shape_any_equals", "A29", ASSERT_SHAPE_TYPE)
+add_common_name_with_type("object_shape_none_equals", "A3", ASSERT_SHAPE_TYPE)
 add_common_name_with_type("box_count_equals", "A4", ASSERT_BOX_COUNT_TYPE)
 add_common_name_with_type("box_count_not_equals", "A5", ASSERT_BOX_COUNT_TYPE)
 add_common_name_with_type("box_count_greater", "A6", ASSERT_BOX_COUNT_TYPE)
@@ -79,19 +82,52 @@ add_common_name_with_type("object_count_greater", "A12", ASSERT_OBJECT_COUNT_TYP
 add_common_name_with_type("object_count_greater_equals", "A13", ASSERT_OBJECT_COUNT_TYPE)
 add_common_name_with_type("object_count_lesser", "A14", ASSERT_OBJECT_COUNT_TYPE)
 add_common_name_with_type("object_count_lesser_equals", "A15", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_color_count_equals", "A16", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_color_count_not_equals", "A17", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_color_count_greater", "A18", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_color_count_greater_equals", "A19", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_color_count_lesser", "A20", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_color_count_lesser_equals", "A21", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_shape_count_equals", "A22", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_shape_count_not_equals", "A23", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_shape_count_greater", "A24", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_shape_count_greater_equals", "A25", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_shape_count_lesser", "A26", ASSERT_OBJECT_COUNT_TYPE)
+add_common_name_with_type("object_shape_count_lesser_equals", "A27", ASSERT_OBJECT_COUNT_TYPE)
+
+add_common_name_with_type("box_exists", "E0", BOX_EXISTS_TYPE)
+add_common_name_with_type("object_exists", "E1", OBJECT_EXISTS_TYPE)
 
 
 # Box filter functions
-add_common_name_with_type("filter_count_equals", "F0", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("filter_count_not_equals", "F1", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("filter_shape_equals", "F2", BOX_SHAPE_FILTER_TYPE)
-add_common_name_with_type("filter_shape_not_equals", "F3", BOX_SHAPE_FILTER_TYPE)
-add_common_name_with_type("filter_color_equals", "F4", BOX_COLOR_FILTER_TYPE)
-add_common_name_with_type("filter_color_not_equals", "F5", BOX_COLOR_FILTER_TYPE)
-add_common_name_with_type("filter_count_greater", "F6", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("filter_count_greater_equals", "F7", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("filter_count_lesser", "F8", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("filter_count_lesser_equals", "F9", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_count_equals", "F0", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_count_not_equals", "F1", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_shape_all_equals", "F2", BOX_SHAPE_FILTER_TYPE)
+add_common_name_with_type("member_shape_any_equals", "F26", BOX_SHAPE_FILTER_TYPE)
+add_common_name_with_type("member_shape_none_equals", "F3", BOX_SHAPE_FILTER_TYPE)
+add_common_name_with_type("member_color_all_equals", "F4", BOX_COLOR_FILTER_TYPE)
+add_common_name_with_type("member_color_any_equals", "F27", BOX_COLOR_FILTER_TYPE)
+add_common_name_with_type("member_color_none_equals", "F5", BOX_COLOR_FILTER_TYPE)
+add_common_name_with_type("member_count_greater", "F6", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_count_greater_equals", "F7", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_count_lesser", "F8", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_count_lesser_equals", "F9", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_color_count_equals", "F10", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_color_count_not_equals", "F11", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_color_count_greater", "F12", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_color_count_greater_equals", "F13", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_color_count_lesser", "F14", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_color_count_lesser_equals", "F15", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_shape_count_equals", "F16", BOX_COLOR_FILTER_TYPE)
+add_common_name_with_type("member_shape_count_not_equals", "F17", BOX_COLOR_FILTER_TYPE)
+add_common_name_with_type("member_shape_count_greater", "F18", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_shape_count_greater_equals", "F19", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_shape_count_lesser", "F20", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_shape_count_lesser_equals", "F21", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_shape_same", "F22", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
+add_common_name_with_type("member_color_same", "F23", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
+add_common_name_with_type("member_shape_different", "F24", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
+add_common_name_with_type("member_color_different", "F25", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
 
 
 # Object filter functions
@@ -109,6 +145,7 @@ add_common_name_with_type("touch_top", "T2", OBJECT_FILTER_TYPE)
 add_common_name_with_type("touch_bottom", "T3", OBJECT_FILTER_TYPE)
 add_common_name_with_type("touch_left", "T4", OBJECT_FILTER_TYPE)
 add_common_name_with_type("touch_right", "T5", OBJECT_FILTER_TYPE)
+add_common_name_with_type("touch_object", "T6", OBJECT_FILTER_TYPE)
 add_common_name_with_type("above", "L0", OBJECT_FILTER_TYPE)
 add_common_name_with_type("below", "L1", OBJECT_FILTER_TYPE)
 add_common_name_with_type("top", "L2", OBJECT_FILTER_TYPE)
@@ -116,9 +153,6 @@ add_common_name_with_type("bottom", "L3", OBJECT_FILTER_TYPE)
 add_common_name_with_type("small", "Z0", OBJECT_FILTER_TYPE)
 add_common_name_with_type("medium", "Z1", OBJECT_FILTER_TYPE)
 add_common_name_with_type("big", "Z2", OBJECT_FILTER_TYPE)
-
-add_common_name_with_type("box_exists", "E0", BOX_EXISTS_TYPE)
-add_common_name_with_type("object_exists", "E1", OBJECT_EXISTS_TYPE)
 
 add_common_name_with_type("negate_filter", "N", NEGATE_FILTER_TYPE)
 
