@@ -215,13 +215,7 @@ def trainItersElmo(encoder, decoder, output_lang, n_iters, sent_pairs, sent_pair
             evaluateRandomly(encoder, decoder, output_lang, sent_pairs, max_length, 3)
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
-            fh = open("results_run_002.txt", "a")
-            fh.write('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters), iter, iter / n_iters * 100,print_loss_avg))
-            fh.write('train accuracy: {} {}'.format(train_acc, train_template_acc))
-            fh.write('dev accuracy: {} {}'.format(dev_acc, dev_template_acc))
-            fh.close
-            print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
-                                         iter, iter / n_iters * 100, print_loss_avg))
+            print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters), iter, iter / n_iters * 100, print_loss_avg))
 
         if iter % plot_every == 0:
             plot_loss_avg = plot_loss_total / plot_every
