@@ -26,6 +26,20 @@ class ParsingError(Exception):
         return repr(self.message)
 
 
+class ExecutionError(Exception):
+    """
+    This exception gets raised when you're trying to execute a logical form that your executor does
+    not understand. This may be because your logical form contains an function with an invalid name
+    or a set of arguments whose types do not match those that the fuction expects.
+    """
+    def __init__(self, message):
+        super(ExecutionError, self).__init__()
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+
+
 class World:
     """
     Base class for defining a world in a new domain. This class defines a method to translate a

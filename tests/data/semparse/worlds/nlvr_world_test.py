@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import json
 
+from allennlp.data.semparse.worlds.world import ParsingError
 from allennlp.data.semparse.worlds.nlvr_world import NlvrWorld
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -28,6 +29,15 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         logical_form = "(box_exists (member_color_none_equals all_boxes color_blue))"
         # Should evaluate to False.
         assert not nlvr_world.execute(logical_form)
+
+    def test_logical_form_with_box_filter_within_object_filter_executes_correctly(self):
+        nlvr_world = self.worlds[2]
+        # Utterance is "There are atleast three blue items in boxes with blue items" and label
+        # is "True".
+        logical_form = "(object_count_greater_equals \
+                            (object_in_box (member_color_any_equals all_boxes color_blue)) 3)"
+        # Should evaluate to True.
+        assert nlvr_world.execute(logical_form)
 
     def test_logical_form_with_same_color_executes_correctly(self):
         nlvr_world = self.worlds[1]
@@ -101,7 +111,7 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
     def test_get_logical_form_fails_with_incomplete_action_sequence(self):
         nlvr_world = self.worlds[0]
         action_sequence = ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists']
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ParsingError):
             nlvr_world.get_logical_form(action_sequence)
 
     def test_get_logical_form_fails_with_action_sequence_in_wrong_order(self):
@@ -110,5 +120,5 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
                            'b -> [<c,b>, c]', '<c,b> -> [<b,<c,b>>, b]',
                            'b -> all_boxes', '<b,<c,b>> -> member_color_none_equals',
                            'c -> color_blue']
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ParsingError):
             nlvr_world.get_logical_form(action_sequence)

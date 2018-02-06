@@ -191,6 +191,8 @@ class NlvrDatasetReader(DatasetReader):
                 agenda.append(self._terminal_productions["bottom"])
         if " not " in sentence:
             agenda.append(self._terminal_productions["negate_filter"])
+        if " tower " in sentence or " contains " in sentence or " has " in sentence:
+            agenda.append(self._terminal_productions["all_boxes"])
         number_productions = self._get_number_productions(sentence)
         for production in number_productions:
             agenda.append(production)

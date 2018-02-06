@@ -5,15 +5,18 @@ which mainly contains an execution method and related helper methods.
 from collections import defaultdict
 import operator
 from typing import List, Dict, Set, Callable, TypeVar, Union
+import logging
 
 from nltk.sem.logic import Type
 from overrides import overrides
 
 from allennlp.common.util import JsonDict
 from allennlp.data.semparse import util as semparse_util
+from allennlp.data.semparse.worlds.world import ExecutionError
 from allennlp.data.semparse.type_declarations import nlvr_type_declaration as types
 from allennlp.data.semparse.worlds.world import World
 
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 AttributeType = TypeVar('AttributeType', str, int)  # pylint: disable=invalid-name
 
@@ -273,7 +276,7 @@ class NlvrWorld(World):
         # target.
         function_name_parts = sub_expression[0].split('_')
         entity_type = function_name_parts[0]
-        target_attribute: Union[str, int] = None
+        target_attribute: AttributeType = None
         if len(function_name_parts) == 2 and function_name_parts[1] == "exists":
             attribute_type = "count"
             comparison_op = "greater_equals"
@@ -315,11 +318,15 @@ class NlvrWorld(World):
 
         if comparison_op in ["all_equals", "any_equals", "none_equals"]:
             set_comparison = self._set_binary_operators[comparison_op]
-            assert returned_attribute is not None, "Invalid assertion function: %s" % sub_expression[0]
+            if returned_attribute is None:
+                logger.error("Invalid assertion function: %s", sub_expression[0])
+                raise ExecutionError("Invalid assertion function")
             return set_comparison(returned_attribute, target_attribute)
         else:
             number_comparison = self._number_operators[comparison_op]
-            assert returned_count is not None, "Invalid assertion function: %s" % sub_expression[0]
+            if returned_count is None:
+                logger.error("Invalid assertion function: %s", sub_expression[0])
+                raise ExecutionError("Invalid assertion function")
             return number_comparison(returned_count, target_attribute)
 
     def _execute_box_filter(self, sub_expression: Union[str, List]) -> Set[Box]:
@@ -381,7 +388,8 @@ class NlvrWorld(World):
         elif sub_expression == 'all_boxes' or sub_expression[0] == 'all_boxes':
             return self._boxes
         else:
-            raise RuntimeError("Invalid box filter expression: %s" % sub_expression)
+            logger.error("Invalid box filter expression: %s", sub_expression)
+            raise ExecutionError("Unknown box filter expression")
 
     def _execute_object_filter(self, sub_expression: Union[str, List]) -> Set[Object]:
         """
@@ -396,18 +404,30 @@ class NlvrWorld(World):
             original_filter_name = sub_expression[1]
             if isinstance(original_filter_name, list):
                 original_filter_name = original_filter_name[0]
-            original_filter = getattr(self, original_filter_name)
             initial_set = self._execute_object_filter(sub_expression[2])
-            return self.negate_filter(original_filter, initial_set)
+            try:
+                original_filter = getattr(self, original_filter_name)
+                return self.negate_filter(original_filter, initial_set)
+            except AttributeError:
+                logger.error("Function not found: %s", original_filter_name)
+                raise ExecutionError("Function not found")
         elif sub_expression == "all_objects" or sub_expression[0] == "all_objects":
             return self._objects
         elif isinstance(sub_expression[0], str) and len(sub_expression) == 2:
             # These are functions like black, square, same_color etc.
-            function = getattr(self, sub_expression[0])
             arguments = self._execute_object_filter(sub_expression[1])
-            return function(arguments)
+            try:
+                function = getattr(self, sub_expression[0])
+                return function(arguments)
+            except AttributeError:
+                logger.error("Function not found: %s", sub_expression[0])
+                raise ExecutionError("Function not found")
+        elif isinstance(sub_expression, list) and sub_expression[0].startswith("member_") or \
+                sub_expression == 'all_boxes' or sub_expression[0] == 'all_boxes':
+            return self._execute_box_filter(sub_expression)
         else:
-            raise RuntimeError("Invalid object filter expression: %s" % sub_expression)
+            logger.error("Invalid object filter expression: %s", sub_expression)
+            raise ExecutionError("Invalid object filter expression")
 
     @staticmethod
     def _execute_constant(sub_expression: str):
@@ -421,7 +441,8 @@ class NlvrWorld(World):
         elif sub_expression.startswith('shape_'):
             return sub_expression.replace('shape_', '')
         else:
-            raise RuntimeError("Invalid constant: %s" % sub_expression)
+            logger.error("Invalid constant: %s", sub_expression)
+            raise ExecutionError("Invalid constant")
 
     ## Attribute functions
     @staticmethod
@@ -443,8 +464,11 @@ class NlvrWorld(World):
         return len(entities_set)
 
     @staticmethod
-    def object_in_box(box: Box) -> Set[Object]:
-        return box.objects
+    def object_in_box(box: Set[Box]) -> Set[Object]:
+        return_set: Set[Object] = set()
+        for box_ in box:
+            return_set.update(box_.objects)
+        return return_set
 
     @staticmethod
     def _filter_boxes(set_to_filter: Set[Box],
