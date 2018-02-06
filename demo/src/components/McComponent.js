@@ -14,12 +14,12 @@ import ModelIntro from './ModelIntro'
 
 const mcExamples = [
     {
-      passage: "A reusable launch system (RLS, or reusable launch vehicle, RLV) is a launch system which is capable of launching a payload into space more than once.",
-      question: "What can a launch system launch?",
+      passage: "A reusable launch system (RLS, or reusable launch vehicle, RLV) is a launch system which is capable of launching a payload into space more than once. This contrasts with expendable launch systems, where each launch vehicle is launched once and then discarded. No completely reusable orbital launch system has ever been created. Two partially reusable launch systems were developed, the Space Shuttle and Falcon 9. The Space Shuttle was partially reusable: the orbiter (which included the Space Shuttle main engines and the Orbital Maneuvering System engines), and the two solid rocket boosters were reused after several months of refitting work for each launch. The external tank was discarded after each flight.",
+      question: "How many partially reusable launch systems were developed?",
     },
     {
-      passage: "Robotics is an interdisciplinary branch of engineering?",
-      question: "Robotics is a branch of what?",
+      passage: "Robotics is an interdisciplinary branch of engineering and science that includes mechanical engineering, electrical engineering, computer science, and others. Robotics deals with the design, construction, operation, and use of robots, as well as computer systems for their control, sensory feedback, and information processing. These technologies are used to develop machines that can substitute for humans. Robots can be used in any situation and for any purpose, but today many are used in dangerous environments (including bomb detection and de-activation), manufacturing processes, or where humans cannot survive. Robots can take on any form but some are made to resemble humans in appearance. This is said to help in the acceptance of a robot in certain replicative behaviors usually performed by people. Such robots attempt to replicate walking, lifting, speech, cognition, and basically anything a human can do.",
+      question: "What do robots that resemble humans attempt to do?",
     },
     {
       passage: "The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called \"the Matrix\", created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer \"Neo\" learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the \"dream world.\"",
@@ -136,7 +136,7 @@ render() {
 
 class McOutput extends React.Component {
     render() {
-      const { passage, answer, pxp_matrix, pxq_matrix, pxp_by_head, question_tokens, passage_tokens } = this.props;
+      const { passage, answer, attention, question_tokens, passage_tokens } = this.props;
 
       const start = passage.indexOf(answer);
       const head = passage.slice(0, start);
@@ -160,15 +160,13 @@ class McOutput extends React.Component {
 
           <div className="form__field">
             <Collapsible trigger="Model internals (beta)">
-              <Collapsible trigger="P x P matrix">
+              <Collapsible trigger="Passage to Question attention">
+                <span>
+                  For every passage word, the model computes an attention over the question words.
+                  This heatmap shows that attention, which is normalized for every row in the matrix.
+                </span>
                 <div className="heatmap">
-                  <HeatMap xLabels={passage_tokens} yLabels={passage_tokens} data={pxp_matrix} />
-                </div>
-              </Collapsible>
-
-              <Collapsible trigger="P x Q matrix">
-                <div className="heatmap">
-                  <HeatMap xLabels={question_tokens} yLabels={passage_tokens} data={pxq_matrix} />
+                  <HeatMap xLabels={question_tokens} yLabels={passage_tokens} data={attention} />
                 </div>
               </Collapsible>
             </Collapsible>
@@ -239,9 +237,7 @@ class _McComponent extends React.Component {
       const passage = requestData && requestData.passage;
       const question = requestData && requestData.question;
       const answer = responseData && responseData.best_span_str;
-      const pxp_matrix = responseData && responseData.pxp_matrix;
-      const pxq_matrix = responseData && responseData.pxq_matrix;
-      const pxp_by_head = responseData && responseData.pxp_by_head;
+      const attention = responseData && responseData.passage_question_attention;
       const question_tokens = responseData && responseData.question_tokens;
       const passage_tokens = responseData && responseData.passage_tokens;
 
@@ -256,9 +252,7 @@ class _McComponent extends React.Component {
           <PaneRight outputState={this.state.outputState}>
             <McOutput passage={passage}
                       answer={answer}
-                      pxp_matrix={pxp_matrix}
-                      pxq_matrix={pxq_matrix}
-                      pxp_by_head={pxp_by_head}
+                      attention={attention}
                       question_tokens={question_tokens}
                       passage_tokens={passage_tokens}/>
           </PaneRight>
