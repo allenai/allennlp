@@ -167,5 +167,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     @classmethod
     def from_params(cls, params: Params) -> 'PennTreeBankConstituencySpanDatasetReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
-        return PennTreeBankConstituencySpanDatasetReader(token_indexers=token_indexers)
+        return PennTreeBankConstituencySpanDatasetReader(token_indexers=token_indexers,
+                                                         lazy=lazy)

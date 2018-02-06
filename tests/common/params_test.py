@@ -29,6 +29,16 @@ class TestParams(AllenNlpTestCase):
         assert model_params.pop("type") == "BAR"
         assert model_params["text_field_embedder.tokens.type"] == "BAZ"
 
+    def test_as_flat_dict(self):
+        params = Params({
+                'a': 10,
+                'b': {
+                        'c': 20,
+                        'd': 'stuff'
+                }
+        }).as_flat_dict()
+
+        assert params == {'a': 10, 'b.c': 20, 'b.d': 'stuff'}
 
     def test_add_file_to_archive(self):
         # Some nested classes just to exercise the ``from_params``
