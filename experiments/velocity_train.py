@@ -13,7 +13,7 @@ def main(argv):
     print("*** initializing data ***")
     output_lang, pairs, pairs_dev, max_length = initializeData('data/mturk.train.txt', 'data/mturk.dev.txt', max_input_length = 101)
       
-    hidden_size = 1029
+    hidden_size = 1028
     if use_cuda:
         device = 0
     else:
@@ -28,11 +28,11 @@ def main(argv):
         encoder1 = encoder1.cuda()
         attn_decoder1 = attn_decoder1.cuda()
 
-    trainItersElmo(encoder1, attn_decoder1, output_lang, 15000, pairs, pairs_dev, max_length, print_every=100)
+    trainItersElmo(encoder1, attn_decoder1, output_lang, 30000, pairs, pairs_dev, max_length, print_every=100)
     # experimental
     #    trainItersElmo(encoder1, attn_decoder1, output_lang, 750, 200, pairs, pairs_dev, max_length, print_every=1, save_every=10)
     print("*** done training ***")
-    print(validate(encoder1, attn_decoder1, output_lang, pairs_dev, max_length, 4813))
+    print(validate(encoder1, attn_decoder1, output_lang, pairs_dev, max_length, 460))
     torch.save(encoder1, 'encoder.final.pt')
     torch.save(attn_decoder1, 'decoder.final.pt')
     

@@ -191,6 +191,7 @@ def validate(encoder, decoder, output_lang, sent_pairs, max_length, num_to_eval=
 
 def validateRandomSubset(encoder, decoder, output_lang, sent_pairs, max_length, num_to_eval=100):
     num_correct = 0
+    template_correct = 0
     for i in range(num_to_eval):
         pair = random.choice(sent_pairs)
         try:
@@ -198,11 +199,14 @@ def validateRandomSubset(encoder, decoder, output_lang, sent_pairs, max_length, 
             output_sentence = ' '.join(output_words[:-1])
             if pair[1] == output_sentence:
                 num_correct += 1
+            if pair[1][0] == output_sentence[0]:
+                template_correct += 1
         except KeyError:
             pass
             #print('token not found')
     accuracy = float(num_correct)/num_to_eval
-    return accuracy
+    template_accuracy = float(template_correct)/num_to_eval
+    return (accuracy, template_accuracy)
 
 def evaluateRandomly(encoder, decoder, output_lang, sent_pairs, max_length, n=10):
     for i in range(n):
