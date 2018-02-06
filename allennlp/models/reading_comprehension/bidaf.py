@@ -249,7 +249,6 @@ class BidirectionalAttentionFlow(Model):
 
         output_dict = {
                 "passage_question_attention": passage_question_attention,
-                "question_passage_attention": question_passage_attention,
                 "span_start_logits": span_start_logits,
                 "span_start_probs": span_start_probs,
                 "span_end_logits": span_end_logits,
