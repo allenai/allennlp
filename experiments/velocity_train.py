@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import sys
 import torch
 sys.path.append('./python')
