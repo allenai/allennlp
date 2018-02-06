@@ -45,20 +45,20 @@ class Elmo(Subcommand):
         subparser.add_argument('input_file', type=argparse.FileType('r'), help='path to input file')
         subparser.add_argument('output_file', type=str, help='path to output file')
 
-        subparser.add_argument('--vocab_path', type=str, help='A path to a vocabulary file to generate ')
+        subparser.add_argument('--vocab-path', type=str, help='A path to a vocabulary file to generate ')
         subparser.add_argument(
-            '--options_file',
+            '--options-file',
             type=str,
             default=DEFAULT_OPTIONS_FILE,
             help='The path to the ELMo options file.')
         subparser.add_argument(
-            '--weight_file',
+            '--weight-file',
             type=str,
             default=DEFAULT_WEIGHT_FILE,
             help='The path to the ELMo weight file.')
-        subparser.add_argument('--batch_size', type=int, default=64, help='The batch size to use.')
-        subparser.add_argument('--cuda_device', type=int, default=-1, help='The cuda_device to run on.')
-        subparser.add_argument('--use_sentence_key', default=False, action='store_true')
+        subparser.add_argument('--batch-size', type=int, default=64, help='The batch size to use.')
+        subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
+        subparser.add_argument('--use-sentence-key', default=False, action='store_true')
 
         subparser.set_defaults(func=elmo_command)
 
