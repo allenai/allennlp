@@ -1,26 +1,29 @@
-# Laziness
+# Laziness in AllenNLP
 
 By default, a `DatasetReader` returns instances as a `list`
-containing every instance in the dataset.
-This causes problems when you want to use
-a really large dataset that doesn't fit into memory. In this case
-you'll need your `DatasetReader` to be "lazy"; that is,
+containing every instance in the dataset. There are several
+reasons why you might not want this behavior:
+
+* your dataset is too large to fit into memory
+* you want each iteration through the dataset to do some sort of sampling
+* you want to start training on your data immediately
+  rather than wait for the whole dataset to be processed and indexed.
+  (In this case you'd want to first use the
+   [make-vocab](https://github.com/allenai/allennlp/blob/master/allennlp/commands/make_vocab.py)
+   command to create your vocabulary so that training really does start immediately.)
+
+In these cases
+you'll want your `DatasetReader` to be "lazy"; that is,
 to create and yield up instances as needed rather than all at once.
 
 This tutorial will show both you how to create `DatasetReader`s
 that allow this lazy behavior, and how to handle this laziness
 when training a model.
 
-## TLDR, for those who don't care about the details
-
-* `YourDatasetReader` subclass should have a `lazy` parameter in its constructor
-  and `from_params` method, and pass that value to its superclass constructor
-* `YourDatasetReader._read()` should return a generator, not a list
-* specify `'lazy': true` in the `dataset_reader` section of your experiment config
-* specify `'max_instances_in_memory'` as large as you can in the `iterator` section
-  of your experiment config
-
-If you _do_ care about the details, read on.
+If you're not interested in the details,
+there's an extremely brief [How-To](../how_to/laziness.md)
+that just tells you the steps to follow.
+But really you should be interested in the details.
 
 ## You specify laziness in the `DatasetReader` constructor
 
@@ -92,7 +95,7 @@ after the initial call to `.read()`.
 
 The more interesting case is when the dataset reader was instantiated with `lazy=True`.
 In that case we return a `_LazyInstances` initialized with a lambda function
-that calls `_read()`. `_LazyInstances` is just a simple class wrapper to produce
+that calls `_read()`. `_LazyInstances` is just a simple wrapper to produce
 lazy iterables (again, I stripped it down to just its essence):
 
 ```python
@@ -121,10 +124,6 @@ for epoch in range(10):
 Then each epoch's `for instance in instances` results in a *new* call
 to `MyDatasetReader._read()`, and your instances will be read from disk
 10 times.
-
-In this case, you should make sure that your `_read()` method
-doesn't itself load the whole dataset into memory; otherwise
-it defeats the point of using laziness.
 
 ## Laziness in `YourDatasetReader._read()`
 
@@ -229,5 +228,4 @@ which isn't particularly helpful.
 The other option here is `instances_per_epoch`. By default, each epoch is a single
 pass through the dataset. However, if you had millions of instances,
 you might want each epoch to consist of a fraction of the dataset,
-in which case you can specify the value here. But most likely you don't need
-to change this one.
+in which case you can specify the value here.
