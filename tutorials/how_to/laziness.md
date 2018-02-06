@@ -22,7 +22,7 @@ and `from_params` method, and pass that value to its superclass constructor.
 
 `YourDatasetReader._read()` should return a generator, not a list.
 
-([Detailed explanation](../getting_started/laziness.md##laziness-in-yourdatasetreader_read))
+([Detailed explanation](../getting_started/laziness.md#laziness-in-yourdatasetreader_read))
 
 ## In the `dataset_reader` section of your experiment configuration
 
