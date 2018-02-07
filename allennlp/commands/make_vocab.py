@@ -7,12 +7,12 @@ each training run.
 
    $ python -m allennlp.run make-vocab --help
 
-    usage: python -m allennlp.run make-vocab [-h] [-o OVERRIDES] param_path
+    usage: python -m allennlp.run make-vocab [-h] [-o OVERRIDES] param-path
 
     Create a vocabulary from the specified dataset.
 
     positional arguments:
-    param_path            path to parameter file describing the model and its
+    param-path            path to parameter file describing the model and its
                           inputs
 
     optional arguments:
@@ -41,7 +41,7 @@ class MakeVocab(Subcommand):
         description = '''Create a vocabulary from the specified dataset.'''
         subparser = parser.add_parser(
                 name, description=description, help='Create a vocabulary')
-        subparser.add_argument('param_path',
+        subparser.add_argument('param-path',
                                type=str,
                                help='path to parameter file describing the model and its inputs')
 
