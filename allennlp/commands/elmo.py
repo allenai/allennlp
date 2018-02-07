@@ -15,13 +15,15 @@ used in the output file.
 """
 
 import argparse
-from typing import IO
+from typing import Dict, IO, List, Iterable, NamedTuple
 
 import h5py
 import logging
+import numpy
 import torch
 
 from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import lazy_groups_of
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
@@ -35,12 +37,13 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 DEFAULT_OPTIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
 DEFAULT_WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 
+
 class Elmo(Subcommand):
 
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = '''Create word vectors using ELMo.'''
         subparser = parser.add_parser(
-                name, description=description, help='Use a trained model to make predictions.')
+            name, description=description, help='Use a trained model to make predictions.')
 
         subparser.add_argument('input_file', type=argparse.FileType('r'), help='path to input file')
         subparser.add_argument('output_file', type=str, help='path to output file')
@@ -65,103 +68,122 @@ class Elmo(Subcommand):
         return subparser
 
 
-def batch_to_ids(indexer, batch):
-    """
-    Given a batch (as list of tokenized sentences), return a batch
-    of padded character ids.
-    """
-    instances = []
-    for sentence in batch:
-        tokens = [Token(token) for token in sentence]
-        field = TextField(tokens, {'character_ids': indexer})
-        instance = Instance({"elmo": field})
-        instances.append(instance)
+class ElmoEmbedder():
+    def __init__(self,
+                 options_file: str = DEFAULT_OPTIONS_FILE,
+                 weight_file: str = DEFAULT_WEIGHT_FILE,
+                 cuda_device: int = -1) -> None:
+        self.indexer = ELMoTokenCharactersIndexer()
 
-    dataset = Batch(instances)
-    vocab = Vocabulary()
-    dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()['elmo']['character_ids']
+        logger.info("Initializing ELMo.")
+        self.elmo_bilm = _ElmoBiLm(options_file, weight_file)
+        if cuda_device >= 0:
+            self.elmo_bilm = self.elmo_bilm.cuda(cuda_device=cuda_device)
 
+        self.cuda_device = cuda_device
 
-def batch_to_embeddings(indexer, batch, elmo_bilm, cuda_device):
-    # returns (batch_size, 3, num_times, 1024) embeddings and (batch_size, num_times) mask
-    character_ids = batch_to_ids(indexer, batch)
-    if cuda_device >= 0:
-        character_ids = character_ids.cuda(cuda_device=cuda_device)
+    def batch_to_ids(self, batch: List[List[str]]) -> torch.Tensor:
+        """
+        :param batch: a list of tokenized sentences
+        :return: a batch of padded character ids
+        """
+        instances = []
+        for sentence in batch:
+            tokens = [Token(token) for token in sentence]
+            field = TextField(tokens,
+                              {'character_ids': self.indexer})
+            instance = Instance({"elmo": field})
+            instances.append(instance)
 
-    bilm_output = elmo_bilm(character_ids)
-    layer_activations = bilm_output['activations']
-    mask_with_bos_eos = bilm_output['mask']
+        dataset = Batch(instances)
+        vocab = Vocabulary()
+        dataset.index_instances(vocab)
+        return dataset.as_tensor_dict()['elmo']['character_ids']
 
-    without_bos_eos = [remove_sentence_boundaries(layer, mask_with_bos_eos)
-            for layer in layer_activations]
-    # without_bos_eos is a 3 element list of (batch_size, num_times, dim) arrays
-    activations = torch.cat([ele[0].unsqueeze(1) for ele in without_bos_eos], dim=1)
-    mask = without_bos_eos[0][1]
+    def batch_to_embeddings(self, batch: List[List[str]]) -> (torch.Tensor, torch.Tensor):
+        """
+        :param batch: a list of tokenized sentences
+        :return: a tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and the
+        second a mask (batch_size, num_timesteps)
+        """
+        character_ids = self.batch_to_ids(batch)
+        if self.cuda_device >= 0:
+            character_ids = character_ids.cuda(cuda_device=self.cuda_device)
 
-    return activations, mask
+        bilm_output = self.elmo_bilm(character_ids)
+        layer_activations = bilm_output['activations']
+        mask_with_bos_eos = bilm_output['mask']
 
+        without_bos_eos = [remove_sentence_boundaries(layer, mask_with_bos_eos)
+                           for layer in layer_activations]
+        # without_bos_eos is a 3 element list of (batch_size, num_times, dim) arrays
+        activations = torch.cat([ele[0].unsqueeze(1) for ele in without_bos_eos], dim=1)
+        mask = without_bos_eos[0][1]
 
-def write_batch(indexer, batch, keys, elmo_bilm, cuda_device, fout):
-    embeddings, mask = batch_to_embeddings(indexer, batch, elmo_bilm, cuda_device)
-    for i, key in enumerate(keys):
-        length = int(mask[i, :].sum())
-        sentence_embeds = embeddings[i, :, :length, :].data.cpu().numpy()
+        return activations, mask
 
-        ds = fout.create_dataset(key,
-                sentence_embeds.shape, dtype='float32',
-                data=sentence_embeds
-        )
+    def embed_sentence(self, sentence: List[str]) -> torch.Tensor:
+        """
+        :param sentence: a tokenized sentence
+        :return: a tensor containing the ELMo vectors
+        """
+        return self.embed_batch([sentence])[0]
+
+    def embed_batch(self, batch: List[List[str]]) -> List[torch.Tensor]:
+        """
+        :param batch: a list of tokenized sentences
+        :return: a list of tensors, each representing the ELMo vectors for the input sentence at the same index
+        """
+        elmo_embeddings = []
+
+        embeddings, mask = self.batch_to_embeddings(batch)
+        for i, s in enumerate(batch):
+            length = int(mask[i, :].sum())
+            sentence_embeds = embeddings[i, :, :length, :].data.cpu().numpy()
+            elmo_embeddings.append(sentence_embeds)
+
+        return elmo_embeddings
+
+    def embed_sentences(self, sentences: Iterable[List[str]], batch_size: int) -> Iterable[torch.Tensor]:
+        """
+        :param sentences: an iterable of tokenized sentences
+        :param batch_size: the number of sentences ELMo should process at once
+        :return: a list of tensors, each representing the ELMo vectors for the input sentence at the same index
+        """
+        for batch in lazy_groups_of(iter(sentences), batch_size):
+            yield from self.embed_batch(batch)
+
+    def embed_file(self,
+                   input_file: IO,
+                   output_file_path: str,
+                   batch_size: int,
+                   use_sentence_key: bool = False):
+
+        # Tokenizes the sentences.
+        sentences = [line.strip().split() for line in input_file]
+        if use_sentence_key:
+            # Uses the first token in each sentence as the key.
+            keys, sentences = zip(*[(tokens[0], tokens[1:]) for tokens in sentences])
+            embedded_sentences = zip(keys, self.embed_sentences(sentences, batch_size))
+        else:
+            # Uses the index as the key
+            embedded_sentences = enumerate(self.embed_sentences(sentences, batch_size))
+
+        logger.info("Processing sentences.")
+        with h5py.File(output_file_path, 'w') as fout:
+            for key, embeddings in embedded_sentences:
+                fout.create_dataset(
+                    str(key),
+                    embeddings.shape, dtype='float32',
+                    data=embeddings
+                )
+        input_file.close()
 
 
 def elmo_command(args):
-    elmo(args.options_file,
-    args.weight_file,
-    args.input_file,
-    args.output_file,
-    args.batch_size,
-    args.cuda_device,
-    args.use_sentence_key)
-
-
-def elmo(options_file: str,
-         weight_file: str,
-         input_file: IO,
-         output_file_path: str,
-         batch_size: int,
-         cuda_device: int,
-         use_sentence_key: bool = False):
-
-    logger.info("Initializing ELMo.")
-    elmo_bilm = _ElmoBiLm(options_file, weight_file)
-    indexer = ELMoTokenCharactersIndexer()
-    if cuda_device >= 0:
-        elmo_bilm.cuda(cuda_device=cuda_device)
-
-    logger.info("Processing sentences.")
-    with h5py.File(output_file_path, 'w') as fout:
-        batch = []
-        keys = []
-        line_no = 0
-
-        for line in Tqdm.tqdm(input_file):
-            tokens = line.strip().split()
-
-            if use_sentence_key:
-                keys.append(tokens[0])
-                batch.append(tokens[1:])
-            else:
-                keys.append(str(line_no))
-                batch.append(tokens)
-            line_no += 1
-
-            if len(batch) >= batch_size:
-                # run biLM and save to file
-                write_batch(indexer, batch, keys, elmo_bilm, cuda_device, fout)
-                batch = []
-                keys = []
-
-        if len(batch) > 0:
-            write_batch(indexer, batch, keys, elmo_bilm, cuda_device, fout)
-
-    input_file.close()
+    elmo_embedder = ElmoEmbedder(args.options_file, args.weight_file, args.cuda_device)
+    elmo_embedder.embed_file(
+        args.input_file,
+        args.output_file,
+        args.batch_size,
+        args.use_sentence_key)
