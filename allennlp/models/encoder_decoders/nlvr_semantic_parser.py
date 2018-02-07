@@ -14,7 +14,7 @@ from allennlp.common.checks import check_dimensions_match
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.type_declarations import GrammarState
-from allennlp.data.semparse.worlds.world import ParsingError
+from allennlp.data.semparse.worlds.world import ParsingError, ExecutionError
 from allennlp.data.semparse.worlds import NlvrWorld
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
@@ -175,7 +175,7 @@ class NlvrSemanticParser(Model):
             denotation = world.execute(logical_form)
             denotation_is_correct = str(denotation).lower() == label.lower()
             return True, denotation_is_correct
-        except ParsingError:
+        except (ParsingError, ExecutionError):
             # TODO (pradeep): Fix the type declaration to make this try-except unnecessary.
             return False, False
 

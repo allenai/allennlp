@@ -436,6 +436,11 @@ class NlvrWorld(World):
         """
         Acceptable constants are numbers or strings starting with `shape_` or `color_`
         """
+        # TODO(pradeep): Let this method call other methods to allow functions that evaluate to
+        # constants as well?
+        if not isinstance(sub_expression, str):
+            logger.error("Invalid constant: %s", sub_expression)
+            raise ExecutionError("Invalid constant")
         if str.isdigit(sub_expression):
             return int(sub_expression)
         elif sub_expression.startswith('color_'):
