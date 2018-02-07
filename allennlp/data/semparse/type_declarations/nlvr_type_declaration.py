@@ -16,8 +16,6 @@ OBJECT_FILTER_TYPE = ComplexType(OBJECT_TYPE, OBJECT_TYPE)
 NEGATE_FILTER_TYPE = ComplexType(ComplexType(OBJECT_TYPE, OBJECT_TYPE),
                                  ComplexType(OBJECT_TYPE, OBJECT_TYPE))
 BOX_MEMBERSHIP_TYPE = ComplexType(BOX_TYPE, OBJECT_TYPE)
-COLOR_FUNCTION_TYPE = ComplexType(OBJECT_TYPE, COLOR_TYPE)
-SHAPE_FUNCTION_TYPE = ComplexType(OBJECT_TYPE, SHAPE_TYPE)
 
 BOX_COLOR_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(COLOR_TYPE, BOX_TYPE))
 BOX_SHAPE_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(SHAPE_TYPE, BOX_TYPE))
@@ -57,9 +55,7 @@ add_common_name_with_type("shape_square", "S1", SHAPE_TYPE)
 add_common_name_with_type("shape_circle", "S2", SHAPE_TYPE)
 
 
-# Attribute functions
-add_common_name_with_type("color", "C", COLOR_FUNCTION_TYPE)
-add_common_name_with_type("shape", "S", SHAPE_FUNCTION_TYPE)
+# Attribute function
 add_common_name_with_type("object_in_box", "I", BOX_MEMBERSHIP_TYPE)
 
 
@@ -118,8 +114,8 @@ add_common_name_with_type("member_color_count_greater", "F12", BOX_COUNT_FILTER_
 add_common_name_with_type("member_color_count_greater_equals", "F13", BOX_COUNT_FILTER_TYPE)
 add_common_name_with_type("member_color_count_lesser", "F14", BOX_COUNT_FILTER_TYPE)
 add_common_name_with_type("member_color_count_lesser_equals", "F15", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_shape_count_equals", "F16", BOX_COLOR_FILTER_TYPE)
-add_common_name_with_type("member_shape_count_not_equals", "F17", BOX_COLOR_FILTER_TYPE)
+add_common_name_with_type("member_shape_count_equals", "F16", BOX_COUNT_FILTER_TYPE)
+add_common_name_with_type("member_shape_count_not_equals", "F17", BOX_COUNT_FILTER_TYPE)
 add_common_name_with_type("member_shape_count_greater", "F18", BOX_COUNT_FILTER_TYPE)
 add_common_name_with_type("member_shape_count_greater_equals", "F19", BOX_COUNT_FILTER_TYPE)
 add_common_name_with_type("member_shape_count_lesser", "F20", BOX_COUNT_FILTER_TYPE)

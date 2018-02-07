@@ -156,6 +156,8 @@ class NlvrWorld(World):
 
     @staticmethod
     def _all_equals(input_set: Set[str], target_value) -> bool:
+        if not input_set:
+            return False
         return all([x == target_value for x in input_set])
 
     @staticmethod
@@ -396,15 +398,13 @@ class NlvrWorld(World):
         Object filtering functions should either be a string referring to all objects, or list which
         executes to a filtering operation.
         The elements should evaluate to one of the following:
-            object_filtering_function(object_set)
-            negate_filter(object_filtering_function, object_set)
+            (object_filtering_function object_set)
+            ((negate_filter object_filtering_function) object_set)
             all_objects
         """
-        if sub_expression[0] == "negate_filter":
-            original_filter_name = sub_expression[1]
-            if isinstance(original_filter_name, list):
-                original_filter_name = original_filter_name[0]
-            initial_set = self._execute_object_filter(sub_expression[2])
+        if sub_expression[0][0] == "negate_filter":
+            original_filter_name = sub_expression[0][1]
+            initial_set = self._execute_object_filter(sub_expression[1])
             try:
                 original_filter = getattr(self, original_filter_name)
                 return self.negate_filter(original_filter, initial_set)
@@ -424,6 +424,9 @@ class NlvrWorld(World):
             arguments = sub_expression[1]
             if isinstance(arguments, list) and arguments[0].startswith("member_") or \
                 arguments == 'all_boxes' or arguments[0] == 'all_boxes':
+                if sub_expression[0] != "object_in_box":
+                    logger.error("Invalid object filter expression: %s", sub_expression)
+                    raise ExecutionError("Invalid object filter expression")
                 return function(self._execute_box_filter(arguments))
             else:
                 return function(self._execute_object_filter(arguments))
@@ -436,8 +439,6 @@ class NlvrWorld(World):
         """
         Acceptable constants are numbers or strings starting with `shape_` or `color_`
         """
-        # TODO(pradeep): Let this method call other methods to allow functions that evaluate to
-        # constants as well?
         if not isinstance(sub_expression, str):
             logger.error("Invalid constant: %s", sub_expression)
             raise ExecutionError("Invalid constant")
@@ -602,10 +603,15 @@ class NlvrWorld(World):
         """
         Returns true iff the objects touch each other.
         """
-        return object1.x_loc + object1.size == object2.x_loc or \
-               object1.y_loc + object1.size == object2.y_loc or \
-               object2.x_loc + object2.size == object1.x_loc or \
-               object2.y_loc + object2.size == object1.y_loc
+        in_vertical_range = object1.y_loc <= object2.y_loc + object2.size and \
+                            object1.y_loc + object1.size >= object2.y_loc
+        in_horizantal_range = object1.x_loc <= object2.x_loc + object2.size and \
+                            object1.x_loc + object1.size >= object2.x_loc
+        touch_side = object1.x_loc + object1.size == object2.x_loc or \
+                     object2.x_loc + object2.size == object1.x_loc
+        touch_top_or_bottom = object1.y_loc + object1.size == object2.y_loc or \
+                              object2.y_loc + object2.size == object1.y_loc
+        return (in_vertical_range and touch_side) or (in_horizantal_range and touch_top_or_bottom)
 
     def top(self, objects: Set[Object]) -> Set[Object]:
         """
@@ -616,7 +622,7 @@ class NlvrWorld(World):
         return_set: Set[Object] = set()
         for _, box_objects in objects_per_box.items():
             max_y_loc = max([obj.y_loc for obj in box_objects])
-            return_set.union(set([obj for obj in box_objects if obj.y_loc == max_y_loc]))
+            return_set.update(set([obj for obj in box_objects if obj.y_loc == max_y_loc]))
         return return_set
 
     def bottom(self, objects: Set[Object]) -> Set[Object]:
@@ -628,7 +634,7 @@ class NlvrWorld(World):
         return_set: Set[Object] = set()
         for _, box_objects in objects_per_box.items():
             min_y_loc = min([obj.y_loc for obj in box_objects])
-            return_set.union(set([obj for obj in box_objects if obj.y_loc == min_y_loc]))
+            return_set.update(set([obj for obj in box_objects if obj.y_loc == min_y_loc]))
         return return_set
 
     def above(self, objects: Set[Object]) -> Set[Object]:
