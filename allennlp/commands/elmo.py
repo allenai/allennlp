@@ -128,16 +128,16 @@ class ElmoEmbedder():
     def batch_to_ids(self, batch: List[List[str]]) -> torch.Tensor:
         """
         Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
-        (len(batch), max sentence length, max word length)
+        (len(batch), max sentence length, max word length).
 
         Parameters
         ----------
         batch : ``List[List[str]]``, required
-            a list of tokenized sentences
+            A list of tokenized sentences.
 
         Returns
         -------
-            a tensor of padded character ids
+            A tensor of padded character ids.
         """
         instances = []
         for sentence in batch:
@@ -157,12 +157,12 @@ class ElmoEmbedder():
         Parameters
         ----------
         batch : ``List[List[str]]``, required
-            a list of tokenized sentences
+            A list of tokenized sentences.
 
         Returns
         -------
-            a tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
-        the second a mask (batch_size, num_timesteps)
+            A tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
+        the second a mask (batch_size, num_timesteps).
         """
         character_ids = self.batch_to_ids(batch)
         if self.cuda_device >= 0:
@@ -172,7 +172,7 @@ class ElmoEmbedder():
         layer_activations = bilm_output['activations']
         mask_with_bos_eos = bilm_output['mask']
 
-        # without_bos_eos is a 3 element list of pairs of (batch_size, num_timesteps, dim) tensors
+        # without_bos_eos is a 3 element list of pairs of (batch_size, num_timesteps, dim) tensors.
         without_bos_eos = [remove_sentence_boundaries(layer, mask_with_bos_eos)
                            for layer in layer_activations]
         # Converts a list of pairs (activation, mask) tensors to a single tensor of activations.
@@ -189,11 +189,11 @@ class ElmoEmbedder():
         Parameters
         ----------
         sentence : ``List[str]``, required
-            a tokenized sentence
+            A tokenized sentence.
 
         Returns
         -------
-        a tensor containing the ELMo vectors
+        A tensor containing the ELMo vectors.
         """
 
         return self.embed_batch([sentence])[0]
@@ -205,11 +205,11 @@ class ElmoEmbedder():
         Parameters
         ----------
         batch : ``List[List[str]]``, required
-            a list of tokenized sentences
+            A list of tokenized sentences.
 
         Returns
         -------
-            a list of tensors, each representing the ELMo vectors for the input sentence at the same index
+            A list of tensors, each representing the ELMo vectors for the input sentence at the same index.
         """
         elmo_embeddings = []
 
@@ -228,13 +228,13 @@ class ElmoEmbedder():
         Parameters
         ----------
         sentences : ``Iterable[List[str]]``, required
-            an iterable of tokenized sentences
+            An iterable of tokenized sentences.
         batch_size : ``int``, required
-            the number of sentences ELMo should process at once
+            The number of sentences ELMo should process at once.
 
         Returns
         -------
-            a list of tensors, each representing the ELMo vectors for the input sentence at the same index
+            A list of tensors, each representing the ELMo vectors for the input sentence at the same index.
         """
         for batch in lazy_groups_of(iter(sentences), batch_size):
             yield from self.embed_batch(batch)
@@ -252,13 +252,13 @@ class ElmoEmbedder():
         Parameters
         ----------
         input_file : ``IO``, required
-            a file with one tokenized sentence per line
+            A file with one tokenized sentence per line.
         output_file_path : ``str``, required
-            a path to the output hdf5 file
+            A path to the output hdf5 file.
         batch_size : ``int``, optional, (default = 64)
-            the number of sentences to process in ELMo at one time
+            The number of sentences to process in ELMo at one time.
         use_sentence_key : ``bool``, optional, (default = False)
-            if true, use the first token in each line as the unique key for the layers output to the HDF5 file.
+            If true, use the first token in each line as the unique key for the layers output to the HDF5 file.
             This key will be stripped from the rest of the line and the remaining tokens will be used as the
             sentence to compute embeddings from.
         """
@@ -270,7 +270,7 @@ class ElmoEmbedder():
             keys, sentences = zip(*[(tokens[0], tokens[1:]) for tokens in sentences])
             embedded_sentences = zip(keys, self.embed_sentences(sentences, batch_size))
         else:
-            # Uses the index as the key
+            # Uses the index as the key.
             embedded_sentences = enumerate(self.embed_sentences(sentences, batch_size))
 
         logger.info("Processing sentences.")
