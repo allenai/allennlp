@@ -4,7 +4,7 @@
 We recently added an attention visualization to the live demo on
 [allennlp.org](http://demo.allennlp.org/machine-comprehension).  Here's what it looks like:
 
-![demo screenshot](bidaf_attention_demo.png)
+![demo screenshot](visualization_images/bidaf_attention_demo.png)
 
 The basic components here are reusable, so you can relatively easily get a similar demo for
 whatever model you're working on.  This is still pretty rough, but if you're feeling adventurous,
@@ -84,4 +84,24 @@ We've used this to visualize the internal workings of an action-based semantic p
 is not quite ready for public consumption, so the code and demo are not yet available, but here's
 a sneak peak of what you can do with this kind of model visualization:
 
+|![main parser UI](visualization_images/wikitables_overview.png)|
+|:--:|
+| *The main (still rough) parser UI, with model internals* |
+
+|![predict actions](visualization_images/predicted_actions.png)|
+|:--:|
+| *The sequence of predicted actions that generated the logical form above* |
+
+|![action probabilities](visualization_images/action_detail.png)|
+|:--:|
+| *At each output step, we show the considered actions and their probabilities* |
+
+|![question attention](visualization_images/action_detail_2.png)|
+|:--:|
+| *At each output step, we also show the model's attention over the question* |
+
+|![linking scores](visualization_images/linking_scores.png)|
+|:--:|
+| *Before decoding, we compute a linking between table entities and question words. This shows
+part of that linking.* |
 
