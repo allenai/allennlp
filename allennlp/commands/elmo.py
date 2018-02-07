@@ -5,13 +5,15 @@ Given a pre-processed input text file, this command outputs the internal
 layers used to compute ELMo representations to a single (potentially large) file.
 
 The input file is previously tokenized, whitespace separated text, one sentence per line.
-The output is a hdf5 file (http://docs.h5py.org/en/latest/) where each
+The output is a hdf5 file (<http://docs.h5py.org/en/latest/>) where each
 sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 
 In the default setting, each sentence is keyed in the output file by the line number
-in the original text file.  Optionally, by specifying --use_sentence_key
+in the original text file.  Optionally, by specifying --use-sentence-key
 the first token in each sentence is assumed to be a unique sentence key
 used in the output file.
+
+#TODO(michaels) add a link to the ELMo paper once published.
 """
 
 import logging
@@ -35,6 +37,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_OPTIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json" # pylint: disable=line-too-long
 DEFAULT_WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5" # pylint: disable=line-too-long
+DEFAULT_BATCH_SIZE = 64
 
 
 class Elmo(Subcommand):
@@ -58,7 +61,7 @@ class Elmo(Subcommand):
                 type=str,
                 default=DEFAULT_WEIGHT_FILE,
                 help='The path to the ELMo weight file.')
-        subparser.add_argument('--batch-size', type=int, default=64, help='The batch size to use.')
+        subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
         subparser.add_argument('--use-sentence-key', default=False, action='store_true')
 
@@ -72,6 +75,16 @@ class ElmoEmbedder():
                  options_file: str = DEFAULT_OPTIONS_FILE,
                  weight_file: str = DEFAULT_WEIGHT_FILE,
                  cuda_device: int = -1) -> None:
+        """
+        Parameters
+        ----------
+        options_file : ``str``, optional
+            A path or URL to an ELMo options file.
+        weight_file : ``str``, optional
+            A path or URL to an ELMo weights file.
+        cuda_device : ``int``, optional, (default=-1)
+            The GPU device to run on.
+        """
         self.indexer = ELMoTokenCharactersIndexer()
 
         logger.info("Initializing ELMo.")
@@ -85,8 +98,15 @@ class ElmoEmbedder():
         """
         Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
         (len(batch), max sentence length, max word length)
-        :param batch: a list of tokenized sentences
-        :return: a batch of padded character ids
+
+        Parameters
+        ----------
+        batch : ``List[List[str]]``, required
+            a list of tokenized sentences
+
+        Returns
+        -------
+            a tensor of padded character ids
         """
         instances = []
         for sentence in batch:
@@ -103,8 +123,14 @@ class ElmoEmbedder():
 
     def batch_to_embeddings(self, batch: List[List[str]]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        :param batch: a list of tokenized sentences
-        :return: a tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
+        Parameters
+        ----------
+        batch : ``List[List[str]]``, required
+            a list of tokenized sentences
+
+        Returns
+        -------
+            a tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
         the second a mask (batch_size, num_timesteps)
         """
         character_ids = self.batch_to_ids(batch)
@@ -128,16 +154,31 @@ class ElmoEmbedder():
     def embed_sentence(self, sentence: List[str]) -> torch.Tensor:
         """
         Computes the ELMo embeddings for a single tokenized sentence.
-        :param sentence: a tokenized sentence
-        :return: a tensor containing the ELMo vectors
+
+        Parameters
+        ----------
+        sentence : ``List[str]``, required
+            a tokenized sentence
+
+        Returns
+        -------
+        a tensor containing the ELMo vectors
         """
+
         return self.embed_batch([sentence])[0]
 
     def embed_batch(self, batch: List[List[str]]) -> List[torch.Tensor]:
         """
         Computes the ELMo embeddings for a batch of tokenized sentences.
-        :param batch: a list of tokenized sentences
-        :return: a list of tensors, each representing the ELMo vectors for the input sentence at the same index
+
+        Parameters
+        ----------
+        batch : ``List[List[str]]``, required
+            a list of tokenized sentences
+
+        Returns
+        -------
+            a list of tensors, each representing the ELMo vectors for the input sentence at the same index
         """
         elmo_embeddings = []
 
@@ -152,9 +193,17 @@ class ElmoEmbedder():
     def embed_sentences(self, sentences: Iterable[List[str]], batch_size: int) -> Iterable[torch.Tensor]:
         """
         Computes the ELMo embeddings for a iterable of sentences.
-        :param sentences: an iterable of tokenized sentences
-        :param batch_size: the number of sentences ELMo should process at once
-        :return: a list of tensors, each representing the ELMo vectors for the input sentence at the same index
+
+        Parameters
+        ----------
+        sentences : ``Iterable[List[str]]``, required
+            an iterable of tokenized sentences
+        batch_size : ``int``, required
+            the number of sentences ELMo should process at once
+
+        Returns
+        -------
+            a list of tensors, each representing the ELMo vectors for the input sentence at the same index
         """
         for batch in lazy_groups_of(iter(sentences), batch_size):
             yield from self.embed_batch(batch)
@@ -162,16 +211,25 @@ class ElmoEmbedder():
     def embed_file(self,
                    input_file: IO,
                    output_file_path: str,
-                   batch_size: int,
+                   batch_size: int = DEFAULT_BATCH_SIZE,
                    use_sentence_key: bool = False) -> None:
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
         The ELMo embeddings are written out in HDF5 format, where each sentences is saved in a dataset corresponds
         with a organized by key.  Unless use_sentence_key is set, the key will be the index of the sentence.
-        :param input_file: a file with one tokenized sentence per line
-        :param output_file_path: a path to the output hdf5 file
-        :param batch_size: the number of sentences to process in ELMo at one time
-        :param use_sentence_key: if true, use the first token in each sentence as the key
+
+        Parameters
+        ----------
+        input_file : ``IO``, required
+            a file with one tokenized sentence per line
+        output_file_path : ``str``, required
+            a path to the output hdf5 file
+        batch_size : ``int``, optional, (default = 64)
+            the number of sentences to process in ELMo at one time
+        use_sentence_key : ``bool``, optional, (default = False)
+            if true, use the first token in each line as the unique key for the layers output to the HDF5 file.
+            This key will be stripped from the rest of the line and the remaining tokens will be used as the
+            sentence to compute embeddings from.
         """
 
         # Tokenizes the sentences.
