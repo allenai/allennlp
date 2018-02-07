@@ -22,15 +22,16 @@ instructions for running the main demo in the [demo README](../../demo/README.md
 to figure out how to either get the same thing running with your stand-alone demo or add your model
 to what's already there.  I said this was still rough.
 
-You should also be at least vaguely familiar with react and how JSX components work.
+You should also be at least vaguely familiar with [react](https://reactjs.org) and how JSX
+components work.
 
 ## Model plumbing
 
 You need the model to output whatever information you want to display.  We already return a
 dictionary from `Model.forward` containing whatever keys you want; you just need to be sure the
-keys you want are in there (including actual strings instead of integers if you want to have
-human-readable labels for the rows and columns of your visualizations).  For BiDAF, this was
-straightforward (see https://github.com/allenai/allennlp/pull/692/files):
+things you want to visualize are in there (including actual strings instead of integers if you want
+to have human-readable labels for the rows and columns of your visualizations).  For BiDAF, this
+was straightforward (see https://github.com/allenai/allennlp/pull/692/files):
 
 - We added `question_tokens` and `passage_tokens` fields to the metadata returned for each
   instance in the `DatasetReader`, which we use for column and row labels.
@@ -48,10 +49,11 @@ in the output dictionary from `model.forward()`, however you want to make that h
 ## UI plumbing
 
 We've added two components to the demo library that are re-usable for any model internals you want
-to show: `Collapsible` and `HeatMap`.  You just need to get the attention values you have passed
-in to a `HeatMap` component with the right labels.  Again, with BiDAF, this was pretty
-straightforward.  Here we're modifying `McComponent.js`, because that's where the BiDAF rendering
-components are found (again see https://github.com/allenai/allennlp/pull/692/files):
+to show: `Collapsible` and `HeatMap`.  You just need to get the attention values you returned from
+`model.forward()` passed in to a `HeatMap` component with the right labels.  Again, with BiDAF,
+this was pretty straightforward.  Here we're modifying `McComponent.js`, because that's where the
+BiDAF rendering components are found (again see
+https://github.com/allenai/allennlp/pull/692/files):
 
 - We found the place where the request data was read and grabbed another field from the
   returned json.  This looks something like `const attention = responseData &&
@@ -88,20 +90,19 @@ a sneak peak of what you can do with this kind of model visualization:
 |:--:|
 | *The main (still rough) parser UI, with model internals* |
 
-|![predict actions](visualization_images/predicted_actions.png)|
+|<img src="visualization_images/predicted_actions.png" width="400" />|
 |:--:|
 | *The sequence of predicted actions that generated the logical form above* |
 
-|![action probabilities](visualization_images/action_detail.png)|
+|<img src="visualization_images/action_detail.png" width="300" />|
 |:--:|
 | *At each output step, we show the considered actions and their probabilities* |
 
-|![question attention](visualization_images/action_detail_2.png)|
+|<img src="visualization_images/action_detail_2.png" width="150" />|
 |:--:|
 | *At each output step, we also show the model's attention over the question* |
 
 |![linking scores](visualization_images/linking_scores.png)|
 |:--:|
-| *Before decoding, we compute a linking between table entities and question words. This shows
-part of that linking.* |
+| *Before decoding, we compute a linking between table entities and question words. This shows part of that linking.* |
 
