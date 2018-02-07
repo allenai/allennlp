@@ -18,7 +18,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
                            'a', 'box', '.']
         assert [t.text for t in sentence_tokens] == expected_tokens
         actions = [action.rule for action in instance.fields["actions"].field_list]
-        assert len(actions) == 125
+        assert len(actions) == 121
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
         agenda_strings = [actions[rule_id] for rule_id in agenda]
         assert agenda_strings == ['<o,o> -> circle', '<o,t> -> object_exists',
