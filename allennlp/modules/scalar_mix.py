@@ -19,7 +19,7 @@ class ScalarMix(torch.nn.Module):
         self.mixture_size = mixture_size
         self.do_layer_norm = do_layer_norm
 
-        self.scalar_parameters = ParameterList([Parameter(torch.FloatTensor([0.0]))
+        self.scalar_parameters = ParameterList([Parameter(torch.FloatTensor([1/self.mixture_size]))
                                                 for _ in range(mixture_size)])
         self.gamma = Parameter(torch.FloatTensor([1.0]))
 
