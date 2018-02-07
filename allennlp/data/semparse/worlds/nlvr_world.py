@@ -276,7 +276,7 @@ class NlvrWorld(World):
         # target.
         function_name_parts = sub_expression[0].split('_')
         entity_type = function_name_parts[0]
-        target_attribute: AttributeType = None
+        target_attribute = None
         if len(function_name_parts) == 2 and function_name_parts[1] == "exists":
             attribute_type = "count"
             comparison_op = "greater_equals"
@@ -415,16 +415,18 @@ class NlvrWorld(World):
             return self._objects
         elif isinstance(sub_expression[0], str) and len(sub_expression) == 2:
             # These are functions like black, square, same_color etc.
-            arguments = self._execute_object_filter(sub_expression[1])
+            function = None
             try:
                 function = getattr(self, sub_expression[0])
-                return function(arguments)
             except AttributeError:
                 logger.error("Function not found: %s", sub_expression[0])
                 raise ExecutionError("Function not found")
-        elif isinstance(sub_expression, list) and sub_expression[0].startswith("member_") or \
-                sub_expression == 'all_boxes' or sub_expression[0] == 'all_boxes':
-            return self._execute_box_filter(sub_expression)
+            arguments = sub_expression[1]
+            if isinstance(arguments, list) and arguments[0].startswith("member_") or \
+                arguments == 'all_boxes' or arguments[0] == 'all_boxes':
+                return function(self._execute_box_filter(arguments))
+            else:
+                return function(self._execute_object_filter(arguments))
         else:
             logger.error("Invalid object filter expression: %s", sub_expression)
             raise ExecutionError("Invalid object filter expression")

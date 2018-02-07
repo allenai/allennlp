@@ -89,36 +89,3 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
                                    'b -> [<c,b>, c]', '<c,b> -> [<b,<c,b>>, b]',
                                    '<b,<c,b>> -> member_color_none_equals', 'b -> all_boxes',
                                    'c -> color_blue']
-
-    def test_get_logical_form_with_real_logical_forms(self):
-        nlvr_world = self.worlds[0]
-        logical_form = ("(box_count_greater_equals (member_color_count_equals all_boxes 0) 1)")
-        parsed_logical_form = nlvr_world.parse_logical_form(logical_form)
-        action_sequence = nlvr_world.get_action_sequence(parsed_logical_form)
-        reconstructed_logical_form = nlvr_world.get_logical_form(action_sequence)
-        parsed_reconstructed_logical_form = nlvr_world.parse_logical_form(reconstructed_logical_form)
-        # It makes more sense to compare parsed logical forms instead of actual logical forms.
-        assert parsed_logical_form == parsed_reconstructed_logical_form
-        assert nlvr_world.execute(logical_form) == nlvr_world.execute(reconstructed_logical_form)
-        logical_form = "(object_color_all_equals (circle (touch_wall (all_objects))) color_black)"
-        parsed_logical_form = nlvr_world.parse_logical_form(logical_form)
-        action_sequence = nlvr_world.get_action_sequence(parsed_logical_form)
-        reconstructed_logical_form = nlvr_world.get_logical_form(action_sequence)
-        parsed_reconstructed_logical_form = nlvr_world.parse_logical_form(reconstructed_logical_form)
-        assert parsed_logical_form == parsed_reconstructed_logical_form
-        assert nlvr_world.execute(logical_form) == nlvr_world.execute(reconstructed_logical_form)
-
-    def test_get_logical_form_fails_with_incomplete_action_sequence(self):
-        nlvr_world = self.worlds[0]
-        action_sequence = ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists']
-        with self.assertRaises(ParsingError):
-            nlvr_world.get_logical_form(action_sequence)
-
-    def test_get_logical_form_fails_with_action_sequence_in_wrong_order(self):
-        nlvr_world = self.worlds[0]
-        action_sequence = ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists',
-                           'b -> [<c,b>, c]', '<c,b> -> [<b,<c,b>>, b]',
-                           'b -> all_boxes', '<b,<c,b>> -> member_color_none_equals',
-                           'c -> color_blue']
-        with self.assertRaises(ParsingError):
-            nlvr_world.get_logical_form(action_sequence)
