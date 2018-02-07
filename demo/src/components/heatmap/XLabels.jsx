@@ -1,3 +1,7 @@
+/*
+ * The column labels for the `HeatMap` component.  We rotate the labels 90 degrees, so we maintain
+ * an even-sided grid.
+ */
 import React from 'react';
 
 function XLabels({labels, width, boxSize}) {

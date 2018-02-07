@@ -1,3 +1,8 @@
+/*
+ * The main part of the `HeatMap` component, which renders the row labels and all of the matrix
+ * cells.  Each row is a div, and each cell is an inline div inside of that, with a background
+ * color determined by the data value.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 
