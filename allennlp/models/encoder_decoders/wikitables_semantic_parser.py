@@ -174,15 +174,17 @@ class WikiTablesSemanticParser(Model):
         # TODO(rajas): get timedistributed to work with a dictionary
         # table_embedder = TimeDistributed(self._question_embedder)
         # embedded_table = table_embedder(table_text)
-        tokens_tensor = table_text['tokens'].view(-1, table_text['tokens'].size(2))
-        token_characters_tensor = table_text['token_characters'].view(-1, table_text['token_characters'].size(2), table_text['token_characters'].size(3))
-        embedded_table = self._question_embedder({'tokens': tokens_tensor, 'token_characters':token_characters_tensor})
-        embedded_table = embedded_table.view(embedded_question.size(0),-1,embedded_table.size(1),embedded_table.size(2))
+
+        num_question_tokens = embedded_question.size(1)
+        batch_size, num_entities, num_entity_tokens, num_characters = table_text['token_characters'].size()
+
+        tokens_tensor = table_text['tokens'].view(-1, num_entity_tokens)
+        token_characters_tensor = table_text['token_characters'].view(-1, num_entity_tokens, num_characters)
+        embedded_table = self._question_embedder({'tokens': tokens_tensor, 'token_characters': token_characters_tensor})
+        embedded_table = embedded_table.view(batch_size, num_entities, num_entity_tokens, self._embedding_dim)
 
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
-        batch_size, num_entities, num_entity_tokens, _ = embedded_table.size()
-        num_question_tokens = embedded_question.size(1)
 
         # (batch_size, num_entities, embedding_dim)
         encoded_table = self._entity_encoder(embedded_table, table_mask)
@@ -233,7 +235,7 @@ class WikiTablesSemanticParser(Model):
         question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_table_similarity_max_score + self._linking_params(linking_features).squeeze(3)
+        linking_scores = question_table_similarity_max_score
 
         # (batch_size, num_question_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
