@@ -14,6 +14,37 @@ the first token in each sentence is assumed to be a unique sentence key
 used in the output file.
 
 #TODO(michaels) add a link to the ELMo paper once published.
+
+.. code-block:: bash
+
+   $ python -m allennlp.run elmo --help
+   usage: python -m allennlp.run [command] elmo [-h] [--vocab-path VOCAB_PATH]
+                                                [--options-file OPTIONS_FILE]
+                                                [--weight-file WEIGHT_FILE]
+                                                [--batch-size BATCH_SIZE]
+                                                [--cuda-device CUDA_DEVICE]
+                                                [--use-sentence-key]
+                                                input_file output_file
+
+   Create word vectors using ELMo.
+
+   positional arguments:
+     input_file            path to input file
+     output_file           path to output file
+
+   optional arguments:
+     -h, --help            show this help message and exit
+     --vocab-path VOCAB_PATH
+                           A path to a vocabulary file to generate
+     --options-file OPTIONS_FILE
+                           The path to the ELMo options file.
+     --weight-file WEIGHT_FILE
+                           The path to the ELMo weight file.
+     --batch-size BATCH_SIZE
+                           The batch size to use.
+     --cuda-device CUDA_DEVICE
+                           The cuda_device to run on.
+     --use-sentence-key
 """
 
 import logging
