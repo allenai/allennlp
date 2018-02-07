@@ -171,15 +171,15 @@ class NlvrDatasetReader(DatasetReader):
         if "touch" in sentence:
             if "top" in sentence:
                 agenda.append(self._terminal_productions["touch_top"])
-            elif "bottom" in sentence:
+            elif "bottom" in sentence or "base" in sentence:
                 agenda.append(self._terminal_productions["touch_bottom"])
             elif "corner" in sentence:
                 agenda.append(self._terminal_productions["touch_corner"])
             elif "right" in sentence:
                 agenda.append(self._terminal_productions["touch_right"])
-            elif "right" in sentence:
+            elif "left" in sentence:
                 agenda.append(self._terminal_productions["touch_left"])
-            elif "wall" or "edge" in sentence:
+            elif "wall" in sentence or "edge" in sentence:
                 agenda.append(self._terminal_productions["touch_wall"])
             else:
                 agenda.append(self._terminal_productions["touch_object"])
