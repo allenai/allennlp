@@ -149,5 +149,14 @@ representations = elmo(character_ids)
 
 ## Writing contextual representations to disk
 
-See [write_elmo_representations_to_file.py](../../scripts/write_elmo_representations_to_file.py) for a script to dump all of the biLM individual layer representations for a dataset to hdf5 file.
+You can write ELMo representations to disk with the `elmo` command.  The `elmo`
+command will write all the biLM individual layer representations for a dataset
+of sentences to an HDF5 file.  Here is an example of using the `elmo` command:
 
+```bash
+echo "The cryptocurrency space is now figuring out to have the highest search on Google globally." > sentences.txt
+echo "Bitcoin alone has a sixty percent share of global search." >> sentences.txt
+python -m allennlp.run elmo sentences.txt elmo_layers.hdf5
+```
+
+For more details, see `python -m allennlp.run elmo -h`.
