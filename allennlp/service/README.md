@@ -5,7 +5,7 @@ This service serves AllenNLP models through a REST API.
 To start the server run the following command.
 
 ```bash
-allennlp/run serve --port 8000
+python -m allennlp.run serve --port 8000
 ```
 
 Right now the API has two routes.
