@@ -5,8 +5,15 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
 .. code-block:: bash
 
     $ python -m allennlp.run predict --help
-    usage: run [command] predict [-h] [--output-file OUTPUT_FILE] [--print]
-                                archive_file input_file
+    usage: python -m allennlp.run [command] predict [-h]
+                                                    [--output-file OUTPUT_FILE]
+                                                    [--batch-size BATCH_SIZE]
+                                                    [--silent]
+                                                    [--cuda-device CUDA_DEVICE]
+                                                    [-o OVERRIDES]
+                                                    [--include-package INCLUDE_PACKAGE]
+                                                    [--predictor PREDICTOR]
+                                                    archive_file input_file
 
     Run the specified model against a JSON-lines input file.
 
@@ -18,7 +25,18 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
     -h, --help            show this help message and exit
     --output-file OUTPUT_FILE
                             path to output file
-    --print               print results to stdout
+    --batch-size BATCH_SIZE
+                            The batch size to use for processing
+    --silent              do not print output to stdout
+    --cuda-device CUDA_DEVICE
+                            id of GPU to use (if any)
+    -o OVERRIDES, --overrides OVERRIDES
+                            a HOCON structure used to override the experiment
+                            configuration
+    --include-package INCLUDE_PACKAGE
+                            additional packages to include
+    --predictor PREDICTOR
+                            optionally specify a specific predictor to use
 """
 
 import argparse

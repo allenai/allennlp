@@ -16,6 +16,7 @@ These tutorials relate to the version of AllenNLP at the git commit SHA you are 
 
 * [Using pre-trained ELMo representations](how_to/elmo.md)
 * [How to train a model with lazy data](how_to/laziness.md)
+* [How to visualize model internals (BETA)](how_to/visualizing_model_internals.md)
 
 ## Deeper Dives
 

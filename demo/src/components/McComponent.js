@@ -1,4 +1,6 @@
 import React from 'react';
+import HeatMap from './heatmap/HeatMap'
+import Collapsible from 'react-collapsible'
 import { API_ROOT } from '../api-config';
 import { withRouter } from 'react-router-dom';
 import {PaneLeft, PaneRight} from './Pane'
@@ -134,7 +136,7 @@ render() {
 
 class McOutput extends React.Component {
     render() {
-      const { passage, answer } = this.props;
+      const { passage, answer, attention, question_tokens, passage_tokens } = this.props;
 
       const start = passage.indexOf(answer);
       const head = passage.slice(0, start);
@@ -154,6 +156,20 @@ class McOutput extends React.Component {
               <span className="passage__answer">{answer}</span>
               <span>{tail}</span>
             </div>
+          </div>
+
+          <div className="form__field">
+            <Collapsible trigger="Model internals (beta)">
+              <Collapsible trigger="Passage to Question attention">
+                <span>
+                  For every passage word, the model computes an attention over the question words.
+                  This heatmap shows that attention, which is normalized for every row in the matrix.
+                </span>
+                <div className="heatmap">
+                  <HeatMap xLabels={question_tokens} yLabels={passage_tokens} data={attention} />
+                </div>
+              </Collapsible>
+            </Collapsible>
           </div>
         </div>
       );
@@ -221,6 +237,9 @@ class _McComponent extends React.Component {
       const passage = requestData && requestData.passage;
       const question = requestData && requestData.question;
       const answer = responseData && responseData.best_span_str;
+      const attention = responseData && responseData.passage_question_attention;
+      const question_tokens = responseData && responseData.question_tokens;
+      const passage_tokens = responseData && responseData.passage_tokens;
 
       return (
         <div className="pane model">
@@ -231,7 +250,11 @@ class _McComponent extends React.Component {
                      question={question}/>
           </PaneLeft>
           <PaneRight outputState={this.state.outputState}>
-            <McOutput passage={passage} answer={answer}/>
+            <McOutput passage={passage}
+                      answer={answer}
+                      attention={attention}
+                      question_tokens={question_tokens}
+                      passage_tokens={passage_tokens}/>
           </PaneRight>
         </div>
       );

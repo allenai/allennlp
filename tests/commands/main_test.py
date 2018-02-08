@@ -21,8 +21,7 @@ class TestMain(TestCase):
 
     def test_warn_on_deprecated_flags(self):
         sys.argv = ["[executable]",
-                    "evaluate",
-                    "--archive_file", "tests/fixtures/bidaf/serialization/model.tar.gz",
+                    "evaluate", "tests/fixtures/bidaf/serialization/model.tar.gz",
                     "--evaluation_data_file", "tests/fixtures/data/squad.json",
                     "--cuda_device", "-1"]
 
@@ -30,9 +29,6 @@ class TestMain(TestCase):
         with self.assertLogs(level=logging.WARNING) as context:
             main()
             assert set(context.output) == {
-                    'WARNING:allennlp.commands:Argument name --archive_file is deprecated '
-                    '(and will likely go away at some point), please use --archive-file instead',
-
                     'WARNING:allennlp.commands:Argument name --evaluation_data_file is deprecated '
                     '(and will likely go away at some point), please use --evaluation-data-file instead',
 

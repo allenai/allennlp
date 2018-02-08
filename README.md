@@ -14,8 +14,8 @@ just run `docker run -it --rm allennlp/allennlp` to get an environment that will
 
 Now you can do any of the following:
 
-* Run a model on example sentences with `allennlp/run predict`.
-* Start a web service to host our models with `allennlp/run serve`.
+* Run a model on example sentences with `python -m allennlp.run predict`.
+* Start a web service to host our models with `python -m allennlp.run serve`.
 * Interactively code against AllenNLP from the Python interpreter with `python`.
 
 You can also install via the `pip` package manager or by cloning this repository into a Python 3.6 virtualenv.

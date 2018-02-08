@@ -6,17 +6,30 @@ which to write the results.
 .. code-block:: bash
 
    $ python -m allennlp.run train --help
-   usage: run [command] train [-h] -s SERIALIZATION_DIR param_path
+   usage: python -m allennlp.run [command] train [-h] -s SERIALIZATION_DIR
+                                               [-o OVERRIDES]
+                                               [--include-package INCLUDE_PACKAGE]
+                                               [--file-friendly-logging]
+                                               param_path
 
    Train the specified model on the specified dataset.
 
    positional arguments:
-   param_path            path to parameter file describing the model to be trained
+   param_path            path to parameter file describing the model to be
+                           trained
 
    optional arguments:
-    -h, --help            show this help message and exit
-    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
-                            directory in which to save the model and its logs
+   -h, --help            show this help message and exit
+   -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+                           directory in which to save the model and its logs
+   -o OVERRIDES, --overrides OVERRIDES
+                           a HOCON structure used to override the experiment
+                           configuration
+   --include-package INCLUDE_PACKAGE
+                           additional packages to include
+   --file-friendly-logging
+                           outputs tqdm status on separate lines and slows tqdm
+                           refresh rate
 """
 from typing import Dict, Iterable
 import argparse
@@ -50,6 +63,7 @@ class Train(Subcommand):
         description = '''Train the specified model on the specified dataset.'''
         subparser = parser.add_parser(
                 name, description=description, help='Train a model')
+
         subparser.add_argument('param_path',
                                type=str,
                                help='path to parameter file describing the model to be trained')
