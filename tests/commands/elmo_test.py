@@ -100,6 +100,7 @@ class TestElmoCommand(ElmoTestCase):
         assert os.path.exists(output_path)
 
         with h5py.File(output_path, 'r') as h5py_file:
+            assert len(h5py_file.keys()) == 1
             assert set(h5py_file.keys()) == set(sentences)
             # The vectors in the test configuration are smaller (32 length)
             for sentence in set(sentences):
