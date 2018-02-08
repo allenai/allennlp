@@ -1,7 +1,7 @@
 # pylint: disable=too-many-lines
 # TODO(mattg): Separate this file out somehow, or simplify things here.
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 from overrides import overrides
 
@@ -315,7 +315,7 @@ class WikiTablesSemanticParser(Model):
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = f"{action['left'][0]} -> {action['right'][0]}"
-            outputs = {'action_mapping': action_mapping}
+            outputs: Dict[str, Any] = {'action_mapping': action_mapping}
             if target_action_sequences is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
@@ -355,7 +355,7 @@ class WikiTablesSemanticParser(Model):
                         logical_form = 'Error producing logical form'
                     outputs['best_action_sequence'].append(action_strings)
                     outputs['logical_form'].append(logical_form)
-                    outputs['debug_info'].append(best_final_states[i][0].debug_info[0])
+                    outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
                     outputs['entities'].append(world[i].table_graph.entities)
                 else:
                     outputs['logical_form'].append('')
@@ -924,7 +924,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  flattened_linking_scores: torch.FloatTensor,
                  actions_to_entities: Dict[Tuple[int, int], int],
                  entity_types: Dict[int, int],
-                 debug_info = None) -> None:
+                 debug_info: List = None) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
@@ -985,7 +985,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         previous_action = [action for state in states for action in state.previous_action_embedding]
         attended_question = [attended for state in states for attended in state.attended_question]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
-        if state.debug_info is not None:
+        if states[0].debug_info is not None:
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
         else:
             debug_info = None
