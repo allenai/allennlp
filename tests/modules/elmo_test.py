@@ -76,7 +76,6 @@ class TestElmoBiLm(ElmoTestCase):
         instances = []
         for batch in zip(*sentences):
             for sentence in batch:
-                fout.write(sentence + "\n")
                 tokens = [Token(token) for token in sentence.split()]
                 field = TextField(tokens, {'character_ids': indexer})
                 instance = Instance({"elmo": field})
