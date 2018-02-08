@@ -45,7 +45,7 @@ if __name__ == "__main__":
     checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs']
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--checks', type=str, required=False, nargs='+', choices = checks)
+    parser.add_argument('--checks', type=str, required=False, nargs='+', choices=checks)
 
     args = parser.parse_args()
 
