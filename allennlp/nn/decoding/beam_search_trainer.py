@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from collections import defaultdict
 
 import torch
@@ -48,24 +48,51 @@ class BeamSearchTrainer(DecoderTrainer):
         _, sorted_indices = finished_scores.sort(-1, descending=True)
         finished_states = [finished_states[i] for i in sorted_indices.cpu().data.numpy()]
 
-        batch_scores = self._group_scores_by_batch(finished_states)
+        for state in finished_states:
+            state.denotation_is_correct()
+        correct_batch_scores, incorrect_batch_scores = self._group_scores_by_batch(finished_states)
         loss = 0
-        for scores in batch_scores.values():
-            # TODO(pradeep): Minimizing the mean. Should we minimize max instead?
-            loss += -torch.mean(torch.cat(scores))
+        all_batch_indices = set(correct_batch_scores.keys()).union(incorrect_batch_scores.keys())
+        for batch_index in all_batch_indices:
+            mean_correct_score = None
+            mean_incorrect_score = None
+            if batch_index in correct_batch_scores:
+                mean_correct_score = torch.mean(torch.cat(correct_batch_scores[batch_index]))
+
+            if batch_index in incorrect_batch_scores:
+                mean_incorrect_score = torch.mean(torch.cat(incorrect_batch_scores[batch_index]))
+
+            # TODO (pradeep): Is 1 the right margin here?
+            if mean_correct_score is None:
+                loss += (1 + mean_incorrect_score)
+            elif mean_incorrect_score is None:
+                loss += (1 - mean_correct_score)
+            else:
+                loss += (1 - mean_correct_score + mean_incorrect_score)
 
         best_action_sequences: Dict[int, List[int]] = defaultdict(list)
         for state in finished_states:
             best_action_sequences[state.batch_indices[0]].append(state.action_history)
-        return {'loss': loss / len(batch_scores), 'best_action_sequence': best_action_sequences}
+        return {'loss': loss / len(all_batch_indices),
+                'best_action_sequence': best_action_sequences}
 
     @staticmethod
-    def _group_scores_by_batch(finished_states: List[DecoderState]) -> Dict[int, List[Variable]]:
-        batch_scores: Dict[int, List[Variable]] = defaultdict(list)
+    def _group_scores_by_batch(finished_states: List[DecoderState]) -> Dict[int,
+                                                                            Tuple[List[Variable],
+                                                                                  List[Variable]]]:
+        # We separate the scores of action sequences that led to the correct denotations from those
+        # that led to incorrect ones.
+        correct_batch_scores: Dict[int, List[Variable]] = defaultdict(list)
+        incorrect_batch_scores: Dict[int, List[Variable]] = defaultdict(list)
         for state in finished_states:
-            for score, batch_index in zip(state.score, state.batch_indices):
-                batch_scores[batch_index].append(score)
-        return batch_scores
+            denotations_are_correct = state.denotation_is_correct()
+            for score, batch_index, is_correct in zip(state.score, state.batch_indices,
+                                                      denotations_are_correct):
+                if is_correct:
+                    correct_batch_scores[batch_index].append(score)
+                else:
+                    incorrect_batch_scores[batch_index].append(score)
+        return correct_batch_scores, incorrect_batch_scores
 
     def _prune_beam(self, states: List[DecoderState]) -> List[DecoderState]:
         """

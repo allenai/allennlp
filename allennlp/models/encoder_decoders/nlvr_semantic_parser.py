@@ -34,9 +34,6 @@ class NlvrSemanticParser(Model):
     The main differences between this parser and what we have for Wikitables are that we have an
     agenda of actions instead of complete target action sequences, and accordingly the score in this
     parser is based on how many of the agenda actions are covered.
-
-    This is still WORK IN PROGRESS. We still need to incorporate other kinds of losses, including
-    atleast a denotation based loss.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -46,7 +43,8 @@ class NlvrSemanticParser(Model):
                  encoder: Seq2SeqEncoder,
                  decoder_trainer: DecoderTrainer,
                  max_decoding_steps: int,
-                 attention_function: SimilarityFunction) -> None:
+                 attention_function: SimilarityFunction,
+                 checklist_weight: float) -> None:
         super(NlvrSemanticParser, self).__init__(vocab=vocab)
 
         self._sentence_embedder = sentence_embedder
@@ -65,7 +63,9 @@ class NlvrSemanticParser(Model):
 
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
-                                             attention_function=attention_function)
+                                             attention_function=attention_function,
+                                             checklist_weight=checklist_weight)
+
     @overrides
     def forward(self,  # type: ignore
                 sentence: Dict[str, torch.LongTensor],
@@ -80,7 +80,6 @@ class NlvrSemanticParser(Model):
         well, once we have a way to transform action sequences into logical forms that can be
         executed to produce denotations.
         """
-        # TODO(pradeep): Use labels for loss computation.
         embedded_input = self._sentence_embedder(sentence)
         # (batch_size, sentence_length)
         sentence_mask = nn_util.get_text_field_mask(sentence).float()
@@ -109,6 +108,9 @@ class NlvrSemanticParser(Model):
         # Get a mapping from production rules to global action ids.
         agenda_mask = agenda != -1
         agenda_mask = agenda_mask.long()
+        labels_data = label.data.cpu()
+        label_strings = [self.vocab.get_token_from_index(int(label_data), "denotations") for
+                         label_data in labels_data]
         # (batch_size, agenda_size)
         initial_checklist = nn_util.new_variable_with_size(agenda, agenda.size(), 0).float()
         agenda_list = [agenda[i] for i in range(batch_size)]
@@ -125,6 +127,7 @@ class NlvrSemanticParser(Model):
         initial_attended_sentence = [attended_sentence[i] for i in range(batch_size)]
         encoder_outputs_list = [encoder_outputs[i] for i in range(batch_size)]
         sentence_mask_list = [sentence_mask[i] for i in range(batch_size)]
+        worlds_list = [world[i] for i in range(batch_size)]
         initial_state = NlvrDecoderState(agenda_list,
                                          agenda_mask_list,
                                          initial_checklist_list,
@@ -140,13 +143,14 @@ class NlvrSemanticParser(Model):
                                          sentence_mask_list,
                                          action_embeddings,
                                          action_indices,
-                                         actions)
+                                         actions,
+                                         worlds_list,
+                                         label_strings)
 
         outputs = self._decoder_trainer.decode(initial_state, self._decoder_step,  # type: ignore
                                                self._max_decoding_steps)
         best_action_sequences = outputs['best_action_sequence']
         get_action_string = lambda rule: "%s -> %s" % (rule["left"][0], rule["right"][0])
-        labels_data = label.data.cpu()
         for i in range(batch_size):
             batch_actions = actions[i]
             batch_best_sequences = best_action_sequences[i]
@@ -154,7 +158,7 @@ class NlvrSemanticParser(Model):
             if batch_best_sequences:
                 action_strings = [get_action_string(batch_actions[rule_id]) for rule_id in
                                   batch_best_sequences[0][0]]
-                label_string = self.vocab.get_token_from_index(int(labels_data[i]), "denotations")
+                label_string = label_strings[i]
                 instance_world = world[i]
                 sequence_is_correct = self._check_denotation(action_strings,
                                                              label_string,
@@ -375,6 +379,7 @@ class NlvrSemanticParser(Model):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
+        checklist_weight = params.pop("checklist_weight", 1.0)
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    sentence_embedder=sentence_embedder,
@@ -383,7 +388,8 @@ class NlvrSemanticParser(Model):
                    encoder=encoder,
                    decoder_trainer=decoder_trainer,
                    max_decoding_steps=max_decoding_steps,
-                   attention_function=attention_function)
+                   attention_function=attention_function,
+                   checklist_weight=checklist_weight)
 
 
 class NlvrDecoderState(DecoderState['NlvrDecoderState']):
@@ -447,6 +453,11 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
     possible_actions : ``List[List[ProductionRuleArray]]``
         The list of all possible actions that was passed to ``model.forward()``.  We need this so
         we can recover production strings, which we need to update grammar states.
+    world : ``List[NlvrWorld]``
+        The world associated with each element. This is needed to compute the denotations.
+    label_strings : ``List[str]``
+        String representations of labels for the elements provided. When scoring finished states, we
+        will compare the denotations of their action sequences against these labels.
     """
     def __init__(self,
                  agenda: List[torch.LongTensor],
@@ -464,7 +475,9 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                  encoder_output_mask: List[torch.Tensor],
                  action_embeddings: torch.Tensor,
                  action_indices: Dict[Tuple[int, int], int],
-                 possible_actions: List[List[ProductionRuleArray]]) -> None:
+                 possible_actions: List[List[ProductionRuleArray]],
+                 worlds: List[NlvrWorld],
+                 label_strings: List[str]) -> None:
         super(NlvrDecoderState, self).__init__(batch_indices, action_history, score)
         self.agenda = agenda
         self.agenda_mask = agenda_mask
@@ -479,6 +492,8 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         self.action_embeddings = action_embeddings
         self.action_indices = action_indices
         self.possible_actions = possible_actions
+        self.worlds = worlds
+        self.label_strings = label_strings
 
     def get_valid_actions(self) -> List[List[int]]:
         """
@@ -486,6 +501,25 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         Returns a list of valid actions for each element of the group.
         """
         return [state.get_valid_actions() for state in self.grammar_state]
+
+    def denotation_is_correct(self) -> List[bool]:
+        """
+        Returns whether each action history in the group evaluates to the correct denotation. Only
+        defined when the state is finished.
+        """
+        is_correct: List[bool] = []
+        for history, world, all_actions, label_string in zip(self.action_history,
+                                                             self.worlds,
+                                                             self.possible_actions,
+                                                             self.label_strings):
+            action_sequence = []
+            for action in history:
+                action_sequence.append("%s -> %s" % (all_actions[action]["left"][0],
+                                                     all_actions[action]["right"][0]))
+            logical_form = world.get_logical_form(action_sequence)
+            denotation = world.execute(logical_form)
+            is_correct.append(str(denotation).lower() == label_string.lower())
+        return is_correct
 
     def is_finished(self) -> bool:
         """This method is identical to ``WikiTablesDecoderState.is_finished``."""
@@ -542,7 +576,9 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                                 states[0].encoder_output_mask,
                                 states[0].action_embeddings,
                                 states[0].action_indices,
-                                states[0].possible_actions)
+                                states[0].possible_actions,
+                                states[0].worlds,
+                                states[0].label_strings)
 
     def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'NlvrDecoderState':
         """
@@ -581,7 +617,9 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                                 self.encoder_output_mask,
                                 self.action_embeddings,
                                 self.action_indices,
-                                self.possible_actions)
+                                self.possible_actions,
+                                self.worlds,
+                                self.label_strings)
 
 
 class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
@@ -589,7 +627,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
-                 checklist_weight: float = 0.5) -> None:
+                 checklist_weight: float) -> None:
         """
         Parameters
         ----------
@@ -826,6 +864,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 checklist_score = cls.score_instance_checklist(new_checklist, instance_agenda_mask)
                 new_score = checklist_weight * checklist_score + \
                             (1 - checklist_weight) * action_prob
+
                 next_states_info[batch_index].append((group_index, action_index, action,
                                                       new_checklist, new_score))
         new_states = []
@@ -837,8 +876,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
             if max_actions is not None:
                 sorted_states_info = sorted_states_info[:max_actions]
             for group_index, action_index, action, new_checklist, new_score in sorted_states_info:
-                new_action_history = state.action_history[group_index] + [action]
                 action_embedding = action_embeddings[group_index, action_index, :]
+                new_action_history = state.action_history[group_index] + [action]
                 left_side = state.possible_actions[batch_index][action]['left'][0]
                 right_side = state.possible_actions[batch_index][action]['right'][0]
                 new_grammar_state = state.grammar_state[group_index].take_action(left_side,
@@ -859,7 +898,9 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                              state.encoder_output_mask,
                                              state.action_embeddings,
                                              state.action_indices,
-                                             state.possible_actions)
+                                             state.possible_actions,
+                                             state.worlds,
+                                             state.label_strings)
                 new_states.append(new_state)
         return new_states
 
