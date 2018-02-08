@@ -35,9 +35,9 @@ class TestElmoCommand(ElmoTestCase):
         assert os.path.exists(output_path)
 
         with h5py.File(output_path, 'r') as h5py_file:
-            assert list(h5py_file.keys()) == ["0"]
+            assert list(h5py_file.keys()) == [sentence]
             # The vectors in the test configuration are smaller (32 length)
-            assert h5py_file.get("0").shape == (3, len(sentence.split()), 32)
+            assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
 
     def test_batch_embedding_works(self):
         tempdir = tempfile.mkdtemp()
@@ -67,44 +67,10 @@ class TestElmoCommand(ElmoTestCase):
         assert os.path.exists(output_path)
 
         with h5py.File(output_path, 'r') as h5py_file:
-            assert list(h5py_file.keys()) == ["0", "1"]
+            assert set(h5py_file.keys()) == set(sentences)
             # The vectors in the test configuration are smaller (32 length)
-            for i, sentence in enumerate(sentences):
-                assert h5py_file.get(str(i)).shape == (3, len(sentence.split()), 32)
-
-    def test_batch_embedding_works_with_sentence_key(self):
-        tempdir = tempfile.mkdtemp()
-        sentences_path = os.path.join(tempdir, "sentences.txt")
-        output_path = os.path.join(tempdir, "output.txt")
-
-        sentences = [
-                "A Michael went to the store to buy some eggs .",
-                "B Joel rolled down the street on his skateboard ."
-        ]
-
-        with open(sentences_path, 'w') as f:
-            for line in sentences:
-                f.write(line + '\n')
-
-        sys.argv = ["run.py",  # executable
-                    "elmo",  # command
-                    sentences_path,
-                    output_path,
-                    "--options-file",
-                    self.options_file,
-                    "--weight-file",
-                    self.weight_file,
-                    "--use-sentence-key"]
-
-        main()
-
-        assert os.path.exists(output_path)
-
-        with h5py.File(output_path, 'r') as h5py_file:
-            assert list(h5py_file.keys()) == ["A", "B"]
-            # The vectors in the test configuration are smaller (32 length)
-            assert h5py_file.get("A").shape == (3, len(sentences[0].split()) - 1, 32)
-            assert h5py_file.get("B").shape == (3, len(sentences[1].split()) - 1, 32)
+            for sentence in sentences:
+                assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
 
 
 class TestElmoEmbedder(ElmoTestCase):

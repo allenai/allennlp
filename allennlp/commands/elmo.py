@@ -8,11 +8,6 @@ The input file is previously tokenized, whitespace separated text, one sentence 
 The output is a hdf5 file (<http://docs.h5py.org/en/latest/>) where each
 sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 
-In the default setting, each sentence is keyed in the output file by the line number
-in the original text file.  Optionally, by specifying --use-sentence-key
-the first token in each sentence is assumed to be a unique sentence key
-used in the output file.
-
 #TODO(michaels) add a link to the ELMo paper once published.
 
 .. code-block:: bash
@@ -23,7 +18,6 @@ used in the output file.
                                                 [--weight-file WEIGHT_FILE]
                                                 [--batch-size BATCH_SIZE]
                                                 [--cuda-device CUDA_DEVICE]
-                                                [--use-sentence-key]
                                                 input_file output_file
 
    Create word vectors using ELMo.
@@ -44,7 +38,6 @@ used in the output file.
                            The batch size to use.
      --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
-     --use-sentence-key
 """
 
 import logging
@@ -94,7 +87,6 @@ class Elmo(Subcommand):
                 help='The path to the ELMo weight file.')
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
-        subparser.add_argument('--use-sentence-key', default=False, action='store_true')
 
         subparser.set_defaults(func=elmo_command)
 
@@ -242,12 +234,10 @@ class ElmoEmbedder():
     def embed_file(self,
                    input_file: IO,
                    output_file_path: str,
-                   batch_size: int = DEFAULT_BATCH_SIZE,
-                   use_sentence_key: bool = False) -> None:
+                   batch_size: int = DEFAULT_BATCH_SIZE) -> None:
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
-        The ELMo embeddings are written out in HDF5 format, where each sentences is saved in a dataset corresponds
-        with a organized by key.  Unless use_sentence_key is set, the key will be the index of the sentence.
+        The ELMo embeddings are written out in HDF5 format, where each sentences is saved in a dataset.
 
         Parameters
         ----------
@@ -257,21 +247,13 @@ class ElmoEmbedder():
             A path to the output hdf5 file.
         batch_size : ``int``, optional, (default = 64)
             The number of sentences to process in ELMo at one time.
-        use_sentence_key : ``bool``, optional, (default = False)
-            If true, use the first token in each line as the unique key for the layers output to the HDF5 file.
-            This key will be stripped from the rest of the line and the remaining tokens will be used as the
-            sentence to compute embeddings from.
         """
 
         # Tokenizes the sentences.
-        sentences = [line.strip().split() for line in input_file]
-        if use_sentence_key:
-            # Uses the first token in each sentence as the key.
-            keys, sentences = zip(*[(tokens[0], tokens[1:]) for tokens in sentences])
-            embedded_sentences = zip(keys, self.embed_sentences(sentences, batch_size))
-        else:
-            # Uses the index as the key.
-            embedded_sentences = enumerate(self.embed_sentences(sentences, batch_size))
+        sentences = [line.strip() for line in input_file]
+        split_sentences = map(lambda sentence: sentence.split(), sentences)
+        # Uses the sentence as the key.
+        embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))
 
         logger.info("Processing sentences.")
         with h5py.File(output_file_path, 'w') as fout:
@@ -288,5 +270,4 @@ def elmo_command(args):
     elmo_embedder.embed_file(
             args.input_file,
             args.output_file,
-            args.batch_size,
-            args.use_sentence_key)
+            args.batch_size)
