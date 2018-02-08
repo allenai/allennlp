@@ -8,13 +8,13 @@ class SniffTest(AllenNlpTestCase):
 
     def test_config(self):
         assert set(DEFAULT_MODELS.keys()) == {
+                'wikitables-parser',
                 'machine-comprehension',
                 'semantic-role-labeling',
                 'textual-entailment',
                 'coreference-resolution',
                 'named-entity-recognition',
         }
-
 
     def test_machine_comprehension(self):
         predictor = DEFAULT_MODELS['machine-comprehension'].predictor()
@@ -27,7 +27,6 @@ class SniffTest(AllenNlpTestCase):
         correct = "Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano"
 
         assert correct == result["best_span_str"]
-
 
     def test_semantic_role_labeling(self):
         predictor = DEFAULT_MODELS['semantic-role-labeling'].predictor()
@@ -109,7 +108,6 @@ class SniffTest(AllenNlpTestCase):
                                       'that', 'some', 'of', 'the', 'fabrics', 'are', 'wearing', 'out', '-', 'since', 'I', 'was',
                                       'a', 'newbie', 'I', 'skimped', 'on', 'some', 'of', 'the', 'fabric', 'and', 'the', 'poor',
                                       'quality', 'ones', 'are', 'developing', 'holes', '.']
-
 
     def test_ner(self):
         predictor = DEFAULT_MODELS['named-entity-recognition'].predictor()
