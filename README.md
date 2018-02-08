@@ -18,7 +18,7 @@ Now you can do any of the following:
 * Start a web service to host our models with `python -m allennlp.run serve`.
 * Interactively code against AllenNLP from the Python interpreter with `python`.
 
-You can also install via the `pip` package manager or by cloning this repository into a Python 3.6 Conda environment.
+You can also install via the `pip` package manager or by cloning this repository into a Python 3.6 environment.
 See below for more detailed instructions.
 
 ## What is AllenNLP?
