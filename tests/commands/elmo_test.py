@@ -131,7 +131,6 @@ class TestElmoEmbedder(ElmoTestCase):
             for i, tensor in enumerate(embeddings):
                 for layer in range(3):
                     expected_tensor = expected.get(str(i))
-                    print(str(i) + ", " + str(layer))
                     numpy.testing.assert_array_almost_equal(tensor[layer], expected_tensor[layer])
 
             main()
