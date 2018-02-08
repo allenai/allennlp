@@ -29,16 +29,15 @@ def main(param_file, extra_beaker_commands):
     # Get temporary ecr login. For this command to work, you need the python awscli
     # package with a version more recent than 1.11.91.
     print("Logging into ECR")
-    # subprocess.run('eval $(aws --region=us-west-2 ecr get-login --no-include-email)', shell=True, check=True)
+    subprocess.run('eval $(aws --region=us-west-2 ecr get-login --no-include-email)', shell=True, check=True)
 
     print(f"Building the Docker image ({image})")
-    # subprocess.run(f'docker build -t {image} .', shell=True, check=True)
+    subprocess.run(f'docker build -t {image} .', shell=True, check=True)
 
     print(f"Pushing the Docker image ({image})")
-    # subprocess.run(f'docker push {image}', shell=True, check=True)
+    subprocess.run(f'docker push {image}', shell=True, check=True)
 
-    # config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
-    config_dataset_id = "BOGUS"
+    config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
     filename = os.path.basename(param_file)
 
     allennlp_command = [
@@ -64,7 +63,7 @@ def main(param_file, extra_beaker_commands):
             f"{config_dataset_id}:/config.json",
             '--gpu-count=1'] + extra_beaker_commands + [image] + allennlp_command
     print(' '.join(command))
-    # subprocess.run(command, check=True)
+    subprocess.run(command, check=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
