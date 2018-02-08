@@ -32,7 +32,8 @@ def predict_logical_forms(args: argparse.Namespace):
     archive = load_archive(args.model_archive, cuda_device=args.cuda_device)
     model = archive.model
     model.eval()
-    # TODO(mattg): TOTAL HACK! Not sure why I'm getting this - might be due to numbers?
+    # TODO(mattg): TOTAL HACK! Not sure why I'm getting UNK tokens when reading production rules,
+    # but I am - might be due to numbers?
     model.vocab._token_to_index['rule_labels']['@@UNKNOWN@@'] = 0
     config = archive.config
     config['dataset_reader']['lazy'] = True
