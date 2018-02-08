@@ -119,18 +119,26 @@ class TestElmoEmbedder(ElmoTestCase):
             --weight-file tests/fixtures/elmo/lm_weights.hdf5 \
             --batch-size 10
         """
+        loaded_sentences, loaded_embeddings = self._load_sentences_embeddings()
+
+        assert len(loaded_sentences) == len(loaded_embeddings)
+        batch_size = len(loaded_sentences)
+
+        # The sentences and embeddings are organized in an idiosyncratic way TensorFlow handles batching.
+        # We are going to reorganize them linearly so they can be grouped into batches by AllenNLP.
         sentences = []
-        with open(self.sentences_txt_file) as fin:
-            for line in fin:
-                sentences.append(line.split())
+        expected_embeddings = []
+        for batch_number in range(len(loaded_sentences[0])):
+            for index in range(batch_size):
+                sentences.append(loaded_sentences[index][batch_number].split())
+                expected_embeddings.append(loaded_embeddings[index][batch_number])
+
+        assert len(expected_embeddings) == len(sentences)
 
         embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
-        embeddings = embedder.embed_sentences(sentences, batch_size=10)
+        embeddings = list(embedder.embed_sentences(sentences, batch_size))
 
-        with h5py.File(self.expected_embeddings_file, "r") as expected:
-            for i, tensor in enumerate(embeddings):
-                for layer in range(3):
-                    expected_tensor = expected.get(str(i))
-                    numpy.testing.assert_array_almost_equal(tensor[layer], expected_tensor[layer])
+        assert len(embeddings) == len(sentences)
 
-            main()
+        for tensor, expected in zip(embeddings, expected_embeddings):
+            numpy.testing.assert_array_almost_equal(tensor[2], expected)

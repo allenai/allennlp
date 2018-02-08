@@ -28,6 +28,40 @@ class ElmoTestCase(AllenNlpTestCase):
         self.sentences_txt_file = os.path.join(self.fixtures_path, 'sentences.txt')
         self.expected_embeddings_file = os.path.join(self.fixtures_path, 'expected_embeddings.hdf5')
 
+    def _load_sentences_embeddings(self):
+        """
+        Load the test sentences and the expected LM embeddings.
+
+        These files loaded in this method were created with a batch-size of 3.
+        Due to idiosyncrasies with TensorFlow, the 30 sentences in sentences.json are split into 3 files in which
+        the k-th sentence in each is from batch k.
+
+        This method returns a (sentences, embeddings) pair where each is a list of length batch_size.
+        Each list contains a sublist with total_sentence_count / batch_size elements.  As with the original files,
+        the k-th element in the sublist is in batch k.
+        """
+        with open(self.sentences_json_file) as fin:
+            sentences = json.load(fin)
+
+        # the expected embeddings
+        expected_lm_embeddings = []
+        for k in range(len(sentences)):
+            embed_fname = os.path.join(
+                    self.fixtures_path, 'lm_embeddings_{}.hdf5'.format(k)
+            )
+            expected_lm_embeddings.append([])
+            with h5py.File(embed_fname, 'r') as fin:
+                for i in range(10):
+                    sent_embeds = fin['%s' % i][...]
+                    sent_embeds_concat = numpy.concatenate(
+                            (sent_embeds[0, :, :], sent_embeds[1, :, :]),
+                            axis=-1
+                    )
+                    expected_lm_embeddings[-1].append(sent_embeds_concat)
+
+        return sentences, expected_lm_embeddings
+
+
 class TestElmoBiLm(ElmoTestCase):
     def test_elmo_bilm(self):
         # get the raw data
@@ -41,8 +75,10 @@ class TestElmoBiLm(ElmoTestCase):
 
         # For each sentence, first create a TextField, then create an instance
         instances = []
+        fout = open("sentences.txt.new", "w")
         for batch in zip(*sentences):
             for sentence in batch:
+                fout.write(sentence + "\n")
                 tokens = [Token(token) for token in sentence.split()]
                 field = TextField(tokens, {'character_ids': indexer})
                 instance = Instance({"elmo": field})
@@ -79,37 +115,12 @@ class TestElmoBiLm(ElmoTestCase):
                         )
                 )
 
-    def _load_sentences_embeddings(self):
-        # load the test sentences and the expected LM embeddings
-        with open(self.sentences_json_file) as fin:
-            sentences = json.load(fin)
-
-        # the expected embeddings
-        expected_lm_embeddings = []
-        for k in range(len(sentences)):
-            embed_fname = os.path.join(
-                    self.fixtures_path, 'lm_embeddings_{}.hdf5'.format(k)
-            )
-            expected_lm_embeddings.append([])
-            with h5py.File(embed_fname, 'r') as fin:
-                for i in range(10):
-                    sent_embeds = fin['%s' % i][...]
-                    sent_embeds_concat = numpy.concatenate(
-                            (sent_embeds[0, :, :], sent_embeds[1, :, :]),
-                            axis=-1
-                    )
-                    expected_lm_embeddings[-1].append(sent_embeds_concat)
-
-        return sentences, expected_lm_embeddings
-
 
 class TestElmo(ElmoTestCase):
     def setUp(self):
         super(TestElmo, self).setUp()
 
-        options_file = os.path.join(self.fixtures_path, 'options.json')
-        weight_file = os.path.join(self.fixtures_path, 'lm_weights.hdf5')
-        self.elmo = Elmo(options_file, weight_file, 2, dropout=0.0)
+        self.elmo = Elmo(self.options_file, self.weight_file, 2, dropout=0.0)
 
     def _sentences_to_ids(self, sentences):
         indexer = ELMoTokenCharactersIndexer()
