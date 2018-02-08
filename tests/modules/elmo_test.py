@@ -100,7 +100,7 @@ class TestElmoBiLm(ElmoTestCase):
         return sentences, expected_lm_embeddings
 
 
-class TestElmo(AllenNlpTestCase):
+class TestElmo(ElmoTestCase):
     def setUp(self):
         super(TestElmo, self).setUp()
 
@@ -167,11 +167,9 @@ class TestElmo(AllenNlpTestCase):
             )
 
 
-class TestElmoRequiresGrad(AllenNlpTestCase):
+class TestElmoRequiresGrad(ElmoTestCase):
     def _run_test(self, requires_grad):
-        options_file = os.path.join(self.fixtures_path, 'options.json')
-        weight_file = os.path.join(self.fixtures_path, 'lm_weights.hdf5')
-        embedder = ElmoTokenEmbedder(options_file, weight_file, requires_grad=requires_grad)
+        embedder = ElmoTokenEmbedder(self.options_file, self.weight_file, requires_grad=requires_grad)
         batch_size = 3
         seq_len = 4
         char_ids = Variable(torch.from_numpy(numpy.random.randint(0, 262, (batch_size, seq_len, 50))))
