@@ -9,6 +9,7 @@ from allennlp.models.decomposable_attention import DecomposableAttention
 from allennlp.models.encoder_decoders.simple_seq2seq import SimpleSeq2Seq
 from allennlp.models.model import Model
 from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFlow
+from allennlp.models.reading_comprehension.multi_paragraph import MultiParagraphReadingComprehension
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.models.coreference_resolution.coref import CoreferenceResolver

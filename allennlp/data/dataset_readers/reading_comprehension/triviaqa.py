@@ -97,6 +97,7 @@ class TriviaQaReader(DatasetReader):
             answer_json = question_json['Answer']
             human_answers = [util.normalize_text(answer) for answer in answer_json.get('HumanAnswers', [])]
             answer_texts = answer_json['NormalizedAliases'] + human_answers
+
             for paragraph in self.pick_paragraphs(evidence_files, question_text, answer_texts):
                 paragraph_tokens = self._tokenizer.tokenize(paragraph)
                 token_spans = util.find_valid_answer_spans(paragraph_tokens, answer_texts)

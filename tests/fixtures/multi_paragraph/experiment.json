@@ -1,0 +1,85 @@
+{
+    "dataset_reader": {
+      "type": "triviaqa",
+      "base_tarball_path": "tests/fixtures/data/triviaqa-sample.tgz",
+      "token_indexers": {
+        "tokens": {
+          "type": "single_id",
+          "lowercase_tokens": true
+        },
+        "token_characters": {
+          "type": "characters",
+          "character_tokenizer": {
+            "byte_encoding": "utf-8"
+          }
+        }
+      }
+    },
+    "train_data_path": "web-train.json",
+    "validation_data_path": "web-train.json",
+    "model": {
+      "type": "multi-paragraph",
+      "embedding_dim": 10,
+      "text_field_embedder": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 2,
+          "trainable": false
+        },
+        "token_characters": {
+          "type": "character_encoding",
+          "embedding": {
+            "num_embeddings": 260,
+            "embedding_dim": 8
+          },
+          "encoder": {
+            "type": "cnn",
+            "embedding_dim": 8,
+            "num_filters": 8,
+            "ngram_filter_sizes": [5]
+          }
+        }
+      },
+      "phrase_layer": {
+        "type": "lstm",
+        "input_size": 10,
+        "hidden_size": 10,
+        "num_layers": 1
+      },
+      "residual_encoder": {
+        "type": "lstm",
+        "input_size": 10,
+        "hidden_size": 10,
+        "num_layers": 1
+      },
+      "span_start_encoder": {
+        "type": "lstm",
+        "input_size": 10,
+        "hidden_size": 10,
+        "num_layers": 1
+      },
+      "span_end_encoder": {
+        "type": "lstm",
+        "input_size": 20,
+        "hidden_size": 10,
+        "num_layers": 1
+      }
+    },
+    "iterator": {
+      "type": "bucket",
+      "sorting_keys": [["passage", "num_tokens"], ["question", "num_tokens"]],
+      "padding_noise": 0.0,
+      "batch_size": 40
+    },
+    "trainer": {
+      "num_epochs": 1,
+      "grad_norm": 10.0,
+      "patience" : 12,
+      "cuda_device" : -1,
+      "optimizer": {
+        "type": "adadelta",
+        "lr": 0.5,
+        "rho": 0.95
+      }
+    }
+  }
