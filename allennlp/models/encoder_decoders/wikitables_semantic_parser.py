@@ -975,7 +975,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         previous_action = [action for state in states for action in state.previous_action_embedding]
         attended_question = [attended for state in states for attended in state.attended_question]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
-        debug_info = [debug_info for state in states for debug_info in state.debug_info]
+        if state.debug_info is not None:
+            debug_info = [debug_info for state in states for debug_info in state.debug_info]
+        else:
+            debug_info = None
         return WikiTablesDecoderState(batch_indices=batch_indices,
                                       action_history=action_histories,
                                       score=scores,
@@ -1011,7 +1014,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         group_hidden_states = [self.hidden_state[i] for i in group_indices]
         group_memory_cells = [self.memory_cell[i] for i in group_indices]
         group_attended_question = [self.attended_question[i] for i in group_indices]
-        group_debug_info = [self.debug_info[i] for i in group_indices]
+        if self.debug_info is not None:
+            group_debug_info = [self.debug_info[i] for i in group_indices]
+        else:
+            group_debug_info = None
         return WikiTablesDecoderState(batch_indices=group_batch_indices,
                                       action_history=group_action_histories,
                                       score=group_scores,
