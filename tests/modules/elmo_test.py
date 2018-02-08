@@ -24,6 +24,9 @@ class ElmoTestCase(AllenNlpTestCase):
         self.fixtures_path = os.path.join('tests', 'fixtures', 'elmo')
         self.options_file = os.path.join(self.fixtures_path, 'options.json')
         self.weight_file = os.path.join(self.fixtures_path, 'lm_weights.hdf5')
+        self.sentences_json_file = os.path.join(self.fixtures_path, 'sentences.json')
+        self.sentences_txt_file = os.path.join(self.fixtures_path, 'sentences.txt')
+        self.expected_embeddings_file = os.path.join(self.fixtures_path, 'expected_embeddings.hdf5')
 
 class TestElmoBiLm(ElmoTestCase):
     def test_elmo_bilm(self):
@@ -78,7 +81,7 @@ class TestElmoBiLm(ElmoTestCase):
 
     def _load_sentences_embeddings(self):
         # load the test sentences and the expected LM embeddings
-        with open(os.path.join(self.fixtures_path, 'sentences.json')) as fin:
+        with open(self.sentences_json_file) as fin:
             sentences = json.load(fin)
 
         # the expected embeddings
