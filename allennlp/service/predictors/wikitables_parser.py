@@ -18,7 +18,6 @@ class WikiTablesParserPredictor(Predictor):
         """
         Expects JSON that looks like ``{"question": "...", "table": "..."}``.
         """
-        print("Got json:", json_dict)
         question_text = json_dict["question"]
         table_text = json_dict["table"]
         cells = []
