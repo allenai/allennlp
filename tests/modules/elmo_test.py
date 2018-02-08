@@ -26,7 +26,6 @@ class ElmoTestCase(AllenNlpTestCase):
         self.weight_file = os.path.join(self.fixtures_path, 'lm_weights.hdf5')
         self.sentences_json_file = os.path.join(self.fixtures_path, 'sentences.json')
         self.sentences_txt_file = os.path.join(self.fixtures_path, 'sentences.txt')
-        self.expected_embeddings_file = os.path.join(self.fixtures_path, 'expected_embeddings.hdf5')
 
     def _load_sentences_embeddings(self):
         """
@@ -75,7 +74,6 @@ class TestElmoBiLm(ElmoTestCase):
 
         # For each sentence, first create a TextField, then create an instance
         instances = []
-        fout = open("sentences.txt.new", "w")
         for batch in zip(*sentences):
             for sentence in batch:
                 fout.write(sentence + "\n")

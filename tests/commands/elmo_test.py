@@ -109,16 +109,6 @@ class TestElmoCommand(ElmoTestCase):
 
 class TestElmoEmbedder(ElmoTestCase):
     def test_embeddings_are_as_expected(self):
-        """
-        You can recreate the expected embeddings with the following command:
-
-        python -m allennlp.run elmo \
-            tests/fixtures/elmo/sentences.txt \
-            tests/fixtures/expected_embeddings.hdf5 \
-            --options-file tests/fixtures/elmo/options.json \
-            --weight-file tests/fixtures/elmo/lm_weights.hdf5 \
-            --batch-size 10
-        """
         loaded_sentences, loaded_embeddings = self._load_sentences_embeddings()
 
         assert len(loaded_sentences) == len(loaded_embeddings)
