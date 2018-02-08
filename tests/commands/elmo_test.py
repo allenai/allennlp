@@ -78,8 +78,8 @@ class TestElmoCommand(ElmoTestCase):
         output_path = os.path.join(tempdir, "output.txt")
 
         sentences = [
-            "Michael went to the store to buy some eggs .",
-            "Michael went to the store to buy some eggs .",
+                "Michael went to the store to buy some eggs .",
+                "Michael went to the store to buy some eggs .",
         ]
 
         with open(sentences_path, 'w') as f:
