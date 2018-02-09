@@ -93,8 +93,8 @@ if __name__ == "__main__":
     if args.source:
         extra_beaker_commands.extend([f"--source={source}" for source in args.source])
     if args.cpu:
-        extra_beaker_commands.append(f"--cpu={cpu}")
+        extra_beaker_commands.append(f"--cpu={args.cpu}")
     if args.memory:
-        extra_beaker_commands.append(f"--memory={memory}")
+        extra_beaker_commands.append(f"--memory={args.memory}")
 
     main(args.param_file, extra_beaker_commands)
