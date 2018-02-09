@@ -72,6 +72,40 @@ class TestElmoCommand(ElmoTestCase):
             for sentence in sentences:
                 assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
 
+    def test_duplicate_sentences(self):
+        tempdir = tempfile.mkdtemp()
+        sentences_path = os.path.join(tempdir, "sentences.txt")
+        output_path = os.path.join(tempdir, "output.txt")
+
+        sentences = [
+                "Michael went to the store to buy some eggs .",
+                "Michael went to the store to buy some eggs .",
+        ]
+
+        with open(sentences_path, 'w') as f:
+            for line in sentences:
+                f.write(line + '\n')
+
+        sys.argv = ["run.py",  # executable
+                    "elmo",  # command
+                    sentences_path,
+                    output_path,
+                    "--options-file",
+                    self.options_file,
+                    "--weight-file",
+                    self.weight_file]
+
+        main()
+
+        assert os.path.exists(output_path)
+
+        with h5py.File(output_path, 'r') as h5py_file:
+            assert len(h5py_file.keys()) == 1
+            assert set(h5py_file.keys()) == set(sentences)
+            # The vectors in the test configuration are smaller (32 length)
+            for sentence in set(sentences):
+                assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
+
 
 class TestElmoEmbedder(ElmoTestCase):
     def test_embeddings_are_as_expected(self):

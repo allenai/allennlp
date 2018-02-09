@@ -258,11 +258,14 @@ class ElmoEmbedder():
         logger.info("Processing sentences.")
         with h5py.File(output_file_path, 'w') as fout:
             for key, embeddings in Tqdm.tqdm(embedded_sentences):
-                fout.create_dataset(
-                        str(key),
-                        embeddings.shape, dtype='float32',
-                        data=embeddings
-                )
+                if key in fout.keys():
+                    logger.warning(f"Key already exists in {output_file_path}, skipping: {key}")
+                else:
+                    fout.create_dataset(
+                            str(key),
+                            embeddings.shape, dtype='float32',
+                            data=embeddings
+                    )
         input_file.close()
 
 def elmo_command(args):
