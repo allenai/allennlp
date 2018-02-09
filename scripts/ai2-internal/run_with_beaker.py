@@ -4,6 +4,7 @@
 
 import argparse
 import os
+import random
 import subprocess
 import sys
 
@@ -20,13 +21,19 @@ def main(param_file, description):
     image = f"{ecr_repository}/allennlp/allennlp:{commit}"
     overrides = ""
 
-    # Read params and set environment
+    # Reads params and sets environment.
     params = Params.from_file(param_file, overrides)
     flat_params = params.as_flat_dict()
     env = []
     for k, v in flat_params.items():
         k = str(k).replace('.', '_')
         env.append(f"--env={k}={v}")
+
+    # If the git repository is dirty, add a random hash.
+    result = subprocess.run('git diff-index --quiet HEAD --', shell=True)
+    if result.returncode != 0:
+        hash = "%x" % random.getrandbits(32)
+        image += "-" + hash
 
     # Get temporary ecr login. For this command to work, you need the python awscli
     # package with a version more recent than 1.11.91.
