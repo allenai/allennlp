@@ -330,6 +330,6 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         while token_index < len(tokens) and tokens[token_index].text in entity_words:
             seen_entity_words.add(tokens[token_index].text)
             token_index += 1
-        return len(seen_entity_words) / len(entity_words)
+        return 0 if len(entity_words) == 0 else len(seen_entity_words) / len(entity_words)
 
     # pylint: enable=unused-argument,no-self-use
