@@ -7,7 +7,7 @@ import logging
 import string
 from typing import Any, Dict, List, Tuple
 
-from allennlp.data.fields import Field, TextField, IndexField, MetadataField
+from allennlp.data.fields import Field, TextField, IndexField, MetadataField, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import Token
@@ -211,3 +211,35 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
+
+def combine_instances(instances: List[Instance]) -> Instance:
+    """
+    Takes a bunch of instances that represent different paragraphs for the same
+    question and combines them into a single instance by combining the
+    passage_tokens, passage_text, and token_spans.
+    """
+    fields: Dict[str, Field] = {}
+
+    # All instances should represent the same question.
+    question_fields = [instance.fields['question'] for instance in instances]
+    question_tokens = [tuple(token.text for token in field.tokens) for field in question_fields]
+    assert len(set(question_tokens)) == 1
+
+    first_instance = instances[0]
+    fields['question'] = first_instance.fields['question']
+    fields['passage'] = ListField([instance.fields['passage'] for instance in instances])
+    fields['span_start'] = ListField([instance.fields['span_start'] for instance in instances])
+    fields['span_end'] = ListField([instance.fields['span_end'] for instance in instances])
+
+    metadata = {
+        key: []
+        for instance in instances
+        for key in instance.fields['metadata'].metadata
+    }
+
+    for instance in instances:
+        for key, value in instance.fields['metadata'].metadata.items():
+            metadata[key].append(value)
+
+    fields['metadata'] = MetadataField(metadata)
+
