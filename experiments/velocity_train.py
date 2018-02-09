@@ -12,7 +12,7 @@ use_cuda = torch.cuda.is_available()
 def main(argv):
  
     print("*** initializing data ***")
-    output_lang, pairs, pairs_dev, max_length = initializeData('data/mturk.004.train.txt', 'data/mturk.004.dev.txt', max_input_length = 120)
+    output_lang, pairs, pairs_dev, max_length = initializeData('data/mturk.005.train.txt', 'data/mturk.005.dev.txt', max_input_length = 120)
       
     hidden_size = 1028
     if use_cuda:
