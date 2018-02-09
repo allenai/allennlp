@@ -53,7 +53,7 @@ class Object:
             size = "medium"
         else:
             size = "big"
-        return "%s %s %s at (%d, %d)" % (size, self.color, self.shape, self.x_loc, self.y_loc)
+        return f"{size} {self.color} {self.shape} at ({self.x_loc}, {self.y_loc})"
 
     def __hash__(self):
         return hash(str(self))
@@ -127,12 +127,12 @@ class NlvrWorld(World):
                                       "any_equals": self._any_equals,
                                       "none_equals": self._none_equals}
 
-        self._count_functions = {"count": self.count,  # type: ignore
+        self._count_functions = {"count": self._count,  # type: ignore
                                  "color_count": self._color_count,
                                  "shape_count": self._shape_count}
 
-        self._attribute_functions = {"shape": self.shape,
-                                     "color": self.color}
+        self._attribute_functions = {"shape": self._shape,
+                                     "color": self._color}
 
     @overrides
     def get_basic_types(self) -> Set[Type]:
@@ -146,6 +146,7 @@ class NlvrWorld(World):
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         return types.COMMON_NAME_MAPPING[name] if name in types.COMMON_NAME_MAPPING else name
 
+    ## Complex operators
     @staticmethod
     def _same(input_set: Set[str]) -> bool:
         return len(input_set) == 1
@@ -164,17 +165,36 @@ class NlvrWorld(World):
     def _any_equals(input_set: Set[str], target_value) -> bool:
         return any([x == target_value for x in input_set])
 
+    ## Attribute functions
+    @staticmethod
+    def _color(objects: Set[Object]) -> Set[str]:
+        """
+        Returns the set of colors of a set of objects.
+        """
+        return set([obj.color for obj in objects])
+
+    @staticmethod
+    def _shape(objects: Set[Object]) -> Set[str]:
+        """
+        Returns the set of shapes of a set of objects.
+        """
+        return set([obj.shape for obj in objects])
+
+    @staticmethod
+    def _count(entities_set: Union[Set[Box], Set[Object]]) -> int:
+        return len(entities_set)
+
     @staticmethod
     def _none_equals(input_set: Set[str], target_value) -> bool:
         return all([x != target_value for x in input_set])
 
     @classmethod
     def _shape_count(cls, input_set: Set[Object]) -> int:
-        return len(cls.shape(input_set))
+        return len(cls._shape(input_set))
 
     @classmethod
     def _color_count(cls, input_set: Set[Object]) -> int:
-        return len(cls.color(input_set))
+        return len(cls._color(input_set))
 
     def execute(self, logical_form: str) -> bool:
         """
@@ -237,6 +257,11 @@ class NlvrWorld(World):
         # TODO(pradeep): May want to make this more general and let the executor deal with questions.
         return self._execute_assertion(expression_as_list)
 
+    # TODO(pradeep): The methods ``_execute_assertion``, ``_execute_box_filter`` and
+    # ``execute_object_filter`` are very complex a this point. I should break these down into a
+    # simpler set of functions, such that one there is a method for each terminal, and the
+    # "execution logic" is minimal.
+
     def _execute_assertion(self, sub_expression: List) -> bool:
         """
         Assertion functions are boolean functions. They are of two types:
@@ -287,7 +312,7 @@ class NlvrWorld(World):
             target_attribute = self._execute_constant(sub_expression[2])
             # If the length of ``function_name_parts`` is 3, getting the attribute and comparison
             # operator is easy. However, if it is greater than 3, we need to determine where the
-            # attribute function stops and where the comparison operaot begins.
+            # attribute function stops and where the comparison operator begins.
             if len(function_name_parts) == 3:
                 # These are cases like ``object_color_equals``, ``box_count_greater`` etc.
                 attribute_type = function_name_parts[1]
@@ -308,7 +333,7 @@ class NlvrWorld(World):
         returned_attribute = None
         if entity_type == "box":
             # You can only count boxes. The other attributes do not apply.
-            returned_count = self.count(self._execute_box_filter(entity_expression))
+            returned_count = self._count(self._execute_box_filter(entity_expression))
         elif "count" in attribute_type:
             # We're counting objects, colors or shapes.
             count_function = self._count_functions[attribute_type]
@@ -452,32 +477,6 @@ class NlvrWorld(World):
             logger.error("Invalid constant: %s", sub_expression)
             raise ExecutionError("Invalid constant")
 
-    ## Attribute functions
-    @staticmethod
-    def color(objects: Set[Object]) -> Set[str]:
-        """
-        Returns the set of colors of a set of objects.
-        """
-        return set([obj.color for obj in objects])
-
-    @staticmethod
-    def shape(objects: Set[Object]) -> Set[str]:
-        """
-        Returns the set of shapes of a set of objects.
-        """
-        return set([obj.shape for obj in objects])
-
-    @staticmethod
-    def count(entities_set: Union[Set[Box], Set[Object]]) -> int:
-        return len(entities_set)
-
-    @staticmethod
-    def object_in_box(box: Set[Box]) -> Set[Object]:
-        return_set: Set[Object] = set()
-        for box_ in box:
-            return_set.update(box_.objects)
-        return return_set
-
     @staticmethod
     def _filter_boxes(set_to_filter: Set[Box],
                       attribute_function: Callable[[Box], AttributeType],
@@ -488,6 +487,13 @@ class NlvrWorld(World):
             if comparison_op(attribute_function(entity), target_attribute):
                 returned_set.add(entity)
         return returned_set
+
+    @staticmethod
+    def object_in_box(box: Set[Box]) -> Set[Object]:
+        return_set: Set[Object] = set()
+        for box_ in box:
+            return_set.update(box_.objects)
+        return return_set
 
     ## Object filtering functions
     @classmethod

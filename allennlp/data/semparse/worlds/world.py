@@ -29,7 +29,7 @@ class ParsingError(Exception):
 class ExecutionError(Exception):
     """
     This exception gets raised when you're trying to execute a logical form that your executor does
-    not understand. This may be because your logical form contains an function with an invalid name
+    not understand. This may be because your logical form contains a function with an invalid name
     or a set of arguments whose types do not match those that the fuction expects.
     """
     def __init__(self, message):
