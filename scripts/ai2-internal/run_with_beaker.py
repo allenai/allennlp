@@ -7,15 +7,14 @@ import os
 import random
 import subprocess
 import sys
+from typing import List
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))))
 
 from allennlp.commands.train import Train
 from allennlp.common.params import Params
 
-#TODO(michaels): add CLI support for mounting datasets.
-
-def main(param_file, description):
+def main(param_file: str, extra_beaker_commands: List[str]):
     ecr_repository = "896129387501.dkr.ecr.us-west-2.amazonaws.com"
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
     image = f"{ecr_repository}/allennlp/allennlp:{commit}"
@@ -70,9 +69,7 @@ def main(param_file, description):
             '/output',
             "--source",
             f"{config_dataset_id}:/config.json",
-            f'--desc={description}',
-            '--gpu-count=1',
-            '--detach'] + [image] + allennlp_command
+            '--gpu-count=1'] + extra_beaker_commands + [image] + allennlp_command
     print(' '.join(command))
     subprocess.run(command, check=True)
 
@@ -80,7 +77,32 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('param_file', type=str, help='The model configuration file.')
-    parser.add_argument('description', type=str, help='A description for the experiment.')
+    parser.add_argument('--desc', type=str, required=True, help='A description for the experiment.')
+    parser.add_argument('--debug', action='store_true', help='Print verbose stack traces on error.')
+    parser.add_argument('--detach', action='store_true', help='Run experiment in the background and print its ID.')
+    parser.add_argument('--env', action='append', help='Set environment variables (e.g. NAME=value or NAME)')
+    parser.add_argument('--mount', action='append', help='Bind a host directory (e.g. /host/path:/target/path)')
+    parser.add_argument('--source', action='append', help='Bind a remote data source (e.g. source-id:/target/path)')
+    parser.add_argument('--cpu', help='CPUs to reserve for this experiment (e.g., 0.5)')
+    parser.add_argument('--memory', help='Memory to reserve for this experiment (e.g., 1GB)')
 
     args = parser.parse_args()
-    main(args.param_file, args.description)
+
+    extra_beaker_commands = []
+    extra_beaker_commands.append(f'--desc={args.desc}'),
+    if args.debug:
+        extra_beaker_commands.append("--debug")
+    if args.detach:
+        extra_beaker_commands.append("--detach")
+    if args.env:
+        extra_beaker_commands.extend([f"--env={env}" for env in args.env])
+    if args.mount:
+        extra_beaker_commands.extend([f"--mount={mount}" for mount in args.mount])
+    if args.source:
+        extra_beaker_commands.extend([f"--source={source}" for source in args.source])
+    if args.cpu:
+        extra_beaker_commands.append(f"--cpu={args.cpu}")
+    if args.memory:
+        extra_beaker_commands.append(f"--memory={args.memory}")
+
+    main(args.param_file, extra_beaker_commands)
