@@ -140,11 +140,6 @@ class MultiParagraphReadingComprehension(Model):
         batch_size, num_paragraphs, *_ = passage['tokens'].size()
 
         if span_start is not None:
-            # print("question", question)
-            # print("passage", passage)
-            # print("batch_size", batch_size)
-            # print("num_paragraphs", num_paragraphs)
-            # print("span_start", span_start)
             # span_start is (batch_size, num_paragraphs, ?)
             assert span_start.size(1) == num_paragraphs
             assert span_end.size(1) == num_paragraphs
@@ -285,13 +280,17 @@ class MultiParagraphReadingComprehension(Model):
 
         if span_start is not None:
             span_idx_mask = 1 - torch.eq(span_start, -1).float()
-            #loss = self._shared_norm_loss(paragraph_span_start_logits, None, span_start, span_idx_mask)
-            #loss += self._shared_norm_loss(paragraph_span_end_logits, None, span_end, span_idx_mask)
+
+            # TODO(joelgrus): shared_norm_loss doesn't work, figure out why.
+            # loss = self._shared_norm_loss(paragraph_span_start_logits, None, span_start, span_idx_mask)
+            # loss += self._shared_norm_loss(paragraph_span_end_logits, None, span_end, span_idx_mask)
+            loss = 0.0
+
             # self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
             # self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
             # self._span_accuracy(best_span, torch.stack([span_start, span_end], -1))
-            loss = 0.0
             output_dict["loss"] = loss
+
         # if metadata is not None:
         #     output_dict['best_span_str'] = []
         #     best_paragraphs = best_paragraph_word_span[:, 0]

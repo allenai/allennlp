@@ -13,9 +13,9 @@ class SharedNormLoss(torch.nn.Module):
                 answer_mask: Variable) -> Variable:
         # pylint: disable=arguments-differ,unused-argument
         # TODO(joelgrus): why is paragraph_mask unused?
-
         masked_span_idxs = (span_idxs * answer_mask.long()).squeeze(-1)
         pos_scores = torch.gather(scores, 2, masked_span_idxs) # (batch_size, num_paras, num_ans)
+
         pos_scores.data.masked_fill_(1 - answer_mask.data.byte(), -float('inf'))
         pos_log_sum_exp = logsumexp(pos_scores)
         all_log_sum_exp = logsumexp(scores)
