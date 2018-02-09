@@ -25,6 +25,7 @@ class TestElmoCommand(ElmoTestCase):
                     "elmo",  # command
                     sentences_path,
                     output_path,
+                    "--all",
                     "--options-file",
                     self.options_file,
                     "--weight-file",
@@ -57,6 +58,7 @@ class TestElmoCommand(ElmoTestCase):
                     "elmo",  # command
                     sentences_path,
                     output_path,
+                    "--all",
                     "--options-file",
                     self.options_file,
                     "--weight-file",
@@ -90,6 +92,7 @@ class TestElmoCommand(ElmoTestCase):
                     "elmo",  # command
                     sentences_path,
                     output_path,
+                    "--all",
                     "--options-file",
                     self.options_file,
                     "--weight-file",
