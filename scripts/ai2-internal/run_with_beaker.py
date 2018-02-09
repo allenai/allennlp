@@ -32,8 +32,8 @@ def main(param_file, description):
     # If the git repository is dirty, add a random hash.
     result = subprocess.run('git diff-index --quiet HEAD --', shell=True)
     if result.returncode != 0:
-        hash = "%x" % random.getrandbits(32)
-        image += "-" + hash
+        dirty_hash = "%x" % random.getrandbits(32)
+        image += "-" + dirty_hash
 
     # Get temporary ecr login. For this command to work, you need the python awscli
     # package with a version more recent than 1.11.91.
