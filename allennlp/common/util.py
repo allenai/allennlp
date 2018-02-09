@@ -46,7 +46,7 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, (list, tuple)):
         # Lists and Tuples need their values sanitized
         return [sanitize(x_i) for x_i in x]
-    elif isinstance(x, (spacy.tokens.token.Token, allennlp.data.Token)):  # pylint: disable=no-member
+    elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
         # Tokens get sanitized to just their text.
         return x.text
     else:
