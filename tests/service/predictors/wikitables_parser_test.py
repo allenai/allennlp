@@ -1,8 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 from unittest import TestCase
 
-from pytest import approx
-
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
