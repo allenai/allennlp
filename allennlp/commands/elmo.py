@@ -5,7 +5,7 @@ Given a pre-processed input text file, this command outputs the internal
 layers used to compute ELMo representations to a single (potentially large) file.
 
 The input file is previously tokenized, whitespace separated text, one sentence per line.
-The output is a hdf5 file (<http://docs.h5py.org/en/latest/>) where each
+The output is a hdf5 file (<http://docs.h5py.org/en/latest/>) where, with the --all flag, each
 sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 
 #TODO(michaels) add a link to the ELMo paper once published.
@@ -45,6 +45,7 @@ from typing import IO, List, Iterable, Tuple
 
 import argparse
 import h5py
+import numpy
 import torch
 
 from allennlp.common.tqdm import Tqdm
@@ -71,10 +72,15 @@ class Elmo(Subcommand):
         subparser = parser.add_parser(
                 name, description=description, help='Use a trained model to make predictions.')
 
-        subparser.add_argument('input_file', type=argparse.FileType('r'), help='path to input file')
-        subparser.add_argument('output_file', type=str, help='path to output file')
+        subparser.add_argument('input_file', type=argparse.FileType('r'), help='The path to the input file.')
+        subparser.add_argument('output_file', type=str, help='The path to the output file.')
 
-        subparser.add_argument('--vocab-path', type=str, help='A path to a vocabulary file to generate ')
+        group = subparser.add_mutually_exclusive_group(required=True)
+        group.add_argument('--all', action='store_true', help='Output all three ELMo vectors.')
+        group.add_argument('--top', action='store_true', help='Output the top ELMo vector.')
+        group.add_argument('--average', action='store_true', help='Output the average of the ELMo vectors.')
+
+        subparser.add_argument('--vocab-path', type=str, help='A path to a vocabulary file to generate.')
         subparser.add_argument(
                 '--options-file',
                 type=str,
@@ -234,6 +240,7 @@ class ElmoEmbedder():
     def embed_file(self,
                    input_file: IO,
                    output_file_path: str,
+                   output_format: str = "all",
                    batch_size: int = DEFAULT_BATCH_SIZE) -> None:
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
@@ -245,9 +252,13 @@ class ElmoEmbedder():
             A file with one tokenized sentence per line.
         output_file_path : ``str``, required
             A path to the output hdf5 file.
+        output_format : ``str``, optional, (default = "all")
+            The embeddings to output.  Must be one of "all", "top", or "average".
         batch_size : ``int``, optional, (default = 64)
             The number of sentences to process in ELMo at one time.
         """
+
+        assert output_format in ["all", "top", "average"]
 
         # Tokenizes the sentences.
         sentences = [line.strip() for line in input_file]
@@ -261,16 +272,31 @@ class ElmoEmbedder():
                 if key in fout.keys():
                     logger.warning(f"Key already exists in {output_file_path}, skipping: {key}")
                 else:
+                    if output_format == "all":
+                        output = embeddings
+                    elif output_format == "top":
+                        output = embeddings[2]
+                    elif output_format == "average":
+                        output = numpy.average(embeddings, axis=0)
+
                     fout.create_dataset(
-                            str(key),
-                            embeddings.shape, dtype='float32',
-                            data=embeddings
+                            key,
+                            output.shape, dtype='float32',
+                            data=output
                     )
         input_file.close()
 
 def elmo_command(args):
     elmo_embedder = ElmoEmbedder(args.options_file, args.weight_file, args.cuda_device)
+    output_format = ""
+    if args.all:
+        output_format = "all"
+    elif args.top:
+        output_format = "top"
+    elif args.average:
+        output_format = "average"
     elmo_embedder.embed_file(
             args.input_file,
             args.output_file,
+            output_format,
             args.batch_size)
