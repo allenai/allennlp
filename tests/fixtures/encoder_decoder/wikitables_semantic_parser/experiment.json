@@ -57,7 +57,7 @@
     "decoder_beam_search": {
       "beam_size": 3
     },
-    "max_decoding_steps": 20,
+    "max_decoding_steps": 200,
     "attention_function": {"type": "dot_product"}
   },
   "iterator": {
