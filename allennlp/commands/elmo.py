@@ -272,15 +272,12 @@ class ElmoEmbedder():
                 if key in fout.keys():
                     logger.warning(f"Key already exists in {output_file_path}, skipping: {key}")
                 else:
-                    print(embeddings.shape)
                     if output_format == "all":
                         output = embeddings
                     elif output_format == "top":
                         output = embeddings[2]
                     elif output_format == "average":
                         output = numpy.average(embeddings, axis=0)
-                    print(output.shape)
-                    print()
 
                     fout.create_dataset(
                             key,
