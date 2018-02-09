@@ -45,6 +45,11 @@ class WikiTablesDatasetReader(DatasetReader):
     For training, we assume you are reading in ``data/*.examples`` files, and you have access to
     the output from Dynamic Programming on Denotations (DPD) on the training dataset.
 
+    We lowercase the question and all table text, because the questions in the data are typically
+    all lowercase, anyway.  This makes it so that any live demo that you put up will have questions
+    that match the data this was trained on.  Lowercasing the table text makes matching the
+    lowercased question text easier.
+
     Parameters
     ----------
     lazy : ``bool`` (optional, default=False)
@@ -196,7 +201,7 @@ class WikiTablesDatasetReader(DatasetReader):
             the whole dataset, then pass the result in here.
         """
         # pylint: disable=arguments-differ
-        tokenized_question = tokenized_question or self._tokenizer.tokenize(question)
+        tokenized_question = tokenized_question or self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
         if isinstance(table_info, str):
             table_knowledge_graph = TableKnowledgeGraph.read_from_file(table_info)
