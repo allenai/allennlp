@@ -195,7 +195,7 @@ allennlp/allennlp            latest              b66aee6cb593        5 minutes a
 You can run the image with `docker run --rm -it allennlp/allennlp`.  The `--rm` flag cleans up the image on exit and the
 `-it` flags make the session interactive so you can use the bash shell the Docker image starts.
 
-You can test your installation by running  `./scripts/verify.py --all`.
+You can test your installation by running  `./scripts/verify.py`.
 
 
 ## Team

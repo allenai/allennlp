@@ -31,7 +31,7 @@ build will test that:
 
 If your code fails one of these checks, you will be expected to fix your pull request before it is considered.
 
-You can run most of these tests locally with `./scripts/verify.py --all`, which will be faster than waiting for
+You can run most of these tests locally with `./scripts/verify.py`, which will be faster than waiting for
 cloud systems to run tests.
 
 ### Do you have a suggestion for an enhancement?
