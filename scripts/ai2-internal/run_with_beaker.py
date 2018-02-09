@@ -6,13 +6,14 @@ import argparse
 import os
 import subprocess
 import sys
+from typing import List
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))))
 
 from allennlp.commands.train import Train
 from allennlp.common.params import Params
 
-def main(param_file, extra_beaker_commands):
+def main(param_file: str, extra_beaker_commands: List[str]):
     ecr_repository = "896129387501.dkr.ecr.us-west-2.amazonaws.com"
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
     image = f"{ecr_repository}/allennlp/allennlp:{commit}"
