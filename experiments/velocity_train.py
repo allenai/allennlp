@@ -29,7 +29,7 @@ def main(argv):
         encoder1 = encoder1.cuda()
         attn_decoder1 = attn_decoder1.cuda()
 
-    trainItersElmo(encoder1, attn_decoder1, output_lang, 30000, pairs, pairs_dev, max_length, print_every=1000)
+    trainItersElmo(encoder1, attn_decoder1, output_lang, 100000, pairs, pairs_dev, max_length, print_every=1000)
     # experimental
     #    trainItersElmo(encoder1, attn_decoder1, output_lang, 750, 200, pairs, pairs_dev, max_length, print_every=1, save_every=10)
     print("*** done training ***")
