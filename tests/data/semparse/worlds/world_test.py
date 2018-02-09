@@ -202,3 +202,20 @@ class WorldTest(AllenNlpTestCase):
                            '<d,r> -> fb:row.row.index', 'r -> [<#1,#1>, r]', '<#1,#1> -> var', 'r -> x']
         with self.assertRaises(RuntimeError):
             world.get_logical_form(action_sequence)
+
+    def test_get_logical_form_with_multiple_negate_filters(self):
+        world = self.nlvr_world
+        # This is an actual sequence of actions produced by an untrained NlvrSemanticParser
+        action_sequence = ['@START@ -> t', 't -> [<c,t>, c]', '<c,t> -> [<o,<c,t>>, o]',
+                           '<o,<c,t>> -> object_color_all_equals', 'o -> [<o,o>, o]',
+                           '<o,o> -> [<<o,o>,<o,o>>, <o,o>]', '<<o,o>,<o,o>> -> negate_filter',
+                           '<o,o> -> [<<o,o>,<o,o>>, <o,o>]', '<<o,o>,<o,o>> -> negate_filter',
+                           '<o,o> -> blue', 'o -> [<o,o>, o]', '<o,o> -> blue', 'o -> [<o,o>, o]',
+                           '<o,o> -> blue', 'o -> all_objects', 'c -> color_blue']
+        logical_form = world.get_logical_form(action_sequence)
+        # "The color of all blue blue objects that are not not blue is blue".
+        expected_logical_form = ("(object_color_all_equals ((negate_filter (negate_filter blue)) "
+                                 "(blue (blue all_objects))) color_blue)")
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        parsed_expected_logical_form = world.parse_logical_form(expected_logical_form)
+        assert parsed_logical_form == parsed_expected_logical_form

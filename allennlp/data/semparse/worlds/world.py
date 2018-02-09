@@ -278,14 +278,21 @@ class World:
         terminals = list(reversed(terminals))
         higher_order_functions = ['reverse', 'negate_filter']
         for i, (terminal, num_args) in enumerate(terminals):
-            if i < len(terminals) - 1 and terminals[i + 1][0] in higher_order_functions:
+            if terminal in higher_order_functions:
+                continue
+            upcoming_higher_order_functions = []
+            for j in range(i + 1, len(terminals)):
+                if terminals[j][0] in higher_order_functions:
+                    upcoming_higher_order_functions.append(terminals[j][0])
+                else:
+                    break
+            if upcoming_higher_order_functions:
                 if 'lambda' in terminal:
                     terminal = f"({terminal} {partial_logical_forms.pop()})"
                     num_args -= 1
-                terminal = f"({terminals[i + 1][0]} {terminal})"
-            if terminal in higher_order_functions:
-                continue
-            elif num_args == 0:
+                for upcoming_function in upcoming_higher_order_functions:
+                    terminal = f"({upcoming_function} {terminal})"
+            if num_args == 0:
                 partial_logical_forms.append(terminal)
             else:
                 args = []

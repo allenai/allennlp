@@ -428,8 +428,20 @@ class NlvrWorld(World):
             all_objects
         """
         if sub_expression[0][0] == "negate_filter":
-            original_filter_name = sub_expression[0][1]
             initial_set = self._execute_object_filter(sub_expression[1])
+            original_filter_name = sub_expression[0][1]
+            # It is possible that the decoder has produced a sequence of nested negations. We deal
+            # with that here.
+            # TODO (pradeep): This is messy. Fix the type declaration so that we don't have to deal
+            # with this.
+            num_negations = 1
+            while isinstance(original_filter_name, list) and \
+                  original_filter_name[0] == "negate_filter":
+                # We have a sequence of "negate_filters"
+                num_negations += 1
+                original_filter_name = original_filter_name[1]
+            if num_negations % 2 == 0:
+                return initial_set
             try:
                 original_filter = getattr(self, original_filter_name)
                 return self.negate_filter(original_filter, initial_set)
