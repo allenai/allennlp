@@ -739,10 +739,10 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
 
         action_logits = embedded_action_logits
         action_mask = embedded_action_mask.float()
-        log_probs = nn_util.masked_log_softmax(action_logits, action_mask)
 
         return self._compute_new_states(state,
-                                        log_probs,
+                                        action_logits,
+                                        action_mask,
                                         hidden_state,
                                         memory_cell,
                                         action_embeddings,
@@ -823,7 +823,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     @classmethod
     def _compute_new_states(cls,  # type: ignore
                             state: NlvrDecoderState,
-                            log_probs: torch.Tensor,
+                            action_logits: torch.Tensor,
+                            action_mask: torch.Tensor,
                             hidden_state: torch.Tensor,
                             memory_cell: torch.Tensor,
                             action_embeddings: torch.Tensor,
@@ -842,15 +843,17 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # may be applicable in the future.
         # Note that we're not sorting these probs. We'll score checklists and sort states based on
         # checklist scores later.
-        probs = torch.exp(log_probs)
+        probs = nn_util.masked_softmax(action_logits, action_mask)
         # batch_index -> [(group_index, action_index, action, checklist, score)]
         next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
-        for group_index, (batch_index, instance_action_probs) in enumerate(zip(state.batch_indices, probs)):
+        for group_index, (batch_index, instance_action_probs, instance_action_logits) in \
+            enumerate(zip(state.batch_indices, probs, action_logits)):
             instance_agenda = state.agenda[group_index]  # (agenda_size,)
             instance_agenda_mask = state.agenda_mask[group_index]  # (agenda_size,)
             instance_checklist = state.checklist[group_index]  # (agenda_size,)
             # action_prob is a Variable.
-            for action_index, action_prob in enumerate(instance_action_probs):
+            for action_index, (action_prob, action_logit) in enumerate(zip(instance_action_probs,
+                                                                           instance_action_logits)):
                 # This is the actual index of the action from the original list of actions.
                 action = considered_actions[group_index][action_index]
                 if action == -1:
@@ -863,7 +866,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 new_checklist = instance_checklist + checklist_addition  # (agenda_size,)
                 checklist_score = cls.score_instance_checklist(new_checklist, instance_agenda_mask)
                 new_score = checklist_weight * checklist_score + \
-                            (1 - checklist_weight) * action_prob
+                            (1 - checklist_weight) * action_logit
 
                 next_states_info[batch_index].append((group_index, action_index, action,
                                                       new_checklist, new_score))
