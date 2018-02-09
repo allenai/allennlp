@@ -147,7 +147,7 @@ cd allennlp
 
 4. Visit http://pytorch.org/ and install the relevant pytorch package.
 
-You should now be able to test your installation with `./scripts/verify.py --all`.  Congratulations!
+You should now be able to test your installation with `./scripts/verify.py`.  Congratulations!
 
 ### Setting up a Docker development environment
 
