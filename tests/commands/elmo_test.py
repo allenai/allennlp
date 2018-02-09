@@ -43,7 +43,7 @@ class TestElmoCommand(ElmoTestCase):
             # The vectors in the test configuration are smaller (32 length)
             embedding = h5py_file.get(sentence)
             assert embedding.shape == (3, len(sentence.split()), 32)
-            numpy.testing.assert_array_almost_equal(embedding, expected_embedding)
+            numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
 
     def test_top_embedding_works(self):
         tempdir = tempfile.mkdtemp()
@@ -76,7 +76,7 @@ class TestElmoCommand(ElmoTestCase):
             # The vectors in the test configuration are smaller (32 length)
             embedding = h5py_file.get(sentence)
             assert embedding.shape == (len(sentence.split()), 32)
-            numpy.testing.assert_array_almost_equal(embedding, expected_embedding)
+            numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
 
     def test_average_embedding_works(self):
         tempdir = tempfile.mkdtemp()
@@ -110,7 +110,7 @@ class TestElmoCommand(ElmoTestCase):
             # The vectors in the test configuration are smaller (32 length)
             embedding = h5py_file.get(sentence)
             assert embedding.shape == (len(sentence.split()), 32)
-            numpy.testing.assert_array_almost_equal(embedding, expected_embedding)
+            numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
 
     def test_batch_embedding_works(self):
         tempdir = tempfile.mkdtemp()
