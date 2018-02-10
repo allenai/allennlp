@@ -77,12 +77,9 @@ class ConditionalRandomField(torch.nn.Module):
         self.num_tags = num_tags
 
         if constraints is None:
-            self._constraint_mask = torch.Tensor(num_tags + 2, num_tags + 2).fill_(1.)
+            self._constraint_mask = torch.Tensor(num_tags, num_tags).fill_(1.)
         else:
-            self._constraint_mask = torch.Tensor(num_tags + 2, num_tags + 2).fill_(0.)
-            # Don't make start / end state transitions
-            self._constraint_mask[-2:, :] = 1.
-            self._constraint_mask[:, -2:] = 1.
+            self._constraint_mask = torch.Tensor(num_tags, num_tags).fill_(0.)
             for i, j in constraints:
                 self._constraint_mask[i, j] = 1.
 
@@ -235,13 +232,13 @@ class ConditionalRandomField(torch.nn.Module):
         end_tag = num_tags + 1
         transitions = torch.Tensor(num_tags + 2, num_tags + 2).fill_(-10000.)
 
-        transitions[:num_tags, :num_tags] = self.transitions.data
+        # Apply transition constraints
+        constrained_transitions_data = (self.transitions.data * self._constraint_mask +
+                                        -10000.0 * (1 - self._constraint_mask))
+
+        transitions[:num_tags, :num_tags] = constrained_transitions_data
         transitions[start_tag, :num_tags] = self.start_transitions.data
         transitions[:num_tags, end_tag] = self.end_transitions.data
-
-        # Apply constraints
-        transitions = (transitions * self._constraint_mask +
-                       -10000. * (1 - self._constraint_mask))
 
         all_tags = []
         # Pad the max sequence length by 2 to account for start_tag + end_tag.
