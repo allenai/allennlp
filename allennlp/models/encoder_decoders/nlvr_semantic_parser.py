@@ -50,7 +50,6 @@ class NlvrSemanticParser(Model):
         super(NlvrSemanticParser, self).__init__(vocab=vocab)
 
         self._sentence_embedder = sentence_embedder
-        self._action_sequence_validity = Average()
         self._denotation_accuracy = Average()
         check_dimensions_match(nonterminal_embedder.get_output_dim(),
                                terminal_embedder.get_output_dim(),
@@ -151,37 +150,30 @@ class NlvrSemanticParser(Model):
         for i in range(batch_size):
             batch_actions = actions[i]
             batch_best_sequences = best_action_sequences[i]
-            sequence_is_valid = False
             sequence_is_correct = False
             if batch_best_sequences:
                 action_strings = [get_action_string(batch_actions[rule_id]) for rule_id in
                                   batch_best_sequences[0][0]]
                 label_string = self.vocab.get_token_from_index(int(labels_data[i]), "denotations")
                 instance_world = world[i]
-                sequence_is_valid, sequence_is_correct = self._check_denotation(action_strings,
-                                                                                label_string,
-                                                                                instance_world)
-            self._action_sequence_validity(1 if sequence_is_valid else 0)
+                sequence_is_correct = self._check_denotation(action_strings,
+                                                             label_string,
+                                                             instance_world)
             self._denotation_accuracy(1 if sequence_is_correct else 0)
         return outputs
 
     @staticmethod
     def _check_denotation(best_action_sequence: List[str],
                           label: str,
-                          world: NlvrWorld) -> Tuple[bool, bool]:
-        try:
-            logical_form = world.get_logical_form(best_action_sequence)
-            denotation = world.execute(logical_form)
-            denotation_is_correct = str(denotation).lower() == label.lower()
-            return True, denotation_is_correct
-        except (RuntimeError, AssertionError, TypeError):
-            # TODO (pradeep): Fix the type declaration to make this try-except unnecessary.
-            return False, False
+                          world: NlvrWorld) -> bool:
+        logical_form = world.get_logical_form(best_action_sequence)
+        denotation = world.execute(logical_form)
+        denotation_is_correct = str(denotation).lower() == label.lower()
+        return denotation_is_correct
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
-                'sequence_validity': self._action_sequence_validity.get_metric(reset),
                 'denotation_accuracy': self._denotation_accuracy.get_metric(reset)
         }
 
