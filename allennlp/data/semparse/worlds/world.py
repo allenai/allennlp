@@ -26,6 +26,20 @@ class ParsingError(Exception):
         return repr(self.message)
 
 
+class ExecutionError(Exception):
+    """
+    This exception gets raised when you're trying to execute a logical form that your executor does
+    not understand. This may be because your logical form contains a function with an invalid name
+    or a set of arguments whose types do not match those that the fuction expects.
+    """
+    def __init__(self, message):
+        super(ExecutionError, self).__init__()
+        self.message = message
+
+    def __str__(self):
+        return repr(self.message)
+
+
 class World:
     """
     Base class for defining a world in a new domain. This class defines a method to translate a
@@ -250,25 +264,35 @@ class World:
                 terminals.append((right_side, self._infer_num_arguments(left_side)))
         partial_logical_forms: List[str] = []
 
-        # We'll handle "reverse" here by looking at the prior terminal to see if it's "reverse"
-        # (and because we're iterating over this backwards, "prior" actually means "next").  If it
-        # is, we'll create a new "terminal" that's the application of "reverse" to that terminal.
-        # This works for most cases, but there are a few edge cases where this breaks, particularly
-        # when there's a lambda involved.  We have a hack to try to handle lambdas, but it doesn't
-        # always work.  TODO(mattg,pradeep): to make this logic more general and remove the need to
-        # special-case reverse, we need to fix some things in the type system.  In particular, we
-        # should remove currying in our action sequences.  If each production accurately reflected
-        # the number of arguments to a function, we could remove most of this logic.
+        # We'll handle higher order functions ("reverse" and "negate_filter") here by looking at the
+        # prior terminal to see if it's a higher order function (and because we're iterating over
+        # this backwards, "prior" actually means "next").  If it is, we'll create a new "terminal"
+        # that's the application of the higher order function to that terminal. This works for most
+        # cases, but there are a few edge cases where this breaks, particularly when there's a
+        # lambda involved (happens only with "reverse" in LambdaDCS).  We have a hack to try to
+        # handle lambdas, but it doesn't always work.  TODO(mattg,pradeep): to make this logic more
+        # general and remove the need to special-case reverse, we need to fix some things in the
+        # type system.  In particular, we should remove currying in our action sequences.  If each
+        # production accurately reflected the number of arguments to a function, we could remove
+        # most of this logic.
         terminals = list(reversed(terminals))
+        higher_order_functions = ['reverse', 'negate_filter']
         for i, (terminal, num_args) in enumerate(terminals):
-            if i < len(terminals) - 1 and terminals[i + 1][0] == 'reverse':
+            if terminal in higher_order_functions:
+                continue
+            upcoming_higher_order_functions = []
+            for j in range(i + 1, len(terminals)):
+                if terminals[j][0] in higher_order_functions:
+                    upcoming_higher_order_functions.append(terminals[j][0])
+                else:
+                    break
+            if upcoming_higher_order_functions:
                 if 'lambda' in terminal:
                     terminal = f"({terminal} {partial_logical_forms.pop()})"
                     num_args -= 1
-                terminal = f"(reverse {terminal})"
-            if terminal == 'reverse':
-                continue
-            elif num_args == 0:
+                for upcoming_function in upcoming_higher_order_functions:
+                    terminal = f"({upcoming_function} {terminal})"
+            if num_args == 0:
                 partial_logical_forms.append(terminal)
             else:
                 args = []
