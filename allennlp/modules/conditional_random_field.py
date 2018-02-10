@@ -1,12 +1,56 @@
 """
 Conditional random field
 """
-from typing import List
+from typing import List, Tuple, Set, Dict
 
 import torch
 from torch.autograd import Variable
 
+from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
+
+
+def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> Set[Tuple[int, int]]:
+    """
+    Implements a couple of common constraint types.
+    """
+    allowed = set()
+    if constraint_type == "BIOUL":
+        for i, from_label in tokens.items():
+            from_bioul, *from_entity = from_label
+            for j, to_label in tokens.items():
+                to_bioul, *to_entity = to_label
+
+                if from_bioul == 'O' and to_bioul in ('O', 'U', 'B'):
+                    allowed.add((i, j))
+                elif from_bioul == 'B' and to_bioul in ('I', 'L') and from_entity == to_entity:
+                    allowed.add((i, j))
+                elif from_bioul == 'I' and to_bioul in ('I', 'L') and from_entity == to_entity:
+                    allowed.add((i, j))
+                elif from_bioul == 'L' and to_bioul in ('B', 'O', 'U'):
+                    allowed.add((i, j))
+                elif from_bioul == 'U' and to_bioul in ('B', 'O', 'U'):
+                    allowed.add((i, j))
+
+    elif constraint_type == "BIO":
+        for i, from_label in tokens.items():
+            from_bio, *from_entity = from_label
+            for j, to_label in tokens.items():
+                to_bio, *to_entity = to_label
+
+                if to_bio == 'O':
+                    allowed.add((i, j))
+                elif from_bio == 'O' and to_bio == 'B':
+                    allowed.add((i, j))
+                elif from_bio == 'B' and to_bio == 'I' and from_entity == to_entity:
+                    allowed.add((i, j))
+                elif from_bio == 'I' and to_bioul == 'I' and from_entity == to_entity:
+                    allowed.add((i, j))
+    else:
+        raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
+
+    return allowed
+
 
 class ConditionalRandomField(torch.nn.Module):
     """
@@ -19,11 +63,15 @@ class ConditionalRandomField(torch.nn.Module):
     ----------
     num_tags : int, required
         The number of tags.
+    allowed_transitions : Set[Tuple[int, int]], optional (default: None)
+        If provided, only these transitions are allowed.
     """
     def __init__(self,
-                 num_tags: int) -> None:
+                 num_tags: int,
+                 allowed_transitions: Set[Tuple[int, int]] = None) -> None:
         super().__init__()
         self.num_tags = num_tags
+        self._allowed_transitions = allowed_transitions
 
         # transitions[i, j] is the logit for transitioning from state i to state j.
         self.transitions = torch.nn.Parameter(torch.Tensor(num_tags, num_tags))
@@ -162,6 +210,7 @@ class ConditionalRandomField(torch.nn.Module):
     def viterbi_tags(self, logits: Variable, mask: Variable) -> List[List[int]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
+        If constraints are applied, disallows all other transitions.
         """
         _, max_seq_length, num_tags = logits.size()
 
@@ -176,6 +225,13 @@ class ConditionalRandomField(torch.nn.Module):
         transitions[:num_tags, :num_tags] = self.transitions.data
         transitions[start_tag, :num_tags] = self.start_transitions.data
         transitions[:num_tags, end_tag] = self.end_transitions.data
+
+        # Apply constraints
+        if self._allowed_transitions is not None:
+            for from_idx in range(num_tags):
+                for to_idx in range(num_tags):
+                    if (from_idx, to_idx) not in self._allowed_transitions:
+                        transitions[from_idx, to_idx] = -10000.
 
         all_tags = []
         # Pad the max sequence length by 2 to account for start_tag + end_tag.
