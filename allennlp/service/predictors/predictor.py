@@ -6,6 +6,7 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.models.archival import Archive, load_archive
+from allennlp.common import Params
 
 
 class Predictor(Registrable):
@@ -34,6 +35,7 @@ class Predictor(Registrable):
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         instance, return_dict = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance, cuda_device)
+
         return_dict.update(outputs)
         return sanitize(return_dict)
 
@@ -67,13 +69,16 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str) -> 'Predictor':
+    def from_archive(cls, archive: Archive, predictor_name: str, config_file=None) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
         subclass; otherwise, the default one for the model will be used.
         """
-        config = archive.config
+        if predictor_name == 'wikitables-parser':
+            config = Params.from_file(config_file)
+        else:
+            config = archive.config
 
         dataset_reader_params = config["dataset_reader"]
         dataset_reader = DatasetReader.from_params(dataset_reader_params)
@@ -90,10 +95,11 @@ class DemoModel:
     (representing the trained model)
     and a choice of predictor
     """
-    def __init__(self, archive_file: str, predictor_name: str) -> None:
+    def __init__(self, archive_file: str, predictor_name: str, config_file=None) -> None:
         self.archive_file = archive_file
         self.predictor_name = predictor_name
+        self.config_file = config_file
 
     def predictor(self) -> Predictor:
         archive = load_archive(self.archive_file)
-        return Predictor.from_archive(archive, self.predictor_name)
+        return Predictor.from_archive(archive, self.predictor_name, self.config_file)

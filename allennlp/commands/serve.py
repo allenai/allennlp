@@ -71,13 +71,18 @@ class Serve(Subcommand):
                 name, description=description, help='Run the web service and demo.')
 
         subparser.add_argument('--port', type=int, default=8000)
-
+        subparser.add_argument('--archive-path', type=str, help='path to trained archive file')
+        subparser.add_argument('--config-file', type=str, help='path to config file since training uses preprocessed reader while serving needs to use original reader')
         subparser.set_defaults(func=_serve(self.trained_models))
 
         return subparser
 
 def _serve(trained_models: Dict[str, DemoModel]):
     def serve_inner(args: argparse.Namespace) -> None:
+        # An archive and config file are required for wikitables demo.
+        trained_models['wikitables-parser'].archive_file = args.archive_path
+        trained_models['wikitables-parser'].config_file = args.config_file
+
         server.run(args.port, trained_models)
 
     return serve_inner
