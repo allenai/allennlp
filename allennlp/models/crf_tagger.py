@@ -31,6 +31,9 @@ class CrfTagger(Model):
     label_namespace : ``str``, optional (default=``labels``)
         This is needed to compute the SpanBasedF1Measure metric.
         Unless you did something unusual, the default value should be what you want.
+    constraint_type : ``str``, optional (default=``None``)
+        If provided, the CRF will be constrained at inference time
+        to produce valid labels based on the specified type (e.g. "BIO", or "BIOUL").
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)

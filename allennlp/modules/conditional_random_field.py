@@ -1,7 +1,7 @@
 """
 Conditional random field
 """
-from typing import List, Tuple, Set, Dict
+from typing import List, Tuple, Dict
 
 import torch
 from torch.autograd import Variable
@@ -10,11 +10,11 @@ from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
 
 
-def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> Set[Tuple[int, int]]:
+def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tuple[int, int]]:
     """
     Implements a couple of common constraint types.
     """
-    allowed = set()
+    allowed = []
     if constraint_type == "BIOUL":
         for i, from_label in tokens.items():
             from_bioul, *from_entity = from_label
@@ -32,7 +32,7 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> Set[Tup
                 ])
 
                 if is_allowed:
-                    allowed.add((i, j))
+                    allowed.append((i, j))
 
     elif constraint_type == "BIO":
         for i, from_label in tokens.items():
@@ -48,7 +48,7 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> Set[Tup
                 ])
 
                 if is_allowed:
-                    allowed.add((i, j))
+                    allowed.append((i, j))
 
     else:
         raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
@@ -67,15 +67,24 @@ class ConditionalRandomField(torch.nn.Module):
     ----------
     num_tags : int, required
         The number of tags.
-    constraints : Set[Tuple[int, int]], optional (default: None)
+    constraints : List[Tuple[int, int]], optional (default: None)
         If provided, only these transitions are allowed.
     """
     def __init__(self,
                  num_tags: int,
-                 constraints: Set[Tuple[int, int]] = None) -> None:
+                 constraints: List[Tuple[int, int]] = None) -> None:
         super().__init__()
         self.num_tags = num_tags
-        self._constraints = constraints
+
+        if constraints is None:
+            self._constraint_mask = torch.Tensor(num_tags + 2, num_tags + 2).fill_(1.)
+        else:
+            self._constraint_mask = torch.Tensor(num_tags + 2, num_tags + 2).fill_(0.)
+            # Don't make start / end state transitions
+            self._constraint_mask[-2:, :] = 1.
+            self._constraint_mask[:, -2:] = 1.
+            for i, j in constraints:
+                self._constraint_mask[i, j] = 1.
 
         # transitions[i, j] is the logit for transitioning from state i to state j.
         self.transitions = torch.nn.Parameter(torch.Tensor(num_tags, num_tags))
@@ -231,11 +240,8 @@ class ConditionalRandomField(torch.nn.Module):
         transitions[:num_tags, end_tag] = self.end_transitions.data
 
         # Apply constraints
-        if self._constraints is not None:
-            for from_idx in range(num_tags):
-                for to_idx in range(num_tags):
-                    if (from_idx, to_idx) not in self._constraints:
-                        transitions[from_idx, to_idx] = -10000.
+        transitions = (transitions * self._constraint_mask +
+                       -10000. * (1 - self._constraint_mask))
 
         all_tags = []
         # Pad the max sequence length by 2 to account for start_tag + end_tag.
