@@ -98,6 +98,7 @@ class TriviaQaReader(DatasetReader):
             human_answers = [util.normalize_text(answer) for answer in answer_json.get('HumanAnswers', [])]
             answer_texts = answer_json['NormalizedAliases'] + human_answers
 
+            paragraph_instances = []
             for paragraph in self.pick_paragraphs(evidence_files, question_text, answer_texts):
                 paragraph_tokens = self._tokenizer.tokenize(paragraph)
                 token_spans = util.find_valid_answer_spans(paragraph_tokens, answer_texts)
@@ -105,13 +106,19 @@ class TriviaQaReader(DatasetReader):
                     # For now, we'll just ignore instances that we can't find answer spans for.
                     # Maybe we can do something smarter here later, but this will do for now.
                     continue
-                instance = self.text_to_instance(question_text,
-                                                 paragraph,
-                                                 token_spans,
-                                                 answer_texts,
-                                                 question_tokens,
-                                                 paragraph_tokens)
-                yield instance
+                paragraph_instance = self.text_to_instance(question_text,
+                                                           paragraph,
+                                                           token_spans,
+                                                           answer_texts,
+                                                           question_tokens,
+                                                           paragraph_tokens)
+
+                paragraph_instances.append(paragraph_instance)
+
+            if paragraph_instances:
+                combined = util.combine_instances(paragraph_instances)
+                print(combined.fields)
+                yield combined
 
     def pick_paragraphs(self,
                         evidence_files: List[List[str]],
