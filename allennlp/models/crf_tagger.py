@@ -53,14 +53,13 @@ class CrfTagger(Model):
         self.tag_projection_layer = TimeDistributed(Linear(self.encoder.get_output_dim(),
                                                            self.num_tags))
 
-
         if constraint_type is not None:
             labels = self.vocab.get_index_to_token_vocabulary(label_namespace)
-            allowed_trans = allowed_transitions(constraint_type, labels)
+            constraints = allowed_transitions(constraint_type, labels)
         else:
-            allowed_trans = None
+            constraints = None
 
-        self.crf = ConditionalRandomField(self.num_tags, allowed_trans)
+        self.crf = ConditionalRandomField(self.num_tags, constraints)
 
         self.span_metric = SpanBasedF1Measure(vocab, tag_namespace=label_namespace)
 

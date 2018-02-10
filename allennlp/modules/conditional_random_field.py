@@ -21,15 +21,17 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> Set[Tup
             for j, to_label in tokens.items():
                 to_bioul, *to_entity = to_label
 
-                if from_bioul == 'O' and to_bioul in ('O', 'U', 'B'):
-                    allowed.add((i, j))
-                elif from_bioul == 'B' and to_bioul in ('I', 'L') and from_entity == to_entity:
-                    allowed.add((i, j))
-                elif from_bioul == 'I' and to_bioul in ('I', 'L') and from_entity == to_entity:
-                    allowed.add((i, j))
-                elif from_bioul == 'L' and to_bioul in ('B', 'O', 'U'):
-                    allowed.add((i, j))
-                elif from_bioul == 'U' and to_bioul in ('B', 'O', 'U'):
+                is_allowed = any([
+                        # O can transition to O, B-* or U-*
+                        # L-x can transition to O, B-*, or U-*
+                        # U-x can transition to O, B-*, or U-*
+                        from_bioul in ('O', 'L', 'U') and to_bioul in ('O', 'B', 'U'),
+                        # B-x can only transition to I-x or L-x
+                        # I-x can only transition to I-x or L-x
+                        from_bioul in ('B', 'I') and to_bioul in ('I', 'L') and from_entity == to_entity
+                ])
+
+                if is_allowed:
                     allowed.add((i, j))
 
     elif constraint_type == "BIO":
@@ -38,14 +40,16 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> Set[Tup
             for j, to_label in tokens.items():
                 to_bio, *to_entity = to_label
 
-                if to_bio == 'O':
+                is_allowed = any([
+                        # Can always transition to O or B-x
+                        to_bio in ('O', 'B'),
+                        # Can only transition to I-x from B-x or I-x
+                        from_bio in ('B', 'I') and to_bio == 'I' and from_entity == to_entity
+                ])
+
+                if is_allowed:
                     allowed.add((i, j))
-                elif from_bio == 'O' and to_bio == 'B':
-                    allowed.add((i, j))
-                elif from_bio == 'B' and to_bio == 'I' and from_entity == to_entity:
-                    allowed.add((i, j))
-                elif from_bio == 'I' and to_bioul == 'I' and from_entity == to_entity:
-                    allowed.add((i, j))
+
     else:
         raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
 
@@ -63,15 +67,15 @@ class ConditionalRandomField(torch.nn.Module):
     ----------
     num_tags : int, required
         The number of tags.
-    allowed_transitions : Set[Tuple[int, int]], optional (default: None)
+    constraints : Set[Tuple[int, int]], optional (default: None)
         If provided, only these transitions are allowed.
     """
     def __init__(self,
                  num_tags: int,
-                 allowed_transitions: Set[Tuple[int, int]] = None) -> None:
+                 constraints: Set[Tuple[int, int]] = None) -> None:
         super().__init__()
         self.num_tags = num_tags
-        self._allowed_transitions = allowed_transitions
+        self._constraints = constraints
 
         # transitions[i, j] is the logit for transitioning from state i to state j.
         self.transitions = torch.nn.Parameter(torch.Tensor(num_tags, num_tags))
@@ -227,10 +231,10 @@ class ConditionalRandomField(torch.nn.Module):
         transitions[:num_tags, end_tag] = self.end_transitions.data
 
         # Apply constraints
-        if self._allowed_transitions is not None:
+        if self._constraints is not None:
             for from_idx in range(num_tags):
                 for to_idx in range(num_tags):
-                    if (from_idx, to_idx) not in self._allowed_transitions:
+                    if (from_idx, to_idx) not in self._constraints:
                         transitions[from_idx, to_idx] = -10000.
 
         all_tags = []
