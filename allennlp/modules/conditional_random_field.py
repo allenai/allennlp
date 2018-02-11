@@ -68,7 +68,8 @@ class ConditionalRandomField(torch.nn.Module):
     num_tags : int, required
         The number of tags.
     constraints : List[Tuple[int, int]], optional (default: None)
-        If provided, only these transitions are allowed.
+        An optional list of allowed transitions (from_tag_id, to_tag_id).
+        These are applied to ``viterbi_tags()`` but do not affect ``forward()``.
     """
     def __init__(self,
                  num_tags: int,
