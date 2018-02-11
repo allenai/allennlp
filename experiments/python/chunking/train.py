@@ -43,7 +43,7 @@ class EncoderRNNElmo(nn.Module):
         super(EncoderRNNElmo, self).__init__()
         self.n_layers = n_layers
         self.hidden_size = hidden_size
-        special_tokens = ['sos', 'eos', '<?>', '<unk>']
+        special_tokens = ['sos', 'eos', '<?>', '<unk>', '_a', '_b', '_c', '_d', '_e', '_f']
         self.embedding = ElmoEmbedder(elmo_bilm, special_tokens, device)
         self.gru = nn.GRU(hidden_size, hidden_size)
 
