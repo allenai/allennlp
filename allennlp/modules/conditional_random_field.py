@@ -76,15 +76,16 @@ class ConditionalRandomField(torch.nn.Module):
         super().__init__()
         self.num_tags = num_tags
 
+        # transitions[i, j] is the logit for transitioning from state i to state j.
+        self.transitions = torch.nn.Parameter(torch.Tensor(num_tags, num_tags))
+
+        # _constraint_mask indicates valid transitions (based on supplied constraints).
         if constraints is None:
-            self._constraint_mask = torch.Tensor(num_tags, num_tags).fill_(1.)
+            self._constraint_mask = None
         else:
             self._constraint_mask = torch.Tensor(num_tags, num_tags).fill_(0.)
             for i, j in constraints:
                 self._constraint_mask[i, j] = 1.
-
-        # transitions[i, j] is the logit for transitioning from state i to state j.
-        self.transitions = torch.nn.Parameter(torch.Tensor(num_tags, num_tags))
 
         # Also need logits for transitioning from "start" state and to "end" state.
         self.start_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
@@ -233,10 +234,13 @@ class ConditionalRandomField(torch.nn.Module):
         transitions = torch.Tensor(num_tags + 2, num_tags + 2).fill_(-10000.)
 
         # Apply transition constraints
-        constrained_transitions_data = (self.transitions.data * self._constraint_mask +
-                                        -10000.0 * (1 - self._constraint_mask))
+        if self._constraint_mask is None:
+            transitions_data = self.transitions.data
+        else:
+            transitions_data = (self.transitions.data * self._constraint_mask +
+                                -10000.0 * (1 - self._constraint_mask))
 
-        transitions[:num_tags, :num_tags] = constrained_transitions_data
+        transitions[:num_tags, :num_tags] = transitions_data
         transitions[start_tag, :num_tags] = self.start_transitions.data
         transitions[:num_tags, end_tag] = self.end_transitions.data
 
