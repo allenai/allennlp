@@ -101,7 +101,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                 'related_column_lemma',
                 'span_overlap_fraction',
                 ]
-        self._feature_extractors: List[Callable[[str, List[Token], Token], float]] = []
+        self._feature_extractors: List[Callable[[str, List[Token], Token, int, List[Token]], float]] = []
         for feature_extractor_name in feature_extractors:
             extractor = getattr(self, '_' + feature_extractor_name, None)
             if not extractor:
