@@ -49,6 +49,7 @@ class NlvrSemanticParser(Model):
 
         self._sentence_embedder = sentence_embedder
         self._denotation_accuracy = Average()
+        self._agenda_coverage = Average()
         check_dimensions_match(nonterminal_embedder.get_output_dim(),
                                terminal_embedder.get_output_dim(),
                                "nonterminal embedding dim",
@@ -149,21 +150,27 @@ class NlvrSemanticParser(Model):
 
         outputs = self._decoder_trainer.decode(initial_state, self._decoder_step,  # type: ignore
                                                self._max_decoding_steps)
+        agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
         best_action_sequences = outputs['best_action_sequence']
         get_action_string = lambda rule: "%s -> %s" % (rule["left"][0], rule["right"][0])
         for i in range(batch_size):
             batch_actions = actions[i]
             batch_best_sequences = best_action_sequences[i]
             sequence_is_correct = False
+            in_agenda_ratio = 0.0
             if batch_best_sequences:
                 action_strings = [get_action_string(batch_actions[rule_id]) for rule_id in
                                   batch_best_sequences[0][0]]
+                actions_in_agenda = [rule_id in agenda_data[i] for rule_id in
+                                     batch_best_sequences[0][0]]
+                in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 label_string = label_strings[i]
                 instance_world = world[i]
                 sequence_is_correct = self._check_denotation(action_strings,
                                                              label_string,
                                                              instance_world)
             self._denotation_accuracy(1 if sequence_is_correct else 0)
+            self._agenda_coverage(in_agenda_ratio)
         return outputs
 
     @staticmethod
@@ -178,7 +185,8 @@ class NlvrSemanticParser(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
-                'denotation_accuracy': self._denotation_accuracy.get_metric(reset)
+                'denotation_accuracy': self._denotation_accuracy.get_metric(reset),
+                'agenda_coverage': self._agenda_coverage.get_metric(reset)
         }
 
     @staticmethod
@@ -846,14 +854,13 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         probs = nn_util.masked_softmax(action_logits, action_mask)
         # batch_index -> [(group_index, action_index, action, checklist, score)]
         next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
-        for group_index, (batch_index, instance_action_probs, instance_action_logits) in \
-            enumerate(zip(state.batch_indices, probs, action_logits)):
+        for group_index, (batch_index, instance_action_probs) in \
+            enumerate(zip(state.batch_indices, probs)):
             instance_agenda = state.agenda[group_index]  # (agenda_size,)
             instance_agenda_mask = state.agenda_mask[group_index]  # (agenda_size,)
             instance_checklist = state.checklist[group_index]  # (agenda_size,)
             # action_prob is a Variable.
-            for action_index, (action_prob, action_logit) in enumerate(zip(instance_action_probs,
-                                                                           instance_action_logits)):
+            for action_index, action_prob in enumerate(instance_action_probs):
                 # This is the actual index of the action from the original list of actions.
                 action = considered_actions[group_index][action_index]
                 if action == -1:
@@ -866,7 +873,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 new_checklist = instance_checklist + checklist_addition  # (agenda_size,)
                 checklist_score = cls.score_instance_checklist(new_checklist, instance_agenda_mask)
                 new_score = checklist_weight * checklist_score + \
-                            (1 - checklist_weight) * action_logit
+                            (1 - checklist_weight) * action_prob
 
                 next_states_info[batch_index].append((group_index, action_index, action,
                                                       new_checklist, new_score))
