@@ -8,7 +8,6 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
-from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
@@ -78,7 +77,7 @@ class TriviaQaReader(DatasetReader):
             data_json = json.loads(base_tarball.extractfile(path).read().decode('utf-8'))
 
         logger.info("Reading the dataset")
-        for question_json in Tqdm.tqdm(data_json['Data']):
+        for question_json in data_json['Data']:
             question_text = question_json['Question']
             question_tokens = self._tokenizer.tokenize(question_text)
 

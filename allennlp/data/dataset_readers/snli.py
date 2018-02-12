@@ -6,7 +6,6 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
-from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, LabelField
 from allennlp.data.instance import Instance
@@ -47,7 +46,7 @@ class SnliReader(DatasetReader):
 
         with open(file_path, 'r') as snli_file:
             logger.info("Reading SNLI instances from jsonl dataset at: %s", file_path)
-            for line in Tqdm.tqdm(snli_file):
+            for line in snli_file:
                 example = json.loads(line)
 
                 label = example["gold_label"]
