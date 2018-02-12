@@ -16,10 +16,8 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tu
     """
     allowed = []
     if constraint_type == "BIOUL":
-        for i, from_label in tokens.items():
-            from_bioul, *from_entity = from_label
-            for j, to_label in tokens.items():
-                to_bioul, *to_entity = to_label
+        for i, (from_bioul, *from_entity) in tokens.items():
+            for j, (to_bioul, *to_entity) in tokens.items():
 
                 is_allowed = any([
                         # O can transition to O, B-* or U-*
@@ -35,16 +33,14 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tu
                     allowed.append((i, j))
 
     elif constraint_type == "BIO":
-        for i, from_label in tokens.items():
-            from_bio, *from_entity = from_label
-            for j, to_label in tokens.items():
-                to_bio, *to_entity = to_label
+        for i, (from_bio, *from_entity) in tokens.items():
+            for j, (to_bio, *to_entity) in tokens.items():
 
                 is_allowed = any([
                         # Can always transition to O or B-x
                         to_bio in ('O', 'B'),
                         # Can only transition to I-x from B-x or I-x
-                        from_bio in ('B', 'I') and to_bio == 'I' and from_entity == to_entity
+                        to_bio == 'I' and from_bio in ('B', 'I') and from_entity == to_entity
                 ])
 
                 if is_allowed:
