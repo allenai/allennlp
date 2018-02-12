@@ -5,7 +5,6 @@ from allennlp.data.instance import Instance
 from allennlp.common import Params, Tqdm
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
-from allennlp.common.util import ensure_list
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
