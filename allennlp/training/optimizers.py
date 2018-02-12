@@ -58,7 +58,9 @@ class Optimizer(Registrable):
             # This is typed as as Any since the dict values other then
             # the params key are passed to the Optimizer constructor and
             # can be any type it accepts.
-            # The last entry of this list is for the parameters not in any regex.
+            # In addition to any parameters that match group specific regex,
+            # we also need a group for the remaining "default" group.
+            # Those will be included in the last entry of parameter_groups.
             parameter_groups: Any = [{'params': []} for _ in range(len(groups) + 1)]
             # add the group specific kwargs
             for k in range(len(groups)): # pylint: disable=consider-using-enumerate
