@@ -23,20 +23,20 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
                 }
         self.graph = TableKnowledgeGraph.read_from_json(json)
         self.vocab = Vocabulary()
-        self.name_index = self.vocab.add_token_to_namespace("Name", namespace='tokens')
+        self.name_index = self.vocab.add_token_to_namespace("name", namespace='tokens')
         self.in_index = self.vocab.add_token_to_namespace("in", namespace='tokens')
-        self.english_index = self.vocab.add_token_to_namespace("English", namespace='tokens')
-        self.location_index = self.vocab.add_token_to_namespace("Location", namespace='tokens')
-        self.paradeniz_index = self.vocab.add_token_to_namespace("Paradeniz", namespace='tokens')
-        self.mersin_index = self.vocab.add_token_to_namespace("Mersin", namespace='tokens')
-        self.lake_index = self.vocab.add_token_to_namespace("Lake", namespace='tokens')
-        self.gala_index = self.vocab.add_token_to_namespace("Gala", namespace='tokens')
+        self.english_index = self.vocab.add_token_to_namespace("english", namespace='tokens')
+        self.location_index = self.vocab.add_token_to_namespace("location", namespace='tokens')
+        self.paradeniz_index = self.vocab.add_token_to_namespace("paradeniz", namespace='tokens')
+        self.mersin_index = self.vocab.add_token_to_namespace("mersin", namespace='tokens')
+        self.lake_index = self.vocab.add_token_to_namespace("lake", namespace='tokens')
+        self.gala_index = self.vocab.add_token_to_namespace("gala", namespace='tokens')
 
         self.oov_index = self.vocab.get_token_index('random OOV string', namespace='tokens')
         self.edirne_index = self.oov_index
 
         self.tokenizer = WordTokenizer(SpacyWordSplitter(pos_tags=True))
-        self.utterance = self.tokenizer.tokenize("Where is Mersin?")
+        self.utterance = self.tokenizer.tokenize("where is mersin?")
         self.token_indexers = {"tokens": SingleIdTokenIndexer("tokens")}
         self.field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
 
@@ -47,15 +47,15 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         self.field.count_vocab_items(namespace_token_counts)
 
         assert namespace_token_counts["tokens"] == {
-                'Name': 1,
+                'name': 1,
                 'in': 2,
-                'English': 2,
-                'Location': 1,
-                'Paradeniz': 1,
-                'Mersin': 1,
-                'Lake': 1,
-                'Gala': 1,
-                'Edirne': 1,
+                'english': 2,
+                'location': 1,
+                'paradeniz': 1,
+                'mersin': 1,
+                'lake': 1,
+                'gala': 1,
+                'edirne': 1,
                 }
 
     def test_index_converts_field_correctly(self):
@@ -103,49 +103,68 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
                                 [0, 0, 0]]
         assert_almost_equal(tensor_dict['text']['tokens'].data.cpu().numpy(), expected_text_tensor)
 
-        expected_linking_tensor = [[[0, 0, 0, 0, .2, 0, 0],  # fb:cell.edirne, "Where"
-                                    [0, 0, 0, 0, -1.5, 0, 0],  # fb:cell.edirne, "is"
-                                    [0, 0, 0, 0, 0, 0, 0],  # fb:cell.edirne, "Mersin"
-                                    [0, 0, 0, 0, -5, 0, 0],  # fb:cell.edirne, "?"
-                                    [0, 0, 0, 0, 0, 0, 0]],  # fb:cell.edirne, padding
-                                   [[0, 0, 0, 0, -.6, 0, 0],  # fb:cell.lake_gala, "Where"
-                                    [0, 0, 0, 0, -3.5, 0, 0],  # fb:cell.lake_gala, "is"
-                                    [0, 0, 0, 0, -.3333333, 0, 0],  # fb:cell.lake_gala, "Mersin"
-                                    [0, 0, 0, 0, -8, 0, 0],  # fb:cell.lake_gala, "?"
-                                    [0, 0, 0, 0, 0, 0, 0]],  # fb:cell.lake_gala, padding
-                                   [[0, 0, 0, 0, 0, 0, 0],  # fb:cell.mersin, "Where"
-                                    [0, 0, 0, 0, -1.5, 0, 0],  # fb:cell.mersin, "is"
-                                    [1, 1, 1, 1, 1, 0, 0],  # fb:cell.mersin, "Mersin"
-                                    [0, 0, 0, 0, -5, 0, 0],  # fb:cell.mersin, "?"
-                                    [0, 0, 0, 0, 0, 0, 0]],  # fb:cell.mersin, padding
-                                   [[0, 0, 0, 0, -.6, 0, 0],  # fb:cell.paradeniz, "Where"
-                                    [0, 0, 0, 0, -3, 0, 0],  # fb:cell.paradeniz, "is"
-                                    [0, 0, 0, 0, -.1666666, 0, 0],  # fb:cell.paradeniz, "Mersin"
-                                    [0, 0, 0, 0, -8, 0, 0],  # fb:cell.paradeniz, "?"
-                                    [0, 0, 0, 0, 0, 0, 0]],  # fb:cell.paradeniz, padding
-                                   [[0, 0, 0, 0, -2.8, 0, 0],  # fb:row.row.name_in_english, "Where"
-                                    [0, 0, 0, 0, -7.5, 0, 0],  # fb:row.row.name_in_english, "is"
-                                    [0, 0, 0, 0, -1.8333333, 1, 1],  # fb:row.row.name_in_english, "Mersin"
-                                    [0, 0, 0, 0, -18, 0, 0],  # fb:row.row.name_in_english, "?"
-                                    [0, 0, 0, 0, 0, 0, 0]],  # fb:row.row.name_in_english, padding
-                                   [[0, 0, 0, 0, -1.8, 0, 0],  # fb:row.row.location_in_english, "Where"
-                                    [0, 0, 0, 0, -5.5, 0, 0],  # fb:row.row.location_in_english, "is"
-                                    [0, 0, 0, 0, -1.1666666, 0, 0],  # fb:row.row.location_in_english, "Mersin"
-                                    [0, 0, 0, 0, -14, 0, 0],  # fb:row.row.location_in_english, "?"
-                                    [0, 0, 0, 0, 0, 0, 0]],  # fb:row.row.location_in_english, padding
-                                   [[0, 0, 0, 0, 0, 0, 0],  # padding, "Where"
-                                    [0, 0, 0, 0, 0, 0, 0],  # padding, "is"
-                                    [0, 0, 0, 0, 0, 0, 0],  # padding, "Mersin"
-                                    [0, 0, 0, 0, 0, 0, 0],  # padding, "?"
-                                    [0, 0, 0, 0, 0, 0, 0]]]  # padding, padding
-        assert_almost_equal(tensor_dict['linking'].data.cpu().numpy(), expected_linking_tensor)
+        linking_tensor = tensor_dict['linking'].data.cpu().numpy()
+        expected_linking_tensor = [[[0, 0, 0, 0, .2, 0, 0, 0],  # fb:cell.edirne, "where"
+                                    [0, 0, 0, 0, -1.5, 0, 0, 0],  # fb:cell.edirne, "is"
+                                    [0, 0, 0, 0, .1666666, 0, 0, 0],  # fb:cell.edirne, "mersin"
+                                    [0, 0, 0, 0, -5, 0, 0, 0],  # fb:cell.edirne, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.edirne, padding
+                                   [[0, 0, 0, 0, -.6, 0, 0, 0],  # fb:cell.lake_gala, "where"
+                                    [0, 0, 0, 0, -3.5, 0, 0, 0],  # fb:cell.lake_gala, "is"
+                                    [0, 0, 0, 0, -.3333333, 0, 0, 0],  # fb:cell.lake_gala, "mersin"
+                                    [0, 0, 0, 0, -8, 0, 0, 0],  # fb:cell.lake_gala, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.lake_gala, padding
+                                   [[0, 0, 0, 0, 0, 0, 0, 0],  # fb:cell.mersin, "where"
+                                    [0, 0, 0, 0, -1.5, 0, 0, 0],  # fb:cell.mersin, "is"
+                                    [1, 1, 1, 1, 1, 0, 0, 1],  # fb:cell.mersin, "mersin"
+                                    [0, 0, 0, 0, -5, 0, 0, 0],  # fb:cell.mersin, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.mersin, padding
+                                   [[0, 0, 0, 0, -.6, 0, 0, 0],  # fb:cell.paradeniz, "where"
+                                    [0, 0, 0, 0, -3, 0, 0, 0],  # fb:cell.paradeniz, "is"
+                                    [0, 0, 0, 0, -.1666666, 0, 0, 0],  # fb:cell.paradeniz, "mersin"
+                                    [0, 0, 0, 0, -8, 0, 0, 0],  # fb:cell.paradeniz, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.paradeniz, padding
+                                   [[0, 0, 0, 0, -2.6, 0, 0, 0],  # fb:row.row.name_in_english, "where"
+                                    [0, 0, 0, 0, -7.5, 0, 0, 0],  # fb:row.row.name_in_english, "is"
+                                    [0, 0, 0, 0, -1.8333333, 1, 1, 0],  # fb:row.row.name_in_english, "mersin"
+                                    [0, 0, 0, 0, -18, 0, 0, 0],  # fb:row.row.name_in_english, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:row.row.name_in_english, padding
+                                   [[0, 0, 0, 0, -1.6, 0, 0, 0],  # fb:row.row.location_in_english, "where"
+                                    [0, 0, 0, 0, -5.5, 0, 0, 0],  # fb:row.row.location_in_english, "is"
+                                    [0, 0, 0, 0, -1, 0, 0, 0],  # fb:row.row.location_in_english, "mersin"
+                                    [0, 0, 0, 0, -14, 0, 0, 0],  # fb:row.row.location_in_english, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:row.row.location_in_english, padding
+                                   [[0, 0, 0, 0, 0, 0, 0, 0],  # padding, "where"
+                                    [0, 0, 0, 0, 0, 0, 0, 0],  # padding, "is"
+                                    [0, 0, 0, 0, 0, 0, 0, 0],  # padding, "mersin"
+                                    [0, 0, 0, 0, 0, 0, 0, 0],  # padding, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0]]]  # padding, padding
+        for entity_index, entity_features in enumerate(expected_linking_tensor):
+            for question_index, feature_vector in enumerate(entity_features):
+                assert_almost_equal(linking_tensor[entity_index, question_index], feature_vector,
+                                    err_msg=f"{entity_index} {question_index}")
 
     def test_lemma_feature_extractor(self):
         # pylint: disable=protected-access
         utterance = self.tokenizer.tokenize("Names in English")
         field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
         entity = 'fb:row.row.name_in_english'
-        assert field._contains_lemma_match(entity, field._entity_text_map[entity], utterance[0]) == 1
+        lemma_feature = field._contains_lemma_match(entity,
+                                                    field._entity_text_map[entity],
+                                                    utterance[0],
+                                                    0,
+                                                    utterance)
+        assert lemma_feature == 1
+
+    def test_span_overlap_fraction(self):
+        # pylint: disable=protected-access
+        utterance = self.tokenizer.tokenize("what is the name in english of mersin?")
+        field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
+        entity = 'fb:row.row.name_in_english'
+        entity_text = field._entity_text_map[entity]
+        feature_values = [field._span_overlap_fraction(entity, entity_text, token, i, utterance)
+                          for i, token in enumerate(utterance)]
+        assert feature_values == [0, 0, 0, 1, 2/3, 1/3, 0, 0, 0]
 
     def test_batch_tensors(self):
         self.field.index(self.vocab)

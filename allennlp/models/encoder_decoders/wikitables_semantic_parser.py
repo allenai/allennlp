@@ -119,7 +119,7 @@ class WikiTablesSemanticParser(Model):
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
-        self._linking_params = torch.nn.Linear(7, 1)  # TODO(mattg): use linking features param vector
+        self._linking_params = torch.nn.Linear(8, 1)  # TODO(mattg): use linking features param vector
 
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
