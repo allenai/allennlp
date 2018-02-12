@@ -94,7 +94,7 @@ class Optimizer(Registrable):
             for k in range(len(groups) + 1):
                 group_options = {key: val for key, val in parameter_groups[k].items()
                                  if key != 'params'}
-                print("Group {0}: {1}, {2}".format(k,
+                logger.info("Group {0}: {1}, {2}".format(k,
                                                    list(parameter_group_names[k]),
                                                    group_options))
             # check for unused regex
