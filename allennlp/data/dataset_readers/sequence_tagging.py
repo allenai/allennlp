@@ -5,7 +5,6 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
-from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.instance import Instance
@@ -56,7 +55,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
         with open(file_path, "r") as data_file:
 
             logger.info("Reading instances from lines in file at: %s", file_path)
-            for line in Tqdm.tqdm(data_file):
+            for line in data_file:
                 line = line.strip("\n")
 
                 # skip blank lines

@@ -7,7 +7,6 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField, Field
 from allennlp.data.instance import Instance
@@ -83,7 +82,7 @@ class Conll2003DatasetReader(DatasetReader):
             logger.info("Reading instances from lines in file at: %s", file_path)
 
             # Group into alternative divider / sentence chunks.
-            for is_divider, lines in Tqdm.tqdm(itertools.groupby(data_file, _is_divider)):
+            for is_divider, lines in itertools.groupby(data_file, _is_divider):
                 # Ignore the divider chunks, so that `lines` corresponds to the words
                 # of a single sentence.
                 if not is_divider:
@@ -113,7 +112,6 @@ class Conll2003DatasetReader(DatasetReader):
                         instance_fields['tags'] = SequenceLabelField(chunk_tags, sequence)
 
                     yield Instance(instance_fields)
-
 
     def text_to_instance(self, tokens: List[Token]) -> Instance:  # type: ignore
         """

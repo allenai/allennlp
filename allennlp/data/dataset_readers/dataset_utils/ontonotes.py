@@ -6,8 +6,6 @@ import logging
 
 from nltk import Tree
 
-from allennlp.common.tqdm import Tqdm
-
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 TypedSpan = Tuple[int, Tuple[int, int]]  # pylint: disable=invalid-name
@@ -189,7 +187,7 @@ class Ontonotes:
         containing CONLL-formatted files.
         """
         logger.info("Reading CONLL sentences from dataset files at: %s", file_path)
-        for root, _, files in Tqdm.tqdm(list(os.walk(file_path))):
+        for root, _, files in list(os.walk(file_path)):
             for data_file in files:
                 # These are a relic of the dataset pre-processing. Every
                 # file will be duplicated - one file called filename.gold_skel

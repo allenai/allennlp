@@ -10,7 +10,6 @@ from nltk.tree import Tree
 
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
-from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SpanField, SequenceLabelField, ListField, Field
 from allennlp.data.instance import Instance
@@ -52,7 +51,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         directory, filename = os.path.split(file_path)
         logger.info("Reading instances from lines in file at: %s", file_path)
 
-        for parse in Tqdm.tqdm(BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents()):
+        for parse in BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents():
             yield self.text_to_instance(parse.leaves(), [x[1] for x in parse.pos()], parse)
 
     @overrides
