@@ -13,6 +13,7 @@ allennlp.service.predictors
 * :ref:`SentenceTaggerPredictor<sentence-tagger>`
 * :ref:`CorefPredictor<coreference-resolution>`
 * :ref:`ConstituencyParserPredictor<constituency-parser>`
+* :ref:`WikiTablesParserPredictor<wikitables-parser>`
 
 .. _predictor:
 .. automodule:: allennlp.service.predictors.predictor
@@ -52,6 +53,12 @@ allennlp.service.predictors
 
 .. _constituency-parser:
 .. automodule:: allennlp.service.predictors.constituency_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _wikitables-parser:
+.. automodule:: allennlp.service.predictors.wikitables_parser
    :members:
    :undoc-members:
    :show-inheritance:

@@ -30,6 +30,10 @@ from allennlp.service.predictors import DemoModel
 # that have the same ``Predictor`` wrapper. The corresponding model
 # will be served at the `/predict/<name-of-task>` API endpoint.
 DEFAULT_MODELS = {
+        'wikitables-parser': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/wikitables-model-preliminary-2018.02.07.tar.gz',  # pylint: disable=line-too-long
+                'wikitables-parser'
+        ),
         'machine-comprehension': DemoModel(
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',  # pylint: disable=line-too-long
                 'machine-comprehension'

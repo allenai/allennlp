@@ -1,7 +1,7 @@
 # pylint: disable=too-many-lines
 # TODO(mattg): Separate this file out somehow, or simplify things here.
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 from overrides import overrides
 
@@ -19,6 +19,7 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.semparse.type_declarations import GrammarState
 from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.data.semparse.worlds import WikiTablesWorld
+from allennlp.data.semparse import ParsingError
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
@@ -226,7 +227,8 @@ class WikiTablesSemanticParser(Model):
         question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_table_similarity_max_score + self._linking_params(linking_features).squeeze(3)
+        feature_scores = self._linking_params(linking_features).squeeze(3)
+        linking_scores = question_table_similarity_max_score + feature_scores
 
         # (batch_size, num_question_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
@@ -291,40 +293,62 @@ class WikiTablesSemanticParser(Model):
                                                possible_actions=actions,
                                                flattened_linking_scores=flattened_linking_scores,
                                                actions_to_entities=actions_to_entities,
-                                               entity_types=entity_type_dict)
+                                               entity_types=entity_type_dict,
+                                               debug_info=None)
         if self.training:
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
                                                 target_action_sequences,
                                                 target_mask)
         else:
-            outputs = {}
+            action_mapping = {}
+            for batch_index, batch_actions in enumerate(actions):
+                for action_index, action in enumerate(batch_actions):
+                    action_mapping[(batch_index, action_index)] = f"{action['left'][0]} -> {action['right'][0]}"
+            outputs: Dict[str, Any] = {'action_mapping': action_mapping}
             if target_action_sequences is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
                                                                target_action_sequences,
                                                                target_mask)['loss']
             num_steps = self._max_decoding_steps
+            # This tells the state to start keeping track of debug info, which we'll pass along in
+            # our output dictionary.
+            initial_state.debug_info = [[] for _ in range(batch_size)]
             best_final_states = self._beam_search.search(num_steps,
                                                          initial_state,
                                                          self._decoder_step,
                                                          keep_final_unfinished_states=False)
-            best_action_sequences = []
+            outputs['best_action_sequence'] = []
+            outputs['debug_info'] = []
+            outputs['entities'] = []
+            outputs['linking_scores'] = linking_scores
+            outputs['feature_scores'] = feature_scores
+            outputs['similarity_scores'] = question_table_similarity_max_score
+            outputs['logical_form'] = []
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
                 # infinite action loop).
                 if i in best_final_states:
-                    predicted = best_final_states[i][0].action_history
+                    best_action_indices = best_final_states[i][0].action_history[0]
                     credit = 0
                     if target_action_sequences is not None:
                         # Use a Tensor, not a Variable, to avoid a memory leak.
                         targets = target_action_sequences[i].data
-                        credit = self._action_history_match(predicted[0], targets)
+                        credit = self._action_history_match(best_action_indices, targets)
                     self._action_sequence_accuracy(credit)
-                    best_action_sequences.append(predicted)
-            outputs['best_action_sequence'] = best_action_sequences
-            # TODO(matt): compute accuracy here.
+                    action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
+                    try:
+                        logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
+                    except ParsingError:
+                        logical_form = 'Error producing logical form'
+                    outputs['best_action_sequence'].append(action_strings)
+                    outputs['logical_form'].append(logical_form)
+                    outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                    outputs['entities'].append(world[i].table_graph.entities)
+                else:
+                    outputs['logical_form'].append('')
             return outputs
 
     @staticmethod
@@ -748,12 +772,29 @@ class WikiTablesSemanticParser(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
-        best_action_indices = output_dict["best_action_sequence"][0]
-        action_strings = []
-        for action_index in best_action_indices:
-            action_strings.append(self.vocab.get_token_from_index(action_index,
-                                                                  namespace=self._action_namespace))
-        output_dict["predicted_actions"] = [action_strings]
+        action_mapping = output_dict['action_mapping']
+        best_actions = output_dict["best_action_sequence"]
+        debug_infos = output_dict['debug_info']
+        batch_action_info = []
+        for batch_index, (predicted_actions, debug_info) in enumerate(zip(best_actions, debug_infos)):
+            instance_action_info = []
+            for predicted_action, action_debug_info in zip(predicted_actions, debug_info):
+                action_info = {}
+                action_info['predicted_action'] = predicted_action
+                considered_actions = action_debug_info['considered_actions']
+                probabilities = action_debug_info['probabilities']
+                actions = []
+                for action, probability in zip(considered_actions, probabilities):
+                    if action != -1:
+                        actions.append((action_mapping[(batch_index, action)], probability))
+                actions.sort()
+                considered_actions, probabilities = zip(*actions)
+                action_info['considered_actions'] = considered_actions
+                action_info['action_probabilities'] = probabilities
+                action_info['question_attention'] = action_debug_info['question_attention']
+                instance_action_info.append(action_info)
+            batch_action_info.append(instance_action_info)
+        output_dict["predicted_actions"] = batch_action_info
         return output_dict
 
     @classmethod
@@ -872,7 +913,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  possible_actions: List[List[ProductionRuleArray]],
                  flattened_linking_scores: torch.FloatTensor,
                  actions_to_entities: Dict[Tuple[int, int], int],
-                 entity_types: Dict[int, int]) -> None:
+                 entity_types: Dict[int, int],
+                 debug_info: List = None) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
@@ -887,6 +929,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.flattened_linking_scores = flattened_linking_scores
         self.actions_to_entities = actions_to_entities
         self.entity_types = entity_types
+        self.debug_info = debug_info
 
     def get_valid_actions(self) -> List[List[int]]:
         """
@@ -932,6 +975,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         previous_action = [action for state in states for action in state.previous_action_embedding]
         attended_question = [attended for state in states for attended in state.attended_question]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
+        if states[0].debug_info is not None:
+            debug_info = [debug_info for state in states for debug_info in state.debug_info]
+        else:
+            debug_info = None
         return WikiTablesDecoderState(batch_indices=batch_indices,
                                       action_history=action_histories,
                                       score=scores,
@@ -947,7 +994,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       possible_actions=states[0].possible_actions,
                                       flattened_linking_scores=states[0].flattened_linking_scores,
                                       actions_to_entities=states[0].actions_to_entities,
-                                      entity_types=states[0].entity_types)
+                                      entity_types=states[0].entity_types,
+                                      debug_info=debug_info)
 
     def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'WikiTablesDecoderState':
         """
@@ -966,6 +1014,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         group_hidden_states = [self.hidden_state[i] for i in group_indices]
         group_memory_cells = [self.memory_cell[i] for i in group_indices]
         group_attended_question = [self.attended_question[i] for i in group_indices]
+        if self.debug_info is not None:
+            group_debug_info = [self.debug_info[i] for i in group_indices]
+        else:
+            group_debug_info = None
         return WikiTablesDecoderState(batch_indices=group_batch_indices,
                                       action_history=group_action_histories,
                                       score=group_scores,
@@ -981,7 +1033,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       possible_actions=self.possible_actions,
                                       flattened_linking_scores=self.flattened_linking_scores,
                                       actions_to_entities=self.actions_to_entities,
-                                      entity_types=self.entity_types)
+                                      entity_types=self.entity_types,
+                                      debug_info=group_debug_info)
 
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
@@ -1082,6 +1135,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                         memory_cell,
                                         action_embeddings,
                                         attended_question,
+                                        attention_weights,
                                         considered_actions,
                                         allowed_actions,
                                         max_actions)
@@ -1346,6 +1400,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                             memory_cell: torch.Tensor,
                             action_embeddings: torch.Tensor,
                             attended_question: torch.Tensor,
+                            attention_weights: torch.Tensor,
                             considered_actions: List[List[int]],
                             allowed_actions: List[Set[int]],
                             max_actions: int = None) -> List[WikiTablesDecoderState]:
@@ -1363,6 +1418,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             # We might need a version of `sorted_log_probs` on the CPU later, but only if we need
             # to truncate the best states to `max_actions`.
             sorted_log_probs_cpu = sorted_log_probs.data.cpu().numpy()
+        if state.debug_info is not None:
+            probs_cpu = log_probs.exp().data.cpu().numpy().tolist()
         sorted_actions = sorted_actions.data.cpu().numpy().tolist()
         best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)
         for group_index, (batch_index, group_actions) in enumerate(zip(state.batch_indices, sorted_actions)):
@@ -1406,6 +1463,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 left_side = state.possible_actions[batch_index][action]['left'][0]
                 right_side = state.possible_actions[batch_index][action]['right'][0]
                 new_grammar_state = state.grammar_state[group_index].take_action(left_side, right_side)
+                if state.debug_info is not None:
+                    debug_info = {
+                            'considered_actions': considered_actions[group_index],
+                            'question_attention': attention_weights[group_index],
+                            'probabilities': probs_cpu[group_index],
+                            }
+                    new_debug_info = [state.debug_info[group_index] + [debug_info]]
+                else:
+                    new_debug_info = None
                 new_state = WikiTablesDecoderState(batch_indices=[batch_index],
                                                    action_history=[new_action_history],
                                                    score=[new_score],
@@ -1421,6 +1487,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    possible_actions=state.possible_actions,
                                                    flattened_linking_scores=state.flattened_linking_scores,
                                                    actions_to_entities=state.actions_to_entities,
-                                                   entity_types=state.entity_types)
+                                                   entity_types=state.entity_types,
+                                                   debug_info=new_debug_info)
                 new_states.append(new_state)
         return new_states
