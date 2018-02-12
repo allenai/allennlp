@@ -5,9 +5,6 @@
     "tables_directory": "/wikitables/",
     "dpd_output_directory": "/wikitables/dpd_output/"
   },
-  "vocabulary": {
-    //"directory_path": "/wikitables_preprocessed/vocab"
-  },
   "train_data_path": "/wikitables/data/random-split-1-train.examples",
   "validation_data_path": "/wikitables/data/random-split-1-dev.examples",
   "model": {
