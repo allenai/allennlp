@@ -2,10 +2,9 @@ from typing import Iterable, Iterator, Callable
 import logging
 
 from allennlp.data.instance import Instance
-from allennlp.common import Params
+from allennlp.common import Params, Tqdm
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
-from allennlp.common.util import ensure_list
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -49,9 +48,7 @@ class DatasetReader(Registrable):
         in the specified dataset.
 
         If ``self.lazy`` is False, this calls ``self._read()``,
-        calls ``ensure_list`` on the result (which is a no-op if
-        self._read() returns a list, which most of the existing
-        dataset readers do), and returns the resulting list.
+        ensures that the result is a list, then returns the resulting list.
 
         If ``self.lazy`` is True, this returns an object whose
         ``__iter__`` method calls ``self._read()`` each iteration.
@@ -71,7 +68,9 @@ class DatasetReader(Registrable):
         if lazy:
             return _LazyInstances(lambda: iter(self._read(file_path)))
         else:
-            instances = ensure_list(self._read(file_path))
+            instances = self._read(file_path)
+            if not isinstance(instances, list):
+                instances = [instance for instance in Tqdm.tqdm(instances)]
             if not instances:
                 raise ConfigurationError("No instances were read from the given filepath {}. "
                                          "Is the path correct?".format(file_path))

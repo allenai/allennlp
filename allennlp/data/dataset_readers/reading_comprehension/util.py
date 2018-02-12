@@ -175,9 +175,9 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
         metadata for use with official evaluation scripts, but not used anywhere else.
     additional_metadata : ``Dict[str, Any]``, optional
         The constructed ``metadata`` field will by default contain ``original_passage``,
-        ``token_offsets``, and ``answer_texts`` keys.  If you want any other metadata to be
-        associated with each instance, you can pass that in here.  This dictionary will get added
-        to the ``metadata`` dictionary we already construct.
+        ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
+        you want any other metadata to be associated with each instance, you can pass that in here.
+        This dictionary will get added to the ``metadata`` dictionary we already construct.
     """
     additional_metadata = additional_metadata or {}
     fields: Dict[str, Field] = {}
@@ -189,7 +189,9 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     fields['question'] = TextField(question_tokens, token_indexers)
     metadata = {
             'original_passage': passage_text,
-            'token_offsets': passage_offsets
+            'token_offsets': passage_offsets,
+            'question_tokens': [token.text for token in question_tokens],
+            'passage_tokens': [token.text for token in passage_tokens],
             }
     if answer_texts:
         metadata['answer_texts'] = answer_texts

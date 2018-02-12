@@ -6,7 +6,6 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
-from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, ListField, TextField, SpanField, MetadataField, SequenceLabelField
 from allennlp.data.instance import Instance
@@ -87,7 +86,7 @@ class ConllCorefReader(DatasetReader):
         file_path = cached_path(file_path)
 
         ontonotes_reader = Ontonotes()
-        for sentences in Tqdm.tqdm(ontonotes_reader.dataset_document_iterator(file_path)):
+        for sentences in ontonotes_reader.dataset_document_iterator(file_path):
             clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
 
             total_tokens = 0

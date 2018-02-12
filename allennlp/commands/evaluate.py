@@ -6,20 +6,29 @@ and report any metrics calculated by the model.
 .. code-block:: bash
 
     $ python -m allennlp.run evaluate --help
-    usage: run [command] evaluate [-h] --archive_file ARCHIVE_FILE
-                                --evaluation_data_file EVALUATION_DATA_FILE
-                                [--cuda_device CUDA_DEVICE]
+    usage: python -m allennlp.run [command] evaluate [-h] --evaluation-data-file
+                                                    EVALUATION_DATA_FILE
+                                                    [--cuda-device CUDA_DEVICE]
+                                                    [-o OVERRIDES]
+                                                    [--include-package INCLUDE_PACKAGE]
+                                                    archive_file
 
     Evaluate the specified model + dataset
 
+    positional arguments:
+    archive_file          path to an archived trained model
+
     optional arguments:
     -h, --help            show this help message and exit
-    --archive-file ARCHIVE_FILE
-                            path to an archived trained model
     --evaluation-data-file EVALUATION_DATA_FILE
                             path to the file containing the evaluation data
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
+    -o OVERRIDES, --overrides OVERRIDES
+                            a HOCON structure used to override the experiment
+                            configuration
+    --include-package INCLUDE_PACKAGE
+                            additional packages to include
 """
 from typing import Dict, Any, Iterable
 import argparse
@@ -44,10 +53,7 @@ class Evaluate(Subcommand):
         subparser = parser.add_parser(
                 name, description=description, help='Evaluate the specified model + dataset')
 
-        archive_file = subparser.add_mutually_exclusive_group(required=True)
-        archive_file.add_argument('--archive-file', type=str, help='path to an archived trained model')
-        archive_file.add_argument('--archive_file', type=str, help=argparse.SUPPRESS)
-
+        subparser.add_argument('archive_file', type=str, help='path to an archived trained model')
 
         evaluation_data_file = subparser.add_mutually_exclusive_group(required=True)
         evaluation_data_file.add_argument('--evaluation-data-file',

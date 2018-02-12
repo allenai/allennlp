@@ -77,77 +77,35 @@ ELMo provides a 1024 dimension representation so the new dimension is 1224.
 
 ## Using ELMo programmatically
 
-If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to use the Elmo class directly [(API doc)](https://allenai.github.io/allennlp-docs/api/allennlp.modules.elmo.html).
+If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors
+programatically.  This is easily done with the ElmoEmbedder class [(API doc)](https://github.com/allenai/allennlp/tree/master/allennlp/commands/elmo.py).
 
 
 ```python
-# Compute multiple layers of ELMo representations from raw text
+from allennlp.commands.elmo import ElmoEmbedder
 
-import logging
+ee = ElmoEmbedder()
 
-from allennlp.modules.elmo import Elmo
-from allennlp.data.dataset import Dataset
-from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.fields import TextField
-from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
+ee.embed_sentence("Bitcoin alone has a sixty percent share of global search.")
 
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', level=logging.INFO)
+embeddings = ee.embed_sentence("Bitcoin alone has a sixty percent share of global search.".split())
 
-options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
-weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
-
-use_gpu = False
-
-indexer = ELMoTokenCharactersIndexer()
-def batch_to_ids(batch):
-    """
-    Given a batch (as list of tokenized sentences), return a batch
-    of padded character ids.
-    """
-    instances = []
-    for sentence in batch:
-        tokens = [Token(token) for token in sentence]
-        field = TextField(tokens, {'character_ids': indexer})
-        instance = Instance({"elmo": field})
-        instances.append(instance)
-
-    dataset = Dataset(instances)
-    vocab = Vocabulary()
-    dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()['elmo']['character_ids']
-
-
-# Create the ELMo class.  This example computes two output representation
-# layers each with separate layer weights.
-# We recommend adding dropout (50% is good default) either here or elsewhere
-# where ELMo is used (e.g. in the next layer bi-LSTM).
-elmo = Elmo(options_file, weight_file, num_output_representations=2,
-            do_layer_norm=False, dropout=0)
-
-if use_gpu:
-    elmo.cuda()
-
-# Finally, compute representations.
-# The input is tokenized text, without any normalization.
-batch = [
-    'Pre-trained biLMs compute representations useful for NLP tasks .'.split(),
-    'They give state of the art performance for many tasks .'.split(),
-    'A third sentence .'.split()
-]
-
-# character ids is size (3, 11, 50)
-character_ids = batch_to_ids(batch)
-if use_gpu:
-    character_ids = character_ids.cuda()
-
-representations = elmo(character_ids)
-# representations['elmo_representations'] is a list with two elements,
-#   each is a tensor of size (3, 11, 1024).  Sequences shorter then the
-#   maximum sequence are padded on the right, with undefined value where padded.
-# representations['mask'] is a (3, 11) shaped sequence mask.
+# embeddings has shape (3, 11, 1024)
+#   3    - the number of ELMo vectors.
+#   11   - the number of words in the input sentence
+#   1024 - the length of each ELMo vector
 ```
 
 ## Writing contextual representations to disk
 
-See [write_elmo_representations_to_file.py](../../scripts/write_elmo_representations_to_file.py) for a script to dump all of the biLM individual layer representations for a dataset to hdf5 file.
+You can write ELMo representations to disk with the `elmo` command.  The `elmo`
+command will write all the biLM individual layer representations for a dataset
+of sentences to an HDF5 file.  Here is an example of using the `elmo` command:
 
+```bash
+echo "The cryptocurrency space is now figuring out to have the highest search on Google globally ." > sentences.txt
+echo "Bitcoin alone has a sixty percent share of global search ." >> sentences.txt
+python -m allennlp.run elmo sentences.txt elmo_layers.hdf5
+```
+
+For more details, see `python -m allennlp.run elmo -h`.

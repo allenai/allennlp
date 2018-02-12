@@ -52,7 +52,6 @@ class TestPredict(AllenNlpTestCase):
             assert args.cuda_device == 0
             assert args.silent
 
-
     def test_works_with_known_model(self):
         tempdir = tempfile.mkdtemp()
         infile = os.path.join(tempdir, "inputs.txt")
@@ -81,8 +80,9 @@ class TestPredict(AllenNlpTestCase):
         assert len(results) == 2
         for result in results:
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
-                                          "span_start_probs", "span_end_probs", "best_span",
-                                          "best_span_str"}
+                                          "passage_question_attention", "question_tokens",
+                                          "passage_tokens", "span_start_probs", "span_end_probs",
+                                          "best_span", "best_span_str"}
 
         shutil.rmtree(tempdir)
 
@@ -114,8 +114,9 @@ class TestPredict(AllenNlpTestCase):
         assert len(results) == 2
         for result in results:
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
-                                          "span_start_probs", "span_end_probs", "best_span",
-                                          "best_span_str"}
+                                          "passage_question_attention", "question_tokens",
+                                          "passage_tokens", "span_start_probs", "span_end_probs",
+                                          "best_span", "best_span_str"}
 
         shutil.rmtree(tempdir)
 
@@ -167,11 +168,11 @@ class TestPredict(AllenNlpTestCase):
         # Overridden predictor should output extra field
         for result in results:
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
-                                          "span_start_probs", "span_end_probs", "best_span",
-                                          "best_span_str", "overridden"}
+                                          "passage_question_attention", "question_tokens",
+                                          "passage_tokens", "span_start_probs", "span_end_probs",
+                                          "best_span", "best_span_str", "overridden"}
 
         shutil.rmtree(tempdir)
-
 
     def test_can_specify_predictor(self):
 
@@ -211,8 +212,9 @@ class TestPredict(AllenNlpTestCase):
         # Overridden predictor should output extra field
         for result in results:
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
-                                          "span_start_probs", "span_end_probs", "best_span",
-                                          "best_span_str", "explicit"}
+                                          "passage_question_attention", "question_tokens",
+                                          "passage_tokens", "span_start_probs", "span_end_probs",
+                                          "best_span", "best_span_str", "explicit"}
 
         shutil.rmtree(tempdir)
 
@@ -268,11 +270,11 @@ class TestPredict(AllenNlpTestCase):
         # Overridden predictor should output extra field
         for result in results:
             assert set(result.keys()) == {"span_start_logits", "span_end_logits",
-                                          "span_start_probs", "span_end_probs", "best_span",
-                                          "best_span_str"}
+                                          "passage_question_attention", "question_tokens",
+                                          "passage_tokens", "span_start_probs", "span_end_probs",
+                                          "best_span", "best_span_str"}
 
         sys.path.remove(self.TEST_DIR)
-
 
     def test_alternative_file_formats(self):
         tempdir = tempfile.mkdtemp()

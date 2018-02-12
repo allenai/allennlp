@@ -27,13 +27,11 @@ class TestEvaluate(AllenNlpTestCase):
 
     @flaky
     def test_evaluate_from_args(self):
-        snake_args = ["evaluate",
-                      "--archive_file", "tests/fixtures/bidaf/serialization/model.tar.gz",
+        snake_args = ["evaluate", "tests/fixtures/bidaf/serialization/model.tar.gz",
                       "--evaluation_data_file", "tests/fixtures/data/squad.json",
                       "--cuda_device", "-1"]
 
-        kebab_args = ["evaluate",
-                      "--archive-file", "tests/fixtures/bidaf/serialization/model.tar.gz",
+        kebab_args = ["evaluate", "tests/fixtures/bidaf/serialization/model.tar.gz",
                       "--evaluation-data-file", "tests/fixtures/data/squad.json",
                       "--cuda-device", "-1"]
 
@@ -78,8 +76,7 @@ class TestEvaluate(AllenNlpTestCase):
 
         archive_file = os.path.join(serialization_dir, 'model.tar.gz')
 
-        raw_args = ["evaluate",
-                    "--archive-file", archive_file,
+        raw_args = ["evaluate", archive_file,
                     "--evaluation-data-file", "tests/fixtures/data/squad.json"]
 
         args = self.parser.parse_args(raw_args)

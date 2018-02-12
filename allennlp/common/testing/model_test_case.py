@@ -34,7 +34,6 @@ class ModelTestCase(AllenNlpTestCase):
         self.dataset = Batch(self.instances)
         self.dataset.index_instances(self.vocab)
 
-
     def ensure_model_can_train_save_and_load(self,
                                              param_file: str,
                                              tolerance: float = 1e-4,
@@ -166,16 +165,8 @@ class ModelTestCase(AllenNlpTestCase):
                 batch_predicted = batch_predictions[key][i]
                 if isinstance(single_predicted, torch.autograd.Variable):
                     if single_predicted.size() != batch_predicted.size():
-                        # This is probably a sequence model, and our output shape has some padded
-                        # elements in the batched case.  Fixing this in general is complicated;
-                        # we'll just fix some easy cases that we actually have, for now.
-                        num_tokens = single_predicted.size(0)
-                        if batch_predicted.dim() == 1:
-                            batch_predicted = batch_predicted[:num_tokens]
-                        elif batch_predicted.dim() == 2:
-                            batch_predicted = batch_predicted[:num_tokens, :]
-                        else:
-                            raise NotImplementedError
+                        slices = tuple(slice(0, size) for size in single_predicted.size())
+                        batch_predicted = batch_predicted[slices]
                     assert_allclose(single_predicted.data.numpy(),
                                     batch_predicted.data.numpy(),
                                     atol=tolerance,

@@ -30,7 +30,7 @@ scipy
 scikit-learn
 
 # Training visualisation using tensorboard.
-tensorboard
+tensorboard==1.0.0a6
 
 # Required by torch.utils.ffi
 cffi==1.11.2
