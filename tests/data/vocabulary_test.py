@@ -27,13 +27,13 @@ class TestVocabulary(AllenNlpTestCase):
 
     def test_from_dataset_respects_min_count(self):
 
-        vocab = Vocabulary.from_instances(self.dataset, min_count=4)
+        vocab = Vocabulary.from_instances(self.dataset, min_count={'tokens': 4})
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' not in words
         assert 'c' not in words
 
-        vocab = Vocabulary.from_instances(self.dataset, min_count=1)
+        vocab = Vocabulary.from_instances(self.dataset, min_count=None)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' in words
@@ -86,7 +86,6 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'a' in words
         assert 'b' in words
         assert 'c' in words
-
 
     def test_add_word_to_index_gives_consistent_results(self):
         vocab = Vocabulary()
