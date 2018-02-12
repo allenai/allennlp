@@ -171,6 +171,8 @@ class TestConditionalRandomField(AllenNlpTestCase):
         bio_labels = ['O', 'B-X', 'I-X', 'B-Y', 'I-Y']
         #              0     1      2      3      4
         allowed = allowed_transitions("BIO", dict(enumerate(bio_labels)))
+
+        # The empty spaces in this matrix indicate disallowed transitions.
         assert set(allowed) == {
             (0, 0), (0, 1),         (0, 3),
             (1, 0), (1, 1), (1, 2), (1, 3),
@@ -182,6 +184,8 @@ class TestConditionalRandomField(AllenNlpTestCase):
         bioul_labels = ['O', 'B-X', 'I-X', 'L-X', 'U-X', 'B-Y', 'I-Y', 'L-Y', 'U-Y']
         #                0     1      2      3      4      5      6      7      8
         allowed = allowed_transitions("BIOUL", dict(enumerate(bioul_labels)))
+
+        # The empty spaces in this matrix indicate disallowed transitions.
         assert set(allowed) == {
             (0, 0), (0, 1),                 (0, 4), (0, 5),                 (0, 8),
                             (1, 2), (1, 3),

@@ -12,7 +12,20 @@ import allennlp.nn.util as util
 
 def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tuple[int, int]]:
     """
-    Implements a couple of common constraint types.
+    Given tokens and a constraint type, returns the allowed transitions.
+
+    Parameters
+    ----------
+    constraint_type : ``str``, required
+        Indicates which constraint to apply. Current choices are "BIO" and "BIOUL".
+    tokens : ``Dict[int, str]``, required
+        A mapping {token_id -> token}. Most commonly this would be the value from
+        Vocabulary.get_index_to_token_vocabulary()
+
+    Returns
+    -------
+    ``List[Tuple[int, int]]``
+        The allowed transitions (from_token_id, to_token_id)
     """
     allowed = []
     if constraint_type == "BIOUL":
@@ -80,9 +93,11 @@ class ConditionalRandomField(torch.nn.Module):
         if constraints is None:
             self._constraint_mask = None
         else:
-            self._constraint_mask = torch.Tensor(num_tags, num_tags).fill_(0.)
+            constraint_mask = torch.Tensor(num_tags, num_tags).fill_(0.)
             for i, j in constraints:
-                self._constraint_mask[i, j] = 1.
+                constraint_mask[i, j] = 1.
+
+            self._constraint_mask = torch.nn.Parameter(constraint_mask, requires_grad=False)
 
         # Also need logits for transitioning from "start" state and to "end" state.
         self.start_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
@@ -232,12 +247,12 @@ class ConditionalRandomField(torch.nn.Module):
 
         # Apply transition constraints
         if self._constraint_mask is None:
-            transitions_data = self.transitions.data
+            constrained_transitions = self.transitions
         else:
-            transitions_data = (self.transitions.data * self._constraint_mask +
-                                -10000.0 * (1 - self._constraint_mask))
+            constrained_transitions = (self.transitions * self._constraint_mask +
+                                       -10000.0 * (1 - self._constraint_mask))
 
-        transitions[:num_tags, :num_tags] = transitions_data
+        transitions[:num_tags, :num_tags] = constrained_transitions.data
         transitions[start_tag, :num_tags] = self.start_transitions.data
         transitions[:num_tags, end_tag] = self.end_transitions.data
 
