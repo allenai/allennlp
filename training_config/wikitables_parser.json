@@ -1,20 +1,18 @@
 {
   "dataset_reader": {
     "type": "wikitables",
-    "tables_directory": "tests/fixtures/data/wikitables/",
-    "dpd_output_directory": "tests/fixtures/data/wikitables/dpd_output/"
+    "lazy": false,
+    "tables_directory": "/wikitables/",
+    "dpd_output_directory": "/wikitables/dpd_output/"
   },
-  "vocabulary": {
-    "non_padded_namespaces": ["actions"]
-  },
-  "train_data_path": "tests/fixtures/data/wikitables/sample_data.examples",
-  "validation_data_path": "tests/fixtures/data/wikitables/sample_data.examples",
+  "train_data_path": "/wikitables/data/random-split-1-train.examples",
+  "validation_data_path": "/wikitables/data/random-split-1-dev.examples",
   "model": {
     "type": "wikitables_parser",
     "question_embedder": {
       "tokens": {
         "type": "embedding",
-        "embedding_dim": 25,
+        "embedding_dim": 200,
         "trainable": true
       }
     },
@@ -22,7 +20,7 @@
       "tokens": {
         "type": "embedding",
         "vocab_namespace": "rule_labels",
-        "embedding_dim": 25,
+        "embedding_dim": 50,
         "trainable": true
       }
     },
@@ -35,20 +33,21 @@
         "encoder": {
           "type": "cnn",
           "embedding_dim": 8,
-          "num_filters": 25,
+          "num_filters": 50,
           "ngram_filter_sizes": [3]
         }
       }
     },
     "encoder": {
       "type": "lstm",
-      "input_size": 50,
-      "hidden_size": 10,
+      "input_size": 400,
+      "hidden_size": 100,
+      "bidirectional": true,
       "num_layers": 1
     },
     "entity_encoder": {
       "type": "boe",
-      "embedding_dim": 25,
+      "embedding_dim": 200,
       "averaged": true
     },
     "decoder_trainer": {
@@ -57,22 +56,19 @@
     "decoder_beam_search": {
       "beam_size": 3
     },
-    "max_decoding_steps": 200,
+    "max_decoding_steps": 20,
     "attention_function": {"type": "dot_product"}
   },
   "iterator": {
-    "type": "bucket",
-    "sorting_keys": [["question", "num_tokens"]],
-    "padding_noise": 0.0,
+    "type": "lazy-basic",
     "batch_size" : 2
   },
   "trainer": {
-    "num_epochs": 2,
+    "num_epochs": 20,
     "patience": 10,
-    "cuda_device": -1,
+    "cuda_device": 0,
     "optimizer": {
-      "type": "sgd",
-      "lr": 0.01
+      "type": "adam"
     }
   }
 }

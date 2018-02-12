@@ -103,6 +103,11 @@ class WikiTablesDatasetReader(DatasetReader):
         The list of feature extractors to use in the :class:`KnowledgeGraphField` when computing
         entity linking features.  See that class for more information.  By default, we will use all
         available feature extractors.
+    include_table_metadata : ``bool`` (optional, default=False)
+        This is necessary for pre-processing the data.  We output a jsonl file that has all of the
+        information necessary for reading each instance, which includes the table contents itself.
+        This flag tells the reader to include a ``table_metadata`` field that gets read by the
+        pre-processing script.
     """
     def __init__(self,
                  lazy: bool = False,
@@ -149,20 +154,23 @@ class WikiTablesDatasetReader(DatasetReader):
                 # We want the TSV file, but the ``*.examples`` files typically point to CSV.
                 table_filename = os.path.join(self._tables_directory,
                                               parsed_info["table_filename"].replace(".csv", ".tsv"))
-                dpd_output_filename = os.path.join(self._dpd_output_directory,
-                                                   parsed_info["id"] + '.gz')
-                try:
-                    dpd_file = gzip.open(dpd_output_filename)
-                    sempre_forms = []
-                    for dpd_line in dpd_file:
-                        sempre_forms.append(dpd_line.strip().decode('utf-8'))
-                        if self._max_dpd_tries and len(sempre_forms) >= self._max_dpd_tries:
-                            # TODO(mattg): might want to sort by length here before truncating...
-                            break
-                except FileNotFoundError:
-                    logger.debug(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
-                    num_dpd_missing += 1
-                    continue
+                if self._dpd_output_directory:
+                    dpd_output_filename = os.path.join(self._dpd_output_directory,
+                                                       parsed_info["id"] + '.gz')
+                    try:
+                        dpd_file = gzip.open(dpd_output_filename)
+                        sempre_forms = []
+                        for dpd_line in dpd_file:
+                            sempre_forms.append(dpd_line.strip().decode('utf-8'))
+                            if self._max_dpd_tries and len(sempre_forms) >= self._max_dpd_tries:
+                                # TODO(mattg): might want to sort by length here before truncating...
+                                break
+                    except FileNotFoundError:
+                        logger.debug(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
+                        num_dpd_missing += 1
+                        continue
+                else:
+                    sempre_forms = None
                 instance = self.text_to_instance(question,
                                                  table_filename,
                                                  sempre_forms)
@@ -170,13 +178,14 @@ class WikiTablesDatasetReader(DatasetReader):
                     num_instances += 1
                     yield instance
 
-        logger.info(f"Missing DPD info for {num_dpd_missing} out of {num_lines} instances")
-        num_with_dpd = num_lines - num_dpd_missing
-        num_bad_lfs = num_with_dpd - num_instances
-        logger.info(f"DPD output was bad for {num_bad_lfs} out of {num_with_dpd} instances")
-        if num_bad_lfs > 0:
-            logger.info("Re-run with log level set to debug to see the un-parseable logical forms")
-        logger.info(f"Kept {num_instances} instances")
+        if self._dpd_output_directory:
+            logger.info(f"Missing DPD info for {num_dpd_missing} out of {num_lines} instances")
+            num_with_dpd = num_lines - num_dpd_missing
+            num_bad_lfs = num_with_dpd - num_instances
+            logger.info(f"DPD output was bad for {num_bad_lfs} out of {num_with_dpd} instances")
+            if num_bad_lfs > 0:
+                logger.info("Re-run with log level set to debug to see the un-parseable logical forms")
+            logger.info(f"Kept {num_instances} instances")
 
     @overrides
     def text_to_instance(self,  # type: ignore

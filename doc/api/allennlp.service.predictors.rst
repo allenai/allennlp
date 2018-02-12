@@ -14,6 +14,7 @@ allennlp.service.predictors
 * :ref:`CorefPredictor<coreference-resolution>`
 * :ref:`ConstituencyParserPredictor<constituency-parser>`
 * :ref:`SimpleSeq2SeqPredictor<simple-seq2seq>`
+* :ref:`WikiTablesParserPredictor<wikitables-parser>`
 
 .. _predictor:
 .. automodule:: allennlp.service.predictors.predictor
@@ -59,6 +60,12 @@ allennlp.service.predictors
 
 .. _simple-seq2seq:
 .. automodule:: allennlp.service.predictors.simple_seq2seq
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _wikitables-parser:
+.. automodule:: allennlp.service.predictors.wikitables_parser
    :members:
    :undoc-members:
    :show-inheritance:

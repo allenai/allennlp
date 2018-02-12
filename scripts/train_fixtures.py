@@ -55,6 +55,7 @@ if __name__ == "__main__":
                 'coref',
                 'decomposable_attention',
                 'encoder_decoder/simple_seq2seq',
+                'encoder_decoder/wikitables_semantic_parser',
                 'srl',
                 ]
         for model in models:

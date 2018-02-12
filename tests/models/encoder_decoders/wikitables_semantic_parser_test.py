@@ -498,12 +498,14 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         new_hidden_state = torch.FloatTensor([[i + 1, i + 1] for i in range(len(allowed_actions))])
         new_memory_cell = torch.FloatTensor([[i + 1, i + 1] for i in range(len(allowed_actions))])
         new_attended_question = torch.FloatTensor([[i + 1, i + 1] for i in range(len(allowed_actions))])
+        new_attention_weights = torch.FloatTensor([[i + 1, i + 1] for i in range(len(allowed_actions))])
         new_states = WikiTablesDecoderStep._compute_new_states(self.state,
                                                                log_probs,
                                                                new_hidden_state,
                                                                new_memory_cell,
                                                                step_action_embeddings,
                                                                new_attended_question,
+                                                               new_attention_weights,
                                                                considered_actions,
                                                                allowed_actions,
                                                                max_actions)
@@ -572,12 +574,14 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         new_hidden_state = torch.FloatTensor([[i + 1, i + 1] for i in range(len(considered_actions))])
         new_memory_cell = torch.FloatTensor([[i + 1, i + 1] for i in range(len(considered_actions))])
         new_attended_question = torch.FloatTensor([[i + 1, i + 1] for i in range(len(considered_actions))])
+        new_attention_weights = torch.FloatTensor([[i + 1, i + 1] for i in range(len(considered_actions))])
         new_states = WikiTablesDecoderStep._compute_new_states(self.state,
                                                                log_probs,
                                                                new_hidden_state,
                                                                new_memory_cell,
                                                                step_action_embeddings,
                                                                new_attended_question,
+                                                               new_attention_weights,
                                                                considered_actions,
                                                                allowed_actions=None,
                                                                max_actions=max_actions)
