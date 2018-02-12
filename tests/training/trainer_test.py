@@ -55,6 +55,20 @@ class TestTrainer(AllenNlpTestCase):
         assert 'best_epoch' in metrics
         assert isinstance(metrics['best_epoch'], int)
 
+        # Making sure that both increasing and decreasing validation metrics work.
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          validation_metric='+loss',
+                          num_epochs=2)
+        metrics = trainer.train()
+        assert 'best_validation_loss' in metrics
+        assert isinstance(metrics['best_validation_loss'], float)
+        assert 'best_epoch' in metrics
+        assert isinstance(metrics['best_epoch'], int)
+
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         trainer = Trainer(self.model, self.optimizer,
