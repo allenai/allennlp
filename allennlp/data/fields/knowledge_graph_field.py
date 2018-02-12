@@ -326,10 +326,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                token_index: int,
                                tokens: List[Token]) -> float:
         entity_words = set(entity_token.text for entity_token in entity_text)
+        if not entity_words:
+            # Some tables have empty cells.
+            return 0
         seen_entity_words = set()
         while token_index < len(tokens) and tokens[token_index].text in entity_words:
             seen_entity_words.add(tokens[token_index].text)
             token_index += 1
-        return 0 if len(entity_words) == 0 else len(seen_entity_words) / len(entity_words)
+        return len(seen_entity_words) / len(entity_words)
 
     # pylint: enable=unused-argument,no-self-use
