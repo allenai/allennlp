@@ -41,6 +41,10 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
         Token indexers for table entities. Will default to ``question_token_indexers`` (though you
         very likely want to use something different for these, as you can't rely on having an
         embedding for every table entity at test time).
+    use_table_for_vocab : ``bool`` (optional, default=False)
+        If ``True``, we will include table cell text in vocabulary creation.  The original parser
+        did not do this, because the same table can appear multiple times, messing with vocab
+        counts, and making you include lots of rare entities in your vocab.
     nonterminal_indexers : ``Dict[str, TokenIndexer]`` (optional)
         How should we represent non-terminals in production rules when we're computing action
         embeddings?  We use ``TokenIndexers`` for this.  Default is to use a
@@ -59,11 +63,13 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
                  lazy: bool = False,
                  question_token_indexers: Dict[str, TokenIndexer] = None,
                  table_token_indexers: Dict[str, TokenIndexer] = None,
+                 use_table_for_vocab: bool = False,
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
                  terminal_indexers: Dict[str, TokenIndexer] = None) -> None:
         super().__init__(lazy)
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
+        self._use_table_for_vocab = use_table_for_vocab
         self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
         self._terminal_indexers = terminal_indexers or {"token_characters": TokenCharactersIndexer()}
 
@@ -87,7 +93,8 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
                                           tokenizer=None,
                                           token_indexers=self._table_token_indexers,
                                           entity_tokens=entity_tokens,
-                                          linking_features=json_obj['linking_features'])
+                                          linking_features=json_obj['linking_features'],
+                                          include_in_vocab=self._use_table_for_vocab)
         world = WikiTablesWorld(table_knowledge_graph, question_tokens)
         world_field = MetadataField(world)
 
@@ -126,7 +133,9 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
         lazy = params.pop('lazy', False)
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
         table_token_indexers = TokenIndexer.dict_from_params(params.pop('table_token_indexers', {}))
+        use_table_for_vocab = params.pop('use_table_for_vocab', False)
         params.assert_empty(cls.__name__)
         return WikiTablesPreprocessedDatasetReader(lazy=lazy,
                                                    question_token_indexers=question_token_indexers,
-                                                   table_token_indexers=table_token_indexers)
+                                                   table_token_indexers=table_token_indexers,
+                                                   use_table_for_vocab=use_table_for_vocab)
