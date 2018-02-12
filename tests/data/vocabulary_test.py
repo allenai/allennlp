@@ -46,7 +46,7 @@ class TestVocabulary(AllenNlpTestCase):
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
 
         vocab = Vocabulary.from_instances(self.dataset,
-                                          min_count=4,
+                                          min_count={'tokens': 4},
                                           pretrained_files={'tokens': embeddings_filename},
                                           only_include_pretrained_words=True)
         words = vocab.get_index_to_token_vocabulary().values()
@@ -55,7 +55,6 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' not in words
 
         vocab = Vocabulary.from_instances(self.dataset,
-                                          min_count=-1,
                                           pretrained_files={'tokens': embeddings_filename},
                                           only_include_pretrained_words=True)
         words = vocab.get_index_to_token_vocabulary().values()
@@ -70,7 +69,7 @@ class TestVocabulary(AllenNlpTestCase):
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
 
         vocab = Vocabulary.from_instances(self.dataset,
-                                          min_count=4,
+                                          min_count={'tokens': 4},
                                           pretrained_files={'tokens': embeddings_filename},
                                           only_include_pretrained_words=False)
         words = vocab.get_index_to_token_vocabulary().values()
@@ -79,7 +78,6 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' not in words
 
         vocab = Vocabulary.from_instances(self.dataset,
-                                          min_count=-1,
                                           pretrained_files={'tokens': embeddings_filename},
                                           only_include_pretrained_words=False)
         words = vocab.get_index_to_token_vocabulary().values()
@@ -291,4 +289,4 @@ class TestVocabulary(AllenNlpTestCase):
         # Test from_params raises when there are any other dict keys
         # present apart from 'vocabulary_directory' and we aren't calling from_dataset.
         with pytest.raises(ConfigurationError):
-            _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": 2}))
+            _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": {'tokens': 2}}))
