@@ -177,12 +177,17 @@ class WikiTablesSemanticParser(Model):
         # embedded_table = table_embedder(table_text)
 
         num_question_tokens = embedded_question.size(1)
-        batch_size, num_entities, num_entity_tokens, num_characters = table_text['token_characters'].size()
 
-        tokens_tensor = table_text['tokens'].view(-1, num_entity_tokens)
-        token_characters_tensor = table_text['token_characters'].view(-1, num_entity_tokens, num_characters)
-        embedded_table = self._question_embedder({'tokens': tokens_tensor, 'token_characters': token_characters_tensor})
-        embedded_table = embedded_table.view(batch_size, num_entities, num_entity_tokens, self._embedding_dim)
+        if 'token_characters' in table_text:
+            batch_size, num_entities, num_entity_tokens, num_characters = table_text['token_characters'].size()
+            tokens_tensor = table_text['tokens'].view(-1, num_entity_tokens)
+            token_characters_tensor = table_text['token_characters'].view(-1, num_entity_tokens, num_characters)
+            embedded_table = self._question_embedder({'tokens': tokens_tensor, 'token_characters': token_characters_tensor})
+            embedded_table = embedded_table.view(batch_size, num_entities, num_entity_tokens, self._embedding_dim)
+        else:
+            batch_size, num_entities, num_entity_tokens = table_text['tokens'].size()
+            embedded_table = self._question_embedder(table_text)
+
 
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
