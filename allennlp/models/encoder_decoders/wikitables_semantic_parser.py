@@ -22,7 +22,7 @@ from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.semparse import ParsingError
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
+from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder, CnnEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import Embedding
@@ -172,11 +172,25 @@ class WikiTablesSemanticParser(Model):
         embedded_question = self._question_embedder(question)
         question_mask = util.get_text_field_mask(question).float()
         # (batch_size, num_entities, num_entity_tokens, embedding_dim)
-        embedded_table = self._question_embedder(table_text)
+        # TODO(rajas): get timedistributed to work with a dictionary
+        # table_embedder = TimeDistributed(self._question_embedder)
+        # embedded_table = table_embedder(table_text)
+
+        num_question_tokens = embedded_question.size(1)
+
+        if 'token_characters' in table_text:
+            batch_size, num_entities, num_entity_tokens, num_characters = table_text['token_characters'].size()
+            tokens_tensor = table_text['tokens'].view(-1, num_entity_tokens)
+            token_characters_tensor = table_text['token_characters'].view(-1, num_entity_tokens, num_characters)
+            embedded_table = self._question_embedder({'tokens': tokens_tensor, 'token_characters': token_characters_tensor})
+            embedded_table = embedded_table.view(batch_size, num_entities, num_entity_tokens, self._embedding_dim)
+        else:
+            batch_size, num_entities, num_entity_tokens = table_text['tokens'].size()
+            embedded_table = self._question_embedder(table_text)
+
+
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
-        batch_size, num_entities, num_entity_tokens, _ = embedded_table.size()
-        num_question_tokens = embedded_question.size(1)
 
         # (batch_size, num_entities, embedding_dim)
         encoded_table = self._entity_encoder(embedded_table, table_mask)
@@ -228,7 +242,7 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
         feature_scores = self._linking_params(linking_features).squeeze(3)
-        linking_scores = question_table_similarity_max_score + feature_scores
+        linking_scores = question_table_similarity_max_score
 
         # (batch_size, num_question_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
