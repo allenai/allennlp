@@ -94,7 +94,7 @@ class WikiTablesDatasetReader(DatasetReader):
         The list of feature extractors to use in the :class:`KnowledgeGraphField` when computing
         entity linking features.  See that class for more information.  By default, we will use all
         available feature extractors.
-    include_table_metadata : ``bool` (optional, default=False)
+    include_table_metadata : ``bool`` (optional, default=False)
         This is necessary for pre-processing the data.  We output a jsonl file that has all of the
         information necessary for reading each instance, which includes the table contents itself.
         This flag tells the reader to include a ``table_metadata`` field that gets read by the
