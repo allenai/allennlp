@@ -65,6 +65,18 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         :func:`_exact_token_match`, you would pass the string ``exact_token_match``.  We will add
         an underscore and look for a function matching that name.  If this list is omitted, we will
         use all available feature functions.
+    entity_tokens : ``List[List[Token]]``, optional
+        If you have pre-computed the tokenization of the table text, you can pass it in here.  The
+        must be a list of the tokens in the entity text, for each entity in the knowledge graph, in
+        the same order in which the knowledge graph returns entities.
+    linking_features : ``List[List[List[float]]]``, optional
+        If you have pre-computed the linking features between the utterance and the table text, you
+        can pass it in here.
+    include_in_vocab : ``bool``, optional (default=True)
+        If this is ``False``, we will skip the ``count_vocab_items`` logic, leaving out all table
+        entity text from the vocabulary computation.  You might want to do this if you have a lot
+        of rare entities in your tables, and you see the same table in multiple training instances,
+        so your vocabulary counts get skewed and include too many rare entities.
     """
     def __init__(self,
                  knowledge_graph: KnowledgeGraph,
@@ -73,7 +85,8 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                  tokenizer: Tokenizer = None,
                  feature_extractors: List[str] = None,
                  entity_tokens: List[List[Token]] = None,
-                 linking_features: List[List[List[float]]] = None) -> None:
+                 linking_features: List[List[List[float]]] = None,
+                 include_in_vocab: bool = True) -> None:
         self.knowledge_graph = knowledge_graph
         if not entity_tokens:
             entity_texts = [knowledge_graph.entity_text[entity] for entity in knowledge_graph.entities]
@@ -88,6 +101,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             self.entity_texts = entity_tokens
         self.utterance_tokens = utterance_tokens
         self._token_indexers: Dict[str, TokenIndexer] = token_indexers
+        self._include_in_vocab = include_in_vocab
         self._indexed_entity_texts: Dict[str, TokenList] = None
 
         feature_extractors = feature_extractors or [
@@ -126,10 +140,11 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
-        for indexer in self._token_indexers.values():
-            for entity_text in self.entity_texts:
-                for token in entity_text:
-                    indexer.count_vocab_items(token, counter)
+        if self._include_in_vocab:
+            for indexer in self._token_indexers.values():
+                for entity_text in self.entity_texts:
+                    for token in entity_text:
+                        indexer.count_vocab_items(token, counter)
 
     @overrides
     def index(self, vocab: Vocabulary):
