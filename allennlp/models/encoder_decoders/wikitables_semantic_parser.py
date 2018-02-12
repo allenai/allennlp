@@ -114,8 +114,9 @@ class WikiTablesSemanticParser(Model):
 
         check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                "entity word average embedding dim", "question embedding dim")
-        check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
-                               "nonterminal embedding dim", "terminal embedding dim")
+        if terminal_embedder:
+            check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
+                                   "nonterminal embedding dim", "terminal embedding dim")
 
         self._action_padding_index = -1  # the padding value used by IndexField
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
@@ -175,7 +176,7 @@ class WikiTablesSemanticParser(Model):
         embedded_question = self._question_embedder(question)
         question_mask = util.get_text_field_mask(question).float()
         # (batch_size, num_entities, num_entity_tokens, embedding_dim)
-        embedded_table = self._question_embedder(table_text)
+        embedded_table = self._question_embedder(table_text, num_wrapping_dims=1)
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
         batch_size, num_entities, num_entity_tokens, _ = embedded_table.size()
@@ -807,7 +808,11 @@ class WikiTablesSemanticParser(Model):
         entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
         max_decoding_steps = params.pop("max_decoding_steps")
         nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
-        terminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("terminal_embedder"))
+        terminal_embedder_params = params.pop('terminal_embedder', None)
+        if terminal_embedder_params:
+            terminal_embedder = TextFieldEmbedder.from_params(vocab, terminal_embedder_params)
+        else:
+            terminal_embedder = None
         decoder_trainer = DecoderTrainer.from_params(params.pop("decoder_trainer"))
         decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         # If no attention function is specified, we should not use attention, not attention with
