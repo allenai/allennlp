@@ -12,3 +12,4 @@ from .decomposable_attention import DecomposableAttentionPredictor
 from .semantic_role_labeler import SemanticRoleLabelerPredictor
 from .coref import CorefPredictor
 from .sentence_tagger import SentenceTaggerPredictor
+from .wikitables_parser import WikiTablesParserPredictor

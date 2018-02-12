@@ -43,3 +43,5 @@ if __name__ == "__main__":
         train_fixture("tests/fixtures/bidaf/experiment.json", "tests/fixtures/bidaf/serialization")
         train_fixture("tests/fixtures/srl/experiment.json", "tests/fixtures/srl/serialization")
         train_fixture("tests/fixtures/coref/experiment.json", "tests/fixtures/coref/serialization")
+        train_fixture("tests/fixtures/encoder_decoder/wikitables_semantic_parser/experiment.json",
+                      "tests/fixtures/encoder_decoder/wikitables_semantic_parser/serialization")
