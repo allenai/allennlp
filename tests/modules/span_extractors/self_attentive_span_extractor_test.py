@@ -72,4 +72,4 @@ class TestSelfAttentiveSpanExtractor:
         mean_embeddings = sequence_tensor[batch_element, 0:3, :].mean(0)
         numpy.testing.assert_array_almost_equal(spans[0].data.numpy(), mean_embeddings.data.numpy())
         # Second span was masked, so should be completely zero.
-        numpy.testing.assert_array_almost_equal(spans[1].data.numpy(), numpy.zeros([input_dim])) 
+        numpy.testing.assert_array_almost_equal(spans[1].data.numpy(), numpy.zeros([input_dim]))
