@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Route, Redirect } from 'react-router-dom';
 import SrlComponent from './components/SrlComponent';
 import TeComponent from './components/TeComponent';
 import McComponent from './components/McComponent';
+import WikiTablesComponent from './components/WikiTablesComponent';
 import CorefComponent from './components/CorefComponent'
 import NamedEntityComponent from './components/NamedEntityComponent'
 import ConstituencyParserComponent from './components/ConstituencyParserComponent'
@@ -119,6 +120,8 @@ class Demo extends React.Component {
       }
       else if (selectedModel === "constituency-parsing") {
         return (<ConstituencyParserComponent requestData={requestData} responseData={responseData}/>)
+      else if (selectedModel === "wikitables-parser") {
+        return (<WikiTablesComponent requestData={requestData} responseData={responseData}/>)
       }
     }
 

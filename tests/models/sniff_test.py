@@ -8,6 +8,7 @@ class SniffTest(AllenNlpTestCase):
 
     def test_config(self):
         assert set(DEFAULT_MODELS.keys()) == {
+                'wikitables-parser',
                 'machine-comprehension',
                 'semantic-role-labeling',
                 'textual-entailment',
