@@ -128,6 +128,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         forward_sequence, backward_sequence = torch.split(sequence_tensor, int(self._input_dim / 2), -1)
         forward_sequence = forward_sequence.contiguous()
         backward_sequence = backward_sequence.contiguous()
+
         # shape (batch_size, num_spans)
         span_starts, span_ends = [index.squeeze(-1) for index in indices.split(1, dim=-1)]
 
@@ -137,7 +138,9 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
         # We want `exclusive` span starts, so we remove 1 from the forward span starts
         # as the AllenNLP ``SpanField`` is inclusive.
+        # shape (batch_size, num_spans)
         exclusive_span_starts = span_starts - 1
+        # shape (batch_size, num_spans)
         start_sentinel_mask = (exclusive_span_starts == -1).float().unsqueeze(-1)
 
         # We want `exclusive` span ends for the backward direction
@@ -152,24 +155,46 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             # shape (batch_size), filled with the sequence length size of the sequence_tensor.
             sequence_lengths = ones_like(sequence_tensor[:, 0, 0]).long() * sequence_tensor.size(1)
 
+        # shape (batch_size, num_spans)
         end_sentinel_mask = (exclusive_span_ends == sequence_lengths.unsqueeze(-1)).long()
+
+        # Forward Direction: start indices are exclusive. Shape (batch_size, num_spans, input_size / 2)
         forward_start_embeddings = batched_index_select(forward_sequence, exclusive_span_starts)
+        # Forward Direction: end indices are inclusive, so we can just use span_ends.
+        # Shape (batch_size, num_spans, input_size / 2)
         forward_end_embeddings = batched_index_select(forward_sequence, span_ends)
 
+        # Backward Direction: start indices are actually the end indices, because we
+        # are going backwards, which we want to be inclusive, so we can just use span_starts.
+        # Shape (batch_size, num_spans, input_size / 2)
         backward_start_embeddings = batched_index_select(backward_sequence, span_starts)
+        # Backward Direction: end indices are actually the start indices, which we want to
+        # be exclusive. As we added 1 to the span_ends to make them exclusive, which might have
+        # caused indices equal to the sequence_length to become out of bounds, we multiply
+        # by the inverse of the end_sentinel mask to erase these indices (as we will replace
+        # them anyway in the block below).
+        # Shape (batch_size, num_spans, input_size / 2)
         backward_end_embeddings = batched_index_select(backward_sequence,
                                                        exclusive_span_ends * (1 - end_sentinel_mask))
         if self._use_sentinels:
+            # If we're using sentinels, we need to replace all the elements which were
+            # outside the dimensions of the sequence_tensor with either the start sentinel,
+            # or the end sentinel.
             float_end_sentinel_mask = end_sentinel_mask.float().unsqueeze(-1)
             forward_start_embeddings = forward_start_embeddings * (1 - start_sentinel_mask) \
                                         + start_sentinel_mask * self._start_sentinel
             backward_end_embeddings = backward_end_embeddings * (1 - float_end_sentinel_mask) \
                                         + float_end_sentinel_mask * self._end_sentinel
 
+        # Now we combine the forward and backward spans in the manner specified by the
+        # respective combinations and concatenate these representations.
+        # Shape (batch_size, num_spans, forward_combination_dim)
         forward_spans = combine_tensors(self._forward_combination,
                                         [forward_start_embeddings, forward_end_embeddings])
+        # Shape (batch_size, num_spans, backward_combination_dim)
         backward_spans = combine_tensors(self._backward_combination,
                                          [backward_start_embeddings, backward_end_embeddings])
+        # Shape (batch_size, num_spans, forward_combination_dim + backward_combination_dim)
         span_embeddings = torch.cat([forward_spans, backward_spans], -1)
 
         if self._span_width_embedding is not None:
@@ -195,9 +220,11 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         num_width_embeddings = params.pop_int("num_width_embeddings", None)
         span_width_embedding_dim = params.pop_int("span_width_embedding_dim", None)
         bucket_widths = params.pop_bool("bucket_widths", False)
+        use_sentinels = params.pop_bool("use_sentinels", True)
         return BidirectionalEndpointSpanExtractor(input_dim=input_dim,
                                                   forward_combination=forward_combination,
                                                   backward_combination=backward_combination,
                                                   num_width_embeddings=num_width_embeddings,
                                                   span_width_embedding_dim=span_width_embedding_dim,
-                                                  bucket_widths=bucket_widths)
+                                                  bucket_widths=bucket_widths,
+                                                  use_sentinels=use_sentinels)
