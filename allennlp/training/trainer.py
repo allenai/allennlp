@@ -394,7 +394,7 @@ class Trainer:
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
-        logger.info(f"Peak memory usage MB: {peak_memory_mb()}")
+        logger.info(f"Peak CPU memory usage MB: {peak_memory_mb()}")
         train_loss = 0.0
         # Set the model to "train" mode.
         self._model.train()
