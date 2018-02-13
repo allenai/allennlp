@@ -39,9 +39,7 @@ def main(argv):
 
 
     print("*** Analyzing ***")
-    print(validate(encoder1, attn_decoder1, output_lang, pairs_dev, max_length, 2500))
-    torch.save(encoder1, 'encoder.final.pt')
-    torch.save(attn_decoder1, 'decoder.final.pt')
+    print(validate(encoder1, attn_decoder1, output_lang, pairs_dev, max_length, 100))
     
 
 if __name__ == "__main__":
