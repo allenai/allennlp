@@ -23,11 +23,6 @@ def main(argv):
     encoder1 = torch.load('results/run_008/encoder.final.pt')
     attn_decoder1 = torch.load('results/run_008/decoder.final.pt')
 
-    if use_cuda:
-        print("*** Using cuda ***")
-        encoder1 = encoder1.cuda()
-        attn_decoder1 = attn_decoder1.cuda()
-
     print("*** Analyzing ***")
     print(validate(encoder1, attn_decoder1, output_lang, pairs_dev, max_length, 100))
     
