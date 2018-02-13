@@ -132,8 +132,7 @@ class SpanConstituencyParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Constructs a tree given the scored spans. Spans which are predicted to have no label
-        are not included.
+        Constructs a tree given the scored spans.
         """
         all_predictions = output_dict['class_probabilities'].cpu().data
         all_spans = output_dict["spans"].cpu().data
@@ -143,11 +142,11 @@ class SpanConstituencyParser(Model):
         sentence_lengths = get_lengths_from_binary_sequence_mask(output_dict["token_mask"]).data
 
         trees = []
-        for batch_index, (predictions, spans, sentence) in enumerate(zip(all_predictions,
-                                                                         all_spans,
-                                                                         all_sentences)):
+        for batch_index, (predictions, spans, sentence_ids) in enumerate(zip(all_predictions,
+                                                                             all_spans,
+                                                                             all_sentences)):
             sentence: List[str] = [self.vocab.get_token_from_index(index, "tokens") for
-                                   index in sentence[:sentence_lengths[batch_index]]]
+                                   index in sentence_ids[:sentence_lengths[batch_index]]]
 
             selected_spans = []
             for prediction, span in zip(predictions, spans):
@@ -162,17 +161,18 @@ class SpanConstituencyParser(Model):
                             "start": int(start),
                             # Switch to exclusive span ends to make
                             # recursive tree constuction easier.
-                            "end": int(end) + 1,
+                            "end": float(end) + 1,
                             "label_prob": float(label_prob),
                             "no_label_prob": float(no_label_prob),
-                            "label_index": int(label_index)
+                            "label_index": float(label_index)
                     })
 
             # The spans we've selected might overlap, which causes problems when we try
             # to construct the tree as they won't nest properly.
             consistent_spans = self.resolve_overlap_conflicts_greedily(selected_spans)
 
-            spans_to_labels = {(span["start"], span["end"]): self.vocab.get_token_from_index(span["label_index"], "labels")
+            spans_to_labels = {(int(span["start"]), int(span["end"])): 
+                               self.vocab.get_token_from_index(int(span["label_index"]), "labels")
                                for span in consistent_spans}
             trees.append(self.construct_tree_from_spans(spans_to_labels, sentence))
 
@@ -180,9 +180,31 @@ class SpanConstituencyParser(Model):
         return output_dict
 
     @staticmethod
-    def resolve_overlap_conflicts_greedily(chosen_spans: List[Dict[str, int]]) -> List[Dict[str, int]]:
+    def resolve_overlap_conflicts_greedily(chosen_spans: List[Dict[str, float]]) -> List[Dict[str, float]]:
         """
-        Given a set of spans, removes spans which overlap.
+        Given a set of spans, removes spans which overlap by evaluating the difference
+        in probability between one being labeled and the other explicitly having no label
+        and vice-versa. The worst case runtime of this method is ``O(k * n^4)`` where ``n``
+        is the length of the sentence that the spans were enumerated from and ``k`` is the 
+        number of conflicts. However, in practice, there are very few conflicts. Hopefully.
+
+        Parameters
+        ----------
+        chosen_spans: ``List[Dict[str, int]]``, required.
+            A list of chosen spans, where each span is a dictionary containing the following keys:
+            start: ``int``
+                The start index of the span.
+            end : ``int``
+                The exclusive end index of the span.
+            no_label_prob : ``float``
+                The probability of this span being assigned the ``NO-LABEL`` label.
+            label_prob : ``float``
+                The probability of the most likely label.
+
+        Returns
+        -------
+        ``chosen_spans``, with the conflicts resolved by considering
+        local differences between pairs of spans.
         """
         conflicts_exist = True
         while conflicts_exist:
@@ -191,7 +213,13 @@ class SpanConstituencyParser(Model):
                 for span2_index, span2 in list(enumerate(chosen_spans))[span1_index + 1:]:
                     if (span1["start"] < span2["start"] < span1["end"] < span2["end"] or
                         span2["start"] < span1["start"] < span2["end"] < span1["end"]):
+                        # The spans overlap.
                         conflicts_exist = True
+                        # What's the more likely situation: that span2 was labeled 
+                        # and span1 was unlabled, or that span1 was labeled and span2
+                        # was unlabled? In the first case, we delete span2 from the
+                        # set of spans to form the tree - in the second case, we delete
+                        # span1.
                         if (span1["no_label_prob"] + span2["label_prob"] <
                             span2["no_label_prob"] + span1["label_prob"]):
                             chosen_spans.pop(span2_index)
@@ -203,8 +231,45 @@ class SpanConstituencyParser(Model):
     def construct_tree_from_spans(spans_to_labels: Dict[Tuple[int, int], str],
                                   sentence: List[str],
                                   pos_tags: List[str] = None):
+        """
+        Parameters
+        ----------
+        spans_to_labels : ``Dict[Tuple[int, int], str]``, required.
+            A mapping from spans to constituency labels.
+        sentence : ``List[str]``, required.
+            A list of tokens forming the sentence to be parsed.
+        pos_tags : ``List[str]``, optional (default = None)
+            A list of the pos tags for the words in the sentence, if they
+            were either predicted or taken as input to the model.
 
-        def assemble_subtree(start, end):
+        Returns
+        -------
+        A nested dictionary, where each node contains the following keys:
+
+        label : ``str``
+            The constituency label of this subtree.
+        start : ``int``
+            The start index for this subtree.
+        end : ``int``
+            The exclusive end index for this subtree.
+        children : ``List[Dict]``
+            A list of subtrees containing the children of this node.
+
+        or alternatively, if the node is a leaf node, it will have the following keys:
+
+        label : ``str``
+            The constituency label of this subtree.
+        start : ``int``
+            The start index for this subtree.
+        end : ``int``
+            The exclusive end index for this subtree.
+        is_leaf : ``bool`` = True
+            A indicator to make identifying leaf nodes easier.
+        pos_tag : ``str``, optional.
+            Optionally the gold pos tag will be included, if a list of
+            gold (or predicted) pos tags are passed to this method.
+        """
+        def assemble_subtree(start: int, end: int):
             if (start, end) in spans_to_labels:
                 label = spans_to_labels[(start, end)]
                 assert label != ()
@@ -212,9 +277,10 @@ class SpanConstituencyParser(Model):
                 assert start != 0 or end != len(sentence)
                 label = None
 
+            # This node is a leaf.
             if end - start == 1:
                 word = sentence[start]
-                tree = {"start": start, "word": word, "is_leaf": True}
+                tree = {"start": start, "end": end, "word": word, "is_leaf": True}
                 if label is not None:
                     tree["label"] = label
                 if pos_tags is not None:
