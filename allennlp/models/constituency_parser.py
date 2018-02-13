@@ -1,6 +1,5 @@
 from typing import Dict, Optional
 
-import numpy
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
@@ -13,16 +12,16 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, last_dim_softmax
 from allennlp.training.metrics import CategoricalAccuracy
 
 
 @Model.register("constituency_parser")
 class SpanConstituencyParser(Model):
     """
-    This ``SpanConstituencyParser`` simply encodes a sequence of text 
-    with a stacked ``Seq2SeqEncoder``, extracts span representations using a 
-    ``SpanExtractor``, and then predicts a tag for each span in the sequence.
+    This ``SpanConstituencyParser`` simply encodes a sequence of text
+    with a stacked ``Seq2SeqEncoder``, extracts span representations using a
+    ``SpanExtractor``, and then predicts a label for each span in the sequence.
 
     Parameters
     ----------
@@ -46,7 +45,7 @@ class SpanConstituencyParser(Model):
                  stacked_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(SimpleTagger, self).__init__(vocab, regularizer)
+        super(SpanConstituencyParser, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.span_extractor = span_extractor
@@ -68,6 +67,7 @@ class SpanConstituencyParser(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
+                pos_tags: torch.LongTensor,
                 spans: torch.LongTensor,
                 span_labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -95,35 +95,31 @@ class SpanConstituencyParser(Model):
         An output dictionary consisting of:
         logits : ``torch.FloatTensor``
             A tensor of shape ``(batch_size, num_spans, span_label_vocab_size)``
-            representing unnormalised log probabilities of the tag classes.
+            representing unnormalised log probabilities of the label classes for each span.
         class_probabilities : ``torch.FloatTensor``
             A tensor of shape ``(batch_size, num_spans, span_label_vocab_size)``
-            representing a distribution of the tag classes per span.
+            representing a distribution over the label classes per span.
         loss : ``torch.FloatTensor``, optional
             A scalar loss to be optimised.
         """
         embedded_text_input = self.text_field_embedder(tokens)
-        batch_size, sequence_length, _ = embedded_text_input.size()
-        num_spans = spans.size(1)
         mask = get_text_field_mask(tokens)
         # Shape: (batch_size, num_spans)
         span_mask = (spans[:, :, 0] >= 0).squeeze(-1).float()
+        # TODO(Mark): merge this into the call to the span extractor once other PR is in.
+        spans = spans * span_mask.long().unsqueeze(-1)
 
-        # TODO(Mark): add masks once other PR is merged.
         encoded_text = self.stacked_encoder(embedded_text_input, mask)
+        # TODO(Mark): add masks once other PR is merged.
         span_representations = self.span_extractor(encoded_text, spans)
-        
         logits = self.tag_projection_layer(span_representations)
-        reshaped_log_probs = logits.view(-1, self.num_classes)
-        class_probabilities = F.softmax(reshaped_log_probs, dim=-1).view([batch_size,
-                                                                          num_spans,
-                                                                          self.num_classes])
+        class_probabilities = last_dim_softmax(logits, span_mask.unsqueeze(-1))
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
         if span_labels is not None:
-            loss = sequence_cross_entropy_with_logits(logits, span_labels, mask)
+            loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask)
             for metric in self.metrics.values():
-                metric(logits, span_labels, mask)
+                metric(logits, span_labels, span_mask)
             output_dict["loss"] = loss
 
         return output_dict
@@ -131,8 +127,8 @@ class SpanConstituencyParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Does a simple position-wise argmax over each token, converts indices to string labels, and
-        adds a ``"tags"`` key to the dictionary with the result.
+        Constructs a tree given the scored spans. Spans which are predicted to have no label
+        are not included.
         """
         all_predictions = output_dict['class_probabilities']
         all_predictions = all_predictions.cpu().data.numpy()
@@ -140,13 +136,11 @@ class SpanConstituencyParser(Model):
             predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
         else:
             predictions_list = [all_predictions]
-        all_tags = []
         for predictions in predictions_list:
-            
-            # TODO(Mark): construct the ML tree from the scored spans.
-            pass            
 
-        output_dict['tags'] = all_tags
+            # TODO(Mark): construct the ML tree from the scored spans.
+            pass
+
         return output_dict
 
     @overrides
