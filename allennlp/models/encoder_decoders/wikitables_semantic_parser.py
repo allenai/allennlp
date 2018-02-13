@@ -72,6 +72,10 @@ class WikiTablesSemanticParser(Model):
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  This is the similarity function we use for that
         attention.
+    num_linking_features : ``int``, optional (default=8)
+        We need to construct a parameter vector for the linking features, so we need to know how
+        many there are.  The default of 8 here matches the default in the ``KnowledgeGraphField``,
+        which is to use all eight defined features.
     embed_terminals : ``bool``, optional (default=False)
         When selecting grammar actions in a particular state, we compare an action embedding with
         our current decoder state.  Computing the action embedding might be hard for
@@ -92,6 +96,7 @@ class WikiTablesSemanticParser(Model):
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction,
+                 num_linking_features: int = 8,
                  embed_terminals: bool = False) -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
@@ -112,15 +117,13 @@ class WikiTablesSemanticParser(Model):
         check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
                                "nonterminal embedding dim", "terminal embedding dim")
 
-        # TODO(mattg): instantiate a parameter vector for the linking features.
-
         self._action_padding_index = -1  # the padding value used by IndexField
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
         num_entity_types = 2  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
-        self._linking_params = torch.nn.Linear(8, 1)  # TODO(mattg): use linking features param vector
+        self._linking_params = torch.nn.Linear(num_linking_features, 1)
 
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
@@ -814,6 +817,7 @@ class WikiTablesSemanticParser(Model):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
+        num_linking_features = params.pop_int('num_linking_features', 8)
         embed_terminals = params.pop('embed_terminals', False)
         params.assert_empty(cls.__name__)
         return cls(vocab,
@@ -826,6 +830,7 @@ class WikiTablesSemanticParser(Model):
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function,
+                   num_linking_features=num_linking_features,
                    embed_terminals=embed_terminals)
 
 
