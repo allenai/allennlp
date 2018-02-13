@@ -3,7 +3,6 @@ from typing import Dict, Tuple, List, Optional
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
-import torch.nn.functional as F
 
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
@@ -12,7 +11,8 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, last_dim_softmax, get_lengths_from_binary_sequence_mask
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -115,12 +115,12 @@ class SpanConstituencyParser(Model):
         logits = self.tag_projection_layer(span_representations)
         class_probabilities = last_dim_softmax(logits, span_mask.unsqueeze(-1))
         output_dict = {
-            "logits": logits, 
-            "class_probabilities": class_probabilities,
-            "spans": spans,
-            "tokens": tokens,
-            "token_mask": mask}
-
+                "logits": logits,
+                "class_probabilities": class_probabilities,
+                "spans": spans,
+                "tokens": tokens,
+                "token_mask": mask
+        }
         if span_labels is not None:
             loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask)
             for metric in self.metrics.values():
@@ -143,8 +143,10 @@ class SpanConstituencyParser(Model):
         sentence_lengths = get_lengths_from_binary_sequence_mask(output_dict["token_mask"]).data
 
         trees = []
-        for batch_index, (predictions, spans, sentence) in enumerate(zip(all_predictions, all_spans, all_sentences)):
-            sentence: List[str] = [self.vocab.get_token_from_index(index, "tokens") for 
+        for batch_index, (predictions, spans, sentence) in enumerate(zip(all_predictions,
+                                                                         all_spans,
+                                                                         all_sentences)):
+            sentence: List[str] = [self.vocab.get_token_from_index(index, "tokens") for
                                    index in sentence[:sentence_lengths[batch_index]]]
 
             selected_spans = []
@@ -155,22 +157,22 @@ class SpanConstituencyParser(Model):
 
                 # Does the span have a label != NO-LABEL or is it the root node?
                 # If so, include it in the spans that we consider.
-                if int(label_index) != no_label_id or (start == 0 and end == len(sentence)):
+                if int(label_index) != no_label_id or (start == 0 and end + 1 == len(sentence)):
                     selected_spans.append({
-                        "start": int(start),
-                        # Switch to exclusive span ends to make 
-                        # recursive tree constuction easier.
-                        "end": int(end) + 1,
-                        "label_prob": float(label_prob),
-                        "no_label_prob": float(no_label_prob),
-                        "label_index": int(label_index)
+                            "start": int(start),
+                            # Switch to exclusive span ends to make
+                            # recursive tree constuction easier.
+                            "end": int(end) + 1,
+                            "label_prob": float(label_prob),
+                            "no_label_prob": float(no_label_prob),
+                            "label_index": int(label_index)
                     })
-            
+
             # The spans we've selected might overlap, which causes problems when we try
             # to construct the tree as they won't nest properly.
             consistent_spans = self.resolve_overlap_conflicts_greedily(selected_spans)
 
-            spans_to_labels = {(span["start"], span["end"]): self.vocab.get_token_from_index(span["label_index"])
+            spans_to_labels = {(span["start"], span["end"]): self.vocab.get_token_from_index(span["label_index"], "labels")
                                for span in consistent_spans}
             trees.append(self.construct_tree_from_spans(spans_to_labels, sentence))
 
@@ -181,7 +183,6 @@ class SpanConstituencyParser(Model):
     def resolve_overlap_conflicts_greedily(chosen_spans: List[Dict[str, int]]) -> List[Dict[str, int]]:
         """
         Given a set of spans, removes spans which overlap.
-        
         """
         conflicts_exist = True
         while conflicts_exist:
@@ -189,23 +190,21 @@ class SpanConstituencyParser(Model):
             for span1_index, span1 in enumerate(chosen_spans):
                 for span2_index, span2 in list(enumerate(chosen_spans))[span1_index + 1:]:
                     if (span1["start"] < span2["start"] < span1["end"] < span2["end"] or
-                          span2["start"] < span1["start"] < span2["end"] < span1["end"]):
+                        span2["start"] < span1["start"] < span2["end"] < span1["end"]):
                         conflicts_exist = True
-                        if span1["no_label_prob"] + span2["label_prob"] < span2["no_label_prob"] + span1["label_prob"]:
+                        if (span1["no_label_prob"] + span2["label_prob"] <
+                            span2["no_label_prob"] + span1["label_prob"]):
                             chosen_spans.pop(span2_index)
                         else:
                             chosen_spans.pop(span1_index)
                         break
         return chosen_spans
-
-    def construct_tree_from_spans(self,
-                                  spans_to_labels: Dict[Tuple[int, int], str],
+    @staticmethod
+    def construct_tree_from_spans(spans_to_labels: Dict[Tuple[int, int], str],
                                   sentence: List[str],
                                   pos_tags: List[str] = None):
 
-        used = set()
         def assemble_subtree(start, end):
-            used.add((start, end))
             if (start, end) in spans_to_labels:
                 label = spans_to_labels[(start, end)]
                 assert label != ()
@@ -223,7 +222,8 @@ class SpanConstituencyParser(Model):
                 return [tree]
 
             argmax_split = start + 1
-            # Find the next largest subspan.
+            # Find the next largest subspan such that
+            # the left hand side is a constituent.
             for split in range(end - 1, start, -1):
                 if (start, split) in spans_to_labels:
                     argmax_split = split
