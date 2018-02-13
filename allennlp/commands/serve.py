@@ -7,15 +7,13 @@ their predictions.
 .. code-block:: bash
 
     $ python -m allennlp.run serve --help
-    usage: run [command] serve [-h] [--port PORT] [--workers WORKERS]
-                            [--config-file CONFIG_FILE]
+    usage: python -m allennlp.run [command] serve [-h] [--port PORT]
 
     Run the web service, which provides an HTTP API as well as a web demo.
 
     optional arguments:
-    -h, --help            show this help message and exit
+    -h, --help   show this help message and exit
     --port PORT
-    --workers WORKERS
 """
 
 import argparse
