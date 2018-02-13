@@ -20,16 +20,16 @@ def main(argv):
     else:
         device = -1
             
-    chunker, pairs, pairs_dev = initializeChunker('encoder.final.pt','decoder.final.pt','data/mturk.005.train.txt','data/mturk.005.dev.txt',max_input_length=120)
+    chunker = NeuralChunker('encoder.final.pt','decoder.final.pt', output_lang, max_length)
 
     encoder1 = chunker.encoder
     attn_decoder1 = chunker.decoder
     
     print("*** starting evaluation ***")
-        #if use_cuda:
-        #print("*** using cuda to eval ***")
-        #encoder1 = encoder1.cuda()
-        #attn_decoder1 = attn_decoder1.cuda()
+    if use_cuda:
+        print("*** using cuda to eval ***")
+        encoder1 = encoder1.cuda()
+        attn_decoder1 = attn_decoder1.cuda()
 
     trainItersElmo(encoder1, attn_decoder1, output_lang, 0, pairs, pairs_dev, max_length, print_every=100)
     # experimental
