@@ -20,7 +20,7 @@ def main(argv):
     else:
         device = -1
             
-    chunker, pairs, pairs_dev = initializeChunker('encoder.bootstrap.pt','decoder.bootstrap.pt','data/mturk.005.train.txt','data/mturk.005.dev.txt',max_input_length = 120)
+    chunker, pairs, pairs_dev = initializeChunker('encoder.final.pt','decoder.final.pt','data/mturk.005.train.txt','data/mturk.005.dev.txt',max_input_length = 120)
 
     encoder1 = chunker.encoder
     attn_decoder1 = chunker.decoder
