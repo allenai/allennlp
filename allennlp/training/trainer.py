@@ -397,7 +397,7 @@ class Trainer:
         logger.info(f"Peak memory usage MB: {peak_memory_mb()}")
         gpu_memory = gpu_memory_mb()
         if gpu_memory:
-            logger.info(f"GPU memory: {gpu_memory}")
+            logger.info(f"GPU memory MB: {gpu_memory}")
 
         train_loss = 0.0
         # Set the model to "train" mode.

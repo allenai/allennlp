@@ -262,7 +262,7 @@ def gpu_memory_mb() -> Dict[int, int]:
         return None
 
     gpu_memory = [int(x) for x in result.strip().split('\n')]
-    return { gpu: memory for gpu, memory in sorted(gpu_memory.items()) }
+    return { gpu: memory for gpu, memory in enumerate(gpu_memory) }
 
 def ensure_list(iterable: Iterable[A]) -> List[A]:
     """
