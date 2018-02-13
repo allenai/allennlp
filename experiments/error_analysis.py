@@ -2,7 +2,7 @@ import sys
 import torch
 sys.path.append('./python')
 
-from chunking.data import initializeData, initializeChunker
+from chunking.data import initializeData, initializeChunker, NeuralChunker
 from chunking.eval import validate
 from chunking.train import trainItersElmo, EncoderRNNElmo, AttnDecoderRNN
 
