@@ -20,23 +20,13 @@ def main(argv):
     else:
         device = -1
     
-        
-    chunker, pairs, pairs_dev = initializeChunker(
-        'results/run_008/encoder.final.pt',
-        'results/run_008/decoder.final.pt',
-        'data/mturk.005.train.txt',
-        'data/mturk.005.dev.txt',
-        max_input_length = 120
-    )
-        
-    encoder1 = chunker.encoder
-    attn_decoder1 = chunker.decoder
+    encoder1 = torch.load('results/run_008/encoder.final.pt')
+    attn_decoder1 = torch.load('results/run_008/decoder.final.pt')
 
     if use_cuda:
-        print("*** using cuda to train ***")
+        print("*** Using cuda ***")
         encoder1 = encoder1.cuda()
         attn_decoder1 = attn_decoder1.cuda()
-
 
     print("*** Analyzing ***")
     print(validate(encoder1, attn_decoder1, output_lang, pairs_dev, max_length, 100))
