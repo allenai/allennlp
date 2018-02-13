@@ -112,7 +112,7 @@ def target_variable_from_sentences(lang, sentences):
     
 def initializeChunker(encoderFile, decoderFile, train_file, dev_file, max_input_length):
     output_lang, pairs, pairs_dev, max_length = initializeData(train_file, dev_file, max_input_length = max_input_length)  
-    chunker = NeuralChunker(encoderFile, decoderFile, input_lang, output_lang, max_length)
+    chunker = NeuralChunker(encoderFile, decoderFile, output_lang, max_length)
     return chunker, pairs, pairs_dev
 
 
