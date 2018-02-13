@@ -8,6 +8,7 @@ import importlib
 import pkgutil
 import random
 import resource
+import subprocess
 import sys
 
 import torch
@@ -236,8 +237,6 @@ def peak_memory_mb() -> float:
     else:
         # On Linux the result is in kilobytes.
         return peak / 1_000
-
-import subprocess
 
 def gpu_memory_mb() -> Dict[int, int]:
     """
