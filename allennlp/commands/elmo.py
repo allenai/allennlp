@@ -219,7 +219,10 @@ class ElmoEmbedder():
 
         return elmo_embeddings
 
-    def embed_sentences(self, sentences: Iterable[List[str]], batch_size: int) -> Iterable[torch.Tensor]:
+    def embed_sentences(
+                self,
+                sentences: Iterable[List[str]],
+                batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[torch.Tensor]:
         """
         Computes the ELMo embeddings for a iterable of sentences.
 
