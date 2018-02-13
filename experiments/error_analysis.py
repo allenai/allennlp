@@ -19,13 +19,25 @@ def main(argv):
         device = 0
     else:
         device = -1
-    
-    encoder1 = torch.load('results/run_008/encoder.final.pt')
-    attn_decoder1 = torch.load('results/run_008/decoder.final.pt')
+            
+    chunker, pairs, pairs_dev = initializeChunker('encoder.bootstrap.pt','decoder.bootstrap.pt','data/mturk.005.train.txt','data/mturk.005.dev.txt',max_input_length=120)
 
-    print("*** Analyzing ***")
-    print(validate(encoder1, attn_decoder1, output_lang, pairs_dev, max_length, 100))
+    encoder1 = chunker.encoder
+    attn_decoder1 = chunker.decoder
     
+    print("*** starting evaluation ***")
+    if use_cuda:
+        print("*** using cuda to eval ***")
+        encoder1 = encoder1.cuda()
+        attn_decoder1 = attn_decoder1.cuda()
+
+    #trainItersElmo(encoder1, attn_decoder1, output_lang, 150000, pairs, pairs_dev, max_length, print_every=100)
+    # experimental
+    #    trainItersElmo(encoder1, attn_decoder1, output_lang, 750, 200, pairs, pairs_dev, max_length, print_every=1, save_every=10)
+    print(validate(encoder1, attn_decoder1, output_lang, pairs_dev, max_length, 100))
+#    torch.save(encoder1, 'encoder.final.pt')
+#    torch.save(attn_decoder1, 'decoder.final.pt')
+
 
 if __name__ == "__main__":
     main(sys.argv)
