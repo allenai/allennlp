@@ -197,7 +197,7 @@ class WikiTablesDatasetReader(DatasetReader):
         Reads text inputs and makes an instance. WikitableQuestions dataset provides tables as TSV
         files, which we use for training. For running a demo, we may want to provide tables in a
         JSON format. To make this method compatible with both, we take ``table_info``, which can
-        either be a filename, or a dict. We check the argument's type and calle the appropriate
+        either be a filename, or a dict. We check the argument's type and call the appropriate
         method in ``TableKnowledgeGraph``.
 
         Parameters
