@@ -251,7 +251,7 @@ def gpu_memory_mb() -> Dict[int, int]:
     ``Dict[int, int]``
         Keys are device ids as integers.
         Values are memory usage as integers in MB.
-        Returns ``None`` if GPUs are not available.
+        Returns an empty ``dict`` if GPUs are not available.
     """
     # pylint: disable=bare-except
     try:
