@@ -395,9 +395,8 @@ class Trainer:
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
         logger.info(f"Peak CPU memory usage MB: {peak_memory_mb()}")
-        gpu_memory = gpu_memory_mb()
-        if gpu_memory:
-            logger.info(f"GPU memory usage MB: {gpu_memory}")
+        for gpu, memory in gpu_memory_mb():
+            logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
         train_loss = 0.0
         # Set the model to "train" mode.
