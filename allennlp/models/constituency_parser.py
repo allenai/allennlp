@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Tuple, List, Optional
 
 from overrides import overrides
 import torch
@@ -12,7 +12,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, last_dim_softmax
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, last_dim_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -114,7 +114,12 @@ class SpanConstituencyParser(Model):
         span_representations = self.span_extractor(encoded_text, spans)
         logits = self.tag_projection_layer(span_representations)
         class_probabilities = last_dim_softmax(logits, span_mask.unsqueeze(-1))
-        output_dict = {"logits": logits, "class_probabilities": class_probabilities}
+        output_dict = {
+            "logits": logits, 
+            "class_probabilities": class_probabilities,
+            "spans": spans,
+            "tokens": tokens,
+            "token_mask": mask}
 
         if span_labels is not None:
             loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask)
@@ -130,18 +135,110 @@ class SpanConstituencyParser(Model):
         Constructs a tree given the scored spans. Spans which are predicted to have no label
         are not included.
         """
-        all_predictions = output_dict['class_probabilities']
-        all_predictions = all_predictions.cpu().data.numpy()
-        if all_predictions.ndim == 3:
-            predictions_list = [all_predictions[i] for i in range(all_predictions.shape[0])]
-        else:
-            predictions_list = [all_predictions]
-        for predictions in predictions_list:
+        all_predictions = output_dict['class_probabilities'].cpu().data
+        all_spans = output_dict["spans"].cpu().data
+        no_label_id = self.vocab.get_token_index("NO-LABEL", "labels")
 
-            # TODO(Mark): construct the ML tree from the scored spans.
-            pass
+        all_sentences = output_dict["tokens"]["tokens"].data
+        sentence_lengths = get_lengths_from_binary_sequence_mask(output_dict["token_mask"]).data
 
+        trees = []
+        for batch_index, (predictions, spans, sentence) in enumerate(zip(all_predictions, all_spans, all_sentences)):
+            sentence: List[str] = [self.vocab.get_token_from_index(index, "tokens") for 
+                                   index in sentence[:sentence_lengths[batch_index]]]
+
+            selected_spans = []
+            for prediction, span in zip(predictions, spans):
+                start, end = span
+                no_label_prob = prediction[no_label_id]
+                label_prob, label_index = torch.max(prediction, -1)
+
+                # Does the span have a label != NO-LABEL or is it the root node?
+                # If so, include it in the spans that we consider.
+                if int(label_index) != no_label_id or (start == 0 and end == len(sentence)):
+                    selected_spans.append({
+                        "start": int(start),
+                        # Switch to exclusive span ends to make 
+                        # recursive tree constuction easier.
+                        "end": int(end) + 1,
+                        "label_prob": float(label_prob),
+                        "no_label_prob": float(no_label_prob),
+                        "label_index": int(label_index)
+                    })
+            
+            # The spans we've selected might overlap, which causes problems when we try
+            # to construct the tree as they won't nest properly.
+            consistent_spans = self.resolve_overlap_conflicts_greedily(selected_spans)
+
+            spans_to_labels = {(span["start"], span["end"]): self.vocab.get_token_from_index(span["label_index"])
+                               for span in consistent_spans}
+            trees.append(self.construct_tree_from_spans(spans_to_labels, sentence))
+
+        output_dict["trees"] = trees
         return output_dict
+
+    @staticmethod
+    def resolve_overlap_conflicts_greedily(chosen_spans: List[Dict[str, int]]) -> List[Dict[str, int]]:
+        """
+        Given a set of spans, removes spans which overlap.
+        
+        """
+        conflicts_exist = True
+        while conflicts_exist:
+            conflicts_exist = False
+            for span1_index, span1 in enumerate(chosen_spans):
+                for span2_index, span2 in list(enumerate(chosen_spans))[span1_index + 1:]:
+                    if (span1["start"] < span2["start"] < span1["end"] < span2["end"] or
+                          span2["start"] < span1["start"] < span2["end"] < span1["end"]):
+                        conflicts_exist = True
+                        if span1["no_label_prob"] + span2["label_prob"] < span2["no_label_prob"] + span1["label_prob"]:
+                            chosen_spans.pop(span2_index)
+                        else:
+                            chosen_spans.pop(span1_index)
+                        break
+        return chosen_spans
+
+    def construct_tree_from_spans(self,
+                                  spans_to_labels: Dict[Tuple[int, int], str],
+                                  sentence: List[str],
+                                  pos_tags: List[str] = None):
+
+        used = set()
+        def assemble_subtree(start, end):
+            used.add((start, end))
+            if (start, end) in spans_to_labels:
+                label = spans_to_labels[(start, end)]
+                assert label != ()
+            else:
+                assert start != 0 or end != len(sentence)
+                label = None
+
+            if end - start == 1:
+                word = sentence[start]
+                tree = {"start": start, "word": word, "is_leaf": True}
+                if label is not None:
+                    tree["label"] = label
+                if pos_tags is not None:
+                    tree["pos_tag"] = pos_tags[start]
+                return [tree]
+
+            argmax_split = start + 1
+            # Find the next largest subspan.
+            for split in range(end - 1, start, -1):
+                if (start, split) in spans_to_labels:
+                    argmax_split = split
+                    break
+
+            assert start < argmax_split < end, (start, argmax_split, end)
+            left_trees = assemble_subtree(start, argmax_split)
+            right_trees = assemble_subtree(argmax_split, end)
+            children = left_trees + right_trees
+            if label is not None:
+                children = [{"label": label, "children": children, "start": start, "end": end}]
+            return children
+
+        tree = assemble_subtree(0, len(sentence))
+        return tree[0]
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
