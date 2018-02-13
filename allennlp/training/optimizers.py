@@ -40,23 +40,27 @@ class Optimizer(Registrable):
         # make the parameter groups if need
         groups = params.pop("parameter_groups", None)
         if groups:
-            # input to optimizer is list of dict
-            # each dict contains {'params': [list of parameters], 'lr': 1e-3, ...}
+            # The input to the optimizer is list of dict.
+            # Each dict contains a "parameter group" and groups specific options,
+            # e.g., {'params': [list of parameters], 'lr': 1e-3, ...}
             # Any config option not specified in the additional options (e.g.
             # for the default group) is inherited from the top level config.
             # see: http://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options
             #
             # groups contains something like:
             #"parameter_groups": [
-            #       [['regex1', 'regex2'], {'lr': 1e-3},
-            #        ['regex3'], {'lr': 1e-4}]
+            #       [["regex1", "regex2"], {"lr": 1e-3},
+            #        ["regex3"], {"lr": 1e-4}]
             #]
-            #
-            # The last entry of this list is for the parameters not in any regex.
-            #
+            #(note that the allennlp config files require double quotes ", and will
+            # fail (sometimes silently) with single quotes ').
+
             # This is typed as as Any since the dict values other then
             # the params key are passed to the Optimizer constructor and
             # can be any type it accepts.
+            # In addition to any parameters that match group specific regex,
+            # we also need a group for the remaining "default" group.
+            # Those will be included in the last entry of parameter_groups.
             parameter_groups: Any = [{'params': []} for _ in range(len(groups) + 1)]
             # add the group specific kwargs
             for k in range(len(groups)): # pylint: disable=consider-using-enumerate
@@ -90,9 +94,9 @@ class Optimizer(Registrable):
             for k in range(len(groups) + 1):
                 group_options = {key: val for key, val in parameter_groups[k].items()
                                  if key != 'params'}
-                print("Group {0}: {1}, {2}".format(k,
-                                                   list(parameter_group_names[k]),
-                                                   group_options))
+                logger.info("Group %s: %s, %s", k,
+                            list(parameter_group_names[k]),
+                            group_options)
             # check for unused regex
             for regex, count in regex_use_counts.items():
                 if count == 0:
