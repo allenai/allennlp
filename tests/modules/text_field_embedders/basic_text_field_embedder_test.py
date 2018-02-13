@@ -53,3 +53,31 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
 
     def test_forward_concats_resultant_embeddings(self):
         assert self.token_embedder(self.inputs).size() == (1, 4, 10)
+
+    def test_forward_works_on_higher_order_input(self):
+        params = Params({
+                "words": {
+                        "type": "embedding",
+                        "num_embeddings": 20,
+                        "embedding_dim": 2,
+                        },
+                "characters": {
+                        "type": "character_encoding",
+                        "embedding": {
+                                "embedding_dim": 4,
+                                "num_embeddings": 15,
+                                },
+                        "encoder": {
+                                "type": "cnn",
+                                "embedding_dim": 4,
+                                "num_filters": 10,
+                                "ngram_filter_sizes": [3],
+                                },
+                        }
+                })
+        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        inputs = {
+                'words': Variable(torch.rand(3, 4, 5, 6) * 20).long(),
+                'characters': Variable(torch.rand(3, 4, 5, 6, 7) * 15).long(),
+                }
+        assert token_embedder(inputs, num_wrapping_dims=2).size() == (3, 4, 5, 6, 12)
