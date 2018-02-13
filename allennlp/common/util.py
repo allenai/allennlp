@@ -251,17 +251,15 @@ def gpu_memory_mb() -> Dict[int, int]:
         Returns ``None`` if GPUs are not available.
     """
     try:
-        result = subprocess.check_output(
-            [
-                'nvidia-smi', '--query-gpu=memory.used',
-                '--format=csv,nounits,noheader'
-            ], encoding='utf-8')
+        result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
+                                          '--format=csv,nounits,noheader'],
+                                         encoding='utf-8')
     except FileNotFoundError:
         # `nvidia-smi` doesn't exist, assume that means no GPU.
         return None
 
     gpu_memory = [int(x) for x in result.strip().split('\n')]
-    return { gpu: memory for gpu, memory in enumerate(gpu_memory) }
+    return {gpu: memory for gpu, memory in enumerate(gpu_memory)}
 
 def ensure_list(iterable: Iterable[A]) -> List[A]:
     """
