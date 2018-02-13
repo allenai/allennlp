@@ -237,6 +237,33 @@ def peak_memory_mb() -> float:
         # On Linux the result is in kilobytes.
         return peak / 1_000
 
+import subprocess
+
+def gpu_memory_mb() -> Dict[int, int]:
+    """
+    Get the current GPU memory usage.
+    Based on https://discuss.pytorch.org/t/access-gpu-memory-usage-in-pytorch/3192/4
+
+    Returns
+    -------
+    ``Dict[int, int]``
+        Keys are device ids as integers.
+        Values are memory usage as integers in MB.
+        Returns ``None`` if GPUs are not available.
+    """
+    try:
+        result = subprocess.check_output(
+            [
+                'nvidia-smi', '--query-gpu=memory.used',
+                '--format=csv,nounits,noheader'
+            ], encoding='utf-8')
+    except FileNotFoundError:
+        # `nvidia-smi` doesn't exist, assume that means no GPU.
+        return None
+
+    gpu_memory = [int(x) for x in result.strip().split('\n')]
+    return { gpu: memory for gpu, memory in sorted(gpu_memory.items()) }
+
 def ensure_list(iterable: Iterable[A]) -> List[A]:
     """
     An Iterable may be a list or a generator.
