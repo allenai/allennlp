@@ -25,7 +25,7 @@ from tensorboard import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb
+from allennlp.common.util import peak_memory_mb, gpu_memory_mb
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -395,6 +395,9 @@ class Trainer:
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
         logger.info(f"Peak CPU memory usage MB: {peak_memory_mb()}")
+        for gpu, memory in gpu_memory_mb().items():
+            logger.info(f"GPU {gpu} memory usage MB: {memory}")
+
         train_loss = 0.0
         # Set the model to "train" mode.
         self._model.train()
