@@ -180,7 +180,7 @@ class ElmoEmbedder():
 
         return activations, mask
 
-    def embed_sentence(self, sentence: List[str]) -> torch.Tensor:
+    def embed_sentence(self, sentence: List[str]) -> numpy.ndarray:
         """
         Computes the ELMo embeddings for a single tokenized sentence.
 
@@ -196,7 +196,7 @@ class ElmoEmbedder():
 
         return self.embed_batch([sentence])[0]
 
-    def embed_batch(self, batch: List[List[str]]) -> List[torch.Tensor]:
+    def embed_batch(self, batch: List[List[str]]) -> List[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a batch of tokenized sentences.
 
@@ -211,18 +211,22 @@ class ElmoEmbedder():
         """
         elmo_embeddings = []
 
-        embeddings, mask = self.batch_to_embeddings(batch)
-        for i in range(len(batch)):
-            length = int(mask[i, :].sum())
-            sentence_embeds = embeddings[i, :, :length, :].data.cpu().numpy()
-            elmo_embeddings.append(sentence_embeds)
+        # Batches will only an empty sentence will throw an exception inside AllenNLP, but rather than throw an
+        # exception we want to return an empty embedding.
+        if batch == [[]]:
+            elmo_embeddings.append(numpy.zeros((3, 0, 1024)))
+        else:
+            embeddings, mask = self.batch_to_embeddings(batch)
+            for i in range(len(batch)):
+                length = int(mask[i, :].sum())
+                elmo_embeddings.append(embeddings[i, :, :length, :].data.cpu().numpy())
 
         return elmo_embeddings
 
     def embed_sentences(
-                self,
-                sentences: Iterable[List[str]],
-                batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[torch.Tensor]:
+            self,
+            sentences: Iterable[List[str]],
+            batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a iterable of sentences.
 
