@@ -34,7 +34,7 @@ def main(argv):
     trainItersElmo(encoder1, attn_decoder1, output_lang, 0, pairs, pairs_dev, max_length, print_every=100)
     # experimental
     #    trainItersElmo(encoder1, attn_decoder1, output_lang, 750, 200, pairs, pairs_dev, max_length, print_every=1, save_every=10)
-    print(validate(torch.load('encoder.final.pt'), torch.load('decoder.final.pt'), output_lang, pairs_dev, max_length, 100))
+    print(validate(torch.load('encoder.final.pt').cuda(), torch.load('decoder.final.pt').cuda(), output_lang, pairs_dev, max_length, 100))
 #    torch.save(encoder1, 'encoder.final.pt')
 #    torch.save(attn_decoder1, 'decoder.final.pt')
 
