@@ -210,10 +210,12 @@ class TestElmoEmbedder(ElmoTestCase):
 
     def test_embed_batch_is_empty_sentence(self):
         embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
+        embeddings = embedder.embed_sentence([])
 
-        embedder.embed_sentence([])
+        assert embeddings.shape == (3, 0, 1024)
 
     def test_embed_batch_contains_empty_sentence(self):
         embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
+        embeddings = list(embedder.embed_sentences(["This is a test".split(), []]))
 
-        embedder.embed_sentences(["This is a test".split(), []])
+        assert len(embeddings) == 2
