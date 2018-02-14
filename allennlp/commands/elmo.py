@@ -123,6 +123,9 @@ class ElmoEmbedder():
 
         self.cuda_device = cuda_device
 
+    def empty_embedding(self) -> numpy.ndarray:
+        return numpy.zeros((3, 0, 1024))
+
     def batch_to_ids(self, batch: List[List[str]]) -> torch.Tensor:
         """
         Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
@@ -214,12 +217,16 @@ class ElmoEmbedder():
         # Batches will only an empty sentence will throw an exception inside AllenNLP, but rather than throw an
         # exception we want to return an empty embedding.
         if batch == [[]]:
-            elmo_embeddings.append(numpy.zeros((3, 0, 1024)))
+            elmo_embeddings.append(self.empty_embedding())
         else:
             embeddings, mask = self.batch_to_embeddings(batch)
             for i in range(len(batch)):
                 length = int(mask[i, :].sum())
-                elmo_embeddings.append(embeddings[i, :, :length, :].data.cpu().numpy())
+                # Slicing the embedding :0 throws an exception so we need to special case for empty sentences.
+                if length == 0:
+                    elmo_embeddings.append(self.empty_embedding())
+                else:
+                    elmo_embeddings.append(embeddings[i, :, :length, :].data.cpu().numpy())
 
         return elmo_embeddings
 

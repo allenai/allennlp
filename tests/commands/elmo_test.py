@@ -208,7 +208,12 @@ class TestElmoEmbedder(ElmoTestCase):
         for tensor, expected in zip(embeddings, expected_embeddings):
             numpy.testing.assert_array_almost_equal(tensor[2], expected)
 
-    def test_embed_empty_sentence(self):
+    def test_embed_batch_is_empty_sentence(self):
         embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
 
         embedder.embed_sentence([])
+
+    def test_embed_batch_contains_empty_sentence(self):
+        embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
+
+        embedder.embed_sentences(["This is a test".split(), []])
