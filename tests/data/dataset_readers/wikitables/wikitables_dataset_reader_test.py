@@ -356,6 +356,9 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
                 "r -> x",
                 ]
 
+        # We should have sorted the logical forms by length.  This is the action sequence
+        # corresponding to the shortest logical form in the examples, which is _not_ the first one
+        # in the file.
         action_sequence = instance.fields["target_action_sequences"].field_list[0]
         action_indices = [l.sequence_index for l in action_sequence.field_list]
         actions = [actions[i] for i in action_indices]

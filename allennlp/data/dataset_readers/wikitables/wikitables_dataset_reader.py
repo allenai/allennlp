@@ -55,30 +55,37 @@ class WikiTablesDatasetReader(DatasetReader):
     lazy : ``bool`` (optional, default=False)
         Passed to ``DatasetReader``.  If this is ``True``, training will start sooner, but will
         take longer per batch.
-    tables_directory : ``str`` (optional)
+    tables_directory : ``str``, optional
         Prefix for the path to the directory in which the tables reside. For example,
         ``*.examples`` files contain paths like ``csv/204-csv/590.csv``, this is the directory that
-        contains the ``csv`` directory.
-    dpd_output_directory : ``str`` (optional)
+        contains the ``csv`` directory.  This is only optional for ``Predictors`` (i.e., in a
+        demo), where you're only calling :func:`text_to_instance`.
+    dpd_output_directory : ``str``, optional
         Directory that contains all the gzipped dpd output files. We assume the filenames match the
-        example IDs (e.g.: ``nt-0.gz``).
-    max_dpd_logical_forms : ``int`` (optional)
+        example IDs (e.g.: ``nt-0.gz``).  This is required for training a model, but not required
+        for prediction.
+    max_dpd_logical_forms : ``int``, optional (default=10)
         We will use the first ``max_dpd_logical_forms`` logical forms as our target label.  Only
-        applicable if ``dpd_output_directory`` is given.  Default is 10.
-    max_dpd_tries : ``int`` (optional)
+        applicable if ``dpd_output_directory`` is given.
+    sort_dpd_logical_forms : ``bool``, optional (default=True)
+        If ``True``, we will sort the logical forms in the DPD output by length before selecting
+        the first ``max_dpd_logical_forms``.  This makes the data loading quite a bit slower, but
+        results in better training data.
+    max_dpd_tries : ``int``, optional
         Sometimes DPD just made bad choices about logical forms and gives us forms that we can't
         parse (most of the time these are very unlikely logical forms, because, e.g., it
         hallucinates a date or number from the table that's not in the question).  But we don't
         want to spend our time trying to parse thousands of bad logical forms.  We will try to
         parse only the first ``max_dpd_tries`` logical forms before giving up.  This also speeds up
-        data loading time, because we don't go through the entire DPD file if it's huge.  Only
-        applicable if ``dpd_output_directory`` is given.  Default is 20.
-    tokenizer : ``Tokenizer`` (optional)
+        data loading time, because we don't go through the entire DPD file if it's huge (unless
+        we're sorting the logical forms).  Only applicable if ``dpd_output_directory`` is given.
+        Default is 20.
+    tokenizer : ``Tokenizer``, optional
         Tokenizer to use for the questions. Will default to ``WordTokenizer()`` with Spacy's tagger
         enabled, as we use lemma matches as features for entity linking.
-    question_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
+    question_token_indexers : ``Dict[str, TokenIndexer]``, optional
         Token indexers for questions. Will default to ``{"tokens": SingleIdTokenIndexer()}``.
-    table_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
+    table_token_indexers : ``Dict[str, TokenIndexer]``, optional
         Token indexers for table entities. Will default to ``question_token_indexers`` (though you
         very likely want to use something different for these, as you can't rely on having an
         embedding for every table entity at test time).
@@ -86,20 +93,20 @@ class WikiTablesDatasetReader(DatasetReader):
         If ``True``, we will include table cell text in vocabulary creation.  The original parser
         did not do this, because the same table can appear multiple times, messing with vocab
         counts, and making you include lots of rare entities in your vocab.
-    nonterminal_indexers : ``Dict[str, TokenIndexer]`` (optional)
+    nonterminal_indexers : ``Dict[str, TokenIndexer]``, optional
         How should we represent non-terminals in production rules when we're computing action
         embeddings?  We use ``TokenIndexers`` for this.  Default is to use a
         ``SingleIdTokenIndexer`` with the ``rule_labels`` namespace, keyed by ``tokens``:
         ``{"tokens": SingleIdTokenIndexer("rule_labels")}``.  We use the namespace ``rule_labels``
         so that we don't get padding or OOV tokens for nonterminals.
-    terminal_indexers : ``Dict[str, TokenIndexer]`` (optional)
+    terminal_indexers : ``Dict[str, TokenIndexer]``, optional
         How should we represent terminals in production rules when we're computing action
         embeddings?  We also use ``TokenIndexers`` for this.  The default is to use a
         ``TokenCharactersIndexer`` keyed by ``token_characters``: ``{"token_characters":
         TokenCharactersIndexer()}``.  We use this indexer by default because WikiTables has plenty
         of terminals that are unseen at training time, so we need to use a representation for them
         that is not just a vocabulary lookup.
-    linking_feature_extractors : ``List[str]`` (optional)
+    linking_feature_extractors : ``List[str]``, optional
         The list of feature extractors to use in the :class:`KnowledgeGraphField` when computing
         entity linking features.  See that class for more information.  By default, we will use all
         available feature extractors.
@@ -114,6 +121,7 @@ class WikiTablesDatasetReader(DatasetReader):
                  tables_directory: str = None,
                  dpd_output_directory: str = None,
                  max_dpd_logical_forms: int = 10,
+                 sort_dpd_logical_forms: bool = True,
                  max_dpd_tries: int = 20,
                  tokenizer: Tokenizer = None,
                  question_token_indexers: Dict[str, TokenIndexer] = None,
@@ -127,6 +135,7 @@ class WikiTablesDatasetReader(DatasetReader):
         self._tables_directory = tables_directory
         self._dpd_output_directory = dpd_output_directory
         self._max_dpd_logical_forms = max_dpd_logical_forms
+        self._sort_dpd_logical_forms = sort_dpd_logical_forms
         self._max_dpd_tries = max_dpd_tries
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
@@ -159,12 +168,17 @@ class WikiTablesDatasetReader(DatasetReader):
                                                        parsed_info["id"] + '.gz')
                     try:
                         dpd_file = gzip.open(dpd_output_filename)
-                        sempre_forms = []
-                        for dpd_line in dpd_file:
-                            sempre_forms.append(dpd_line.strip().decode('utf-8'))
-                            if self._max_dpd_tries and len(sempre_forms) >= self._max_dpd_tries:
-                                # TODO(mattg): might want to sort by length here before truncating...
-                                break
+                        if self._sort_dpd_logical_forms:
+                            sempre_forms = [dpd_line.strip().decode('utf-8') for dpd_line in dpd_file]
+                            sempre_forms.sort(key=lambda x: len(x))
+                            if self._max_dpd_tries:
+                                sempre_forms = sempre_forms[:self._max_dpd_tries]
+                        else:
+                            sempre_forms = []
+                            for dpd_line in dpd_file:
+                                sempre_forms.append(dpd_line.strip().decode('utf-8'))
+                                if self._max_dpd_tries and len(sempre_forms) >= self._max_dpd_tries:
+                                    break
                     except FileNotFoundError:
                         logger.debug(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
                         num_dpd_missing += 1
@@ -207,7 +221,7 @@ class WikiTablesDatasetReader(DatasetReader):
         table_info : ``str`` or ``JsonDict``
             Table filename or the table content itself, as a dict. See
             ``TableKnowledgeGraph.read_from_json`` for the expected format.
-        dpd_output : List[str] (optional)
+        dpd_output : List[str], optional
             List of logical forms, produced by dynamic programming on denotations. Not required
             during test.
         tokenized_question : ``List[Token]``
@@ -335,20 +349,22 @@ class WikiTablesDatasetReader(DatasetReader):
         lazy = params.pop('lazy', False)
         tables_directory = params.pop('tables_directory', None)
         dpd_output_directory = params.pop('dpd_output_directory', None)
-        max_dpd_logical_forms = params.pop('max_dpd_logical_forms', 10)
-        max_dpd_tries = params.pop('max_dpd_tries', 20)
+        max_dpd_logical_forms = params.pop_int('max_dpd_logical_forms', 10)
+        sort_dpd_logical_forms = params.pop_bool('sort_dpd_logical_forms', True)
+        max_dpd_tries = params.pop_int('max_dpd_tries', 20)
         default_tokenizer_params = {'word_splitter': {'type': 'spacy', 'pos_tags': True}}
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', default_tokenizer_params))
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
         table_token_indexers = TokenIndexer.dict_from_params(params.pop('table_token_indexers', {}))
-        use_table_for_vocab = params.pop('use_table_for_vocab', False)
+        use_table_for_vocab = params.pop_bool('use_table_for_vocab', False)
         linking_feature_extracters = params.pop('linking_feature_extractors', None)
-        include_table_metadata = params.pop('include_table_metadata', False)
+        include_table_metadata = params.pop_bool('include_table_metadata', False)
         params.assert_empty(cls.__name__)
         return WikiTablesDatasetReader(lazy=lazy,
                                        tables_directory=tables_directory,
                                        dpd_output_directory=dpd_output_directory,
                                        max_dpd_logical_forms=max_dpd_logical_forms,
+                                       sort_dpd_logical_forms=sort_dpd_logical_forms,
                                        max_dpd_tries=max_dpd_tries,
                                        tokenizer=tokenizer,
                                        question_token_indexers=question_token_indexers,
