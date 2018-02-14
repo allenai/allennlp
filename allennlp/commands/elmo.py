@@ -214,8 +214,8 @@ class ElmoEmbedder():
         """
         elmo_embeddings = []
 
-        # Batches will only an empty sentence will throw an exception inside AllenNLP, but rather than throw an
-        # exception we want to return an empty embedding.
+        # Batches with only an empty sentence will throw an exception inside AllenNLP, so we handle this case
+        # and return an empty embedding instead.
         if batch == [[]]:
             elmo_embeddings.append(empty_embedding())
         else:
@@ -230,10 +230,9 @@ class ElmoEmbedder():
 
         return elmo_embeddings
 
-    def embed_sentences(
-            self,
-            sentences: Iterable[List[str]],
-            batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[numpy.ndarray]:
+    def embed_sentences(self,
+                        sentences: Iterable[List[str]],
+                        batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a iterable of sentences.
 
