@@ -181,6 +181,40 @@ class TestElmoCommand(ElmoTestCase):
             for sentence in set(sentences):
                 assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
 
+    def test_empty_sentences_are_filtered(self):
+        tempdir = tempfile.mkdtemp()
+        sentences_path = os.path.join(tempdir, "sentences.txt")
+        output_path = os.path.join(tempdir, "output.txt")
+
+        sentences = [
+                "A",
+                "",
+                "",
+                "B"
+        ]
+
+        with open(sentences_path, 'w') as f:
+            for line in sentences:
+                f.write(line + '\n')
+
+        sys.argv = ["run.py",  # executable
+                    "elmo",  # command
+                    sentences_path,
+                    output_path,
+                    "--all",
+                    "--options-file",
+                    self.options_file,
+                    "--weight-file",
+                    self.weight_file]
+
+        main()
+
+        assert os.path.exists(output_path)
+
+        with h5py.File(output_path, 'r') as h5py_file:
+            assert len(h5py_file.keys()) == 2
+            assert set(h5py_file.keys()) == set(["A", "B"])
+
 
 class TestElmoEmbedder(ElmoTestCase):
     def test_embeddings_are_as_expected(self):
@@ -207,3 +241,15 @@ class TestElmoEmbedder(ElmoTestCase):
 
         for tensor, expected in zip(embeddings, expected_embeddings):
             numpy.testing.assert_array_almost_equal(tensor[2], expected)
+
+    def test_embed_batch_is_empty_sentence(self):
+        embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
+        embeddings = embedder.embed_sentence([])
+
+        assert embeddings.shape == (3, 0, 1024)
+
+    def test_embed_batch_contains_empty_sentence(self):
+        embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
+        embeddings = list(embedder.embed_sentences(["This is a test".split(), []]))
+
+        assert len(embeddings) == 2
