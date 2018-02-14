@@ -11,7 +11,6 @@ from allennlp.common.params import Params
 class MultiHeadSelfAttentionTest(AllenNlpTestCase):
 
     def test_multi_head_self_attention_can_build_from_params(self):
-        
         params = Params({"num_heads": 3, "input_dim": 2, "attention_dim": 5, "values_dim": 5})
 
         encoder = MultiHeadSelfAttention.from_params(params)
