@@ -16,13 +16,19 @@ from chunking.data import variableFromSentence
 
 options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
 weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
-elmo_bilm = _ElmoBiLm(options_file, weight_file)
+
+use_cuda = torch.cuda.is_available()
+
+if use_cuda:
+    elmo_bilm = _ElmoBiLm(options_file, weight_file).cuda()
+else:
+    elmo_bilm = _ElmoBiLm(options_file, weight_file)
+
 
 indexer = ELMoTokenCharactersIndexer()
 
 __all__ = ['elmo_bilm', 'embed_sentence', 'ElmoEmbedder', 'variablesFromPairElmo', 'elmo_variable_from_sentence']
 
-use_cuda = torch.cuda.is_available()
 
 class ElmoEmbedder(Module):
     def __init__(self, elmo_bilm, special_tokens, device):

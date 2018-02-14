@@ -12,8 +12,8 @@ use_cuda = torch.cuda.is_available()
     
 class NeuralChunker:
     def __init__(self, encoder_file, decoder_file, output_lang, max_length):
-        self.encoder = torch.load(encoder_file, map_location=lambda storage, loc: storage)
-        self.decoder = torch.load(decoder_file, map_location=lambda storage, loc: storage)
+        self.encoder = torch.load(encoder_file)
+        self.decoder = torch.load(decoder_file)
         self.output_lang = output_lang
         self.max_length = max_length
         
