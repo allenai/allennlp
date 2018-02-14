@@ -182,7 +182,7 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.getLogger().addHandler(handler)
     serialization_params = deepcopy(params).as_dict(quiet=True)
-    with open(os.path.join(serialization_dir, "model_params.json"), "w") as param_file:
+    with open(os.path.join(serialization_dir, "config.json"), "w") as param_file:
         json.dump(serialization_params, param_file, indent=4)
 
     all_datasets = datasets_from_params(params)

@@ -55,7 +55,7 @@ def archive_model(serialization_dir: str,
         logger.error("weights file %s does not exist, unable to archive model", weights_file)
         return
 
-    config_file = os.path.join(serialization_dir, "model_params.json")
+    config_file = os.path.join(serialization_dir, "config.json")
     if not os.path.exists(config_file):
         logger.error("config file %s does not exist, unable to archive model", config_file)
 
