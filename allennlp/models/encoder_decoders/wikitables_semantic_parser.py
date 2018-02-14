@@ -124,7 +124,10 @@ class WikiTablesSemanticParser(Model):
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
-        self._linking_params = torch.nn.Linear(num_linking_features, 1)
+        if num_linking_features > 0:
+            self._linking_params = torch.nn.Linear(num_linking_features, 1)
+        else:
+            self._linking_params = None
 
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
@@ -231,7 +234,10 @@ class WikiTablesSemanticParser(Model):
         question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        feature_scores = self._linking_params(linking_features).squeeze(3)
+        if self._linking_params is not None:
+            feature_scores = self._linking_params(linking_features).squeeze(3)
+        else:
+            feature_scores = Variable(embedded_table.data.new(question_table_similarity_max_score.size()).fill_(0))
         linking_scores = question_table_similarity_max_score + feature_scores
 
         # (batch_size, num_question_tokens, num_entities)
