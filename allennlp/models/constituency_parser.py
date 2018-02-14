@@ -171,7 +171,7 @@ class SpanConstituencyParser(Model):
             # to construct the tree as they won't nest properly.
             consistent_spans = self.resolve_overlap_conflicts_greedily(selected_spans)
 
-            spans_to_labels = {(int(span["start"]), int(span["end"])): 
+            spans_to_labels = {(int(span["start"]), int(span["end"])):
                                self.vocab.get_token_from_index(int(span["label_index"]), "labels")
                                for span in consistent_spans}
             trees.append(self.construct_tree_from_spans(spans_to_labels, sentence))
@@ -185,7 +185,7 @@ class SpanConstituencyParser(Model):
         Given a set of spans, removes spans which overlap by evaluating the difference
         in probability between one being labeled and the other explicitly having no label
         and vice-versa. The worst case runtime of this method is ``O(k * n^4)`` where ``n``
-        is the length of the sentence that the spans were enumerated from and ``k`` is the 
+        is the length of the sentence that the spans were enumerated from and ``k`` is the
         number of conflicts. However, in practice, there are very few conflicts. Hopefully.
 
         Parameters
@@ -212,16 +212,16 @@ class SpanConstituencyParser(Model):
             for span1_index, span1 in enumerate(chosen_spans):
                 for span2_index, span2 in list(enumerate(chosen_spans))[span1_index + 1:]:
                     if (span1["start"] < span2["start"] < span1["end"] < span2["end"] or
-                        span2["start"] < span1["start"] < span2["end"] < span1["end"]):
+                                span2["start"] < span1["start"] < span2["end"] < span1["end"]):
                         # The spans overlap.
                         conflicts_exist = True
-                        # What's the more likely situation: that span2 was labeled 
+                        # What's the more likely situation: that span2 was labeled
                         # and span1 was unlabled, or that span1 was labeled and span2
                         # was unlabled? In the first case, we delete span2 from the
                         # set of spans to form the tree - in the second case, we delete
                         # span1.
                         if (span1["no_label_prob"] + span2["label_prob"] <
-                            span2["no_label_prob"] + span1["label_prob"]):
+                                    span2["no_label_prob"] + span1["label_prob"]):
                             chosen_spans.pop(span2_index)
                         else:
                             chosen_spans.pop(span1_index)
