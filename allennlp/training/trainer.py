@@ -333,7 +333,6 @@ class Trainer:
 
                 module.register_forward_hook(hook)
 
-
     def _rescale_gradients(self) -> None:
         """
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
@@ -624,7 +623,7 @@ class Trainer:
 
         return val_loss, batch_num
 
-    def train(self) -> Dict[str, object]:
+    def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
@@ -693,6 +692,15 @@ class Trainer:
         for key, value in val_metrics.items():
             metrics["validation_" + key] = value
 
+        if validation_metric_per_epoch:
+            # We may not have had validation data, so we need to hide this behind an if.
+            if self._validation_metric_decreases:
+                best_validation_metric = min(validation_metric_per_epoch)
+            else:
+                best_validation_metric = max(validation_metric_per_epoch)
+            metrics[f"best_validation_{self._validation_metric}"] = best_validation_metric
+            metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
+                                     if value == best_validation_metric][-1]
         return metrics
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
