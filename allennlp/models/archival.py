@@ -83,7 +83,10 @@ def archive_model(serialization_dir: str,
             for key, filename in files_to_archive.items():
                 archive.add(filename, arcname=f"fta/{key}")
 
-def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") -> Archive:
+def load_archive(archive_file: str,
+                 weights_file: str = None,
+                 cuda_device: int = -1,
+                 overrides: str = "") -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
@@ -91,6 +94,8 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
     ----------
     archive_file: ``str``
         The archive file to load the model from.
+    weights_file: ``str``, optional (default = None)
+        The weights file to use.  If unspecified, weights.th in the archive_file will be used.
     cuda_device: ``int``, optional (default = -1)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
@@ -132,9 +137,14 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
     config = Params.from_file(os.path.join(serialization_dir, _CONFIG_NAME), overrides)
     config.loading_from_archive = True
 
+    if weights_file:
+        weights_path = weights_file
+    else:
+        weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
+
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),
-                       weights_file=os.path.join(serialization_dir, _WEIGHTS_NAME),
+                       weights_file=weights_path,
                        serialization_dir=serialization_dir,
                        cuda_device=cuda_device)
 
