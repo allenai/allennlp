@@ -106,4 +106,5 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
     @classmethod
     def from_params(cls, params: Params) -> "SelfAttentiveSpanExtractor":
         input_dim = params.pop_int("input_dim")
+        params.assert_empty(cls.__name__)
         return SelfAttentiveSpanExtractor(input_dim=input_dim)
