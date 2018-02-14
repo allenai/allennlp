@@ -1,12 +1,16 @@
 {
   "dataset_reader": {
-    "type": "wikitables",
+    "type": "wikitables-preprocessed",
     "lazy": false,
-    "tables_directory": "/wikitables/",
-    "dpd_output_directory": "/wikitables/dpd_output/"
+    "question_token_indexers": {
+      "tokens": {"type": "single_id"}
+    }
   },
-  "train_data_path": "/wikitables/data/random-split-1-train.examples",
-  "validation_data_path": "/wikitables/data/random-split-1-dev.examples",
+  "vocabulary": {
+    "min_count": {"tokens": 3}
+  },
+  "train_data_path": "/wikitables_preprocessed/no_var/with_span_features/train.jsonl",
+  "validation_data_path": "/wikitables_preprocessed/no_var/with_span_features/validation.jsonl",
   "model": {
     "type": "wikitables_parser",
     "question_embedder": {
@@ -22,20 +26,6 @@
         "vocab_namespace": "rule_labels",
         "embedding_dim": 50,
         "trainable": true
-      }
-    },
-    "terminal_embedder": {
-      "token_characters": {
-        "type": "character_encoding",
-        "embedding": {
-          "embedding_dim": 8
-        },
-        "encoder": {
-          "type": "cnn",
-          "embedding_dim": 8,
-          "num_filters": 50,
-          "ngram_filter_sizes": [3]
-        }
       }
     },
     "encoder": {
@@ -60,13 +50,14 @@
     "attention_function": {"type": "dot_product"}
   },
   "iterator": {
-    "type": "lazy-basic",
+    "type": "basic",
     "batch_size" : 2
   },
   "trainer": {
     "num_epochs": 20,
-    "patience": 10,
+    "patience": 2,
     "cuda_device": 0,
+    "validation_metric": "+parse_acc",
     "optimizer": {
       "type": "adam"
     }
