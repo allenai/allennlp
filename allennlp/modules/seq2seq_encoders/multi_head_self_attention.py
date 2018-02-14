@@ -158,7 +158,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
     @classmethod
     def from_params(cls, params: Params) -> 'MultiHeadSelfAttention':
-        num_heads = params.pop_int('num_heads', 3)
+        num_heads = params.pop_int('num_heads')
         input_dim = params.pop_int('input_dim')
         attention_dim = params.pop_int('attention_dim')
         values_dim = params.pop_int('values_dim')
