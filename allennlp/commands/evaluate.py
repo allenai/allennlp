@@ -118,7 +118,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         import_submodules(package_name)
 
     # Load from archive
-    archive = load_archive(args.archive_file, args.weights_file, args.cuda_device, args.overrides)
+    archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
     config = archive.config
     prepare_environment(config)
     model = archive.model
