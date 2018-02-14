@@ -5,9 +5,11 @@ Various utilities that don't fit anwhere else.
 from itertools import zip_longest, islice
 from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
 import importlib
+import logging
 import pkgutil
 import random
 import resource
+import subprocess
 import sys
 
 import torch
@@ -17,6 +19,8 @@ from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
@@ -236,6 +240,35 @@ def peak_memory_mb() -> float:
     else:
         # On Linux the result is in kilobytes.
         return peak / 1_000
+
+def gpu_memory_mb() -> Dict[int, int]:
+    """
+    Get the current GPU memory usage.
+    Based on https://discuss.pytorch.org/t/access-gpu-memory-usage-in-pytorch/3192/4
+
+    Returns
+    -------
+    ``Dict[int, int]``
+        Keys are device ids as integers.
+        Values are memory usage as integers in MB.
+        Returns an empty ``dict`` if GPUs are not available.
+    """
+    # pylint: disable=bare-except
+    try:
+        result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
+                                          '--format=csv,nounits,noheader'],
+                                         encoding='utf-8')
+        gpu_memory = [int(x) for x in result.strip().split('\n')]
+        return {gpu: memory for gpu, memory in enumerate(gpu_memory)}
+    except FileNotFoundError:
+        # `nvidia-smi` doesn't exist, assume that means no GPU.
+        return {}
+    except:
+        # Catch *all* exceptions, because this memory check is a nice-to-have
+        # and we'd never want a training run to fail because of it.
+        logger.exception("unable to check gpu_memory_mb(), continuing")
+        return {}
+
 
 def ensure_list(iterable: Iterable[A]) -> List[A]:
     """
