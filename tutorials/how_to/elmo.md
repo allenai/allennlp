@@ -23,7 +23,7 @@ In some case (e.g. SQuAD and SNLI) we found that including multiple layers impro
 
 We will use existing SRL model [configuration file](../../training_config/semantic_role_labeler.json) as an example to illustrate the changes.  Without ELMo, it uses 100 dimensional pre-trained GloVe vectors.
 
-To add ELMo, there are three relevant changes.  First, modify the `text_field_embedder` section as follows:
+To add ELMo, there are three relevant changes.  First, modify the `text_field_embedder` section by adding an `elmo` section as follows:
 
 ```json
    "text_field_embedder": {
@@ -42,7 +42,7 @@ To add ELMo, there are three relevant changes.  First, modify the `text_field_em
      }
 ```
 
-Second, add a section to the `dataset_reader` to convert raw text to ELMo character id sequences in addition to GloVe ids:
+Second, add an `elmo` section to the `dataset_reader` to convert raw text to ELMo character id sequences in addition to GloVe ids:
 
 ```json
  "dataset_reader": {
@@ -59,9 +59,9 @@ Second, add a section to the `dataset_reader` to convert raw text to ELMo charac
  }
 ```
 
-Third, modify the input dimension to the stacked LSTM encoder.
+Third, modify the input dimension (`input_size`) to the stacked LSTM encoder.
 The baseline model uses a 200 dimensional input (100 dimensional GloVe embedding with 100 dimensional feature specifying the predicate location).
-ELMo provides a 1024 dimension representation so the new dimension is 1224.
+ELMo provides a 1024 dimension representation so the new `input_size` is 1224.
 
 ```json
     "stacked_encoder": {
