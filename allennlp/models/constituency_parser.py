@@ -114,11 +114,13 @@ class SpanConstituencyParser(Model):
         span_representations = self.span_extractor(encoded_text, spans)
         logits = self.tag_projection_layer(span_representations)
         class_probabilities = last_dim_softmax(logits, span_mask.unsqueeze(-1))
+
         output_dict = {
                 "logits": logits,
                 "class_probabilities": class_probabilities,
                 "spans": spans,
-                "tokens": tokens,
+                # TODO(Mark): This relies on having tokens represented with a SingleIdTokenIndexer...
+                "tokens": tokens["tokens"],
                 "token_mask": mask
         }
         if span_labels is not None:
@@ -138,7 +140,7 @@ class SpanConstituencyParser(Model):
         all_spans = output_dict["spans"].cpu().data
         no_label_id = self.vocab.get_token_index("NO-LABEL", "labels")
 
-        all_sentences = output_dict["tokens"]["tokens"].data
+        all_sentences = output_dict["tokens"].data
         sentence_lengths = get_lengths_from_binary_sequence_mask(output_dict["token_mask"]).data
 
         trees = []
@@ -184,7 +186,7 @@ class SpanConstituencyParser(Model):
         """
         Given a set of spans, removes spans which overlap by evaluating the difference
         in probability between one being labeled and the other explicitly having no label
-        and vice-versa. The worst case runtime of this method is ``O(k * n^4)`` where ``n``
+        and vice-versa. The worst case time complexity of this method is ``O(k * n^4)`` where ``n``
         is the length of the sentence that the spans were enumerated from and ``k`` is the
         number of conflicts. However, in practice, there are very few conflicts. Hopefully.
 
