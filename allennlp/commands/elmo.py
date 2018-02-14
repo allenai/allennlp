@@ -274,8 +274,8 @@ class ElmoEmbedder():
         assert output_format in ["all", "top", "average"]
 
         # Tokenizes the sentences.
-        sentences = [line.strip() for line in input_file]
-        split_sentences = [sentence.strip().split() for sentence in sentences if sentence.strip()]
+        sentences = [line.strip() for line in input_file if line.strip()]
+        split_sentences = [sentence.split() for sentence in sentences]
         # Uses the sentence as the key.
         embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))
 
