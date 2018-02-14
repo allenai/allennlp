@@ -62,6 +62,9 @@ class Evaluate(Subcommand):
         evaluation_data_file.add_argument('--evaluation_data_file',
                                           type=str,
                                           help=argparse.SUPPRESS)
+        subparser.add_argument('--weights-file',
+                               type=str,
+                               help='overrides which weights file to use')
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
         cuda_device.add_argument('--cuda-device',
@@ -115,7 +118,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         import_submodules(package_name)
 
     # Load from archive
-    archive = load_archive(args.archive_file, args.cuda_device, args.overrides)
+    archive = load_archive(args.archive_file, args.weights_file, args.cuda_device, args.overrides)
     config = archive.config
     prepare_environment(config)
     model = archive.model

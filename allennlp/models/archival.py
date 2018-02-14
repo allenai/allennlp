@@ -84,9 +84,9 @@ def archive_model(serialization_dir: str,
                 archive.add(filename, arcname=f"fta/{key}")
 
 def load_archive(archive_file: str,
-                 weights_file: str = None,
                  cuda_device: int = -1,
-                 overrides: str = "") -> Archive:
+                 overrides: str = "",
+                 weights_file: str = None) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 

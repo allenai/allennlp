@@ -78,7 +78,7 @@ class Predict(Subcommand):
         subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
         subparser.add_argument('--weights-file',
                                type=str,
-                               help='overrides the weights file in the archive_file')
+                               help='overrides which weights file to use')
 
         batch_size = subparser.add_mutually_exclusive_group(required=False)
         batch_size.add_argument('--batch-size', type=int, default=1, help='The batch size to use for processing')
