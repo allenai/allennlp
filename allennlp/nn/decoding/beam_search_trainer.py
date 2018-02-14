@@ -54,21 +54,21 @@ class BeamSearchTrainer(DecoderTrainer):
         loss = 0
         all_batch_indices = set(correct_batch_scores.keys()).union(incorrect_batch_scores.keys())
         for batch_index in all_batch_indices:
-            mean_correct_score = None
-            mean_incorrect_score = None
+            correct_score = None
+            incorrect_score = None
             if batch_index in correct_batch_scores:
-                mean_correct_score = torch.mean(torch.cat(correct_batch_scores[batch_index]))
+                correct_score = torch.max(torch.cat(correct_batch_scores[batch_index]))
 
             if batch_index in incorrect_batch_scores:
-                mean_incorrect_score = torch.mean(torch.cat(incorrect_batch_scores[batch_index]))
+                incorrect_score = torch.max(torch.cat(incorrect_batch_scores[batch_index]))
 
             # TODO (pradeep): Is 1 the right margin here?
-            if mean_correct_score is None:
-                loss += (1 + mean_incorrect_score)
-            elif mean_incorrect_score is None:
-                loss += (1 - mean_correct_score)
+            if correct_score is None:
+                loss += (1 + incorrect_score)
+            elif incorrect_score is None:
+                loss += (1 - correct_score)
             else:
-                loss += (1 - mean_correct_score + mean_incorrect_score)
+                loss += (1 - correct_score + incorrect_score)
 
         best_action_sequences: Dict[int, List[int]] = defaultdict(list)
         for state in finished_states:

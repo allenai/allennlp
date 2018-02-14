@@ -851,14 +851,16 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # may be applicable in the future.
         # Note that we're not sorting these probs. We'll score checklists and sort states based on
         # checklist scores later.
-        probs = nn_util.masked_softmax(action_logits, action_mask)
+        considered_action_probs = nn_util.masked_softmax(action_logits, action_mask)
         # batch_index -> [(group_index, action_index, action, checklist, score)]
         next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
-        for group_index, (batch_index, instance_action_probs) in \
-            enumerate(zip(state.batch_indices, probs)):
+        for group_index, (batch_index, instance_score, instance_action_probs) in \
+            enumerate(zip(state.batch_indices, state.score, considered_action_probs)):
             instance_agenda = state.agenda[group_index]  # (agenda_size,)
             instance_agenda_mask = state.agenda_mask[group_index]  # (agenda_size,)
             instance_checklist = state.checklist[group_index]  # (agenda_size,)
+            agenda_action_probs = cls._get_agenda_action_probs(instance_checklist,
+                                                               instance_agenda_mask)
             # action_prob is a Variable.
             for action_index, action_prob in enumerate(instance_action_probs):
                 # This is the actual index of the action from the original list of actions.
@@ -868,12 +870,14 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                     continue
                 # If action is not in instance_agenda, mask_variable, and checklist_addition will be
                 # all 0s.
-                checklist_mask = instance_agenda == action  # (agenda_size,)
+                checklist_mask = (instance_agenda == action).float()  # (agenda_size,)
+                agenda_action_prob = torch.sum(checklist_mask * agenda_action_probs)  # (1,)
+                # TODO (pradeep): Learn instance specific checklist weights.
+                action_prob = checklist_weight * agenda_action_prob + \
+                              (1 - checklist_weight) * action_prob
                 checklist_addition = checklist_mask.float() * action_prob  # (agenda_size,)
                 new_checklist = instance_checklist + checklist_addition  # (agenda_size,)
-                checklist_score = cls.score_instance_checklist(new_checklist, instance_agenda_mask)
-                new_score = checklist_weight * checklist_score + \
-                            (1 - checklist_weight) * action_prob
+                new_score = instance_score + torch.log(action_prob + 1e-13)
 
                 next_states_info[batch_index].append((group_index, action_index, action,
                                                       new_checklist, new_score))
@@ -915,13 +919,15 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         return new_states
 
     @staticmethod
-    def score_instance_checklist(checklist: Variable, agenda_mask: Variable) -> Variable:
+    def _get_agenda_action_probs(checklist: Variable, agenda_mask: Variable) -> Variable:
         """
-        Takes a checklist and agenda's mask (that shows which of the agenda items are not actually
-        padding), and scores the checklist. We want each of the scores on the checklist to be as
-        close to 1.0 as possible.
+        Takes a checklist and returns assigned probabilities of actions in the agenda based on how
+        many times the actions have been chosen in the past. That is, if the checklist value for
+        the first action is higher than that for the second action, the returned probability for the
+        second action will be higher than that for the first action.
         """
         float_mask = agenda_mask.float()
-        agenda_item_probs = checklist * float_mask
-        score = -torch.sum((float_mask - agenda_item_probs) ** 2)
-        return score
+        masked_checklist = checklist * float_mask
+        # If a specific checklist value is 1.0 or greater, we don't want to select it.
+        checklist_balance = 1 - torch.clamp(masked_checklist, max=1.0)
+        return nn_util.masked_softmax(checklist_balance, (checklist_balance != 0).float())
