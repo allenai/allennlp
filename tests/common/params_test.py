@@ -1,4 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
+import os
+import tempfile
+
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -41,6 +44,14 @@ class TestParams(AllenNlpTestCase):
         assert params == {'a': 10, 'b.c': 20, 'b.d': 'stuff'}
 
     def test_add_file_to_archive(self):
+        # Creates actual files since add_file_to_archive will throw an exception
+        # if the file does not exist.
+        tempdir = tempfile.mkdtemp()
+        my_file = os.path.join(tempdir, "my_file.txt")
+        my_other_file = os.path.join(tempdir, "my_other_file.txt")
+        open(my_file, 'w').close()
+        open(my_other_file, 'w').close()
+
         # Some nested classes just to exercise the ``from_params``
         # and ``add_file_to_archive`` methods.
         class A:
@@ -82,9 +93,9 @@ class TestParams(AllenNlpTestCase):
         params = Params({
                 "a": {
                         "b": {
-                                "filename": "my-file",
+                                "filename": my_file,
                                 "c": {
-                                        "c_file": "my-other-file"
+                                        "c_file": my_other_file
                                 }
                         }
                 }
@@ -94,6 +105,6 @@ class TestParams(AllenNlpTestCase):
         A.from_params(params.pop("a"))
 
         assert params.files_to_archive == {
-                "a.b.filename": "my-file",
-                "a.b.c.c_file": "my-other-file"
+                "a.b.filename": my_file,
+                "a.b.c.c_file": my_other_file
         }
