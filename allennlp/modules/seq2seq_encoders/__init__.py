@@ -12,6 +12,9 @@ The available Seq2Seq encoders are
 * :class:`"augmented_lstm" <allennlp.modules.augmented_lstm.AugmentedLstm>`
 * :class:`"alternating_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm>`
 * :class:`"alternating_highway_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm> (GPU only)`
+* :class:`"stacked_self_attention" <allennlp.modules.stacked_self_attention.StackedSelfAttentionEncoder>`
+* :class:`"multi_head_self_attention" <allennlp.modules.multi_head_self_attention.MultiHeadSelfAttention>`
+* :class:`"pass_through" <allennlp.modules.pass_through_encoder.PassThroughEncoder>`
 """
 
 from typing import Type
@@ -28,6 +31,7 @@ from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelfAttentionEncoder
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
+from allennlp.modules.seq2seq_encoders.pass_through_encoder import PassThroughEncoder
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
