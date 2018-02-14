@@ -830,7 +830,11 @@ class WikiTablesSemanticParser(Model):
             terminal_embedder = TextFieldEmbedder.from_params(vocab, terminal_embedder_params)
         else:
             terminal_embedder = None
-        mixture_feedforward = FeedForward.from_params(params.pop('mixture_feedforward'))
+        mixture_feedforward_type = params.pop('mixture_feedforward', None)
+        if mixture_feedforward_type is not None:
+            mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
+        else:
+            mixture_feedforward = None
         decoder_trainer = DecoderTrainer.from_params(params.pop("decoder_trainer"))
         decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         # If no attention function is specified, we should not use attention, not attention with
@@ -1094,8 +1098,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
 
-        check_dimensions_match(output_dim, mixture_feedforward.get_input_dim(),
-                               "hidden state embedding dim", "mixture feedforward input dim")
+        if mixture_feedforward is not None:
+            check_dimensions_match(output_dim, mixture_feedforward.get_input_dim(),
+                                   "hidden state embedding dim", "mixture feedforward input dim")
+            check_dimensions_match(mixture_feedforward.get_output_dim(), 1,
+                                   "mixture feedforward output dim", "dimension for scalar value")
 
     @overrides
     def take_step(self,
@@ -1152,20 +1159,33 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             entity_action_logits, entity_action_mask, entity_type_embeddings = \
                     self._get_entity_action_logits(state, actions_to_link, attention_weights)
 
-            # The entity and action logits are combined with a mixture weight to prevent the
-            # entity_action_logits from dominating the embedded_action_logits if a softmax
-            # was applied on both together.
-            mixture_weight = self._mixture_feedforward(hidden_state)
-            entity_action_logits = util.masked_softmax(entity_action_logits, entity_action_mask) * mixture_weight
-            embedded_action_logits = util.masked_softmax(embedded_action_logits, embedded_action_mask) * mixture_weight
-
-            action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
-            action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=1).float()
-
             # The `action_embeddings` tensor gets used later as the input to the next decoder step.
             # For linked actions, we don't have any action embedding, so we use the entity type
             # instead.
             action_embeddings = torch.cat([action_embeddings, entity_type_embeddings], dim=1)
+
+            if self._mixture_feedforward is not None:
+                # The entity and action logits are combined with a mixture weight to prevent the
+                # entity_action_logits from dominating the embedded_action_logits if a softmax
+                # was applied on both together.
+                mixture_weight = self._mixture_feedforward(hidden_state)
+                entity_action_logits = util.masked_softmax(entity_action_logits, entity_action_mask.float()) * (1 - mixture_weight)
+                embedded_action_logits = util.masked_softmax(embedded_action_logits, embedded_action_mask.float()) * mixture_weight
+                log_probs = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
+                return self._compute_new_states(state,
+                                                log_probs,
+                                                hidden_state,
+                                                memory_cell,
+                                                action_embeddings,
+                                                attended_question,
+                                                attention_weights,
+                                                considered_actions,
+                                                allowed_actions,
+                                                max_actions)
+
+            action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
+            action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=1).float()
+
         else:
             action_logits = embedded_action_logits
             action_mask = embedded_action_mask.float()
