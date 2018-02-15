@@ -84,12 +84,12 @@ class TestBidirectonalEndpointSpanExtractor:
                                          correct_forward_end_embeddings.data.numpy())
 
         correct_backward_end_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
-                                                                 correct_backward_end_indices)
+                                                               correct_backward_end_indices)
         numpy.testing.assert_array_equal(backward_end_embeddings.data.numpy(),
                                          correct_backward_end_embeddings.data.numpy())
 
         correct_backward_start_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
-                                                               correct_backward_start_indices)
+                                                                 correct_backward_start_indices)
         # This element had sequence_tensor index == sequence_tensor.size(1),
         # so it's exclusive index is the end sentinel.
         correct_backward_start_embeddings[0, 1] = extractor._end_sentinel.data
@@ -159,12 +159,12 @@ class TestBidirectonalEndpointSpanExtractor:
                                          correct_forward_end_embeddings.data.numpy())
 
         correct_backward_end_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
-                                                                 correct_backward_end_indices)
+                                                               correct_backward_end_indices)
         numpy.testing.assert_array_equal(backward_end_embeddings.data.numpy(),
                                          correct_backward_end_embeddings.data.numpy())
 
         correct_backward_start_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
-                                                               correct_backward_start_indices)
+                                                                 correct_backward_start_indices)
         # This element had sequence_tensor index == sequence_tensor.size(1),
         # so it's exclusive index is the end sentinel.
         correct_backward_start_embeddings[0, 1] = extractor._end_sentinel.data
@@ -174,3 +174,14 @@ class TestBidirectonalEndpointSpanExtractor:
 
         numpy.testing.assert_array_equal(backward_start_embeddings.data.numpy(),
                                          correct_backward_start_embeddings.data.numpy())
+
+    def test_forward_raises_with_invalid_indices(self):
+        sequence_tensor = Variable(torch.randn([2, 5, 8]))
+        extractor = BidirectionalEndpointSpanExtractor(input_dim=8)
+        indices = Variable(torch.LongTensor([[[-1, 3],
+                                              [7, 4]],
+                                             [[0, 12],
+                                              [0, -1]]]))
+
+        with pytest.raises(ValueError):
+            _ = extractor(sequence_tensor, indices)

@@ -156,7 +156,17 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         # As we added 1 to the span_ends to make them exclusive, which might have caused indices
         # equal to the sequence_length to become out of bounds, we multiply by the inverse of the
         # end_sentinel mask to erase these indices (as we will replace them anyway in the block below).
-        exclusive_span_ends = exclusive_span_ends * (1 - end_sentinel_mask)
+        # The same argument follows for the exclusive span start indices.
+        exclusive_span_ends = exclusive_span_ends * (1 - end_sentinel_mask.squeeze())
+        exclusive_span_starts = exclusive_span_starts * (1 - start_sentinel_mask.squeeze().long())
+
+        # We'll check the indices here at runtime, because it's difficult to debug
+        # if this goes wrong and it's tricky to get right.
+        if (exclusive_span_starts < 0).any() or (exclusive_span_ends > sequence_lengths.unsqueeze(-1)).any():
+            raise ValueError(f"Adjusted span indices must lie inside the length of the sequence tensor, "
+                             f"but found: exclusive_span_starts: {exclusive_span_starts}, "
+                             f"exclusive_span_ends: {exclusive_span_ends} for a sequence tensor with lengths "
+                             f"{sequence_lengths}.")
 
         # Forward Direction: start indices are exclusive. Shape (batch_size, num_spans, input_size / 2)
         forward_start_embeddings = util.batched_index_select(forward_sequence, exclusive_span_starts)
