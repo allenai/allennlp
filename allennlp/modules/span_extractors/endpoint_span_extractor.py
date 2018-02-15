@@ -112,6 +112,7 @@ class EndpointSpanExtractor(SpanExtractor):
         num_width_embeddings = params.pop_int("num_width_embeddings", None)
         span_width_embedding_dim = params.pop_int("span_width_embedding_dim", None)
         bucket_widths = params.pop_bool("bucket_widths", False)
+        params.assert_empty(cls.__name__)
         return EndpointSpanExtractor(input_dim=input_dim,
                                      combination=combination,
                                      num_width_embeddings=num_width_embeddings,

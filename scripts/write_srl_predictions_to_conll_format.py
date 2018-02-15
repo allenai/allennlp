@@ -19,7 +19,7 @@ def main(serialization_directory, device):
         The device to run the evaluation on.
     """
 
-    config = Params.from_file(os.path.join(serialization_directory, "model_params.json"))
+    config = Params.from_file(os.path.join(serialization_directory, "config.json"))
     dataset_reader = DatasetReader.from_params(config['dataset_reader'])
     evaluation_data_path = config['validation_data_path']
 

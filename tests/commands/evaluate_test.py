@@ -55,7 +55,7 @@ class TestEvaluate(AllenNlpTestCase):
         params = Params.from_file(os.path.join(self.TEST_DIR, 'config.json'))
         params['model']['type'] = 'bidaf-duplicate'
 
-        config_file = os.path.join(serialization_dir, 'model_params.json')
+        config_file = os.path.join(serialization_dir, 'config.json')
         with open(config_file, 'w') as f:
             f.write(json.dumps(params.as_dict(quiet=True)))
 

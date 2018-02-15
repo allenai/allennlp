@@ -57,4 +57,5 @@ class MatrixAttention(torch.nn.Module):
     @classmethod
     def from_params(cls, params: Params) -> 'MatrixAttention':
         similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
+        params.assert_empty(cls.__name__)
         return cls(similarity_function=similarity_function)
