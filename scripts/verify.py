@@ -45,16 +45,13 @@ if __name__ == "__main__":
     checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs']
 
     parser = argparse.ArgumentParser()
-
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--all', action='store_true', help='Run all tests.')
-    group.add_argument('--checks', type=str, nargs='+', choices = checks)
+    parser.add_argument('--checks', type=str, required=False, nargs='+', choices=checks)
 
     args = parser.parse_args()
 
-    if args.all:
-        run_checks = checks
-    else:
+    if args.checks:
         run_checks = args.checks
+    else:
+        run_checks = checks
 
     main(run_checks)

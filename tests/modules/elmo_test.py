@@ -17,18 +17,57 @@ from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.data.fields import TextField
 from allennlp.nn.util import remove_sentence_boundaries
 
-FIXTURES = os.path.join('tests', 'fixtures', 'elmo')
+
+class ElmoTestCase(AllenNlpTestCase):
+    def setUp(self):
+        super(ElmoTestCase, self).setUp()
+        self.fixtures_path = os.path.join('tests', 'fixtures', 'elmo')
+        self.options_file = os.path.join(self.fixtures_path, 'options.json')
+        self.weight_file = os.path.join(self.fixtures_path, 'lm_weights.hdf5')
+        self.sentences_json_file = os.path.join(self.fixtures_path, 'sentences.json')
+        self.sentences_txt_file = os.path.join(self.fixtures_path, 'sentences.txt')
+
+    def _load_sentences_embeddings(self):
+        """
+        Load the test sentences and the expected LM embeddings.
+
+        These files loaded in this method were created with a batch-size of 3.
+        Due to idiosyncrasies with TensorFlow, the 30 sentences in sentences.json are split into 3 files in which
+        the k-th sentence in each is from batch k.
+
+        This method returns a (sentences, embeddings) pair where each is a list of length batch_size.
+        Each list contains a sublist with total_sentence_count / batch_size elements.  As with the original files,
+        the k-th element in the sublist is in batch k.
+        """
+        with open(self.sentences_json_file) as fin:
+            sentences = json.load(fin)
+
+        # the expected embeddings
+        expected_lm_embeddings = []
+        for k in range(len(sentences)):
+            embed_fname = os.path.join(
+                    self.fixtures_path, 'lm_embeddings_{}.hdf5'.format(k)
+            )
+            expected_lm_embeddings.append([])
+            with h5py.File(embed_fname, 'r') as fin:
+                for i in range(10):
+                    sent_embeds = fin['%s' % i][...]
+                    sent_embeds_concat = numpy.concatenate(
+                            (sent_embeds[0, :, :], sent_embeds[1, :, :]),
+                            axis=-1
+                    )
+                    expected_lm_embeddings[-1].append(sent_embeds_concat)
+
+        return sentences, expected_lm_embeddings
 
 
-class TestElmoBiLm(AllenNlpTestCase):
+class TestElmoBiLm(ElmoTestCase):
     def test_elmo_bilm(self):
         # get the raw data
         sentences, expected_lm_embeddings = self._load_sentences_embeddings()
 
         # load the test model
-        options_file = os.path.join(FIXTURES, 'options.json')
-        weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
-        elmo_bilm = _ElmoBiLm(options_file, weight_file)
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
 
         # Deal with the data.
         indexer = ELMoTokenCharactersIndexer()
@@ -73,37 +112,12 @@ class TestElmoBiLm(AllenNlpTestCase):
                         )
                 )
 
-    def _load_sentences_embeddings(self):
-        # load the test sentences and the expected LM embeddings
-        with open(os.path.join(FIXTURES, 'sentences.json')) as fin:
-            sentences = json.load(fin)
 
-        # the expected embeddings
-        expected_lm_embeddings = []
-        for k in range(len(sentences)):
-            embed_fname = os.path.join(
-                    FIXTURES, 'lm_embeddings_{}.hdf5'.format(k)
-            )
-            expected_lm_embeddings.append([])
-            with h5py.File(embed_fname, 'r') as fin:
-                for i in range(10):
-                    sent_embeds = fin['%s' % i][...]
-                    sent_embeds_concat = numpy.concatenate(
-                            (sent_embeds[0, :, :], sent_embeds[1, :, :]),
-                            axis=-1
-                    )
-                    expected_lm_embeddings[-1].append(sent_embeds_concat)
-
-        return sentences, expected_lm_embeddings
-
-
-class TestElmo(AllenNlpTestCase):
+class TestElmo(ElmoTestCase):
     def setUp(self):
         super(TestElmo, self).setUp()
 
-        options_file = os.path.join(FIXTURES, 'options.json')
-        weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
-        self.elmo = Elmo(options_file, weight_file, 2, dropout=0.0)
+        self.elmo = Elmo(self.options_file, self.weight_file, 2, dropout=0.0)
 
     def _sentences_to_ids(self, sentences):
         indexer = ELMoTokenCharactersIndexer()
@@ -164,11 +178,9 @@ class TestElmo(AllenNlpTestCase):
             )
 
 
-class TestElmoRequiresGrad(AllenNlpTestCase):
+class TestElmoRequiresGrad(ElmoTestCase):
     def _run_test(self, requires_grad):
-        options_file = os.path.join(FIXTURES, 'options.json')
-        weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
-        embedder = ElmoTokenEmbedder(options_file, weight_file, requires_grad=requires_grad)
+        embedder = ElmoTokenEmbedder(self.options_file, self.weight_file, requires_grad=requires_grad)
         batch_size = 3
         seq_len = 4
         char_ids = Variable(torch.from_numpy(numpy.random.randint(0, 262, (batch_size, seq_len, 50))))
@@ -191,10 +203,10 @@ class TestElmoRequiresGrad(AllenNlpTestCase):
         self._run_test(False)
 
 
-class TestElmoTokenRepresentation(AllenNlpTestCase):
+class TestElmoTokenRepresentation(ElmoTestCase):
     def test_elmo_token_representation(self):
         # Load the test words and convert to char ids
-        with open(os.path.join(FIXTURES, 'vocab_test.txt'), 'r') as fin:
+        with open(os.path.join(self.fixtures_path, 'vocab_test.txt'), 'r') as fin:
             tokens = fin.read().strip().split('\n')
 
         indexer = ELMoTokenCharactersIndexer()
@@ -209,10 +221,7 @@ class TestElmoTokenRepresentation(AllenNlpTestCase):
             )
         batch = Variable(torch.from_numpy(numpy.array(sentences)))
 
-        options_file = os.path.join(FIXTURES, 'options.json')
-        weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
-
-        elmo_token_embedder = _ElmoCharacterEncoder(options_file, weight_file)
+        elmo_token_embedder = _ElmoCharacterEncoder(self.options_file, self.weight_file)
         elmo_token_embedder_output = elmo_token_embedder(batch)
 
         # Reshape back to a list of words and compare with ground truth.  Need to also
@@ -223,7 +232,7 @@ class TestElmoTokenRepresentation(AllenNlpTestCase):
         )[0].data.numpy()
         actual_embeddings = actual_embeddings.reshape(-1, actual_embeddings.shape[-1])
 
-        embedding_file = os.path.join(FIXTURES, 'elmo_token_embeddings.hdf5')
+        embedding_file = os.path.join(self.fixtures_path, 'elmo_token_embeddings.hdf5')
         with h5py.File(embedding_file, 'r') as fin:
             expected_embeddings = fin['embedding'][...]
 
@@ -233,10 +242,7 @@ class TestElmoTokenRepresentation(AllenNlpTestCase):
         # The additional <S> and </S> embeddings added by the embedder should be as expected.
         indexer = ELMoTokenCharactersIndexer()
 
-        options_file = os.path.join(FIXTURES, 'options.json')
-        weight_file = os.path.join(FIXTURES, 'lm_weights.hdf5')
-
-        elmo_token_embedder = _ElmoCharacterEncoder(options_file, weight_file)
+        elmo_token_embedder = _ElmoCharacterEncoder(self.options_file, self.weight_file)
 
         for correct_index, token in [[0, '<S>'], [2, '</S>']]:
             indices = indexer.token_to_indices(Token(token), Vocabulary())

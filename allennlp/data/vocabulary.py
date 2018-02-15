@@ -121,10 +121,12 @@ class Vocabulary:
         counts and, together with the other parameters to this class, use them to decide which
         words are in-vocabulary.  If this is ``None``, we just won't initialize the vocabulary with
         anything.
-    min_count : ``int``, optional (default=``1``)
+    min_count : ``Dict[str, int]``, optional (default=None)
         When initializing the vocab from a counter, you can specify a minimum count, and every
-        token with a count less than this will not be added to the dictionary.  The default of
-        ``1`` means that every word ever seen will be added.
+        token with a count less than this will not be added to the dictionary.  These minimum
+        counts are `namespace-specific`, so you can specify different minimums for labels versus
+        words tokens, for example.  If a namespace does not have a key in the given dictionary, we
+        will add all seen tokens to that namespace.
     max_vocab_size : ``Union[int, Dict[str, int]]``, optional (default=``None``)
         If you want to cap the number of tokens in your vocabulary, you can do so with this
         parameter.  If you specify a single integer, every namespace will have its vocabulary fixed
@@ -162,7 +164,7 @@ class Vocabulary:
     """
     def __init__(self,
                  counter: Dict[str, Dict[str, int]] = None,
-                 min_count: int = 1,
+                 min_count: Dict[str, int] = None,
                  max_vocab_size: Union[int, Dict[str, int]] = None,
                  non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
                  pretrained_files: Optional[Dict[str, str]] = None,
@@ -178,8 +180,8 @@ class Vocabulary:
         self._index_to_token = _IndexToTokenDefaultDict(non_padded_namespaces,
                                                         self._padding_token,
                                                         self._oov_token)
-        if pretrained_files is None:
-            pretrained_files = {}
+        min_count = min_count or {}
+        pretrained_files = pretrained_files or {}
         if counter is not None:
             for namespace in counter:
                 if namespace in pretrained_files:
@@ -194,11 +196,11 @@ class Vocabulary:
                 for token, count in token_counts:
                     if pretrained_list is not None:
                         if only_include_pretrained_words:
-                            if token in pretrained_list and count >= min_count:
+                            if token in pretrained_list and count >= min_count.get(namespace, 1):
                                 self.add_token_to_namespace(token, namespace)
-                        elif token in pretrained_list or count >= min_count:
+                        elif token in pretrained_list or count >= min_count.get(namespace, 1):
                             self.add_token_to_namespace(token, namespace)
-                    elif count >= min_count:
+                    elif count >= min_count.get(namespace, 1):
                         self.add_token_to_namespace(token, namespace)
 
     def save_to_files(self, directory: str) -> None:
@@ -312,7 +314,7 @@ class Vocabulary:
     @classmethod
     def from_instances(cls,
                        instances: Iterable['adi.Instance'],
-                       min_count: int = 1,
+                       min_count: Dict[str, int] = None,
                        max_vocab_size: Union[int, Dict[str, int]] = None,
                        non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
                        pretrained_files: Optional[Dict[str, str]] = None,
@@ -366,7 +368,7 @@ class Vocabulary:
             params.assert_empty("Vocabulary - from files")
             return Vocabulary.from_files(vocabulary_directory)
 
-        min_count = params.pop_int("min_count", 1)
+        min_count = params.pop("min_count", None)
         max_vocab_size = params.pop_int("max_vocab_size", None)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
@@ -402,7 +404,12 @@ class Vocabulary:
         if token in self._token_to_index[namespace]:
             return self._token_to_index[namespace][token]
         else:
-            return self._token_to_index[namespace][self._oov_token]
+            try:
+                return self._token_to_index[namespace][self._oov_token]
+            except KeyError:
+                logger.error('Namespace: %s', namespace)
+                logger.error('Token: %s', token)
+                raise
 
     def get_token_from_index(self, index: int, namespace: str = 'tokens') -> str:
         return self._index_to_token[namespace][index]
