@@ -46,7 +46,7 @@ class TestBidirectonalEndpointSpanExtractor:
         # We just concatenated the start and end embeddings together, so
         # we can check they match the original indices if we split them apart.
         (forward_start_embeddings, forward_end_embeddings,
-         backward_end_embeddings, backward_start_embeddings) = span_representations.split(4, -1)
+         backward_start_embeddings, backward_end_embeddings) = span_representations.split(4, -1)
 
         forward_sequence_tensor, backward_sequence_tensor = sequence_tensor.split(4, -1)
 
@@ -61,17 +61,15 @@ class TestBidirectonalEndpointSpanExtractor:
         # Forward direction => end indices are the same.
         correct_forward_end_indices = Variable(torch.LongTensor([[3, 4], [2, 4]]))
 
-        # Backward direction => start indices are the end
-        # indices, so leave them as inclusive.
-        correct_backward_start_indices = Variable(torch.LongTensor([[1, 2], [0, 3]]))
-        # Backward direction => end indices are the start indices,
-        # add 1 to the end indices to make them exclusive.
-        correct_backward_end_indices = Variable(torch.LongTensor([[4, 5], [3, 5]]))
+        # Backward direction => start indices are exclusive, so add 1 to the end indices.
+        correct_backward_start_indices = Variable(torch.LongTensor([[4, 5], [3, 5]]))
         # These exclusive end indices are outside the tensor, so will be replaced with the end sentinel.
         # Here we replace them with ones so we can index select using these indices without torch
         # complaining.
-        correct_backward_end_indices[0, 1] = 1
-        correct_backward_end_indices[1, 1] = 1
+        correct_backward_start_indices[0, 1] = 1
+        correct_backward_start_indices[1, 1] = 1
+        # Backward direction => end indices are inclusive and equal to the forward start indices.
+        correct_backward_end_indices = Variable(torch.LongTensor([[1, 2], [0, 3]]))
 
         correct_forward_start_embeddings = batched_index_select(forward_sequence_tensor.contiguous(),
                                                                 correct_forward_start_indices)
@@ -85,19 +83,19 @@ class TestBidirectonalEndpointSpanExtractor:
         numpy.testing.assert_array_equal(forward_end_embeddings.data.numpy(),
                                          correct_forward_end_embeddings.data.numpy())
 
-        correct_backward_start_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
-                                                                 correct_backward_start_indices)
-        numpy.testing.assert_array_equal(backward_start_embeddings.data.numpy(),
-                                         correct_backward_start_embeddings.data.numpy())
-
         correct_backward_end_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
-                                                               correct_backward_end_indices)
-        # This element had sequence_tensor index == sequence_tensor.size(1),
-        # so it's exclusive index is the end sentinel.
-        correct_backward_end_embeddings[0, 1] = extractor._end_sentinel.data
-        correct_backward_end_embeddings[1, 1] = extractor._end_sentinel.data
+                                                                 correct_backward_end_indices)
         numpy.testing.assert_array_equal(backward_end_embeddings.data.numpy(),
                                          correct_backward_end_embeddings.data.numpy())
+
+        correct_backward_start_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
+                                                               correct_backward_start_indices)
+        # This element had sequence_tensor index == sequence_tensor.size(1),
+        # so it's exclusive index is the end sentinel.
+        correct_backward_start_embeddings[0, 1] = extractor._end_sentinel.data
+        correct_backward_start_embeddings[1, 1] = extractor._end_sentinel.data
+        numpy.testing.assert_array_equal(backward_start_embeddings.data.numpy(),
+                                         correct_backward_start_embeddings.data.numpy())
 
 
     def test_correct_sequence_elements_are_embedded_with_a_masked_sequence(self):
@@ -121,7 +119,7 @@ class TestBidirectonalEndpointSpanExtractor:
         # We just concatenated the start and end embeddings together, so
         # we can check they match the original indices if we split them apart.
         (forward_start_embeddings, forward_end_embeddings,
-        backward_end_embeddings, backward_start_embeddings) = span_representations.split(4, -1)
+        backward_start_embeddings, backward_end_embeddings) = span_representations.split(4, -1)
 
         forward_sequence_tensor, backward_sequence_tensor = sequence_tensor.split(4, -1)
 
@@ -137,16 +135,15 @@ class TestBidirectonalEndpointSpanExtractor:
         # Forward direction => end indices are the same.
         correct_forward_end_indices = Variable(torch.LongTensor([[3, 4], [2, 1]]))
 
-        # Backward direction => start indices are the end
-        # indices, so leave them as inclusive.
-        correct_backward_start_indices = Variable(torch.LongTensor([[1, 2], [0, 0]]))
-        # Backward direction => end indices are the start indices,
-        # add 1 to the end indices to make them exclusive.
-        correct_backward_end_indices = Variable(torch.LongTensor([[4, 5], [3, 2]]))
-        # These exclusive end indices are outside the tensor, so will be replaced with the end sentinel.
-        # Here we replace them with ones so we can index select using these indices without torch
-        # complaining.
-        correct_backward_end_indices[0, 1] = 1
+        # Backward direction => start indices are exclusive, so add 1 to the end indices.
+        correct_backward_start_indices = Variable(torch.LongTensor([[4, 5], [3, 2]]))
+        # These exclusive backward start indices are outside the tensor, so will be replaced
+        # with the end sentinel. Here we replace them with ones so we can index select using
+        # these indices without torch complaining.
+        correct_backward_start_indices[0, 1] = 1
+
+        # Backward direction => end indices are inclusive and equal to the forward start indices.
+        correct_backward_end_indices = Variable(torch.LongTensor([[1, 2], [0, 0]]))
 
         correct_forward_start_embeddings = batched_index_select(forward_sequence_tensor.contiguous(),
                                                                 correct_forward_start_indices)
@@ -161,19 +158,19 @@ class TestBidirectonalEndpointSpanExtractor:
         numpy.testing.assert_array_equal(forward_end_embeddings.data.numpy(),
                                          correct_forward_end_embeddings.data.numpy())
 
-        correct_backward_start_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
-                                                                 correct_backward_start_indices)
-        numpy.testing.assert_array_equal(backward_start_embeddings.data.numpy(),
-                                         correct_backward_start_embeddings.data.numpy())
-
         correct_backward_end_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
-                                                               correct_backward_end_indices)
-        # This element had sequence_tensor index == sequence_tensor.size(1),
-        # so it's exclusive index is the end sentinel.
-        correct_backward_end_embeddings[0, 1] = extractor._end_sentinel.data
-        # This element has sequence_tensor index == the masked length of the batch element,
-        # so it should be the end_sentinel even though it isn't greater than sequence_tensor.size(1).
-        correct_backward_end_embeddings[1, 0] = extractor._end_sentinel.data
-
+                                                                 correct_backward_end_indices)
         numpy.testing.assert_array_equal(backward_end_embeddings.data.numpy(),
                                          correct_backward_end_embeddings.data.numpy())
+
+        correct_backward_start_embeddings = batched_index_select(backward_sequence_tensor.contiguous(),
+                                                               correct_backward_start_indices)
+        # This element had sequence_tensor index == sequence_tensor.size(1),
+        # so it's exclusive index is the end sentinel.
+        correct_backward_start_embeddings[0, 1] = extractor._end_sentinel.data
+        # This element has sequence_tensor index == the masked length of the batch element,
+        # so it should be the end_sentinel even though it isn't greater than sequence_tensor.size(1).
+        correct_backward_start_embeddings[1, 0] = extractor._end_sentinel.data
+
+        numpy.testing.assert_array_equal(backward_start_embeddings.data.numpy(),
+                                         correct_backward_start_embeddings.data.numpy())
