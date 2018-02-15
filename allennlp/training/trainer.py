@@ -816,8 +816,12 @@ class Trainer:
         training_state_path = os.path.join(self._serialization_dir,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
 
-        model_state = torch.load(model_path, map_location=util.device_mapping(self._cuda_devices[0]))
-        training_state = torch.load(training_state_path, map_location=util.device_mapping(self._cuda_devices[0]))
+        # Load the parameters onto CPU, then transfer to GPU.
+        # This avoids potential OOM on GPU for large models that
+        # load parameters onto GPU then make a new GPU copy into the parameter
+        # buffer. The GPU transfer happens implicitly in load_state_dict.
+        model_state = torch.load(model_path, map_location=util.device_mapping(-1))
+        training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
 
