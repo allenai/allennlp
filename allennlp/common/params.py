@@ -78,7 +78,7 @@ class Params(MutableMapping):
         If the ``loading_from_archive`` flag is True, this will be a no-op.
         """
         if not self.loading_from_archive:
-            self.files_to_archive[f"{self.history}{name}"] = self.get(name)
+            self.files_to_archive[f"{self.history}{name}"] = cached_path(self.get(name))
 
     @overrides
     def pop(self, key: str, default: Any = DEFAULT) -> Any:

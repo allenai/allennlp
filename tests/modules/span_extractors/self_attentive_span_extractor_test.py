@@ -50,3 +50,26 @@ class TestSelfAttentiveSpanExtractor:
         # Second span.
         mean_embeddings = sequence_tensor[batch_element, 3:5, :].mean(0)
         numpy.testing.assert_array_almost_equal(spans[1].data.numpy(), mean_embeddings.data.numpy())
+
+
+        # Now test the case in which we have some masked spans in our indices.
+        indices_mask = Variable(torch.LongTensor([[1, 1], [1, 0]]))
+        span_representations = extractor(sequence_tensor, indices, span_indices_mask=indices_mask)
+
+        # First element in the batch.
+        batch_element = 0
+        spans = span_representations[batch_element]
+        # First span.
+        mean_embeddings = sequence_tensor[batch_element, 1:4, :].mean(0)
+        numpy.testing.assert_array_almost_equal(spans[0].data.numpy(), mean_embeddings.data.numpy())
+        # Second span.
+        mean_embeddings = sequence_tensor[batch_element, 2:5, :].mean(0)
+        numpy.testing.assert_array_almost_equal(spans[1].data.numpy(), mean_embeddings.data.numpy())
+        # Now the second element in the batch.
+        batch_element = 1
+        spans = span_representations[batch_element]
+        # First span.
+        mean_embeddings = sequence_tensor[batch_element, 0:3, :].mean(0)
+        numpy.testing.assert_array_almost_equal(spans[0].data.numpy(), mean_embeddings.data.numpy())
+        # Second span was masked, so should be completely zero.
+        numpy.testing.assert_array_almost_equal(spans[1].data.numpy(), numpy.zeros([input_dim]))

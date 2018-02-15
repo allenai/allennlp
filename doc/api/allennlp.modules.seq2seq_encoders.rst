@@ -30,3 +30,8 @@ allennlp.modules.seq2seq_encoders
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.modules.seq2seq_encoders.pass_through_encoder
+   :members:
+   :undoc-members:
+   :show-inheritance:

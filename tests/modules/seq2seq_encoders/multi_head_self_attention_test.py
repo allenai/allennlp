@@ -5,9 +5,19 @@ from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import MultiHeadSelfAttention
+from allennlp.common.params import Params
 
 
 class MultiHeadSelfAttentionTest(AllenNlpTestCase):
+
+    def test_multi_head_self_attention_can_build_from_params(self):
+        params = Params({"num_heads": 3, "input_dim": 2, "attention_dim": 5, "values_dim": 5})
+
+        encoder = MultiHeadSelfAttention.from_params(params)
+        assert isinstance(encoder, MultiHeadSelfAttention)
+        assert encoder.get_input_dim() == 2
+        assert encoder.get_output_dim() == 2
+
     def test_multi_head_self_attention_runs_forward(self):
         attention = MultiHeadSelfAttention(num_heads=3,
                                            input_dim=5,
