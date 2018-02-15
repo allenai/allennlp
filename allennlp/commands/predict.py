@@ -70,7 +70,7 @@ class Predict(Subcommand):
          # pylint: disable=protected-access
         description = '''Run the specified model against a JSON-lines input file.'''
         subparser = parser.add_parser(
-            name, description=description, help='Use a trained model to make predictions.')
+                name, description=description, help='Use a trained model to make predictions.')
 
         subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
         subparser.add_argument('input_file', type=argparse.FileType('r'), help='path to input file')
