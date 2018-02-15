@@ -174,7 +174,7 @@ class TestTrain(AllenNlpTestCase):
             f.write(config_json.replace('"num_epochs": 2,', '"num_epochs": 4,'))
 
         # This should fail because the config.json does not match that in the serialization directory
-        with pytest.raises(Exception):
+        with pytest.raises(ConfigurationError):
             main()
 
         sys.path.remove(self.TEST_DIR)

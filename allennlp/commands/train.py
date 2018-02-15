@@ -112,8 +112,8 @@ def train_model_from_args(args: argparse.Namespace):
         import_submodules(package_name)
 
     if not args.cont and os.path.exists(args.serialization_dir):
-        raise Exception(f"Serialization directory ({args.serialization_dir}) already exists.  "
-                        f"Specify --continue to continue training from existing output.")
+        raise ConfigurationError(f"Serialization directory ({args.serialization_dir}) already exists.  "
+                                 f"Specify --continue to continue training from existing output.")
     elif args.cont and not os.path.exists(args.serialization_dir):
         logger.warning(f"--continue specified but serialization_dir ({args.serialization_dir}) does not exist.  "
                        f"Training will start from the beginning.")
@@ -216,7 +216,8 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
                                    f"{flat_params[key]} != {flat_loaded[key]}")
                     fail = True
             if fail:
-                raise Exception("Training configuration does not match the configuration we're continuing from.")
+                raise ConfigurationError("Training configuration does not match the configuration we're "
+                                         "continuing from.")
     else:
         os.makedirs(serialization_dir)
 
