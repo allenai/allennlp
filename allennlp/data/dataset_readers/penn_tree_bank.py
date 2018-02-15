@@ -36,7 +36,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
     use_pos_tags : ``bool``, optional, (default = ``True``)
-        Whether or not the instance should contain gold pos tags
+        Whether or not the instance should contain gold POS tags
         as a field.
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be consumed lazily.
@@ -57,10 +57,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         logger.info("Reading instances from lines in file at: %s", file_path)
 
         for parse in BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents():
-            if self._use_pos_tags:
-                yield self.text_to_instance(parse.leaves(), [x[1] for x in parse.pos()], parse)
-            else:
-                yield self.text_to_instance(parse.leaves(), gold_tree=parse)
+            pos_tags = [x[1] for x in parse.pos()] if self._use_pos_tags else None
+            yield self.text_to_instance(parse.leaves(), pos_tags, parse)
 
     @overrides
     def text_to_instance(self, # type: ignore
@@ -75,7 +73,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         tokens : ``List[str]``, required.
             The tokens in a given sentence.
         pos_tags ``List[str]``, optional, (default = None).
-            The pos tags for the words in the sentence.
+            The POS tags for the words in the sentence.
         gold_tree : ``Tree``, optional (default = None).
             The gold parse tree to create span labels from.
 
@@ -85,7 +83,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             tokens : ``TextField``
                 The tokens in the sentence.
             pos_tags : ``SequenceLabelField``
-                The pos tags of the words in the sentence.
+                The POS tags of the words in the sentence.
                 Only returned if ``use_pos_tags`` is ``True``
             spans : ``ListField[SpanField]``
                 A ListField containing all possible subspans of the
@@ -160,7 +158,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             # The "length" of a tree is defined by
             # NLTK as the number of children.
             # We don't actually want the spans for leaves, because
-            # their labels are pos tags. However, it makes the
+            # their labels are POS tags. However, it makes the
             # indexing more straightforward, so we'll collect them
             # and filter them out below. We subtract 1 from the end
             # index so the spans are inclusive.
