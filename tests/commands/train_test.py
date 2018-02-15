@@ -124,8 +124,7 @@ class TestTrain(AllenNlpTestCase):
 
         # Write out config file
         config_path = os.path.join(self.TEST_DIR, 'config.json')
-        with open(config_path, 'w') as f:
-            f.write("""
+        config_json = """
                 "model": {
                         "type": "duplicate-test-tagger",
                         "text_field_embedder": {
@@ -149,7 +148,9 @@ class TestTrain(AllenNlpTestCase):
                         "num_epochs": 2,
                         "optimizer": "adam"
                 }
-            """.replace('$$$', data_path))
+            """.replace('$$$', data_path)
+        with open(config_path, 'w') as f:
+            f.write(config_json)
 
         serialization_dir = os.path.join(self.TEST_DIR, 'serialization')
 
@@ -163,9 +164,18 @@ class TestTrain(AllenNlpTestCase):
             main()
 
         # Now add the --include-package flag and it should work.
+        # We also need to add --continue since the output directory already exists.
         sys.argv.extend(["--continue", "--include-package", 'testpackage'])
 
         main()
+
+        # Rewrite out config file, but change a value
+        with open(config_path, 'w') as f:
+            f.write(config_json.replace('"num_epochs": 2,', '"num_epochs": 4,'))
+
+        # This should fail because the config.json does not match that in the serialization directory
+        with pytest.raises(Exception):
+            main()
 
         sys.path.remove(self.TEST_DIR)
 
