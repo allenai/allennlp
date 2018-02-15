@@ -50,7 +50,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.models.archival import archive_model
+from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.training.trainer import Trainer
 
@@ -182,7 +182,7 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.getLogger().addHandler(handler)
     serialization_params = deepcopy(params).as_dict(quiet=True)
-    with open(os.path.join(serialization_dir, "model_params.json"), "w") as param_file:
+    with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
         json.dump(serialization_params, param_file, indent=4)
 
     all_datasets = datasets_from_params(params)
