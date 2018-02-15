@@ -22,8 +22,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     By default, this ``SpanExtractor`` represents spans as
     ``sequence_tensor[inclusive_span_end] - sequence_tensor[exclusive_span_start]``
     meaning that the representation is the difference between the the last word in the span
-    and the word `before` the span started. Note that the start and end indices are with 
-    respect to the direction that the RNN is going in, so for the backward direction, the 
+    and the word `before` the span started. Note that the start and end indices are with
+    respect to the direction that the RNN is going in, so for the backward direction, the
     start/end indices are reversed.
 
     Additionally, the width of the spans can be embedded and concatenated on to the
@@ -164,11 +164,11 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         # Shape (batch_size, num_spans, input_size / 2)
         forward_end_embeddings = util.batched_index_select(forward_sequence, span_ends)
 
-        # Backward Direction: The backward start embeddings use the `forward` end 
+        # Backward Direction: The backward start embeddings use the `forward` end
         # indices, because we are going backwards.
         # Shape (batch_size, num_spans, input_size / 2)
         backward_start_embeddings = util.batched_index_select(backward_sequence, exclusive_span_ends)
-        # Backward Direction: The backward end embeddings use the `forward` start 
+        # Backward Direction: The backward end embeddings use the `forward` start
         # indices, because we are going backwards.
         # Shape (batch_size, num_spans, input_size / 2)
         backward_end_embeddings = util.batched_index_select(backward_sequence, span_starts)

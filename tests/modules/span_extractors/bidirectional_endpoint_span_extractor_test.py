@@ -119,7 +119,7 @@ class TestBidirectonalEndpointSpanExtractor:
         # We just concatenated the start and end embeddings together, so
         # we can check they match the original indices if we split them apart.
         (forward_start_embeddings, forward_end_embeddings,
-        backward_start_embeddings, backward_end_embeddings) = span_representations.split(4, -1)
+         backward_start_embeddings, backward_end_embeddings) = span_representations.split(4, -1)
 
         forward_sequence_tensor, backward_sequence_tensor = sequence_tensor.split(4, -1)
 
