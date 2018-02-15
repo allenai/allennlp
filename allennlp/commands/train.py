@@ -77,6 +77,12 @@ class Train(Subcommand):
                                    type=str,
                                    help=argparse.SUPPRESS)
 
+        subparser.add_argument('-c', '--continue',
+                               action='store_true',
+                               default=False,
+                               dest="cont",
+                               help='continue training from the state in serialization_dir')
+
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
@@ -104,6 +110,14 @@ def train_model_from_args(args: argparse.Namespace):
     # Import any additional modules needed (to register custom classes)
     for package_name in args.include_package:
         import_submodules(package_name)
+
+    if not args.cont and os.path.exists(args.serialization_dir):
+        raise Exception(f"Serialization directory ({args.serialization_dir}) already exists.  "
+                         "Specify --continue to continue training from existing output.")
+    elif args.cont and not os.path.exists(args.serialization_dir):
+        logger.warning(f"--continue specified but serialization_dir ({serialization_dir}) already exists.  "
+                       "Training will start from the beginning.")
+
     train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.file_friendly_logging)
 
 

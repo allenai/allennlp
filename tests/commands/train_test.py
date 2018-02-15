@@ -163,7 +163,7 @@ class TestTrain(AllenNlpTestCase):
             main()
 
         # Now add the --include-package flag and it should work.
-        sys.argv.extend(["--include-package", 'testpackage'])
+        sys.argv.extend(["--continue", "--include-package", 'testpackage'])
 
         main()
 
