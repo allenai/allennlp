@@ -170,7 +170,7 @@ class WikiTablesDatasetReader(DatasetReader):
                         dpd_file = gzip.open(dpd_output_filename)
                         if self._sort_dpd_logical_forms:
                             sempre_forms = [dpd_line.strip().decode('utf-8') for dpd_line in dpd_file]
-                            sempre_forms.sort(key=lambda x: len(x))
+                            sempre_forms.sort(key=len)
                             if self._max_dpd_tries:
                                 sempre_forms = sempre_forms[:self._max_dpd_tries]
                         else:
