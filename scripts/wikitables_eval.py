@@ -32,11 +32,20 @@ def predict_logical_forms(args: argparse.Namespace):
     archive = load_archive(args.model_archive, cuda_device=args.cuda_device)
     model = archive.model
     model.eval()
-    # TODO(mattg): TOTAL HACK! Not sure why I'm getting UNK tokens when reading production rules,
-    # but I am - might be due to numbers?
+    # TODO(mattg): TOTAL HACK! We're getting OOV tokens in production rules because we're not
+    # handling number productions correctly yet.
     model.vocab._token_to_index['rule_labels']['@@UNKNOWN@@'] = 0
     config = archive.config
+    # This isn't strictly necessary, but if we're going to crash, it will make us crash faster.
+    # Shouldn't really make a difference in runtime.
     config['dataset_reader']['lazy'] = True
+    # We may have used a preprocessed dataset reader for training, but we need the non-preprocessed
+    # one for this script.
+    config['dataset_reader']['type'] = 'wikitables'
+    # And we need to be sure that we have the tables directory set, and the DPD output directory
+    # unset (having a DPD output directory might lead us to skip some examples for the evaluation).
+    config['dataset_reader']['tables_directory'] = args.table_directory
+    config['dataset_reader']['dpd_output_directory'] = None
     dataset_reader = DatasetReader.from_params(config['dataset_reader'])
     dataset = dataset_reader.read(args.test_data)
     data_iterator = BasicIterator(args.batch_size)
@@ -46,6 +55,9 @@ def predict_logical_forms(args: argparse.Namespace):
     for batch in tqdm.tqdm(data_iterator(dataset, num_epochs=1, shuffle=False)):
         if 'target_action_sequences' in batch:
             # This makes the model skip the loss computation, which will make things a bit faster.
+            # We shouldn't ever hit this branch anymore, because we removed the
+            # `dpd_output_directory` key from the dataset reader, but we'll keep it just in case
+            # code changes later.
             del batch['target_action_sequences']
         results = model(**batch)
         logical_forms.extend(results['logical_form'])

@@ -9,8 +9,8 @@
   "vocabulary": {
     "min_count": {"tokens": 3}
   },
-  "train_data_path": "/wikitables_preprocessed/no_var/with_span_features/train.jsonl",
-  "validation_data_path": "/wikitables_preprocessed/no_var/with_span_features/validation.jsonl",
+  "train_data_path": "/wikitables_preprocessed/no_var/sorted_dpd_span_features/train.jsonl",
+  "validation_data_path": "/wikitables_preprocessed/no_var/sorted_dpd_span_features/validation.jsonl",
   "model": {
     "type": "wikitables_parser",
     "question_embedder": {
