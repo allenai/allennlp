@@ -113,10 +113,10 @@ def train_model_from_args(args: argparse.Namespace):
 
     if not args.cont and os.path.exists(args.serialization_dir):
         raise Exception(f"Serialization directory ({args.serialization_dir}) already exists.  "
-                         "Specify --continue to continue training from existing output.")
+                        f"Specify --continue to continue training from existing output.")
     elif args.cont and not os.path.exists(args.serialization_dir):
-        logger.warning(f"--continue specified but serialization_dir ({serialization_dir}) already exists.  "
-                       "Training will start from the beginning.")
+        logger.warning(f"--continue specified but serialization_dir ({args.serialization_dir}) does not exist.  "
+                       f"Training will start from the beginning.")
 
     train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.file_friendly_logging)
 
@@ -186,7 +186,40 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     """
     prepare_environment(params)
 
-    os.makedirs(serialization_dir, exist_ok=True)
+    if os.path.exists(serialization_dir):
+        logger.info(f"Continuing from prior training at {serialization_dir}.")
+
+        continued_config_file = os.path.join(serialization_dir, CONFIG_NAME)
+        if not os.path.exists(continued_config_file):
+            logger.warning("Continuing from prior training, but no config.json was found.")
+        else:
+            loaded_params = Params.from_file(continued_config_file)
+
+            # Check whether any of the training configuration differs from the configuration we are resuming.
+            # If so, warn the user that training may fail.
+            warn = False
+            flat_params = params.as_flat_dict()
+            flat_loaded = loaded_params.as_flat_dict()
+            for key in flat_params.keys() - flat_loaded.keys():
+                logger.warning(f"Key '{key}' found in training configuration but not in the serialization "
+                               f"directory we're continuing from.")
+                warn = True
+            for key in flat_loaded.keys() - flat_params.keys():
+                logger.warning(f"Key '{key}' found in the serialization directory we're continuing from "
+                               f"but not in the training config.")
+                warn = True
+            for key in flat_params.keys():
+                if flat_params.get(key, None) != flat_loaded.get(key, None):
+                    logger.warning(f"Value for '{key}' in training configuration does not match that the value in "
+                                   f"the serialization directory we're continuing from: "
+                                   f"{flat_params[key]} != {flat_loaded[key]}")
+                    warn = True
+            if warn:
+                logger.warning("Training configuration does not match the configuration we're continuing from.  "
+                               "If you've changed your code since you last trained, the training may fail.")
+    else:
+        os.makedirs(serialization_dir)
+
     sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
                            sys.stdout, file_friendly_logging)
     sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
