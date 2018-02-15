@@ -1170,8 +1170,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # was applied on both together.
                 # Todo(rajas) figure out why the loss is nan with this code.
                 mixture_weight = self._mixture_feedforward(hidden_state)
-                entity_action_logits = util.masked_log_softmax(entity_action_logits, entity_action_mask.float()) * torch.log(1 - mixture_weight)
-                embedded_action_logits = util.masked_log_softmax(embedded_action_logits, embedded_action_mask.float()) * torch.log(mixture_weight)
+                entity_action_logits = util.masked_log_softmax(entity_action_logits, entity_action_mask.float()) + torch.log(1 - mixture_weight)
+                embedded_action_logits = util.masked_log_softmax(embedded_action_logits, embedded_action_mask.float()) + torch.log(mixture_weight)
                 log_probs = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
                 return self._compute_new_states(state,
                                                 log_probs,
