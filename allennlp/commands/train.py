@@ -50,8 +50,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.models.archival import archive_model
-from allennlp.models.archival import CONFIG_NAME
+from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.training.trainer import Trainer
 
