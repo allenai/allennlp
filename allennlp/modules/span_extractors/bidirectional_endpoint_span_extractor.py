@@ -21,15 +21,10 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
     By default, this ``SpanExtractor`` represents spans as
     ``sequence_tensor[inclusive_span_end] - sequence_tensor[exclusive_span_start]``
-    meaning that the representation is
-    the difference between the the last word in the span and the word `before` the span
-    started. Note that this is direction agnostic, so for the forward direction this will
-    be (end_index - start_index), but for the backward direction, this will be
-    (start_index - end_index), as in the backward direction, the relative positions of the
-    start and end indices of the spans are switched (e.g if you trace the direction that the RNN
-    is going in, you encounter the end of the span first, before the start of the span).
-    All references to ``start`` and ``end`` span indices in this class are with respect
-    to the forward direction.
+    meaning that the representation is the difference between the the last word in the span
+    and the word `before` the span started. Note that the start and end indices are with 
+    respect to the direction that the RNN is going in, so for the backward direction, the 
+    start/end indices are reversed.
 
     Additionally, the width of the spans can be embedded and concatenated on to the
     final combination.
@@ -51,7 +46,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         The method used to combine the ``forward_start_embeddings`` and ``forward_end_embeddings``
         for the forward direction of the bidirectional representation.
         See above for a full description.
-    backward_combination : str, optional (default = "x-y").
+    backward_combination : str, optional (default = "y-x").
         The method used to combine the ``backward_start_embeddings`` and ``backward_end_embeddings``
         for the backward direction of the bidirectional representation.
         See above for a full description.
@@ -74,7 +69,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     def __init__(self,
                  input_dim: int,
                  forward_combination: str = "y-x",
-                 backward_combination: str = "x-y",
+                 backward_combination: str = "y-x",
                  num_width_embeddings: int = None,
                  span_width_embedding_dim: int = None,
                  bucket_widths: bool = False,
@@ -158,24 +153,26 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         # shape (batch_size, num_spans)
         end_sentinel_mask = (exclusive_span_ends == sequence_lengths.unsqueeze(-1)).long()
 
+        # As we added 1 to the span_ends to make them exclusive, which might have caused indices
+        # equal to the sequence_length to become out of bounds, we multiply by the inverse of the
+        # end_sentinel mask to erase these indices (as we will replace them anyway in the block below).
+        exclusive_span_ends = exclusive_span_ends * (1 - end_sentinel_mask)
+
         # Forward Direction: start indices are exclusive. Shape (batch_size, num_spans, input_size / 2)
         forward_start_embeddings = util.batched_index_select(forward_sequence, exclusive_span_starts)
         # Forward Direction: end indices are inclusive, so we can just use span_ends.
         # Shape (batch_size, num_spans, input_size / 2)
         forward_end_embeddings = util.batched_index_select(forward_sequence, span_ends)
 
-        # Backward Direction: start indices are actually the end indices, because we
-        # are going backwards, which we want to be inclusive, so we can just use span_starts.
+        # Backward Direction: The backward start embeddings use the `forward` end 
+        # indices, because we are going backwards.
         # Shape (batch_size, num_spans, input_size / 2)
-        backward_start_embeddings = util.batched_index_select(backward_sequence, span_starts)
-        # Backward Direction: end indices are actually the start indices, which we want to
-        # be exclusive. As we added 1 to the span_ends to make them exclusive, which might have
-        # caused indices equal to the sequence_length to become out of bounds, we multiply
-        # by the inverse of the end_sentinel mask to erase these indices (as we will replace
-        # them anyway in the block below).
+        backward_start_embeddings = util.batched_index_select(backward_sequence, exclusive_span_ends)
+        # Backward Direction: The backward end embeddings use the `forward` start 
+        # indices, because we are going backwards.
         # Shape (batch_size, num_spans, input_size / 2)
-        backward_end_embeddings = util.batched_index_select(backward_sequence,
-                                                            exclusive_span_ends * (1 - end_sentinel_mask))
+        backward_end_embeddings = util.batched_index_select(backward_sequence, span_starts)
+
         if self._use_sentinels:
             # If we're using sentinels, we need to replace all the elements which were
             # outside the dimensions of the sequence_tensor with either the start sentinel,
@@ -183,7 +180,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             float_end_sentinel_mask = end_sentinel_mask.float().unsqueeze(-1)
             forward_start_embeddings = forward_start_embeddings * (1 - start_sentinel_mask) \
                                         + start_sentinel_mask * self._start_sentinel
-            backward_end_embeddings = backward_end_embeddings * (1 - float_end_sentinel_mask) \
+            backward_start_embeddings = backward_start_embeddings * (1 - float_end_sentinel_mask) \
                                         + float_end_sentinel_mask * self._end_sentinel
 
         # Now we combine the forward and backward spans in the manner specified by the
