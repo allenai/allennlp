@@ -1,5 +1,4 @@
 from unittest import TestCase
-import logging
 import sys
 
 from allennlp.commands import main
