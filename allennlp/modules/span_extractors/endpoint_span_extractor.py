@@ -70,7 +70,7 @@ class EndpointSpanExtractor(SpanExtractor):
         return combined_dim
 
     @overrides
-    def forward(self, # pylint: disable=arguments-differ
+    def forward(self,
                 sequence_tensor: torch.FloatTensor,
                 indices: torch.LongTensor,
                 sequence_mask: torch.LongTensor = None,

@@ -42,7 +42,9 @@ class SpanExtractor(torch.nn.Module, Registrable):
             elements of the sequence.
         indices_mask : ``torch.LongTensor``, optional (default = ``None``).
             A tensor of shape (batch_size, num_spans) representing the valid
-            spans in the ``indices`` tensor.
+            spans in the ``indices`` tensor. This mask is optional because
+            somtimes it's easier to worry about masking after calling this
+            function, rather than passing a mask directly.
 
         Returns
         -------

@@ -65,7 +65,7 @@ class TestEndpointSpanExtractor:
         start_indices, end_indices = indices.split(1, -1)
 
         correct_start_embeddings = batched_index_select(sequence_tensor, start_indices.squeeze()).data
-        # Completely masked second batch, so it should all be zero.
+        # Completely masked second batch element, so it should all be zero.
         correct_start_embeddings[1, :, :].fill_(0)
         correct_end_embeddings = batched_index_select(sequence_tensor, end_indices.squeeze()).data
         correct_end_embeddings[1, :, :].fill_(0)
