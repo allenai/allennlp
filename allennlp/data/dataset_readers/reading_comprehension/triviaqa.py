@@ -2,9 +2,12 @@ import json
 import logging
 import os
 import tarfile
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Iterable
 
 from overrides import overrides
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import pairwise_distances
+import numpy as np
 
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
@@ -43,6 +46,9 @@ class TriviaQaReader(DatasetReader):
         This is the path to the "unfiltered" TriviaQA data that you can download from the TriviaQA
         website, containing just question JSON files that point to evidence files in the base
         tarball.
+    paragraph_picker: ``str``, optional, (default: ``None``)
+        If specified, this indicates the scheme for sampling paragraphs
+        for each question-document pair.
     tokenizer : ``Tokenizer``, optional
         We'll use this tokenizer on questions and evidence passages, defaulting to
         ``WordTokenizer`` if none is provided.
@@ -53,14 +59,17 @@ class TriviaQaReader(DatasetReader):
     def __init__(self,
                  base_tarball_path: str,
                  unfiltered_tarball_path: str = None,
+                 paragraph_picker: str = None,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._base_tarball_path = base_tarball_path
         self._unfiltered_tarball_path = unfiltered_tarball_path
+        self._paragraph_picker = paragraph_picker
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._tfidf = TfidfVectorizer(strip_accents="unicode", stop_words="")
 
     @overrides
     def _read(self, file_path: str):
@@ -81,46 +90,47 @@ class TriviaQaReader(DatasetReader):
             question_text = question_json['Question']
             question_tokens = self._tokenizer.tokenize(question_text)
 
-            evidence_files: List[List[str]] = []  # contains lines from each evidence file
-            if 'web' in file_path:
-                for result in question_json['SearchResults']:
-                    filename = result['Filename']
-                    evidence_file = base_tarball.extractfile(os.path.join("evidence", "web", filename))
-                    evidence_files.append([line.decode('utf-8') for line in evidence_file.readlines()])
-            else:
-                for result in question_json['EntityPages']:
-                    filename = result['Filename']
-                    evidence_file = base_tarball.extractfile(os.path.join("evidence", "wikipedia", filename))
-                    evidence_files.append([line.decode('utf-8') for line in evidence_file.readlines()])
-
             answer_json = question_json['Answer']
             human_answers = [util.normalize_text(answer) for answer in answer_json.get('HumanAnswers', [])]
             answer_texts = answer_json['NormalizedAliases'] + human_answers
 
-            paragraph_instances = []
-            for paragraph in self.pick_paragraphs(evidence_files, question_text, answer_texts):
-                paragraph_tokens = self._tokenizer.tokenize(paragraph)
-                token_spans = util.find_valid_answer_spans(paragraph_tokens, answer_texts)
-                if not token_spans:
-                    # For now, we'll just ignore instances that we can't find answer spans for.
-                    # Maybe we can do something smarter here later, but this will do for now.
-                    continue
-                paragraph_instance = self.text_to_instance(question_text,
-                                                           paragraph,
-                                                           token_spans,
-                                                           answer_texts,
-                                                           question_tokens,
-                                                           paragraph_tokens)
+            if 'web' in file_path:
+                result_key, evidence_subdir = 'SearchResults', 'web'
+            else:
+                result_key, evidence_subdir = 'EntityPages', 'wikipedia'
 
-                paragraph_instances.append(paragraph_instance)
+            for result in question_json[result_key]:
+                filename = result['Filename']
+                evidence_file = base_tarball.extractfile(os.path.join("evidence", evidence_subdir, filename))
+                paragraphs = [line.decode('utf-8') for line in evidence_file]
 
-            if paragraph_instances:
-                combined = util.combine_instances(paragraph_instances)
-                print(combined.fields)
-                yield combined
+                for paragraph in self.pick_paragraphs(paragraphs, question_text, answer_texts):
+                    paragraph_tokens = self._tokenizer.tokenize(paragraph)
+                    token_spans = util.find_valid_answer_spans(paragraph_tokens, answer_texts)
+                    instance = self.text_to_instance(question_text,
+                                                     paragraph,
+                                                     token_spans,
+                                                     answer_texts,
+                                                     question_tokens,
+                                                     paragraph_tokens)
+
+                    yield instance
+
+    def document_tfidf(self, paragraphs: List[str], question: str) -> np.ndarray:
+        try:
+            # (num_paragraphs, num_features)
+            para_features = self._tfidf.fit_transform(paragraphs)
+            # (1, num_features)
+            q_features = self._tfidf.transform([question])
+        except ValueError:
+            # (num_paragraphs,)
+            return np.array([0.0] * len(paragraphs))
+        # pairwise_distances is (1, num_paragraphs), after ravel is (num_paragraphs,)
+        dists = pairwise_distances(q_features, para_features, "cosine").ravel()
+        return dists
 
     def pick_paragraphs(self,
-                        evidence_files: List[List[str]],
+                        paragraphs: List[str],
                         question: str = None,
                         answer_texts: List[str] = None) -> List[str]:
         """
@@ -132,14 +142,39 @@ class TriviaQaReader(DatasetReader):
         paragraph on the dev or test sets, that's likely cheating, depending on how you've defined
         the task.
         """
-        # pylint: disable=no-self-use,unused-argument
-        paragraphs = []
-        for evidence_file in evidence_files:
-            whole_document = ' '.join(evidence_file)
+        # pylint: disable=unused-argument
+        picked_paragraphs = []
+
+        if self._paragraph_picker == "triviaqa-web-train":
+            # Take the top four paragraphs ranked by tf-idf score
+            # Then sample two from them
+            # Sample the highest-ranked paragraph that contains an answer twice as often
+            # require at least one of the paragraphs to contain an answer span
+            scores = self.document_tfidf(paragraphs, question)
+            ranked = [paragraph for score, paragraph in sorted(zip(scores, paragraphs))][:4]
+
+            has_answers = [i for i, paragraph in enumerate(ranked)
+                           if util.find_valid_answer_spans(self._tokenizer.tokenize(paragraph), answer_texts)]
+
+            if has_answers:
+                sample: Iterable[int] = []
+                # Sample until we get at least one paragraph with an answer
+                while not any(i in has_answers for i in sample):
+                    # Sample the highest ranked paragraph that contains an answer twice as often.
+                    sample = np.random.choice([0, 1, 2, 3, has_answers[0]], size=2)
+                picked_paragraphs.extend(ranked[i] for i in sample)
+            else:
+                # TODO(joelgrus) should we do something else here?
+                pass
+        else:
+            # This is the ``None`` case
+            whole_document = ' '.join(paragraphs)
             tokens = whole_document.split(' ')
             paragraph = ' '.join(tokens[:400])
-            paragraphs.append(paragraph)
-        return paragraphs
+            picked_paragraphs.append(paragraph)
+
+
+        return picked_paragraphs
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -159,18 +194,21 @@ class TriviaQaReader(DatasetReader):
                                                         self._token_indexers,
                                                         passage_text,
                                                         token_spans,
-                                                        answer_texts)
+                                                        answer_texts,
+                                                        pick_most_common_answer=False)
 
     @classmethod
     def from_params(cls, params: Params) -> 'TriviaQaReader':
         base_tarball_path = params.pop('base_tarball_path')
         unfiltered_tarball_path = params.pop('unfiltered_tarball_path', None)
+        paragraph_picker = params.pop('paragraph_picker', None)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return cls(base_tarball_path=base_tarball_path,
                    unfiltered_tarball_path=unfiltered_tarball_path,
+                   paragraph_picker=paragraph_picker,
                    tokenizer=tokenizer,
                    token_indexers=token_indexers,
                    lazy=lazy)

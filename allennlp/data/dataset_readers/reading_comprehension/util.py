@@ -132,13 +132,13 @@ def find_valid_answer_spans(passage_tokens: List[Token],
                 spans.append((span_start, span_end))
     return spans
 
-
 def make_reading_comprehension_instance(question_tokens: List[Token],
                                         passage_tokens: List[Token],
                                         token_indexers: Dict[str, TokenIndexer],
                                         passage_text: str,
                                         token_spans: List[Tuple[int, int]] = None,
                                         answer_texts: List[str] = None,
+                                        pick_most_common_answer: bool = True,
                                         additional_metadata: Dict[str, Any] = None) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
@@ -196,7 +196,7 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     if answer_texts:
         metadata['answer_texts'] = answer_texts
 
-    if token_spans:
+    if pick_most_common_answer and token_spans:
         # There may be multiple answer annotations, so we pick the one that occurs the most.  This
         # only matters on the SQuAD dev set, and it means our computed metrics ("start_acc",
         # "end_acc", and "span_acc") aren't quite the same as the official metrics, which look at
@@ -210,40 +210,14 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
         fields['span_start'] = IndexField(span_start, passage_field)
         fields['span_end'] = IndexField(span_end, passage_field)
 
+    elif token_spans:
+        # Otherwise we make ListFields for all the spans
+        span_starts, span_ends = zip(*token_spans)
+        fields['span_start'] = ListField([IndexField(span_start, passage_field)
+                                          for span_start in span_starts])
+        fields['span_end'] = ListField([IndexField(span_end, passage_field)
+                                        for span_end in span_ends])
+
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
-    return Instance(fields)
-
-def combine_instances(instances: List[Instance]) -> Instance:
-    """
-    Takes a bunch of instances that represent different paragraphs for the same
-    question and combines them into a single instance by combining the
-    passage_tokens, passage_text, and token_spans.
-    """
-    fields: Dict[str, Field] = {}
-
-    # All instances should represent the same question.
-    question_fields = [instance.fields['question'] for instance in instances]
-    question_tokens = [tuple(token.text for token in field.tokens) for field in question_fields]
-    print(question_tokens)
-    assert len(set(question_tokens)) == 1
-
-    first_instance = instances[0]
-    fields['question'] = first_instance.fields['question']
-    fields['passage'] = ListField([instance.fields['passage'] for instance in instances])
-    fields['span_start'] = ListField([instance.fields['span_start'] for instance in instances])
-    fields['span_end'] = ListField([instance.fields['span_end'] for instance in instances])
-
-    metadata = {
-        key: []
-        for instance in instances
-        for key in first_instance.fields['metadata'].metadata
-    }
-
-    for instance in instances:
-        for key, value in instance.fields['metadata'].metadata.items():
-            metadata[key].append(value)
-
-    fields['metadata'] = MetadataField(metadata)
-
     return Instance(fields)
