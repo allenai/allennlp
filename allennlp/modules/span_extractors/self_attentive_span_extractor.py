@@ -45,11 +45,11 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
     @overrides
     def forward(self,
                 sequence_tensor: torch.FloatTensor,
-                indices: torch.LongTensor,
+                span_indices: torch.LongTensor,
                 sequence_mask: torch.LongTensor = None,
-                indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
+                span_indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
         # both of shape (batch_size, num_spans, 1)
-        span_starts, span_ends = indices.split(1, dim=-1)
+        span_starts, span_ends = span_indices.split(1, dim=-1)
 
         # shape (batch_size, num_spans, 1)
         # These span widths are off by 1, because the span ends are `inclusive`.
@@ -102,11 +102,11 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         # Shape: (batch_size, num_spans, embedding_dim)
         attended_text_embeddings = util.weighted_sum(span_embeddings, span_attention_weights)
 
-        if indices_mask is not None:
+        if span_indices_mask is not None:
             # Above we were masking the widths of spans with respect to the max
             # span width in the batch. Here we are masking the spans which were
             # originally passed in as padding.
-            return attended_text_embeddings * indices_mask.unsqueeze(-1).float()
+            return attended_text_embeddings * span_indices_mask.unsqueeze(-1).float()
 
         return attended_text_embeddings
 

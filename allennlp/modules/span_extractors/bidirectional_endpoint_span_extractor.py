@@ -115,9 +115,9 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     @overrides
     def forward(self,
                 sequence_tensor: torch.FloatTensor,
-                indices: torch.LongTensor,
+                span_indices: torch.LongTensor,
                 sequence_mask: torch.LongTensor = None,
-                indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
+                span_indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
 
         # Both of shape (batch_size, sequence_length, embedding_size / 2)
         forward_sequence, backward_sequence = sequence_tensor.split(int(self._input_dim / 2), dim=-1)
@@ -125,11 +125,11 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         backward_sequence = backward_sequence.contiguous()
 
         # shape (batch_size, num_spans)
-        span_starts, span_ends = [index.squeeze(-1) for index in indices.split(1, dim=-1)]
+        span_starts, span_ends = [index.squeeze(-1) for index in span_indices.split(1, dim=-1)]
 
-        if indices_mask is not None:
-            span_starts *= indices_mask
-            span_ends *= indices_mask
+        if span_indices_mask is not None:
+            span_starts *= span_indices_mask
+            span_ends *= span_indices_mask
 
         # We want `exclusive` span starts, so we remove 1 from the forward span starts
         # as the AllenNLP ``SpanField`` is inclusive.
@@ -215,8 +215,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             span_width_embeddings = self._span_width_embedding(span_widths)
             return torch.cat([span_embeddings, span_width_embeddings], -1)
 
-        if indices_mask is not None:
-            return span_embeddings * indices_mask.unsqueeze(-1)
+        if span_indices_mask is not None:
+            return span_embeddings * span_indices_mask.unsqueeze(-1)
         return span_embeddings
 
     @classmethod

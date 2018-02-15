@@ -60,7 +60,7 @@ class TestEndpointSpanExtractor:
         # Make a mask with the second batch element completely masked.
         indices_mask = Variable(torch.LongTensor([[1, 1], [0, 0]]))
 
-        span_representations = extractor(sequence_tensor, indices, indices_mask=indices_mask)
+        span_representations = extractor(sequence_tensor, indices, span_indices_mask=indices_mask)
         start_embeddings, end_embeddings = span_representations.split(7, -1)
         start_indices, end_indices = indices.split(1, -1)
 
