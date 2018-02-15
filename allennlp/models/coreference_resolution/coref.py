@@ -77,8 +77,6 @@ class CoreferenceResolver(Model):
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(CoreferenceResolver, self).__init__(vocab, regularizer)
 
-        self.should_log_activations = True
-
         self._text_field_embedder = text_field_embedder
         self._context_layer = context_layer
         self._antecedent_feedforward = TimeDistributed(antecedent_feedforward)
@@ -110,9 +108,6 @@ class CoreferenceResolver(Model):
         else:
             self._lexical_dropout = lambda x: x
         initializer(self)
-
-    def get_parameters_for_histogram_tensorboard_logging(self):
-        return []
 
     @overrides
     def forward(self,  # type: ignore
