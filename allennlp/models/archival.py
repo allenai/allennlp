@@ -28,7 +28,7 @@ Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
 # themselves under the path ``fta/`` .
 #
 # These constants are the *known names* under which we archive them.
-_CONFIG_NAME = "config.json"
+CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 _FTA_NAME = "files_to_archive.json"
 
@@ -55,7 +55,7 @@ def archive_model(serialization_dir: str,
         logger.error("weights file %s does not exist, unable to archive model", weights_file)
         return
 
-    config_file = os.path.join(serialization_dir, "model_params.json")
+    config_file = os.path.join(serialization_dir, CONFIG_NAME)
     if not os.path.exists(config_file):
         logger.error("config file %s does not exist, unable to archive model", config_file)
 
@@ -70,7 +70,7 @@ def archive_model(serialization_dir: str,
     archive_file = os.path.join(serialization_dir, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
     with tarfile.open(archive_file, 'w:gz') as archive:
-        archive.add(config_file, arcname=_CONFIG_NAME)
+        archive.add(config_file, arcname=CONFIG_NAME)
         archive.add(weights_file, arcname=_WEIGHTS_NAME)
         archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
@@ -83,7 +83,10 @@ def archive_model(serialization_dir: str,
             for key, filename in files_to_archive.items():
                 archive.add(filename, arcname=f"fta/{key}")
 
-def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") -> Archive:
+def load_archive(archive_file: str,
+                 cuda_device: int = -1,
+                 overrides: str = "",
+                 weights_file: str = None) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
@@ -91,6 +94,8 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
     ----------
     archive_file: ``str``
         The archive file to load the model from.
+    weights_file: ``str``, optional (default = None)
+        The weights file to use.  If unspecified, weights.th in the archive_file will be used.
     cuda_device: ``int``, optional (default = -1)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
@@ -129,12 +134,17 @@ def load_archive(archive_file: str, cuda_device: int = -1, overrides: str = "") 
         overrides = json.dumps(combined_hocon)
 
     # Load config
-    config = Params.from_file(os.path.join(serialization_dir, _CONFIG_NAME), overrides)
+    config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
     config.loading_from_archive = True
+
+    if weights_file:
+        weights_path = weights_file
+    else:
+        weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),
-                       weights_file=os.path.join(serialization_dir, _WEIGHTS_NAME),
+                       weights_file=weights_path,
                        serialization_dir=serialization_dir,
                        cuda_device=cuda_device)
 
