@@ -28,7 +28,7 @@ Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
 # themselves under the path ``fta/`` .
 #
 # These constants are the *known names* under which we archive them.
-_CONFIG_NAME = "config.json"
+CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 _FTA_NAME = "files_to_archive.json"
 
@@ -55,7 +55,7 @@ def archive_model(serialization_dir: str,
         logger.error("weights file %s does not exist, unable to archive model", weights_file)
         return
 
-    config_file = os.path.join(serialization_dir, "config.json")
+    config_file = os.path.join(serialization_dir, CONFIG_NAME)
     if not os.path.exists(config_file):
         logger.error("config file %s does not exist, unable to archive model", config_file)
 
@@ -70,7 +70,7 @@ def archive_model(serialization_dir: str,
     archive_file = os.path.join(serialization_dir, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
     with tarfile.open(archive_file, 'w:gz') as archive:
-        archive.add(config_file, arcname=_CONFIG_NAME)
+        archive.add(config_file, arcname=CONFIG_NAME)
         archive.add(weights_file, arcname=_WEIGHTS_NAME)
         archive.add(os.path.join(serialization_dir, "vocabulary"),
                     arcname="vocabulary")
@@ -134,7 +134,7 @@ def load_archive(archive_file: str,
         overrides = json.dumps(combined_hocon)
 
     # Load config
-    config = Params.from_file(os.path.join(serialization_dir, _CONFIG_NAME), overrides)
+    config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
     config.loading_from_archive = True
 
     if weights_file:

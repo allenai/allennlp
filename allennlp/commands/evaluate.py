@@ -64,7 +64,7 @@ class Evaluate(Subcommand):
                                           help=argparse.SUPPRESS)
         subparser.add_argument('--weights-file',
                                type=str,
-                               help='overrides which weights file to use')
+                               help='a path that overrides which weights file to use')
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
         cuda_device.add_argument('--cuda-device',
