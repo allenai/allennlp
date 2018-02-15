@@ -25,7 +25,7 @@ from tensorboard import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb
+from allennlp.common.util import peak_memory_mb, gpu_memory_mb
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -333,7 +333,6 @@ class Trainer:
 
                 module.register_forward_hook(hook)
 
-
     def _rescale_gradients(self) -> None:
         """
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
@@ -395,6 +394,9 @@ class Trainer:
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
         logger.info(f"Peak CPU memory usage MB: {peak_memory_mb()}")
+        for gpu, memory in gpu_memory_mb().items():
+            logger.info(f"GPU {gpu} memory usage MB: {memory}")
+
         train_loss = 0.0
         # Set the model to "train" mode.
         self._model.train()
@@ -621,7 +623,7 @@ class Trainer:
 
         return val_loss, batch_num
 
-    def train(self) -> Dict[str, object]:
+    def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
@@ -690,6 +692,15 @@ class Trainer:
         for key, value in val_metrics.items():
             metrics["validation_" + key] = value
 
+        if validation_metric_per_epoch:
+            # We may not have had validation data, so we need to hide this behind an if.
+            if self._validation_metric_decreases:
+                best_validation_metric = min(validation_metric_per_epoch)
+            else:
+                best_validation_metric = max(validation_metric_per_epoch)
+            metrics[f"best_validation_{self._validation_metric}"] = best_validation_metric
+            metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
+                                     if value == best_validation_metric][-1]
         return metrics
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
