@@ -211,12 +211,12 @@ def trainItersElmo(encoder, decoder, output_lang, n_iters, sent_pairs, sent_pair
             print('train accuracy: {} {}'.format(train_acc, train_template_acc))
             (dev_acc, dev_template_acc) = validateRandomSubset(encoder, decoder, output_lang, sent_pairs_dev, max_length, 100)
             print('dev accuracy: {} {}'.format(dev_acc, dev_template_acc))
-            evaluateRandomly(encoder, decoder, output_lang, sent_pairs, max_length, 3)
+            evaluateRandomly(encoder, decoder, output_lang, sent_dev_pairs, max_length, 100)
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters), iter, iter / n_iters * 100, print_loss_avg))
 
-        if iter % plot_every == 0:
+        if iter % plot_every == 0:
             plot_loss_avg = plot_loss_total / plot_every
             plot_losses.append(plot_loss_avg)
             plot_loss_total = 0

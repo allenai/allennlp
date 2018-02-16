@@ -211,9 +211,11 @@ def validateRandomSubset(encoder, decoder, output_lang, sent_pairs, max_length, 
 def evaluateRandomly(encoder, decoder, output_lang, sent_pairs, max_length, n=10):
     for i in range(n):
         pair = random.choice(sent_pairs)
-        print('>', pair[0])
-        print('=', pair[1])
+        #print('>', pair[0])
+        #print('=', pair[1])
         output_words, attentions = evaluate(encoder, decoder, output_lang, pair[0], max_length)
         output_sentence = ' '.join(output_words[:-1])
-        print('<', output_sentence)
-        print('')
+        #print('<', output_sentence)
+        #print('')
+        print(pair[1],'===',output_sentence)
+
