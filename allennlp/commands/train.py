@@ -73,9 +73,6 @@ class Train(Subcommand):
         serialization.add_argument('-s', '--serialization-dir',
                                    type=str,
                                    help='directory in which to save the model and its logs')
-        serialization.add_argument('--serialization_dir',
-                                   type=str,
-                                   help=argparse.SUPPRESS)
 
         subparser.add_argument('-o', '--overrides',
                                type=str,

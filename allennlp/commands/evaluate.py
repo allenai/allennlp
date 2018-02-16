@@ -59,9 +59,6 @@ class Evaluate(Subcommand):
         evaluation_data_file.add_argument('--evaluation-data-file',
                                           type=str,
                                           help='path to the file containing the evaluation data')
-        evaluation_data_file.add_argument('--evaluation_data_file',
-                                          type=str,
-                                          help=argparse.SUPPRESS)
         subparser.add_argument('--weights-file',
                                type=str,
                                help='a path that overrides which weights file to use')
@@ -71,7 +68,6 @@ class Evaluate(Subcommand):
                                  type=int,
                                  default=-1,
                                  help='id of GPU to use (if any)')
-        cuda_device.add_argument('--cuda_device', type=int, help=argparse.SUPPRESS)
 
         subparser.add_argument('-o', '--overrides',
                                type=str,

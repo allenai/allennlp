@@ -82,13 +82,11 @@ class Predict(Subcommand):
 
         batch_size = subparser.add_mutually_exclusive_group(required=False)
         batch_size.add_argument('--batch-size', type=int, default=1, help='The batch size to use for processing')
-        batch_size.add_argument('--batch_size', type=int, help=argparse.SUPPRESS)
 
         subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
         cuda_device.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
-        cuda_device.add_argument('--cuda_device', type=int, help=argparse.SUPPRESS)
 
         subparser.add_argument('-o', '--overrides',
                                type=str,

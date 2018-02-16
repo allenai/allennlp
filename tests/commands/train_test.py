@@ -81,7 +81,7 @@ class TestTrain(AllenNlpTestCase):
         subparsers = parser.add_subparsers(title='Commands', metavar='')
         Train().add_subparser('train', subparsers)
 
-        for serialization_arg in ["-s", "--serialization_dir", "--serialization-dir"]:
+        for serialization_arg in ["-s", "--serialization-dir"]:
             raw_args = ["train", "path/to/params", serialization_arg, "serialization_dir"]
 
             args = parser.parse_args(raw_args)
