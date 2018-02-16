@@ -164,8 +164,8 @@ class TestTrain(AllenNlpTestCase):
             main()
 
         # Now add the --include-package flag and it should work.
-        # We also need to add --continue since the output directory already exists.
-        sys.argv.extend(["--continue", "--include-package", 'testpackage'])
+        # We also need to add --recover since the output directory already exists.
+        sys.argv.extend(["--recover", "--include-package", 'testpackage'])
 
         main()
 

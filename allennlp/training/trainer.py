@@ -632,7 +632,7 @@ class Trainer:
             epoch_counter, validation_metric_per_epoch = self._restore_checkpoint()
         except RuntimeError:
             traceback.print_exc()
-            raise ConfigurationError("Could not continue training from the checkpoint.  Did you mean to output to "
+            raise ConfigurationError("Could not recover training from the checkpoint.  Did you mean to output to "
                                      "a different serialization directory or delete the existing serialization "
                                      "directory?")
 
