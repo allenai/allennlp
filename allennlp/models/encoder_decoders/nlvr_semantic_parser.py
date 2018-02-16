@@ -882,8 +882,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                               (1 - checklist_weight) * action_prob
                 checklist_addition = checklist_mask.float() * action_prob  # (agenda_size,)
                 new_checklist = instance_checklist + checklist_addition  # (agenda_size,)
-                checklist_score = cls._score_instance_checklist(instance_checklist,
-                                                                instance_agenda_mask)
+                checklist_score = cls.score_instance_checklist(instance_checklist,
+                                                               instance_agenda_mask)
                 new_score = instance_score + torch.log(action_prob + 1e-13)
 
                 next_states_info[batch_index].append((group_index, action_index, action,
@@ -943,7 +943,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         return agenda_probs
 
     @staticmethod
-    def _score_instance_checklist(checklist: Variable, agenda_mask: Variable) -> Variable:
+    def score_instance_checklist(checklist: Variable, agenda_mask: Variable) -> Variable:
         """
         Takes a checklist and agenda's mask (that shows which of the agenda items are not actually
         padding), and scores the checklist. We want each of the scores on the checklist to be as

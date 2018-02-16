@@ -8,6 +8,7 @@ from allennlp.common import Params
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
+from allennlp.models.encoder_decoders.nlvr_semantic_parser import NlvrDecoderStep
 
 
 @DecoderTrainer.register('beam_search')
@@ -42,8 +43,7 @@ class BeamSearchTrainer(DecoderTrainer):
             states = self._prune_beam(next_states)
             num_steps += 1
 
-        for state in finished_states:
-            state.denotation_is_correct()
+        best_action_sequences, best_checklist_scores = self._get_best_state_info(finished_states)
         correct_batch_scores, incorrect_batch_scores = self._group_scores_by_batch(finished_states)
         loss = 0
         all_batch_indices = set(correct_batch_scores.keys()).union(incorrect_batch_scores.keys())
@@ -57,14 +57,16 @@ class BeamSearchTrainer(DecoderTrainer):
                 incorrect_score = torch.max(torch.cat(incorrect_batch_scores[batch_index]))
             # TODO (pradeep): Is 1 the right margin here?
             if correct_score is None:
-                loss += (1 + incorrect_score)
+                denotation_loss = (1 + incorrect_score)
             elif incorrect_score is None:
-                loss += (1 - correct_score)
+                denotation_loss = (1 - correct_score)
             else:
-                loss += (1 - correct_score + incorrect_score)
+                denotation_loss = (1 - correct_score + incorrect_score)
+            # TODO (pradeep): Do not hardcode combination weight here.
+            loss += 0.5 * denotation_loss - 0.5 * best_checklist_scores[batch_index]
 
         return {'loss': loss / len(all_batch_indices),
-                'best_action_sequence': self._get_best_action_sequences(finished_states)}
+                'best_action_sequence': best_action_sequences}
 
     @staticmethod
     def _group_scores_by_batch(finished_states: List[DecoderState]) -> Dict[int,
@@ -84,22 +86,33 @@ class BeamSearchTrainer(DecoderTrainer):
         return correct_batch_scores, incorrect_batch_scores
 
     @staticmethod
-    def _get_best_action_sequences(finished_states: List[DecoderState]) -> Dict[int, List[int]]:
+    def _get_best_state_info(finished_states: List[DecoderState]) -> Tuple[Dict[int, List[int]],
+                                                                           Dict[int, Variable]]:
+        # TODO (pradeep): This is NLVR specific. Change the way of getting checklist scores.
         batch_scores: Dict[int, List[Variable]] = defaultdict(list)
         batch_action_histories: Dict[int, List[List[int]]] = defaultdict(list)
+        batch_checklist_scores: Dict[int, List[Variable]] = defaultdict(list)
         for state in finished_states:
-            for batch_index, score, action_history in zip(state.batch_indices, state.score,
-                                                          state.action_history):
+            for batch_index, score, action_history, checklist, mask in zip(state.batch_indices,
+                                                                           state.score,
+                                                                           state.action_history,
+                                                                           state.checklist,
+                                                                           state.agenda_mask):
                 batch_scores[batch_index].append(score)
                 batch_action_histories[batch_index].append(action_history)
+                batch_checklist_scores[batch_index].append(NlvrDecoderStep.score_instance_checklist(checklist,
+                                                                                                    mask))
 
         best_action_sequences: Dict[int, List[int]] = {}
+        best_checklist_scores: Dict[int, Variable] = {}
         for batch_index, scores in batch_scores.items():
             _, sorted_indices = torch.cat(scores).sort(-1, descending=True)
             cpu_indices = [int(index) for index in sorted_indices.data.cpu().numpy()]
             best_action_sequence = batch_action_histories[batch_index][cpu_indices[0]]
+            best_checklist_score = batch_checklist_scores[batch_index][cpu_indices[0]]
             best_action_sequences[batch_index] = best_action_sequence
-        return best_action_sequences
+            best_checklist_scores[batch_index] = best_checklist_score
+        return best_action_sequences, best_checklist_scores
 
 
     def _prune_beam(self, states: List[DecoderState]) -> List[DecoderState]:
