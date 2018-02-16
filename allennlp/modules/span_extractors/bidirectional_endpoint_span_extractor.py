@@ -128,8 +128,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         span_starts, span_ends = [index.squeeze(-1) for index in span_indices.split(1, dim=-1)]
 
         if span_indices_mask is not None:
-            span_starts *= span_indices_mask
-            span_ends *= span_indices_mask
+            span_starts = span_starts * span_indices_mask
+            span_ends = span_ends * span_indices_mask
 
         # We want `exclusive` span starts, so we remove 1 from the forward span starts
         # as the AllenNLP ``SpanField`` is inclusive.

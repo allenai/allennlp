@@ -190,7 +190,7 @@ class SpanConstituencyParser(Model):
         ----------
         chosen_spans: ``List[Dict[str, int]]``, required.
             A list of chosen spans, where each span is a dictionary containing the following keys:
-            start: ``int``
+            start : ``int``
                 The start index of the span.
             end : ``int``
                 The exclusive end index of the span.
@@ -307,9 +307,9 @@ class SpanConstituencyParser(Model):
         all_metrics = {}
         for metric_name, metric in self.metrics.items():
             f1, precision, recall = metric.get_metric(reset) # pylint: disable=invalid-name
-            all_metrics[metric_name + "f1"] = f1
-            all_metrics[metric_name + "precision"] = precision
-            all_metrics[metric_name + "recall"] = recall
+            all_metrics[metric_name + "_f1"] = f1
+            all_metrics[metric_name + "_precision"] = precision
+            all_metrics[metric_name + "_recall"] = recall
 
         return all_metrics
 

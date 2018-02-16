@@ -10,9 +10,7 @@
       "text_field_embedder": {
         "tokens": {
           "type": "embedding",
-          "projection_dim": 2,
-          "pretrained_file": "tests/fixtures/glove.6B.100d.sample.txt.gz",
-          "embedding_dim": 100,
+          "embedding_dim": 2,
           "trainable": true
         }
       },
