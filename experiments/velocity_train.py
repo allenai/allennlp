@@ -1,11 +1,10 @@
 #!/usr/bin/python
 import sys
 import torch
-sys.path.append('./python')
 
-from chunking.data import initializeData
-from chunking.eval import validate
-from chunking.train import trainItersElmo, EncoderRNNElmo, AttnDecoderRNN
+from src.chunking.data import initializeData
+from src.chunking.eval import validate
+from src.chunking.train import trainItersElmo, EncoderRNNElmo, AttnDecoderRNN
 
 use_cuda = torch.cuda.is_available()
 
