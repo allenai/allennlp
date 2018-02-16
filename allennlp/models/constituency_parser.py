@@ -31,11 +31,11 @@ class SpanConstituencyParser(Model):
         Used to embed the ``tokens`` ``TextField`` we get as input to the model.
     span_extractor : ``SpanExtractor``, required.
         The method used to extract the spans from the encoded sequence.
-    stacked_encoder : ``Seq2SeqEncoder``, required.
-        The encoder (with its own internal stacking) that we will use in between embedding tokens
-        and generating span representations.
+    encoder : ``Seq2SeqEncoder``, required.
+        The encoder that we will use in between embedding tokens and
+        generating span representations.
     feedforward_layer : ``FeedForward``, required.
-        The FeedForward layer that we will use in between the stacked_encoder and the linear
+        The FeedForward layer that we will use in between the encoder and the linear
         projection to a distribution over span labels.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
@@ -46,7 +46,7 @@ class SpanConstituencyParser(Model):
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  span_extractor: SpanExtractor,
-                 stacked_encoder: Seq2SeqEncoder,
+                 encoder: Seq2SeqEncoder,
                  feedforward_layer: FeedForward = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
@@ -55,7 +55,7 @@ class SpanConstituencyParser(Model):
         self.text_field_embedder = text_field_embedder
         self.span_extractor = span_extractor
         self.num_classes = self.vocab.get_vocab_size("labels")
-        self.stacked_encoder = stacked_encoder
+        self.encoder = encoder
         self.feedforward_layer = TimeDistributed(feedforward_layer) if feedforward_layer else None
 
         if feedforward_layer is not None:
@@ -63,15 +63,14 @@ class SpanConstituencyParser(Model):
         else:
             output_dim = span_extractor.get_output_dim()
 
-        self.tag_projection_layer = TimeDistributed(Linear(output_dim,
-                                                           self.num_classes))
+        self.tag_projection_layer = TimeDistributed(Linear(output_dim, self.num_classes))
 
         check_dimensions_match(text_field_embedder.get_output_dim(),
-                               stacked_encoder.get_input_dim(),
+                               encoder.get_input_dim(),
                                "text field embedding dim",
                                "encoder input dim")
         if feedforward_layer is not None:
-            check_dimensions_match(stacked_encoder.get_output_dim(),
+            check_dimensions_match(encoder.get_output_dim(),
                                    feedforward_layer.get_input_dim(),
                                    "stacked encoder output dim",
                                    "feedforward input dim")
@@ -119,10 +118,11 @@ class SpanConstituencyParser(Model):
         """
         embedded_text_input = self.text_field_embedder(tokens)
         mask = get_text_field_mask(tokens)
-        # Shape: (batch_size, num_spans)
+        # Looking at the span start index is enough to know if
+        # this is padding or not. Shape: (batch_size, num_spans)
         span_mask = (spans[:, :, 0] >= 0).squeeze(-1).long()
 
-        encoded_text = self.stacked_encoder(embedded_text_input, mask)
+        encoded_text = self.encoder(embedded_text_input, mask)
         span_representations = self.span_extractor(encoded_text, spans, mask, span_mask)
         if self.feedforward_layer is not None:
             span_representations = self.feedforward_layer(span_representations)
@@ -130,7 +130,6 @@ class SpanConstituencyParser(Model):
         class_probabilities = last_dim_softmax(logits, span_mask.unsqueeze(-1))
 
         output_dict = {
-                "logits": logits,
                 "class_probabilities": class_probabilities,
                 "spans": spans,
                 # TODO(Mark): This relies on having tokens represented with a SingleIdTokenIndexer...
@@ -196,18 +195,19 @@ class SpanConstituencyParser(Model):
         return output_dict
 
     @staticmethod
-    def resolve_overlap_conflicts_greedily(chosen_spans: List[Dict[str, float]]) -> List[Dict[str, float]]:
+    def resolve_overlap_conflicts_greedily(spans: List[Dict[str, float]]) -> List[Dict[str, float]]:
         """
         Given a set of spans, removes spans which overlap by evaluating the difference
         in probability between one being labeled and the other explicitly having no label
         and vice-versa. The worst case time complexity of this method is ``O(k * n^4)`` where ``n``
-        is the length of the sentence that the spans were enumerated from and ``k`` is the
+        is the length of the sentence that the spans were enumerated from (and therefore
+        ``k * m^2`` complexity with respect to the number of spans ``m``) and ``k`` is the
         number of conflicts. However, in practice, there are very few conflicts. Hopefully.
 
         Parameters
         ----------
-        chosen_spans: ``List[Dict[str, int]]``, required.
-            A list of chosen spans, where each span is a dictionary containing the following keys:
+        spans: ``List[Dict[str, int]]``, required.
+            A list of spans, where each span is a dictionary containing the following keys:
 
         start : ``int``
             The start index of the span.
@@ -220,14 +220,14 @@ class SpanConstituencyParser(Model):
 
         Returns
         -------
-        ``chosen_spans``, with the conflicts resolved by considering
-        local differences between pairs of spans.
+        A modified list of ``spans``, with the conflicts resolved by considering local
+        differences between pairs of spans and removing one of the two spans.
         """
         conflicts_exist = True
         while conflicts_exist:
             conflicts_exist = False
-            for span1_index, span1 in enumerate(chosen_spans):
-                for span2_index, span2 in list(enumerate(chosen_spans))[span1_index + 1:]:
+            for span1_index, span1 in enumerate(spans):
+                for span2_index, span2 in list(enumerate(spans))[span1_index + 1:]:
                     if (span1["start"] < span2["start"] < span1["end"] < span2["end"] or
                                 span2["start"] < span1["start"] < span2["end"] < span1["end"]):
                         # The spans overlap.
@@ -239,11 +239,12 @@ class SpanConstituencyParser(Model):
                         # span1.
                         if (span1["no_label_prob"] + span2["label_prob"] <
                                     span2["no_label_prob"] + span1["label_prob"]):
-                            chosen_spans.pop(span2_index)
+                            spans.pop(span2_index)
                         else:
-                            chosen_spans.pop(span1_index)
+                            spans.pop(span1_index)
                         break
-        return chosen_spans
+        return spans
+
     @staticmethod
     def construct_tree_from_spans(spans_to_labels: Dict[Tuple[int, int], str],
                                   sentence: List[str],
@@ -322,7 +323,6 @@ class SpanConstituencyParser(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-
         all_metrics = {}
         for metric_name, metric in self.metrics.items():
             f1, precision, recall = metric.get_metric(reset) # pylint: disable=invalid-name
@@ -337,7 +337,7 @@ class SpanConstituencyParser(Model):
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         span_extractor = SpanExtractor.from_params(params.pop("span_extractor"))
-        stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
+        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         feed_forward_params = params.pop("feedforward", None)
         if feed_forward_params is not None:
             feedforward_layer = FeedForward.from_params(feed_forward_params)
@@ -349,7 +349,7 @@ class SpanConstituencyParser(Model):
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    span_extractor=span_extractor,
-                   stacked_encoder=stacked_encoder,
+                   encoder=encoder,
                    feedforward_layer=feedforward_layer,
                    initializer=initializer,
                    regularizer=regularizer)
