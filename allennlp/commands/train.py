@@ -80,7 +80,7 @@ class Train(Subcommand):
         subparser.add_argument('-c', '--continue',
                                action='store_true',
                                default=False,
-                               dest="cont",
+                               dest="continue_",
                                help='continue training from the state in serialization_dir')
 
         subparser.add_argument('-o', '--overrides',
@@ -111,12 +111,12 @@ def train_model_from_args(args: argparse.Namespace):
     for package_name in args.include_package:
         import_submodules(package_name)
 
-    if not args.cont and os.path.exists(args.serialization_dir):
+    if not args.continue_ and os.path.exists(args.serialization_dir):
         raise ConfigurationError(f"Serialization directory ({args.serialization_dir}) already exists.  "
                                  f"Specify --continue to continue training from existing output.")
-    elif args.cont and not os.path.exists(args.serialization_dir):
-        logger.warning(f"--continue specified but serialization_dir ({args.serialization_dir}) does not exist.  "
-                       f"Training will start from the beginning.")
+    elif args.continue_ and not os.path.exists(args.serialization_dir):
+        raise ConfigurationError(f"--continue specified but serialization_dir ({args.serialization_dir}) does not "
+                                 f"exist.  Training will start from the beginning.")
 
     train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.file_friendly_logging)
 
@@ -166,6 +166,52 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
 
     return datasets
 
+def create_serialization_dir(params: Params, serialization_dir: str) -> None:
+    """
+    This function creates the serialization directory if it doesn't exist.
+    If it already exists, then it verifies that we're continuing from a training with an identical configuration.
+    Parameters
+    ----------
+    params: Params, required.
+        A parameter object specifying an AllenNLP Experiment.
+    serialization_dir: str, required
+        The directory in which to save results and logs.
+    """
+    if os.path.exists(serialization_dir):
+        logger.info(f"Continuing from prior training at {serialization_dir}.")
+
+        continued_config_file = os.path.join(serialization_dir, CONFIG_NAME)
+        if not os.path.exists(continued_config_file):
+            logger.warning("The serialization directory already exists but doesn't contain a config.json.")
+        else:
+            loaded_params = Params.from_file(continued_config_file)
+
+            # Check whether any of the training configuration differs from the configuration we are resuming.
+            # If so, warn the user that training may fail.
+            fail = False
+            flat_params = params.as_flat_dict()
+            flat_loaded = loaded_params.as_flat_dict()
+            for key in flat_params.keys() - flat_loaded.keys():
+                logger.error(f"Key '{key}' found in training configuration but not in the serialization "
+                             f"directory we're continuing from.")
+                fail = True
+            for key in flat_loaded.keys() - flat_params.keys():
+                logger.error(f"Key '{key}' found in the serialization directory we're continuing from "
+                             f"but not in the training config.")
+                fail = True
+            for key in flat_params.keys():
+                if flat_params.get(key, None) != flat_loaded.get(key, None):
+                    logger.error(f"Value for '{key}' in training configuration does not match that the value in "
+                                 f"the serialization directory we're continuing from: "
+                                 f"{flat_params[key]} != {flat_loaded[key]}")
+                    fail = True
+            if fail:
+                raise ConfigurationError("Training configuration does not match the configuration we're "
+                                         "continuing from.")
+    else:
+        os.makedirs(serialization_dir)
+
+
 def train_model(params: Params, serialization_dir: str, file_friendly_logging: bool = False) -> Model:
     """
     This function can be used as an entry point to running models in AllenNLP
@@ -186,40 +232,7 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     """
     prepare_environment(params)
 
-    if os.path.exists(serialization_dir):
-        logger.info(f"Continuing from prior training at {serialization_dir}.")
-
-        continued_config_file = os.path.join(serialization_dir, CONFIG_NAME)
-        if not os.path.exists(continued_config_file):
-            logger.warning("Continuing from prior training, but no config.json was found.")
-            logger.warning("If you've changed your code since you last trained, the training may fail.")
-        else:
-            loaded_params = Params.from_file(continued_config_file)
-
-            # Check whether any of the training configuration differs from the configuration we are resuming.
-            # If so, warn the user that training may fail.
-            fail = False
-            flat_params = params.as_flat_dict()
-            flat_loaded = loaded_params.as_flat_dict()
-            for key in flat_params.keys() - flat_loaded.keys():
-                logger.warning(f"Key '{key}' found in training configuration but not in the serialization "
-                               f"directory we're continuing from.")
-                fail = True
-            for key in flat_loaded.keys() - flat_params.keys():
-                logger.warning(f"Key '{key}' found in the serialization directory we're continuing from "
-                               f"but not in the training config.")
-                fail = True
-            for key in flat_params.keys():
-                if flat_params.get(key, None) != flat_loaded.get(key, None):
-                    logger.warning(f"Value for '{key}' in training configuration does not match that the value in "
-                                   f"the serialization directory we're continuing from: "
-                                   f"{flat_params[key]} != {flat_loaded[key]}")
-                    fail = True
-            if fail:
-                raise ConfigurationError("Training configuration does not match the configuration we're "
-                                         "continuing from.")
-    else:
-        os.makedirs(serialization_dir)
+    create_serialization_dir(params, serialization_dir)
 
     sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
                            sys.stdout, file_friendly_logging)
