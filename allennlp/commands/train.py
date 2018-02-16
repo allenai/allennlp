@@ -131,6 +131,17 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     Load all the datasets specified by the config.
     """
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
+    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
+    test_dataset_reader_params = params.pop("test_dataset_reader", None)
+    
+    validation_dataset_reader: DatasetReader = dataset_reader
+    test_dataset_reader: DatasetReader = dataset_reader
+    if validation_dataset_reader_params is not None:
+        logger.info("Using a separate validation dataset reader to load validation data.")
+        validation_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+    if test_dataset_reader_params is not None: 
+        logger.info("Using a separate test dataset reader to load test data.")
+        test_dataset_reader = DatasetReader.from_params(test_dataset_reader_params)
 
     train_data_path = params.pop('train_data_path')
     logger.info("Reading training data from %s", train_data_path)
@@ -141,13 +152,13 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = dataset_reader.read(validation_data_path)
+        validation_data = validation_dataset_reader.read(validation_data_path)
         datasets["validation"] = validation_data
 
     test_data_path = params.pop("test_data_path", None)
     if test_data_path is not None:
         logger.info("Reading test data from %s", test_data_path)
-        test_data = dataset_reader.read(test_data_path)
+        test_data = test_dataset_reader.read(test_data_path)
         datasets["test"] = test_data
 
     return datasets
