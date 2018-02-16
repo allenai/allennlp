@@ -131,6 +131,7 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     Load all the datasets specified by the config.
     """
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
+    dataset_reader2 = DatasetReader.from_params(params.pop('dataset_reader2', None))
     validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
     
     validation_and_test_dataset_reader: DatasetReader = dataset_reader
@@ -142,7 +143,13 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     logger.info("Reading training data from %s", train_data_path)
     train_data = dataset_reader.read(train_data_path)
 
-    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
+    train2_data = None   
+    if dataset_reader2 is not None:
+        train2_data_path = params.pop('train2_data_path')
+        logger.info("Reading second training dataset from %s", train2_data_path)
+        train2_data = dataset_reader2.read(train2_data_path)
+
+    datasets: Dict[str, Iterable[Instance]] = {"train": train_data, "train2": train2_data}
 
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
@@ -210,6 +217,7 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     iterator.index_with(vocab)
 
     train_data = all_datasets['train']
+    train2_data = all_datasets.get('train', None)
     validation_data = all_datasets.get('validation')
     test_data = all_datasets.get('test')
 
@@ -218,6 +226,7 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
                                   serialization_dir,
                                   iterator,
                                   train_data,
+                                  train2_data,
                                   validation_data,
                                   trainer_params)
 

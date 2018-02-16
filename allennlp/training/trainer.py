@@ -13,6 +13,7 @@ import shutil
 import time
 import re
 import datetime
+import random
 from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 
 import torch
@@ -137,8 +138,8 @@ class Trainer:
                  optimizer: torch.optim.Optimizer,
                  iterator: DataIterator,
                  train_dataset: Iterable[Instance],
-                 train2_dataset: Iterable[Instance],
                  validation_dataset: Optional[Iterable[Instance]] = None,
+                 train2_dataset: Iterable[Instance] = None,
                  patience: int = 2,
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
@@ -410,9 +411,22 @@ class Trainer:
         train_generator = self._iterator(self._train_data,
                                          num_epochs=1,
                                          cuda_device=self._iterator_device)
-        num_training_batches = self._iterator.get_num_batches(self._train_data)
-        train_generator_tqdm = Tqdm.tqdm(train_generator,
-                                         total=num_training_batches)
+
+        if self._train2_data is not None:
+            train2_generator = self._iterator(self._train2_data,
+                                              num_epochs=1,
+                                              cuda_device=self._iterator_device)
+
+            # Combine the batches from the generators zipped with a boolean value which specifies
+            # whether the non-default learning rate groups in the optimizer are trained or not.
+            combined_data = [(True, batch) for batch in train_generator] + [(False, batch) for batch in train2_generator]
+            random.shuffle(combined_data)
+            num_training_batches = len(combined_data)
+            train_generator_tqdm = Tqdm.tqdm(combined_data, total=len(combined_data))
+        else:
+            num_training_batches = self._iterator.get_num_batches(self._train_data)
+            train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_training_batches)
+
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -425,6 +439,12 @@ class Trainer:
 
         logger.info("Training")
         for batch in train_generator_tqdm:
+
+            zero_learning_rate_groups = False 
+            if self._train2_data is not None:
+                zero_learning_rate_groups, batch = batch
+
+
             batch_num += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
@@ -445,6 +465,14 @@ class Trainer:
 
             self._update_learning_rate(None, batch_num_total=batch_num_total)
 
+
+            if zero_learning_rate_groups:
+                cached_learning_rates = []
+                for param_group in self._optimizer.param_groups[: -1]:
+                    cached_learning_rates.append(param_group["lr"])
+                    param_group["lr"] = 0.0
+
+
             if self._log_histograms_this_batch:
                 # get the magnitude of parameter updates for logging
                 # We need a copy of current parameters to compute magnitude of updates,
@@ -461,6 +489,10 @@ class Trainer:
                                                        batch_num_total)
             else:
                 self._optimizer.step()
+        
+            if zero_learning_rate_groups:
+                for learning_rate, param_group in zip(cached_learning_rates, self._optimizer.param_groups[: -1]):
+                    param_group["lr"] = learning_rate
 
             # Update the description with the latest metrics
             metrics = self._get_metrics(train_loss, batch_num)
@@ -873,6 +905,12 @@ class Trainer:
         if cuda_device >= 0:
             model = model.cuda(cuda_device)
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
+
+        if train2_data is not None:
+            logger.warn("#########################################################")
+            logger.warn("You passed train2_data! This is a hack for dual training,"
+                        " you must use parameter groups for your experiment.")
+            logger.warn("#########################################################")
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
         if lr_scheduler_params:
@@ -889,9 +927,9 @@ class Trainer:
 
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
-                       train_data, 
-                       train2_data,
+                       train_data,
                        validation_data,
+                       train2_data=train2_data,
                        patience=patience,
                        validation_metric=validation_metric,
                        num_epochs=num_epochs,
