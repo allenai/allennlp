@@ -42,12 +42,6 @@ class BeamSearchTrainer(DecoderTrainer):
             states = self._prune_beam(next_states)
             num_steps += 1
 
-        # ``finished_states`` contains states that were finished over multiple decoding steps. So
-        # they're not sorted. Let's do that now.
-        finished_scores = torch.cat([state.score[0] for state in finished_states])
-        _, sorted_indices = finished_scores.sort(-1, descending=True)
-        finished_states = [finished_states[i] for i in sorted_indices.cpu().data.numpy()]
-
         for state in finished_states:
             state.denotation_is_correct()
         correct_batch_scores, incorrect_batch_scores = self._group_scores_by_batch(finished_states)
@@ -69,18 +63,14 @@ class BeamSearchTrainer(DecoderTrainer):
             else:
                 loss += (1 - correct_score + incorrect_score)
 
-        best_action_sequences: Dict[int, List[int]] = defaultdict(list)
-        for state in finished_states:
-            best_action_sequences[state.batch_indices[0]].append(state.action_history)
         return {'loss': loss / len(all_batch_indices),
-                'best_action_sequence': best_action_sequences}
+                'best_action_sequence': self._get_best_action_sequences(finished_states)}
 
     @staticmethod
     def _group_scores_by_batch(finished_states: List[DecoderState]) -> Dict[int,
                                                                             Tuple[List[Variable],
                                                                                   List[Variable]]]:
-        # We separate the scores of action sequences that led to the correct denotations from those
-        # that led to incorrect ones.
+        # We separate the action histories and scores of action sequences by batch indices.
         correct_batch_scores: Dict[int, List[Variable]] = defaultdict(list)
         incorrect_batch_scores: Dict[int, List[Variable]] = defaultdict(list)
         for state in finished_states:
@@ -92,6 +82,25 @@ class BeamSearchTrainer(DecoderTrainer):
                 else:
                     incorrect_batch_scores[batch_index].append(score)
         return correct_batch_scores, incorrect_batch_scores
+
+    @staticmethod
+    def _get_best_action_sequences(finished_states: List[DecoderState]) -> Dict[int, List[int]]:
+        batch_scores: Dict[int, List[Variable]] = defaultdict(list)
+        batch_action_histories: Dict[int, List[List[int]]] = defaultdict(list)
+        for state in finished_states:
+            for batch_index, score, action_history in zip(state.batch_indices, state.score,
+                                                          state.action_history):
+                batch_scores[batch_index].append(score)
+                batch_action_histories[batch_index].append(action_history)
+
+        best_action_sequences: Dict[int, List[int]] = {}
+        for batch_index, scores in batch_scores.items():
+            _, sorted_indices = torch.cat(scores).sort(-1, descending=True)
+            cpu_indices = [int(index) for index in sorted_indices.data.cpu().numpy()]
+            best_action_sequence = batch_action_histories[batch_index][cpu_indices[0]]
+            best_action_sequences[batch_index] = best_action_sequence
+        return best_action_sequences
+
 
     def _prune_beam(self, states: List[DecoderState]) -> List[DecoderState]:
         """

@@ -159,14 +159,14 @@ class NlvrSemanticParser(Model):
             in_agenda_ratio = 0.0
             if batch_best_sequences:
                 action_strings = [get_action_string(batch_actions[rule_id]) for rule_id in
-                                  batch_best_sequences[0][0]]
+                                  batch_best_sequences]
                 terminal_agenda_actions = []
                 for rule_id in agenda_data[i]:
                     action_string = get_action_string(batch_actions[rule_id])
                     _, right_side = action_string.split(" -> ")
                     if right_side.isdigit() or ('[' not in right_side and len(right_side) > 1):
                         terminal_agenda_actions.append(rule_id)
-                actions_in_agenda = [rule_id in batch_best_sequences[0][0] for rule_id in
+                actions_in_agenda = [rule_id in batch_best_sequences for rule_id in
                                      terminal_agenda_actions]
                 in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 label_string = label_strings[i]
