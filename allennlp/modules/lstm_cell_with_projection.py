@@ -201,7 +201,7 @@ class LstmCellWithProjection(torch.nn.Module):
 
             if self.memory_cell_clip_value:
                 # pylint: disable=invalid-unary-operand-type
-                memory.data.clamp_(-self.memory_cell_clip_value, self.memory_cell_clip_value)
+                memory = torch.clamp(memory, -self.memory_cell_clip_value, self.memory_cell_clip_value)
 
             # shape (current_length_index, cell_size)
             pre_projection_timestep_output = output_gate * torch.tanh(memory)
@@ -210,8 +210,9 @@ class LstmCellWithProjection(torch.nn.Module):
             timestep_output = self.state_projection(pre_projection_timestep_output)
             if self.state_projection_clip_value:
                 # pylint: disable=invalid-unary-operand-type
-                timestep_output.data.clamp_(-self.state_projection_clip_value,
-                                            self.state_projection_clip_value)
+                timestep_output = torch.clamp(timestep_output,
+                                              -self.state_projection_clip_value,
+                                              self.state_projection_clip_value)
 
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
             if dropout_mask is not None:
