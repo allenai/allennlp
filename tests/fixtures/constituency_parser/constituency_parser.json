@@ -20,6 +20,12 @@
         "hidden_size": 4,
         "num_layers": 1
       },    
+      "feedforward": {
+        "input_dim": 4,
+        "num_layers": 1,
+        "hidden_dims": 4,
+        "activations": "relu"
+      },
       "span_extractor": {
         "type": "endpoint",
         "input_dim": 4

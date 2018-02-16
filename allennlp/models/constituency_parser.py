@@ -7,7 +7,7 @@ from torch.nn.modules.linear import Linear
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, FeedForward
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -34,6 +34,9 @@ class SpanConstituencyParser(Model):
     stacked_encoder : ``Seq2SeqEncoder``, required.
         The encoder (with its own internal stacking) that we will use in between embedding tokens
         and generating span representations.
+    feedforward_layer : ``FeedForward``, required.
+        The FeedForward layer that we will use in between the stacked_encoder and the linear
+        projection to a distribution over span labels.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -44,6 +47,7 @@ class SpanConstituencyParser(Model):
                  text_field_embedder: TextFieldEmbedder,
                  span_extractor: SpanExtractor,
                  stacked_encoder: Seq2SeqEncoder,
+                 feedforward_layer: FeedForward = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(SpanConstituencyParser, self).__init__(vocab, regularizer)
@@ -52,13 +56,25 @@ class SpanConstituencyParser(Model):
         self.span_extractor = span_extractor
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.stacked_encoder = stacked_encoder
-        self.tag_projection_layer = TimeDistributed(Linear(self.span_extractor.get_output_dim(),
+        self.feedforward_layer = TimeDistributed(feedforward_layer) if feedforward_layer else None
+
+        if feedforward_layer is not None:
+            output_dim = feedforward_layer.get_output_dim()
+        else:
+            output_dim = span_extractor.get_output_dim()
+
+        self.tag_projection_layer = TimeDistributed(Linear(output_dim,
                                                            self.num_classes))
 
         check_dimensions_match(text_field_embedder.get_output_dim(),
                                stacked_encoder.get_input_dim(),
                                "text field embedding dim",
                                "encoder input dim")
+        if feedforward_layer is not None:
+            check_dimensions_match(stacked_encoder.get_output_dim(),
+                                   feedforward_layer.get_input_dim(),
+                                   "stacked encoder output dim",
+                                   "feedforward input dim")
 
         self.metrics = {label: F1Measure(index) for index, label
                         in self.vocab.get_index_to_token_vocabulary("labels").items()}
@@ -108,6 +124,8 @@ class SpanConstituencyParser(Model):
 
         encoded_text = self.stacked_encoder(embedded_text_input, mask)
         span_representations = self.span_extractor(encoded_text, spans, mask, span_mask)
+        if self.feedforward_layer is not None:
+            span_representations = self.feedforward_layer(span_representations)
         logits = self.tag_projection_layer(span_representations)
         class_probabilities = last_dim_softmax(logits, span_mask.unsqueeze(-1))
 
@@ -320,7 +338,11 @@ class SpanConstituencyParser(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         span_extractor = SpanExtractor.from_params(params.pop("span_extractor"))
         stacked_encoder = Seq2SeqEncoder.from_params(params.pop("stacked_encoder"))
-
+        feed_forward_params = params.pop("feedforward", None)
+        if feed_forward_params is not None:
+            feedforward_layer = FeedForward.from_params(feed_forward_params)
+        else:
+            feedforward_layer = None
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
@@ -328,5 +350,6 @@ class SpanConstituencyParser(Model):
                    text_field_embedder=text_field_embedder,
                    span_extractor=span_extractor,
                    stacked_encoder=stacked_encoder,
+                   feedforward_layer=feedforward_layer,
                    initializer=initializer,
                    regularizer=regularizer)
