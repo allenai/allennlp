@@ -67,7 +67,7 @@ class Predict(Subcommand):
         self.predictors = {**DEFAULT_PREDICTORS, **predictor_overrides}
 
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-         # pylint: disable=protected-access
+        # pylint: disable=protected-access
         description = '''Run the specified model against a JSON-lines input file.'''
         subparser = parser.add_parser(
                 name, description=description, help='Use a trained model to make predictions.')
