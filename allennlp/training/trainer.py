@@ -137,6 +137,7 @@ class Trainer:
                  optimizer: torch.optim.Optimizer,
                  iterator: DataIterator,
                  train_dataset: Iterable[Instance],
+                 train2_dataset: Iterable[Instance],
                  validation_dataset: Optional[Iterable[Instance]] = None,
                  patience: int = 2,
                  validation_metric: str = "-loss",
@@ -227,6 +228,7 @@ class Trainer:
         self._iterator = iterator
         self._optimizer = optimizer
         self._train_data = train_dataset
+        self._train2_data = train2_dataset
         self._validation_data = validation_dataset
 
         self._patience = patience
@@ -856,6 +858,7 @@ class Trainer:
                     serialization_dir: str,
                     iterator: DataIterator,
                     train_data: Iterable[Instance],
+                    train2_data: Iterable[Instance],
                     validation_data: Optional[Iterable[Instance]],
                     params: Params) -> 'Trainer':
 
@@ -886,7 +889,9 @@ class Trainer:
 
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
-                       train_data, validation_data,
+                       train_data, 
+                       train2_data,
+                       validation_data,
                        patience=patience,
                        validation_metric=validation_metric,
                        num_epochs=num_epochs,
