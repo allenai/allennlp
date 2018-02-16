@@ -19,7 +19,8 @@ class SpanConstituencyParserTest(ModelTestCase):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
-
+        assert set(decode_output_dict.keys()) == {'spans', 'class_probabilities', 'trees',
+                                                  'tokens', 'logits', 'token_mask', 'loss'}
 
     def test_resolve_overlap_conflicts_greedily(self):
         spans = [{"start": 1, "end": 5, "no_label_prob": 0.7, "label_prob": 0.2},

@@ -39,7 +39,7 @@ class SpanConstituencyParser(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, 
+    def __init__(self,
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  span_extractor: SpanExtractor,
@@ -67,7 +67,6 @@ class SpanConstituencyParser(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                pos_tags: torch.LongTensor,
                 spans: torch.LongTensor,
                 span_labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -105,13 +104,10 @@ class SpanConstituencyParser(Model):
         embedded_text_input = self.text_field_embedder(tokens)
         mask = get_text_field_mask(tokens)
         # Shape: (batch_size, num_spans)
-        span_mask = (spans[:, :, 0] >= 0).squeeze(-1).float()
-        # TODO(Mark): merge this into the call to the span extractor once other PR is in.
-        spans = spans * span_mask.long().unsqueeze(-1)
+        span_mask = (spans[:, :, 0] >= 0).squeeze(-1).long()
 
         encoded_text = self.stacked_encoder(embedded_text_input, mask)
-        # TODO(Mark): add masks once other PR is merged.
-        span_representations = self.span_extractor(encoded_text, spans)
+        span_representations = self.span_extractor(encoded_text, spans, mask, span_mask)
         logits = self.tag_projection_layer(span_representations)
         class_probabilities = last_dim_softmax(logits, span_mask.unsqueeze(-1))
 
@@ -274,9 +270,7 @@ class SpanConstituencyParser(Model):
         def assemble_subtree(start: int, end: int):
             if (start, end) in spans_to_labels:
                 label = spans_to_labels[(start, end)]
-                assert label != ()
             else:
-                assert start != 0 or end != len(sentence)
                 label = None
 
             # This node is a leaf.
@@ -297,7 +291,6 @@ class SpanConstituencyParser(Model):
                     argmax_split = split
                     break
 
-            assert start < argmax_split < end, (start, argmax_split, end)
             left_trees = assemble_subtree(start, argmax_split)
             right_trees = assemble_subtree(argmax_split, end)
             children = left_trees + right_trees
@@ -311,14 +304,14 @@ class SpanConstituencyParser(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
 
-        return_metrics = {}
+        all_metrics = {}
         for metric_name, metric in self.metrics.items():
-            f1, precision, recall = metric.get_metric(reset)
-            return_metrics[metric_name + "f1"] = f1
-            return_metrics[metric_name + "precision"] = precision
-            return_metrics[metric_name + "recall"] = recall
+            f1, precision, recall = metric.get_metric(reset) # pylint: disable=invalid-name
+            all_metrics[metric_name + "f1"] = f1
+            all_metrics[metric_name + "precision"] = precision
+            all_metrics[metric_name + "recall"] = recall
 
-        return return_metrics
+        return all_metrics
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SpanConstituencyParser':
