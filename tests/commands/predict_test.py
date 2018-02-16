@@ -29,7 +29,7 @@ class TestPredict(AllenNlpTestCase):
         kebab_args = ["predict",          # command
                       "/path/to/archive", # archive
                       "/dev/null",        # input_file
-                      "--output-file", "/dev/null",  # this one was always kebab-case
+                      "--output-file", "/dev/null",
                       "--batch-size", "10",
                       "--cuda-device", "0",
                       "--silent"]
