@@ -9,7 +9,7 @@ NLP tasks.
 This document describes how to add ELMo representations to your model using `allennlp`.
 We also have a [tensorflow implementation](https://github.com/allenai/bilm-tf).
 
-For more detail about ELMo, please see the publication ["Deep contextualized word representations"](https://openreview.net/forum?id=S1p31z-Ab).
+For more detail about ELMo, please see the publication ["Deep contextualized word representations"](http://arxiv.org/abs/1802.05365).
 
 ## Using ELMo with existing `allennlp` models
 
