@@ -68,8 +68,7 @@ def main(param_file: str, extra_beaker_commands: List[str]):
             '--result-path',
             '/output',
             "--source",
-            f"{config_dataset_id}:/config.json",
-            '--gpu-count=1'] + env + extra_beaker_commands + [image] + allennlp_command
+            f"{config_dataset_id}:/config.json"] + env + extra_beaker_commands + [image] + allennlp_command
     print(' '.join(command))
     subprocess.run(command, check=True)
 
@@ -83,6 +82,7 @@ if __name__ == "__main__":
     parser.add_argument('--mount', action='append', help='Bind a host directory (e.g. /host/path:/target/path)')
     parser.add_argument('--source', action='append', help='Bind a remote data source (e.g. source-id:/target/path)')
     parser.add_argument('--cpu', help='CPUs to reserve for this experiment (e.g., 0.5)')
+    parser.add_argument('--gpu_count', help='GPUs to use for this experiment (e.g., 1 (default))', default=1)
     parser.add_argument('--memory', help='Memory to reserve for this experiment (e.g., 1GB)')
 
     args = parser.parse_args()
@@ -100,6 +100,8 @@ if __name__ == "__main__":
         extra_beaker_commands.extend([f"--source={source}" for source in args.source])
     if args.cpu:
         extra_beaker_commands.append(f"--cpu={args.cpu}")
+    if args.gpu_count:
+        extra_beaker_commands.append(f"--gpu-count={args.gpu_count}")
     if args.memory:
         extra_beaker_commands.append(f"--memory={args.memory}")
 
