@@ -61,7 +61,6 @@ class BeamSearchTrainer(DecoderTrainer):
 
             if batch_index in incorrect_batch_scores:
                 incorrect_score = torch.max(torch.cat(incorrect_batch_scores[batch_index]))
-
             # TODO (pradeep): Is 1 the right margin here?
             if correct_score is None:
                 loss += (1 + incorrect_score)

@@ -117,9 +117,8 @@ class NlvrSemanticParser(Model):
         agenda_list = [agenda[i] for i in range(batch_size)]
         agenda_mask_list = [agenda_mask[i] for i in range(batch_size)]
         initial_checklist_list = [initial_checklist[i] for i in range(batch_size)]
-        initial_score_list = [NlvrDecoderStep.score_instance_checklist(checklist, agenda_mask)
-                              for checklist, agenda_mask in zip(initial_checklist_list,
-                                                                agenda_mask_list)]
+        initial_score_list = [nn_util.new_variable_with_data(agenda, torch.Tensor([0.0])) for i in
+                              range(batch_size)]
         initial_hidden_state = [final_encoder_output[i] for i in range(batch_size)]
         initial_memory_cell = [memory_cell[i] for i in range(batch_size)]
         initial_action_embedding_list = [initial_action_embedding for _ in range(batch_size)]
@@ -161,8 +160,14 @@ class NlvrSemanticParser(Model):
             if batch_best_sequences:
                 action_strings = [get_action_string(batch_actions[rule_id]) for rule_id in
                                   batch_best_sequences[0][0]]
-                actions_in_agenda = [rule_id in agenda_data[i] for rule_id in
-                                     batch_best_sequences[0][0]]
+                terminal_agenda_actions = []
+                for rule_id in agenda_data[i]:
+                    action_string = get_action_string(batch_actions[rule_id])
+                    _, right_side = action_string.split(" -> ")
+                    if right_side.isdigit() or ('[' not in right_side and len(right_side) > 1):
+                        terminal_agenda_actions.append(rule_id)
+                actions_in_agenda = [rule_id in batch_best_sequences[0][0] for rule_id in
+                                     terminal_agenda_actions]
                 in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 label_string = label_strings[i]
                 instance_world = world[i]
@@ -852,8 +857,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # Note that we're not sorting these probs. We'll score checklists and sort states based on
         # checklist scores later.
         considered_action_probs = nn_util.masked_softmax(action_logits, action_mask)
-        # batch_index -> [(group_index, action_index, action, checklist, score)]
-        next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
+        # batch_index -> [(group_index, action_index, action, checklist, checklist_score, model_score)]
+        next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable, Variable]]] = defaultdict(list)
         for group_index, (batch_index, instance_score, instance_action_probs) in \
             enumerate(zip(state.batch_indices, state.score, considered_action_probs)):
             instance_agenda = state.agenda[group_index]  # (agenda_size,)
@@ -877,19 +882,21 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                               (1 - checklist_weight) * action_prob
                 checklist_addition = checklist_mask.float() * action_prob  # (agenda_size,)
                 new_checklist = instance_checklist + checklist_addition  # (agenda_size,)
+                checklist_score = cls._score_instance_checklist(instance_checklist,
+                                                                instance_agenda_mask)
                 new_score = instance_score + torch.log(action_prob + 1e-13)
 
                 next_states_info[batch_index].append((group_index, action_index, action,
-                                                      new_checklist, new_score))
+                                                      new_checklist, checklist_score, new_score))
         new_states = []
         for batch_index, states_info in next_states_info.items():
-            # We need to sort states by scores. We batch all the scores first for efficient sorting.
-            batch_scores = torch.cat([state_info[-1] for state_info in states_info])
+            # We're sorting states by checklist scores. We batch all the scores first for efficient sorting.
+            batch_scores = torch.cat([state_info[4] for state_info in states_info])
             _, sorted_indices = batch_scores.sort(-1, descending=True)
             sorted_states_info = [states_info[i] for i in sorted_indices.cpu().data.numpy()]
             if max_actions is not None:
                 sorted_states_info = sorted_states_info[:max_actions]
-            for group_index, action_index, action, new_checklist, new_score in sorted_states_info:
+            for group_index, action_index, action, new_checklist, _, new_score in sorted_states_info:
                 action_embedding = action_embeddings[group_index, action_index, :]
                 new_action_history = state.action_history[group_index] + [action]
                 left_side = state.possible_actions[batch_index][action]['left'][0]
@@ -929,5 +936,20 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         float_mask = agenda_mask.float()
         masked_checklist = checklist * float_mask
         # If a specific checklist value is 1.0 or greater, we don't want to select it.
-        checklist_balance = 1 - torch.clamp(masked_checklist, max=1.0)
-        return nn_util.masked_softmax(checklist_balance, (checklist_balance != 0).float())
+        # We're transposing twice here since masked_softmax normalizes rows, not columns.
+        checklist_balance = torch.t(1 - torch.clamp(masked_checklist, max=1.0))
+        agenda_probs = torch.t(nn_util.masked_softmax(checklist_balance, (checklist_balance !=
+                                                                          0).float()))
+        return agenda_probs
+
+    @staticmethod
+    def _score_instance_checklist(checklist: Variable, agenda_mask: Variable) -> Variable:
+        """
+        Takes a checklist and agenda's mask (that shows which of the agenda items are not actually
+        padding), and scores the checklist. We want each of the scores on the checklist to be as
+        close to 1.0 as possible.
+        """
+        float_mask = agenda_mask.float()
+        agenda_item_probs = checklist * float_mask
+        score = -torch.sum((float_mask - agenda_item_probs) ** 2)
+        return score
