@@ -132,7 +132,7 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     """
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
     validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
-    
+
     validation_and_test_dataset_reader: DatasetReader = dataset_reader
     if validation_dataset_reader_params is not None:
         logger.info("Using a separate dataset reader to load validation and test data.")
