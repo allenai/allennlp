@@ -169,11 +169,11 @@ class TestTrain(AllenNlpTestCase):
 
         main()
 
-        # Rewrite out config file, but change a value
+        # Rewrite out config file, but change a value.
         with open(config_path, 'w') as f:
             f.write(config_json.replace('"num_epochs": 2,', '"num_epochs": 4,'))
 
-        # This should fail because the config.json does not match that in the serialization directory
+        # This should fail because the config.json does not match that in the serialization directory.
         with pytest.raises(ConfigurationError):
             main()
 
