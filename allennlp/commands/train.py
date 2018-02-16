@@ -167,8 +167,9 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
 
 def create_serialization_dir(params: Params, serialization_dir: str) -> None:
     """
-    This function creates the serialization directory if it doesn't exist.
-    If it already exists, then it verifies that we're recovering from a training with an identical configuration.
+    This function creates the serialization directory if it doesn't exist.  If it already exists,
+    then it verifies that we're recovering from a training with an identical configuration.
+
     Parameters
     ----------
     params: Params, required.
@@ -181,7 +182,8 @@ def create_serialization_dir(params: Params, serialization_dir: str) -> None:
 
         recovered_config_file = os.path.join(serialization_dir, CONFIG_NAME)
         if not os.path.exists(recovered_config_file):
-            logger.warning("The serialization directory already exists but doesn't contain a config.json.")
+            raise ConfigurationError("The serialization directory already exists but doesn't "
+                                     "contain a config.json. You probably gave the wrong directory.")
         else:
             loaded_params = Params.from_file(recovered_config_file)
 

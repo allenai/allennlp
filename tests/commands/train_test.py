@@ -43,7 +43,7 @@ class TestTrain(AllenNlpTestCase):
                 }
         })
 
-        train_model(params, serialization_dir=self.TEST_DIR)
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
 
     def test_train_with_test_set(self):
         params = Params({
@@ -74,7 +74,7 @@ class TestTrain(AllenNlpTestCase):
                 }
         })
 
-        train_model(params, serialization_dir=self.TEST_DIR)
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'train_with_test_set'))
 
     def test_train_args(self):
         parser = argparse.ArgumentParser(description="Testing")
@@ -179,6 +179,7 @@ class TestTrain(AllenNlpTestCase):
 
         sys.path.remove(self.TEST_DIR)
 
+
 @DatasetReader.register('lazy-test')
 class LazyFakeReader(DatasetReader):
     # pylint: disable=abstract-method
@@ -225,7 +226,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 }
         })
 
-        train_model(params, serialization_dir=self.TEST_DIR)
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'train_lazy_model'))
 
     def test_train_with_test_set(self):
         params = Params({
@@ -256,4 +257,4 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 }
         })
 
-        train_model(params, serialization_dir=self.TEST_DIR)
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'lazy_test_set'))

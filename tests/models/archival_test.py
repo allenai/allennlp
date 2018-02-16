@@ -45,9 +45,10 @@ class ArchivalTest(AllenNlpTestCase):
         params_copy = copy.deepcopy(self.params.as_dict())
 
         # `train_model` should create an archive
-        model = train_model(self.params, serialization_dir=self.TEST_DIR)
+        serialization_dir = os.path.join(self.TEST_DIR, 'archive_test')
+        model = train_model(self.params, serialization_dir=serialization_dir)
 
-        archive_path = os.path.join(self.TEST_DIR, "model.tar.gz")
+        archive_path = os.path.join(serialization_dir, "model.tar.gz")
 
         # load from the archive
         archive = load_archive(archive_path)
