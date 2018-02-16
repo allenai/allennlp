@@ -173,7 +173,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
         # Record the number of cache hits before we hit the cache so we can tell whether we hit or not.
         # In theory this could result in false positives.
         pre_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
-
+        use_cache = False
         try:
             if use_cache and cache_size > 0:
                 # lru_cache insists that all function arguments be hashable,

@@ -32,6 +32,12 @@ const parserExamples = [
              "2007\tTier 3\tDivision 1\tSödra\t14th\tRelegated",
       question: "What is the only year with the 1st position?",
     },
+    {
+      table: "#\tEvent Year\tSeason\tFlag bearer\n" +
+             "7\t2012\tSummer\tEle Opeloge\n" +
+             "6\t2008\tSummer\tEle Opeloge",
+      question: "How many years were held in summer?",
+    },
 ];
 
 const title = "WikiTables Semantic Parsing";
