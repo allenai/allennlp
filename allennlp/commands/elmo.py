@@ -8,7 +8,8 @@ The input file is previously tokenized, whitespace separated text, one sentence 
 The output is a hdf5 file (<http://docs.h5py.org/en/latest/>) where, with the --all flag, each
 sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 
-#TODO(michaels) add a link to the ELMo paper once published.
+For information, see "Deep contextualized word representations", Peters et al 2018.
+https://arxiv.org/abs/1802.05365
 
 .. code-block:: bash
 
