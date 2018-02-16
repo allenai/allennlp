@@ -13,7 +13,7 @@ from allennlp.service.predictors.predictor import Predictor
 DEFAULT_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
 ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
 GROW_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-grow.grammar"
-SEMPRE_DIR = 'sempre-data/'
+SEMPRE_DIR = 'data/'
 
 @Predictor.register('wikitables-parser')
 class WikiTablesParserPredictor(Predictor):
