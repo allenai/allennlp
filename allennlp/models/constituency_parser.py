@@ -190,14 +190,15 @@ class SpanConstituencyParser(Model):
         ----------
         chosen_spans: ``List[Dict[str, int]]``, required.
             A list of chosen spans, where each span is a dictionary containing the following keys:
-            start : ``int``
-                The start index of the span.
-            end : ``int``
-                The exclusive end index of the span.
-            no_label_prob : ``float``
-                The probability of this span being assigned the ``NO-LABEL`` label.
-            label_prob : ``float``
-                The probability of the most likely label.
+
+        start : ``int``
+            The start index of the span.
+        end : ``int``
+            The exclusive end index of the span.
+        no_label_prob : ``float``
+            The probability of this span being assigned the ``NO-LABEL`` label.
+        label_prob : ``float``
+            The probability of the most likely label.
 
         Returns
         -------
