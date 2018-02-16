@@ -7,7 +7,7 @@ import logging
 import string
 from typing import Any, Dict, List, Tuple
 
-from allennlp.data.fields import Field, TextField, IndexField, MetadataField, ListField
+from allennlp.data.fields import Field, TextField, IndexField, MetadataField, ListField, SpanField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import Token
@@ -138,7 +138,6 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
                                         passage_text: str,
                                         token_spans: List[Tuple[int, int]] = None,
                                         answer_texts: List[str] = None,
-                                        pick_most_common_answer: bool = True,
                                         additional_metadata: Dict[str, Any] = None) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
@@ -196,7 +195,7 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     if answer_texts:
         metadata['answer_texts'] = answer_texts
 
-    if pick_most_common_answer and token_spans:
+    if token_spans:
         # There may be multiple answer annotations, so we pick the one that occurs the most.  This
         # only matters on the SQuAD dev set, and it means our computed metrics ("start_acc",
         # "end_acc", and "span_acc") aren't quite the same as the official metrics, which look at
@@ -210,13 +209,92 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
         fields['span_start'] = IndexField(span_start, passage_field)
         fields['span_end'] = IndexField(span_end, passage_field)
 
-    elif token_spans:
-        # Otherwise we make ListFields for all the spans
-        span_starts, span_ends = zip(*token_spans)
-        fields['span_start'] = ListField([IndexField(span_start, passage_field)
-                                          for span_start in span_starts])
-        fields['span_end'] = ListField([IndexField(span_end, passage_field)
-                                        for span_end in span_ends])
+    metadata.update(additional_metadata)
+    fields['metadata'] = MetadataField(metadata)
+    return Instance(fields)
+
+def make_multi_paragraph_reading_comprehension_instance(
+        question_tokens: List[Token],
+        paragraph_tokens: List[List[Token]],
+        token_indexers: Dict[str, TokenIndexer],
+        paragraph_texts: List[str],
+        token_spans: List[List[Tuple[int, int]]] = None,
+        answer_texts: List[str] = None,
+        additional_metadata: Dict[str, Any] = None) -> Instance:
+    """
+    Converts a question, some paragraphs, and an optional answer (or answers)
+    to an ``Instance`` for use in a reading comprehension model.
+
+    Creates an ``Instance`` with at least these fields:
+        ``question`` : ``TextField``
+        ``paragraphs`` : ``ListField[TestField]``
+        ``metadata`` : ``MetadataField``
+
+    Additionally, if both ``answer_texts`` and ``token_spans`` are given,
+    the ``Instance`` has ``span_start`` and ``span_end`` fields,
+    which are both ``ListField[SpanField]``.
+
+    Parameters
+    ----------
+    question_tokens : ``List[Token]``
+        An already-tokenized question.
+    paragraph_tokens : ``List[List[Token]]``
+        Already-tokenized paragarphs that might contain the answer to the given question.
+    token_indexers : ``Dict[str, TokenIndexer]``
+        Determines how the question and passage ``TextFields`` will be converted into tensors that
+        get input to a model.  See :class:`TokenIndexer`.
+    paragraph_texts : ``List[str]``
+        The original paragraph texts.
+    token_spans : ``List[List[Tuple[int, int]]]``, optional
+        Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
+        a list because there might be several possible correct answer spans in the passage.
+        Currently, we just select the most frequent span in this list (i.e., SQuAD has multiple
+        annotations on the dev set; this will select the span that the most annotators gave as
+        correct).
+    answer_texts : ``List[str]``, optional
+        All valid answer strings for the given question.  In SQuAD, e.g., the training set has
+        exactly one answer per question, but the dev and test sets have several.  TriviaQA has many
+        possible answers, which are the aliases for the known correct entity.  This is put into the
+        metadata for use with official evaluation scripts, but not used anywhere else.
+    additional_metadata : ``Dict[str, Any]``, optional
+        The constructed ``metadata`` field will by default contain ``original_passage``,
+        ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
+        you want any other metadata to be associated with each instance, you can pass that in here.
+        This dictionary will get added to the ``metadata`` dictionary we already construct.
+    """
+    additional_metadata = additional_metadata or {}
+    fields: Dict[str, Field] = {}
+    paragraph_offsets = [[(token.idx, token.idx + len(token.text)) for token in paragraph_i_tokens]
+                         for paragraph_i_tokens in paragraph_tokens]
+
+    # This is separate so we can reference it later with a known type.
+    paragraphs_field = ListField([TextField(paragraph_i_tokens, token_indexers)
+                                  for paragraph_i_tokens in paragraph_tokens])
+    fields['paragraphs'] = paragraphs_field
+    fields['question'] = TextField(question_tokens, token_indexers)
+    metadata = {
+            'paragraph_texts': paragraph_texts,
+            'token_offsets': paragraph_offsets,
+            'question_tokens': [token.text for token in question_tokens],
+            'paragraph_tokens': [[token.text for token in paragraph_i_tokens]
+                                 for paragraph_i_tokens in paragraph_tokens],
+            }
+    if answer_texts:
+        metadata['answer_texts'] = answer_texts
+
+    if token_spans:
+        span_fields = []
+        for paragraph_field_i, token_spans_i in zip(paragraphs_field, token_spans):
+            if token_spans_i:
+                span_field_i = ListField([SpanField(start, end, paragraph_field_i) for start, end in token_spans_i])
+                span_fields.append(span_field_i)
+            else:
+                # Hack to make an "empty" list field
+                empty = SpanField(-1, -1, paragraph_field_i.empty_field())
+                span_field_i = ListField([empty])
+                span_fields.append(span_field_i)
+
+        fields['spans'] = ListField(span_fields)
 
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)

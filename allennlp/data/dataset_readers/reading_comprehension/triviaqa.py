@@ -102,19 +102,16 @@ class TriviaQaReader(DatasetReader):
             for result in question_json[result_key]:
                 filename = result['Filename']
                 evidence_file = base_tarball.extractfile(os.path.join("evidence", evidence_subdir, filename))
-                paragraphs = [line.decode('utf-8') for line in evidence_file]
+                paragraphs = [line.decode('utf-8').strip("\n") for line in evidence_file]
 
-                for paragraph in self.pick_paragraphs(paragraphs, question_text, answer_texts):
-                    paragraph_tokens = self._tokenizer.tokenize(paragraph)
-                    token_spans = util.find_valid_answer_spans(paragraph_tokens, answer_texts)
-                    instance = self.text_to_instance(question_text,
-                                                     paragraph,
-                                                     token_spans,
-                                                     answer_texts,
-                                                     question_tokens,
-                                                     paragraph_tokens)
+                picked_paragraphs = self.pick_paragraphs(paragraphs, question_text, answer_texts)
+                instance = self.text_to_instance(question_text,
+                                                 picked_paragraphs,
+                                                 None,  # token spans
+                                                 answer_texts,
+                                                 question_tokens)
 
-                    yield instance
+                yield instance
 
     def document_tfidf(self, paragraphs: List[str], question: str) -> np.ndarray:
         try:
@@ -151,17 +148,23 @@ class TriviaQaReader(DatasetReader):
             # Sample the highest-ranked paragraph that contains an answer twice as often
             # require at least one of the paragraphs to contain an answer span
             scores = self.document_tfidf(paragraphs, question)
-            ranked = [paragraph for score, paragraph in sorted(zip(scores, paragraphs))][:4]
+            ranked = [paragraph for score, paragraph in sorted(zip(scores, paragraphs))]
 
             has_answers = [i for i, paragraph in enumerate(ranked)
                            if util.find_valid_answer_spans(self._tokenizer.tokenize(paragraph), answer_texts)]
 
             if has_answers:
+                first_answer = has_answers[0]
+                if first_answer < 4:
+                    choices = [0, 1, 2, 3, first_answer]
+                else:
+                    choices = [0, 1, 2, first_answer, first_answer]
+
                 sample: Iterable[int] = []
                 # Sample until we get at least one paragraph with an answer
                 while not any(i in has_answers for i in sample):
                     # Sample the highest ranked paragraph that contains an answer twice as often.
-                    sample = np.random.choice([0, 1, 2, 3, has_answers[0]], size=2)
+                    sample = np.random.choice(choices, size=2)
                 picked_paragraphs.extend(ranked[i] for i in sample)
             else:
                 # TODO(joelgrus) should we do something else here?
@@ -179,23 +182,29 @@ class TriviaQaReader(DatasetReader):
     @overrides
     def text_to_instance(self,  # type: ignore
                          question_text: str,
-                         passage_text: str,
+                         paragraphs: List[str],
                          token_spans: List[Tuple[int, int]] = None,
                          answer_texts: List[str] = None,
                          question_tokens: List[Token] = None,
-                         passage_tokens: List[Token] = None) -> Instance:
+                         paragraph_tokens: List[List[Token]] = None) -> Instance:
         # pylint: disable=arguments-differ
-        if not question_tokens:
+        if paragraph_tokens is None:
+            paragraph_tokens = [self._tokenizer.tokenize(paragraph) for paragraph in paragraphs]
+
+        if token_spans is None:
+            print(paragraph_tokens)
+            token_spans = [util.find_valid_answer_spans(paragraph_tokens_i, answer_texts)
+                           for paragraph_tokens_i in paragraph_tokens]
+        if question_tokens is None:
             question_tokens = self._tokenizer.tokenize(question_text)
-        if not passage_tokens:
-            passage_tokens = self._tokenizer.tokenize(passage_text)
-        return util.make_reading_comprehension_instance(question_tokens,
-                                                        passage_tokens,
-                                                        self._token_indexers,
-                                                        passage_text,
-                                                        token_spans,
-                                                        answer_texts,
-                                                        pick_most_common_answer=False)
+
+        return util.make_multi_paragraph_reading_comprehension_instance(
+            question_tokens,
+            paragraph_tokens,
+            self._token_indexers,
+            paragraphs,
+            token_spans,
+            answer_texts)
 
     @classmethod
     def from_params(cls, params: Params) -> 'TriviaQaReader':

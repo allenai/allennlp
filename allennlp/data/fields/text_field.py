@@ -2,7 +2,7 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Iterator
 
 from overrides import overrides
 from spacy.tokens import Token as SpacyToken
@@ -42,6 +42,9 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
             raise ConfigurationError("TextFields must be passed Tokens. "
                                      "Found: {} with types {}.".format(tokens, [type(x) for x in tokens]))
+
+    def __iter__(self) -> Iterator[Token]:
+        return iter(self.tokens)
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
