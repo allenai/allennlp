@@ -13,7 +13,7 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_mask
-from allennlp.training.metrics import CategoricalAccuracy
+from allennlp.training.metrics import F1Measure
 
 
 @Model.register("constituency_parser")
@@ -39,7 +39,8 @@ class SpanConstituencyParser(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, vocab: Vocabulary,
+    def __init__(self, 
+                 vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  span_extractor: SpanExtractor,
                  stacked_encoder: Seq2SeqEncoder,
@@ -58,10 +59,9 @@ class SpanConstituencyParser(Model):
                                stacked_encoder.get_input_dim(),
                                "text field embedding dim",
                                "encoder input dim")
-        self.metrics = {
-                "accuracy": CategoricalAccuracy(),
-                "accuracy3": CategoricalAccuracy(top_k=3)
-        }
+
+        self.metrics = {label: F1Measure(index) for index, label
+                        in self.vocab.get_index_to_token_vocabulary("labels").items()}
         initializer(self)
 
     @overrides
@@ -310,7 +310,15 @@ class SpanConstituencyParser(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+
+        return_metrics = {}
+        for metric_name, metric in self.metrics.items():
+            f1, precision, recall = metric.get_metric(reset)
+            return_metrics[metric_name + "f1"] = f1
+            return_metrics[metric_name + "precision"] = precision
+            return_metrics[metric_name + "recall"] = recall
+
+        return return_metrics
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SpanConstituencyParser':
