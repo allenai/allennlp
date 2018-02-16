@@ -125,7 +125,14 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     model.eval()
 
     # Load the evaluation data
-    dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
+
+    # Try to use the validation dataset reader if there is one - otherwise fall back
+    # to the default dataset_reader used for both training and validation.
+    validation_dataset_reader_params = config.pop('validation_dataset_reader', None)
+    if validation_dataset_reader_params is not None:
+        dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+    else:
+        dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
     evaluation_data_path = args.evaluation_data_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
