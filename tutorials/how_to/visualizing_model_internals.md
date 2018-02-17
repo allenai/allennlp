@@ -1,31 +1,35 @@
+# Visualizing model internals in a live demo
 
-# Visualizing model internals in a live demo (BETA)
-
-We recently added an attention visualization to the live demo on
+We recently added an attention visualization to the live BiDAF demo on
 [allennlp.org](http://demo.allennlp.org/machine-comprehension).  Here's what it looks like:
 
 ![demo screenshot](visualization_images/bidaf_attention_demo.png)
 
 The basic components here are reusable, so you can relatively easily get a similar demo for
-whatever model you're working on.  This is still pretty rough, but if you're feeling adventurous,
-here's a guide to the changes you need to make to get a live demo that shows model internals, which
-we've found to be very helpful for understanding what parts of our models need fixing.
+whatever model you're working on.  This is a little bit more involved than some of our other
+how-tos, but if you're feeling adventurous, here's a guide to the changes you need to make to get a
+live demo that shows model internals, which we've found to be very helpful for understanding what
+parts of our models need fixing.
 
 ## Pre-requisites
 
-You need to have a demo of your model already running.  See the [tutorial on creating a
-demo](../getting_started/making_predictions_and_creating_a_demo.md) for how to do this.  You'll
-also have to be using react to serve the demo, which means the simple server is out.  You need to
-be using `python -m allennlp.run serve` instead of `python -m allennlp.service.server_simple` to
-run the server.  Sorry, but we're not including instructions for that here.  You can see
-instructions for running the main demo in the [demo README](../../demo/README.md), but you'll have
-to figure out how to either get the same thing running with your stand-alone demo or add your model
-to what's already there.  I said this was still rough.
-
-You should also be at least vaguely familiar with [react](https://reactjs.org) and how JSX
-components work.
+1. You need to have a text in / text out demo of your model already running using our simple
+   server.  See the [tutorial on creating a
+demo](../getting_started/making_predictions_and_creating_a_demo.md) for how to do this.
+2. We'll be using a react app to generate HTML and javascript for the fancier demo, so you need to
+   have `npm` and `node.js` installed.  There are plenty of guides for how to install these on the
+web, sometimes with one-line shell commands.  On MacOS with homebrew, you can just run `brew
+install npm`.
+3. Some vague familiarity with [react](https://reactjs.org) and how JSX components work would be
+   helpful, but we've tried to make it super simple to modify the react components even if you've
+never seen react before.  You'll need to use javascript syntax, but again, even if you're not
+familiar with javascript, you should be able to get by with just making simple modifications to
+what's there.
 
 ## Model plumbing
+
+If your text in / text out demo already contains "text out" for all of the pieces of your model
+you want to display in your demo, you can skip this section.  If not, keep reading.
 
 You need the model to output whatever information you want to display.  We already return a
 dictionary from `Model.forward` containing whatever keys you want; you just need to be sure the
@@ -46,35 +50,54 @@ tokenize your data, and pass along the tokens there), but it was easiest this wa
 That's all you have to change in the model.  All we need is to be able to get the right information
 in the output dictionary from `model.forward()`, however you want to make that happen.
 
-## UI plumbing
+After you've made these changes in your model, you should be able to see the outputs you want to
+visualize in the text output returned by the simple server you set up in the pre-requisites.
 
-We've added two components to the demo library that are re-usable for any model internals you want
-to show: `Collapsible` and `HeatMap`.  You just need to get the attention values you returned from
-`model.forward()` passed in to a `HeatMap` component with the right labels.  Again, with BiDAF,
-this was pretty straightforward.  Here we're modifying `McComponent.js`, because that's where the
-BiDAF rendering components are found (again see
-https://github.com/allenai/allennlp/pull/692/files):
+## Set up the react demo
 
-- We found the place where the request data was read and grabbed another field from the
-  returned json.  This looks something like `const attention = responseData &&
-responseData.passage_question_attention`, and similar for the `question_tokens` and
-`passage_tokens`.
-- We passed those fields in to the `McOutput` component, which renders the model output.
-- We modified the `McOutput` component to accept and render those fields.  We added two
-  `Collapsible` components, one wrapping all model internals, and one containing the attention
-heatmap.  The `HeatMap` component just takes the `question_tokens` as `xLabels`, the
-`passage_tokens` as `yLabels`, and the `attention` as `data`.  You can see the specific code in
-the linked pull request above.
+We've [set up a repository](https://github.com/allenai/allennlp-simple-server-visualization) with a
+stripped-down version of the code that runs the demo on
+[http://demo.allennlp.org](demo.allennlp.org).  Clone that repository and copy the `demo/`
+directory to wherever you want.  `cd` to that directory, and run `npm install`, then `npm start`.
+That should show a screen in your terminal that says "Compiled successfully!", directing you to
+view your demo in a browser at `localhost:3000`.  If you go there, you should see a page that says
+"Your Model Name" and has some place-holder UI elements.
 
-That should be all you have to do to get model internals visualized in your demo.
+## Customize the react demo
 
-## Single-dimension heatmaps
+The demo code that you copied above has two files that you need to modify to make your demo work:
+`src/ModelInput.jsx` and `src/ModelOutput.jsx`.  `ModelInput.jsx` renders the left half of the
+screen, where you give inputs to the model, and `ModelOutput.jsx` renders the right half of the
+screen with the output of your model after you click on the "Run" button.
 
-The `HeatMap` component we used expects a two-dimensional data array.  If you have a
-one-dimensional data array you want to visualize, this is still possible, but you need to do
-something like `attention = attention.map(x => [x])` in the javascript to make your
-one-dimensional array into a two-dimensional array with length 1 on the x axis.  You also need to
-provide a single `xLabel` to the `HeatMap`, like `xLabels={['Probabilities']}`.
+### Modifying ModelInput.jsx
+
+There are six `TODOs` in `ModelInput.jsx`, showing all of the places you might want to modify to
+get your demo hooked up correctly.  These modifications include changing the input elements to
+accept the inputs that your model expects, adding some canned examples that are easy to run in
+your demo, and giving a title and description for your model.  The most important point to make
+sure of is that the keys to the dictionary you pass to the `runModel` function match the keys that
+your model expects to receive in `predict_json`.
+
+Once you've modified these, you can check that you've done it correctly by clicking "Run" with an
+example and making sure that your simple server receives and can respond to the request.  You
+should be running the simple server on port 8000, and you should see the server log a `POST`
+request, with a response code `200`.  If you see an error on your server at this point, you
+haven't hooked up your variable names correctly.  Note that the right side of the page won't
+render properly yet, and the javascript will probably crash.  That's fine, just refresh the page
+and make sure the backend server worked - we'll fix the output next.
+
+### Modifying ModelOutput.jsx
+
+There are only two `TODOs` in `ModelOutput.jsx` that indicate places you need to modify.  These
+pieces pull out the variables you want to visualize from the `outputs` JSON returned by your
+model, and then display those variables with fancy components.  We've given examples for
+visualizing text fields and attention maps (both 1D and 2D); if you want to see other kinds of
+output, you can add whatever react components or raw HTML that you want here.
+
+After you've fixed `ModelOutput.jsx` to render the actual outputs from your model, that's it,
+you're done!  You should be able to run your demo end-to-end, entering text on the left side of
+the page, and seeing your results on the right side of the page.  Happy demoing!
 
 ## More general uses
 
@@ -105,4 +128,3 @@ a sneak peak of what you can do with this kind of model visualization:
 |![linking scores](visualization_images/linking_scores.png)|
 |:--:|
 | *Before decoding, we compute a linking between table entities and question words. This shows part of that linking.* |
-

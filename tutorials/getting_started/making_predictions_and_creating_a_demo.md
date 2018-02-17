@@ -234,7 +234,12 @@ that the predictor is expecting, or the demo won't work!
 
 ## Customizing the Demo
 
-Our JSON "visualization" is not particularly impressive.
+Our JSON "visualization" is not particularly impressive.  If you want to visualize model internals,
+with easy attention heat maps, you might want to look at our [how-to for visualizing model
+internals](../how_to/visualizing_model_internals.md).  That how-to relies on installing `npm` and
+using react; if you want a simpler way of just using html and javascript (but with less
+hand-holding), keeping reading.
+
 We can customize it by putting our own `index.html`
 (and any other files we need) in some directory
 and calling `server_simple` with the `--static-dir` flag.
