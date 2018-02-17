@@ -29,8 +29,9 @@ numpy
 scipy
 scikit-learn
 
-# Training visualisation using tensorboard.
-tensorboard==1.0.0a6
+# Write logs for training visualisation with the Tensorboard application
+# Install the Tensorboard application separately (part of tensorflow) to view them.
+tensorboardX==1.0
 
 # Required by torch.utils.ffi
 cffi==1.11.2
