@@ -123,7 +123,7 @@ def main(args):
     parser.add_argument('--static-dir', type=str, help='serve index.html from this directory')
     parser.add_argument('--title', type=str, help='change the default page title', default="AllenNLP Demo")
     parser.add_argument('--field-name', type=str, action='append', help='field names to include in the demo')
-    parser.add_argument('--port', type=int, default=8888, help='port to serve the demo on')
+    parser.add_argument('--port', type=int, default=8000, help='port to serve the demo on')
 
     parser.add_argument('--include-package',
                         type=str,

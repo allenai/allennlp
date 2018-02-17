@@ -16,13 +16,13 @@ parts of our models need fixing.
 1. You need to have a text in / text out demo of your model already running using our simple
    server.  See the [tutorial on creating a
 demo](../getting_started/making_predictions_and_creating_a_demo.md) for how to do this.
-2. We'll be using a react app to generate HTML and javascript for the fancier demo, so you need to
+2. We'll be using a React app to generate HTML and javascript for the fancier demo, so you need to
    have `npm` and `node.js` installed.  There are plenty of guides for how to install these on the
 web, sometimes with one-line shell commands.  On MacOS with homebrew, you can just run `brew
 install npm`.
-3. Some vague familiarity with [react](https://reactjs.org) and how JSX components work would be
-   helpful, but we've tried to make it super simple to modify the react components even if you've
-never seen react before.  You'll need to use javascript syntax, but again, even if you're not
+3. Some vague familiarity with [React](https://reactjs.org) and how JSX components work would be
+   helpful, but we've tried to make it super simple to modify the React components even if you've
+never seen React before.  You'll need to use javascript syntax, but again, even if you're not
 familiar with javascript, you should be able to get by with just making simple modifications to
 what's there.
 
@@ -53,7 +53,7 @@ in the output dictionary from `model.forward()`, however you want to make that h
 After you've made these changes in your model, you should be able to see the outputs you want to
 visualize in the text output returned by the simple server you set up in the pre-requisites.
 
-## Set up the react demo
+## Set up the React demo
 
 We've [set up a repository](https://github.com/allenai/allennlp-simple-server-visualization) with a
 stripped-down version of the code that runs the demo on
@@ -63,7 +63,7 @@ That should show a screen in your terminal that says "Compiled successfully!", d
 view your demo in a browser at `localhost:3000`.  If you go there, you should see a page that says
 "Your Model Name" and has some place-holder UI elements.
 
-## Customize the react demo
+## Customize the React demo
 
 The demo code that you copied above has two files that you need to modify to make your demo work:
 `src/ModelInput.jsx` and `src/ModelOutput.jsx`.  `ModelInput.jsx` renders the left half of the
@@ -81,11 +81,11 @@ your model expects to receive in `predict_json`.
 
 Once you've modified these, you can check that you've done it correctly by clicking "Run" with an
 example and making sure that your simple server receives and can respond to the request.  You
-should be running the simple server on port 8000, and you should see the server log a `POST`
-request, with a response code `200`.  If you see an error on your server at this point, you
-haven't hooked up your variable names correctly.  Note that the right side of the page won't
-render properly yet, and the javascript will probably crash.  That's fine, just refresh the page
-and make sure the backend server worked - we'll fix the output next.
+should be running the simple server on port 8000 (which is the default), and you should see the
+server log a `POST` request, with a response code `200`.  If you see an error on your server at
+this point, you haven't hooked up your variable names correctly.  Note that the right side of the
+page won't render properly yet, and the javascript will probably crash.  That's fine, just make
+sure the backend server worked and refresh the page - we'll fix the output next.
 
 ### Modifying ModelOutput.jsx
 
@@ -93,7 +93,7 @@ There are only two `TODOs` in `ModelOutput.jsx` that indicate places you need to
 pieces pull out the variables you want to visualize from the `outputs` JSON returned by your
 model, and then display those variables with fancy components.  We've given examples for
 visualizing text fields and attention maps (both 1D and 2D); if you want to see other kinds of
-output, you can add whatever react components or raw HTML that you want here.
+output, you can add whatever React components or raw HTML that you want here.
 
 After you've fixed `ModelOutput.jsx` to render the actual outputs from your model, that's it,
 you're done!  You should be able to run your demo end-to-end, entering text on the left side of
@@ -103,7 +103,7 @@ the page, and seeing your results on the right side of the page.  Happy demoing!
 
 The basic outline here is quite general and allows for visualizing all kinds of model internals.
 You just need to make sure your model outputs the internal state you want to visualize, and that
-the demo code passes that information from the JSON response to the proper react component.
+the demo code passes that information from the JSON response to the proper React component.
 
 We've used this to visualize the internal workings of an action-based semantic parser.  The parser
 is not quite ready for public consumption, so the code and demo are not yet available, but here's
