@@ -204,6 +204,8 @@ class SpanConstituencyParser(Model):
         ``k * m^2`` complexity with respect to the number of spans ``m``) and ``k`` is the
         number of conflicts. However, in practice, there are very few conflicts. Hopefully.
 
+        This function modifies ``spans`` to remove overlapping spans.
+
         Parameters
         ----------
         spans: ``List[Dict[str, int]]``, required.
