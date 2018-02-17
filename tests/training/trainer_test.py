@@ -131,7 +131,6 @@ class TestTrainer(AllenNlpTestCase):
                               num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
 
-    @pytest.mark.skipif(os.uname().sysname == 'Darwin', reason="Tensorboard logging broken on mac.")
     def test_trainer_can_log_histograms(self):
         # enable activation logging
         for module in self.model.modules():
