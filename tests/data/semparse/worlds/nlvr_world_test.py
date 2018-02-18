@@ -155,3 +155,29 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         # There is a circle in the box with objects of different shapes.
         assert world.execute("(object_shape_any_equals (object_in_box "
                              "(member_shape_different all_boxes)) shape_circle)") is True
+
+    def test_get_agenda_for_sentence(self):
+        world = self.worlds[0]
+        agenda = world.get_agenda_for_sentence("there is a tower with exactly two yellow blocks")
+        assert agenda == ['<o,o> -> yellow', '<b,t> -> box_exists', 'e -> 2']
+        agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
+                                               "the bottom of a box.")
+        # "bottom" triggers two rules, one due to lexical match and another due to the rule
+        # involving touch and bottom.
+        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> bottom', '<o,o> -> touch_bottom',
+                                   'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
+                                               "the right wall of a box.")
+        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_right', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
+                                               "the left wall of a box.")
+        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_left', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
+                                               "a wall of a box.")
+        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_wall', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is exactly one square touching any edge")
+        assert set(agenda) == set(['<o,o> -> square', '<o,o> -> touch_wall', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is only 1 tower with 1 blue block at the base")
+        assert set(agenda) == set(['<o,o> -> blue', 'e -> 1', '<o,o> -> bottom', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is only 1 tower with 1 blue block at the top")
+        assert set(agenda) == set(['<o,o> -> blue', 'e -> 1', '<o,o> -> top', 'e -> 1'])

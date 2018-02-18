@@ -178,7 +178,7 @@ class NlvrWorld(World):
             # TODO(pradeep): Deal with constant names with underscores.
             if constant in sentence:
                 agenda.append(production)
-        if sentence.startswith("there is a box"):
+        if sentence.startswith("there is a box") or sentence.startswith("there is a tower "):
             agenda.append(self.terminal_productions["box_exists"])
         elif sentence.startswith("there is a "):
             agenda.append(self.terminal_productions["object_exists"])
