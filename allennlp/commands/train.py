@@ -68,6 +68,7 @@ class Train(Subcommand):
                                help='path to parameter file describing the model to be trained')
 
         subparser.add_argument('-s', '--serialization-dir',
+                               required=True,
                                type=str,
                                help='directory in which to save the model and its logs')
 
