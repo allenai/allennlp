@@ -170,10 +170,16 @@ class SpanConstituencyParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Constructs a tree given the scored spans.
+        Constructs a tree given the scored spans. We also switch to exclusive span
+        ends when constructing the tree representation, because it makes indexing into
+        lists cleaner for ranges of text, rather than individual indices.
         """
         all_predictions = output_dict['class_probabilities'].cpu().data
         all_spans = output_dict["spans"].cpu().data
+
+        # Switch to using exclusive end spans.
+        exclusive_end_spans = all_spans.clone()
+        exclusive_end_spans[:, :, -1] += 1
         no_label_id = self.vocab.get_token_index("NO-LABEL", "labels")
 
         all_sentences = output_dict["tokens"].data
@@ -181,7 +187,7 @@ class SpanConstituencyParser(Model):
 
         trees = []
         for batch_index, (predictions, spans, sentence_ids) in enumerate(zip(all_predictions,
-                                                                             all_spans,
+                                                                             exclusive_end_spans,
                                                                              all_sentences)):
             sentence: List[str] = [self.vocab.get_token_from_index(index, "tokens") for
                                    index in sentence_ids[:sentence_lengths[batch_index]]]
@@ -194,7 +200,7 @@ class SpanConstituencyParser(Model):
 
                 # Does the span have a label != NO-LABEL or is it the root node?
                 # If so, include it in the spans that we consider.
-                if int(label_index) != no_label_id or (start == 0 and end + 1 == len(sentence)):
+                if int(label_index) != no_label_id or (start == 0 and end == len(sentence)):
                     selected_spans.append(SpanInformation(start=int(start),
                                                           end=int(end),
                                                           label_prob=float(label_prob),
