@@ -228,7 +228,7 @@ class SpanConstituencyParser(Model):
         Parameters
         ----------
         spans: ``List[SpanInformation]``, required.
-            A list of spans, where each span is a ``namedtuple`` containing the 
+            A list of spans, where each span is a ``namedtuple`` containing the
             following attributes:
 
         start : ``int``
