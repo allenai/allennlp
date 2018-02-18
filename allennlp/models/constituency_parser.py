@@ -201,7 +201,9 @@ class SpanConstituencyParser(Model):
                 # Does the span have a label != NO-LABEL or is it the root node?
                 # If so, include it in the spans that we consider.
                 if int(label_index) != no_label_id or (start == 0 and end == len(sentence)):
-                    selected_spans.append(SpanInformation(start=int(start),
+                    # TODO(Mark): Remove this once pylint sorts out named tuples.
+                    # https://github.com/PyCQA/pylint/issues/1418
+                    selected_spans.append(SpanInformation(start=int(start), # pylint: disable=no-value-for-parameter
                                                           end=int(end),
                                                           label_prob=float(label_prob),
                                                           no_label_prob=float(no_label_prob),
