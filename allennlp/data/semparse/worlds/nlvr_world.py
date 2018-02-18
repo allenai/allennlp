@@ -559,7 +559,7 @@ class NlvrWorld(World):
                 logger.error("Function not found: %s", sub_expression[0])
                 raise ExecutionError("Function not found")
             arguments = sub_expression[1]
-            if isinstance(arguments, list) and arguments[0].startswith("member_") or \
+            if isinstance(arguments, list) and str(arguments[0]).startswith("member_") or \
                 arguments == 'all_boxes' or arguments[0] == 'all_boxes':
                 if sub_expression[0] != "object_in_box":
                     logger.error("Invalid object filter expression: %s", sub_expression)
@@ -643,6 +643,8 @@ class NlvrWorld(World):
         objects_of_attribute: Dict[str, Set[Object]] = defaultdict(set)
         for entity in objects:
             objects_of_attribute[attribute_function(entity)].add(entity)
+        if not objects_of_attribute:
+            return set()
         most_frequent_attribute = max(objects_of_attribute, key=lambda x: len(objects_of_attribute[x]))
         if len(objects_of_attribute[most_frequent_attribute]) <= 1:
             return set()

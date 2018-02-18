@@ -23,7 +23,8 @@ def read_json_line(line: str) -> Tuple[str, str, NlvrWorld, bool]:
 
 def process_data(input_file: str,
                  output_file: str,
-                 max_path_length: int) -> None:
+                 max_path_length: int,
+                 max_num_logical_forms: int) -> None:
     """
     Reads an NLVR dataset and returns a Json representation containing sentences, correct and
     incorrect logical forms. The format is:
@@ -36,7 +37,7 @@ def process_data(input_file: str,
     for line in open(input_file):
         instance_id, sentence, world, label = read_json_line(line)
         sentence_agenda = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
-        logical_forms = walker.get_logical_forms_with_agenda(sentence_agenda)
+        logical_forms = walker.get_logical_forms_with_agenda(sentence_agenda, max_num_logical_forms)
         correct_logical_forms = []
         incorrect_logical_forms = []
         for logical_form in logical_forms:
@@ -56,7 +57,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=str, help="NLVR data file")
     parser.add_argument("output", type=str, help="Processed output")
-    parser.add_argument("--max_path_length", type=int, help="Maximum path length for logical forms",
-                        default=15)
+    parser.add_argument("--max_path_length", type=int,
+                        help="Maximum path length for logical forms", default=12)
+    parser.add_argument("--max_num_logical_forms", type=int,
+                        help="Maximum number of logical forms per question", default=40)
     args = parser.parse_args()
-    process_data(args.input, args.output, args.max_path_length)
+    process_data(args.input, args.output, args.max_path_length, args.max_num_logical_forms)

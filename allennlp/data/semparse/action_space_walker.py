@@ -70,7 +70,9 @@ class ActionSpaceWalker:
             right_side_parts.append(right_side)
         return right_side_parts
 
-    def get_logical_forms_with_agenda(self, agenda: List[str]) -> List[str]:
+    def get_logical_forms_with_agenda(self,
+                                      agenda: List[str],
+                                      max_num_logical_forms: int = None) -> List[str]:
         if self._completed_paths is None:
             self._walk()
         agenda_path_indices = [self._terminal_path_index[action] for action in agenda]
@@ -80,5 +82,7 @@ class ActionSpaceWalker:
         for next_set in agenda_path_indices[1:]:
             return_set = return_set.intersection(next_set)
         paths = [self._completed_paths[index] for index in return_set]
+        if max_num_logical_forms is not None:
+            paths = sorted(paths, key=len)[:max_num_logical_forms]
         logical_forms = [self._world.get_logical_form(path) for path in paths]
         return logical_forms
