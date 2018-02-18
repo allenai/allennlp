@@ -354,12 +354,23 @@ class SpanConstituencyParser(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         all_metrics = {}
+
+        total_f1 = 0.0
+        total_precision = 0.0
+        total_recall = 0.0
         for metric_name, metric in self.metrics.items():
             f1, precision, recall = metric.get_metric(reset) # pylint: disable=invalid-name
+            total_f1 += f1
+            total_precision += precision
+            total_recall += recall
             all_metrics[metric_name + "_f1"] = f1
             all_metrics[metric_name + "_precision"] = precision
             all_metrics[metric_name + "_recall"] = recall
 
+        num_metrics = len(self.metrics)
+        all_metrics["average_f1"] = total_f1 / num_metrics
+        all_metrics["average_precision"] = total_precision / num_metrics
+        all_metrics["average_recall"] = total_recall / num_metrics
         return all_metrics
 
     @classmethod
