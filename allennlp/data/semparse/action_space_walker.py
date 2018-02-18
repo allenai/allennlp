@@ -14,15 +14,21 @@ class ActionSpaceWalker:
 
     Parameters
     ----------
+    world : ``World``
+        The world from which valid actions will be taken.
+    max_path_length : ``int``
+        The maximum path length till which the action space will be explored. Paths longer than this
+        length will be discarded.
     """
-    def __init__(self, world: World) -> None:
+    def __init__(self, world: World, max_path_length: int) -> None:
         self._world = world
+        self._max_path_length = max_path_length
         self._completed_paths: List[List[str]] = None
         self._terminal_path_index: Dict[str, Set[int]] = defaultdict(set)
 
-    def walk(self, max_path_length: int) -> None:
+    def _walk(self) -> None:
         """
-        Walk over action space to collect completed paths of at most ``max_path_length`` steps.
+        Walk over action space to collect completed paths of at most ``self._max_path_length`` steps.
         """
         # Buffer of NTs to expand, previous actions
         incomplete_paths = [([str(type_)], [f"@START@ -> {type_}"]) for type_ in
@@ -37,9 +43,9 @@ class ActionSpaceWalker:
                 for action in actions[nonterminal]:
                     new_history = history + [action]
                     new_nonterminal_buffer = list(nonterminal_buffer)
-                    for rhs_part in reversed(self._get_right_side_parts(action)):
-                        if types.is_nonterminal(rhs_part):
-                            new_nonterminal_buffer.append(rhs_part)
+                    for right_side_part in reversed(self._get_right_side_parts(action)):
+                        if types.is_nonterminal(right_side_part):
+                            new_nonterminal_buffer.append(right_side_part)
                     new_incomplete_paths.append((new_nonterminal_buffer, new_history))
             incomplete_paths = []
             for nonterminal_buffer, path in new_incomplete_paths:
@@ -51,13 +57,13 @@ class ActionSpaceWalker:
                             if not types.is_nonterminal(value):
                                 self._terminal_path_index[action].add(next_path_index)
                     self._completed_paths.append(path)
-                elif len(path) <= max_path_length:
+                elif len(path) <= self._max_path_length:
                     incomplete_paths.append((nonterminal_buffer, path))
 
     @staticmethod
     def _get_right_side_parts(action: str) -> List[str]:
         _, right_side = action.split(" -> ")
-        right_side_parts = []
+        right_side_parts: List[str] = []
         if "[" in right_side:
             right_side_parts = right_side[1:-1].split(", ")
         else:
@@ -66,7 +72,7 @@ class ActionSpaceWalker:
 
     def get_logical_forms_with_agenda(self, agenda: List[str]) -> List[str]:
         if self._completed_paths is None:
-            raise RuntimeError("Run ActionSpaceWalker.walk() first!")
+            self._walk()
         agenda_path_indices = [self._terminal_path_index[action] for action in agenda]
         # TODO (pradeep): Sort the indices and do intersections in order, so that we can return the
         # set with maximal coverage if the full intersection is null.

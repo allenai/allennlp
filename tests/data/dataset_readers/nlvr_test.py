@@ -39,8 +39,8 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
         actions = [action.rule for action in instance.fields["actions"].field_list]
         agenda_actions = [actions[i] for i in agenda]
-        # pylint: disable=protected-access
-        expected_agenda_actions = reader._get_agenda_for_sentence(sentence)
+        world = instance.fields["world"].as_tensor({})
+        expected_agenda_actions = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
         assert expected_agenda_actions == agenda_actions
 
     def test_agenda_indices_are_correct_with_paths(self):
@@ -54,6 +54,6 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
         actions = [action.rule for action in instance.fields["actions"].field_list]
         agenda_actions = [actions[i] for i in agenda]
-        # pylint: disable=protected-access
-        expected_agenda_actions = reader._get_agenda_for_sentence(sentence, NlvrWorld({}))
+        world = instance.fields["world"].as_tensor({})
+        expected_agenda_actions = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=True)
         assert expected_agenda_actions == agenda_actions
