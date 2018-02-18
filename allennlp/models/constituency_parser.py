@@ -1,5 +1,4 @@
-from typing import Dict, Tuple, List, Optional
-
+from typing import Dict, Tuple, List, Optional, NamedTuple
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
@@ -16,12 +15,36 @@ from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_
 from allennlp.training.metrics import F1Measure
 
 
+class SpanInformation(NamedTuple):
+    """
+    A helper namedtuple for handling decoding information.
+
+    Parameters
+    ----------
+    start : ``int``
+        The start index of the span.
+    end : ``int``
+        The exclusive end index of the span.
+    no_label_prob : ``float``
+        The probability of this span being assigned the ``NO-LABEL`` label.
+    label_prob : ``float``
+        The probability of the most likely label.
+    """
+    start: int
+    end: int
+    label_prob: float
+    no_label_prob: float
+    label_index: int
+
+
 @Model.register("constituency_parser")
 class SpanConstituencyParser(Model):
     """
     This ``SpanConstituencyParser`` simply encodes a sequence of text
     with a stacked ``Seq2SeqEncoder``, extracts span representations using a
     ``SpanExtractor``, and then predicts a label for each span in the sequence.
+    These labels are non-terminal nodes in a constituency parse tree, which we then
+    greedily reconstruct.
 
     Parameters
     ----------
@@ -172,22 +195,18 @@ class SpanConstituencyParser(Model):
                 # Does the span have a label != NO-LABEL or is it the root node?
                 # If so, include it in the spans that we consider.
                 if int(label_index) != no_label_id or (start == 0 and end + 1 == len(sentence)):
-                    selected_spans.append({
-                            "start": int(start),
-                            # Switch to exclusive span ends to make
-                            # recursive tree constuction easier.
-                            "end": float(end) + 1,
-                            "label_prob": float(label_prob),
-                            "no_label_prob": float(no_label_prob),
-                            "label_index": float(label_index)
-                    })
+                    selected_spans.append(SpanInformation(start=int(start),
+                                                          end=int(end),
+                                                          label_prob=float(label_prob),
+                                                          no_label_prob=float(no_label_prob),
+                                                          label_index=int(label_index)))
 
             # The spans we've selected might overlap, which causes problems when we try
             # to construct the tree as they won't nest properly.
             consistent_spans = self.resolve_overlap_conflicts_greedily(selected_spans)
 
-            spans_to_labels = {(int(span["start"]), int(span["end"])):
-                               self.vocab.get_token_from_index(int(span["label_index"]), "labels")
+            spans_to_labels = {(span.start, span.end):
+                               self.vocab.get_token_from_index(span.label_index, "labels")
                                for span in consistent_spans}
             trees.append(self.construct_tree_from_spans(spans_to_labels, sentence))
 
@@ -195,7 +214,7 @@ class SpanConstituencyParser(Model):
         return output_dict
 
     @staticmethod
-    def resolve_overlap_conflicts_greedily(spans: List[Dict[str, float]]) -> List[Dict[str, float]]:
+    def resolve_overlap_conflicts_greedily(spans: List[SpanInformation]) -> List[SpanInformation]:
         """
         Given a set of spans, removes spans which overlap by evaluating the difference
         in probability between one being labeled and the other explicitly having no label
@@ -208,8 +227,9 @@ class SpanConstituencyParser(Model):
 
         Parameters
         ----------
-        spans: ``List[Dict[str, int]]``, required.
-            A list of spans, where each span is a dictionary containing the following keys:
+        spans: ``List[SpanInformation]``, required.
+            A list of spans, where each span is a ``namedtuple`` containing the 
+            following attributes:
 
         start : ``int``
             The start index of the span.
@@ -230,8 +250,8 @@ class SpanConstituencyParser(Model):
             conflicts_exist = False
             for span1_index, span1 in enumerate(spans):
                 for span2_index, span2 in list(enumerate(spans))[span1_index + 1:]:
-                    if (span1["start"] < span2["start"] < span1["end"] < span2["end"] or
-                                span2["start"] < span1["start"] < span2["end"] < span1["end"]):
+                    if (span1.start < span2.start < span1.end < span2.end or
+                                span2.start < span1.start < span2.end < span1.end):
                         # The spans overlap.
                         conflicts_exist = True
                         # What's the more likely situation: that span2 was labeled
@@ -239,8 +259,8 @@ class SpanConstituencyParser(Model):
                         # was unlabled? In the first case, we delete span2 from the
                         # set of spans to form the tree - in the second case, we delete
                         # span1.
-                        if (span1["no_label_prob"] + span2["label_prob"] <
-                                    span2["no_label_prob"] + span1["label_prob"]):
+                        if (span1.no_label_prob + span2.label_prob <
+                                    span2.no_label_prob + span1.label_prob):
                             spans.pop(span2_index)
                         else:
                             spans.pop(span1_index)

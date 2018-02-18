@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 
 from allennlp.common.testing.model_test_case import ModelTestCase
+from allennlp.models.constituency_parser import SpanInformation
 
 class SpanConstituencyParserTest(ModelTestCase):
 
@@ -23,10 +24,13 @@ class SpanConstituencyParserTest(ModelTestCase):
                                                   'tokens', 'token_mask', 'loss'}
 
     def test_resolve_overlap_conflicts_greedily(self):
-        spans = [{"start": 1, "end": 5, "no_label_prob": 0.7, "label_prob": 0.2},
-                 {"start": 2, "end": 7, "no_label_prob": 0.5, "label_prob": 0.3}]
+        spans = [SpanInformation(start=1, end=5, no_label_prob=0.7,
+                                 label_prob=0.2, label_index=2),
+                 SpanInformation(start=2, end=7, no_label_prob=0.5,
+                                 label_prob=0.3, label_index=4)]
         resolved_spans = self.model.resolve_overlap_conflicts_greedily(spans)
-        assert resolved_spans == [{"start": 2, "end": 7, "no_label_prob": 0.5, "label_prob": 0.3}]
+        assert resolved_spans == [SpanInformation(start=2, end=7, no_label_prob=0.5,
+                                                  label_prob=0.3, label_index=4)]
 
     def test_construct_tree_from_spans(self):
         # (S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))
