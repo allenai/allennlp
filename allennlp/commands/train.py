@@ -6,11 +6,11 @@ which to write the results.
 .. code-block:: bash
 
    $ python -m allennlp.run train --help
-   usage: python -m allennlp.run [command] train [-h] -s SERIALIZATION_DIR
-                                               [-o OVERRIDES]
-                                               [--include-package INCLUDE_PACKAGE]
-                                               [--file-friendly-logging]
-                                               param_path
+   usage: python -m allennlp.run train [-h] -s SERIALIZATION_DIR
+                                            [-o OVERRIDES]
+                                            [--include-package INCLUDE_PACKAGE]
+                                            [--file-friendly-logging]
+                                            param_path
 
    Train the specified model on the specified dataset.
 
@@ -61,18 +61,15 @@ class Train(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Train the specified model on the specified dataset.'''
-        subparser = parser.add_parser(
-                name, description=description, help='Train a model')
+        subparser = parser.add_parser(name, description=description, help='Train a model')
 
         subparser.add_argument('param_path',
                                type=str,
                                help='path to parameter file describing the model to be trained')
 
-        # This is necessary to preserve backward compatibility
-        serialization = subparser.add_mutually_exclusive_group(required=True)
-        serialization.add_argument('-s', '--serialization-dir',
-                                   type=str,
-                                   help='directory in which to save the model and its logs')
+        subparser.add_argument('-s', '--serialization-dir',
+                               type=str,
+                               help='directory in which to save the model and its logs')
 
         subparser.add_argument('-r', '--recover',
                                action='store_true',
@@ -117,20 +114,26 @@ def train_model_from_args(args: argparse.Namespace):
     train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.file_friendly_logging)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: str = "",
+def train_model_from_file(parameter_filename: str,
+                          serialization_dir: str,
+                          overrides: str = "",
                           file_friendly_logging: bool = False) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
     Parameters
     ----------
-    param_path: str, required.
+    param_path : ``str``
         A json parameter file specifying an AllenNLP experiment.
-    serialization_dir: str, required
-        The directory in which to save results and logs.
+    serialization_dir : ``str``
+        The directory in which to save results and logs. We just pass this along to
+        :func:`train_model`.
+    overrides : ``str``
+        A HOCON string that we will use to override values in the input parameter file.
+    file_friendly_logging : ``bool``, optional (default=False)
+        If ``True``, we make our output more friendly to saved model files.  We just pass this
+        along to :func:`train_model`.
     """
-    if file_friendly_logging:
-        Tqdm.set_default_mininterval(10.0)
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
     return train_model(params, serialization_dir, file_friendly_logging)
@@ -218,30 +221,30 @@ def create_serialization_dir(params: Params, serialization_dir: str) -> None:
 
 def train_model(params: Params, serialization_dir: str, file_friendly_logging: bool = False) -> Model:
     """
-    This function can be used as an entry point to running models in AllenNLP
-    directly from a JSON specification using a :class:`Driver`. Note that if
-    you care about reproducibility, you should avoid running code using Pytorch
-    or numpy which affect the reproducibility of your experiment before you
-    import and use this function, these libraries rely on random seeds which
-    can be set in this function via a JSON specification file. Note that this
-    function performs training and will also evaluate the trained model on
-    development and test sets if provided in the parameter json.
+    Trains the model specified in the given :class:`Params` object, using the data and training
+    parameters also specified in that object, and saves the results in ``serialization_dir``.
 
     Parameters
     ----------
-    params: Params, required.
+    params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
-    serialization_dir: str, required
+    serialization_dir : ``str``
         The directory in which to save results and logs.
+    file_friendly_logging : ``bool``, optional (default=False)
+        If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
+        down tqdm's output to only once every 10 seconds.
     """
     prepare_environment(params)
 
     create_serialization_dir(params, serialization_dir)
 
+    Tqdm.set_slower_interval(file_friendly_logging)
     sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
-                           sys.stdout, file_friendly_logging)
+                           sys.stdout,
+                           file_friendly_logging)
     sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
-                           sys.stderr, file_friendly_logging)
+                           sys.stderr,
+                           file_friendly_logging)
     handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
