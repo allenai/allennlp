@@ -47,7 +47,7 @@ DEFAULT_MODELS = {
                 'coreference-resolution'
         ),
         'named-entity-recognition': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2017.11.15.tar.gz',  # pylint: disable=line-too-long
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.02.12.tar.gz',  # pylint: disable=line-too-long
                 'sentence-tagger'
         )
 }
