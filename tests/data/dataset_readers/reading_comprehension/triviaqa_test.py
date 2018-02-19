@@ -73,3 +73,6 @@ class TestTriviaQaReader:
 
         padding_lengths = batch.get_padding_lengths()
         tensors = batch.as_tensor_dict(padding_lengths)
+
+        # TODO(joelgrus): a better test
+        assert tensors is not None

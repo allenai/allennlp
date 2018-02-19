@@ -84,9 +84,8 @@ class MultiParagraphReadingComprehension(Model):
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
-                passage: Dict[str, torch.LongTensor],
-                span_start: torch.IntTensor = None,
-                span_end: torch.IntTensor = None,
+                paragraphs: Dict[str, torch.LongTensor],
+                spans: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -94,8 +93,8 @@ class MultiParagraphReadingComprehension(Model):
         ----------
         question : Dict[str, torch.LongTensor]
             From a ``TextField``.
-        passage : Dict[str, torch.LongTensor]
-            From a ``TextField``.  The model assumes that this passage contains the answer to the
+        paragraphs : Dict[str, torch.LongTensor]
+            From a ``ListField[TextField]``.  The model assumes that at least this passage contains the answer to the
             question, and predicts the beginning and ending positions of the answer within the
             passage.
         span_start : ``torch.IntTensor``, optional
@@ -137,18 +136,17 @@ class MultiParagraphReadingComprehension(Model):
             question.
         """
         # paragraphs['tokens'] is (batch_size, num_paragraphs, ?)
-        batch_size, num_paragraphs, *_ = passage['tokens'].size()
+        batch_size, num_paragraphs, *_ = paragraphs['tokens'].size()
 
-        if span_start is not None:
-            # span_start is (batch_size, num_paragraphs, ?)
-            assert span_start.size(1) == num_paragraphs
-            assert span_end.size(1) == num_paragraphs
+        if spans is not None:
+            # span is (batch_size, num_paragraphs, ?)
+            assert spans.size(1) == num_paragraphs
 
         # Squash paragraph dimension into batch dimension
         # (batch_size, num_paragraphs, seq_length, input_size) ->
         #   (batch_size * num_paragraphs, seq_length, input_size)
         passage = {field_name: squash(tensor)
-                   for field_name, tensor in passage.items()}
+                   for field_name, tensor in paragraphs.items()}
 
         # repeat questions
         for field_name, tensor in question.items():
@@ -278,13 +276,20 @@ class MultiParagraphReadingComprehension(Model):
                 "best_span": best_paragraph_word_span
         }
 
-        if span_start is not None:
-            span_idx_mask = 1 - torch.eq(span_start, -1).float()
+        if spans is not None:
+            # (batch_size, num_paragraphs, num_spans, 2)
+            span_idx_mask = 1 - torch.eq(spans, -1).float()
+            # (batch_size, num_paragraphs, num_spans)
+            span_idx_mask = span_idx_mask.max(dim=-1)[0]
 
-            # TODO(joelgrus): shared_norm_loss doesn't work, figure out why.
-            # loss = self._shared_norm_loss(paragraph_span_start_logits, None, span_start, span_idx_mask)
-            # loss += self._shared_norm_loss(paragraph_span_end_logits, None, span_end, span_idx_mask)
-            loss = 0.0
+            # (batch_size, num_paragraphs, num_spans)
+            span_starts = spans[:, :, :, 0]
+            span_ends = spans[:, :, :, 1]
+
+            paragraphs_mask = util.get_text_field_mask(paragraphs, num_wrapping_dims=1).float()
+
+            loss = self._shared_norm_loss(paragraph_span_start_logits, paragraphs_mask, span_starts, span_idx_mask)
+            loss += self._shared_norm_loss(paragraph_span_end_logits, paragraphs_mask, span_ends, span_idx_mask)
 
             # self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
             # self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))

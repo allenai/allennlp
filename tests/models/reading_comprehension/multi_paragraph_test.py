@@ -28,16 +28,9 @@ class MultiParagraphReadingComprehensionTest(ModelTestCase):
         batch.index_instances(self.vocab)
         training_tensors = batch.as_tensor_dict()
 
-        # This is a temporary hack. Right now the triviaqa dataset reader creates an Instance
-        # for each (question, paragraph) pair. For multiparagraph question answering we want
-        # Instances of (question, [paragraph1, paragraph2, ...]). Until I make the dataset reader
-        # do that, I'm using `unsqueeze` to fake it.
-        training_tensors['span_start'] = training_tensors['span_start'].unsqueeze(1)
-        training_tensors['span_end'] = training_tensors['span_end'].unsqueeze(1)
-        for k, v in training_tensors['passage'].items():
-            training_tensors['passage'][k] = v.unsqueeze(1)
-
         output_dict = self.model(**training_tensors)
         # metrics = self.model.get_metrics(reset=True)
 
         assert 'span_start_logits' in output_dict
+        assert 'best_span' in output_dict
+        assert 'loss' in output_dict

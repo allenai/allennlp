@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("triviaqa")
 class TriviaQaReader(DatasetReader):
     """
-    Reads the TriviaQA dataset into a ``Dataset`` containing ``Instances`` with four fields:
-    ``question`` (a ``TextField``), ``passage`` (another ``TextField``), ``span_start``, and
-    ``span_end`` (both ``IndexFields``).
+    Reads the TriviaQA dataset into a ``Dataset`` containing ``Instances`` with three fields:
+    ``question`` (a ``TextField``), ``paragraphs`` (a ``ListField[TextField]``),
+    and ``spans`` (a ``ListField[SpanField]``). Each instance consists of one or more paragraphs
+    from the same document, chosen in a manner specified by the ``paragraph_picker`` parameter.
 
     TriviaQA is split up into several JSON files defining the questions, and a lot of text files
     containing crawled web documents.  We read these from a gzipped tarball, to avoid having to
@@ -143,17 +144,20 @@ class TriviaQaReader(DatasetReader):
         picked_paragraphs = []
 
         if self._paragraph_picker == "triviaqa-web-train":
-            # Take the top four paragraphs ranked by tf-idf score
-            # Then sample two from them
-            # Sample the highest-ranked paragraph that contains an answer twice as often
-            # require at least one of the paragraphs to contain an answer span
+            # Take the top four paragraphs ranked by tf-idf score and sample two from them.
+            # Sample the highest-ranked paragraph that contains an answer twice as often.
+            # Require at least one of the paragraphs to contain an answer span.
+
+            # Sort the paragraphs by their tfidf score with the question.
             scores = self.document_tfidf(paragraphs, question)
             ranked = [paragraph for score, paragraph in sorted(zip(scores, paragraphs))]
 
+            # Find the indexes of paragraphs that have answers.
             has_answers = [i for i, paragraph in enumerate(ranked)
                            if util.find_valid_answer_spans(self._tokenizer.tokenize(paragraph), answer_texts)]
 
             if has_answers:
+                # Want to sample the highest rank answer twice as often.
                 first_answer = has_answers[0]
                 if first_answer < 4:
                     choices = [0, 1, 2, 3, first_answer]
@@ -163,10 +167,10 @@ class TriviaQaReader(DatasetReader):
                 sample: Iterable[int] = []
                 # Sample until we get at least one paragraph with an answer
                 while not any(i in has_answers for i in sample):
-                    # Sample the highest ranked paragraph that contains an answer twice as often.
                     sample = np.random.choice(choices, size=2)
                 picked_paragraphs.extend(ranked[i] for i in sample)
             else:
+                # No paragraphs that include an answer!
                 # TODO(joelgrus) should we do something else here?
                 pass
         else:
@@ -192,7 +196,6 @@ class TriviaQaReader(DatasetReader):
             paragraph_tokens = [self._tokenizer.tokenize(paragraph) for paragraph in paragraphs]
 
         if token_spans is None:
-            print(paragraph_tokens)
             token_spans = [util.find_valid_answer_spans(paragraph_tokens_i, answer_texts)
                            for paragraph_tokens_i in paragraph_tokens]
         if question_tokens is None:

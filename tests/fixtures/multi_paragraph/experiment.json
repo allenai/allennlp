@@ -1,6 +1,7 @@
 {
     "dataset_reader": {
       "type": "triviaqa",
+      "paragraph_picker": "triviaqa-web-train",
       "base_tarball_path": "tests/fixtures/data/triviaqa-sample.tgz",
       "token_indexers": {
         "tokens": {
