@@ -172,7 +172,7 @@ def masked_log_softmax(vector, mask):
         # zero in the mask for these cases.  This logic replaces zeros in the mask with 1e-45
         # before calling mask.log().  We use 1e-45 because 1e-46 is so small it becomes 0 - this is
         # just the smallest value we can actually use.
-        mask = (mask.float() + 1e-45) * (1 - mask) + mask
+        mask = (mask + 1e-45) * (1 - mask) + mask
         vector = vector + mask.log()
     return torch.nn.functional.log_softmax(vector, dim=1)
 
