@@ -172,9 +172,9 @@ class SpanConstituencyParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Constructs a NLTK ``Tree`` given the scored spans. We also switch to exclusive span
-        ends when constructing the tree representation, because it makes indexing into
-        lists cleaner for ranges of text, rather than individual indices.
+        Constructs an NLTK ``Tree`` given the scored spans. We also switch to exclusive
+        span ends when constructing the tree representation, because it makes indexing
+        into lists cleaner for ranges of text, rather than individual indices.
         """
         all_predictions = output_dict['class_probabilities'].cpu().data
         all_spans = output_dict["spans"].cpu().data
