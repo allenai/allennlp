@@ -80,7 +80,7 @@ allennlp.training.metrics
    :show-inheritance:
 
 .. _evab:
-.. automodule:: allennlp.training.metrics.evab_bracketing_scorer
+.. automodule:: allennlp.training.metrics.evalb_bracketing_scorer
    :members:
    :undoc-members:
    :show-inheritance:

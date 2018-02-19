@@ -21,7 +21,7 @@ class EvalbBracketingScorer(Metric):
 
     Note that this software is 20 years' old. In order to compile it on modern hardware,
     you may need to remove an ``include <malloc.h>`` statement in ``evalb.c`` before it
-    will compile. 
+    will compile.
 
     Parameters
     ----------
