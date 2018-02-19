@@ -1173,9 +1173,31 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 mixture_weight = self._mixture_feedforward(hidden_state)
                 mix1 = (torch.log(mixture_weight) * entity_action_mask.float())
                 mix2 = (torch.log(1 - mixture_weight) * embedded_action_mask.float())
-                entity_action_logits = util.masked_log_softmax(entity_action_logits, entity_action_mask.float()) + mix1
-                embedded_action_logits = util.masked_log_softmax(embedded_action_logits, embedded_action_mask.float()) + mix2
-                log_probs = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
+
+                # print("11111 entity_action_logits")
+                # print(entity_action_logits)
+                # print("1111 entity_action_mask.float()")
+                # print(entity_action_mask.float().log())
+                # print("1111 sum of normal entity_action_mask.float()")
+                # print(entity_action_logits + entity_action_mask.float().log())
+
+                # entity_action_probs = util.masked_log_softmax(entity_action_logits, entity_action_mask.float())  #+ mix1
+
+                entity_action_probs = util.masked_log_softmax(entity_action_logits, None)
+                entity_action_probs = entity_action_probs * entity_action_mask.float()
+                entity_action_probs = entity_action_probs + entity_action_mask.float().log() + mix1
+
+                # embedded_action_probs = util.masked_log_softmax(embedded_action_logits, embedded_action_mask.float()) + mix2
+                embedded_action_probs = util.masked_log_softmax(embedded_action_logits, None)
+                embedded_action_probs = embedded_action_probs * embedded_action_mask.float()
+                embedded_action_probs = embedded_action_probs + embedded_action_mask.float().log() + mix2
+
+                log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=1)
+                # print('222222 entity_action_probs')
+                # print(entity_action_probs)
+                # print('3333 entity_action_probs + log mask')
+                # print(entity_action_probs * entity_action_mask.float())
+
                 return self._compute_new_states(state,
                                                 log_probs,
                                                 hidden_state,
