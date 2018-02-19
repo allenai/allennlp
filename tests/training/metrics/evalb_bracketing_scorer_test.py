@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
-import subprocess
 import os
 from nltk import Tree
 
