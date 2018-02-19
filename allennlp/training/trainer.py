@@ -13,6 +13,7 @@ import shutil
 import time
 import re
 import datetime
+import traceback
 from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 
 import torch
@@ -20,8 +21,8 @@ import torch.optim.lr_scheduler
 from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
 from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
-import tensorboard
-from tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
+
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -102,13 +103,9 @@ class TensorboardWriter:
 
     def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
         if self._train_log is not None:
-            # SummaryWriter.add_histogram doesn't pass global step, so
-            # need to access file_writer directly
             if isinstance(values, torch.autograd.Variable):
                 values_to_write = values.cpu().data.numpy().flatten()
-                self._train_log.file_writer.add_summary(
-                        tensorboard.summary.histogram(name, values_to_write), global_step
-                )
+                self._train_log.add_histogram(name, values_to_write, global_step)
 
     def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
         if self._validation_log is not None:
@@ -630,7 +627,14 @@ class Trainer:
         """
         Trains the supplied model with the supplied parameters.
         """
-        epoch_counter, validation_metric_per_epoch = self._restore_checkpoint()
+        try:
+            epoch_counter, validation_metric_per_epoch = self._restore_checkpoint()
+        except RuntimeError:
+            traceback.print_exc()
+            raise ConfigurationError("Could not recover training from the checkpoint.  Did you mean to output to "
+                                     "a different serialization directory or delete the existing serialization "
+                                     "directory?")
+
         self._enable_gradient_clipping()
         self._enable_activation_logging()
 

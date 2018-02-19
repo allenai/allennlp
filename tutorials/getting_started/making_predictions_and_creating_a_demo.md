@@ -221,7 +221,7 @@ python -m allennlp.service.server_simple \
     --field-name paperAbstract
 ```
 
-This will start a server at `localhost:8888` that serves up a really simple
+This will start a server at `localhost:8000` that serves up a really simple
 text-in-json-out version of your model:
 
 ![demo screenshot](best_paper.png)
@@ -234,7 +234,12 @@ that the predictor is expecting, or the demo won't work!
 
 ## Customizing the Demo
 
-Our JSON "visualization" is not particularly impressive.
+Our JSON "visualization" is not particularly impressive.  If you want to visualize model internals,
+with easy attention heat maps, you might want to look at our [how-to for visualizing model
+internals](../how_to/visualizing_model_internals.md).  That how-to relies on installing `npm` and
+using React; if you want a simpler way of just using HTML and JavaScript (but with less built-in
+functionality), keeping reading.
+
 We can customize it by putting our own `index.html`
 (and any other files we need) in some directory
 and calling `server_simple` with the `--static-dir` flag.
