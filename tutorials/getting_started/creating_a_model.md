@@ -41,7 +41,13 @@ In addition to whatever tags we're trying to predict, we'll have special
 in order to capture the "transition" inherent in being the tag at the
 beginning or end of a sentence.
 
-As this is just a component of our model, we'll implement it as a [Module](https://allenai.github.io/allennlp-docs/api/allennlp.modules.html).
+In addition, our CRF will accept an optional set of _constraints_ that
+disallow "invalid" transitions (where "invalid" depends on what you're trying to model.)
+For example, our NER data has distinct tags that represent the beginning, middle, and end
+of each entity type. We'd like not to allow a "beginning of a person entity" tag
+to be followed by an "end of location entity tag".
+
+As the CRF is just a component of our model, we'll implement it as a [Module](https://allenai.github.io/allennlp-docs/api/allennlp.modules.html).
 
 ## Implementing the CRF Module
 
@@ -55,20 +61,32 @@ and override
 
 to compute the log-likelihood of the provided inputs.
 
-To initialize this module, we just need the number of tags.
+To initialize this module, we just need the number of tags and optionally some constraints
+(represented as a list of allowed pairs `(from_tag_index, to_tag_index)`):
 
 ```python
-    def __init__(self, num_tags: int) -> None:
+    def __init__(self,
+                 num_tags: int,
+                 constraints: List[Tuple[int, int]] = None) -> None:
         super().__init__()
-
         self.num_tags = num_tags
 
         # transitions[i, j] is the logit for transitioning from state i to state j.
-        self.transitions = torch.nn.Parameter(torch.randn(num_tags, num_tags))
+        self.transitions = torch.nn.Parameter(torch.Tensor(num_tags, num_tags))
+
+        # _constraint_mask indicates valid transitions (based on supplied constraints).
+        if constraints is None:
+            self._constraint_mask = None
+        else:
+            constraint_mask = torch.Tensor(num_tags, num_tags).fill_(0.)
+            for i, j in constraints:
+                constraint_mask[i, j] = 1.
+
+            self._constraint_mask = torch.nn.Parameter(constraint_mask, requires_grad=False)
 
         # Also need logits for transitioning from "start" state and to "end" state.
-        self.start_transitions = torch.nn.Parameter(torch.randn(num_tags))
-        self.end_transitions = torch.nn.Parameter(torch.randn(num_tags))
+        self.start_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
+        self.end_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
 ```
 
 I'm not going to get into the exact mechanics of how the log-likelihood is calculated;
@@ -88,6 +106,7 @@ if you want the details. The key points are
 * We also add a `viterbi_tags()` method that accepts some input logits,
   gets the transition probabilities, and uses the
   [Viterbi algorithm](https://en.wikipedia.org/wiki/Viterbi_algorithm)
+  and the supplied constraints
   to compute the most likely sequence of tags for a given input.
 
 ## Implementing the CRF Tagger Model
@@ -158,6 +177,9 @@ We don't *need* to, but we also make a few other changes
   treated as out-of-vocabulary at evaluation time. The second flag just evaluates
   the model on the test set when training stops. Use this flag cautiously,
   when you're doing real science you don't want to evaluate on your test set too often.
+* if you want to specify constraints for the CRF, you can add a `"model.constraint_type"`
+  to your config that indicates what sort of constraints the CRF tagger should use.
+
 
 ## Putting It All Together
 
