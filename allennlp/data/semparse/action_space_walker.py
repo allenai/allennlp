@@ -44,6 +44,8 @@ class ActionSpaceWalker:
         # added to completed_paths, 2) longer than max_path_length, in which case they are
         # discarded, or 3) neither, in which case they are used to form the incomplete_paths for the
         # next iteration of this while loop.
+        # While the non-terminal expansion is done in a depth-first fashion, note that the search over
+        # the action space itself is breadth-first.
         while incomplete_paths:
             next_paths = []
             for nonterminal_buffer, history in incomplete_paths:
