@@ -484,6 +484,9 @@ LAMBDA_VARIABLES = set(['x', 'y', 'z'])
 def is_nonterminal(production: str) -> bool:
     # TODO(pradeep): This is pretty specific to the assumptions made in converting types to
     # strings (e.g., that we're only using the first letter for types, lowercased).
+    # TODO(pradeep): Also we simply check the surface forms here, and this works for
+    # wikitables and nlvr. We should ideally let the individual type declarations define their own
+    # variants of this method.
     if production in ['<=', '<']:
         # Some grammars (including the wikitables grammar) have "less than" and "less than or
         # equal to" functions that are terminals.  We don't want to treat those like our

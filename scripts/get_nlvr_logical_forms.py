@@ -26,7 +26,7 @@ def process_data(input_file: str,
                  max_path_length: int,
                  max_num_logical_forms: int) -> None:
     """
-    Reads an NLVR dataset and returns a Json representation containing sentences, correct and
+    Reads an NLVR dataset and returns a JSON representation containing sentences, correct and
     incorrect logical forms. The format is:
         ``[{"id": str, "sentence": str, "correct": List[str], "incorrect": List[str]}]``
     """
@@ -37,14 +37,20 @@ def process_data(input_file: str,
     for line in open(input_file):
         instance_id, sentence, world, label = read_json_line(line)
         sentence_agenda = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
-        logical_forms = walker.get_logical_forms_with_agenda(sentence_agenda, max_num_logical_forms)
+        logical_forms = walker.get_logical_forms_with_agenda(sentence_agenda,
+                                                             max_num_logical_forms * 10)
         correct_logical_forms = []
         incorrect_logical_forms = []
         for logical_form in logical_forms:
             if world.execute(logical_form) == label:
-                correct_logical_forms.append(logical_form)
+                if len(correct_logical_forms) <= max_num_logical_forms:
+                    correct_logical_forms.append(logical_form)
             else:
-                incorrect_logical_forms.append(logical_form)
+                if len(incorrect_logical_forms) <= max_num_logical_forms:
+                    incorrect_logical_forms.append(logical_form)
+            if len(correct_logical_forms) >= max_num_logical_forms \
+               and len(incorrect_logical_forms) >= max_num_logical_forms:
+                break
         processed_data.append({"id": instance_id,
                                "sentence": sentence,
                                "correct": correct_logical_forms,
@@ -60,6 +66,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_path_length", type=int,
                         help="Maximum path length for logical forms", default=12)
     parser.add_argument("--max_num_logical_forms", type=int,
-                        help="Maximum number of logical forms per question", default=40)
+                        help="Maximum number of logical forms per denotation, per question",
+                        default=20)
     args = parser.parse_args()
     process_data(args.input, args.output, args.max_path_length, args.max_num_logical_forms)

@@ -227,9 +227,17 @@ class NlvrWorld(World):
         number_strings = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six":
                           "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"}
         number_productions = []
-        for word, numeral in number_strings.items():
-            if word in sentence or numeral in sentence:
-                number_productions.append(f"e -> {numeral}")
+        tokens = sentence.split()
+        for token in tokens:
+            if token.isdigit():
+                try:
+                    value = int(token)
+                    if value >= 1 and value <= 10:
+                        number_productions.append(f"e -> {token}")
+                except ValueError:
+                    pass
+            elif token in number_strings:
+                number_productions.append(f"e -> {number_strings[token]}")
         return number_productions
 
     def _add_nonterminal_productions(self, agenda: List[str]) -> List[str]:

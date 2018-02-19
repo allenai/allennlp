@@ -1,8 +1,8 @@
 from collections import defaultdict
 from typing import List, Dict, Set
 
-from allennlp.data.semparse.type_declarations import type_declaration as types
 from allennlp.data.semparse.worlds.world import World
+from allennlp.data.semparse.type_declarations import type_declaration as types
 
 
 class ActionSpaceWalker:
@@ -36,19 +36,32 @@ class ActionSpaceWalker:
 
         self._completed_paths = []
         actions = self._world.get_valid_actions()
+        # Overview: We keep track of the buffer of non-terminals to expand, and the action history
+        # for each incomplete path. At every iteration in the while loop below, we iterate over all
+        # incomplete paths, expand one non-terminal from the buffer in a depth-first fashion, get
+        # all possible next actions triggered by that non-terminal and add to the paths. Then, we
+        # check whether the expanded paths, to see if they are 1) complete, in which case they are
+        # added to completed_paths, 2) longer than max_path_length, in which case they are
+        # discarded, or 3) neither, in which case they are used to form the incomplete_paths for the
+        # next iteration of this while loop.
         while incomplete_paths:
-            new_incomplete_paths = []
+            next_paths = []
             for nonterminal_buffer, history in incomplete_paths:
+                # Taking the last non-terminal added to the buffer. We're going depth-first.
                 nonterminal = nonterminal_buffer.pop()
+                # Iterating over all possible next actions.
                 for action in actions[nonterminal]:
                     new_history = history + [action]
-                    new_nonterminal_buffer = list(nonterminal_buffer)
+                    new_nonterminal_buffer = nonterminal_buffer[:]
+                    # Since we expand the last action added to the buffer, the left child should be
+                    # added after the right child.
                     for right_side_part in reversed(self._get_right_side_parts(action)):
                         if types.is_nonterminal(right_side_part):
                             new_nonterminal_buffer.append(right_side_part)
-                    new_incomplete_paths.append((new_nonterminal_buffer, new_history))
+                    next_paths.append((new_nonterminal_buffer, new_history))
             incomplete_paths = []
-            for nonterminal_buffer, path in new_incomplete_paths:
+            for nonterminal_buffer, path in next_paths:
+                # An empty buffer means that we've completed this path.
                 if not nonterminal_buffer:
                     # Indexing completed paths by the nonterminals they contain.
                     next_path_index = len(self._completed_paths)
@@ -57,17 +70,18 @@ class ActionSpaceWalker:
                             if not types.is_nonterminal(value):
                                 self._terminal_path_index[action].add(next_path_index)
                     self._completed_paths.append(path)
+                # We're adding to incomplete_paths for the next iteration, only those paths that are
+                # shorter than the max_path_length the remaining paths will be discarded.
                 elif len(path) <= self._max_path_length:
                     incomplete_paths.append((nonterminal_buffer, path))
 
     @staticmethod
     def _get_right_side_parts(action: str) -> List[str]:
         _, right_side = action.split(" -> ")
-        right_side_parts: List[str] = []
         if "[" in right_side:
             right_side_parts = right_side[1:-1].split(", ")
         else:
-            right_side_parts.append(right_side)
+            right_side_parts = [right_side]
         return right_side_parts
 
     def get_logical_forms_with_agenda(self,
