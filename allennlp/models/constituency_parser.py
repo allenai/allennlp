@@ -1,7 +1,9 @@
 from typing import Dict, Tuple, List, Optional, NamedTuple
 from overrides import overrides
+
 import torch
 from torch.nn.modules.linear import Linear
+from nltk import Tree
 
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
@@ -170,9 +172,9 @@ class SpanConstituencyParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Constructs a tree given the scored spans. We also switch to exclusive span
-        ends when constructing the tree representation, because it makes indexing into
-        lists cleaner for ranges of text, rather than individual indices.
+        Constructs an NLTK ``Tree`` given the scored spans. We also switch to exclusive
+        span ends when constructing the tree representation, because it makes indexing
+        into lists cleaner for ranges of text, rather than individual indices.
         """
         all_predictions = output_dict['class_probabilities'].cpu().data
         all_spans = output_dict["spans"].cpu().data
@@ -185,7 +187,7 @@ class SpanConstituencyParser(Model):
         all_sentences = output_dict["tokens"].data
         sentence_lengths = get_lengths_from_binary_sequence_mask(output_dict["token_mask"]).data
 
-        trees = []
+        trees: List[Tree] = []
         for batch_index, (predictions, spans, sentence_ids) in enumerate(zip(all_predictions,
                                                                              exclusive_end_spans,
                                                                              all_sentences)):
@@ -278,7 +280,7 @@ class SpanConstituencyParser(Model):
     @staticmethod
     def construct_tree_from_spans(spans_to_labels: Dict[Tuple[int, int], str],
                                   sentence: List[str],
-                                  pos_tags: List[str] = None):
+                                  pos_tags: List[str] = None) -> Tree:
         """
         Parameters
         ----------
@@ -292,30 +294,7 @@ class SpanConstituencyParser(Model):
 
         Returns
         -------
-        A nested dictionary, where each node contains the following keys:
-
-        label : ``str``
-            The constituency label of this subtree.
-        start : ``int``
-            The start index for this subtree.
-        end : ``int``
-            The exclusive end index for this subtree.
-        children : ``List[Dict]``
-            A list of subtrees containing the children of this node.
-
-        or alternatively, if the node is a leaf node, it will have the following keys:
-
-        label : ``str``
-            The constituency label of this subtree.
-        start : ``int``
-            The start index for this subtree.
-        end : ``int``
-            The exclusive end index for this subtree.
-        is_leaf : ``bool`` = True
-            A indicator to make identifying leaf nodes easier.
-        pos_tag : ``str``, optional.
-            Optionally the gold pos tag will be included, if a list of
-            gold (or predicted) pos tags are passed to this method.
+        An ``nltk.Tree`` constructed from the labelled spans.
         """
         def assemble_subtree(start: int, end: int):
             if (start, end) in spans_to_labels:
@@ -326,11 +305,16 @@ class SpanConstituencyParser(Model):
             # This node is a leaf.
             if end - start == 1:
                 word = sentence[start]
-                tree = {"start": start, "end": end, "word": word, "is_leaf": True}
-                if label is not None:
-                    tree["label"] = label
-                if pos_tags is not None:
-                    tree["pos_tag"] = pos_tags[start]
+                pos_tag = pos_tags[start] if pos_tags is not None else "XX"
+                tree = Tree(pos_tag, [word])
+                if label is not None and pos_tags is not None:
+                    # If POS tags were passed explicitly,
+                    # they are added as pre-terminal nodes.
+                    tree = Tree(label, [tree])
+                elif label is not None:
+                    # Otherwise, we didn't want POS tags
+                    # at all.
+                    tree = Tree(label, [word])
                 return [tree]
 
             argmax_split = start + 1
@@ -345,7 +329,7 @@ class SpanConstituencyParser(Model):
             right_trees = assemble_subtree(argmax_split, end)
             children = left_trees + right_trees
             if label is not None:
-                children = [{"label": label, "children": children, "start": start, "end": end}]
+                children = [Tree(label, children)]
             return children
 
         tree = assemble_subtree(0, len(sentence))
