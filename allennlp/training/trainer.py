@@ -13,6 +13,7 @@ import shutil
 import time
 import re
 import datetime
+import traceback
 from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 
 import torch
@@ -626,7 +627,14 @@ class Trainer:
         """
         Trains the supplied model with the supplied parameters.
         """
-        epoch_counter, validation_metric_per_epoch = self._restore_checkpoint()
+        try:
+            epoch_counter, validation_metric_per_epoch = self._restore_checkpoint()
+        except RuntimeError:
+            traceback.print_exc()
+            raise ConfigurationError("Could not recover training from the checkpoint.  Did you mean to output to "
+                                     "a different serialization directory or delete the existing serialization "
+                                     "directory?")
+
         self._enable_gradient_clipping()
         self._enable_activation_logging()
 
