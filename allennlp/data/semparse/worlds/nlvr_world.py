@@ -134,6 +134,15 @@ class NlvrWorld(World):
         self._attribute_functions = {"shape": self._shape,
                                      "color": self._color}
 
+        # Mapping from terminal strings to productions that produce them.
+        # Eg.: "yellow" -> "<o,o> -> yellow", "<b,<<b,e>,<e,b>>> -> filter_greater" etc.
+        self.terminal_productions: Dict[str, str] = {}
+        for constant in types.COMMON_NAME_MAPPING:
+            alias = types.COMMON_NAME_MAPPING[constant]
+            if alias in types.COMMON_TYPE_SIGNATURE:
+                constant_type = types.COMMON_TYPE_SIGNATURE[alias]
+                self.terminal_productions[constant] = "%s -> %s" % (constant_type, constant)
+
     @overrides
     def get_basic_types(self) -> Set[Type]:
         return types.BASIC_TYPES
@@ -145,6 +154,105 @@ class NlvrWorld(World):
     @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         return types.COMMON_NAME_MAPPING[name] if name in types.COMMON_NAME_MAPPING else name
+
+    def get_agenda_for_sentence(self,
+                                sentence: str,
+                                add_paths_to_agenda: bool = False) -> List[str]:
+        """
+        Given a ``sentence``, returns a list of actions the sentence triggers as an ``agenda``. The
+        ``agenda`` can be used while by a parser to guide the decoder.  sequences as possible. This
+        is a simplistic mapping at this point, and can be expanded.
+
+        Parameters
+        ----------
+        sentence : ``str``
+            The sentence for which an agenda will be produced.
+        add_paths_to_agenda : ``bool`` , optional
+            If set, the agenda will also include nonterminal productions that lead to the terminals
+            from the root node (default = False).
+        """
+        agenda = []
+        sentence = sentence.lower()
+        if sentence.startswith("there is a box") or sentence.startswith("there is a tower "):
+            agenda.append(self.terminal_productions["box_exists"])
+        elif sentence.startswith("there is a "):
+            agenda.append(self.terminal_productions["object_exists"])
+
+        if "touch" in sentence:
+            if "top" in sentence:
+                agenda.append(self.terminal_productions["touch_top"])
+            elif "bottom" in sentence or "base" in sentence:
+                agenda.append(self.terminal_productions["touch_bottom"])
+            elif "corner" in sentence:
+                agenda.append(self.terminal_productions["touch_corner"])
+            elif "right" in sentence:
+                agenda.append(self.terminal_productions["touch_right"])
+            elif "left" in sentence:
+                agenda.append(self.terminal_productions["touch_left"])
+            elif "wall" in sentence or "edge" in sentence:
+                agenda.append(self.terminal_productions["touch_wall"])
+            else:
+                agenda.append(self.terminal_productions["touch_object"])
+        else:
+            # The words "top" and "bottom" may be referring to top and bottom blocks in a tower.
+            if "top" in sentence:
+                agenda.append(self.terminal_productions["top"])
+            elif "bottom" in sentence or "base" in sentence:
+                agenda.append(self.terminal_productions["bottom"])
+
+        # This takes care of shapes, colors, top, bottom, big, small etc.
+        for constant, production in self.terminal_productions.items():
+            # TODO(pradeep): Deal with constant names with underscores.
+            if "top" in constant or "bottom" in constant:
+                # We already dealt with top, bottom, touch_top and touch_bottom above.
+                continue
+            if constant in sentence:
+                agenda.append(production)
+        if " not " in sentence:
+            agenda.append(self.terminal_productions["negate_filter"])
+        if " contains " in sentence or " has " in sentence:
+            agenda.append(self.terminal_productions["all_boxes"])
+        # TODO (pradeep): Rules for "member_*" productions ("tower" or "box" followed by a color,
+        # shape or number...)
+        number_productions = self._get_number_productions(sentence)
+        for production in number_productions:
+            agenda.append(production)
+        if add_paths_to_agenda:
+            agenda = self._add_nonterminal_productions(agenda)
+        return agenda
+
+    @staticmethod
+    def _get_number_productions(sentence: str) -> List[str]:
+        """
+        Gathers all the numbers in the sentence, and returns productions that lead to them.
+        """
+        # The mapping here is very simple and limited, which also shouldn't be a problem
+        # because numbers seem to be represented fairly regularly.
+        number_strings = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six":
+                          "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"}
+        number_productions = []
+        tokens = sentence.split()
+        numbers = number_strings.values()
+        for token in tokens:
+            if token in numbers:
+                number_productions.append(f"e -> {token}")
+            elif token in number_strings:
+                number_productions.append(f"e -> {number_strings[token]}")
+        return number_productions
+
+    def _add_nonterminal_productions(self, agenda: List[str]) -> List[str]:
+        """
+        Given a partially populated agenda with (mostly) terminal productions, this method adds the
+        nonterminal productions that lead from the root to the terminal productions.
+        """
+        nonterminal_productions = set(agenda)
+        for action in agenda:
+            paths = self.get_paths_to_root(action, max_num_paths=5)
+            for path in paths:
+                for path_action in path:
+                    nonterminal_productions.add(path_action)
+        new_agenda = list(nonterminal_productions)
+        return new_agenda
 
     ## Complex operators
     @staticmethod
@@ -459,7 +567,7 @@ class NlvrWorld(World):
                 logger.error("Function not found: %s", sub_expression[0])
                 raise ExecutionError("Function not found")
             arguments = sub_expression[1]
-            if isinstance(arguments, list) and arguments[0].startswith("member_") or \
+            if isinstance(arguments, list) and str(arguments[0]).startswith("member_") or \
                 arguments == 'all_boxes' or arguments[0] == 'all_boxes':
                 if sub_expression[0] != "object_in_box":
                     logger.error("Invalid object filter expression: %s", sub_expression)
@@ -543,6 +651,8 @@ class NlvrWorld(World):
         objects_of_attribute: Dict[str, Set[Object]] = defaultdict(set)
         for entity in objects:
             objects_of_attribute[attribute_function(entity)].add(entity)
+        if not objects_of_attribute:
+            return set()
         most_frequent_attribute = max(objects_of_attribute, key=lambda x: len(objects_of_attribute[x]))
         if len(objects_of_attribute[most_frequent_attribute]) <= 1:
             return set()
