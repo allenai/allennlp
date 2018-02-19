@@ -159,13 +159,10 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
     def test_get_agenda_for_sentence(self):
         world = self.worlds[0]
         agenda = world.get_agenda_for_sentence("there is a tower with exactly two yellow blocks")
-        assert agenda == ['<o,o> -> yellow', '<b,t> -> box_exists', 'e -> 2']
+        assert set(agenda) == set(['<o,o> -> yellow', '<b,t> -> box_exists', 'e -> 2'])
         agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
                                                "the bottom of a box.")
-        # "bottom" triggers two rules, one due to lexical match and another due to the rule
-        # involving touch and bottom.
-        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> bottom', '<o,o> -> touch_bottom',
-                                   'e -> 1'])
+        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_bottom', 'e -> 1'])
         agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
                                                "the right wall of a box.")
         assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_right', 'e -> 1'])

@@ -173,11 +173,6 @@ class NlvrWorld(World):
         """
         agenda = []
         sentence = sentence.lower()
-        # This takes care of shapes, colors, top, bottom, big, small etc.
-        for constant, production in self.terminal_productions.items():
-            # TODO(pradeep): Deal with constant names with underscores.
-            if constant in sentence:
-                agenda.append(production)
         if sentence.startswith("there is a box") or sentence.startswith("there is a tower "):
             agenda.append(self.terminal_productions["box_exists"])
         elif sentence.startswith("there is a "):
@@ -204,6 +199,15 @@ class NlvrWorld(World):
                 agenda.append(self.terminal_productions["top"])
             elif "bottom" in sentence or "base" in sentence:
                 agenda.append(self.terminal_productions["bottom"])
+
+        # This takes care of shapes, colors, top, bottom, big, small etc.
+        for constant, production in self.terminal_productions.items():
+            # TODO(pradeep): Deal with constant names with underscores.
+            if "top" in constant or "bottom" in constant:
+                # We already dealt with top, bottom, touch_top and touch_bottom above.
+                continue
+            if constant in sentence:
+                agenda.append(production)
         if " not " in sentence:
             agenda.append(self.terminal_productions["negate_filter"])
         if " contains " in sentence or " has " in sentence:
@@ -228,14 +232,10 @@ class NlvrWorld(World):
                           "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"}
         number_productions = []
         tokens = sentence.split()
+        numbers = number_strings.values()
         for token in tokens:
-            if token.isdigit():
-                try:
-                    value = int(token)
-                    if value >= 1 and value <= 10:
-                        number_productions.append(f"e -> {token}")
-                except ValueError:
-                    pass
+            if token in numbers:
+                number_productions.append(f"e -> {token}")
             elif token in number_strings:
                 number_productions.append(f"e -> {number_strings[token]}")
         return number_productions

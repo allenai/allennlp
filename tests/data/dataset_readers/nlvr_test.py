@@ -21,8 +21,9 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert len(actions) == 121
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
         agenda_strings = [actions[rule_id] for rule_id in agenda]
-        assert agenda_strings == ['<o,o> -> circle', '<o,t> -> object_exists',
-                                  '<o,o> -> touch_corner']
+        assert set(agenda_strings) == set(['<o,o> -> circle',
+                                           '<o,t> -> object_exists',
+                                           '<o,o> -> touch_corner'])
         world = instance.fields["world"].as_tensor({})
         assert isinstance(world, NlvrWorld)
         label = instance.fields["label"].label

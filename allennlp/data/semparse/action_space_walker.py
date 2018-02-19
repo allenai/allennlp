@@ -40,7 +40,7 @@ class ActionSpaceWalker:
         # for each incomplete path. At every iteration in the while loop below, we iterate over all
         # incomplete paths, expand one non-terminal from the buffer in a depth-first fashion, get
         # all possible next actions triggered by that non-terminal and add to the paths. Then, we
-        # check whether the expanded paths, to see if they are 1) complete, in which case they are
+        # check the expanded paths, to see if they are 1) complete, in which case they are
         # added to completed_paths, 2) longer than max_path_length, in which case they are
         # discarded, or 3) neither, in which case they are used to form the incomplete_paths for the
         # next iteration of this while loop.
@@ -73,7 +73,7 @@ class ActionSpaceWalker:
                                 self._terminal_path_index[action].add(next_path_index)
                     self._completed_paths.append(path)
                 # We're adding to incomplete_paths for the next iteration, only those paths that are
-                # shorter than the max_path_length the remaining paths will be discarded.
+                # shorter than the max_path_length. The remaining paths will be discarded.
                 elif len(path) <= self._max_path_length:
                     incomplete_paths.append((nonterminal_buffer, path))
 

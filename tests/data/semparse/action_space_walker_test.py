@@ -48,10 +48,10 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
                                                                                 '<o,o> -> touch_wall'])
         # Permutations of the three functions. There will not be repetitions of any functions
         # because we limit the length of paths to 10 above.
-        assert set(black_triangle_touch_forms) == \
-                set(['(object_exists (black (triangle (touch_wall all_objects))))',
-                     '(object_exists (black (touch_wall (triangle all_objects))))',
-                     '(object_exists (triangle (black (touch_wall all_objects))))',
-                     '(object_exists (triangle (touch_wall (black all_objects))))',
-                     '(object_exists (touch_wall (black (triangle all_objects))))',
-                     '(object_exists (touch_wall (triangle (black all_objects))))'])
+        assert set(black_triangle_touch_forms) == set([
+                '(object_exists (black (triangle (touch_wall all_objects))))',
+                '(object_exists (black (touch_wall (triangle all_objects))))',
+                '(object_exists (triangle (black (touch_wall all_objects))))',
+                '(object_exists (triangle (touch_wall (black all_objects))))',
+                '(object_exists (touch_wall (black (triangle all_objects))))',
+                '(object_exists (touch_wall (triangle (black all_objects))))'])

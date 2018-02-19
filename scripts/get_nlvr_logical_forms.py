@@ -26,9 +26,10 @@ def process_data(input_file: str,
                  max_path_length: int,
                  max_num_logical_forms: int) -> None:
     """
-    Reads an NLVR dataset and returns a JSON representation containing sentences, correct and
-    incorrect logical forms. The format is:
-        ``[{"id": str, "sentence": str, "correct": List[str], "incorrect": List[str]}]``
+    Reads an NLVR dataset and returns a JSON representation containing sentences, labels, correct and
+    incorrect logical forms. The output will contain at most `max_num_logical_forms` logical forms
+    each in both correct and incorrect lists. The output format is:
+        ``[{"id": str, "label": str, "sentence": str, "correct": List[str], "incorrect": List[str]}]``
     """
     processed_data: JsonDict = []
     # We can instantiate the ``ActionSpaceWalker`` with any world because the action space is the
@@ -53,6 +54,7 @@ def process_data(input_file: str,
                 break
         processed_data.append({"id": instance_id,
                                "sentence": sentence,
+                               "label": str(label),
                                "correct": correct_logical_forms,
                                "incorrect": incorrect_logical_forms})
     outfile = open(output_file, "w")
