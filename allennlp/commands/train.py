@@ -74,6 +74,11 @@ class Train(Subcommand):
                                    type=str,
                                    help='directory in which to save the model and its logs')
 
+        subparser.add_argument('-r', '--recover',
+                               action='store_true',
+                               default=False,
+                               help='recover training from the state in serialization_dir')
+
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
@@ -101,6 +106,14 @@ def train_model_from_args(args: argparse.Namespace):
     # Import any additional modules needed (to register custom classes)
     for package_name in args.include_package:
         import_submodules(package_name)
+
+    if not args.recover and os.path.exists(args.serialization_dir):
+        raise ConfigurationError(f"Serialization directory ({args.serialization_dir}) already exists.  "
+                                 f"Specify --recover to recover training from existing output.")
+    elif args.recover and not os.path.exists(args.serialization_dir):
+        raise ConfigurationError(f"--recover specified but serialization_dir ({args.serialization_dir}) does not "
+                                 f"exist.  There is nothing to recover from.")
+
     train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.file_friendly_logging)
 
 
@@ -155,6 +168,54 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
 
     return datasets
 
+def create_serialization_dir(params: Params, serialization_dir: str) -> None:
+    """
+    This function creates the serialization directory if it doesn't exist.  If it already exists,
+    then it verifies that we're recovering from a training with an identical configuration.
+
+    Parameters
+    ----------
+    params: Params, required.
+        A parameter object specifying an AllenNLP Experiment.
+    serialization_dir: str, required
+        The directory in which to save results and logs.
+    """
+    if os.path.exists(serialization_dir):
+        logger.info(f"Recovering from prior training at {serialization_dir}.")
+
+        recovered_config_file = os.path.join(serialization_dir, CONFIG_NAME)
+        if not os.path.exists(recovered_config_file):
+            raise ConfigurationError("The serialization directory already exists but doesn't "
+                                     "contain a config.json. You probably gave the wrong directory.")
+        else:
+            loaded_params = Params.from_file(recovered_config_file)
+
+            # Check whether any of the training configuration differs from the configuration we are resuming.
+            # If so, warn the user that training may fail.
+            fail = False
+            flat_params = params.as_flat_dict()
+            flat_loaded = loaded_params.as_flat_dict()
+            for key in flat_params.keys() - flat_loaded.keys():
+                logger.error(f"Key '{key}' found in training configuration but not in the serialization "
+                             f"directory we're recovering from.")
+                fail = True
+            for key in flat_loaded.keys() - flat_params.keys():
+                logger.error(f"Key '{key}' found in the serialization directory we're recovering from "
+                             f"but not in the training config.")
+                fail = True
+            for key in flat_params.keys():
+                if flat_params.get(key, None) != flat_loaded.get(key, None):
+                    logger.error(f"Value for '{key}' in training configuration does not match that the value in "
+                                 f"the serialization directory we're recovering from: "
+                                 f"{flat_params[key]} != {flat_loaded[key]}")
+                    fail = True
+            if fail:
+                raise ConfigurationError("Training configuration does not match the configuration we're "
+                                         "recovering from.")
+    else:
+        os.makedirs(serialization_dir)
+
+
 def train_model(params: Params, serialization_dir: str, file_friendly_logging: bool = False) -> Model:
     """
     This function can be used as an entry point to running models in AllenNLP
@@ -175,7 +236,8 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     """
     prepare_environment(params)
 
-    os.makedirs(serialization_dir, exist_ok=True)
+    create_serialization_dir(params, serialization_dir)
+
     sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
                            sys.stdout, file_friendly_logging)
     sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
