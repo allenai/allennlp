@@ -198,12 +198,11 @@ class TestNnUtil(AllenNlpTestCase):
                                   numpy.array([[0., 0., 0., 1.]]))
 
         # Testing the masked 1D case where the input is not all 0s
-        # and the mask is all 0s.
+        # and the mask is all 0s.  The output here will be arbitrary, but it should not be nan.
         vector_1d = Variable(torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]]))
         mask_1d = Variable(torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]]))
-        vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
-        assert_array_almost_equal(numpy.exp(vector_1d_softmaxed),
-                                  numpy.array([[1.0, 1.0, 1.0, 1.0]]))
+        vector_1d_softmaxed = util.masked_log_softmax(vector_1d, mask_1d).data.numpy()
+        assert not numpy.isnan(vector_1d_softmaxed).any()
 
     def test_get_text_field_mask_returns_a_correct_mask(self):
         text_field_tensors = {
