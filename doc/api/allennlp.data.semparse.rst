@@ -6,6 +6,11 @@ allennlp.data.semparse
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.data.semparse.action_space_walker
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. toctree::
 
    allennlp.data.semparse.knowledge_graphs
