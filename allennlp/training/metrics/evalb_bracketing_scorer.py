@@ -4,6 +4,7 @@ import os
 import tempfile
 import re
 import math
+import subprocess
 
 from overrides import overrides
 from nltk import Tree
@@ -44,7 +45,7 @@ class EvalbBracketingScorer(Metric):
         self._count = 0.0
 
     @overrides
-    def __call__(self, predicted_trees: List[Tree], gold_trees: List[Tree]) -> None:
+    def __call__(self, predicted_trees: List[Tree], gold_trees: List[Tree]) -> None: # type: ignore
         """
         Parameters
         ----------
@@ -67,10 +68,7 @@ class EvalbBracketingScorer(Metric):
 
         command = f"{self._evalb_program_path} -p {self._evalb_param_path} " \
                   f"{gold_path} {predicted_path} > {output_path}"
-        return_code = os.system(command)
-
-        if return_code != 0:
-            raise RuntimeError(f"Call to EVALB metric failed with error code {return_code}")
+        subprocess.run(command, shell=True, check=True)
 
         recall = math.nan
         precision = math.nan
