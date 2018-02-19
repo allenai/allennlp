@@ -123,7 +123,7 @@ class ElmoEmbedder():
         logger.info("Initializing ELMo.")
         self.elmo_bilm = _ElmoBiLm(options_file, weight_file)
         if cuda_device >= 0:
-            self.elmo_bilm = self.elmo_bilm.cuda(cuda_device=cuda_device)
+            self.elmo_bilm = self.elmo_bilm.cuda(device=cuda_device)
 
         self.cuda_device = cuda_device
 
@@ -168,7 +168,7 @@ class ElmoEmbedder():
         """
         character_ids = self.batch_to_ids(batch)
         if self.cuda_device >= 0:
-            character_ids = character_ids.cuda(cuda_device=self.cuda_device)
+            character_ids = character_ids.cuda(device=self.cuda_device)
 
         bilm_output = self.elmo_bilm(character_ids)
         layer_activations = bilm_output['activations']
