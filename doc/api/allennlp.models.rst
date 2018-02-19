@@ -17,4 +17,4 @@ allennlp.models
   allennlp.models.coreference_resolution
   allennlp.models.semantic_role_labeler
   allennlp.models.simple_tagger
-
+  allennlp.models.constituency_parser

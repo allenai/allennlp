@@ -79,8 +79,10 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
+        multigpu_iterator = BasicIterator(batch_size=4)
+        multigpu_iterator.index_with(self.vocab)
         trainer = Trainer(self.model, self.optimizer,
-                          BasicIterator(batch_size=4), self.instances, num_epochs=2,
+                          multigpu_iterator, self.instances, num_epochs=2,
                           cuda_device=[0, 1])
         trainer.train()
 
@@ -131,7 +133,6 @@ class TestTrainer(AllenNlpTestCase):
                               num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
 
-    @pytest.mark.skipif(os.uname().sysname == 'Darwin', reason="Tensorboard logging broken on mac.")
     def test_trainer_can_log_histograms(self):
         # enable activation logging
         for module in self.model.modules():

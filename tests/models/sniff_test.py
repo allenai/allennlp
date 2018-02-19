@@ -92,7 +92,7 @@ class SniffTest(AllenNlpTestCase):
                 "hypothesis": "The elephant was lost."
         })
 
-        assert result["label_probs"][2] > 0.7  # neutral
+        assert result["label_probs"][2] > 0.6  # neutral
 
     def test_coreference_resolution(self):
         predictor = DEFAULT_MODELS['coreference-resolution'].predictor()

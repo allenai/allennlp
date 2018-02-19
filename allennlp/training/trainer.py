@@ -21,8 +21,8 @@ import torch.optim.lr_scheduler
 from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
 from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
-import tensorboard
-from tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
+
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -103,13 +103,9 @@ class TensorboardWriter:
 
     def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
         if self._train_log is not None:
-            # SummaryWriter.add_histogram doesn't pass global step, so
-            # need to access file_writer directly
             if isinstance(values, torch.autograd.Variable):
                 values_to_write = values.cpu().data.numpy().flatten()
-                self._train_log.file_writer.add_summary(
-                        tensorboard.summary.histogram(name, values_to_write), global_step
-                )
+                self._train_log.add_histogram(name, values_to_write, global_step)
 
     def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
         if self._validation_log is not None:
@@ -150,6 +146,7 @@ class Trainer:
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[PytorchLRScheduler] = None,
+                 summary_interval: int = 100,
                  histogram_interval: int = None) -> None:
         """
         Parameters
@@ -206,6 +203,8 @@ class Trainer:
             provided to determine if learning has plateaued.  To support updating the learning
             rate on every batch, this can optionally implement ``step_batch(batch_num)`` which
             updates the learning rate given the batch number.
+        summary_interval: ``int``, optional, (default = 100)
+            Number of batches between logging scalars to tensorboard
         histogram_interval : ``int``, optional, (default = ``None``)
             If not None, then log histograms to tensorboard every ``histogram_interval`` batches.
             When this parameter is specified, the following additional logging is enabled:
@@ -269,7 +268,7 @@ class Trainer:
             self._model = self._model.cuda(self._cuda_devices[0])
 
         self._log_interval = 10  # seconds
-        self._summary_interval = 100  # num batches between logging to tensorboard
+        self._summary_interval = summary_interval
         self._histogram_interval = histogram_interval
         self._log_histograms_this_batch = False
         self._batch_num_total = 0
@@ -824,8 +823,12 @@ class Trainer:
         training_state_path = os.path.join(self._serialization_dir,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
 
-        model_state = torch.load(model_path, map_location=util.device_mapping(self._cuda_devices[0]))
-        training_state = torch.load(training_state_path, map_location=util.device_mapping(self._cuda_devices[0]))
+        # Load the parameters onto CPU, then transfer to GPU.
+        # This avoids potential OOM on GPU for large models that
+        # load parameters onto GPU then make a new GPU copy into the parameter
+        # buffer. The GPU transfer happens implicitly in load_state_dict.
+        model_state = torch.load(model_path, map_location=util.device_mapping(-1))
+        training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
 
@@ -878,6 +881,13 @@ class Trainer:
         else:
             scheduler = None
 
+        num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", None)
+        keep_serialized_model_every_num_seconds = params.pop_int(
+                "keep_serialized_model_every_num_seconds", None)
+        model_save_interval = params.pop_float("model_save_interval", None)
+        summary_interval = params.pop_int("summary_interval", 100)
+        histogram_interval = params.pop_int("histogram_interval", None)
+
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
                        train_data, validation_data,
@@ -888,4 +898,9 @@ class Trainer:
                        cuda_device=cuda_device,
                        grad_norm=grad_norm,
                        grad_clipping=grad_clipping,
-                       learning_rate_scheduler=scheduler)
+                       learning_rate_scheduler=scheduler,
+                       num_serialized_models_to_keep=num_serialized_models_to_keep,
+                       keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
+                       model_save_interval=model_save_interval,
+                       summary_interval=summary_interval,
+                       histogram_interval=histogram_interval)
