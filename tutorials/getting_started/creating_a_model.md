@@ -162,7 +162,6 @@ a couple of changes:
 * change the `model.type` to `"crf_tagger"`
 * change the `"dataset_reader.type"` to `"conll2003"`
 * add a `"dataset_reader.tag_label"` field with value "ner" (to indicate that the NER labels are what we're predicting)
-* add a `"model.constraint_type"` field to indicate the type of constraints we want to use
 
 We don't *need* to, but we also make a few other changes
 
@@ -178,6 +177,9 @@ We don't *need* to, but we also make a few other changes
   treated as out-of-vocabulary at evaluation time. The second flag just evaluates
   the model on the test set when training stops. Use this flag cautiously,
   when you're doing real science you don't want to evaluate on your test set too often.
+* if you want to specify constraints for the CRF, you can add a `"model.constraint_type"`
+  to your config that indicates what sort of constraints the CRF tagger should use.
+
 
 ## Putting It All Together
 

@@ -18,7 +18,6 @@
   "evaluate_on_test": true,
   "model": {
     "type": "crf_tagger",
-    "constraint_type": "bioul",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
