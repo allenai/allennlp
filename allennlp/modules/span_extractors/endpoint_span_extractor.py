@@ -83,8 +83,8 @@ class EndpointSpanExtractor(SpanExtractor):
             # but it's possible that the span representation was padded with something other
             # than 0 (such as -1, which would be an invalid index), so we do so anyway to
             # be safe.
-            span_starts *= span_indices_mask
-            span_ends *= span_indices_mask
+            span_starts = span_starts * span_indices_mask
+            span_ends = span_ends * span_indices_mask
 
         start_embeddings = batched_index_select(sequence_tensor, span_starts)
         end_embeddings = batched_index_select(sequence_tensor, span_ends)

@@ -40,8 +40,7 @@ def make_app(predictor: Predictor,
              field_names: List[str] = None,
              static_dir: str = None,
              sanitizer: Callable[[JsonDict], JsonDict] = None,
-             title: str = "AllenNLP Demo",
-             use_cors: bool = False) -> Flask:
+             title: str = "AllenNLP Demo") -> Flask:
     """
     Creates a Flask app that serves up the provided ``Predictor``
     along with a front-end for interacting with it.
@@ -109,10 +108,7 @@ def make_app(predictor: Predictor,
         else:
             raise ServerError("static_dir not specified", 404)
 
-    if use_cors:
-        return CORS(app)
-    else:
-        return app
+    return app
 
 
 def main(args):
@@ -127,6 +123,7 @@ def main(args):
     parser.add_argument('--static-dir', type=str, help='serve index.html from this directory')
     parser.add_argument('--title', type=str, help='change the default page title', default="AllenNLP Demo")
     parser.add_argument('--field-name', type=str, action='append', help='field names to include in the demo')
+    parser.add_argument('--port', type=int, default=8000, help='port to serve the demo on')
 
     parser.add_argument('--include-package',
                         type=str,
@@ -148,8 +145,10 @@ def main(args):
                    field_names=field_names,
                    static_dir=args.static_dir,
                    title=args.title)
+    CORS(app)
 
-    http_server = WSGIServer(('0.0.0.0', 8888), app)
+    http_server = WSGIServer(('0.0.0.0', args.port), app)
+    print(f"Model loaded, serving demo on port {args.port}")
     http_server.serve_forever()
 
 #
