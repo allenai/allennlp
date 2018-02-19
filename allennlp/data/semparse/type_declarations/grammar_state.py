@@ -1,6 +1,8 @@
 from copy import deepcopy
 from typing import Dict, List, Tuple
 
+from allennlp.data.semparse.type_declarations import type_declaration as types
+
 
 class GrammarState:
     """
@@ -46,12 +48,6 @@ class GrammarState:
         reasons in the decoder.  This means we need a way to map from the production rule strings
         that we generate for lambda variables back to the integer used to represent it.
     """
-    # TODO(mattg): We're hard-coding three lambda variables here.  This isn't a great way to do
-    # this; it's just something that works for now, that we can fix later if / when it's needed.
-    # If you allow for more than three nested lambdas, or if you want to use different lambda
-    # variable names, you'll have to change this somehow.
-    lambda_variables = set(['x', 'y', 'z'])
-
     def __init__(self,
                  nonterminal_stack: List[str],
                  lambda_stacks: Dict[Tuple[str, str], List[str]],
@@ -123,7 +119,7 @@ class GrammarState:
             new_lambda_stacks[(lambda_type, lambda_variable)] = []
 
         for production in reversed(productions):
-            if self._is_nonterminal(production):
+            if types.is_nonterminal(production):
                 new_stack.append(production)
                 for lambda_stack in new_lambda_stacks.values():
                     lambda_stack.append(production)
@@ -152,23 +148,3 @@ class GrammarState:
             return production_string[1:-1].split(', ')
         else:
             return [production_string]
-
-    @staticmethod
-    def _is_nonterminal(production: str) -> bool:
-        # TODO(mattg): ProductionRuleField has a similar method, as does another place or two.  We
-        # should centralize this logic somewhere, probably in the type declaration, or the
-        # ``World`` object.  This is pretty specific to the WikiTablesWorld, and to the assumptions
-        # made in converting types to strings (e.g., that we're only using the first letter for
-        # types, lowercased).
-        if production in ['<=', '<']:
-            # Some grammars (including the wikitables grammar) have "less than" and "less than or
-            # equal to" functions that are terminals.  We don't want to treat those like our
-            # "<t,d>" types.
-            return False
-        if production[0] == '<':
-            return True
-        if production.startswith('fb:'):
-            return False
-        if len(production) > 1 or production in GrammarState.lambda_variables:
-            return False
-        return production[0].islower()
