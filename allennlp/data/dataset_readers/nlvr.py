@@ -13,8 +13,6 @@ from allennlp.data.fields import ProductionRuleField, MetadataField
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.semparse.type_declarations import type_declaration as types
-from allennlp.data.semparse.type_declarations import nlvr_type_declaration as nlvr_types
 from allennlp.data.semparse.worlds import NlvrWorld
 
 
@@ -77,16 +75,7 @@ class NlvrDatasetReader(DatasetReader):
         self._nonterminal_indexers = nonterminal_indexers or {"tokens":
                                                               SingleIdTokenIndexer("rule_labels")}
         self._terminal_indexers = terminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
-        # Mapping from terminal strings to productions that produce them.
-        # Eg.: "yellow" -> "<o,o> -> yellow", "<b,<<b,e>,<e,b>>> -> filter_greater" etc.
-        self._terminal_productions: Dict[str, str] = {}
         self._add_paths_to_agenda = add_paths_to_agenda
-        for constant in nlvr_types.COMMON_NAME_MAPPING:
-            alias = nlvr_types.COMMON_NAME_MAPPING[constant]
-            if alias in nlvr_types.COMMON_TYPE_SIGNATURE:
-                constant_type = nlvr_types.COMMON_TYPE_SIGNATURE[alias]
-                if constant_type != types.ANY_TYPE:
-                    self._terminal_productions[constant] = "%s -> %s" % (constant_type, constant)
 
     @overrides
     def _read(self, file_path: str):
@@ -121,7 +110,7 @@ class NlvrDatasetReader(DatasetReader):
         world = NlvrWorld(structured_representation)
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)
-        agenda = self._get_agenda_for_sentence(sentence, world)
+        agenda = world.get_agenda_for_sentence(sentence, self._add_paths_to_agenda)
         assert agenda, "No agenda found for sentence: %s" % sentence
         production_rule_fields: List[Field] = []
         instance_action_ids: Dict[str, int] = {}
@@ -130,7 +119,7 @@ class NlvrDatasetReader(DatasetReader):
             field = ProductionRuleField(production_rule,
                                         terminal_indexers=self._terminal_indexers,
                                         nonterminal_indexers=self._nonterminal_indexers,
-                                        is_nonterminal=lambda x: x not in self._terminal_productions,
+                                        is_nonterminal=lambda x: x not in world.terminal_productions,
                                         context=tokenized_sentence)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
@@ -146,90 +135,6 @@ class NlvrDatasetReader(DatasetReader):
             label_field = LabelField(label, label_namespace='denotations')
             fields["label"] = label_field
         return Instance(fields)
-
-    def _get_agenda_for_sentence(self, sentence: str, world: NlvrWorld = None) -> List[str]:
-        """
-        Given a ``sentence``, and a corresponding ``NlvrWorld`` returns a list of actions the
-        sentence triggers. The model tries to include as many of these actions in the decoded
-        sequences as possible. Hence, this method defines a mapping from sentence level features to
-        actions. This is a simplistic mapping at this point, and can be expanded.
-        """
-        # TODO(pradeep): Add more rules in the mapping?
-        # TODO(pradeep): Use approximate and substring matching as well.
-        agenda = []
-        sentence = sentence.lower()
-        # This takes care of shapes, colors, top, bottom, big, small etc.
-        for constant, production in self._terminal_productions.items():
-            # TODO(pradeep): Deal with constant names with underscores.
-            if constant in sentence:
-                agenda.append(production)
-        if sentence.startswith("there is a box"):
-            agenda.append(self._terminal_productions["box_exists"])
-        elif sentence.startswith("there is a "):
-            agenda.append(self._terminal_productions["object_exists"])
-
-        if "touch" in sentence:
-            if "top" in sentence:
-                agenda.append(self._terminal_productions["touch_top"])
-            elif "bottom" in sentence or "base" in sentence:
-                agenda.append(self._terminal_productions["touch_bottom"])
-            elif "corner" in sentence:
-                agenda.append(self._terminal_productions["touch_corner"])
-            elif "right" in sentence:
-                agenda.append(self._terminal_productions["touch_right"])
-            elif "left" in sentence:
-                agenda.append(self._terminal_productions["touch_left"])
-            elif "wall" in sentence or "edge" in sentence:
-                agenda.append(self._terminal_productions["touch_wall"])
-            else:
-                agenda.append(self._terminal_productions["touch_object"])
-        else:
-            # The words "top" and "bottom" may be referring to top and bottom blocks in a tower.
-            if "top" in sentence:
-                agenda.append(self._terminal_productions["top"])
-            elif "bottom" in sentence or "base" in sentence:
-                agenda.append(self._terminal_productions["bottom"])
-        if " not " in sentence:
-            agenda.append(self._terminal_productions["negate_filter"])
-        if " tower " in sentence or " contains " in sentence or " has " in sentence:
-            agenda.append(self._terminal_productions["all_boxes"])
-        number_productions = self._get_number_productions(sentence)
-        for production in number_productions:
-            agenda.append(production)
-        if self._add_paths_to_agenda:
-            assert world is not None, "Pass a world if you want to add paths to the agenda"
-            agenda = self._add_nonterminal_productions(agenda, world)
-        return agenda
-
-    @staticmethod
-    def _get_number_productions(sentence: str) -> List[str]:
-        """
-        Gathers all the numbers in the sentence, and returns productions that lead to them.
-        """
-        # The mapping here is very simple and limited, which also shouldn't be a problem
-        # because numbers seem to be represented fairly regularly.
-        number_strings = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six":
-                          "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"}
-        number_productions = []
-        for word, numeral in number_strings.items():
-            if word in sentence or numeral in sentence:
-                number_productions.append(f"e -> {numeral}")
-        return number_productions
-
-    @staticmethod
-    def _add_nonterminal_productions(agenda: List[str], world: NlvrWorld) -> List[str]:
-        """
-        Given a partially populated agenda with (mostly) terminal productions, this method adds the
-        nonterminal productions that lead from the root to the terminal productions.
-        """
-        nonterminal_productions = set(agenda)
-        for action in agenda:
-            paths = world.get_paths_to_root(action, max_num_paths=5)
-            for path in paths:
-                for path_action in path:
-                    nonterminal_productions.add(path_action)
-        new_agenda = list(nonterminal_productions)
-        return new_agenda
 
     @classmethod
     def from_params(cls, params: Params) -> 'NlvrDatasetReader':

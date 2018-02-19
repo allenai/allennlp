@@ -474,3 +474,28 @@ def get_valid_actions(name_mapping: Dict[str, str],
 
 
 START_TYPE = NamedBasicType(START_SYMBOL)
+
+# TODO(mattg): We're hard-coding three lambda variables here.  This isn't a great way to do
+# this; it's just something that works for now, that we can fix later if / when it's needed.
+# If you allow for more than three nested lambdas, or if you want to use different lambda
+# variable names, you'll have to change this somehow.
+LAMBDA_VARIABLES = set(['x', 'y', 'z'])
+
+def is_nonterminal(production: str) -> bool:
+    # TODO(pradeep): This is pretty specific to the assumptions made in converting types to
+    # strings (e.g., that we're only using the first letter for types, lowercased).
+    # TODO(pradeep): Also we simply check the surface forms here, and this works for
+    # wikitables and nlvr. We should ideally let the individual type declarations define their own
+    # variants of this method.
+    if production in ['<=', '<']:
+        # Some grammars (including the wikitables grammar) have "less than" and "less than or
+        # equal to" functions that are terminals.  We don't want to treat those like our
+        # "<t,d>" types.
+        return False
+    if production[0] == '<':
+        return True
+    if production.startswith('fb:'):
+        return False
+    if len(production) > 1 or production in LAMBDA_VARIABLES:
+        return False
+    return production[0].islower()
