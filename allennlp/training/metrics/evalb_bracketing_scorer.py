@@ -9,6 +9,7 @@ import subprocess
 from overrides import overrides
 from nltk import Tree
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
 
@@ -38,6 +39,10 @@ class EvalbBracketingScorer(Metric):
     def __init__(self, evalb_directory_path: str, evalb_param_filename: str = "COLLINS.prm") -> None:
         self._evalb_program_path = os.path.join(evalb_directory_path, "evalb")
         self._evalb_param_path = os.path.join(evalb_directory_path, evalb_param_filename)
+
+        if not os.path.exists(self._evalb_param_path):
+            raise ConfigurationError("You must compile the EVALB scorer before using it."
+                                     " Run 'make' in the 'scripts/EVALB' directory.")
 
         self._recall_regex = re.compile(r"Bracketing Recall\s+=\s+(\d+\.\d+)")
         self._precision_regex = re.compile(r"Bracketing Precision\s+=\s+(\d+\.\d+)")
