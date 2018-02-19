@@ -147,7 +147,7 @@ def masked_softmax(vector, mask):
     if mask is None:
         result = torch.nn.functional.softmax(vector, dim=-1)
     else:
-        # To limit numerical errors from large vector elements outside mask, we zero these out
+        # To limit numerical errors from large vector elements outside the mask, we zero these out.
         result = torch.nn.functional.softmax(vector * mask, dim=-1)
         result = result * mask
         result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
@@ -162,11 +162,17 @@ def masked_log_softmax(vector, mask):
 
     We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
 
-    In the case that the input vector is completely masked, this function returns an array
-    of ``0.0``.  You should be masking the result of whatever computation comes out of this in that
-    case, anyway, so it shouldn't matter.
+    In the case that the input vector is completely masked, the return value of this function is
+    arbitrary, but not ``nan``.  You should be masking the result of whatever computation comes out
+    of this in that case, anyway, so the specific values returned shouldn't matter.
     """
     if mask is not None:
+        # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
+        # results in nans when the whole vector is masked.  We need a very small value instead of a
+        # zero in the mask for these cases.  This logic replaces zeros in the mask with 1e-45
+        # before calling mask.log().  We use 1e-45 because 1e-46 is so small it becomes 0 - this is
+        # just the smallest value we can actually use.
+        mask = (mask.float() + 1e-45) * (1 - mask) + mask
         vector = vector + mask.log()
     return torch.nn.functional.log_softmax(vector, dim=1)
 
