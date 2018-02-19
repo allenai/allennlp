@@ -1,5 +1,7 @@
 # pylint: disable=no-self-use,invalid-name,no-value-for-parameter
 
+from nltk import Tree
+
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.models.constituency_parser import SpanInformation
 
@@ -34,74 +36,10 @@ class SpanConstituencyParserTest(ModelTestCase):
 
     def test_construct_tree_from_spans(self):
         # (S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))
-        tree_spans = [((0, 1), 'D-POS'), ((1, 2), 'N-POS'), ((0, 2), 'NP'),
-                      ((2, 3), 'V-POS'), ((3, 4), 'D-POS'), ((4, 5), 'N-POS'),
+        tree_spans = [((0, 1), 'D'), ((1, 2), 'N'), ((0, 2), 'NP'),
+                      ((2, 3), 'V'), ((3, 4), 'D'), ((4, 5), 'N'),
                       ((3, 5), 'NP'), ((2, 5), 'VP'), ((0, 5), 'S')]
         sentence = ["the", "dog", "chased", "the", "cat"]
         tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
-        # pylint: disable=bad-continuation
-        correct_tree = {
-                "label": "S",
-                "start": 0,
-                "end": 5,
-                "children": [
-                        {
-                            "label": "NP",
-                            "start": 0,
-                            "end": 2,
-                            "children": [
-                                {
-                                    "label": "D-POS",
-                                    "start": 0,
-                                    "end": 1,
-                                    "word": "the",
-                                    "is_leaf": True
-                                },
-                                {
-                                    "label": "N-POS",
-                                    "start": 1,
-                                    "end": 2,
-                                    "word": "dog",
-                                    "is_leaf": True
-                                }
-                            ]
-                        },
-                        {
-                            "label": "VP",
-                            "start": 2,
-                            "end": 5,
-                            "children": [
-                                {
-                                    "label": "V-POS",
-                                    "start": 2,
-                                    "end": 3,
-                                    "word": "chased",
-                                    "is_leaf": True
-                                },
-                                {
-                                    "label": "NP",
-                                    "start": 3,
-                                    "end": 5,
-                                    "children": [
-                                        {
-                                            "label": "D-POS",
-                                            "start": 3,
-                                            "end": 4,
-                                            "word": "the",
-                                            "is_leaf": True
-                                        },
-                                        {
-                                            "label": "N-POS",
-                                            "start": 4,
-                                            "end": 5,
-                                            "word": "cat",
-                                            "is_leaf": True
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-        # pylint: enable=bad-continuation
+        correct_tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         assert tree == correct_tree
