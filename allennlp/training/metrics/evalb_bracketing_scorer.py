@@ -23,6 +23,10 @@ class EvalbBracketingScorer(Metric):
     you may need to remove an ``include <malloc.h>`` statement in ``evalb.c`` before it
     will compile.
 
+    AllenNLP contains the EVALB software, but you will need to compile it yourself
+    before using it because the binary it generates is system depenedent. To build it,
+    run ``make`` inside the ``scripts/EVALB`` directory.
+
     Parameters
     ----------
     evalb_directory_path : ``str``, required.

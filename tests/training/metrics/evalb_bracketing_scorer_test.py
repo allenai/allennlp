@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
+import subprocess
+import os
 from nltk import Tree
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -6,6 +8,14 @@ from allennlp.training.metrics import EvalbBracketingScorer
 
 
 class EvalbBracketingScorerTest(AllenNlpTestCase):
+
+    def setUp(self):
+        super().setUp()
+        os.system("cd ./scripts/EVALB/ && make && cd ../../")
+
+    def tearDown(self):
+        os.system("rm scripts/EVALB/evalb")
+
     def test_evalb_correctly_scores_identical_trees(self):
         tree1 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
