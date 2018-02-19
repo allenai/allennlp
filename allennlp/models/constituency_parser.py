@@ -108,7 +108,8 @@ class SpanConstituencyParser(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 spans: torch.LongTensor,
-                span_labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                span_labels: torch.LongTensor = None,
+                gold_trees: List[Tree] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -125,9 +126,11 @@ class SpanConstituencyParser(Model):
         spans : ``torch.LongTensor``, required.
             A tensor of shape ``(batch_size, num_spans, 2)`` representing the
             inclusive start and end indices of all possible spans in the sentence.
-        span_labels : torch.LongTensor, optional (default = None)
+        span_labels : ``torch.LongTensor``, optional (default = None)
             A torch tensor representing the integer gold class labels for all possible
             spans, of shape ``(batch_size, num_spans)``.
+        gold_trees : ``List[Tree]``, optional, (default = None)
+            Gold NLTK trees for use in evaluation.
 
         Returns
         -------
