@@ -26,7 +26,7 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
         assert metrics["f1_measure"] == 1.0
 
     def test_evalb_correctly_scores_imperfect_trees(self):
-        # Change to constiutency label (VP ... )should effect scores, but change to POS 
+        # Change to constiutency label (VP ... )should effect scores, but change to POS
         # tag (NP dog) should have no effect.
         tree1 = Tree.fromstring("(S (VP (D the) (NP dog)) (VP (V chased) (NP (D the) (N cat))))")
         tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
