@@ -165,6 +165,10 @@ def masked_log_softmax(vector, mask):
     In the case that the input vector is completely masked, the return value of this function is
     arbitrary, but not ``nan``.  You should be masking the result of whatever computation comes out
     of this in that case, anyway, so the specific values returned shouldn't matter.
+
+    If your logits are all extremely negative (i.e., the max value in your logit vector is -50 or
+    lower), the way we handle masking here could mess you up.  But if you've got logit values that
+    extreme, you've got bigger problems than this.
     """
     if mask is not None:
         # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
