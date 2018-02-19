@@ -308,7 +308,7 @@ class SpanConstituencyParser(Model):
                 if label is not None:
                     tree = Tree(label, [word])
                     if pos_tags is not None:
-                        # Tree has non-terminal pos-tags.
+                        # Tree has pre-terminal POS tags.
                         tree = Tree(label, [Tree(pos_tags[start], [word])])
                 return [tree]
 
