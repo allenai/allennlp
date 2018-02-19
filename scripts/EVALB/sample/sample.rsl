@@ -1,0 +1,56 @@
+  Sent.                        Matched  Bracket   Cross        Correct Tag
+ ID  Len.  Stat. Recal  Prec.  Bracket gold test Bracket Words  Tags Accracy
+============================================================================
+   1    4    0  100.00 100.00     4      4    4      0      4     4   100.00
+   2    4    0   75.00  75.00     3      4    4      0      4     4   100.00
+   3    4    0  100.00 100.00     4      4    4      0      4     3    75.00
+   4    4    0   75.00  75.00     3      4    4      0      4     3    75.00
+   5    4    0   75.00  75.00     3      4    4      0      4     4   100.00
+   6    4    0   50.00  66.67     2      4    3      1      4     4   100.00
+   7    4    0   25.00 100.00     1      4    1      0      4     4   100.00
+   8    4    0    0.00   0.00     0      4    0      0      4     4   100.00
+   9    4    0  100.00  80.00     4      4    5      0      4     4   100.00
+  10    4    0  100.00  50.00     4      4    8      0      4     4   100.00
+  11    4    2    0.00   0.00     0      0    0      0      4     0     0.00
+  12    4    1    0.00   0.00     0      0    0      0      4     0     0.00
+  13    4    1    0.00   0.00     0      0    0      0      4     0     0.00
+  14    4    2    0.00   0.00     0      0    0      0      4     0     0.00
+  15    4    0  100.00 100.00     4      4    4      0      4     4   100.00
+  16    4    1    0.00   0.00     0      0    0      0      4     0     0.00
+  17    4    1    0.00   0.00     0      0    0      0      4     0     0.00
+  18    4    0  100.00 100.00     4      4    4      0      4     4   100.00
+  19    4    0  100.00 100.00     4      4    4      0      4     4   100.00
+  20    4    1    0.00   0.00     0      0    0      0      4     0     0.00
+  21    4    0  100.00 100.00     4      4    4      0      4     4   100.00
+  22   44    0  100.00 100.00    34     34   34      0     44    44   100.00
+  23    4    0  100.00 100.00     4      4    4      0      4     4   100.00
+  24    5    0  100.00 100.00     4      4    4      0      4     4   100.00
+============================================================================
+                 87.76  90.53     86     98   95     16    108   106    98.15
+=== Summary ===
+
+-- All --
+Number of sentence        =     24
+Number of Error sentence  =      5
+Number of Skip  sentence  =      2
+Number of Valid sentence  =     17
+Bracketing Recall         =  87.76
+Bracketing Precision      =  90.53
+Complete match            =  52.94
+Average crossing          =   0.06
+No crossing               =  94.12
+2 or less crossing        = 100.00
+Tagging accuracy          =  98.15
+
+-- len<=40 --
+Number of sentence        =     23
+Number of Error sentence  =      5
+Number of Skip  sentence  =      2
+Number of Valid sentence  =     16
+Bracketing Recall         =  81.25
+Bracketing Precision      =  85.25
+Complete match            =  50.00
+Average crossing          =   0.06
+No crossing               =  93.75
+2 or less crossing        = 100.00
+Tagging accuracy          =  96.88
