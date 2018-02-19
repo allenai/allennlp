@@ -43,3 +43,13 @@ class SpanConstituencyParserTest(ModelTestCase):
         tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
         correct_tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         assert tree == correct_tree
+
+    def test_tree_construction_with_too_few_spans_creates_trees_with_depth_one_word_nodes(self):
+        # We only have a partial tree here: (S (NP (D the) (N dog)). Decoding should
+        # recover this from the spans, whilst attaching all other words to the root node with
+        # XX POS tag labels, as the right hand side splits will not occur in tree_spans.
+        tree_spans = [((0, 1), 'D'), ((1, 2), 'N'), ((0, 2), 'NP'), ((0, 5), 'S')]
+        sentence = ["the", "dog", "chased", "the", "cat"]
+        tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
+        correct_tree = Tree.fromstring("(S (NP (D the) (N dog)) (XX chased) (XX the) (XX cat))")
+        assert tree == correct_tree
