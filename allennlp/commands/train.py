@@ -112,7 +112,7 @@ def train_model_from_args(args: argparse.Namespace):
                                  f"Specify --recover to recover training from existing output.")
     elif args.recover and not os.path.exists(args.serialization_dir):
         raise ConfigurationError(f"--recover specified but serialization_dir ({args.serialization_dir}) does not "
-                                 f"exist.  Training will start from the beginning.")
+                                 f"exist.  There is nothing to recover from.")
 
     train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.file_friendly_logging)
 
