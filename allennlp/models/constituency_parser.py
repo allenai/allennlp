@@ -307,15 +307,14 @@ class SpanConstituencyParser(Model):
                 word = sentence[start]
                 pos_tag = pos_tags[start] if pos_tags is not None else "XX"
                 tree = Tree(pos_tag, [word])
-                if label is not None:
-                    if pos_tags is not None:
-                        # If POS tags were passed explicitly,
-                        # they are added as pre-terminal nodes.
-                        tree = Tree(label, [tree])
-                    else:
-                        # Otherwise, we didn't want POS tags
-                        # at all.
-                        tree = Tree(label, [word])
+                if label is not None and pos_tags is not None:
+                    # If POS tags were passed explicitly,
+                    # they are added as pre-terminal nodes.
+                    tree = Tree(label, [tree])
+                elif label is not None:
+                    # Otherwise, we didn't want POS tags
+                    # at all.
+                    tree = Tree(label, [word])
                 return [tree]
 
             argmax_split = start + 1
