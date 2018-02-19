@@ -42,9 +42,7 @@ from copy import deepcopy
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params
-from allennlp.common.tee_logger import TeeLogger
-from allennlp.common.tqdm import Tqdm
+from allennlp.common import Params, TeeLogger, Tqdm
 from allennlp.common.util import prepare_environment, import_submodules
 from allennlp.data import Vocabulary
 from allennlp.data.instance import Instance
@@ -239,6 +237,8 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
 
     create_serialization_dir(params, serialization_dir)
 
+    # TODO(mattg): pull this block out into a separate function (maybe just add this to
+    # `prepare_environment`?)
     Tqdm.set_slower_interval(file_friendly_logging)
     sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
                            sys.stdout,
@@ -250,6 +250,7 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.getLogger().addHandler(handler)
+
     serialization_params = deepcopy(params).as_dict(quiet=True)
     with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
         json.dump(serialization_params, param_file, indent=4)
