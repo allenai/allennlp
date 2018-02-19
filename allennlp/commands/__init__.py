@@ -24,12 +24,14 @@ def main(prog: str = None,
     The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
     codebase. In particular, once you start creating your own ``Model`` s and so forth, it won't
     work for them, unless you use the ``--include-package`` flag available for most commands.
-
-    The default models for ``serve`` and the default predictors for ``predict`` are defined above.
-    If you'd like to add more or use different ones, the ``model_overrides`` and
-    ``predictor_overrides`` arguments will take precedence over the defaults.
     """
     # pylint: disable=dangerous-default-value
+
+    # TODO(mattg): document and/or remove the `predictor_overrides` and `model_overrides` commands.
+    # The `--predictor` option for the `predict` command largely removes the need for
+    # `predictor_overrides`, and I think the simple server largely removes the need for
+    # `model_overrides`, and maybe the whole `serve` command as a public API (we only need that
+    # path for demo.allennlp.org, and it's not likely anyone else would host that particular demo).
 
     # TODO(mattg): is it feasible to add `--include-package` somewhere in here, so it's included by
     # all commands, instead of needing to be added manually for each one?
