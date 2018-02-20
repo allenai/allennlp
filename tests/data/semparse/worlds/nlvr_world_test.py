@@ -12,11 +12,13 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         test_filename = "tests/fixtures/data/nlvr/sample_data.jsonl"
         data = [json.loads(line)["structured_rep"] for line in open(test_filename).readlines()]
         self.worlds = [NlvrWorld(rep) for rep in data]
-        custom_rep = [[{"y_loc": 21, "size": 20, "type": "triangle", "x_loc": 27, "color": "Yellow"},
-                       {"y_loc": 45, "size": 10, "type": "circle", "x_loc": 47, "color": "Black"}],
-                      [{"y_loc": 56, "size": 30, "type": "square", "x_loc": 10, "color": "#0099ff"},
-                       {"y_loc": 26, "size": 30, "type": "square", "x_loc": 40, "color": "Yellow"}],
-                      [{"y_loc": 40, "size": 10, "type": "triangle", "x_loc": 12, "color": "#0099ff"}]]
+        # y_loc increases as we go down from top to bottom, and x_loc from left to right. That is,
+        # the origin is at the top-left corner.
+        custom_rep = [[{"y_loc": 79, "size": 20, "type": "triangle", "x_loc": 27, "color": "Yellow"},
+                       {"y_loc": 55, "size": 10, "type": "circle", "x_loc": 47, "color": "Black"}],
+                      [{"y_loc": 44, "size": 30, "type": "square", "x_loc": 10, "color": "#0099ff"},
+                       {"y_loc": 74, "size": 30, "type": "square", "x_loc": 40, "color": "Yellow"}],
+                      [{"y_loc": 60, "size": 10, "type": "triangle", "x_loc": 12, "color": "#0099ff"}]]
         self.custom_world = NlvrWorld(custom_rep)
 
     def test_logical_form_with_assert_executes_correctly(self):

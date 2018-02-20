@@ -33,7 +33,7 @@ class Object:
     attributes : ``JsonDict``
         The dict for each object from the json file.
     """
-    def __init__(self, attributes: JsonDict) -> None:
+    def __init__(self, attributes: JsonDict, box_id: str) -> None:
         object_color = attributes["color"].lower()
         # The dataset has a hex code only for blue for some reason.
         if object_color.startswith("#"):
@@ -45,6 +45,7 @@ class Object:
         self.x_loc = attributes["x_loc"]
         self.y_loc = attributes["y_loc"]
         self.size = attributes["size"]
+        self._box_id = box_id
 
     def __str__(self):
         if self.size == 10:
@@ -53,7 +54,7 @@ class Object:
             size = "medium"
         else:
             size = "big"
-        return f"{size} {self.color} {self.shape} at ({self.x_loc}, {self.y_loc})"
+        return f"{size} {self.color} {self.shape} at ({self.x_loc}, {self.y_loc}) in {self._box_id}"
 
     def __hash__(self):
         return hash(str(self))
@@ -70,15 +71,14 @@ class Box:
     ----------
     objects_list : ``List[JsonDict]``
         List of objects in the box, as given by the json file.
-    name : ``str`` (optional)
-        Optionally specify a string representation. It could be any unique string. If not
-        specified, we will use the list of object names.
     """
+    _id = 1
+
     def __init__(self,
-                 objects_list: List[JsonDict],
-                 name: str = None) -> None:
-        self.objects = set([Object(object_dict) for object_dict in objects_list])
-        self._name = name or str([str(obj) for obj in objects_list])
+                 objects_list: List[JsonDict]) -> None:
+        self._name = f"box {Box._id}"
+        Box._id += 1
+        self.objects = set([Object(object_dict, self._name) for object_dict in objects_list])
 
     def __str__(self):
         return self._name
@@ -107,8 +107,7 @@ class NlvrWorld(World):
         super(NlvrWorld, self).__init__(global_type_signatures=types.COMMON_TYPE_SIGNATURE,
                                         global_name_mapping=types.COMMON_NAME_MAPPING,
                                         num_nested_lambdas=0)
-        self._boxes = set([Box(object_list, "box%d" % index)
-                           for index, object_list in enumerate(world_representation)])
+        self._boxes = set([Box(object_list) for object_list in world_representation])
         self._objects: Set[Object] = set()
         for box in self._boxes:
             self._objects.update(box.objects)
@@ -684,7 +683,7 @@ class NlvrWorld(World):
 
     @classmethod
     def touch_bottom(cls, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.y_loc == 0])
+        return set([obj for obj in objects if obj.y_loc + obj.size == 100])
 
     @classmethod
     def touch_left(cls, objects: Set[Object]) -> Set[Object]:
@@ -692,7 +691,7 @@ class NlvrWorld(World):
 
     @classmethod
     def touch_top(cls, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.y_loc + obj.size == 100])
+        return set([obj for obj in objects if obj.y_loc == 0])
 
     @classmethod
     def touch_right(cls, objects: Set[Object]) -> Set[Object]:
@@ -743,26 +742,26 @@ class NlvrWorld(World):
 
     def top(self, objects: Set[Object]) -> Set[Object]:
         """
-        Return the topmost objects (i.e. maximum y_loc). The comparison is done separately for each
+        Return the topmost objects (i.e. minimum y_loc). The comparison is done separately for each
         box.
-        """
-        objects_per_box = self._separate_objects_by_boxes(objects)
-        return_set: Set[Object] = set()
-        for _, box_objects in objects_per_box.items():
-            max_y_loc = max([obj.y_loc for obj in box_objects])
-            return_set.update(set([obj for obj in box_objects if obj.y_loc == max_y_loc]))
-        return return_set
-
-    def bottom(self, objects: Set[Object]) -> Set[Object]:
-        """
-        Return the bottom most objects(i.e. minimum y_loc). The comparison is done separately for
-        each box.
         """
         objects_per_box = self._separate_objects_by_boxes(objects)
         return_set: Set[Object] = set()
         for _, box_objects in objects_per_box.items():
             min_y_loc = min([obj.y_loc for obj in box_objects])
             return_set.update(set([obj for obj in box_objects if obj.y_loc == min_y_loc]))
+        return return_set
+
+    def bottom(self, objects: Set[Object]) -> Set[Object]:
+        """
+        Return the bottom most objects(i.e. maximum y_loc). The comparison is done separately for
+        each box.
+        """
+        objects_per_box = self._separate_objects_by_boxes(objects)
+        return_set: Set[Object] = set()
+        for _, box_objects in objects_per_box.items():
+            max_y_loc = max([obj.y_loc for obj in box_objects])
+            return_set.update(set([obj for obj in box_objects if obj.y_loc == max_y_loc]))
         return return_set
 
     def above(self, objects: Set[Object]) -> Set[Object]:
@@ -774,9 +773,10 @@ class NlvrWorld(World):
         objects_per_box = self._separate_objects_by_boxes(objects)
         return_set = set()
         for box in objects_per_box:
-            max_y_loc = max([obj.y_loc for obj in objects_per_box[box]])
+            # min_y_loc corresponds to the top-most object.
+            min_y_loc = min([obj.y_loc for obj in objects_per_box[box]])
             for candidate_obj in box.objects:
-                if candidate_obj.y_loc > max_y_loc:
+                if candidate_obj.y_loc < min_y_loc:
                     return_set.add(candidate_obj)
         return return_set
 
@@ -789,9 +789,10 @@ class NlvrWorld(World):
         objects_per_box = self._separate_objects_by_boxes(objects)
         return_set = set()
         for box in objects_per_box:
-            min_y_loc = min([obj.y_loc for obj in objects_per_box[box]])
+            # max_y_loc corresponds to the bottom-most object.
+            max_y_loc = max([obj.y_loc for obj in objects_per_box[box]])
             for candidate_obj in box.objects:
-                if candidate_obj.y_loc < min_y_loc:
+                if candidate_obj.y_loc > max_y_loc:
                     return_set.add(candidate_obj)
         return return_set
 
