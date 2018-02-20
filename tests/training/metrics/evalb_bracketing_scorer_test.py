@@ -14,6 +14,7 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
 
     def tearDown(self):
         os.system("rm scripts/EVALB/evalb")
+        super().tearDown()
 
     def test_evalb_correctly_scores_identical_trees(self):
         tree1 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")

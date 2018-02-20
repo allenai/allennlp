@@ -16,6 +16,7 @@ class SpanConstituencyParserTest(ModelTestCase):
 
     def tearDown(self):
         os.system("rm scripts/EVALB/evalb")
+        super().tearDown()
 
     def test_span_parser_can_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
