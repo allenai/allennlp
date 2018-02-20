@@ -31,7 +31,7 @@ from allennlp.service.predictors import DemoModel
 # will be served at the `/predict/<name-of-task>` API endpoint.
 DEFAULT_MODELS = {
         'wikitables-parser': DemoModel(
-                'models/character-embedding/model.tar.gz',  # pylint: disable=line-too-long
+                'models/character-embedding-no-features-2/model.tar.gz',  # pylint: disable=line-too-long
                 'wikitables-parser'
         ),
         'machine-comprehension': DemoModel(
