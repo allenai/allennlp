@@ -71,13 +71,13 @@ class Box:
     ----------
     objects_list : ``List[JsonDict]``
         List of objects in the box, as given by the json file.
+    box_id : ``int``
+        An integer identifying the box index (0, 1 or 2).
     """
-    _id = 1
-
     def __init__(self,
-                 objects_list: List[JsonDict]) -> None:
-        self._name = f"box {Box._id}"
-        Box._id += 1
+                 objects_list: List[JsonDict],
+                 box_id: int) -> None:
+        self._name = f"box {box_id + 1}"
         self.objects = set([Object(object_dict, self._name) for object_dict in objects_list])
 
     def __str__(self):
@@ -107,7 +107,8 @@ class NlvrWorld(World):
         super(NlvrWorld, self).__init__(global_type_signatures=types.COMMON_TYPE_SIGNATURE,
                                         global_name_mapping=types.COMMON_NAME_MAPPING,
                                         num_nested_lambdas=0)
-        self._boxes = set([Box(object_list) for object_list in world_representation])
+        self._boxes = set([Box(object_list, box_id) for box_id, object_list in
+                           enumerate(world_representation)])
         self._objects: Set[Object] = set()
         for box in self._boxes:
             self._objects.update(box.objects)
