@@ -74,11 +74,11 @@ class EvalbBracketingScorer(Metric):
         output_path = os.path.join(tempdir, "output.txt")
         with open(gold_path, "w") as gold_file:
             for tree in gold_trees:
-                gold_file.write(f"{tree}\n")
+                gold_file.write(f"{tree.pformat(margin=1000000)}\n")
 
         with open(predicted_path, "w") as predicted_file:
             for tree in predicted_trees:
-                predicted_file.write(f"{tree}\n")
+                predicted_file.write(f"{tree.pformat(margin=1000000)}\n")
 
         command = f"{self._evalb_program_path} -p {self._evalb_param_path} " \
                   f"{gold_path} {predicted_path} > {output_path}"
@@ -99,14 +99,21 @@ class EvalbBracketingScorer(Metric):
                 if f1_measure_match:
                     fmeasure = float(f1_measure_match.group(1))
                     break
-        if any([recall == math.nan, precision == math.nan, fmeasure == math.nan]):
+        if any([math.isnan(recall), math.isnan(precision)]):
             raise RuntimeError(f"Call to EVALB produced invalid metrics: recall: "
                                f"{recall}, precision: {precision}, fmeasure: {fmeasure}")
-        else:
-            self._precision += precision / 100.0
-            self._recall += recall / 100.0
-            self._f1_measure += fmeasure / 100.0
-            self._count += 1
+
+        if math.isnan(fmeasure) and recall == 0.0 and precision == 0.0:
+            fmeasure = 0.0
+        elif math.isnan(fmeasure):
+            raise RuntimeError(f"Call to EVALB produced an invalid f1 measure, "
+                               f"which was not due to zero division: recall: "
+                               f"{recall}, precision: {precision}, fmeasure: {fmeasure}")
+
+        self._precision += precision / 100.0
+        self._recall += recall / 100.0
+        self._f1_measure += fmeasure / 100.0
+        self._count += 1
 
     @overrides
     def get_metric(self, reset: bool = False):
@@ -116,9 +123,9 @@ class EvalbBracketingScorer(Metric):
         The average precision, recall and f1.
         """
         metrics = {}
-        metrics["precision"] = self._precision / self._count if self._count > 0 else 0.0
-        metrics["recall"] = self._recall / self._count if self._count > 0 else 0.0
-        metrics["f1_measure"] = self._f1_measure / self._count if self._count > 0 else 0.0
+        metrics["evalb_precision"] = self._precision / self._count if self._count > 0 else 0.0
+        metrics["evalb_recall"] = self._recall / self._count if self._count > 0 else 0.0
+        metrics["evalb_f1_measure"] = self._f1_measure / self._count if self._count > 0 else 0.0
 
         if reset:
             self.reset()

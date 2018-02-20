@@ -1,0 +1,57 @@
+{
+    "dataset_reader":{
+        "type":"ptb_trees",
+        "use_pos_tags": false
+    },
+    "train_data_path": ${PTB_TRAIN_PATH},
+    "validation_data_path": ${PTB_VALIDATION_PATH},
+    "test_data_path": ${PTB_TEST_PATH},
+    "model": {
+      "type": "constituency_parser",
+      "text_field_embedder": {
+        "tokens": {
+            "type": "embedding",
+            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
+            "embedding_dim": 100,
+            "trainable": true
+          }
+      },
+      "encoder": {
+        "type": "lstm",
+        "input_size": 100,
+        "hidden_size": 250,
+        "num_layers": 2,
+        "bidirectional": true,
+        "dropout": 0.2
+      },
+      "feedforward": {
+        "input_dim": 500,
+        "num_layers": 1,
+        "hidden_dims": 250,
+        "activations": "relu",
+        "dropout": 0.2
+      },
+      "span_extractor": {
+        "type": "bidirectional_endpoint",
+        "input_dim": 500
+      },
+      "evalb_directory_path": "scripts/EVALB"
+    },      
+    "iterator": {
+      "type": "bucket",
+      "sorting_keys": [["tokens", "num_tokens"]],
+      "batch_size" : 20
+    },
+    "trainer": {
+      "num_epochs": 100,
+      "grad_norm": 5.0,
+      "patience": 20,
+      "cuda_device": -1,
+      "optimizer": {
+        "type": "adadelta",
+        "lr": 1.0,
+        "rho": 0.95
+      }
+    }
+  }
+  
