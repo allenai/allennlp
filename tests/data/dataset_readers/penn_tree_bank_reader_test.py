@@ -47,6 +47,8 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
                                     "VP(TO to)(VP(VB be)(ADJP-PRD(JJ fair)(PP(TO to)(NP(JJ other)(NNS "
                                     "bidders))))))))))))))(. .)))")
 
+        assert fields["gold_tree"].metadata == gold_tree
+
         correct_spans_and_labels = {}
         ptb_reader._get_gold_spans(gold_tree, 0, correct_spans_and_labels)
         for span, label in zip(spans, span_labels):
@@ -74,6 +76,8 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
                                     "(NP(DT the)(NN chance)(S(VP(TO to)(VP(VP(VB influence)(NP(DT the)"
                                     "(NN outcome)))(CC and)(VP(ADVP(RB perhaps))(VB join)(NP(DT the)"
                                     "(VBG winning)(NN bidder)))))))))(. .)))")
+
+        assert fields["gold_tree"].metadata == gold_tree
 
         correct_spans_and_labels = {}
         ptb_reader._get_gold_spans(gold_tree, 0, correct_spans_and_labels)

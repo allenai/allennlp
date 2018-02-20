@@ -11,7 +11,7 @@ from nltk.tree import Tree
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, SpanField, SequenceLabelField, ListField, Field
+from allennlp.data.fields import TextField, SpanField, SequenceLabelField, ListField, MetadataField, Field
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
@@ -92,6 +92,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                 The constiutency tags for each of the possible spans, with
                 respect to a gold parse tree. If a span is not contained
                 within the tree, a span will have a ``NO-LABEL`` label.
+            gold_tree : ``MetadataField(Tree)``
+                The gold NLTK parse tree for use in evaluation.
         """
         # pylint: disable=arguments-differ
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
@@ -121,6 +123,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                     gold_labels.append(gold_spans[(start, end)])
                 else:
                     gold_labels.append("NO-LABEL")
+
+        if gold_tree:
+            fields["gold_tree"] = MetadataField(gold_tree)
 
         span_list_field: ListField = ListField(spans)
         fields["spans"] = span_list_field

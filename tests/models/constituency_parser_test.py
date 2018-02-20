@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name,no-value-for-parameter
+import os
 
 from nltk import Tree
 
@@ -8,9 +9,14 @@ from allennlp.models.constituency_parser import SpanInformation
 class SpanConstituencyParserTest(ModelTestCase):
 
     def setUp(self):
+        os.system("cd ./scripts/EVALB/ && make && cd ../../")
         super(SpanConstituencyParserTest, self).setUp()
         self.set_up_model("tests/fixtures/constituency_parser/constituency_parser.json",
                           "tests/fixtures/data/example_ptb.trees")
+
+    def tearDown(self):
+        os.system("rm scripts/EVALB/evalb")
+        super().tearDown()
 
     def test_span_parser_can_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -19,11 +25,17 @@ class SpanConstituencyParserTest(ModelTestCase):
         self.ensure_batch_predictions_are_consistent()
 
     def test_decode_runs(self):
+        self.model.eval()
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
         assert set(decode_output_dict.keys()) == {'spans', 'class_probabilities', 'trees',
-                                                  'tokens', 'token_mask', 'loss'}
+                                                  'tokens', 'sentence_lengths', 'loss'}
+        metrics = self.model.get_metrics(reset=True)
+        metric_keys = set(metrics.keys())
+        assert "evalb_precision" in metric_keys
+        assert "evalb_recall" in metric_keys
+        assert "evalb_f1_measure" in metric_keys
 
     def test_resolve_overlap_conflicts_greedily(self):
         spans = [SpanInformation(start=1, end=5, no_label_prob=0.7,
