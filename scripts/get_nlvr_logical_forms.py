@@ -37,21 +37,22 @@ def process_data(input_file: str,
     walker = ActionSpaceWalker(NlvrWorld({}), max_path_length=max_path_length)
     for line in open(input_file):
         instance_id, sentence, world, label = read_json_line(line)
-        sentence_agenda = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
-        logical_forms = walker.get_logical_forms_with_agenda(sentence_agenda,
-                                                             max_num_logical_forms * 10)
         correct_logical_forms = []
         incorrect_logical_forms = []
-        for logical_form in logical_forms:
-            if world.execute(logical_form) == label:
-                if len(correct_logical_forms) <= max_num_logical_forms:
-                    correct_logical_forms.append(logical_form)
-            else:
-                if len(incorrect_logical_forms) <= max_num_logical_forms:
-                    incorrect_logical_forms.append(logical_form)
-            if len(correct_logical_forms) >= max_num_logical_forms \
-               and len(incorrect_logical_forms) >= max_num_logical_forms:
-                break
+        sentence_agenda = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
+        if sentence_agenda:
+            logical_forms = walker.get_logical_forms_with_agenda(sentence_agenda,
+                                                                 max_num_logical_forms * 10)
+            for logical_form in logical_forms:
+                if world.execute(logical_form) == label:
+                    if len(correct_logical_forms) <= max_num_logical_forms:
+                        correct_logical_forms.append(logical_form)
+                else:
+                    if len(incorrect_logical_forms) <= max_num_logical_forms:
+                        incorrect_logical_forms.append(logical_form)
+                if len(correct_logical_forms) >= max_num_logical_forms \
+                   and len(incorrect_logical_forms) >= max_num_logical_forms:
+                    break
         processed_data.append({"id": instance_id,
                                "sentence": sentence,
                                "label": str(label),
