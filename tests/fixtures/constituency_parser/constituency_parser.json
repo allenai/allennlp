@@ -29,7 +29,8 @@
       "span_extractor": {
         "type": "endpoint",
         "input_dim": 4
-      }
+      },
+      "evalb_directory_path": "scripts/EVALB"
     },      
 
     "iterator": {

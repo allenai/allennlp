@@ -15,6 +15,7 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import F1Measure
+from allennlp.training.metrics import EvalbBracketingScorer
 
 
 class SpanInformation(NamedTuple):
@@ -74,7 +75,8 @@ class SpanConstituencyParser(Model):
                  encoder: Seq2SeqEncoder,
                  feedforward_layer: FeedForward = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+                 regularizer: Optional[RegularizerApplicator] = None,
+                 evalb_directory_path: str = None) -> None:
         super(SpanConstituencyParser, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
@@ -102,6 +104,11 @@ class SpanConstituencyParser(Model):
 
         self.metrics = {label: F1Measure(index) for index, label
                         in self.vocab.get_index_to_token_vocabulary("labels").items()}
+
+        if evalb_directory_path is not None:
+            self._evalb_score = EvalbBracketingScorer(evalb_directory_path)
+        else:
+            self._evalb_score = None
         initializer(self)
 
     @overrides
@@ -169,6 +176,13 @@ class SpanConstituencyParser(Model):
             for metric in self.metrics.values():
                 metric(logits, span_labels, span_mask)
             output_dict["loss"] = loss
+
+        # The evalb score is expensive to compute, so we only compute
+        # it for the validation # and test sets.
+        if gold_trees is not None and self._evalb_score is not None and not self.training:
+            decoded_output = self.decode(output_dict)
+            predicted_trees = decoded_output["trees"]
+            self._evalb_score(predicted_trees, gold_trees)
 
         return output_dict
 
@@ -358,6 +372,11 @@ class SpanConstituencyParser(Model):
         all_metrics["average_f1"] = total_f1 / num_metrics
         all_metrics["average_precision"] = total_precision / num_metrics
         all_metrics["average_recall"] = total_recall / num_metrics
+
+        if self._evalb_score is not None:
+            evalb_metrics = self._evalb_score.get_metric(reset=reset)
+            all_metrics.update(evalb_metrics)
+
         return all_metrics
 
     @classmethod
@@ -373,6 +392,8 @@ class SpanConstituencyParser(Model):
             feedforward_layer = None
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
+        evalb_directory_path = params.pop("evalb_directory_path", None)
+        params.assert_empty(cls.__name__)
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
@@ -380,4 +401,5 @@ class SpanConstituencyParser(Model):
                    encoder=encoder,
                    feedforward_layer=feedforward_layer,
                    initializer=initializer,
-                   regularizer=regularizer)
+                   regularizer=regularizer,
+                   evalb_directory_path=evalb_directory_path)
