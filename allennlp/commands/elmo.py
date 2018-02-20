@@ -8,7 +8,8 @@ The input file is previously tokenized, whitespace separated text, one sentence 
 The output is a hdf5 file (<http://docs.h5py.org/en/latest/>) where, with the --all flag, each
 sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 
-#TODO(michaels) add a link to the ELMo paper once published.
+For information, see "Deep contextualized word representations", Peters et al 2018.
+https://arxiv.org/abs/1802.05365
 
 .. code-block:: bash
 
@@ -99,6 +100,9 @@ class Elmo(Subcommand):
         return subparser
 
 
+def empty_embedding() -> numpy.ndarray:
+    return numpy.zeros((3, 0, 1024))
+
 class ElmoEmbedder():
     def __init__(self,
                  options_file: str = DEFAULT_OPTIONS_FILE,
@@ -119,7 +123,7 @@ class ElmoEmbedder():
         logger.info("Initializing ELMo.")
         self.elmo_bilm = _ElmoBiLm(options_file, weight_file)
         if cuda_device >= 0:
-            self.elmo_bilm = self.elmo_bilm.cuda(cuda_device=cuda_device)
+            self.elmo_bilm = self.elmo_bilm.cuda(device=cuda_device)
 
         self.cuda_device = cuda_device
 
@@ -164,7 +168,7 @@ class ElmoEmbedder():
         """
         character_ids = self.batch_to_ids(batch)
         if self.cuda_device >= 0:
-            character_ids = character_ids.cuda(cuda_device=self.cuda_device)
+            character_ids = character_ids.cuda(device=self.cuda_device)
 
         bilm_output = self.elmo_bilm(character_ids)
         layer_activations = bilm_output['activations']
@@ -180,7 +184,7 @@ class ElmoEmbedder():
 
         return activations, mask
 
-    def embed_sentence(self, sentence: List[str]) -> torch.Tensor:
+    def embed_sentence(self, sentence: List[str]) -> numpy.ndarray:
         """
         Computes the ELMo embeddings for a single tokenized sentence.
 
@@ -196,7 +200,7 @@ class ElmoEmbedder():
 
         return self.embed_batch([sentence])[0]
 
-    def embed_batch(self, batch: List[List[str]]) -> List[torch.Tensor]:
+    def embed_batch(self, batch: List[List[str]]) -> List[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a batch of tokenized sentences.
 
@@ -211,15 +215,25 @@ class ElmoEmbedder():
         """
         elmo_embeddings = []
 
-        embeddings, mask = self.batch_to_embeddings(batch)
-        for i in range(len(batch)):
-            length = int(mask[i, :].sum())
-            sentence_embeds = embeddings[i, :, :length, :].data.cpu().numpy()
-            elmo_embeddings.append(sentence_embeds)
+        # Batches with only an empty sentence will throw an exception inside AllenNLP, so we handle this case
+        # and return an empty embedding instead.
+        if batch == [[]]:
+            elmo_embeddings.append(empty_embedding())
+        else:
+            embeddings, mask = self.batch_to_embeddings(batch)
+            for i in range(len(batch)):
+                length = int(mask[i, :].sum())
+                # Slicing the embedding :0 throws an exception so we need to special case for empty sentences.
+                if length == 0:
+                    elmo_embeddings.append(empty_embedding())
+                else:
+                    elmo_embeddings.append(embeddings[i, :, :length, :].data.cpu().numpy())
 
         return elmo_embeddings
 
-    def embed_sentences(self, sentences: Iterable[List[str]], batch_size: int) -> Iterable[torch.Tensor]:
+    def embed_sentences(self,
+                        sentences: Iterable[List[str]],
+                        batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a iterable of sentences.
 
@@ -261,7 +275,7 @@ class ElmoEmbedder():
         assert output_format in ["all", "top", "average"]
 
         # Tokenizes the sentences.
-        sentences = [line.strip() for line in input_file]
+        sentences = [line.strip() for line in input_file if line.strip()]
         split_sentences = [sentence.split() for sentence in sentences]
         # Uses the sentence as the key.
         embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))

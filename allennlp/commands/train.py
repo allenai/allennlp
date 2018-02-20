@@ -6,11 +6,11 @@ which to write the results.
 .. code-block:: bash
 
    $ python -m allennlp.run train --help
-   usage: python -m allennlp.run [command] train [-h] -s SERIALIZATION_DIR
-                                               [-o OVERRIDES]
-                                               [--include-package INCLUDE_PACKAGE]
-                                               [--file-friendly-logging]
-                                               param_path
+   usage: python -m allennlp.run train [-h] -s SERIALIZATION_DIR
+                                            [-o OVERRIDES]
+                                            [--include-package INCLUDE_PACKAGE]
+                                            [--file-friendly-logging]
+                                            param_path
 
    Train the specified model on the specified dataset.
 
@@ -42,15 +42,13 @@ from copy import deepcopy
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params
-from allennlp.common.tee_logger import TeeLogger
-from allennlp.common.tqdm import Tqdm
+from allennlp.common import Params, TeeLogger, Tqdm
 from allennlp.common.util import prepare_environment, import_submodules
 from allennlp.data import Vocabulary
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.models.archival import archive_model
+from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.training.trainer import Trainer
 
@@ -61,21 +59,21 @@ class Train(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Train the specified model on the specified dataset.'''
-        subparser = parser.add_parser(
-                name, description=description, help='Train a model')
+        subparser = parser.add_parser(name, description=description, help='Train a model')
 
         subparser.add_argument('param_path',
                                type=str,
                                help='path to parameter file describing the model to be trained')
 
-        # This is necessary to preserve backward compatibility
-        serialization = subparser.add_mutually_exclusive_group(required=True)
-        serialization.add_argument('-s', '--serialization-dir',
-                                   type=str,
-                                   help='directory in which to save the model and its logs')
-        serialization.add_argument('--serialization_dir',
-                                   type=str,
-                                   help=argparse.SUPPRESS)
+        subparser.add_argument('-s', '--serialization-dir',
+                               required=True,
+                               type=str,
+                               help='directory in which to save the model and its logs')
+
+        subparser.add_argument('-r', '--recover',
+                               action='store_true',
+                               default=False,
+                               help='recover training from the state in serialization_dir')
 
         subparser.add_argument('-o', '--overrides',
                                type=str,
@@ -104,23 +102,37 @@ def train_model_from_args(args: argparse.Namespace):
     # Import any additional modules needed (to register custom classes)
     for package_name in args.include_package:
         import_submodules(package_name)
+
+    if not args.recover and os.path.exists(args.serialization_dir):
+        raise ConfigurationError(f"Serialization directory ({args.serialization_dir}) already exists.  "
+                                 f"Specify --recover to recover training from existing output.")
+    elif args.recover and not os.path.exists(args.serialization_dir):
+        raise ConfigurationError(f"--recover specified but serialization_dir ({args.serialization_dir}) does not "
+                                 f"exist.  There is nothing to recover from.")
+
     train_model_from_file(args.param_path, args.serialization_dir, args.overrides, args.file_friendly_logging)
 
 
-def train_model_from_file(parameter_filename: str, serialization_dir: str, overrides: str = "",
+def train_model_from_file(parameter_filename: str,
+                          serialization_dir: str,
+                          overrides: str = "",
                           file_friendly_logging: bool = False) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
     Parameters
     ----------
-    param_path: str, required.
+    param_path : ``str``
         A json parameter file specifying an AllenNLP experiment.
-    serialization_dir: str, required
-        The directory in which to save results and logs.
+    serialization_dir : ``str``
+        The directory in which to save results and logs. We just pass this along to
+        :func:`train_model`.
+    overrides : ``str``
+        A HOCON string that we will use to override values in the input parameter file.
+    file_friendly_logging : ``bool``, optional (default=False)
+        If ``True``, we make our output more friendly to saved model files.  We just pass this
+        along to :func:`train_model`.
     """
-    if file_friendly_logging:
-        Tqdm.set_default_mininterval(10.0)
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
     return train_model(params, serialization_dir, file_friendly_logging)
@@ -131,6 +143,12 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     Load all the datasets specified by the config.
     """
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
+    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
+
+    validation_and_test_dataset_reader: DatasetReader = dataset_reader
+    if validation_dataset_reader_params is not None:
+        logger.info("Using a separate dataset reader to load validation and test data.")
+        validation_and_test_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
 
     train_data_path = params.pop('train_data_path')
     logger.info("Reading training data from %s", train_data_path)
@@ -141,27 +159,21 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     validation_data_path = params.pop('validation_data_path', None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = dataset_reader.read(validation_data_path)
+        validation_data = validation_and_test_dataset_reader.read(validation_data_path)
         datasets["validation"] = validation_data
 
     test_data_path = params.pop("test_data_path", None)
     if test_data_path is not None:
         logger.info("Reading test data from %s", test_data_path)
-        test_data = dataset_reader.read(test_data_path)
+        test_data = validation_and_test_dataset_reader.read(test_data_path)
         datasets["test"] = test_data
 
     return datasets
 
-def train_model(params: Params, serialization_dir: str, file_friendly_logging: bool = False) -> Model:
+def create_serialization_dir(params: Params, serialization_dir: str) -> None:
     """
-    This function can be used as an entry point to running models in AllenNLP
-    directly from a JSON specification using a :class:`Driver`. Note that if
-    you care about reproducibility, you should avoid running code using Pytorch
-    or numpy which affect the reproducibility of your experiment before you
-    import and use this function, these libraries rely on random seeds which
-    can be set in this function via a JSON specification file. Note that this
-    function performs training and will also evaluate the trained model on
-    development and test sets if provided in the parameter json.
+    This function creates the serialization directory if it doesn't exist.  If it already exists,
+    then it verifies that we're recovering from a training with an identical configuration.
 
     Parameters
     ----------
@@ -170,19 +182,77 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
     serialization_dir: str, required
         The directory in which to save results and logs.
     """
+    if os.path.exists(serialization_dir):
+        logger.info(f"Recovering from prior training at {serialization_dir}.")
+
+        recovered_config_file = os.path.join(serialization_dir, CONFIG_NAME)
+        if not os.path.exists(recovered_config_file):
+            raise ConfigurationError("The serialization directory already exists but doesn't "
+                                     "contain a config.json. You probably gave the wrong directory.")
+        else:
+            loaded_params = Params.from_file(recovered_config_file)
+
+            # Check whether any of the training configuration differs from the configuration we are resuming.
+            # If so, warn the user that training may fail.
+            fail = False
+            flat_params = params.as_flat_dict()
+            flat_loaded = loaded_params.as_flat_dict()
+            for key in flat_params.keys() - flat_loaded.keys():
+                logger.error(f"Key '{key}' found in training configuration but not in the serialization "
+                             f"directory we're recovering from.")
+                fail = True
+            for key in flat_loaded.keys() - flat_params.keys():
+                logger.error(f"Key '{key}' found in the serialization directory we're recovering from "
+                             f"but not in the training config.")
+                fail = True
+            for key in flat_params.keys():
+                if flat_params.get(key, None) != flat_loaded.get(key, None):
+                    logger.error(f"Value for '{key}' in training configuration does not match that the value in "
+                                 f"the serialization directory we're recovering from: "
+                                 f"{flat_params[key]} != {flat_loaded[key]}")
+                    fail = True
+            if fail:
+                raise ConfigurationError("Training configuration does not match the configuration we're "
+                                         "recovering from.")
+    else:
+        os.makedirs(serialization_dir)
+
+
+def train_model(params: Params, serialization_dir: str, file_friendly_logging: bool = False) -> Model:
+    """
+    Trains the model specified in the given :class:`Params` object, using the data and training
+    parameters also specified in that object, and saves the results in ``serialization_dir``.
+
+    Parameters
+    ----------
+    params : ``Params``
+        A parameter object specifying an AllenNLP Experiment.
+    serialization_dir : ``str``
+        The directory in which to save results and logs.
+    file_friendly_logging : ``bool``, optional (default=False)
+        If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
+        down tqdm's output to only once every 10 seconds.
+    """
     prepare_environment(params)
 
-    os.makedirs(serialization_dir, exist_ok=True)
+    create_serialization_dir(params, serialization_dir)
+
+    # TODO(mattg): pull this block out into a separate function (maybe just add this to
+    # `prepare_environment`?)
+    Tqdm.set_slower_interval(file_friendly_logging)
     sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
-                           sys.stdout, file_friendly_logging)
+                           sys.stdout,
+                           file_friendly_logging)
     sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
-                           sys.stderr, file_friendly_logging)
+                           sys.stderr,
+                           file_friendly_logging)
     handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.getLogger().addHandler(handler)
+
     serialization_params = deepcopy(params).as_dict(quiet=True)
-    with open(os.path.join(serialization_dir, "model_params.json"), "w") as param_file:
+    with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
         json.dump(serialization_params, param_file, indent=4)
 
     all_datasets = datasets_from_params(params)

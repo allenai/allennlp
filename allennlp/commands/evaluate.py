@@ -59,16 +59,15 @@ class Evaluate(Subcommand):
         evaluation_data_file.add_argument('--evaluation-data-file',
                                           type=str,
                                           help='path to the file containing the evaluation data')
-        evaluation_data_file.add_argument('--evaluation_data_file',
-                                          type=str,
-                                          help=argparse.SUPPRESS)
+        subparser.add_argument('--weights-file',
+                               type=str,
+                               help='a path that overrides which weights file to use')
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
         cuda_device.add_argument('--cuda-device',
                                  type=int,
                                  default=-1,
                                  help='id of GPU to use (if any)')
-        cuda_device.add_argument('--cuda_device', type=int, help=argparse.SUPPRESS)
 
         subparser.add_argument('-o', '--overrides',
                                type=str,
@@ -115,14 +114,21 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         import_submodules(package_name)
 
     # Load from archive
-    archive = load_archive(args.archive_file, args.cuda_device, args.overrides)
+    archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
     config = archive.config
     prepare_environment(config)
     model = archive.model
     model.eval()
 
     # Load the evaluation data
-    dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
+
+    # Try to use the validation dataset reader if there is one - otherwise fall back
+    # to the default dataset_reader used for both training and validation.
+    validation_dataset_reader_params = config.pop('validation_dataset_reader', None)
+    if validation_dataset_reader_params is not None:
+        dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+    else:
+        dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
     evaluation_data_path = args.evaluation_data_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)

@@ -43,7 +43,9 @@ class TestCnnEncoder(AllenNlpTestCase):
         initializer(encoder)
         input_tensor = Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
         encoder_output = encoder(input_tensor, None)
-        assert_almost_equal(encoder_output.data.numpy(), numpy.asarray([[1.6 + 1.0, 3.1 + 1.0]]))
+        assert_almost_equal(encoder_output.data.numpy(),
+                            numpy.asarray([[1.6 + 1.0, 3.1 + 1.0]]),
+                            decimal=6)
 
     def test_forward_runs_with_larger_input(self):
         encoder = CnnEncoder(embedding_dim=7,

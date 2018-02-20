@@ -76,16 +76,17 @@ class Predict(Subcommand):
         subparser.add_argument('input_file', type=argparse.FileType('r'), help='path to input file')
 
         subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
+        subparser.add_argument('--weights-file',
+                               type=str,
+                               help='a path that overrides which weights file to use')
 
         batch_size = subparser.add_mutually_exclusive_group(required=False)
         batch_size.add_argument('--batch-size', type=int, default=1, help='The batch size to use for processing')
-        batch_size.add_argument('--batch_size', type=int, help=argparse.SUPPRESS)
 
         subparser.add_argument('--silent', action='store_true', help='do not print output to stdout')
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
         cuda_device.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
-        cuda_device.add_argument('--cuda_device', type=int, help=argparse.SUPPRESS)
 
         subparser.add_argument('-o', '--overrides',
                                type=str,
@@ -107,7 +108,10 @@ class Predict(Subcommand):
         return subparser
 
 def _get_predictor(args: argparse.Namespace, predictors: Dict[str, str]) -> Predictor:
-    archive = load_archive(args.archive_file, cuda_device=args.cuda_device, overrides=args.overrides)
+    archive = load_archive(args.archive_file,
+                           weights_file=args.weights_file,
+                           cuda_device=args.cuda_device,
+                           overrides=args.overrides)
 
     if args.predictor:
         # Predictor explicitly specified, so use it
@@ -179,6 +183,11 @@ def _predict(predictors: Dict[str, str]):
             if args.output_file:
                 output_file = stack.enter_context(args.output_file)  # type: ignore
 
-            _run(predictor, input_file, output_file, args.batch_size, not args.silent, args.cuda_device)
+            _run(predictor,
+                 input_file,
+                 output_file,
+                 args.batch_size,
+                 not args.silent,
+                 args.cuda_device)
 
     return predict_inner

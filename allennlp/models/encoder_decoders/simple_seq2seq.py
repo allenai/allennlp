@@ -298,6 +298,7 @@ class SimpleSeq2Seq(Model):
         else:
             attention_function = None
         scheduled_sampling_ratio = params.pop_float("scheduled_sampling_ratio", 0.0)
+        params.assert_empty(cls.__name__)
         return cls(vocab,
                    source_embedder=source_embedder,
                    encoder=encoder,

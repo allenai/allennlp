@@ -20,3 +20,8 @@ allennlp.modules.span_extractors
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.modules.span_extractors.bidirectional_endpoint_span_extractor
+   :members:
+   :undoc-members:
+   :show-inheritance:

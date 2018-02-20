@@ -43,9 +43,31 @@ class TestTrainer(AllenNlpTestCase):
         self.iterator.index_with(vocab)
 
     def test_trainer_can_run(self):
-        trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances, num_epochs=2)
-        trainer.train()
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=2)
+        metrics = trainer.train()
+        assert 'best_validation_loss' in metrics
+        assert isinstance(metrics['best_validation_loss'], float)
+        assert 'best_epoch' in metrics
+        assert isinstance(metrics['best_epoch'], int)
+
+        # Making sure that both increasing and decreasing validation metrics work.
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          validation_metric='+loss',
+                          num_epochs=2)
+        metrics = trainer.train()
+        assert 'best_validation_loss' in metrics
+        assert isinstance(metrics['best_validation_loss'], float)
+        assert 'best_epoch' in metrics
+        assert isinstance(metrics['best_epoch'], int)
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
@@ -57,8 +79,10 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
+        multigpu_iterator = BasicIterator(batch_size=4)
+        multigpu_iterator.index_with(self.vocab)
         trainer = Trainer(self.model, self.optimizer,
-                          BasicIterator(batch_size=4), self.instances, num_epochs=2,
+                          multigpu_iterator, self.instances, num_epochs=2,
                           cuda_device=[0, 1])
         trainer.train()
 
@@ -86,8 +110,8 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="+test")
-        assert new_trainer._should_stop_early([.5, .3, .2, .1, .4, .4]) #pylint: disable=protected-access
-        assert not new_trainer._should_stop_early([.3, .3, .3, .2, .5, .1]) #pylint: disable=protected-access
+        assert new_trainer._should_stop_early([.5, .3, .2, .1, .4, .4])  # pylint: disable=protected-access
+        assert not new_trainer._should_stop_early([.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
 
     def test_should_stop_early_with_decreasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
@@ -95,9 +119,8 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="-test")
-        assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4]) #pylint: disable=protected-access
-        assert not new_trainer._should_stop_early([.3, .3, .2, .1, .4, .5]) #pylint: disable=protected-access
-
+        assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4])  # pylint: disable=protected-access
+        assert not new_trainer._should_stop_early([.3, .3, .2, .1, .4, .5])  # pylint: disable=protected-access
 
     def test_train_driver_raises_on_model_with_no_loss_key(self):
 
@@ -110,7 +133,6 @@ class TestTrainer(AllenNlpTestCase):
                               num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
 
-    @pytest.mark.skipif(os.uname().sysname == 'Darwin', reason="Tensorboard logging broken on mac.")
     def test_trainer_can_log_histograms(self):
         # enable activation logging
         for module in self.model.modules():

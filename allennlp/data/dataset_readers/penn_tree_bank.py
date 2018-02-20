@@ -16,7 +16,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spans
-
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -35,14 +35,19 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
+    use_pos_tags : ``bool``, optional, (default = ``True``)
+        Whether or not the instance should contain gold POS tags
+        as a field.
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be consumed lazily.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
+                 use_pos_tags: bool = True,
                  lazy: bool = False) -> None:
         super().__init__(lazy=lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._use_pos_tags = use_pos_tags
 
     @overrides
     def _read(self, file_path):
@@ -52,12 +57,13 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         logger.info("Reading instances from lines in file at: %s", file_path)
 
         for parse in BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents():
-            yield self.text_to_instance(parse.leaves(), [x[1] for x in parse.pos()], parse)
+            pos_tags = [x[1] for x in parse.pos()] if self._use_pos_tags else None
+            yield self.text_to_instance(parse.leaves(), pos_tags, parse)
 
     @overrides
     def text_to_instance(self, # type: ignore
                          tokens: List[str],
-                         pos_tags: List[str],
+                         pos_tags: List[str] = None,
                          gold_tree: Tree = None) -> Instance:
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
@@ -66,8 +72,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         ----------
         tokens : ``List[str]``, required.
             The tokens in a given sentence.
-        pos_tags ``List[str]``, required.
-            The pos tags for the words in the sentence.
+        pos_tags ``List[str]``, optional, (default = None).
+            The POS tags for the words in the sentence.
         gold_tree : ``Tree``, optional (default = None).
             The gold parse tree to create span labels from.
 
@@ -77,7 +83,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             tokens : ``TextField``
                 The tokens in the sentence.
             pos_tags : ``SequenceLabelField``
-                The pos tags of the words in the sentence.
+                The POS tags of the words in the sentence.
+                Only returned if ``use_pos_tags`` is ``True``
             spans : ``ListField[SpanField]``
                 A ListField containing all possible subspans of the
                 sentence.
@@ -88,8 +95,14 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         """
         # pylint: disable=arguments-differ
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
-        pos_tag_field = SequenceLabelField(pos_tags, text_field, "pos_tags")
-        fields = {"tokens": text_field, "pos_tags": pos_tag_field}
+        fields: Dict[str, Field] = {"tokens": text_field}
+
+        if self._use_pos_tags and pos_tags is not None:
+            pos_tag_field = SequenceLabelField(pos_tags, text_field, "pos_tags")
+            fields["pos_tags"] = pos_tag_field
+        elif self._use_pos_tags:
+            raise ConfigurationError("use_pos_tags was set to True but no gold pos"
+                                     " tags were passed to the dataset reader.")
         spans: List[Field] = []
         gold_labels = []
 
@@ -145,7 +158,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             # The "length" of a tree is defined by
             # NLTK as the number of children.
             # We don't actually want the spans for leaves, because
-            # their labels are pos tags. However, it makes the
+            # their labels are POS tags. However, it makes the
             # indexing more straightforward, so we'll collect them
             # and filter them out below. We subtract 1 from the end
             # index so the spans are inclusive.
@@ -166,7 +179,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     @classmethod
     def from_params(cls, params: Params) -> 'PennTreeBankConstituencySpanDatasetReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        use_pos_tags = params.pop('use_pos_tags', True)
         lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return PennTreeBankConstituencySpanDatasetReader(token_indexers=token_indexers,
+                                                         use_pos_tags=use_pos_tags,
                                                          lazy=lazy)

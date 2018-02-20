@@ -43,11 +43,13 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         return self._input_dim
 
     @overrides
-    def forward(self, # pylint: disable=arguments-differ
+    def forward(self,
                 sequence_tensor: torch.FloatTensor,
-                indicies: torch.LongTensor) -> None:
+                span_indices: torch.LongTensor,
+                sequence_mask: torch.LongTensor = None,
+                span_indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
         # both of shape (batch_size, num_spans, 1)
-        span_starts, span_ends = indicies.split(1, dim=-1)
+        span_starts, span_ends = span_indices.split(1, dim=-1)
 
         # shape (batch_size, num_spans, 1)
         # These span widths are off by 1, because the span ends are `inclusive`.
@@ -74,7 +76,6 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         # We're using <= here (and for the mask below) because the span ends are
         # inclusive, so we want to include indices which are equal to span_widths rather
         # than using it as a non-inclusive upper bound.
-        # TODO(Mark): Make this class able to take inclusive or exclusive end indices.
         span_mask = (max_span_range_indices <= span_widths).float()
         raw_span_indices = span_ends - max_span_range_indices
         # We also don't want to include span indices which are less than zero,
@@ -101,9 +102,16 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         # Shape: (batch_size, num_spans, embedding_dim)
         attended_text_embeddings = util.weighted_sum(span_embeddings, span_attention_weights)
 
+        if span_indices_mask is not None:
+            # Above we were masking the widths of spans with respect to the max
+            # span width in the batch. Here we are masking the spans which were
+            # originally passed in as padding.
+            return attended_text_embeddings * span_indices_mask.unsqueeze(-1).float()
+
         return attended_text_embeddings
 
     @classmethod
     def from_params(cls, params: Params) -> "SelfAttentiveSpanExtractor":
         input_dim = params.pop_int("input_dim")
+        params.assert_empty(cls.__name__)
         return SelfAttentiveSpanExtractor(input_dim=input_dim)

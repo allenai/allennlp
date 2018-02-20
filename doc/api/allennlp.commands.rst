@@ -37,6 +37,7 @@ calls ``main()``.
     allennlp.commands.predict
     allennlp.commands.serve
     allennlp.commands.train
+    allennlp.commands.fine_tune
     allennlp.commands.elmo
 
 .. automodule:: allennlp.commands

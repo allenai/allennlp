@@ -43,7 +43,7 @@ class TestTrain(AllenNlpTestCase):
                 }
         })
 
-        train_model(params, serialization_dir=self.TEST_DIR)
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
 
     def test_train_with_test_set(self):
         params = Params({
@@ -74,14 +74,14 @@ class TestTrain(AllenNlpTestCase):
                 }
         })
 
-        train_model(params, serialization_dir=self.TEST_DIR)
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'train_with_test_set'))
 
     def test_train_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')
         Train().add_subparser('train', subparsers)
 
-        for serialization_arg in ["-s", "--serialization_dir", "--serialization-dir"]:
+        for serialization_arg in ["-s", "--serialization-dir"]:
             raw_args = ["train", "path/to/params", serialization_arg, "serialization_dir"]
 
             args = parser.parse_args(raw_args)
@@ -124,8 +124,7 @@ class TestTrain(AllenNlpTestCase):
 
         # Write out config file
         config_path = os.path.join(self.TEST_DIR, 'config.json')
-        with open(config_path, 'w') as f:
-            f.write("""
+        config_json = """
                 "model": {
                         "type": "duplicate-test-tagger",
                         "text_field_embedder": {
@@ -149,7 +148,9 @@ class TestTrain(AllenNlpTestCase):
                         "num_epochs": 2,
                         "optimizer": "adam"
                 }
-            """.replace('$$$', data_path))
+            """.replace('$$$', data_path)
+        with open(config_path, 'w') as f:
+            f.write(config_json)
 
         serialization_dir = os.path.join(self.TEST_DIR, 'serialization')
 
@@ -163,11 +164,21 @@ class TestTrain(AllenNlpTestCase):
             main()
 
         # Now add the --include-package flag and it should work.
-        sys.argv.extend(["--include-package", 'testpackage'])
+        # We also need to add --recover since the output directory already exists.
+        sys.argv.extend(["--recover", "--include-package", 'testpackage'])
 
         main()
 
+        # Rewrite out config file, but change a value.
+        with open(config_path, 'w') as f:
+            f.write(config_json.replace('"num_epochs": 2,', '"num_epochs": 4,'))
+
+        # This should fail because the config.json does not match that in the serialization directory.
+        with pytest.raises(ConfigurationError):
+            main()
+
         sys.path.remove(self.TEST_DIR)
+
 
 @DatasetReader.register('lazy-test')
 class LazyFakeReader(DatasetReader):
@@ -215,7 +226,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 }
         })
 
-        train_model(params, serialization_dir=self.TEST_DIR)
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'train_lazy_model'))
 
     def test_train_with_test_set(self):
         params = Params({
@@ -246,4 +257,4 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 }
         })
 
-        train_model(params, serialization_dir=self.TEST_DIR)
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'lazy_test_set'))

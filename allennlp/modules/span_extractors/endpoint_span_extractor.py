@@ -70,11 +70,22 @@ class EndpointSpanExtractor(SpanExtractor):
         return combined_dim
 
     @overrides
-    def forward(self, # pylint: disable=arguments-differ
+    def forward(self,
                 sequence_tensor: torch.FloatTensor,
-                indicies: torch.LongTensor) -> None:
+                span_indices: torch.LongTensor,
+                sequence_mask: torch.LongTensor = None,
+                span_indices_mask: torch.LongTensor = None) -> None:
         # shape (batch_size, num_spans)
-        span_starts, span_ends = [index.squeeze(-1) for index in indicies.split(1, dim=-1)]
+        span_starts, span_ends = [index.squeeze(-1) for index in span_indices.split(1, dim=-1)]
+
+        if span_indices_mask is not None:
+            # It's not strictly necessary to multiply the span indices by the mask here,
+            # but it's possible that the span representation was padded with something other
+            # than 0 (such as -1, which would be an invalid index), so we do so anyway to
+            # be safe.
+            span_starts = span_starts * span_indices_mask
+            span_ends = span_ends * span_indices_mask
+
         start_embeddings = batched_index_select(sequence_tensor, span_starts)
         end_embeddings = batched_index_select(sequence_tensor, span_ends)
 
@@ -90,6 +101,8 @@ class EndpointSpanExtractor(SpanExtractor):
             span_width_embeddings = self._span_width_embedding(span_widths)
             return torch.cat([combined_tensors, span_width_embeddings], -1)
 
+        if span_indices_mask is not None:
+            return combined_tensors * span_indices_mask.unsqueeze(-1).float()
         return combined_tensors
 
     @classmethod
@@ -99,6 +112,7 @@ class EndpointSpanExtractor(SpanExtractor):
         num_width_embeddings = params.pop_int("num_width_embeddings", None)
         span_width_embedding_dim = params.pop_int("span_width_embedding_dim", None)
         bucket_widths = params.pop_bool("bucket_widths", False)
+        params.assert_empty(cls.__name__)
         return EndpointSpanExtractor(input_dim=input_dim,
                                      combination=combination,
                                      num_width_embeddings=num_width_embeddings,

@@ -27,18 +27,13 @@ class TestEvaluate(AllenNlpTestCase):
 
     @flaky
     def test_evaluate_from_args(self):
-        snake_args = ["evaluate", "tests/fixtures/bidaf/serialization/model.tar.gz",
-                      "--evaluation_data_file", "tests/fixtures/data/squad.json",
-                      "--cuda_device", "-1"]
-
         kebab_args = ["evaluate", "tests/fixtures/bidaf/serialization/model.tar.gz",
                       "--evaluation-data-file", "tests/fixtures/data/squad.json",
                       "--cuda-device", "-1"]
 
-        for raw_args in [snake_args, kebab_args]:
-            args = self.parser.parse_args(raw_args)
-            metrics = evaluate_from_args(args)
-            assert metrics.keys() == {'span_acc', 'end_acc', 'start_acc', 'em', 'f1'}
+        args = self.parser.parse_args(kebab_args)
+        metrics = evaluate_from_args(args)
+        assert metrics.keys() == {'span_acc', 'end_acc', 'start_acc', 'em', 'f1'}
 
     def test_external_modules(self):
         sys.path.insert(0, self.TEST_DIR)
@@ -55,7 +50,7 @@ class TestEvaluate(AllenNlpTestCase):
         params = Params.from_file(os.path.join(self.TEST_DIR, 'config.json'))
         params['model']['type'] = 'bidaf-duplicate'
 
-        config_file = os.path.join(serialization_dir, 'model_params.json')
+        config_file = os.path.join(serialization_dir, 'config.json')
         with open(config_file, 'w') as f:
             f.write(json.dumps(params.as_dict(quiet=True)))
 
