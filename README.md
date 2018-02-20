@@ -10,7 +10,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 ## Quickstart
 
 The fastest way to get an environment to run AllenNLP is with Docker.  Once you have [installed Docker](https://docs.docker.com/engine/installation/)
-just run `docker run -it --rm allennlp/allennlp:v0.3.0` to get an environment that will run on either the cpu or gpu.
+just run `docker run -it --rm allennlp/allennlp:v0.4.0` to get an environment that will run on either the cpu or gpu.
 
 Now you can do any of the following:
 
@@ -170,7 +170,7 @@ new image on every update to the master branch.  To download
 the latest released from [Docker Hub](https://hub.docker.com/r/allennlp/) just run:
 
 ```bash
-docker pull allennlp/allennlp:v0.3.0
+docker pull allennlp/allennlp:v0.4.0
 ```
 
 #### Building a Docker image
