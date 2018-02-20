@@ -1170,33 +1170,58 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # was applied on both together.
                 # Todo(rajas) remove mix1 and mix2 variables
                 # Todo(rajas) figure out why the loss is nan with this code.
-                mixture_weight = self._mixture_feedforward(hidden_state)
-                mix1 = (torch.log(mixture_weight) * entity_action_mask.float())
-                mix2 = (torch.log(1 - mixture_weight) * embedded_action_mask.float())
+                mixture_weight = self._mixture_feedforward(hidden_state) #+ 0.1
+                # mix1 = torch.log(mixture_weight) * entity_action_mask.float()
+                # mix2 = torch.log(1 - mixture_weight) * embedded_action_mask.float()
+                mix1 = torch.log(mixture_weight) + (entity_action_mask.float() + 1e-45).log()
+                mix2 = torch.log(1 - mixture_weight) + (embedded_action_mask.float()+ 1e-45).log()
+                # print('~~~~')
+                # print(mixture_weight)
+                # print(mix1)
 
-                # print("11111 entity_action_logits")
-                # print(entity_action_logits)
-                # print("1111 entity_action_mask.float()")
-                # print(entity_action_mask.float().log())
-                # print("1111 sum of normal entity_action_mask.float()")
-                # print(entity_action_logits + entity_action_mask.float().log())
+                # import math
+                # if math.isnan(mixture_weight.cpu().data.numpy()[0]):
+                #     print("nan territory")
 
-                # entity_action_probs = util.masked_log_softmax(entity_action_logits, entity_action_mask.float())  #+ mix1
+                should_log = False
+                # if should_log:
+                #     print("-------------------------------")
+                #     # print("11111 entity_action_logits")
+                #     # print(entity_action_logits)
+                #     print("mixture_weight")
+                #     print(mixture_weight)
+                #     print("log mixture_weight")
+                #     print(torch.log(mixture_weight))
+                #     print("mix1")
+                #     print(mix1)
+                #     print("1111 entity_action_mask.float()")
+                #     print(entity_action_mask.float())
 
-                entity_action_probs = util.masked_log_softmax(entity_action_logits, None)
-                entity_action_probs = entity_action_probs * entity_action_mask.float()
-                entity_action_probs = entity_action_probs + entity_action_mask.float().log() + mix1
+                entity_action_probs = util.masked_log_softmax(entity_action_logits, entity_action_mask.float()) + mix1
+                # print('---------------')
+                # print(entity_action_probs)
+                # print(entity_action_mask)
 
-                # embedded_action_probs = util.masked_log_softmax(embedded_action_logits, embedded_action_mask.float()) + mix2
-                embedded_action_probs = util.masked_log_softmax(embedded_action_logits, None)
-                embedded_action_probs = embedded_action_probs * embedded_action_mask.float()
-                embedded_action_probs = embedded_action_probs + embedded_action_mask.float().log() + mix2
+                embedded_action_probs = util.masked_log_softmax(embedded_action_logits, embedded_action_mask.float()) + mix2
+                # print('---------------')
+                # print(embedded_action_probs)
+                # print(embedded_action_mask)
+
+                # if embedded_action_logits.size(0) == 3 and embedded_action_logits.size(1) == 4:
+                #     exit(0)
 
                 log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=1)
-                # print('222222 entity_action_probs')
-                # print(entity_action_probs)
-                # print('3333 entity_action_probs + log mask')
-                # print(entity_action_probs * entity_action_mask.float())
+
+                # if should_log:
+                #     print('222222 entity_action_probs')
+                #     print(entity_action_probs)
+
+                # a = entity_action_probs.cpu().data
+                # a[a != a] = 0
+                # if reduce(operator.mul, entity_action_probs.size()) > torch.sum(a)[0]:
+                #     print(reduce(operator.mul, entity_action_mask.size()))
+                #     print(torch.sum(entity_action_mask.float()).cpu().data.numpy()[0])
+                #     exit(0)
 
                 return self._compute_new_states(state,
                                                 log_probs,
@@ -1216,7 +1241,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             action_logits = embedded_action_logits
             action_mask = embedded_action_mask.float()
         log_probs = util.masked_log_softmax(action_logits, action_mask)
-
+        # print('---------------')
+        # print(log_probs)
+        # print(action_mask)
         return self._compute_new_states(state,
                                         log_probs,
                                         hidden_state,
