@@ -265,7 +265,7 @@ class SpanConstituencyParser(Model):
                                    index in sentence_ids[:sentence_lengths[batch_index]]]
 
             selected_spans = []
-            for prediction, span in zip(scored_spans[:num_spans[batch_index]], 
+            for prediction, span in zip(scored_spans[:num_spans[batch_index]],
                                         spans[:num_spans[batch_index]]):
                 start, end = span
                 no_label_prob = prediction[no_label_id]
