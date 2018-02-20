@@ -99,6 +99,7 @@ mask = Variable(torch.ones([3, 4]))
 # See below for a full explaination.
 pruned_embeddings, pruned_mask, pruned_indices, pruned_scores = pruner(spans, mask, num_spans_to_keep=3)
 ```
+
 First, we've got our `pruned_embeddings`. 
 These are of shape `(batch_size, num_spans_to_keep, embedding_size)`
 The spans we kept corespond to the topk with respect to the parameterised
@@ -109,6 +110,15 @@ Secondly, we've got the `pruned_mask`, which has shape `(batch_size, num_spans_t
 In 99% of cases, this will be all ones. However, if you have masked spans in a 
 batch element, and you request that the `SpanPruner` keeps more than the number
 of non-masked spans, there will be some masked elements in the returned spans.
+
+Thirdly, we have the `pruned_indices` which has shape `(batch_size, num_spans_to_keep)`
+The indices of the top-k scoring spans into the original ``spans`` tensor. 
+This is returned because it can be useful to retain pointers to the original spans,
+if each span is being scored by multiple distinct scorers, such as in the co-reference
+model, for instance.
+
+Finally, we have the `pruned_scores`, which has shape `(batch_size, num_spans_to_keep, 1)`.
+This is returned so that you can incorporate the scores of the spans into some loss function.
 
 ## Existing AllenNLP examples for generating `SpanFields`
 
