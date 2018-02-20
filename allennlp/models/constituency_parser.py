@@ -116,7 +116,7 @@ class SpanConstituencyParser(Model):
                 tokens: Dict[str, torch.LongTensor],
                 spans: torch.LongTensor,
                 span_labels: torch.LongTensor = None,
-                gold_trees: List[Tree] = None) -> Dict[str, torch.Tensor]:
+                gold_tree: List[Tree] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -136,7 +136,7 @@ class SpanConstituencyParser(Model):
         span_labels : ``torch.LongTensor``, optional (default = None)
             A torch tensor representing the integer gold class labels for all possible
             spans, of shape ``(batch_size, num_spans)``.
-        gold_trees : ``List[Tree]``, optional, (default = None)
+        gold_tree : ``List[Tree]``, optional, (default = None)
             Gold NLTK trees for use in evaluation.
 
         Returns
@@ -153,6 +153,7 @@ class SpanConstituencyParser(Model):
         """
         embedded_text_input = self.text_field_embedder(tokens)
         mask = get_text_field_mask(tokens)
+        sentence_lengths = get_lengths_from_binary_sequence_mask(mask)
         # Looking at the span start index is enough to know if
         # this is padding or not. Shape: (batch_size, num_spans)
         span_mask = (spans[:, :, 0] >= 0).squeeze(-1).long()
@@ -169,7 +170,7 @@ class SpanConstituencyParser(Model):
                 "spans": spans,
                 # TODO(Mark): This relies on having tokens represented with a SingleIdTokenIndexer...
                 "tokens": tokens["tokens"],
-                "token_mask": mask
+                "sentence_lengths": sentence_lengths
         }
         if span_labels is not None:
             loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask)
@@ -178,11 +179,13 @@ class SpanConstituencyParser(Model):
             output_dict["loss"] = loss
 
         # The evalb score is expensive to compute, so we only compute
-        # it for the validation # and test sets.
-        if gold_trees is not None and self._evalb_score is not None and not self.training:
-            decoded_output = self.decode(output_dict)
-            predicted_trees = decoded_output["trees"]
-            self._evalb_score(predicted_trees, gold_trees)
+        # it for the validation and test sets.
+        if gold_tree is not None and self._evalb_score is not None and not self.training:
+            predicted_trees = self.construct_trees(class_probabilities.cpu().data,
+                                                   spans.cpu().data,
+                                                   tokens["tokens"].cpu().data,
+                                                   sentence_lengths.cpu().data)
+            self._evalb_score(predicted_trees, gold_tree)
 
         return output_dict
 
@@ -196,23 +199,56 @@ class SpanConstituencyParser(Model):
         all_predictions = output_dict['class_probabilities'].cpu().data
         all_spans = output_dict["spans"].cpu().data
 
+        all_sentences = output_dict["tokens"].cpu().data
+        sentence_lengths = output_dict["sentence_lengths"].data
+        trees = self.construct_trees(all_predictions, all_spans, all_sentences, sentence_lengths)
+
+        output_dict["trees"] = trees
+        return output_dict
+
+    def construct_trees(self,
+                        predictions: torch.FloatTensor,
+                        enumerated_spans: torch.LongTensor,
+                        sentences: torch.LongTensor,
+                        sentence_lengths: torch.LongTensor) -> List[Tree]:
+        """
+        Construct ``nltk.Tree``'s for each batch element by greedily nesting spans.
+        The trees use exclusive end indices, which contrasts with how spans are
+        represented in the rest of the model.
+        Parameters
+        ----------
+
+        predictions : ``torch.FloatTensor``, required.
+            A tensor of shape ``(batch_size, num_spans, span_label_vocab_size)``
+            representing a distribution over the label classes per span.
+        enumerated_spans : ``torch.LongTensor``, required.
+            A tensor of shape (batch_size, num_spans, 2), representing the span
+            indices we scored.
+        sentences : ``torch.LongTensor``, required.
+            A tensor of shape (batch_size, sentence_length) representing the vocabulary
+            ids of the words in the sentences.
+        sentence_lengths : ``torch.LongTensor``, required.
+            A tensor of shape (batch_size), representing the lengths of the non-padded
+            elements of ``sentences``.
+
+        Returns
+        -------
+        A ``List[Tree]`` containing the decoded trees for each element in the batch.
+        """
         # Switch to using exclusive end spans.
-        exclusive_end_spans = all_spans.clone()
+        exclusive_end_spans = enumerated_spans.clone()
         exclusive_end_spans[:, :, -1] += 1
         no_label_id = self.vocab.get_token_index("NO-LABEL", "labels")
 
-        all_sentences = output_dict["tokens"].data
-        sentence_lengths = get_lengths_from_binary_sequence_mask(output_dict["token_mask"]).data
-
         trees: List[Tree] = []
-        for batch_index, (predictions, spans, sentence_ids) in enumerate(zip(all_predictions,
-                                                                             exclusive_end_spans,
-                                                                             all_sentences)):
+        for batch_index, (scored_spans, spans, sentence_ids) in enumerate(zip(predictions,
+                                                                              exclusive_end_spans,
+                                                                              sentences)):
             sentence: List[str] = [self.vocab.get_token_from_index(index, "tokens") for
                                    index in sentence_ids[:sentence_lengths[batch_index]]]
 
             selected_spans = []
-            for prediction, span in zip(predictions, spans):
+            for prediction, span in zip(scored_spans, spans):
                 start, end = span
                 no_label_prob = prediction[no_label_id]
                 label_prob, label_index = torch.max(prediction, -1)
@@ -237,8 +273,7 @@ class SpanConstituencyParser(Model):
                                for span in consistent_spans}
             trees.append(self.construct_tree_from_spans(spans_to_labels, sentence))
 
-        output_dict["trees"] = trees
-        return output_dict
+        return trees
 
     @staticmethod
     def resolve_overlap_conflicts_greedily(spans: List[SpanInformation]) -> List[SpanInformation]:

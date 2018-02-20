@@ -30,7 +30,7 @@ class SpanConstituencyParserTest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
         assert set(decode_output_dict.keys()) == {'spans', 'class_probabilities', 'trees',
-                                                  'tokens', 'token_mask', 'loss'}
+                                                  'tokens', 'sentence_lengths', 'loss'}
         metrics = self.model.get_metrics(reset=True)
         metric_keys = set(metrics.keys())
         assert "evalb_precision" in metric_keys
