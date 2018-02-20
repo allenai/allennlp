@@ -49,6 +49,7 @@ const teExamples = [
       <a href = "https://nlp.stanford.edu/projects/snli/" target="_blank" rel="noopener noreferrer">{' '} the SNLI benchmark {' '}</a>
       <span>
         (short sentences about visual scenes) in 2016.
+        Rather than pre-trained Glove vectors, this model uses <a href="Deep contextualized word representations">ELMo embeddings</a>, which are completely character based and improve performance by 2%
       </span>
     </span>
   );
