@@ -1,0 +1,87 @@
+##------------------------------------------##
+## Debug mode                               ##
+##   0: No debugging                        ##
+##   1: print data for individual sentence  ##
+##   2: print detailed bracketing info      ##
+##------------------------------------------##
+DEBUG 0
+
+##------------------------------------------##
+## MAX error                                ##
+##    Number of error to stop the process.  ##
+##    This is useful if there could be      ##
+##    tokanization error.                   ##
+##    The process will stop when this number##
+##    of errors are accumulated.            ##
+##------------------------------------------##
+MAX_ERROR 10
+
+##------------------------------------------##
+## Cut-off length for statistics            ##
+##    At the end of evaluation, the         ##
+##    statistics for the senetnces of length##
+##    less than or equal to this number will##
+##    be shown, on top of the statistics    ##
+##    for all the sentences                 ##
+##------------------------------------------##
+CUTOFF_LEN 40
+
+##------------------------------------------##
+## unlabeled or labeled bracketing          ##
+##    0: unlabeled bracketing               ##
+##    1: labeled bracketing                 ##
+##------------------------------------------##
+LABELED 1                 
+
+##------------------------------------------##
+## Delete labels                            ##
+##    list of labels to be ignored.         ##
+##    If it is a pre-terminal label, delete ##
+##    the word along with the brackets.     ##
+##    If it is a non-terminal label, just   ##
+##    delete the brackets (don't delete     ##
+##    deildrens).                           ##
+##------------------------------------------##
+DELETE_LABEL TOP
+DELETE_LABEL S1
+DELETE_LABEL -NONE-
+DELETE_LABEL ,
+DELETE_LABEL :
+DELETE_LABEL ``
+DELETE_LABEL ''
+DELETE_LABEL .
+DELETE_LABEL ?
+DELETE_LABEL !
+
+##------------------------------------------##
+## Delete labels for length calculation     ##
+##    list of labels to be ignored for      ##
+##    length calculation purpose            ##
+##------------------------------------------##
+DELETE_LABEL_FOR_LENGTH -NONE-
+
+##------------------------------------------##
+## Labels to be considered for misquote     ##
+##    (could be possesive or quote)         ##
+##------------------------------------------##
+QUOTE_LABEL ``
+QUOTE_LABEL ''
+QUOTE_LABEL POS
+
+##------------------------------------------##
+## These ones are less common, but          ##
+##    are on occasion output by parsers:    ##      
+##------------------------------------------##
+QUOTE_LABEL NN
+QUOTE_LABEL CD
+QUOTE_LABEL VBZ
+QUOTE_LABEL :
+
+##------------------------------------------##
+## Equivalent labels, words                 ##
+##     the pairs are considered equivalent  ##
+##     This is non-directional.             ##
+##------------------------------------------##
+EQ_LABEL ADVP PRT
+
+# EQ_WORD  Example example

@@ -115,7 +115,7 @@ The preferred way to install AllenNLP into your environment is via `pip`.
     pip install allennlp
     ```
 
-2. Visit http://pytorch.org/ and install the PyTorch 0.3.0 package for your system.
+2. Visit http://pytorch.org/ and install the PyTorch 0.3.1 package for your system.
 
 3. Download the spacy models. 
 
