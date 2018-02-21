@@ -1122,10 +1122,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                                        encoder_outputs_with_coverage,
                                                                        encoder_output_mask)
 
-        # todo(rajas): ok to update state here or should i do it in compute_new_states
-        # todo(rajas): no need to mask attention_weights right?
-        coverage = coverage + attention_weights
-
         # To predict an action, we'll use a concatenation of the hidden state and attention over
         # the question.  We'll just predict an _embedding_, which we will compare to embedded
         # representations of all valid actions to get a final output.
@@ -1492,8 +1488,13 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 new_action_history = state.action_history[group_index] + [action]
                 new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
 
-                # todo(rajas): how to store hyperparam since this is a static method?
-                coverage_attention = torch.stack([coverage[group_index], attention_weights[group_index]])
+                # todo(rajas): Can this method be non static so that the decoder step can store a
+                # [coverage_hyperparameter = Linear(1,1)] which will be multiplied by the loss?
+                # Or should I store this hyperparameter in the decoder state?
+                # todo(rajas): find alternative to sum since coverage_loss quickly becomes 1
+                coverage[group_index] = coverage[group_index] + attention_weights[group_index]
+                coverage_attention = torch.stack([coverage[group_index],
+                                                  attention_weights[group_index]])
                 minimum = torch.min(coverage_attention, dim=0)[0]
                 coverage_loss = torch.sum(minimum)
                 new_score = new_score + coverage_loss
