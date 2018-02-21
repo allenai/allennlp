@@ -67,7 +67,7 @@ def _read(self, file_path: str) -> Iterable[Instance]:
 In addition, the base `DatasetReader` constructor now takes a `lazy: bool` parameter,
 which means that your subclass constructor should also take that parameter
 (unless you don't want to allow laziness, but why wouldn't you?)
-and explicitly pass it the superclass constructor:
+and explicitly pass it to the superclass constructor:
 
 ```python
 class MyDatasetReader(DatasetReader)
@@ -78,11 +78,12 @@ class MyDatasetReader(DatasetReader)
         # whatever other initialization you need
 ```
 
-(For the reasoning behind this change, see the [Laziness tutorial](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/laziness.md).)
+For the reasoning behind this change, see the [Laziness tutorial](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/laziness.md).
 
 # CHANGES YOU ARE MUCH LESS LIKELY TO RUN INTO
 
-If you only ever use our the command line tools (`python -m allennlp.run ...`) to train / evaluate models,
+If you only ever create `Model`s and `DatasetReader`s and
+use the command line tools (`python -m allennlp.run ...`) to train and evaluate them,
 you shouldn't have to change anything else. However, if you've written your own training loop,
 (or if you're just really interested in how AllenNLP works), there are a few more changes you should know about.
 
@@ -91,18 +92,19 @@ you shouldn't have to change anything else. However, if you've written your own 
 AllenNLP 0.4.0 gets rid of the `Dataset` class / abstraction.
 Previously, a `Dataset` was a wrapper for a concrete list of instances
 that contained logic for _indexing_ them with some vocabulary,
-and for converting them into `Tensor` s. And, as mentioned above,
+and for converting them into `Tensor`s. And, as mentioned above,
 previously `DatasetReader.read()` returned such a dataset.
 
 In 0.4.0, `DatasetReader.read()` returns an `Iterable[Instance]`,
 which could be a list of instances or could produce them lazily.
-This means that the indexing and tensorization needs to happen elsewhere.
+Because of this, the indexing was moved into `DataIterator` (see ["Indexing"](#indexing) below),
+and the tensorization was moved into a new `Batch` abstraction (see ["Batch"](#batch) below).
 
 ## `Vocabulary`
 
 As `Dataset` no longer exists, we replaced `Vocabulary.from_dataset()`
 with `Vocabulary.from_instances()`, which accepts an `Iterable[Instance]`.
-In particulary, you'd most likely call this with the results of one or more calls
+In particular, you'd most likely call this with the results of one or more calls
 to `DatasetReader.read()`.
 
 ## `Batch`
@@ -137,3 +139,5 @@ as it's iterated over.
 Furthermore, each `Instance` now knows whether it's been indexed,
 so in the eager case (when all instances stay in memory),
 the indexing only happens in the first iteration.
+This means that the first pass through your dataset will be slower
+than subsequent ones.
