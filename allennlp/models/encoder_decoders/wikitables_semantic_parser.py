@@ -1173,8 +1173,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 mixture_weight = self._mixture_feedforward(hidden_state) #+ 0.1
                 # mix1 = torch.log(mixture_weight) * entity_action_mask.float()
                 # mix2 = torch.log(1 - mixture_weight) * embedded_action_mask.float()
-                mix1 = torch.log(mixture_weight) + (entity_action_mask.float() + 1e-45).log()
-                mix2 = torch.log(1 - mixture_weight) + (embedded_action_mask.float()+ 1e-45).log()
+                mix1 = torch.log(mixture_weight) #+ (entity_action_mask.float() + 1e-45).log()
+                mix2 = torch.log(1 - mixture_weight) #+ (embedded_action_mask.float()+ 1e-45).log()
                 # print('~~~~')
                 # print(mixture_weight)
                 # print(mix1)
