@@ -10,7 +10,6 @@ with the two improvements above.
 """
 from typing import Dict, List, Optional, Set, Tuple, Union
 from collections import defaultdict
-import re
 
 from overrides import overrides
 from nltk.sem.logic import Expression, ApplicationExpression, ConstantExpression, LogicParser, Variable
@@ -389,9 +388,9 @@ def substitute_any_type(type_: Type, basic_types: Set[BasicType]) -> List[Type]:
     want to use ``_substitute_placeholder_type`` instead.
     """
     if type_ == ANY_TYPE:
-        return basic_types
+        return list(basic_types)
     if isinstance(type_, BasicType):
-        return set([type_])
+        return [type_]
     # If we've made it this far, we have a ComplexType, and we can just call
     # `type_.substitute_any_type()`.
     return type_.substitute_any_type(basic_types)

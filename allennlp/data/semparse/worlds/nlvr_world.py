@@ -162,7 +162,7 @@ class NlvrWorld(World):
     def get_valid_starting_types(self) -> Set[Type]:
         return {types.TRUTH_TYPE}
 
-    def _get_curried_functions(self) -> Dict[str, int]:
+    def _get_curried_functions(self) -> Dict[Type, int]:
         return NlvrWorld.curried_functions
 
     @overrides

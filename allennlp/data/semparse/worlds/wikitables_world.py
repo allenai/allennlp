@@ -67,7 +67,7 @@ class WikiTablesWorld(World):
         """
         return entity_name in self._entity_set
 
-    def _get_curried_functions(self) -> Dict[str, int]:
+    def _get_curried_functions(self) -> Dict[Type, int]:
         return WikiTablesWorld.curried_functions
 
     def _get_numbers_from_tokens(self, tokens: List[Token]) -> List[str]:

@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from typing import Dict, List
+from typing import List
 
 import pytest
 
@@ -165,8 +165,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                  '[<d,d>, d]',
                                  '[<e,d>, e]',
                                  '[<e,<e,<e,d>>>, e, e, e]',
-                                 '[<r,d>, r]',
-                                 ])
+                                 '[<r,d>, r]'])
 
         check_productions_match(valid_actions['e'],
                                 ['-1',
