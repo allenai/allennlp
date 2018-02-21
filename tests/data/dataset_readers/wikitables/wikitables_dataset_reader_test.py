@@ -346,6 +346,14 @@ def assert_dataset_correct(dataset):
             "r -> x",
             ]
 
+    # We should have been able to read all of the logical forms in the file.  If one of them can't
+    # be parsed, or the action sequences can't be mapped correctly, the DatasetReader will skip the
+    # logical form, log an error, and keep going (i.e., it won't crash).  This is good, because
+    # sometimes DPD does silly things that we don't want to reproduce.  But it also means if we
+    # break something, we might not notice in the test unless we check this explicitly.
+    num_action_sequences = len(instance.fields["target_action_sequences"].field_list)
+    assert num_action_sequences == 10
+
     # We should have sorted the logical forms by length.  This is the action sequence
     # corresponding to the shortest logical form in the examples, which is _not_ the first one
     # in the file.
