@@ -130,11 +130,11 @@ class WikiTablesSemanticParser(Model):
         else:
             self._linking_params = None
 
-        self._decoder_step = WikiTablesDecoderStep(mixture_feedforward=mixture_feedforward,
-                                                   encoder_output_dim=self._encoder.get_output_dim(),
+        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
-                                                   num_entity_types=self.num_entity_types)
+                                                   num_entity_types=self.num_entity_types,
+                                                   mixture_feedforward=mixture_feedforward)
 
     @overrides
     def forward(self,  # type: ignore
@@ -1072,11 +1072,11 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     def __init__(self,
-                 mixture_feedforward: FeedForward,
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
-                 num_entity_types: int) -> None:
+                 num_entity_types: int,
+                 mixture_feedforward: FeedForward = None) -> None:
         super(WikiTablesDecoderStep, self).__init__()
         self._mixture_feedforward = mixture_feedforward
         self._entity_type_embedding = Embedding(num_entity_types, action_embedding_dim)
