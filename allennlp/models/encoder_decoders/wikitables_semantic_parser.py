@@ -1168,13 +1168,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # The entity and action logits are combined with a mixture weight to prevent the
                 # entity_action_logits from dominating the embedded_action_logits if a softmax
                 # was applied on both together.
-                # Todo(rajas) remove mix1 and mix2 variables
-                # Todo(rajas) figure out why the loss is nan with this code.
-                mixture_weight = self._mixture_feedforward(hidden_state) #+ 0.1
-                # mix1 = torch.log(mixture_weight) * entity_action_mask.float()
-                # mix2 = torch.log(1 - mixture_weight) * embedded_action_mask.float()
-                mix1 = torch.log(mixture_weight) #+ (entity_action_mask.float() + 1e-45).log()
-                mix2 = torch.log(1 - mixture_weight) #+ (embedded_action_mask.float()+ 1e-45).log()
+
+                mixture_weight = self._mixture_feedforward(hidden_state)
+                mix1 = torch.log(mixture_weight)
+                mix2 = torch.log(1 - mixture_weight)
                 # print('~~~~')
                 # print(mixture_weight)
                 # print(mix1)
@@ -1183,7 +1180,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # if math.isnan(mixture_weight.cpu().data.numpy()[0]):
                 #     print("nan territory")
 
-                should_log = False
+                # should_log = False
                 # if should_log:
                 #     print("-------------------------------")
                 #     # print("11111 entity_action_logits")
