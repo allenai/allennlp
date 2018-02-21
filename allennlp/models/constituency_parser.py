@@ -413,7 +413,10 @@ class SpanConstituencyParser(Model):
         total_f1 = 0.0
         total_precision = 0.0
         total_recall = 0.0
-        for metric_name, metric in self.metrics.items():
+        # We'll just capture the average f1, precision and recall
+        # because there are 27 constituent types, which makes
+        # for very verbose console output.
+        for metric in self.metrics.values():
             f1, precision, recall = metric.get_metric(reset) # pylint: disable=invalid-name
             total_f1 += f1
             total_precision += precision

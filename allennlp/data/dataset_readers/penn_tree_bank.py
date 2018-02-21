@@ -57,6 +57,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         logger.info("Reading instances from lines in file at: %s", file_path)
 
         for parse in BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents():
+            self._strip_functional_tags(parse)
             pos_tags = [x[1] for x in parse.pos()] if self._use_pos_tags else None
             yield self.text_to_instance(parse.leaves(), pos_tags, parse)
 
@@ -134,6 +135,17 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
 
         return Instance(fields)
 
+    def _strip_functional_tags(self, tree: Tree) -> None:
+        """
+        Removes all functional tags from constituency labels in an NLTK tree.
+        This modification is done in-place.
+        """
+        for child in tree:
+            clean_label = child.label().split("=")[0].split("-")[0].split("|")[0]
+            child.set_label(clean_label)
+            if not isinstance(child[0], str):
+                self._strip_functional_tags(child)
+
     def _get_gold_spans(self, # pylint: disable=arguments-differ
                         tree: Tree,
                         index: int,
@@ -178,7 +190,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                 child_start = end
             # Set the end index of the current span to
             # the last appended index - 1, as the span is inclusive.
-            typed_spans[(index, end - 1)] = tree.label().split("=")[0].split("-")[0].split("|")[0]
+            # We also strip off anything after a =, - or | character,
+            # because these are functional tags which we don't want to use.
+            typed_spans[(index, end - 1)] = tree.label()
         return end
 
     @classmethod
