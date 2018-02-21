@@ -1,15 +1,16 @@
 """
 Defines all the types in the WikitablesQuestions domain.
 """
-from typing import Optional
+from typing import List, Optional, Set
 from overrides import overrides
 
-from nltk.sem.logic import Type, ComplexType, EntityType, ANY_TYPE
+from nltk.sem.logic import Type, BasicType, EntityType, ANY_TYPE
 
-from allennlp.data.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType, IdentityType
+from allennlp.data.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType, IdentityType
+from allennlp.data.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType
 
 
-class ReverseType(PlaceholderType):
+class ReverseType(PlaceholderType, HigherOrderType):
     """
     ReverseType is a kind of ``PlaceholderType`` where type resolution involves matching the return
     type with the reverse of the argument type. So all we care about are the types of the surrounding
@@ -23,6 +24,9 @@ class ReverseType(PlaceholderType):
         <<r,?>, ?>      :   <<r,?>, <?,r>>>
         <<r,?>, <?,e>>  :   None
     """
+    def __init__(self, first: Type, second: Type) -> None:
+        super().__init__(num_arguments=1, first=first, second=second)
+
     @property
     def _signature(self) -> str:
         return "<<#1,#2>,<#2,#1>>"
@@ -47,6 +51,18 @@ class ReverseType(PlaceholderType):
     @overrides
     def get_application_type(self, argument_type: Type) -> Type:
         return ComplexType(argument_type.second, argument_type.first)
+
+    @overrides
+    def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
+        basic_first_types = basic_types if self.first.first == ANY_TYPE else {self.first.first}
+        basic_second_types = basic_types if self.first.second == ANY_TYPE else {self.first.second}
+        substitutions = []
+        for first_type in basic_first_types:
+            for second_type in basic_second_types:
+                substituted_first = ComplexType(first_type, second_type)
+                substituted_second = ComplexType(second_type, first_type)
+                substitutions.append(ReverseType(substituted_first, substituted_second))
+        return substitutions
 
 
 class ConjunctionType(PlaceholderType):
@@ -79,6 +95,12 @@ class ConjunctionType(PlaceholderType):
     @overrides
     def get_application_type(self, argument_type: Type) -> Type:
         return ComplexType(argument_type, argument_type)
+
+    @overrides
+    def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
+        if self.first != ANY_TYPE:
+            return [self]
+        return [ConjunctionType(basic_type, basic_type) for basic_type in basic_types]
 
 
 class ArgExtremeType(PlaceholderType):
@@ -139,6 +161,21 @@ class ArgExtremeType(PlaceholderType):
         # This is called after the placeholders are resolved.
         return self.second
 
+    @overrides
+    def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
+        if self.second.second.first != ANY_TYPE:
+            return [self]
+        return [self._substitute_basic_type(basic_type) for basic_type in basic_types]
+
+    @classmethod
+    def _substitute_basic_type(cls, basic_type: BasicType) -> 'ArgExtremeType':
+        return cls(DATE_NUM_TYPE,
+                   ComplexType(DATE_NUM_TYPE,
+                               ComplexType(basic_type,
+                                           ComplexType(ComplexType(DATE_NUM_TYPE, basic_type),
+                                                       basic_type))))
+
+
 
 class CountType(PlaceholderType):
     """
@@ -161,6 +198,12 @@ class CountType(PlaceholderType):
     @overrides
     def get_application_type(self, argument_type: Type) -> Type:
         return DATE_NUM_TYPE
+
+    @overrides
+    def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
+        if self.first != ANY_TYPE:
+            return [self]
+        return [CountType(basic_type, DATE_NUM_TYPE) for basic_type in basic_types]
 
 
 CELL_TYPE = EntityType()

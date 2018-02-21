@@ -1,6 +1,6 @@
-from nltk.sem.logic import TRUTH_TYPE, EntityType, ComplexType
+from nltk.sem.logic import TRUTH_TYPE, EntityType
 
-from allennlp.data.semparse.type_declarations.type_declaration import NamedBasicType
+from allennlp.data.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType, NamedBasicType
 
 
 # All constants default to ``EntityType`` in NLTK. For domains where constants of different types
@@ -13,8 +13,9 @@ OBJECT_TYPE = NamedBasicType("OBJECT")
 COLOR_TYPE = NamedBasicType("COLOR")
 SHAPE_TYPE = NamedBasicType("SHAPE")
 OBJECT_FILTER_TYPE = ComplexType(OBJECT_TYPE, OBJECT_TYPE)
-NEGATE_FILTER_TYPE = ComplexType(ComplexType(OBJECT_TYPE, OBJECT_TYPE),
-                                 ComplexType(OBJECT_TYPE, OBJECT_TYPE))
+NEGATE_FILTER_TYPE = HigherOrderType(1,
+                                     ComplexType(OBJECT_TYPE, OBJECT_TYPE),
+                                     ComplexType(OBJECT_TYPE, OBJECT_TYPE))
 BOX_MEMBERSHIP_TYPE = ComplexType(BOX_TYPE, OBJECT_TYPE)
 
 BOX_COLOR_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(COLOR_TYPE, BOX_TYPE))
