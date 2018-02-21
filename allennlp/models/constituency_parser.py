@@ -207,6 +207,7 @@ class SpanConstituencyParser(Model):
         Constructs an NLTK ``Tree`` given the scored spans. We also switch to exclusive
         span ends when constructing the tree representation, because it makes indexing
         into lists cleaner for ranges of text, rather than individual indices.
+
         """
         all_predictions = output_dict['class_probabilities'].cpu().data
         all_spans = output_dict["spans"].cpu().data
@@ -221,7 +222,7 @@ class SpanConstituencyParser(Model):
 
     def construct_trees(self,
                         predictions: torch.FloatTensor,
-                        enumerated_spans: torch.LongTensor,
+                        all_spans: torch.LongTensor,
                         sentences: torch.LongTensor,
                         sentence_lengths: torch.LongTensor,
                         num_spans: torch.LongTensor) -> List[Tree]:
@@ -235,7 +236,7 @@ class SpanConstituencyParser(Model):
         predictions : ``torch.FloatTensor``, required.
             A tensor of shape ``(batch_size, num_spans, span_label_vocab_size)``
             representing a distribution over the label classes per span.
-        enumerated_spans : ``torch.LongTensor``, required.
+        all_spans : ``torch.LongTensor``, required.
             A tensor of shape (batch_size, num_spans, 2), representing the span
             indices we scored.
         sentences : ``torch.LongTensor``, required.
@@ -253,7 +254,7 @@ class SpanConstituencyParser(Model):
         A ``List[Tree]`` containing the decoded trees for each element in the batch.
         """
         # Switch to using exclusive end spans.
-        exclusive_end_spans = enumerated_spans.clone()
+        exclusive_end_spans = all_spans.clone()
         exclusive_end_spans[:, :, -1] += 1
         no_label_id = self.vocab.get_token_index("NO-LABEL", "labels")
 
