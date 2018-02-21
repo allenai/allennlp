@@ -100,7 +100,7 @@ class ConjunctionType(PlaceholderType):
     def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
         if self.first != ANY_TYPE:
             return [self]
-        return [ConjunctionType(basic_type, basic_type) for basic_type in basic_types]
+        return [ConjunctionType(basic_type, ComplexType(basic_type, basic_type)) for basic_type in basic_types]
 
 
 class ArgExtremeType(PlaceholderType):
@@ -176,7 +176,6 @@ class ArgExtremeType(PlaceholderType):
                                                        basic_type))))
 
 
-
 class CountType(PlaceholderType):
     """
     Type of a function that counts arbitrary things. Signature is <#1,d>.
@@ -240,7 +239,7 @@ ROW_INDEX_TYPE = ComplexType(DATE_NUM_TYPE, ROW_TYPE)
 # count
 COUNT_TYPE = CountType(ANY_TYPE, DATE_NUM_TYPE)
 # and, or
-CONJUNCTION_TYPE = ConjunctionType(ANY_TYPE, ANY_TYPE)
+CONJUNCTION_TYPE = ConjunctionType(ANY_TYPE, ComplexType(ANY_TYPE, ANY_TYPE))
 # argmax, argmin
 ARG_EXTREME_TYPE = ArgExtremeType(DATE_NUM_TYPE,
                                   ComplexType(DATE_NUM_TYPE,

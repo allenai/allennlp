@@ -110,6 +110,17 @@ class WikiTablesWorld(World):
         return types.BASIC_TYPES
 
     @overrides
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        valid_actions = super().get_valid_actions()
+
+        # We just need to add a few things here that don't get added by our world-general logic.
+
+        # This one is possible because of `reverse`.
+        valid_actions['e'].append('e -> [<r,e>, r]')
+        valid_actions['d'].append('d -> [<r,d>, r]')
+        return valid_actions
+
+    @overrides
     def get_valid_starting_types(self) -> Set[Type]:
         return types.BASIC_TYPES
 

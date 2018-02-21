@@ -123,7 +123,7 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         logical_form = "(object_color_all_equals (circle (touch_wall (all_objects))) color_black)"
         expression = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(expression)
-        assert action_sequence == ['@START@ -> t', 't -> [<c,t>, c]', '<c,t> -> [<o,<c,t>>, o]',
+        assert action_sequence == ['@START@ -> t', 't -> [<o,<c,t>>, o, c]',
                                    '<o,<c,t>> -> object_color_all_equals', 'o -> [<o,o>, o]',
                                    '<o,o> -> circle', 'o -> [<o,o>, o]', '<o,o> -> touch_wall',
                                    'o -> all_objects', 'c -> color_black']
@@ -134,9 +134,8 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         expression = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(expression)
         assert action_sequence == ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists',
-                                   'b -> [<c,b>, c]', '<c,b> -> [<b,<c,b>>, b]',
-                                   '<b,<c,b>> -> member_color_none_equals', 'b -> all_boxes',
-                                   'c -> color_blue']
+                                   'b -> [<b,<c,b>>, b, c]', '<b,<c,b>> -> member_color_none_equals',
+                                   'b -> all_boxes', 'c -> color_blue']
 
     def test_spatial_relations_return_objects_in_the_same_box(self):
         # "above", "below", "top", "bottom" are relations defined only for objects within the same

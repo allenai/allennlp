@@ -1,9 +1,10 @@
 # pylint: disable=no-self-use
+from allennlp.data.semparse.type_declarations import type_declaration as base_types
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestPlaceholderTypeResolution(AllenNlpTestCase):
+class WikiTablesTypeDeclarationTest(AllenNlpTestCase):
     def test_reverse_resolves_correctly(self):
         assert types.REVERSE_TYPE.resolve(types.CELL_TYPE) is None
 
@@ -91,6 +92,13 @@ class TestPlaceholderTypeResolution(AllenNlpTestCase):
                                                                                         types.ANY_TYPE)))
         assert resolution == types.ConjunctionType(types.ROW_TYPE, types.ComplexType(types.ROW_TYPE,
                                                                                      types.ROW_TYPE))
+
+    def test_conjunction_maps_to_correct_actions(self):
+        valid_actions = base_types.get_valid_actions({'and': 'O'},
+                                                     {'O': types.CONJUNCTION_TYPE},
+                                                     {types.CELL_TYPE},
+                                                     {types.CELL_TYPE})
+        assert 'e -> [<#1,<#1,#1>>, e, e]' in valid_actions['e']
 
     def test_count_type_resolves_correctly(self):
         # Resolution should fail with basic type
