@@ -149,7 +149,7 @@ class SpanConstituencyParser(Model):
             The original spans tensor.
         tokens : ``torch.LongTensor``
             The token ids from the ``TextField``. Has shape (batch_size, num_tokens).
-         sentence_lengths : ``torch.LongTensor``, required.
+        sentence_lengths : ``torch.LongTensor``, required.
             A tensor of shape (batch_size), representing the lengths of the non-padded
             elements of ``sentences``.
         num_spans : ``torch.LongTensor``, required.
