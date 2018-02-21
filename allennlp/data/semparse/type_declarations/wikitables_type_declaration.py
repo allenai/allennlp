@@ -4,7 +4,7 @@ Defines all the types in the WikitablesQuestions domain.
 from typing import List, Optional, Set
 from overrides import overrides
 
-from nltk.sem.logic import Type, BasicType, EntityType, ANY_TYPE
+from nltk.sem.logic import Type, BasicType, EntityType, ANY_TYPE, ComplexType as NltkComplexType
 
 from allennlp.data.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType, IdentityType
 from allennlp.data.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType
@@ -35,7 +35,7 @@ class ReverseType(PlaceholderType, HigherOrderType):
     def resolve(self, other: Type) -> Optional[Type]:
         # Idea: Since its signature is <<#1,#2>,<#2,#1>> no information about types in self is relevant.
         # All that matters is that other.fiirst resolves against the reverse of other.second and vice versa.
-        if not isinstance(other, ComplexType):
+        if not isinstance(other, NltkComplexType):
             return None
         # other.first and other.second are the argument and return types respectively.
         reversed_second = ComplexType(other.second.second, other.second.first)
@@ -77,9 +77,9 @@ class ConjunctionType(PlaceholderType):
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
         """See ``PlaceholderType.resolve``"""
-        if not isinstance(other, ComplexType):
+        if not isinstance(other, NltkComplexType):
             return None
-        if not isinstance(other.second, ComplexType):
+        if not isinstance(other.second, NltkComplexType):
             return None
         other_first = other.first.resolve(other.second.first)
         if other_first is None:
@@ -116,7 +116,7 @@ class ArgExtremeType(PlaceholderType):
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
         """See ``PlaceholderType.resolve``"""
-        if not isinstance(other, ComplexType):
+        if not isinstance(other, NltkComplexType):
             return None
         expected_second = ComplexType(DATE_NUM_TYPE,
                                       ComplexType(ANY_TYPE, ComplexType(ComplexType(DATE_NUM_TYPE, ANY_TYPE),
@@ -188,7 +188,7 @@ class CountType(PlaceholderType):
     @overrides
     def resolve(self, other: Type) -> Type:
         """See ``PlaceholderType.resolve``"""
-        if not isinstance(other, ComplexType):
+        if not isinstance(other, NltkComplexType):
             return None
         resolved_second = DATE_NUM_TYPE.resolve(other.second)
         if not resolved_second:

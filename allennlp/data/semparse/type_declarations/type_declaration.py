@@ -239,7 +239,7 @@ class IdentityType(PlaceholderType):
     @overrides
     def resolve(self, other) -> Optional[Type]:
         """See ``PlaceholderType.resolve``"""
-        if not isinstance(other, ComplexType):
+        if not isinstance(other, NltkComplexType):
             return None
         other_first = other.first.resolve(other.second)
         if not other_first:
@@ -480,9 +480,7 @@ def get_valid_actions(name_mapping: Dict[str, str],
             complex_types.add(name_type)
 
     for complex_type in complex_types:
-        print(complex_type, basic_types)
         for substituted_type in substitute_any_type(complex_type, basic_types):
-            print('  ', substituted_type)
             head, production = _get_complex_type_production(substituted_type)
             valid_actions[head].add(production)
 
