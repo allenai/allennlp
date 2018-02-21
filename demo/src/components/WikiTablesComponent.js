@@ -35,8 +35,13 @@ const parserExamples = [
     {
       table: "#\tEvent Year\tSeason\tFlag bearer\n" +
              "7\t2012\tSummer\tEle Opeloge\n" +
-             "6\t2008\tSummer\tEle Opeloge",
-      question: "How many years were held in summer?",
+             "6\t2008\tSummer\tEle Opeloge\n" +
+             "5\t2004\tSummer\tUati Maposua\n" +
+             "4\t2000\tSummer\tPauga Lalau\n" +
+             "3\t1996\tSummer\tBob Gasio\n" +
+             "2\t1988\tSummer\tHenry Smith\n" +
+             "1\t1984\tSummer\tApelu Ioane",
+      question: "How many years were held in summer?\n",
     },
 ];
 
@@ -166,12 +171,11 @@ class WikiTablesOutput extends React.Component {
               <Collapsible trigger="Entity linking scores">
                   <HeatMap xLabels={question_tokens} yLabels={entities} data={linking_scores} xLabelWidth="250px" />
               </Collapsible>
-                {feature_scores &&
-                < Collapsible trigger="Entity linking scores (features only)">
+              {feature_scores &&
+                <Collapsible trigger="Entity linking scores (features only)">
                     <HeatMap xLabels={question_tokens} yLabels={entities} data={feature_scores} xLabelWidth="250px" />
                     </Collapsible>
-                }
-
+              }
               <Collapsible trigger="Entity linking scores (similarity only)">
                   <HeatMap xLabels={question_tokens} yLabels={entities} data={similarity_scores} xLabelWidth="250px" />
               </Collapsible>
