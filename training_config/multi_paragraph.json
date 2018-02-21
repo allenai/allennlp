@@ -1,8 +1,10 @@
 {
     "dataset_reader": {
       "type": "triviaqa",
+      "lazy": "true",
       "paragraph_picker": "triviaqa-web-train",
-      "base_tarball_path": "tests/fixtures/data/triviaqa-sample.tgz",
+      "cache_questions": true,
+      "base_tarball_path": "/Users/joelg/data/triviaqa-rc.tar.gz"
       "token_indexers": {
         "tokens": {
           "type": "single_id",
@@ -17,7 +19,7 @@
       }
     },
     "train_data_path": "web-train.json",
-    "validation_data_path": "web-train.json",
+    "validation_data_path": "web-dev.json",
     "model": {
       "type": "multi-paragraph",
       "embedding_dim": 10,
@@ -68,7 +70,7 @@
     },
     "iterator": {
       "type": "basic",
-      "batch_size": 40
+      "batch_size": 12
     },
     "trainer": {
       "num_epochs": 100,

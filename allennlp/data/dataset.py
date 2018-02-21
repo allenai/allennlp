@@ -38,7 +38,6 @@ class Batch(Iterable):
         all_instance_fields_and_types: List[Dict[str, str]] = [{k: v.__class__.__name__
                                                                 for k, v in x.fields.items()}
                                                                for x in self.instances]
-        print(all_instance_fields_and_types)
         # Check all the field names and Field types are the same for every instance.
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
             raise ConfigurationError("You cannot construct a Batch with non-homogeneous Instances.")

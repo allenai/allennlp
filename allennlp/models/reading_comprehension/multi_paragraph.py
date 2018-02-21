@@ -286,7 +286,10 @@ class MultiParagraphReadingComprehension(Model):
             span_starts = spans[:, :, :, 0]
             span_ends = spans[:, :, :, 1]
 
+            # (batch_size, num_paragraphs, num_tokens)
             paragraphs_mask = util.get_text_field_mask(paragraphs, num_wrapping_dims=1).float()
+            # (batch_size, num_paragraphs)
+            paragraphs_mask = paragraphs_mask.max(dim=-1)[0]
 
             loss = self._shared_norm_loss(paragraph_span_start_logits, paragraphs_mask, span_starts, span_idx_mask)
             loss += self._shared_norm_loss(paragraph_span_end_logits, paragraphs_mask, span_ends, span_idx_mask)

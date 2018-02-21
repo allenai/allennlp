@@ -9,7 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import pairwise_distances
 import numpy as np
 
-from allennlp.common import Params
+from allennlp.common import Params, JsonDict
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -50,6 +50,10 @@ class TriviaQaReader(DatasetReader):
     paragraph_picker: ``str``, optional, (default: ``None``)
         If specified, this indicates the scheme for sampling paragraphs
         for each question-document pair.
+    cache_questions: ``bool``, optional, (default: ``True``)
+        If ``True``, the JSON blobs representing questions will be stored
+        in-memory between iterations. (It is on the order of 100s of MB
+        and is somewhat slow to parse.)
     tokenizer : ``Tokenizer``, optional
         We'll use this tokenizer on questions and evidence passages, defaulting to
         ``WordTokenizer`` if none is provided.
@@ -61,6 +65,7 @@ class TriviaQaReader(DatasetReader):
                  base_tarball_path: str,
                  unfiltered_tarball_path: str = None,
                  paragraph_picker: str = None,
+                 cache_questions: bool = True,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False) -> None:
@@ -68,51 +73,71 @@ class TriviaQaReader(DatasetReader):
         self._base_tarball_path = base_tarball_path
         self._unfiltered_tarball_path = unfiltered_tarball_path
         self._paragraph_picker = paragraph_picker
+        self._cache_questions = cache_questions
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tfidf = TfidfVectorizer(strip_accents="unicode", stop_words="")
 
+        self._questions: Dict[str, JsonDict] = {}
+
     @overrides
     def _read(self, file_path: str):
-        logger.info("Opening base tarball file at %s", self._base_tarball_path)
-        base_tarball = tarfile.open(cached_path(self._base_tarball_path), 'r')
-        if 'unfiltered' in file_path:
-            logger.info("Opening unfiltered tarball file at %s", self._unfiltered_tarball_path)
-            unfiltered_tarball = tarfile.open(cached_path(self._unfiltered_tarball_path), 'r')
-            logger.info("Loading question file from tarball")
-            data_json = json.loads(unfiltered_tarball.extractfile(file_path).read().decode('utf-8'))
-        else:
-            logger.info("Loading question file from tarball")
-            path = os.path.join('qa', file_path)
-            data_json = json.loads(base_tarball.extractfile(path).read().decode('utf-8'))
+        data_json = self._questions.get(file_path)
 
-        logger.info("Reading the dataset")
-        for question_json in data_json['Data']:
-            question_text = question_json['Question']
-            question_tokens = self._tokenizer.tokenize(question_text)
+        with tarfile.open(cached_path(self._base_tarball_path), 'r') as base_tarball:
 
-            answer_json = question_json['Answer']
-            human_answers = [util.normalize_text(answer) for answer in answer_json.get('HumanAnswers', [])]
-            answer_texts = answer_json['NormalizedAliases'] + human_answers
-
-            if 'web' in file_path:
-                result_key, evidence_subdir = 'SearchResults', 'web'
+            if data_json:
+                logger.info("Reading questions from memory.")
             else:
-                result_key, evidence_subdir = 'EntityPages', 'wikipedia'
+                logger.info("Opening base tarball file at %s", self._base_tarball_path)
+                # if 'unfiltered' in file_path:
+                #     logger.info("Opening unfiltered tarball file at %s", self._unfiltered_tarball_path)
+                #     unfiltered_tarball = tarfile.open(cached_path(self._unfiltered_tarball_path), 'r')
+                #     logger.info("Loading question file from tarball")
+                #     data_json = json.loads(unfiltered_tarball.extractfile(file_path).read().decode('utf-8'))
+                # else:
+                logger.info("Loading question file from tarball")
+                path = os.path.join('qa', file_path)
+                data_json = json.loads(base_tarball.extractfile(path).read().decode('utf-8'))
+                if self._cache_questions:
+                    self._questions[file_path] = data_json
 
-            for result in question_json[result_key]:
-                filename = result['Filename']
-                evidence_file = base_tarball.extractfile(os.path.join("evidence", evidence_subdir, filename))
-                paragraphs = [line.decode('utf-8').strip("\n") for line in evidence_file]
+            logger.info("Reading the dataset")
+            num_instances = 0
 
-                picked_paragraphs = self.pick_paragraphs(paragraphs, question_text, answer_texts)
-                instance = self.text_to_instance(question_text,
-                                                 picked_paragraphs,
-                                                 None,  # token spans
-                                                 answer_texts,
-                                                 question_tokens)
+            for question_json in data_json['Data']:
+                base_tarball.members = []
+                if num_instances > 1000:
+                    break
 
-                yield instance
+                question_text = question_json['Question']
+                question_tokens = self._tokenizer.tokenize(question_text)
+
+                answer_json = question_json['Answer']
+                human_answers = [util.normalize_text(answer) for answer in answer_json.get('HumanAnswers', [])]
+                answer_texts = answer_json['NormalizedAliases'] + human_answers
+
+                if 'web' in file_path:
+                    result_key, evidence_subdir = 'SearchResults', 'web'
+                else:
+                    result_key, evidence_subdir = 'EntityPages', 'wikipedia'
+
+                for result in question_json[result_key]:
+                    filename = result['Filename']
+                    evidence_file = base_tarball.extractfile(os.path.join("evidence", evidence_subdir, filename))
+                    paragraphs = [line.decode('utf-8').strip("\n") for line in evidence_file]
+
+                    picked_paragraphs = self.pick_paragraphs(paragraphs, question_text, answer_texts)
+
+                    if picked_paragraphs:
+                        instance = self.text_to_instance(question_text,
+                                                        picked_paragraphs,
+                                                        None,  # token spans
+                                                        answer_texts,
+                                                        question_tokens)
+
+                        yield instance
+                        num_instances += 1
 
     def document_tfidf(self, paragraphs: List[str], question: str) -> np.ndarray:
         try:
@@ -151,6 +176,7 @@ class TriviaQaReader(DatasetReader):
             # Sort the paragraphs by their tfidf score with the question.
             scores = self.document_tfidf(paragraphs, question)
             ranked = [paragraph for score, paragraph in sorted(zip(scores, paragraphs))]
+            ranked_indexes = [i for i, _ in enumerate(ranked)]
 
             # Find the indexes of paragraphs that have answers.
             has_answers = [i for i, paragraph in enumerate(ranked)
@@ -160,9 +186,9 @@ class TriviaQaReader(DatasetReader):
                 # Want to sample the highest rank answer twice as often.
                 first_answer = has_answers[0]
                 if first_answer < 4:
-                    choices = [0, 1, 2, 3, first_answer]
+                    choices = [first_answer] + ranked_indexes[:4]
                 else:
-                    choices = [0, 1, 2, first_answer, first_answer]
+                    choices = [first_answer, first_answer] + ranked_indexes[:3]
 
                 sample: Iterable[int] = []
                 # Sample until we get at least one paragraph with an answer
@@ -214,6 +240,7 @@ class TriviaQaReader(DatasetReader):
         base_tarball_path = params.pop('base_tarball_path')
         unfiltered_tarball_path = params.pop('unfiltered_tarball_path', None)
         paragraph_picker = params.pop('paragraph_picker', None)
+        cache_questions = params.pop_bool('cache_questions', True)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         lazy = params.pop('lazy', False)
@@ -221,6 +248,7 @@ class TriviaQaReader(DatasetReader):
         return cls(base_tarball_path=base_tarball_path,
                    unfiltered_tarball_path=unfiltered_tarball_path,
                    paragraph_picker=paragraph_picker,
+                   cache_questions=cache_questions,
                    tokenizer=tokenizer,
                    token_indexers=token_indexers,
                    lazy=lazy)
