@@ -89,6 +89,14 @@ class WorldTest(AllenNlpTestCase):
     # we'll mostly use the NLVR world to test them, as it's a simpler world than the WikiTables
     # world.
 
+    def test_get_action_sequence_removes_currying(self):
+        world = self.wikitables_world
+        logical_form = ("(argmax (number 1) (number 1) (fb:row.row.division fb:cell.2) "
+                        "(reverse (lambda x ((reverse fb:row.row.index) (var x))))")
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        action_sequence = world.get_action_sequence(parsed_logical_form)
+        assert 'r -> [<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d,r>]' in action_sequence
+
     def test_get_action_sequence_removes_and_retains_var_correctly(self):
         world = self.wikitables_world
         logical_form = ("((reverse fb:row.row.league) (argmin (number 1) (number 1) "

@@ -101,6 +101,17 @@ class NlvrWorld(World):
         structured_rep from the JSON file.
     """
     # pylint: disable=too-many-public-methods
+
+    curried_functions = {
+            types.BOX_COLOR_FILTER_TYPE: 2,
+            types.BOX_SHAPE_FILTER_TYPE: 2,
+            types.BOX_COUNT_FILTER_TYPE: 2,
+            types.ASSERT_COLOR_TYPE: 2,
+            types.ASSERT_SHAPE_TYPE: 2,
+            types.ASSERT_BOX_COUNT_TYPE: 2,
+            types.ASSERT_OBJECT_COUNT_TYPE: 2,
+            }
+
     # TODO(pradeep): Define more spatial relationship methods: left_of, right_of..
     # They should be defined for objects within the same box.
     def __init__(self, world_representation: List[List[JsonDict]]) -> None:
@@ -150,6 +161,9 @@ class NlvrWorld(World):
     @overrides
     def get_valid_starting_types(self) -> Set[Type]:
         return {types.TRUTH_TYPE}
+
+    def _get_curried_functions(self) -> Dict[str, int]:
+        return NlvrWorld.curried_functions
 
     @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:

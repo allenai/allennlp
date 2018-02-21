@@ -1,11 +1,12 @@
 """
-This module defines some classes that are generally useful for defining a type system for a new domain. We
-inherit the type logic in ``nltk.sem.logic`` and add some functionality on top of it here. There are two main
-improvements:
+This module defines some classes that are generally useful for defining a type system for a new
+domain. We inherit the type logic in ``nltk.sem.logic`` and add some functionality on top of it
+here. There are two main improvements:
 1) Firstly, we allow defining multiple basic types with their own names (see ``NamedBasicType``).
-2) Secondly, we allow defining function types that have placeholders in them (see ``PlaceholderType``).
-We also extend NLTK's ``LogicParser`` to define a ``DynamicTypeLogicParser`` that knows how to deal with the
-two improvements above.
+2) Secondly, we allow defining function types that have placeholders in them (see
+``PlaceholderType``).
+We also extend NLTK's ``LogicParser`` to define a ``DynamicTypeLogicParser`` that knows how to deal
+with the two improvements above.
 """
 from typing import Dict, List, Optional, Set, Tuple, Union
 from collections import defaultdict
@@ -20,9 +21,9 @@ START_SYMBOL = '@START@'
 
 class NamedBasicType(BasicType):
     """
-    A ``BasicType`` that also takes the name of the type as an argument to its constructor. Type resolution
-    uses the output of ``__str__`` as well, so basic types with different representations do not resolve
-    against each other.
+    A ``BasicType`` that also takes the name of the type as an argument to its constructor. Type
+    resolution uses the output of ``__str__`` as well, so basic types with different
+    representations do not resolve against each other.
 
     Parameters
     ----------
@@ -46,27 +47,29 @@ class NamedBasicType(BasicType):
 
 class PlaceholderType(ComplexType):
     """
-    ``PlaceholderType`` is a ``ComplexType`` that involves placeholders, and thus its type resolution is
-    context sensitive. This is an abstract class for all placeholder types like reverse, and, or, argmax, etc.
+    ``PlaceholderType`` is a ``ComplexType`` that involves placeholders, and thus its type
+    resolution is context sensitive. This is an abstract class for all placeholder types like
+    reverse, and, or, argmax, etc.
 
-    Note that ANY_TYPE in NLTK's type system doesn't work like a wild card. Once the type of a variable gets
-    resolved to a specific type, NLTK changes the type of that variable to that specific type. Hence, what
-    NLTK calls "ANY_TYPE", is essentially a "yet-to-be-decided" type. This is a problem because we may want the
-    same variable to bind to different types within a logical form, and using ANY_TYPE for this purpose will
-    cause a resolution failure. For example the count function may apply to both rows and cells in the same
-    logical form, and making count of type ``ComplexType(ANY_TYPE, DATE_NUM_TYPE)`` will cause a resolution
-    error. This class lets you define ``ComplexType`` s with placeholders that are actually wild cards.
+    Note that ANY_TYPE in NLTK's type system doesn't work like a wild card. Once the type of a
+    variable gets resolved to a specific type, NLTK changes the type of that variable to that
+    specific type. Hence, what NLTK calls "ANY_TYPE", is essentially a "yet-to-be-decided" type.
+    This is a problem because we may want the same variable to bind to different types within a
+    logical form, and using ANY_TYPE for this purpose will cause a resolution failure. For example
+    the count function may apply to both rows and cells in the same logical form, and making count
+    of type ``ComplexType(ANY_TYPE, DATE_NUM_TYPE)`` will cause a resolution error. This class lets
+    you define ``ComplexType`` s with placeholders that are actually wild cards.
 
     The subclasses of this abstract class need to do three things
-    1) Override the property ``_signature`` to define the type signature (this is just the signature's
-    string representation and will not affect type inference or checking). You will see this signature in
-    action sequences.
-    2) Override ``resolve`` to resolve the type appropriately (see the docstring in ``resolve`` for more
-    information).
-    3) Override ``get_application_type`` which returns the return type when this type is applied as a function
-    to an argument of a specified type.
-    For example, if you defined a reverse type by inheriting from this class, ``get_application_type`` gets an
-    argument of type ``<a,b>``, it should return ``<b,a>`` .
+    1) Override the property ``_signature`` to define the type signature (this is just the
+    signature's string representation and will not affect type inference or checking). You will see
+    this signature in action sequences.
+    2) Override ``resolve`` to resolve the type appropriately (see the docstring in ``resolve`` for
+    more information).
+    3) Override ``get_application_type`` which returns the return type when this type is applied as
+    a function to an argument of a specified type.  For example, if you defined a reverse type by
+    inheriting from this class, ``get_application_type`` gets an argument of type ``<a,b>``, it
+    should return ``<b,a>`` .
     """
     @property
     def _signature(self) -> str:
@@ -131,11 +134,11 @@ class PlaceholderType(ComplexType):
 
 class IdentityType(PlaceholderType):
     """
-    ``IdentityType`` is a kind of ``PlaceholderType`` that takes an argument of any type and returns
-    an expression of the same type. That is, type signature is <#1, #1>. This is in this module because it is
-    a commonly needed ``PlaceholderType`` in many domains. For example, if your logical form language has
-    lambda expressions, it is quite convenient to specify the variable's usage as "(var x)", and you can make
-    "var" a function of this type.
+    ``IdentityType`` is a kind of ``PlaceholderType`` that takes an argument of any type and
+    returns an expression of the same type. That is, type signature is <#1, #1>. This is in this
+    module because it is a commonly needed ``PlaceholderType`` in many domains. For example, if
+    your logical form language has lambda expressions, it is quite convenient to specify the
+    variable's usage as "(var x)", and you can make "var" a function of this type.
     """
     @property
     def _signature(self) -> str:
@@ -162,8 +165,8 @@ class IdentityType(PlaceholderType):
 class TypedConstantExpression(ConstantExpression):
     # pylint: disable=abstract-method
     """
-    NLTK assumes all constants are of type ``EntityType`` (e) by default. We define this new class where we
-    can pass a default type to the constructor and use that in the ``_set_type`` method.
+    NLTK assumes all constants are of type ``EntityType`` (e) by default. We define this new class
+    where we can pass a default type to the constructor and use that in the ``_set_type`` method.
     """
     def __init__(self, variable, default_type: Type) -> None:
         super(TypedConstantExpression, self).__init__(variable)
@@ -183,14 +186,15 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
     limitations, which we overcome by inheriting from ``ApplicationExpression`` and overriding two
     methods.
 
-    Firstly, ``ApplicationExpression`` does not handle the case where P's type involves placeholders
-    (R, V, !=, etc.), which are special cases because their return types depend on the type of their
-    arguments (x). We override the property ``type`` to redefine the type of the application.
+    Firstly, ``ApplicationExpression`` does not handle the case where P's type involves
+    placeholders (R, V, !=, etc.), which are special cases because their return types depend on the
+    type of their arguments (x). We override the property ``type`` to redefine the type of the
+    application.
 
     Secondly, NLTK's variables only bind to entities, and thus the variable types are 'e' by
     default. We get around this issue by replacing x with X, whose initial type is ANY_TYPE, and
-    later gets resolved based on the type signature of the function whose scope the variable appears
-    in. This variable binding operation is implemented by overriding ``_set_type`` below.
+    later gets resolved based on the type signature of the function whose scope the variable
+    appears in. This variable binding operation is implemented by overriding ``_set_type`` below.
     """
     def __init__(self, function: Expression, argument: Expression, variables_with_placeholders: Set[str]) -> None:
         super(DynamicTypeApplicationExpression, self).__init__(function, argument)
@@ -211,20 +215,20 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
     def _set_type(self, other_type: Type = ANY_TYPE, signature=None) -> None:
         """
         We override this method to do just one thing on top of ``ApplicationExpression._set_type``.
-        In lambda expressions of the form /x F(x), where the function is F and the argument is x, we
-        can use the type of F to infer the type of x. That is, if F is of type <a, b>, we can
-        resolve the type of x against a. We do this as the additional step after setting the type of
-        F(x).
+        In lambda expressions of the form /x F(x), where the function is F and the argument is x,
+        we can use the type of F to infer the type of x. That is, if F is of type <a, b>, we can
+        resolve the type of x against a. We do this as the additional step after setting the type
+        of F(x).
 
-        So why does NLTK not already do this? NLTK assumes all variables (x) are of type entity (e).
-        So it does not have to resolve the type of x anymore. However, this would cause type
-        inference failures in our case since x can bind to rows, numbers or cells, each of which has
-        a different type. To deal with this issue, we made X of type ANY_TYPE. Also, LambdaDCS (and
-        some other languages) contain a var function that indicate the usage of variables within
-        lambda functions. We map var to V, and made it of type <#1, #1>. We cannot leave X as
-        ANY_TYPE because that would propagate up the tree. We need to set its type when we have the
-        information about F. Hence this method. Note that the language may or may not contain the
-        var function. We deal with both cases below.
+        So why does NLTK not already do this? NLTK assumes all variables (x) are of type entity
+        (e).  So it does not have to resolve the type of x anymore. However, this would cause type
+        inference failures in our case since x can bind to rows, numbers or cells, each of which
+        has a different type. To deal with this issue, we made X of type ANY_TYPE. Also, LambdaDCS
+        (and some other languages) contain a var function that indicate the usage of variables
+        within lambda functions. We map var to V, and made it of type <#1, #1>. We cannot leave X
+        as ANY_TYPE because that would propagate up the tree. We need to set its type when we have
+        the information about F. Hence this method. Note that the language may or may not contain
+        the var function. We deal with both cases below.
         """
         super(DynamicTypeApplicationExpression, self)._set_type(other_type, signature)
         # TODO(pradeep): Assuming the mapping of "var" function is "V". Do something better.
@@ -242,12 +246,12 @@ class DynamicTypeLogicParser(LogicParser):
     ``PlaceholderType`` appropriately. Our extension here does two things differently.
 
     Firstly, we should handle constants of different types. We do this by passing a dict of format
-    ``{name_prefix: type}`` to the constructor. For example, your domain has entities of types unicorns
-    and elves, and you have an entity "Phil" of type unicorn, and "Bob" of type "elf". The names of the two
-    entities should then be "unicorn:phil" and "elf:bob" respectively.
+    ``{name_prefix: type}`` to the constructor. For example, your domain has entities of types
+    unicorns and elves, and you have an entity "Phil" of type unicorn, and "Bob" of type "elf". The
+    names of the two entities should then be "unicorn:phil" and "elf:bob" respectively.
 
-    Secondly, since we defined a new kind of ``ApplicationExpression`` above, the ``LogicParser`` should be
-    able to create this new kind of expression.
+    Secondly, since we defined a new kind of ``ApplicationExpression`` above, the ``LogicParser``
+    should be able to create this new kind of expression.
     """
     def __init__(self,
                  type_check: bool = True,
@@ -280,10 +284,10 @@ class DynamicTypeLogicParser(LogicParser):
 
 def _substitute_any_type(_type: Type, basic_types: Set[BasicType]) -> Set[Type]:
     """
-    Takes a type and a set of basic types, and substitutes all instances of ANY_TYPE with all possible basic
-    types, and returns a set with all possible combinations.
-    Note that this substitution is unconstrained. That is, If you have a type with placeholders,
-    <#1,#1> for example, this may substitute the placeholders with different basic types. In that case, you'd
+    Takes a type and a set of basic types, and substitutes all instances of ANY_TYPE with all
+    possible basic types, and returns a set with all possible combinations.  Note that this
+    substitution is unconstrained. That is, If you have a type with placeholders, <#1,#1> for
+    example, this may substitute the placeholders with different basic types. In that case, you'd
     want to use ``_substitute_placeholder_type`` instead.
     """
     if _type == ANY_TYPE:
@@ -299,11 +303,11 @@ def _substitute_any_type(_type: Type, basic_types: Set[BasicType]) -> Set[Type]:
 
 def _substitute_placeholder_type(_type: Type, basic_type: BasicType) -> Type:
     """
-    Takes a type with placeholders and a basic type, and substitutes all occurrences of the placeholder with
-    that type.
+    Takes a type with placeholders and a basic type, and substitutes all occurrences of the
+    placeholder with that type.
     """
-    # TODO (pradeep): This assumes there's just one placeholder in the type. So this doesn't work with
-    # ``reverse`` yet, which has two placeholders.
+    # TODO (pradeep): This assumes there's just one placeholder in the type. So this doesn't work
+    # with ``reverse`` yet, which has two placeholders.
     if len(set(re.findall("#[0-9]+", str(_type)))) > 1:
         raise NotImplementedError("We do not deal with placeholder types with more than one placeholder yet.")
     if _type == ANY_TYPE:
@@ -320,9 +324,9 @@ def _make_production_string(source: Type, target: Union[List[Type], Type]) -> st
 
 def _get_complex_type_productions(complex_type: ComplexType) -> List[Tuple[Type, str]]:
     """
-    Takes a complex type without any placeholders and returns all productions that lead to it, starting
-    from the most basic return type. For example, if the complex is `<a,<<b,c>,d>>`, this gives the
-    following tuples:
+    Takes a complex type without any placeholders and returns all productions that lead to it,
+    starting from the most basic return type. For example, if the complex is `<a,<<b,c>,d>>`, this
+    gives the following tuples:
 
     ('<<b,c>,d>', '<<b,c>,d> -> [<a,<<b,c>,d>>, a]')
     ('d', 'd -> [<<b,c>,d>, <b,c>]')
@@ -343,10 +347,10 @@ def _get_placeholder_actions(complex_type: ComplexType,
                              basic_types: Set[Type],
                              valid_actions: Dict[Type, Set[str]]) -> None:
     """
-    Takes a ``complex_type`` with placeholders and a set of ``basic_types``, infers the valid actions
-    starting at all non-terminals, by substituting placeholders with basic types, and adds them to
-    ``valid_actions``. Note that the substitutions need to be constrained. For example, for <#1,#1>, <e,r>
-    is not a valid substitution.
+    Takes a ``complex_type`` with placeholders and a set of ``basic_types``, infers the valid
+    actions starting at all non-terminals, by substituting placeholders with basic types, and adds
+    them to ``valid_actions``. Note that the substitutions need to be constrained. For example, for
+    <#1,#1>, <e,r> is not a valid substitution.
     """
     if complex_type.first == ANY_TYPE:
         if isinstance(complex_type.first, BasicType):

@@ -12,7 +12,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.table_kg = TableKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/sample_table.tsv")
-        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '?']]
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
         self.world = WikiTablesWorld(self.table_kg, question_tokens)
 
     def test_world_processes_sempre_forms_correctly(self):
@@ -23,10 +23,8 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         assert str(expression) == "R(C6,C2(cell:usl_a_league))"
 
     def test_world_parses_logical_forms_with_dates(self):
-        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'year', '2002', '?']]
-        world = WikiTablesWorld(self.table_kg, question_tokens)
-        sempre_form = "((reverse fb:row.row.league) (fb:row.row.year (fb:cell.cell.date (date 2002 -1 -1))))"
-        expression = world.parse_logical_form(sempre_form)
+        sempre_form = "((reverse fb:row.row.league) (fb:row.row.year (fb:cell.cell.date (date 2000 -1 -1))))"
+        expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "R(C2,C6(D1(D0(2002,~1,~1))))"
 
     def test_world_parses_logical_forms_with_decimals(self):
@@ -35,6 +33,32 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         sempre_form = "(fb:cell.cell.number (number 0.200))"
         expression = world.parse_logical_form(sempre_form)
         assert str(expression) == "I1(I(0_200))"
+
+    def test_get_action_sequence_removes_currying_for_all_wikitables_functions(self):
+        # minus
+        logical_form = "(- (number 3) (number 2))"
+        parsed_logical_form = self.world.parse_logical_form(logical_form)
+        action_sequence = self.world.get_action_sequence(parsed_logical_form)
+        assert 'd -> [<d,<d,d>>, d, d]' in action_sequence
+
+        # date
+        logical_form = "(count (fb:cell.cell.date (date 2000 -1 -1)))"
+        parsed_logical_form = self.world.parse_logical_form(logical_form)
+        action_sequence = self.world.get_action_sequence(parsed_logical_form)
+        assert 'd -> [<e,<e,<e,d>>>, e, e, e]' in action_sequence
+
+        # argmax
+        logical_form = ("(argmax (number 1) (number 1) (fb:row.row.division fb:cell.2) "
+                        "(reverse (lambda x ((reverse fb:row.row.index) (var x))))")
+        parsed_logical_form = self.world.parse_logical_form(logical_form)
+        action_sequence = self.world.get_action_sequence(parsed_logical_form)
+        assert 'r -> [<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d,r>]' in action_sequence
+
+        # and
+        logical_form = "(and (number 1) (number 1))"
+        parsed_logical_form = self.world.parse_logical_form(logical_form)
+        action_sequence = self.world.get_action_sequence(parsed_logical_form)
+        assert 'd -> [<#1,<#1,#1>>, d, d]' in action_sequence
 
     def test_parsing_logical_forms_fails_with_unmapped_names(self):
         with pytest.raises(ParsingError):
