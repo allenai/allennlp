@@ -231,7 +231,6 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
             log_blob["outputs"]["verbs"] = verbs
         elif model_name == "wikitables-parser":
             log_blob['outputs']['logical_form'] = prediction['logical_form']
-            prediction['feature_scores'] = prediction['similarity_scores']
 
         logger.info("prediction: %s", json.dumps(log_blob))
 
