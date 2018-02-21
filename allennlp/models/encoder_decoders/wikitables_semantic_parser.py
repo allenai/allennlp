@@ -1168,14 +1168,14 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # The entity and action logits are combined with a mixture weight to prevent the
                 # entity_action_logits from dominating the embedded_action_logits if a softmax
                 # was applied on both together.
-
                 mixture_weight = self._mixture_feedforward(hidden_state)
                 mix1 = torch.log(mixture_weight)
                 mix2 = torch.log(1 - mixture_weight)
 
-                entity_action_probs = util.masked_log_softmax(entity_action_logits, entity_action_mask.float()) + mix1
-                embedded_action_probs = util.masked_log_softmax(embedded_action_logits, embedded_action_mask.float()) + mix2
-
+                entity_action_probs = util.masked_log_softmax(entity_action_logits,
+                                                              entity_action_mask.float()) + mix1
+                embedded_action_probs = util.masked_log_softmax(embedded_action_logits,
+                                                                embedded_action_mask.float()) + mix2
                 log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=1)
 
                 return self._compute_new_states(state,
