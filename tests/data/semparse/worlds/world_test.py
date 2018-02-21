@@ -176,13 +176,11 @@ class WorldTest(AllenNlpTestCase):
         world = self.wikitables_world
         action_sequence = ['@START@ -> e', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
                            '<<#1,#2>,<#2,#1>> -> reverse', '<e,r> -> fb:row.row.league',
-                           'r -> [<<d,r>,r>, <d,r>]', '<<d,r> ,r> -> [<r,<<d,r>,r>>, r]',
-                           '<r,<<d,r>,r>> -> [<d,<r,<<d,r>,r>>>, d]',
-                           '<d,<r,<<d,r>,r>>> -> [<d,<d,<#1,<<d,#1>,#1>>>>, d]',
+                           'r -> [<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d, r>]',
                            '<d,<d,<#1,<<d,#1>,#1>>>> -> argmin', 'd -> [<e,d>, e]', '<e,d> -> number',
                            'e -> 1', ' d -> [<e,d>, e]', '<e,d> -> number', 'e -> 1',
                            'r -> [<#1,#1>, r]', '<#1,#1> -> fb:type.object.type', 'r -> fb:type.row',
-                           '<d,r> -> [<<#1,#2>,<#2,#1>>,  <r,d>]', '<<#1,#2>,<#2,#1>> -> reverse',
+                           '<d,r> -> [<<#1,#2>,<#2,#1>>, <r,d>]', '<<#1,#2>,<#2,#1>> -> reverse',
                            "<r,d> -> ['lambda x', d]", 'd -> [<r,d>, r]',
                            '<r,d> -> [<<#1,#2>,<#2,#1>>, <d,r>]', '<<#1,#2>,<#2,#1>> -> reverse',
                            '<d,r> -> fb:row.row.index', 'r -> x']
@@ -198,9 +196,7 @@ class WorldTest(AllenNlpTestCase):
         world = self.wikitables_world
         action_sequence = ['@START@ -> e', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
                            '<<#1,#2>,<#2,#1>> -> reverse', '<e,r> -> fb:row.row.league',
-                           'r -> [<<d,r>,r>, <d,r>]', '<<d,r> ,r> -> [<r,<<d,r>,r>>, r]',
-                           '<r,<<d,r>,r>> -> [<d,<r,<<d,r>,r>>>, d]',
-                           '<d,<r,<<d,r>,r>>> -> [<d,<d,<#1,<<d,#1>,#1>>>>, d]',
+                           'r -> [<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d, r>]',
                            '<d,<d,<#1,<<d,#1>,#1>>>> -> argmin', 'd -> [<e,d>, e]', '<e,d> -> number',
                            'e -> 1', ' d -> [<e,d>, e]', '<e,d> -> number', 'e -> 1',
                            'r -> [<#1,#1>, r]', '<#1,#1> -> fb:type.object.type', 'r -> fb:type.row',
@@ -214,7 +210,7 @@ class WorldTest(AllenNlpTestCase):
     def test_get_logical_form_with_multiple_negate_filters(self):
         world = self.nlvr_world
         # This is an actual sequence of actions produced by an untrained NlvrSemanticParser
-        action_sequence = ['@START@ -> t', 't -> [<c,t>, c]', '<c,t> -> [<o,<c,t>>, o]',
+        action_sequence = ['@START@ -> t', 't -> [<o,<c,t>>, o, c]',
                            '<o,<c,t>> -> object_color_all_equals', 'o -> [<o,o>, o]',
                            '<o,o> -> [<<o,o>,<o,o>>, <o,o>]', '<<o,o>,<o,o>> -> negate_filter',
                            '<o,o> -> [<<o,o>,<o,o>>, <o,o>]', '<<o,o>,<o,o>> -> negate_filter',
