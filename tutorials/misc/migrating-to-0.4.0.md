@@ -78,7 +78,7 @@ class MyDatasetReader(DatasetReader)
         # whatever other initialization you need
 ```
 
-(For the reasoning behind this change, see the [Laziness tutorial](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/laziness.md).
+(For the reasoning behind this change, see the [Laziness tutorial](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/laziness.md).)
 
 # CHANGES YOU ARE MUCH LESS LIKELY TO RUN INTO
 
@@ -107,7 +107,8 @@ to `DatasetReader.read()`.
 
 ## `Batch`
 
-Accordingly, 0.4.0 introduces the notion of a `Batch`,
+To handle tensorization,
+0.4.0 introduces the notion of a `Batch`,
 which is basically just a list of `Instance`s.
 In particular, a `Batch` knows how to compute padding
 for its instances and convert them to tensors.
@@ -121,7 +122,8 @@ In order to convert an `Instance` to tensors,
 its fields must be _indexed_ by some vocabulary.
 
 Previously, a `Dataset` contained all instances in memory,
-and so you would call `Dataset.index_instances()` once
+and so you would call `Dataset.index_instances()`
+after you loaded your data
 and then have indexed instances ever after.
 
 That doesn't work for lazy datasets, whose instances
