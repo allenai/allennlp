@@ -178,7 +178,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                 child_start = end
             # Set the end index of the current span to
             # the last appended index - 1, as the span is inclusive.
-            typed_spans[(index, end - 1)] = tree.label()
+            typed_spans[(index, end - 1)] = tree.label().split("=")[0].split("-")[0].split("|")[0]
         return end
 
     @classmethod

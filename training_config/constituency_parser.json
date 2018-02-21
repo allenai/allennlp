@@ -3,9 +3,9 @@
         "type":"ptb_trees",
         "use_pos_tags": false
     },
-    "train_data_path": ${PTB_TRAIN_PATH},
-    "validation_data_path": ${PTB_VALIDATION_PATH},
-    "test_data_path": ${PTB_TEST_PATH},
+    "train_data_path": "/net/efs/aristo/allennlp/constituency-parsing/ptb-wsj/wsj.train.notrace.trees",
+    "validation_data_path": "/net/efs/aristo/allennlp/constituency-parsing/ptb-wsj/wsj.dev.trees",
+    "test_data_path": "/net/efs/aristo/allennlp/constituency-parsing/ptb-wsj/wsj.test.trees",
     "model": {
       "type": "constituency_parser",
       "text_field_embedder": {
@@ -16,6 +16,12 @@
             "trainable": true
           }
       },
+      "initializer": [
+        ["tag_projection_layer.*weight", {"type": "xavier_normal"}],
+        ["feedforward_layer.*weight", {"type": "xavier_normal"}],
+        ["encoder._module.weight_ih.*", {"type": "xavier_normal"}],
+        ["encoder._module.weight_hh.*", {"type": "orthogonal"}]
+      ],
       "encoder": {
         "type": "lstm",
         "input_size": 100,
@@ -36,17 +42,17 @@
         "input_dim": 500
       },
       "evalb_directory_path": "scripts/EVALB"
-    },      
+    },
     "iterator": {
       "type": "bucket",
       "sorting_keys": [["tokens", "num_tokens"]],
-      "batch_size" : 20
+      "batch_size" : 1
     },
     "trainer": {
       "num_epochs": 100,
       "grad_norm": 5.0,
       "patience": 20,
-      "cuda_device": -1,
+      "cuda_device": 0,
       "optimizer": {
         "type": "adadelta",
         "lr": 1.0,
@@ -54,4 +60,4 @@
       }
     }
   }
-  
+

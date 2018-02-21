@@ -418,9 +418,6 @@ class SpanConstituencyParser(Model):
             total_f1 += f1
             total_precision += precision
             total_recall += recall
-            all_metrics[metric_name + "_f1"] = f1
-            all_metrics[metric_name + "_precision"] = precision
-            all_metrics[metric_name + "_recall"] = recall
 
         num_metrics = len(self.metrics)
         all_metrics["average_f1"] = total_f1 / num_metrics
