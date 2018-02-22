@@ -40,7 +40,7 @@ class TestConstituencyParserPredictor(TestCase):
 
         for class_distribution in result["class_probabilities"]:
             self.assertAlmostEqual(sum(class_distribution), 1.0, places=4)
-        
+
         result = results[1]
 
         assert len(result["spans"]) == 36
