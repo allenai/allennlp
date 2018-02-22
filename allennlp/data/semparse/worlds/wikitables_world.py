@@ -59,7 +59,7 @@ class WikiTablesWorld(World):
         for entity in table_graph.entities + ['fb:cell.null', 'fb:row.row.null']:
             self._map_name(entity, keep_mapping=True)
 
-        numbers = self._get_numbers_from_tokens(question_tokens) + list(str(i) for i in range(-1, 10))
+        numbers = self._get_numbers_from_tokens(question_tokens) + list(str(i) for i in range(-1, 5))
         for number in numbers:
             self._map_name(number, keep_mapping=True)
 
@@ -119,8 +119,8 @@ class WikiTablesWorld(World):
 
         # We just need to add a few things here that don't get added by our world-general logic.
 
-        # This one is possible because of `reverse`.
-        valid_actions['e'].append('e -> [<r,e>, r]')
+        # These are possible because of `reverse`.
+        valid_actions['c'].append('c -> [<r,c>, r]')
         valid_actions['d'].append('d -> [<r,d>, r]')
         return valid_actions
 
@@ -147,16 +147,15 @@ class WikiTablesWorld(World):
                 translated_name = "part:%s" % name.split(".")[-1]
                 self._add_name_mapping(name, translated_name, types.PART_TYPE)
             else:
-                # NLTK throws an error if it sees a "." in constants, which will most likely happen within
-                # numbers as a decimal point. We're changing those to underscores.
+                # The only other unmapped names we should see are numbers.
+                # NLTK throws an error if it sees a "." in constants, which will most likely happen
+                # within numbers as a decimal point. We're changing those to underscores.
                 translated_name = name.replace(".", "_")
                 if re.match("-[0-9_]+", translated_name):
-                    # The string is a negative number. This makes NLTK interpret this as a negated expression
-                    # and force its type to be TRUTH_VALUE (t).
+                    # The string is a negative number. This makes NLTK interpret this as a negated
+                    # expression and force its type to be TRUTH_VALUE (t).
                     translated_name = translated_name.replace("-", "~")
-                    # TODO(mattg): bare numbers are treated as cells by the type system.  This
-                    # might not actually be correct...
-                self._add_name_mapping(name, translated_name, types.CELL_TYPE)
+                self._add_name_mapping(name, translated_name, types.NUMBER_TYPE)
         else:
             if name in types.COMMON_NAME_MAPPING:
                 translated_name = types.COMMON_NAME_MAPPING[name]
