@@ -15,7 +15,8 @@ class TestConstituencyParserPredictor(TestCase):
         predictor = Predictor.from_archive(archive, 'constituency-parser')
         result = predictor.predict_json(inputs)
 
-        assert len(result["spans"]) == 21
+        assert len(result["spans"]) == 21 # number of possible substrings of the sentence.
+        assert len(result["class_probabilities"]) == 21
         assert result["sentence"] == ["What", "a", "great", "test", "sentence", "."]
         assert isinstance(result["trees"], str)
 
@@ -33,7 +34,7 @@ class TestConstituencyParserPredictor(TestCase):
         results = predictor.predict_batch_json(inputs)
 
         result = results[0]
-        assert len(result["spans"]) == 21
+        assert len(result["spans"]) == 21 # number of possible substrings of the sentence.
         assert len(result["class_probabilities"]) == 21
         assert result["sentence"] == ["What", "a", "great", "test", "sentence", "."]
         assert isinstance(result["trees"], str)
@@ -43,7 +44,7 @@ class TestConstituencyParserPredictor(TestCase):
 
         result = results[1]
 
-        assert len(result["spans"]) == 36
+        assert len(result["spans"]) == 36 # number of possible substrings of the sentence.
         assert len(result["class_probabilities"]) == 36
         assert result["sentence"] == ["Here", "'s", "another", "good", ",", "interesting", "one", "."]
         assert isinstance(result["trees"], str)
