@@ -25,13 +25,15 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
     def test_get_valid_actions_returns_correct_set(self):
         # This test is long, but worth it.  These are all of the valid actions in the grammar, and
         # we want to be sure they are what we expect.
+
+        # This test checks that our valid actions for each type match  PNP's, except for the
+        # terminal productions for type 'p'.
         valid_actions = self.world.get_valid_actions()
         assert set(valid_actions.keys()) == {
                 '<#1,#1>',
                 '<#1,<#1,#1>>',
                 '<#1,n>',
                 '<<#1,#2>,<#2,#1>>',
-                '<c,c>',
                 '<c,d>',
                 '<c,n>',
                 '<c,p>',
@@ -39,9 +41,8 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                 '<d,c>',
                 '<d,d>',
                 '<d,n>',
-                '<d,p>',
                 '<d,r>',
-                '<n,<n,<#1,<<n,#1>,#1>>>>',
+                '<n,<n,<#1,<<#2,#1>,#1>>>>',
                 '<n,<n,<n,d>>>',
                 '<n,<n,n>>',
                 '<n,c>',
@@ -50,10 +51,6 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                 '<n,p>',
                 '<n,r>',
                 '<p,c>',
-                '<p,d>',
-                '<p,n>',
-                '<p,p>',
-                '<p,r>',
                 '<r,c>',
                 '<r,d>',
                 '<r,n>',
@@ -68,7 +65,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                 }
 
         check_productions_match(valid_actions['<#1,#1>'],
-                                ['!=', 'fb:type.object.type'])
+                                ['!='])
 
         check_productions_match(valid_actions['<#1,<#1,#1>>'],
                                 ['and', 'or'])
@@ -79,9 +76,6 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         check_productions_match(valid_actions['<<#1,#2>,<#2,#1>>'],
                                 ['reverse'])
 
-        check_productions_match(valid_actions['<c,c>'],
-                                ["['lambda x', c]", '[<<#1,#2>,<#2,#1>>, <c,c>]'])
-
         check_productions_match(valid_actions['<c,d>'],
                                 ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,c>]'])
 
@@ -89,7 +83,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                 ["['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,c>]'])
 
         check_productions_match(valid_actions['<c,p>'],
-                                ["['lambda x', p]", '[<<#1,#2>,<#2,#1>>, <p,c>]'])
+                                ['[<<#1,#2>,<#2,#1>>, <p,c>]'])
 
         # Most of these are instance-specific production rules.  These are the columns in the
         # table.  Remember that SEMPRE did things backwards: fb:row.row.division takes a cell ID
@@ -103,16 +97,14 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                  'fb:row.row.division',
                                  'fb:row.row.regular_season',
                                  'fb:row.row.playoffs',
-                                 'fb:row.row.open_cup',
-                                 "['lambda x', r]",
-                                 '[<<#1,#2>,<#2,#1>>, <r,c>]'])
+                                 'fb:row.row.open_cup'])
 
         # These might look backwards, but that's because SEMPRE chose to make them backwards.
         # fb:a.b is a function that takes b and returns a.  So fb:cell.cell.date takes cell.date
         # and returns cell and fb:row.row.index takes row.index and returns row.
         check_productions_match(valid_actions['<d,c>'],
-                                ['fb:cell.cell.num2', 'fb:cell.cell.date', 'fb:cell.cell.number',
-                                 "['lambda x', c]", '[<<#1,#2>,<#2,#1>>, <c,d>]'])
+                                ['fb:cell.cell.date',
+                                 '[<<#1,#2>,<#2,#1>>, <c,d>]'])
 
         check_productions_match(valid_actions['<d,d>'],
                                 ['<', '<=', '>', '>=', 'min', 'max',
@@ -121,13 +113,10 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         check_productions_match(valid_actions['<d,n>'],
                                 ["['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,d>]'])
 
-        check_productions_match(valid_actions['<d,p>'],
-                                ["['lambda x', p]", '[<<#1,#2>,<#2,#1>>, <p,d>]'])
-
         check_productions_match(valid_actions['<d,r>'],
-                                ["['lambda x', r]", '[<<#1,#2>,<#2,#1>>, <r,d>]'])
+                                ['[<<#1,#2>,<#2,#1>>, <r,d>]'])
 
-        check_productions_match(valid_actions['<n,<n,<#1,<<n,#1>,#1>>>>'],
+        check_productions_match(valid_actions['<n,<n,<#1,<<#2,#1>,#1>>>>'],
                                 ['argmax', 'argmin'])
 
         # "date" is a function that takes three numbers: (date 2018 01 06).
@@ -138,7 +127,8 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                 ['-'])
 
         check_productions_match(valid_actions['<n,c>'],
-                                ["['lambda x', c]", '[<<#1,#2>,<#2,#1>>, <c,n>]'])
+                                ['fb:cell.cell.num2', 'fb:cell.cell.number',
+                                 '[<<#1,#2>,<#2,#1>>, <c,n>]'])
 
         check_productions_match(valid_actions['<n,d>'],
                                 ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,n>]'])
@@ -148,10 +138,10 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                  'number', "['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,n>]'])
 
         check_productions_match(valid_actions['<n,p>'],
-                                ["['lambda x', p]", '[<<#1,#2>,<#2,#1>>, <p,n>]'])
+                                ['[<<#1,#2>,<#2,#1>>, <p,n>]'])
 
         check_productions_match(valid_actions['<n,r>'],
-                                ['fb:row.row.index', "['lambda x', r]", '[<<#1,#2>,<#2,#1>>, <r,n>]'])
+                                ['fb:row.row.index', '[<<#1,#2>,<#2,#1>>, <r,n>]'])
 
         # PART_TYPE rules.  A cell part is for when a cell has text that can be split into multiple
         # parts.  We don't currently handle this, so we don't have any terminal productions here.
@@ -159,25 +149,13 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         # actually push one of these non-terminals onto our stack.  But they're in the grammar, so
         # we they are in our list of valid actions.
         check_productions_match(valid_actions['<p,c>'],
-                                ['fb:cell.cell.part', "['lambda x', c]", '[<<#1,#2>,<#2,#1>>, <c,p>]'])
-
-        check_productions_match(valid_actions['<p,d>'],
-                                ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,p>]'])
-
-        check_productions_match(valid_actions['<p,n>'],
-                                ["['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,p>]'])
-
-        check_productions_match(valid_actions['<p,p>'],
-                                ["['lambda x', p]", '[<<#1,#2>,<#2,#1>>, <p,p>]'])
-
-        check_productions_match(valid_actions['<p,r>'],
-                                ["['lambda x', r]", '[<<#1,#2>,<#2,#1>>, <r,p>]'])
+                                ['fb:cell.cell.part'])
 
         check_productions_match(valid_actions['<r,c>'],
-                                ["['lambda x', c]", '[<<#1,#2>,<#2,#1>>, <c,r>]'])
+                                ['[<<#1,#2>,<#2,#1>>, <c,r>]'])
 
         check_productions_match(valid_actions['<r,d>'],
-                                ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,r>]'])
+                                ["['lambda x', d]"])
 
         check_productions_match(valid_actions['<r,n>'],
                                 ["['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,r>]'])
@@ -186,7 +164,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                 ["['lambda x', p]", '[<<#1,#2>,<#2,#1>>, <p,r>]'])
 
         check_productions_match(valid_actions['<r,r>'],
-                                ['fb:row.row.next', "['lambda x', r]", '[<<#1,#2>,<#2,#1>>, <r,r>]'])
+                                ['fb:row.row.next', 'fb:type.object.type', '[<<#1,#2>,<#2,#1>>, <r,r>]'])
 
         check_productions_match(valid_actions['@START@'],
                                 ['d', 'c', 'p', 'r', 'n'])
@@ -194,8 +172,10 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
         check_productions_match(valid_actions['c'],
                                 ['[<#1,#1>, c]',
                                  '[<#1,<#1,#1>>, c, c]',
-                                 '[<n,<n,<#1,<<n,#1>,#1>>>>, n, n, c, <n,c>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, c, <n,c>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, c, <d,c>]',
                                  '[<d,c>, d]',
+                                 '[<n,c>, n]',
                                  '[<p,c>, p]',
                                  '[<r,c>, r]',
                                  'fb:cell.null',
@@ -216,9 +196,10 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                 ['[<n,<n,<n,d>>>, n, n, n]',
                                  '[<#1,#1>, d]',
                                  '[<#1,<#1,#1>>, d, d]',
-                                 '[<n,<n,<#1,<<n,#1>,#1>>>>, n, n, d, <n,d>]',
-                                 '[<d,d>, d]',
-                                 '[<r,d>, r]'])
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, d, <d,d>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, d, <n,d>]',
+                                 '[<c,d>, c]',
+                                 '[<d,d>, d]'])
 
         check_productions_match(valid_actions['n'],
                                 ['-1',
@@ -230,25 +211,33 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                  '2000',
                                  '[<#1,#1>, n]',
                                  '[<#1,<#1,#1>>, n, n]',
-                                 '[<n,<n,n>>, n, n]',
-                                 '[<n,n>, n]',
                                  '[<#1,n>, c]',
                                  '[<#1,n>, d]',
                                  '[<#1,n>, n]',
                                  '[<#1,n>, p]',
                                  '[<#1,n>, r]',
-                                 '[<n,<n,<#1,<<n,#1>,#1>>>>, n, n, n, <n,n>]'])
+                                 '[<c,n>, c]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, n, <d,n>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, n, <n,n>]',
+                                 '[<n,<n,n>>, n, n]',
+                                 '[<n,n>, n]',
+                                 '[<r,n>, r]'])
 
+        # TODO(mattg): There should be a bunch of terminal productions here, but those aren't
+        # implemented at this point.
         check_productions_match(valid_actions['p'],
-                                ['[<n,<n,<#1,<<n,#1>,#1>>>>, n, n, p, <n,p>]',
+                                ['[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, p, <d,p>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, p, <n,p>]',
                                  '[<#1,#1>, p]',
+                                 '[<c,p>, c]',
                                  '[<#1,<#1,#1>>, p, p]'])
 
         check_productions_match(valid_actions['r'],
                                 ['fb:type.row',
                                  '[<#1,#1>, r]',
                                  '[<#1,<#1,#1>>, r, r]',
-                                 '[<n,<n,<#1,<<n,#1>,#1>>>>, n, n, r, <n,r>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <d,r>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <n,r>]',
                                  '[<n,r>, n]',
                                  '[<c,r>, c]',
                                  '[<r,r>, r]'])
@@ -263,21 +252,21 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
     def test_world_parses_logical_forms_with_dates(self):
         sempre_form = "((reverse fb:row.row.league) (fb:row.row.year (fb:cell.cell.date (date 2000 -1 -1))))"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "R(C2,C6(D1(D0(2000,~1,~1))))"
+        assert str(expression) == "R(C2,C6(D1(D0(num:2000,num:~1,num:~1))))"
 
     def test_world_parses_logical_forms_with_decimals(self):
         question_tokens = [Token(x) for x in ['0.2']]
         world = WikiTablesWorld(self.table_kg, question_tokens)
         sempre_form = "(fb:cell.cell.number (number 0.200))"
         expression = world.parse_logical_form(sempre_form)
-        assert str(expression) == "I1(I(0_200))"
+        assert str(expression) == "I1(I(num:0_200))"
 
     def test_get_action_sequence_removes_currying_for_all_wikitables_functions(self):
         # minus
         logical_form = "(- (number 3) (number 2))"
         parsed_logical_form = self.world.parse_logical_form(logical_form)
         action_sequence = self.world.get_action_sequence(parsed_logical_form)
-        assert 'd -> [<d,<d,d>>, d, d]' in action_sequence
+        assert 'n -> [<n,<n,n>>, n, n]' in action_sequence
 
         # date
         logical_form = "(count (fb:cell.cell.date (date 2000 -1 -1)))"
@@ -290,13 +279,13 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                         "(reverse (lambda x ((reverse fb:row.row.index) (var x))))")
         parsed_logical_form = self.world.parse_logical_form(logical_form)
         action_sequence = self.world.get_action_sequence(parsed_logical_form)
-        assert 'r -> [<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d,r>]' in action_sequence
+        assert 'r -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <n,r>]' in action_sequence
 
         # and
         logical_form = "(and (number 1) (number 1))"
         parsed_logical_form = self.world.parse_logical_form(logical_form)
         action_sequence = self.world.get_action_sequence(parsed_logical_form)
-        assert 'd -> [<#1,<#1,#1>>, d, d]' in action_sequence
+        assert 'n -> [<#1,<#1,#1>>, n, n]' in action_sequence
 
     def test_parsing_logical_forms_fails_with_unmapped_names(self):
         with pytest.raises(ParsingError):
@@ -304,7 +293,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
 
     def test_world_has_only_basic_numbers(self):
         valid_actions = self.world.get_valid_actions()
-        for i in range(10):
+        for i in range(-1, 5):
             assert f'n -> {i}' in valid_actions['n']
         assert 'n -> 17' not in valid_actions['n']
         assert 'n -> 231' not in valid_actions['n']

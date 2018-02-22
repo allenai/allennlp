@@ -94,17 +94,17 @@ def assert_dataset_correct(dataset):
             '@START@ -> d',
             'd -> [<d,d>, d]',
             '<d,d> -> max',
-            'd -> [<e,d>, e]',
-            '<e,d> -> [<<#1,#2>,<#2,#1>>, <d,e>]',
+            'd -> [<c,d>, c]',
+            '<c,d> -> [<<#1,#2>,<#2,#1>>, <d,c>]',
             '<<#1,#2>,<#2,#1>> -> reverse',
-            '<d,e> -> fb:cell.cell.date',
-            'e -> [<r,e>, r]',
-            '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
+            '<d,c> -> fb:cell.cell.date',
+            'c -> [<r,c>, r]',
+            '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]',
             '<<#1,#2>,<#2,#1>> -> reverse',
-            '<e,r> -> fb:row.row.year',
-            'r -> [<e,r>, e]',
-            '<e,r> -> fb:row.row.league',
-            'e -> fb:cell.usl_a_league'
+            '<c,r> -> fb:row.row.year',
+            'r -> [<c,r>, c]',
+            '<c,r> -> fb:row.row.league',
+            'c -> fb:cell.usl_a_league'
             ]
 
 
@@ -139,25 +139,25 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
         action_strings = [actions[i] for i in action_indices]
         assert action_strings == [
                 '@START@ -> d',
-                'd -> [<e,d>, e]',
-                '<e,d> -> [<<#1,#2>,<#2,#1>>, <d,e>]',
+                'd -> [<c,d>, c]',
+                '<c,d> -> [<<#1,#2>,<#2,#1>>, <d,c>]',
                 '<<#1,#2>,<#2,#1>> -> reverse',
-                '<d,e> -> fb:cell.cell.date',
-                'e -> [<r,e>, r]',
-                '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
+                '<d,c> -> fb:cell.cell.date',
+                'c -> [<r,c>, r]',
+                '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]',
                 '<<#1,#2>,<#2,#1>> -> reverse',
-                '<e,r> -> fb:row.row.year',
-                'r -> [<d,r>, d]',
-                '<d,r> -> fb:row.row.index',
-                'd -> [<d,d>, d]',
-                '<d,d> -> max',
-                'd -> [<r,d>, r]',
-                '<r,d> -> [<<#1,#2>,<#2,#1>>, <d,r>]',
+                '<c,r> -> fb:row.row.year',
+                'r -> [<n,r>, n]',
+                '<n,r> -> fb:row.row.index',
+                'n -> [<n,n>, n]',
+                '<n,n> -> max',
+                'n -> [<r,n>, r]',
+                '<r,n> -> [<<#1,#2>,<#2,#1>>, <n,r>]',
                 '<<#1,#2>,<#2,#1>> -> reverse',
-                '<d,r> -> fb:row.row.index',
-                'r -> [<e,r>, e]',
-                '<e,r> -> fb:row.row.league',
-                'e -> fb:cell.usl_a_league'
+                '<n,r> -> fb:row.row.index',
+                'r -> [<c,r>, c]',
+                '<c,r> -> fb:row.row.league',
+                'c -> fb:cell.usl_a_league'
                 ]
 
     def test_parse_example_line(self):

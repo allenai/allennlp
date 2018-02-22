@@ -3,7 +3,7 @@ We store all the information related to a world (i.e. the context in which logic
 executed) here. For WikiTableQuestions, this includes a representation of a table, mapping from
 Sempre variables in all logical forms to NLTK variables, and the types of all predicates and entities.
 """
-from typing import Dict, List, Set
+from typing import Callable, Dict, List, Set
 import re
 
 from nltk.sem.logic import Type
@@ -42,7 +42,8 @@ class WikiTablesWorld(World):
 
     def __init__(self, table_graph: TableKnowledgeGraph, question_tokens: List[Token]) -> None:
         super(WikiTablesWorld, self).__init__(constant_type_prefixes={"part": types.PART_TYPE,
-                                                                      "cell": types.CELL_TYPE},
+                                                                      "cell": types.CELL_TYPE,
+                                                                      "num": types.NUMBER_TYPE},
                                               global_type_signatures=types.COMMON_TYPE_SIGNATURE,
                                               global_name_mapping=types.COMMON_NAME_MAPPING,
                                               num_nested_lambdas=1)
@@ -117,12 +118,49 @@ class WikiTablesWorld(World):
     def get_valid_actions(self) -> Dict[str, List[str]]:
         valid_actions = super().get_valid_actions()
 
-        # We just need to add a few things here that don't get added by our world-general logic.
+        # We need to add a few things here that don't get added by our world-general logic, and
+        # remove some things that are technically possible in our type system, but not present in
+        # the original SEMPRE grammar.
 
         # These are possible because of `reverse`.
         valid_actions['c'].append('c -> [<r,c>, r]')
-        valid_actions['d'].append('d -> [<r,d>, r]')
+        valid_actions['d'].append('d -> [<c,d>, c]')
+        valid_actions['n'].append('n -> [<r,n>, r]')
+        valid_actions['n'].append('n -> [<c,n>, c]')
+        valid_actions['p'].append('p -> [<c,p>, c]')
+
+        # These get added when we do our ANY_TYPE substitution with basic types, but we don't
+        # actually need them.
+        del valid_actions['<c,c>']
+        del valid_actions['<d,p>']
+        del valid_actions['<p,d>']
+        del valid_actions['<p,n>']
+        del valid_actions['<p,p>']
+        del valid_actions['<p,r>']
+
+        # Our code that generates lambda productions similarly creates more than we need.
+        for type_ in ['<c,p>', '<c,r>', '<d,c>', '<d,r>', '<n,c>', '<n,p>', '<n,r>', '<p,c>',
+                      '<r,c>', '<r,r>']:
+            self._remove_action_from_type(valid_actions, type_, lambda x: 'lambda' in x)
+
+        # And we don't need `reverse` productions everywhere they are added, either.
+        for type_ in ['<c,r>', '<p,c>', '<r,d>']:
+            self._remove_action_from_type(valid_actions, type_, lambda x: '<<#1,#2>,<#2,#1>>' in x)
+
         return valid_actions
+
+    @staticmethod
+    def _remove_action_from_type(valid_actions: Dict[str, List[str]],
+                                 type_: str,
+                                 filter_function: Callable[[str], bool]) -> None:
+        """
+        Finds the production rule matching the filter function in the given type's valid action
+        list, and removes it.  If there is more than one matching function, we crash.
+        """
+        action_list = valid_actions[type_]
+        matching_action_index = [i for i, action in enumerate(action_list) if filter_function(action)]
+        assert len(matching_action_index) == 1, "Filter function didn't find one action"
+        action_list.pop(matching_action_index[0])
 
     @overrides
     def get_valid_starting_types(self) -> Set[Type]:
@@ -155,6 +193,7 @@ class WikiTablesWorld(World):
                     # The string is a negative number. This makes NLTK interpret this as a negated
                     # expression and force its type to be TRUTH_VALUE (t).
                     translated_name = translated_name.replace("-", "~")
+                translated_name = f"num:{translated_name}"
                 self._add_name_mapping(name, translated_name, types.NUMBER_TYPE)
         else:
             if name in types.COMMON_NAME_MAPPING:
