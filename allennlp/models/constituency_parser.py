@@ -164,6 +164,10 @@ class SpanConstituencyParser(Model):
         # Looking at the span start index is enough to know if
         # this is padding or not. Shape: (batch_size, num_spans)
         span_mask = (spans[:, :, 0] >= 0).squeeze(-1).long()
+        if span_mask.dim() == 1:
+            # This happens if you use batch_size 1 and encounter
+            # a length 1 sentence in PTB, which do exist. -.-
+            span_mask = span_mask.unsqueeze(-1)
 
         sentence_lengths = get_lengths_from_binary_sequence_mask(mask)
         num_spans = get_lengths_from_binary_sequence_mask(span_mask)
@@ -413,14 +417,14 @@ class SpanConstituencyParser(Model):
         total_f1 = 0.0
         total_precision = 0.0
         total_recall = 0.0
-        for metric_name, metric in self.metrics.items():
+        # We'll just capture the average f1, precision and recall
+        # because there are 27 constituent types, which makes
+        # for very verbose console output.
+        for metric in self.metrics.values():
             f1, precision, recall = metric.get_metric(reset) # pylint: disable=invalid-name
             total_f1 += f1
             total_precision += precision
             total_recall += recall
-            all_metrics[metric_name + "_f1"] = f1
-            all_metrics[metric_name + "_precision"] = precision
-            all_metrics[metric_name + "_recall"] = recall
 
         num_metrics = len(self.metrics)
         all_metrics["average_f1"] = total_f1 / num_metrics
