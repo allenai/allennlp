@@ -212,6 +212,9 @@ class SpanConstituencyParser(Model):
         span ends when constructing the tree representation, because it makes indexing
         into lists cleaner for ranges of text, rather than individual indices.
 
+        Finally, for batch prediction, we will have padded spans and class probabilities.
+        In order to make this less confusing, we remove all the padded spans and
+        distributions from ``spans`` and ``class_probabilities`` respectively.
         """
         all_predictions = output_dict['class_probabilities'].cpu().data
         all_spans = output_dict["spans"].cpu().data
@@ -220,6 +223,10 @@ class SpanConstituencyParser(Model):
         sentence_lengths = output_dict["sentence_lengths"].data
         num_spans = output_dict["num_spans"].data
         trees = self.construct_trees(all_predictions, all_spans, all_sentences, sentence_lengths, num_spans)
+
+        batch_size = all_predictions.size(0)
+        output_dict["spans"] = [all_spans[i, :num_spans[i]] for i in range(batch_size)]
+        output_dict["class_probabilities"] = [all_predictions[i, :num_spans[i], :] for i in range(batch_size)]
 
         output_dict["trees"] = trees
         return output_dict
