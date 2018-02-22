@@ -2,6 +2,9 @@
 import os
 
 from nltk import Tree
+import torch
+from torch.autograd import Variable
+
 
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.models.constituency_parser import SpanInformation
@@ -23,6 +26,15 @@ class SpanConstituencyParserTest(ModelTestCase):
 
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
+
+    def test_forward_can_handle_a_single_word_as_input(self):
+        # A very annoying edge case: the PTB has several single word sentences.
+        # when running with a batch size 1, we have to be very careful
+        # about how we .squeeze/.unsqueeze things to make sure it still runs.
+        text = {"tokens": Variable(torch.LongTensor([[1]]).long())}
+        spans = Variable(torch.LongTensor([[[0, 0]]]))
+        label = Variable(torch.LongTensor([[1]]))
+        self.model(text, spans, label)
 
     def test_decode_runs(self):
         self.model.eval()
