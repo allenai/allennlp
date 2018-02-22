@@ -420,6 +420,10 @@ class World:
         # its number of arguments with NLTK's `uncurry()` function.  If it is, we output an action
         # using those arguments.  Otherwise, we're at an intermediate node of a curried function,
         # and we squelch the action that would normally be generated.
+        # TODO(mattg): There might be some way of removing the need for `curried_functions` here,
+        # using instead the `argument_types()` function I added to `ComplexType`, but my guess is
+        # that it would involve needing to modify nltk, and I don't want to bother with figuring
+        # that out right now.
         curried_functions = self._get_curried_functions()
         expression_type = expression.type
         try:
