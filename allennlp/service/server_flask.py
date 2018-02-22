@@ -254,11 +254,13 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
 
     # As a SPA, we need to return index.html for /model-name and /model-name/permalink
     @app.route('/semantic-role-labeling')
+    @app.route('/constituency-parsing')
     @app.route('/machine-comprehension')
     @app.route('/textual-entailment')
     @app.route('/coreference-resolution')
     @app.route('/named-entity-recognition')
     @app.route('/semantic-role-labeling/<permalink>')
+    @app.route('/constituency-parsing/<permalink>')
     @app.route('/machine-comprehension/<permalink>')
     @app.route('/textual-entailment/<permalink>')
     @app.route('/coreference-resolution/<permalink>')
