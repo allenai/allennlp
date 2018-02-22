@@ -253,6 +253,7 @@ class WikiTablesSemanticParser(Model):
         attended_question, question_attention_weights = self._decoder_step.attend_on_question(final_encoder_output,
                                                                                               encoder_outputs,
                                                                                               question_mask)
+        coverage = Variable(attended_question.data.new(question_attention_weights.size()).fill_(0))
 
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
 
@@ -277,6 +278,8 @@ class WikiTablesSemanticParser(Model):
         initial_hidden_state = [final_encoder_output[i] for i in range(batch_size)]
         initial_memory_cell = [memory_cell[i] for i in range(batch_size)]
         initial_attended_question = [attended_question[i] for i in range(batch_size)]
+        initial_coverage = [coverage[i] for i in range(batch_size)]
+        initial_attention_weight = [question_attention_weights[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
         question_mask_list = [question_mask[i] for i in range(batch_size)]
         initial_grammar_state = [self._create_grammar_state(world[i], actions[i])
@@ -289,8 +292,8 @@ class WikiTablesSemanticParser(Model):
                                                memory_cell=initial_memory_cell,
                                                previous_action_embedding=initial_action_embedding_list,
                                                attended_question=initial_attended_question,
-                                               coverage=question_attention_weights,
-                                               attention_weights=question_attention_weights,
+                                               coverage=initial_coverage,
+                                               attention_weights=initial_attention_weight,
                                                grammar_state=initial_grammar_state,
                                                encoder_outputs=encoder_output_list,
                                                encoder_output_mask=question_mask_list,
@@ -1164,7 +1167,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                         memory_cell,
                                         action_embeddings,
                                         attended_question,
-                                        coverage,
                                         attention_weights,
                                         considered_actions,
                                         allowed_actions,
@@ -1430,7 +1432,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                             memory_cell: torch.Tensor,
                             action_embeddings: torch.Tensor,
                             attended_question: torch.Tensor,
-                            coverage: torch.Tensor,
                             attention_weights: torch.Tensor,
                             considered_actions: List[List[int]],
                             allowed_actions: List[Set[int]],
@@ -1443,7 +1444,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         hidden_state = [x.squeeze(0) for x in hidden_state.split(1, 0)]
         memory_cell = [x.squeeze(0) for x in memory_cell.split(1, 0)]
         attended_question = [x.squeeze(0) for x in attended_question.split(1, 0)]
-        coverage = [x.squeeze(0) for x in coverage.split(1, 0)]
+        coverage = state.coverage
         attention_weights = [x.squeeze(0) for x in attention_weights.split(1, 0)]
 
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
@@ -1492,11 +1493,17 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # [coverage_hyperparameter = Linear(1,1)] which will be multiplied by the loss?
                 # Or should I store this hyperparameter in the decoder state?
                 # todo(rajas): find alternative to sum since coverage_loss quickly becomes 1
-                coverage[group_index] = coverage[group_index] + attention_weights[group_index]
+                cov = coverage[group_index]
+                att = attention_weights[group_index]
+                coverage[group_index] = cov + torch.pow(att, 2)
                 coverage_attention = torch.stack([coverage[group_index],
                                                   attention_weights[group_index]])
                 minimum = torch.min(coverage_attention, dim=0)[0]
                 coverage_loss = torch.sum(minimum)
+                # print("Coverage loss")
+                # print(coverage_loss)
+                # print("Coverage")
+                # print(coverage[group_index])
                 new_score = new_score + coverage_loss
 
                 # `action_index` is the index in the _sorted_ tensors, but the action embedding
