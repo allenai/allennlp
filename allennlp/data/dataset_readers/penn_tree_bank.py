@@ -140,9 +140,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         Removes all functional tags from constituency labels in an NLTK tree.
         This modification is done in-place.
         """
+        clean_label = tree.label().split("=")[0].split("-")[0].split("|")[0]
+        tree.set_label(clean_label)
         for child in tree:
-            clean_label = child.label().split("=")[0].split("-")[0].split("|")[0]
-            child.set_label(clean_label)
             if not isinstance(child[0], str):
                 self._strip_functional_tags(child)
 
