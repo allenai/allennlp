@@ -250,9 +250,10 @@ class WikiTablesSemanticParser(Model):
         memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
 
         initial_score = Variable(embedded_question.data.new(batch_size).fill_(0))
-        attended_question, _ = self._decoder_step.attend_on_question(final_encoder_output,
-                                                                     encoder_outputs,
-                                                                     question_mask)
+        attended_question, question_attention_weights = self._decoder_step.attend_on_question(final_encoder_output,
+                                                                                              encoder_outputs,
+                                                                                              question_mask)
+        coverage = Variable(attended_question.data.new(question_attention_weights.size()).fill_(0))
 
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
 
@@ -277,6 +278,8 @@ class WikiTablesSemanticParser(Model):
         initial_hidden_state = [final_encoder_output[i] for i in range(batch_size)]
         initial_memory_cell = [memory_cell[i] for i in range(batch_size)]
         initial_attended_question = [attended_question[i] for i in range(batch_size)]
+        initial_coverage = [coverage[i] for i in range(batch_size)]
+        initial_attention_weight = [question_attention_weights[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
         question_mask_list = [question_mask[i] for i in range(batch_size)]
         initial_grammar_state = [self._create_grammar_state(world[i], actions[i])
@@ -289,6 +292,8 @@ class WikiTablesSemanticParser(Model):
                                                memory_cell=initial_memory_cell,
                                                previous_action_embedding=initial_action_embedding_list,
                                                attended_question=initial_attended_question,
+                                               coverage=initial_coverage,
+                                               attention_weights=initial_attention_weight,
                                                grammar_state=initial_grammar_state,
                                                encoder_outputs=encoder_output_list,
                                                encoder_output_mask=question_mask_list,
@@ -843,6 +848,7 @@ class WikiTablesSemanticParser(Model):
 # we've defined.  We're using generics to make the types of `combine_states` and `split_finished`
 # come out right.  See the note in `nn.decoding.decoder_state.py` for a little more detail.
 class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
+    # todo(rajas): update comment to hold coverage
     """
     TODO(mattg): This class is a mess!  We need to figure out a better way to pass around and
     update this state.  There are too many things going on here, and it's getting out of control.
@@ -915,6 +921,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  memory_cell: List[torch.Tensor],
                  previous_action_embedding: List[torch.Tensor],
                  attended_question: List[torch.Tensor],
+                 coverage: List[torch.Tensor],
+                 attention_weights: List[torch.Tensor],
                  grammar_state: List[GrammarState],
                  encoder_outputs: torch.Tensor,
                  encoder_output_mask: torch.Tensor,
@@ -930,6 +938,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.memory_cell = memory_cell
         self.previous_action_embedding = previous_action_embedding
         self.attended_question = attended_question
+        self.coverage = coverage
+        self.attention_weights = attention_weights
         self.grammar_state = grammar_state
         self.encoder_outputs = encoder_outputs
         self.encoder_output_mask = encoder_output_mask
@@ -984,6 +994,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         memory_cells = [memory_cell for state in states for memory_cell in state.memory_cell]
         previous_action = [action for state in states for action in state.previous_action_embedding]
         attended_question = [attended for state in states for attended in state.attended_question]
+        coverage = [coverage for state in states for coverage in state.coverage]
+        attention_weights = [attention for state in states for attention in state.attention_weights]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
         if states[0].debug_info is not None:
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
@@ -996,6 +1008,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       memory_cell=memory_cells,
                                       previous_action_embedding=previous_action,
                                       attended_question=attended_question,
+                                      coverage=coverage,
+                                      attention_weights=attention_weights,
                                       grammar_state=grammar_states,
                                       encoder_outputs=states[0].encoder_outputs,
                                       encoder_output_mask=states[0].encoder_output_mask,
@@ -1070,6 +1084,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # `action_embedding_dim` to make a prediction.
         self._output_projection_layer = Linear(output_dim + encoder_output_dim, action_embedding_dim)
 
+        self._encoder_outputs_projection_layer = Linear(encoder_output_dim, encoder_output_dim)
+        self._coverage_projection_layer = Linear(1, encoder_output_dim)
+
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
 
@@ -1096,11 +1113,16 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
         hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
 
-        # (group_size, encoder_output_dim)
+        # (group_size, num_question_tokens, encoder_output_dim)
         encoder_outputs = torch.stack([state.encoder_outputs[i] for i in state.batch_indices])
         encoder_output_mask = torch.stack([state.encoder_output_mask[i] for i in state.batch_indices])
+
+        coverage = torch.stack([x for x in state.coverage])
+        encoder_outputs_with_coverage = self._encoder_outputs_projection_layer(encoder_outputs)
+        encoder_outputs_with_coverage = encoder_outputs_with_coverage + self._coverage_projection_layer(coverage.unsqueeze(-1))
+
         attended_question, attention_weights = self.attend_on_question(hidden_state,
-                                                                       encoder_outputs,
+                                                                       encoder_outputs_with_coverage,
                                                                        encoder_output_mask)
 
         # To predict an action, we'll use a concatenation of the hidden state and attention over
@@ -1422,6 +1444,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         hidden_state = [x.squeeze(0) for x in hidden_state.split(1, 0)]
         memory_cell = [x.squeeze(0) for x in memory_cell.split(1, 0)]
         attended_question = [x.squeeze(0) for x in attended_question.split(1, 0)]
+        coverage = state.coverage
+        attention_weights = [x.squeeze(0) for x in attention_weights.split(1, 0)]
 
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
         if max_actions is not None:
@@ -1465,6 +1489,23 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 new_action_history = state.action_history[group_index] + [action]
                 new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
 
+                # todo(rajas): Can this method be non static so that the decoder step can store a
+                # [coverage_hyperparameter = Linear(1,1)] which will be multiplied by the loss?
+                # Or should I store this hyperparameter in the decoder state?
+                # todo(rajas): find alternative to sum since coverage_loss quickly becomes 1
+                cov = coverage[group_index]
+                att = attention_weights[group_index]
+                coverage[group_index] = cov + torch.pow(att, 2)
+                coverage_attention = torch.stack([coverage[group_index],
+                                                  attention_weights[group_index]])
+                minimum = torch.min(coverage_attention, dim=0)[0]
+                coverage_loss = torch.sum(minimum)
+                # print("Coverage loss")
+                # print(coverage_loss)
+                # print("Coverage")
+                # print(coverage[group_index])
+                new_score = new_score + coverage_loss
+
                 # `action_index` is the index in the _sorted_ tensors, but the action embedding
                 # matrix is _not_ sorted, so we need to get back the original, non-sorted action
                 # index before we get the action embedding.
@@ -1489,6 +1530,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    memory_cell=[memory_cell[group_index]],
                                                    previous_action_embedding=[action_embedding],
                                                    attended_question=[attended_question[group_index]],
+                                                   coverage=[coverage[group_index]],
+                                                   attention_weights=[coverage[group_index]],
                                                    grammar_state=[new_grammar_state],
                                                    encoder_outputs=state.encoder_outputs,
                                                    encoder_output_mask=state.encoder_output_mask,
