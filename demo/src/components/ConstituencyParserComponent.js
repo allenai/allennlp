@@ -28,11 +28,6 @@ const description = (
   </span>
 );
 
-function getStrIndex(words, wordIdx) {
-  if (wordIdx < 0) throw new Error(`Invalid word index: ${wordIdx}`);
-  return words.slice(0, wordIdx).join(' ').length;
-}
-
 class ConstituencyParserInput extends React.Component {
   constructor(props) {
     super(props);
@@ -84,7 +79,7 @@ class ConstituencyParserInput extends React.Component {
         </div>
         <div className="form__field">
           <label htmlFor="#input--srl-sentence">Sentence</label>
-          <input onChange={this.handleSentenceChange} value={constituencyParserSentenceValue} id="input--srl-sentence" ref="constituencyParserSentence" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
+          <input onChange={this.handleSentenceChange} value={constituencyParserSentenceValue} id="input--parser-sentence" ref="constituencyParserSentence" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
         </div>
         <div className="form__field form__field--btn">
           <Button enabled={outputState !== "working"} outputState={outputState} runModel={runConstituencyParserModel} inputs={constituencyParserInputs} />
@@ -99,13 +94,6 @@ class HierplaneVisualization extends React.Component {
     if (this.props.tree) {
       return (
         <div className="hierplane__visualization">
-          <div className="hierplane__visualization-verbs">
-            <a className="hierplane__visualization-verbs__prev">
-              <svg width="12" height="12">
-                <use xlinkHref="#icon__disclosure"></use>
-              </svg>
-            </a>
-          </div>
           <Tree tree={this.props.tree} theme="light" />
         </div>
       )
@@ -119,11 +107,6 @@ class HierplaneVisualization extends React.Component {
   <ConstituencyParserComponent /> Component
 *******************************************************************************/
 
-const VisualizationType = {
-  TREE: 'Tree',
-  TEXT: 'Text'
-};
-Object.freeze(VisualizationType);
 
 class _ConstituencyParserComponent extends React.Component {
   constructor(props) {
@@ -136,9 +119,7 @@ class _ConstituencyParserComponent extends React.Component {
       responseData: responseData,
       // valid values: "working", "empty", "received", "error",
       outputState: responseData ? "received" : "empty",
-      visualizationType: VisualizationType.TREE
     };
-
     this.runConstituencyParserModel = this.runConstituencyParserModel.bind(this);
   }
 
@@ -177,20 +158,7 @@ class _ConstituencyParserComponent extends React.Component {
 
   render() {
     const { requestData, responseData } = this.props;
-    const { visualizationType } = this.state;
-
     const sentence = requestData && requestData.sentence;
-    console.log(responseData);
-    let viz = null;
-    switch(visualizationType) {
-      case VisualizationType.TEXT:
-        viz = <div><p>{responseData.trees}</p></div>;
-        break;
-      case VisualizationType.TREE:
-      default:
-        viz = <HierplaneVisualization tree={responseData ? responseData.hierplane_tree : null} />
-        break;
-    }
 
     return (
       <div className="pane model">
@@ -200,24 +168,7 @@ class _ConstituencyParserComponent extends React.Component {
             sentence={sentence} />
         </PaneLeft>
         <PaneRight outputState={this.state.outputState}>
-          <ul className="srl__vizualization-types">
-            {Object.keys(VisualizationType).map(tpe => {
-              const vizType = VisualizationType[tpe];
-              const className = (
-                visualizationType === vizType
-                  ? 'srl__vizualization-types__active-type'
-                  : null
-              );
-              return (
-                <li key={vizType} className={className}>
-                  <a onClick={() => this.setState({ visualizationType: vizType })}>
-                    {vizType}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-          {viz}
+          <HierplaneVisualization tree={responseData ? responseData.hierplane_tree : null} />
         </PaneRight>
       </div>
     );

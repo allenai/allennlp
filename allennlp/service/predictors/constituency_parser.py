@@ -82,21 +82,17 @@ class ConstituencyParserPredictor(Predictor):
                 # the word to the character index.
                 index += len(child)
 
-        span = " ".join(tree.leaves())
         label = tree.label()
+        span = " ".join(tree.leaves())
         hierplane_node = {
                 "word": span,
                 "nodeType": label,
                 "attributes": [label],
-                "link": label,
-                #"spans": [{"start": index, "end": index + len(word) + 1,}],
+                "link": label
         }
         if children:
             hierplane_node["children"] = children
-        else:
-            # Only add spans to leaves. TODO: Ask Sam about this.
-            hierplane_node["spans"] = [{"start": index, "end": index + len(span) + 1,}]
-
+        # TODO(Mark): Figure out how to span highlighting to the leaves.
         if is_root:
             hierplane_node = {
                     "text": span,
