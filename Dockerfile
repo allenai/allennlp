@@ -34,7 +34,7 @@ RUN apt-get update --fix-missing && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
     
 # Install Java.
-RUN echo "deb http://http.debian.net/debian jessie-backports main" >/etc/apt/sources.list
+RUN echo "deb http://http.debian.net/debian jessie-backports main" >>/etc/apt/sources.list
 RUN apt-get update
 RUN install -t jessie-backports openjdk-8-jdk
 
