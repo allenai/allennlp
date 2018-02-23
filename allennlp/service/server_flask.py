@@ -229,6 +229,9 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
                     verbs.append({"verb": verb["verb"], "description": verb["description"]})
 
             log_blob["outputs"]["verbs"] = verbs
+        elif model_name == "wikitables-parser":
+            log_blob['outputs']['logical_form'] = prediction['logical_form']
+            log_blob['outputs']['answer'] = prediction['answer']
 
         logger.info("prediction: %s", json.dumps(log_blob))
 
