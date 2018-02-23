@@ -31,18 +31,7 @@ const parserExamples = [
              "2006*\tTier 3\tDivision 1\tNorra\t5th\t\n" +
              "2007\tTier 3\tDivision 1\tSödra\t14th\tRelegated",
       question: "What is the only year with the 1st position?",
-    },
-    {
-        table: "#\tEvent Year\tSeason\tFlag bearer\n" +
-               "7\t2012\tSummer\tEle Opeloge\n" +
-               "6\t2008\tSummer\tEle Opeloge\n" +
-               "5\t2004\tSummer\tUati Maposua\n" +
-               "4\t2000\tSummer\tPauga Lalau\n" +
-               "3\t1996\tSummer\tBob Gasio\n" +
-               "2\t1988\tSummer\tHenry Smith\n" +
-               "1\t1984\tSummer\tApelu Ioane",
-        question: "How many years were held in summer?\n",
-    },
+    }
 ];
 
 const title = "WikiTables Semantic Parsing";
