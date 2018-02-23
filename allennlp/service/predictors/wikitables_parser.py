@@ -1,14 +1,14 @@
-from typing import Tuple
-from overrides import overrides
 import os
 from subprocess import run
+from typing import Tuple
+
+from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
-
 
 DEFAULT_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
 ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
@@ -27,10 +27,10 @@ class WikiTablesParserPredictor(Predictor):
         super().__init__(model, dataset_reader)
         # Load auxiliary sempre files during startup for faster logical form execution.
         os.makedirs(SEMPRE_DIR, exist_ok=True)
-        if not os.path.exists(SEMPRE_DIR + 'abbreviations.tsv'):
+        if not os.path.exists(os.path.join(SEMPRE_DIR, 'abbreviations.tsv')):
             run(f'wget {ABBREVIATIONS_FILE}', shell=True)
             run(f'mv wikitables-abbreviations.tsv {SEMPRE_DIR}abbreviations.tsv', shell=True)
-        if not os.path.exists(SEMPRE_DIR + 'grow.grammar'):
+        if not os.path.exists(os.path.join(SEMPRE_DIR, 'grow.grammar')):
             run(f'wget {GROW_FILE}', shell=True)
             run(f'mv wikitables-grow.grammar {SEMPRE_DIR}grow.grammar', shell=True)
 
