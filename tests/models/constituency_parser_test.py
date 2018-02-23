@@ -34,7 +34,7 @@ class SpanConstituencyParserTest(ModelTestCase):
         text = {"tokens": Variable(torch.LongTensor([[1]]).long())}
         spans = Variable(torch.LongTensor([[[0, 0]]]))
         label = Variable(torch.LongTensor([[1]]))
-        self.model(text, spans, label)
+        self.model(text, spans, [{"tokens": ["hello"]}], label)
 
     def test_decode_runs(self):
         self.model.eval()

@@ -125,8 +125,11 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                 else:
                     gold_labels.append("NO-LABEL")
 
+        metadata = {"tokens": tokens}
         if gold_tree:
-            fields["gold_tree"] = MetadataField(gold_tree)
+            metadata["gold_tree"] = gold_tree
+
+        fields["metadata"] = MetadataField(metadata)
 
         span_list_field: ListField = ListField(spans)
         fields["spans"] = span_list_field

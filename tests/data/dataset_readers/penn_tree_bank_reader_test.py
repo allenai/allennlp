@@ -47,7 +47,8 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
                                     "VP(TO to)(VP(VB be)(ADJP(JJ fair)(PP(TO to)(NP(JJ other)(NNS "
                                     "bidders))))))))))))))(. .)))")
 
-        assert fields["gold_tree"].metadata == gold_tree
+        assert fields["metadata"].metadata["gold_tree"] == gold_tree
+        assert fields["metadata"].metadata["tokens"] == tokens
 
         correct_spans_and_labels = {}
         ptb_reader._get_gold_spans(gold_tree, 0, correct_spans_and_labels)
@@ -77,7 +78,8 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
                                     "(NN outcome)))(CC and)(VP(ADVP(RB perhaps))(VB join)(NP(DT the)"
                                     "(VBG winning)(NN bidder)))))))))(. .)))")
 
-        assert fields["gold_tree"].metadata == gold_tree
+        assert fields["metadata"].metadata["gold_tree"] == gold_tree
+        assert fields["metadata"].metadata["tokens"] == tokens
 
         correct_spans_and_labels = {}
         ptb_reader._get_gold_spans(gold_tree, 0, correct_spans_and_labels)

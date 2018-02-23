@@ -23,7 +23,7 @@ class ConstituencyParserPredictor(Predictor):
         Expects JSON that looks like ``{"sentence": "..."}``.
         """
         sentence_text = [token.text for token in self._tokenizer.split_words(json_dict["sentence"])]
-        return self._dataset_reader.text_to_instance(sentence_text), {"sentence": sentence_text}
+        return self._dataset_reader.text_to_instance(sentence_text), {}
 
     @overrides
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:

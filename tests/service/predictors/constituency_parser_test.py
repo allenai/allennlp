@@ -17,7 +17,7 @@ class TestConstituencyParserPredictor(TestCase):
 
         assert len(result["spans"]) == 21 # number of possible substrings of the sentence.
         assert len(result["class_probabilities"]) == 21
-        assert result["sentence"] == ["What", "a", "great", "test", "sentence", "."]
+        assert result["tokens"] == ["What", "a", "great", "test", "sentence", "."]
         assert isinstance(result["trees"], str)
 
         for class_distribution in result["class_probabilities"]:
@@ -36,7 +36,7 @@ class TestConstituencyParserPredictor(TestCase):
         result = results[0]
         assert len(result["spans"]) == 21 # number of possible substrings of the sentence.
         assert len(result["class_probabilities"]) == 21
-        assert result["sentence"] == ["What", "a", "great", "test", "sentence", "."]
+        assert result["tokens"] == ["What", "a", "great", "test", "sentence", "."]
         assert isinstance(result["trees"], str)
 
         for class_distribution in result["class_probabilities"]:
@@ -46,7 +46,7 @@ class TestConstituencyParserPredictor(TestCase):
 
         assert len(result["spans"]) == 36 # number of possible substrings of the sentence.
         assert len(result["class_probabilities"]) == 36
-        assert result["sentence"] == ["Here", "'s", "another", "good", ",", "interesting", "one", "."]
+        assert result["tokens"] == ["Here", "'s", "another", "good", ",", "interesting", "one", "."]
         assert isinstance(result["trees"], str)
 
         for class_distribution in result["class_probabilities"]:
