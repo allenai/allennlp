@@ -298,4 +298,5 @@ def make_multi_paragraph_reading_comprehension_instance(
 
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
+
     return Instance(fields)

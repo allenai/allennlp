@@ -129,7 +129,8 @@ class BasicIterator(DataIterator):
             iterator = iter(instance_list)
             # Then break each memory-sized list into batches.
             for batch_instances in lazy_groups_of(iterator, self._batch_size):
-                yield Batch(batch_instances)
+                batch = Batch(batch_instances)
+                yield batch
 
     @classmethod
     def from_params(cls, params: Params) -> 'BasicIterator':
