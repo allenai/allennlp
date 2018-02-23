@@ -192,6 +192,7 @@ class ActionInfo extends React.Component {
     const { action, question_tokens } = this.props;
     const action_string = action['predicted_action'];
     const question_attention = action['question_attention'].map(x => [x]);
+    const coverage = action['coverage'].map(x => [x]);
     const considered_actions = action['considered_actions'];
     const action_probs = action['action_probabilities'].map(x => [x]);
 
@@ -202,6 +203,7 @@ class ActionInfo extends React.Component {
         </div>
         <div className="heatmap">
           <HeatMap xLabels={['Prob']} yLabels={question_tokens} data={question_attention} xLabelWidth="70px" />
+            <HeatMap xLabels={['Coverage']} yLabels={question_tokens} data={coverage} xLabelWidth="70px" />
         </div>
       </div>
     )

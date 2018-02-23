@@ -807,6 +807,7 @@ class WikiTablesSemanticParser(Model):
                 action_info['considered_actions'] = considered_actions
                 action_info['action_probabilities'] = probabilities
                 action_info['question_attention'] = action_debug_info['question_attention']
+                action_info['coverage'] = action_debug_info['coverage']
                 instance_action_info.append(action_info)
             batch_action_info.append(instance_action_info)
         output_dict["predicted_actions"] = batch_action_info
@@ -1092,6 +1093,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
         self._encoder_outputs_projection_layer = Linear(encoder_output_dim, encoder_output_dim)
         self._coverage_projection_layer = Linear(1, encoder_output_dim)
+        self._coverage_hyperparameter = Linear(1, 1)
 
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
@@ -1431,8 +1433,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
         return action_logits, action_mask, type_embeddings
 
-    @staticmethod
-    def _compute_new_states(state: WikiTablesDecoderState,
+    # @staticmethod
+    def _compute_new_states(self, state: WikiTablesDecoderState,
                             log_probs: torch.Tensor,
                             hidden_state: torch.Tensor,
                             memory_cell: torch.Tensor,
@@ -1506,11 +1508,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                   attention_weights[group_index]])
                 minimum = torch.min(coverage_attention, dim=0)[0]
                 coverage_loss = torch.sum(minimum)
+                covlosshyper = self._coverage_hyperparameter(coverage_loss)
                 # print("Coverage loss")
-                # print(coverage_loss)
+                # print(covlosshyper)
+                # print("new score")
+                # print(new_score)
                 # print("Coverage")
                 # print(coverage[group_index])
-                new_score = new_score + coverage_loss
+                new_score = new_score + covlosshyper
+
 
                 # `action_index` is the index in the _sorted_ tensors, but the action embedding
                 # matrix is _not_ sorted, so we need to get back the original, non-sorted action
@@ -1525,6 +1531,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                             'considered_actions': considered_actions[group_index],
                             'question_attention': attention_weights[group_index],
                             'probabilities': probs_cpu[group_index],
+                            'coverage': coverage[group_index]
                             }
                     new_debug_info = [state.debug_info[group_index] + [debug_info]]
                 else:
