@@ -99,8 +99,7 @@ class WikiTablesParserPredictor(Predictor):
                             cached_path(DEFAULT_EXECUTOR_JAR),
                             test_data_filename,
                             logical_form_filename,
-                            table_dir,
-                            ])
+                            table_dir])
         run(command, shell=True)
 
         denotations_file = os.path.join(SEMPRE_DIR, 'logical_forms_denotations.tsv')

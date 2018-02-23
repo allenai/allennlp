@@ -45,4 +45,3 @@ class TestWikiTablesParserPredictor(TestCase):
         result = predictor.predict_json(inputs)
         answer = result.get("answer")
         assert answer is not None
-
