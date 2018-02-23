@@ -62,24 +62,38 @@ class WikiTablesParserPredictor(Predictor):
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
         instance, return_dict = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance, cuda_device)
+        outputs['answer'] = self.execute_logical_form_on_table(outputs['logical_form'],
+                                                               inputs['table'])
 
+        return_dict.update(outputs)
+        return sanitize(return_dict)
+
+    def execute_logical_form_on_table(self, logical_form, table):
+        """
+        The parameters are written out to files which the jar file reads and then executes the
+        logical form.
+        """
         logical_form_filename = os.path.join(SEMPRE_DIR, 'logical_forms.txt')
         with open(logical_form_filename, 'w') as f:
-            f.write(outputs['logical_form'] + '\n')
+            f.write(logical_form + '\n')
 
-        table_dir = SEMPRE_DIR + 'csv/'
+        table_dir = os.path.join(SEMPRE_DIR, 'csv/')
         os.makedirs(table_dir, exist_ok=True)
         table_filename = 'context.csv'
-        with open(table_dir + table_filename, 'w', encoding='utf-8') as f:
-            f.write(inputs["table"])
+        with open(os.path.join(table_dir, table_filename), 'w', encoding='utf-8') as f:
+            f.write(table)
 
-        test_record = ('(example (id %s) (utterance %s) (context (graph tables.TableKnowledgeGraph %s))'
-                       '(targetValue (list (description "6"))))' % ('nt-0', inputs['question'],
-                                                                     table_filename))
-        test_data_filename = SEMPRE_DIR + 'data.examples'
+        # The id, target, and utterance are ignored, we just need to get the
+        # table filename into sempre's lisp format.
+        test_record = ('(example (id nt-0) (utterance none) (context (graph tables.TableKnowledgeGraph %s))'
+                       '(targetValue (list (description "6"))))' % (table_filename))
+        test_data_filename = os.path.join(SEMPRE_DIR, 'data.examples')
         with open(test_data_filename, 'w') as f:
             f.write(test_record)
 
+        # TODO(matt): The jar that we have isn't optimal for this use case - we're using a
+        # script designed for computing accuracy, and just pulling out a piece of it. Writing
+        # a new entry point to the jar that's tailored for this use would be cleaner.
         command = ' '.join(['java',
                             '-jar',
                             cached_path(DEFAULT_EXECUTOR_JAR),
@@ -89,10 +103,7 @@ class WikiTablesParserPredictor(Predictor):
                             ])
         run(command, shell=True)
 
-        denotations_file = SEMPRE_DIR + 'logical_forms_denotations.tsv'
+        denotations_file = os.path.join(SEMPRE_DIR, 'logical_forms_denotations.tsv')
         with open(denotations_file) as f:
             line = f.readline().split('\t')
-            outputs['answer'] = line[1] if len(line) > 1 else line[0]
-
-        return_dict.update(outputs)
-        return sanitize(return_dict)
+            return line[1] if len(line) > 1 else line[0]
