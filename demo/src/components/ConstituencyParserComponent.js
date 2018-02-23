@@ -22,9 +22,13 @@ const title = "Constituency Parsing";
 const description = (
   <span>
     <span>
-        Constituency Parsing yo
+      A constituency parse tree breaks a text into sub-phrases, or constituents. Non-terminals in the tree are types of phrases, the terminals are the words in the sentence.
+      This demo is an implementation of a minimal neural model for constituency parsing based on an independent scoring of labels and spans from 
     </span>
-    <a href="https://www.semanticscholar.org/paper/Deep-Semantic-Role-Labeling-What-Works-and-What-s-He-Lee/a3ccff7ad63c2805078b34b8514fa9eab80d38e9" target="_blank" rel="noopener noreferrer">{' '} a deep BiLSTM model (He et al, 2017)</a>
+    <a href="https://www.semanticscholar.org/paper/A-Minimal-Span-Based-Neural-Constituency-Parser-Stern-Andreas/593e4e749bd2dbcaf8dc25298d830b41d435e435" target="_blank" rel="noopener noreferrer">{' '} a Minimal Span Based Constituency Parser (Stern et al, 2017)</a>
+    <span>
+      . This model achieved state of the art single model performance on the Penn Tree Bank in 2017.
+    </span> 
   </span>
 );
 
