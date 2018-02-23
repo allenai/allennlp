@@ -12,11 +12,13 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         test_filename = "tests/fixtures/data/nlvr/sample_data.jsonl"
         data = [json.loads(line)["structured_rep"] for line in open(test_filename).readlines()]
         self.worlds = [NlvrWorld(rep) for rep in data]
-        custom_rep = [[{"y_loc": 21, "size": 20, "type": "triangle", "x_loc": 27, "color": "Yellow"},
-                       {"y_loc": 45, "size": 10, "type": "circle", "x_loc": 47, "color": "Black"}],
-                      [{"y_loc": 56, "size": 30, "type": "square", "x_loc": 10, "color": "#0099ff"},
-                       {"y_loc": 26, "size": 30, "type": "square", "x_loc": 40, "color": "Yellow"}],
-                      [{"y_loc": 40, "size": 10, "type": "triangle", "x_loc": 12, "color": "#0099ff"}]]
+        # y_loc increases as we go down from top to bottom, and x_loc from left to right. That is,
+        # the origin is at the top-left corner.
+        custom_rep = [[{"y_loc": 79, "size": 20, "type": "triangle", "x_loc": 27, "color": "Yellow"},
+                       {"y_loc": 55, "size": 10, "type": "circle", "x_loc": 47, "color": "Black"}],
+                      [{"y_loc": 44, "size": 30, "type": "square", "x_loc": 10, "color": "#0099ff"},
+                       {"y_loc": 74, "size": 30, "type": "square", "x_loc": 40, "color": "Yellow"}],
+                      [{"y_loc": 60, "size": 10, "type": "triangle", "x_loc": 12, "color": "#0099ff"}]]
         self.custom_world = NlvrWorld(custom_rep)
 
     def test_logical_form_with_assert_executes_correctly(self):
@@ -155,3 +157,26 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         # There is a circle in the box with objects of different shapes.
         assert world.execute("(object_shape_any_equals (object_in_box "
                              "(member_shape_different all_boxes)) shape_circle)") is True
+
+    def test_get_agenda_for_sentence(self):
+        world = self.worlds[0]
+        agenda = world.get_agenda_for_sentence("there is a tower with exactly two yellow blocks")
+        assert set(agenda) == set(['<o,o> -> yellow', '<b,t> -> box_exists', 'e -> 2'])
+        agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
+                                               "the bottom of a box.")
+        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_bottom', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
+                                               "the right wall of a box.")
+        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_right', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
+                                               "the left wall of a box.")
+        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_left', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
+                                               "a wall of a box.")
+        assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_wall', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is exactly one square touching any edge")
+        assert set(agenda) == set(['<o,o> -> square', '<o,o> -> touch_wall', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is only 1 tower with 1 blue block at the base")
+        assert set(agenda) == set(['<o,o> -> blue', 'e -> 1', '<o,o> -> bottom', 'e -> 1'])
+        agenda = world.get_agenda_for_sentence("There is only 1 tower with 1 blue block at the top")
+        assert set(agenda) == set(['<o,o> -> blue', 'e -> 1', '<o,o> -> top', 'e -> 1'])
