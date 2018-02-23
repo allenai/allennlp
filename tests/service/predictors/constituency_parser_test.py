@@ -61,4 +61,66 @@ class TestConstituencyParserPredictor(TestCase):
 
         hierplane_tree = predictor._build_hierplane_tree(tree, 0, is_root=True)
 
-        print(hierplane_tree)
+        # pylint: disable=bad-continuation
+        correct_tree = {
+                'text': 'the dog chased the cat',
+                'root': {
+                        'word': 'the dog chased the cat',
+                        'nodeType': 'S',
+                        'attributes': ['S'],
+                        'link': 'S',
+                        'children': [{
+                                'word': 'the dog',
+                                'nodeType': 'NP',
+                                'attributes': ['NP'],
+                                'link': 'NP',
+                                'children': [{
+                                        'word': 'the',
+                                        'nodeType': 'D',
+                                        'attributes': ['D'],
+                                        'link': 'D'
+                                        },
+                                        {
+                                        'word': 'dog',
+                                        'nodeType': 'N',
+                                        'attributes': ['N'],
+                                        'link': 'N'}
+                                        ]
+                                },
+                                {
+                                'word': 'chased the cat',
+                                'nodeType': 'VP',
+                                'attributes': ['VP'],
+                                'link': 'VP',
+                                'children': [{
+                                    'word': 'chased',
+                                    'nodeType': 'V',
+                                    'attributes': ['V'],
+                                    'link': 'V'
+                                    },
+                                    {
+                                    'word':
+                                    'the cat',
+                                    'nodeType': 'NP',
+                                    'attributes': ['NP'],
+                                    'link': 'NP',
+                                    'children': [{
+                                            'word': 'the',
+                                            'nodeType': 'D',
+                                            'attributes': ['D'],
+                                            'link': 'D'
+                                            },
+                                            {
+                                            'word': 'cat',
+                                            'nodeType': 'N',
+                                            'attributes': ['N'],
+                                            'link': 'N'}
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+        # pylint: enable=bad-continuation
+        assert correct_tree == hierplane_tree
