@@ -21,7 +21,7 @@ RUN apt-get update --fix-missing && apt-get install -y \
     bzip2 \
     ca-certificates \
     curl \
-    default-jre \
+    oracle-java8-installer \
     gcc \
     git \
     libc-dev \
