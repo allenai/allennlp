@@ -1,5 +1,7 @@
 from typing import Tuple, List
+
 from overrides import overrides
+from nltk import Tree
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
@@ -33,6 +35,7 @@ class ConstituencyParserPredictor(Predictor):
 
         # format the NLTK tree as a string on a single line.
         tree = return_dict.pop("trees")
+        return_dict["hierplane_tree"] = self._build_hierplane_tree(tree, 0, is_root=True)
         return_dict["trees"] = tree.pformat(margin=1000000)
         return sanitize(return_dict)
 
@@ -44,5 +47,37 @@ class ConstituencyParserPredictor(Predictor):
             return_dict.update(output)
             # format the NLTK tree as a string on a single line.
             tree = return_dict.pop("trees")
+            return_dict["hierplane_tree"] = self._build_hierplane_tree(tree, 0, is_root=True)
             return_dict["trees"] = tree.pformat(margin=1000000)
         return sanitize(return_dicts)
+
+
+    def _build_hierplane_tree(self, tree: Tree, index: int, is_root: bool) -> JsonDict:
+
+        children = []
+        for child in tree:
+            if isinstance(child, Tree):
+                children.append(self._build_hierplane_tree(child, index, is_root=False))
+            else:
+                print(tree)
+                index += len(child)
+        
+        word = " ".join(tree.leaves())
+        hierplane_node = {
+                    "word": word,
+                    "nodeType": tree.label(),
+                    "attributes": [tree.label()],
+                    "link": tree.label(),
+                    #"spans": [{"start": index, "end": index + len(word) + 1,}],
+            }
+        if children:
+            hierplane_node["children"] = children
+        #else:
+        #    hierplane_node["spans"] = [{"start": index, "end": index + len(word) + 1,}]
+
+        if is_root:
+            hierplane_node = {
+                "text": " ".join(tree.leaves()),
+                "root": hierplane_node
+            }
+        return hierplane_node

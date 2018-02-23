@@ -1,6 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 from unittest import TestCase
 
+from nltk import Tree
+
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
@@ -51,3 +53,13 @@ class TestConstituencyParserPredictor(TestCase):
 
         for class_distribution in result["class_probabilities"]:
             self.assertAlmostEqual(sum(class_distribution), 1.0, places=4)
+
+    def test_build_hierplane_tree(self):
+        tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
+        archive = load_archive('tests/fixtures/constituency_parser/serialization/model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'constituency-parser') 
+
+        hierplane_tree = predictor._build_hierplane_tree(tree, 0, is_root=True)
+
+        text = " ".join(tree.leaves())
+        print(hierplane_tree)

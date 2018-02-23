@@ -188,7 +188,7 @@ class _ConstituencyParserComponent extends React.Component {
         break;
       case VisualizationType.TREE:
       default:
-        viz = <HierplaneVisualization tree={responseData ? responseData.trees : null} />
+        viz = <HierplaneVisualization tree={responseData ? responseData.hierplane_tree : null} />
         break;
     }
 
