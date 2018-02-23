@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
+import os
 from unittest import TestCase
 
 from allennlp.models.archival import load_archive
@@ -13,7 +14,7 @@ class TestWikiTablesParserPredictor(TestCase):
         }
 
         archive_dir = 'tests/fixtures/encoder_decoder/wikitables_semantic_parser/serialization/'
-        archive = load_archive(archive_dir + 'model.tar.gz')
+        archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
         predictor = Predictor.from_archive(archive, 'wikitables-parser')
 
         result = predictor.predict_json(inputs)
@@ -30,3 +31,17 @@ class TestWikiTablesParserPredictor(TestCase):
 
             logical_form = result.get("logical_form")
             assert logical_form is not None
+
+    def test_answer_present(self):
+        inputs = {
+                "question": "Who is 18 years old?",
+                "table": "Name\tAge\nShallan\t16\nKaladin\t18"
+        }
+
+        archive_dir = 'tests/fixtures/encoder_decoder/wikitables_semantic_parser/serialization/'
+        archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
+        predictor = Predictor.from_archive(archive, 'wikitables-parser')
+
+        result = predictor.predict_json(inputs)
+        answer = result.get("answer")
+        assert answer is not None

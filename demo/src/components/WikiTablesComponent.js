@@ -151,7 +151,7 @@ class WikiTablesOutput extends React.Component {
         <div className="model__content">
           <div className="form__field">
             <label>Answer</label>
-            <div className="model__content__summary">{ answer } Logical form execution (to actually get an answer) not yet supported</div>
+            <div className="model__content__summary">{ answer }</div>
           </div>
 
           <div className="form__field">
