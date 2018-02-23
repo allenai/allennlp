@@ -21,6 +21,7 @@ RUN apt-get update --fix-missing && apt-get install -y \
     bzip2 \
     ca-certificates \
     curl \
+    default-jre \
     gcc \
     git \
     libc-dev \
