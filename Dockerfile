@@ -17,12 +17,10 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 WORKDIR /stage/allennlp
 
 # Install base packages.
-RUN add-apt-repository ppa:openjdk-r/ppa
 RUN apt-get update --fix-missing && apt-get install -y \
     bzip2 \
     ca-certificates \
     curl \
-    openjdk-8-jre \
     gcc \
     git \
     libc-dev \
@@ -34,6 +32,15 @@ RUN apt-get update --fix-missing && apt-get install -y \
     libevent-dev \
     build-essential && \
     rm -rf /var/lib/apt/lists/*
+    
+# Install Java.
+RUN \
+  echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+  add-apt-repository -y ppa:webupd8team/java && \
+  apt-get update && \
+  apt-get install -y oracle-java8-installer && \
+  rm -rf /var/lib/apt/lists/* && \
+  rm -rf /var/cache/oracle-jdk8-installer
 
 # Install npm
 RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && apt-get install -y nodejs
