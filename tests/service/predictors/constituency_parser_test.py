@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 from unittest import TestCase
 
 from nltk import Tree
@@ -57,9 +57,8 @@ class TestConstituencyParserPredictor(TestCase):
     def test_build_hierplane_tree(self):
         tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         archive = load_archive('tests/fixtures/constituency_parser/serialization/model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'constituency-parser') 
+        predictor = Predictor.from_archive(archive, 'constituency-parser')
 
         hierplane_tree = predictor._build_hierplane_tree(tree, 0, is_root=True)
 
-        text = " ".join(tree.leaves())
         print(hierplane_tree)

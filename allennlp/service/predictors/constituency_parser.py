@@ -53,31 +53,53 @@ class ConstituencyParserPredictor(Predictor):
 
 
     def _build_hierplane_tree(self, tree: Tree, index: int, is_root: bool) -> JsonDict:
+        """
+        Recursively builds a JSON dictionary from an NLTK ``Tree`` suitable for
+        rendering trees using the `Hierplane library<https://allenai.github.io/hierplane/>`.
 
+        Parameters
+        ----------
+        tree : ``Tree``, required.
+            The tree to convert into Hierplane JSON.
+        index : int, required.
+            The character index into the tree, used for creating spans.
+        is_root : bool
+            An indicator which allows us to add the outer Hierplane JSON which
+            is required for rendering.
+
+        Returns
+        -------
+        A JSON dictionary render-able by Hierplane for the given tree.
+        """
         children = []
         for child in tree:
             if isinstance(child, Tree):
+                # If the child is a tree, it has children,
+                # as NLTK leaves are just strings.
                 children.append(self._build_hierplane_tree(child, index, is_root=False))
             else:
-                print(tree)
+                # We're at a leaf, so add the length of
+                # the word to the character index.
                 index += len(child)
-        
-        word = " ".join(tree.leaves())
+
+        span = " ".join(tree.leaves())
+        label = tree.label()
         hierplane_node = {
-                    "word": word,
-                    "nodeType": tree.label(),
-                    "attributes": [tree.label()],
-                    "link": tree.label(),
-                    #"spans": [{"start": index, "end": index + len(word) + 1,}],
-            }
+                "word": span,
+                "nodeType": label,
+                "attributes": [label],
+                "link": label,
+                #"spans": [{"start": index, "end": index + len(word) + 1,}],
+        }
         if children:
             hierplane_node["children"] = children
-        #else:
-        #    hierplane_node["spans"] = [{"start": index, "end": index + len(word) + 1,}]
+        else:
+            # Only add spans to leaves. TODO: Ask Sam about this.
+            hierplane_node["spans"] = [{"start": index, "end": index + len(span) + 1,}]
 
         if is_root:
             hierplane_node = {
-                "text": " ".join(tree.leaves()),
-                "root": hierplane_node
+                    "text": span,
+                    "root": hierplane_node
             }
         return hierplane_node
