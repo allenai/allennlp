@@ -507,6 +507,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         self.possible_actions = possible_actions
         self.worlds = worlds
         self.label_strings = label_strings
+        self._checklist_costs = None
 
     def get_valid_actions(self) -> List[List[int]]:
         """
@@ -521,18 +522,85 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         defined when the state is finished.
         """
         is_correct: List[bool] = []
-        for history, world, all_actions, label_string in zip(self.action_history,
-                                                             self.worlds,
-                                                             self.possible_actions,
-                                                             self.label_strings):
-            action_sequence = []
-            for action in history:
-                action_sequence.append("%s -> %s" % (all_actions[action]["left"][0],
-                                                     all_actions[action]["right"][0]))
+        for history, world, label_string in zip(self.action_history,
+                                                self.worlds,
+                                                self.label_strings):
+            action_sequence = [self._get_action_string(action) for action in history]
             logical_form = world.get_logical_form(action_sequence)
             denotation = world.execute(logical_form)
             is_correct.append(str(denotation).lower() == label_string.lower())
         return is_correct
+
+    def get_state_info(self) -> Dict[str, List]:
+        """
+        This method is here for debugging purposes, in case you want to look at the what the model
+        is learning. It may be inefficient to call it while training the model on real data.
+        """
+        checklist_costs = [float(cost.data.cpu().numpy()) for cost in self.get_costs()]
+        model_scores = [float(score.data.cpu().numpy()) for score in self.score]
+        action_sequences = [[self._get_action_string(action) for action in history]
+                            for history in self.action_history]
+        agenda_sequences = []
+        for agenda in self.agenda:
+            agenda_indices = []
+            for action in agenda:
+                action_int = int(action.data.cpu().numpy())
+                if action_int != -1:
+                    agenda_indices.append(action_int)
+            agenda_sequences.append([self._get_action_string(action) for action in agenda_indices])
+        return {"agenda": agenda_sequences,
+                "history": action_sequences,
+                "costs": checklist_costs,
+                "scores": model_scores}
+
+    def _get_action_string(self, action_id: int) -> str:
+        # Possible actions for all worlds are the same.
+        all_actions = self.possible_actions[0]
+        return "%s -> %s" % (all_actions[action_id]["left"][0],
+                             all_actions[action_id]["right"][0])
+
+
+    def get_agenda_action_probs(self) -> List[Variable]:
+        """
+        Returns probabilities of choosing in-agenda actions based on how many times they've been
+        chosen previously. That is, if the checklist value for the first action is higher than that
+        for the second action, the returned probability for the second action will be higher than
+        that for the first action.
+        """
+        agenda_probs: List[Variable] = []
+        for instance_agenda_mask, instance_checklist in zip(self.agenda_mask, self.checklist):
+            float_mask = instance_agenda_mask.float()
+            masked_checklist = instance_checklist * float_mask
+            # If a specific checklist value is 1.0 or greater, we don't want to select it.
+            # We're transposing twice here since masked_softmax normalizes rows, not columns.
+            checklist_balance = torch.t(1 - torch.clamp(masked_checklist, max=1.0))
+            agenda_probs.append(torch.t(nn_util.masked_softmax(checklist_balance,
+                                                               (checklist_balance != 0).float())))
+        return agenda_probs
+
+    def get_costs(self) -> List[Variable]:
+        """
+        Returns the checklist costs all the instances in the group.
+        """
+        if self._checklist_costs is None:
+            self._checklist_costs: List[Variable] = []
+            for instance_agenda_mask, instance_checklist in zip(self.agenda_mask, self.checklist):
+                # Costs are negative checklist scores.
+                self._checklist_costs.append(- self.score_single_checklist(instance_checklist,
+                                                                           instance_agenda_mask))
+        return self._checklist_costs
+
+    @classmethod
+    def score_single_checklist(cls,
+                               instance_checklist: Variable,
+                               instance_agenda_mask: Variable) -> Variable:
+        """
+        Takes a single checklist and a corresponding agenda_mask and returns
+        the score of the checklist. We want the checklist to be as close to all 1s as possible.
+        """
+        float_mask = instance_agenda_mask.float()
+        agenda_item_probs = instance_checklist * float_mask
+        return -torch.sum((float_mask - agenda_item_probs) ** 2)
 
     def is_finished(self) -> bool:
         """This method is identical to ``WikiTablesDecoderState.is_finished``."""
@@ -857,15 +925,14 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # Note that we're not sorting these probs. We'll score checklists and sort states based on
         # checklist scores later.
         considered_action_probs = nn_util.masked_softmax(action_logits, action_mask)
-        # batch_index -> [(group_index, action_index, action, checklist, checklist_score, model_score)]
+        all_agenda_action_probs = state.get_agenda_action_probs()
+        # batch_index -> [(group_index, action_index, action, checklist, model_score)]
         next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable, Variable]]] = defaultdict(list)
         for group_index, (batch_index, instance_score, instance_action_probs) in \
             enumerate(zip(state.batch_indices, state.score, considered_action_probs)):
             instance_agenda = state.agenda[group_index]  # (agenda_size,)
-            instance_agenda_mask = state.agenda_mask[group_index]  # (agenda_size,)
             instance_checklist = state.checklist[group_index]  # (agenda_size,)
-            agenda_action_probs = cls._get_agenda_action_probs(instance_checklist,
-                                                               instance_agenda_mask)
+            agenda_action_probs = all_agenda_action_probs[group_index]
             # action_prob is a Variable.
             for action_index, action_prob in enumerate(instance_action_probs):
                 # This is the actual index of the action from the original list of actions.
@@ -877,26 +944,26 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 # all 0s.
                 checklist_mask = (instance_agenda == action).float()  # (agenda_size,)
                 agenda_action_prob = torch.sum(checklist_mask * agenda_action_probs)  # (1,)
-                # TODO (pradeep): Learn instance specific checklist weights.
+                # TODO (pradeep): Learn instance specific checklist weights, and properly combine
+                # these probabilities.
                 action_prob = checklist_weight * agenda_action_prob + \
                               (1 - checklist_weight) * action_prob
-                checklist_addition = checklist_mask.float() * action_prob  # (agenda_size,)
+                # We're adding 1.0 at the corresponding agenda index.
+                checklist_addition = checklist_mask.float()  # (agenda_size,)
                 new_checklist = instance_checklist + checklist_addition  # (agenda_size,)
-                checklist_score = cls.score_instance_checklist(instance_checklist,
-                                                               instance_agenda_mask)
                 new_score = instance_score + torch.log(action_prob + 1e-13)
 
                 next_states_info[batch_index].append((group_index, action_index, action,
-                                                      new_checklist, checklist_score, new_score))
+                                                      new_checklist, new_score))
         new_states = []
         for batch_index, states_info in next_states_info.items():
-            # We're sorting states by checklist scores. We batch all the scores first for efficient sorting.
-            batch_scores = torch.cat([state_info[4] for state_info in states_info])
+            # We're sorting states by model scores.
+            batch_scores = torch.cat([state_info[-1] for state_info in states_info])
             _, sorted_indices = batch_scores.sort(-1, descending=True)
             sorted_states_info = [states_info[i] for i in sorted_indices.cpu().data.numpy()]
             if max_actions is not None:
                 sorted_states_info = sorted_states_info[:max_actions]
-            for group_index, action_index, action, new_checklist, _, new_score in sorted_states_info:
+            for group_index, action_index, action, new_checklist, new_score in sorted_states_info:
                 action_embedding = action_embeddings[group_index, action_index, :]
                 new_action_history = state.action_history[group_index] + [action]
                 left_side = state.possible_actions[batch_index][action]['left'][0]
@@ -924,32 +991,3 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                              state.label_strings)
                 new_states.append(new_state)
         return new_states
-
-    @staticmethod
-    def _get_agenda_action_probs(checklist: Variable, agenda_mask: Variable) -> Variable:
-        """
-        Takes a checklist and returns assigned probabilities of actions in the agenda based on how
-        many times the actions have been chosen in the past. That is, if the checklist value for
-        the first action is higher than that for the second action, the returned probability for the
-        second action will be higher than that for the first action.
-        """
-        float_mask = agenda_mask.float()
-        masked_checklist = checklist * float_mask
-        # If a specific checklist value is 1.0 or greater, we don't want to select it.
-        # We're transposing twice here since masked_softmax normalizes rows, not columns.
-        checklist_balance = torch.t(1 - torch.clamp(masked_checklist, max=1.0))
-        agenda_probs = torch.t(nn_util.masked_softmax(checklist_balance, (checklist_balance !=
-                                                                          0).float()))
-        return agenda_probs
-
-    @staticmethod
-    def score_instance_checklist(checklist: Variable, agenda_mask: Variable) -> Variable:
-        """
-        Takes a checklist and agenda's mask (that shows which of the agenda items are not actually
-        padding), and scores the checklist. We want each of the scores on the checklist to be as
-        close to 1.0 as possible.
-        """
-        float_mask = agenda_mask.float()
-        agenda_item_probs = checklist * float_mask
-        score = -torch.sum((float_mask - agenda_item_probs) ** 2)
-        return score
