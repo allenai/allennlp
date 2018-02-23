@@ -240,8 +240,9 @@ class WikiTablesDatasetReader(DatasetReader):
             table_metadata = MetadataField(table_info)
         table_field = KnowledgeGraphField(table_knowledge_graph,
                                           tokenized_question,
+                                          self._table_token_indexers,
                                           tokenizer=self._tokenizer,
-                                          token_indexers=self._table_token_indexers,
+                                          feature_extractors=self._linking_feature_extractors,
                                           include_in_vocab=self._use_table_for_vocab)
         world = WikiTablesWorld(table_knowledge_graph, tokenized_question)
         world_field = MetadataField(world)
