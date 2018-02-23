@@ -98,7 +98,7 @@ class ArgExtremeType(PlaceholderType):
         # The lambda function that we use inside the argmax  must take either a number or a date as
         # an argument.
         lambda_arg_type = other.second.second.second.first.first
-        if (lambda_arg_type.resolve(NUMBER_TYPE) is None and lambda_arg_type.resolve(DATE_TYPE) is None):
+        if lambda_arg_type.resolve(NUMBER_TYPE) is None and lambda_arg_type.resolve(DATE_TYPE) is None:
             return None
 
         try:

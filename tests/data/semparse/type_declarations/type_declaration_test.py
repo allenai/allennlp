@@ -13,7 +13,6 @@ from allennlp.data.semparse.type_declarations.wikitables_type_declaration import
         CELL_TYPE,
         ROW_TYPE,
         )
-from allennlp.data.semparse.type_declarations.type_declaration import ComplexType
 
 
 class TestTypeDeclaration(AllenNlpTestCase):
@@ -37,8 +36,7 @@ class TestTypeDeclaration(AllenNlpTestCase):
         resolution = unary_type.resolve(ComplexType(CELL_TYPE, ANY_TYPE))
         assert resolution == UnaryOpType(CELL_TYPE)
 
-        reverse_type = ComplexType(ComplexType(CELL_TYPE, ROW_TYPE),
-                                         ComplexType(CELL_TYPE, ROW_TYPE))
+        reverse_type = ComplexType(ComplexType(CELL_TYPE, ROW_TYPE), ComplexType(CELL_TYPE, ROW_TYPE))
         resolution = unary_type.resolve(reverse_type)
         assert resolution == UnaryOpType(ComplexType(CELL_TYPE, ROW_TYPE))
 
