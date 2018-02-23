@@ -17,6 +17,7 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 WORKDIR /stage/allennlp
 
 # Install base packages.
+RUN add-apt-repository ppa:openjdk-r/ppa
 RUN apt-get update --fix-missing && apt-get install -y \
     bzip2 \
     ca-certificates \
