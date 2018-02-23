@@ -1177,28 +1177,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 embedded_action_probs = util.masked_log_softmax(embedded_action_logits,
                                                                 embedded_action_mask.float()) + mix2
                 log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=1)
-
-                return self._compute_new_states(state,
-                                                log_probs,
-                                                hidden_state,
-                                                memory_cell,
-                                                action_embeddings,
-                                                attended_question,
-                                                attention_weights,
-                                                considered_actions,
-                                                allowed_actions,
-                                                max_actions)
-
-            action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
-            action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=1).float()
-
+            else:
+                action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
+                action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=1).float()
+                log_probs = util.masked_log_softmax(action_logits, action_mask)
         else:
             action_logits = embedded_action_logits
             action_mask = embedded_action_mask.float()
-        log_probs = util.masked_log_softmax(action_logits, action_mask)
-        # print('---------------')
-        # print(log_probs)
-        # print(action_mask)
+            log_probs = util.masked_log_softmax(action_logits, action_mask)
+
         return self._compute_new_states(state,
                                         log_probs,
                                         hidden_state,
