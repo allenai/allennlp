@@ -369,29 +369,35 @@ class SpanConstituencyParser(Model):
         """
         def assemble_subtree(start: int, end: int):
             if (start, end) in spans_to_labels:
-                label = spans_to_labels[(start, end)]
+                # Some labels contain nested spans, e.g S-VP.
+                # We actually want to create (S (VP ...)) nodes
+                # for these labels, so we split them up here.
+                labels: List[str] = spans_to_labels[(start, end)].split("-")
             else:
-                label = None
+                labels = None
 
             # This node is a leaf.
             if end - start == 1:
                 word = sentence[start]
                 pos_tag = pos_tags[start] if pos_tags is not None else "XX"
                 tree = Tree(pos_tag, [word])
-                if label is not None and pos_tags is not None:
+                if labels is not None and pos_tags is not None:
                     # If POS tags were passed explicitly,
                     # they are added as pre-terminal nodes.
-                    tree = Tree(label, [tree])
-                elif label is not None:
+                    while labels:
+                        tree = Tree(labels.pop(), [tree])
+                elif labels is not None:
                     # Otherwise, we didn't want POS tags
                     # at all.
-                    tree = Tree(label, [word])
+                    tree = Tree(labels.pop(), [word])
+                    while labels:
+                        tree = Tree(labels.pop(), [tree])
                 return [tree]
 
             argmax_split = start + 1
             # Find the next largest subspan such that
             # the left hand side is a constituent.
-            for split in range(end - 1, start, -1):
+            for split in range(end - 1, start, - 1):
                 if (start, split) in spans_to_labels:
                     argmax_split = split
                     break
@@ -399,8 +405,9 @@ class SpanConstituencyParser(Model):
             left_trees = assemble_subtree(start, argmax_split)
             right_trees = assemble_subtree(argmax_split, end)
             children = left_trees + right_trees
-            if label is not None:
-                children = [Tree(label, children)]
+            if labels is not None:
+                while labels:
+                    children = [Tree(labels.pop(), children)]
             return children
 
         tree = assemble_subtree(0, len(sentence))
