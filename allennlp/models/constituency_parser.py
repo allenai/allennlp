@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List, Optional, NamedTuple
+from typing import Dict, Tuple, List, Optional, NamedTuple, Any
 from overrides import overrides
 
 import torch
@@ -115,8 +115,8 @@ class SpanConstituencyParser(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 spans: torch.LongTensor,
-                span_labels: torch.LongTensor = None,
-                gold_tree: List[Tree] = None) -> Dict[str, torch.Tensor]:
+                metadata: List[Dict[str, Any]],
+                span_labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -136,8 +136,12 @@ class SpanConstituencyParser(Model):
         span_labels : ``torch.LongTensor``, optional (default = None)
             A torch tensor representing the integer gold class labels for all possible
             spans, of shape ``(batch_size, num_spans)``.
-        gold_tree : ``List[Tree]``, optional, (default = None)
-            Gold NLTK trees for use in evaluation.
+        metadata : List[Dict[str, Any]], required.
+            A dictionary of metadata for each batch element which has keys:
+                tokens : ``List[str]``, required.
+                    The original string tokens in the sentence.
+                gold_tree : ``nltk.Tree``, optional (default = None)
+                    Gold NLTK trees for use in evaluation.
 
         Returns
         -------
@@ -147,11 +151,8 @@ class SpanConstituencyParser(Model):
             representing a distribution over the label classes per span.
         spans : ``torch.LongTensor``
             The original spans tensor.
-        tokens : ``torch.LongTensor``
-            The token ids from the ``TextField``. Has shape (batch_size, num_tokens).
-        sentence_lengths : ``torch.LongTensor``, required.
-            A tensor of shape (batch_size), representing the lengths of the non-padded
-            elements of ``sentences``.
+        tokens : ``List[List[str]]``, required.
+            A list of tokens in the sentence for each element in the batch.
         num_spans : ``torch.LongTensor``, required.
             A tensor of shape (batch_size), representing the lengths of non-padded spans
             in ``enumerated_spans``.
@@ -169,7 +170,6 @@ class SpanConstituencyParser(Model):
             # a length 1 sentence in PTB, which do exist. -.-
             span_mask = span_mask.unsqueeze(-1)
 
-        sentence_lengths = get_lengths_from_binary_sequence_mask(mask)
         num_spans = get_lengths_from_binary_sequence_mask(span_mask)
 
         encoded_text = self.encoder(embedded_text_input, mask)
@@ -182,9 +182,7 @@ class SpanConstituencyParser(Model):
         output_dict = {
                 "class_probabilities": class_probabilities,
                 "spans": spans,
-                # TODO(Mark): This relies on having tokens represented with a SingleIdTokenIndexer...
-                "tokens": tokens["tokens"],
-                "sentence_lengths": sentence_lengths,
+                "tokens": [meta["tokens"] for meta in metadata],
                 "num_spans": num_spans
         }
         if span_labels is not None:
@@ -195,13 +193,13 @@ class SpanConstituencyParser(Model):
 
         # The evalb score is expensive to compute, so we only compute
         # it for the validation and test sets.
-        if gold_tree is not None and self._evalb_score is not None and not self.training:
+        batch_gold_trees = [meta.get("gold_tree") for meta in metadata]
+        if all(batch_gold_trees) and self._evalb_score is not None and not self.training:
             predicted_trees = self.construct_trees(class_probabilities.cpu().data,
                                                    spans.cpu().data,
-                                                   tokens["tokens"].cpu().data,
-                                                   sentence_lengths.cpu().data,
+                                                   output_dict["tokens"],
                                                    num_spans.data)
-            self._evalb_score(predicted_trees, gold_tree)
+            self._evalb_score(predicted_trees, batch_gold_trees)
 
         return output_dict
 
@@ -219,10 +217,9 @@ class SpanConstituencyParser(Model):
         all_predictions = output_dict['class_probabilities'].cpu().data
         all_spans = output_dict["spans"].cpu().data
 
-        all_sentences = output_dict["tokens"].cpu().data
-        sentence_lengths = output_dict["sentence_lengths"].data
+        all_sentences = output_dict["tokens"]
         num_spans = output_dict["num_spans"].data
-        trees = self.construct_trees(all_predictions, all_spans, all_sentences, sentence_lengths, num_spans)
+        trees = self.construct_trees(all_predictions, all_spans, all_sentences, num_spans)
 
         batch_size = all_predictions.size(0)
         output_dict["spans"] = [all_spans[i, :num_spans[i]] for i in range(batch_size)]
@@ -234,8 +231,7 @@ class SpanConstituencyParser(Model):
     def construct_trees(self,
                         predictions: torch.FloatTensor,
                         all_spans: torch.LongTensor,
-                        sentences: torch.LongTensor,
-                        sentence_lengths: torch.LongTensor,
+                        sentences: List[List[str]],
                         num_spans: torch.LongTensor) -> List[Tree]:
         """
         Construct ``nltk.Tree``'s for each batch element by greedily nesting spans.
@@ -250,12 +246,8 @@ class SpanConstituencyParser(Model):
         all_spans : ``torch.LongTensor``, required.
             A tensor of shape (batch_size, num_spans, 2), representing the span
             indices we scored.
-        sentences : ``torch.LongTensor``, required.
-            A tensor of shape (batch_size, sentence_length) representing the vocabulary
-            ids of the words in the sentences.
-        sentence_lengths : ``torch.LongTensor``, required.
-            A tensor of shape (batch_size), representing the lengths of the non-padded
-            elements of ``sentences``.
+        sentences : ``List[List[str]]``, required.
+            A list of tokens in the sentence for each element in the batch.
         num_spans : ``torch.LongTensor``, required.
             A tensor of shape (batch_size), representing the lengths of non-padded spans
             in ``enumerated_spans``.
@@ -270,12 +262,9 @@ class SpanConstituencyParser(Model):
         no_label_id = self.vocab.get_token_index("NO-LABEL", "labels")
 
         trees: List[Tree] = []
-        for batch_index, (scored_spans, spans, sentence_ids) in enumerate(zip(predictions,
-                                                                              exclusive_end_spans,
-                                                                              sentences)):
-            sentence: List[str] = [self.vocab.get_token_from_index(index, "tokens") for
-                                   index in sentence_ids[:sentence_lengths[batch_index]]]
-
+        for batch_index, (scored_spans, spans, sentence) in enumerate(zip(predictions,
+                                                                          exclusive_end_spans,
+                                                                          sentences)):
             selected_spans = []
             for prediction, span in zip(scored_spans[:num_spans[batch_index]],
                                         spans[:num_spans[batch_index]]):

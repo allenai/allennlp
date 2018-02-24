@@ -34,7 +34,7 @@ class SpanConstituencyParserTest(ModelTestCase):
         text = {"tokens": Variable(torch.LongTensor([[1]]).long())}
         spans = Variable(torch.LongTensor([[[0, 0]]]))
         label = Variable(torch.LongTensor([[1]]))
-        self.model(text, spans, label)
+        self.model(text, spans, [{"tokens": ["hello"]}], label)
 
     def test_decode_runs(self):
         self.model.eval()
@@ -42,7 +42,7 @@ class SpanConstituencyParserTest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
         assert set(decode_output_dict.keys()) == {'spans', 'class_probabilities', 'trees',
-                                                  'tokens', 'sentence_lengths', 'num_spans', 'loss'}
+                                                  'tokens', 'num_spans', 'loss'}
         metrics = self.model.get_metrics(reset=True)
         metric_keys = set(metrics.keys())
         assert "evalb_precision" in metric_keys

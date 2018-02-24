@@ -1,5 +1,7 @@
 from typing import Tuple, List
+
 from overrides import overrides
+from nltk import Tree
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
@@ -23,7 +25,7 @@ class ConstituencyParserPredictor(Predictor):
         Expects JSON that looks like ``{"sentence": "..."}``.
         """
         sentence_text = [token.text for token in self._tokenizer.split_words(json_dict["sentence"])]
-        return self._dataset_reader.text_to_instance(sentence_text), {"sentence": sentence_text}
+        return self._dataset_reader.text_to_instance(sentence_text), {}
 
     @overrides
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
@@ -33,6 +35,7 @@ class ConstituencyParserPredictor(Predictor):
 
         # format the NLTK tree as a string on a single line.
         tree = return_dict.pop("trees")
+        return_dict["hierplane_tree"] = self._build_hierplane_tree(tree, 0, is_root=True)
         return_dict["trees"] = tree.pformat(margin=1000000)
         return sanitize(return_dict)
 
@@ -44,5 +47,55 @@ class ConstituencyParserPredictor(Predictor):
             return_dict.update(output)
             # format the NLTK tree as a string on a single line.
             tree = return_dict.pop("trees")
+            return_dict["hierplane_tree"] = self._build_hierplane_tree(tree, 0, is_root=True)
             return_dict["trees"] = tree.pformat(margin=1000000)
         return sanitize(return_dicts)
+
+
+    def _build_hierplane_tree(self, tree: Tree, index: int, is_root: bool) -> JsonDict:
+        """
+        Recursively builds a JSON dictionary from an NLTK ``Tree`` suitable for
+        rendering trees using the `Hierplane library<https://allenai.github.io/hierplane/>`.
+
+        Parameters
+        ----------
+        tree : ``Tree``, required.
+            The tree to convert into Hierplane JSON.
+        index : int, required.
+            The character index into the tree, used for creating spans.
+        is_root : bool
+            An indicator which allows us to add the outer Hierplane JSON which
+            is required for rendering.
+
+        Returns
+        -------
+        A JSON dictionary render-able by Hierplane for the given tree.
+        """
+        children = []
+        for child in tree:
+            if isinstance(child, Tree):
+                # If the child is a tree, it has children,
+                # as NLTK leaves are just strings.
+                children.append(self._build_hierplane_tree(child, index, is_root=False))
+            else:
+                # We're at a leaf, so add the length of
+                # the word to the character index.
+                index += len(child)
+
+        label = tree.label()
+        span = " ".join(tree.leaves())
+        hierplane_node = {
+                "word": span,
+                "nodeType": label,
+                "attributes": [label],
+                "link": label
+        }
+        if children:
+            hierplane_node["children"] = children
+        # TODO(Mark): Figure out how to span highlighting to the leaves.
+        if is_root:
+            hierplane_node = {
+                    "text": span,
+                    "root": hierplane_node
+            }
+        return hierplane_node
