@@ -159,7 +159,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         """
         Recursively construct the gold spans from an nltk ``Tree``.
         Labels are the constituents, and in the case of nested constituents
-        with the same spans, labels are contatenated in parent-child order.
+        with the same spans, labels are concatenated in parent-child order.
         For example, ``(S (NP (D the) (N man)))`` would have an ``S-NP`` label
         for the outer span, as it has both ``S`` and ``NP`` label.
         Spans are inclusive.
