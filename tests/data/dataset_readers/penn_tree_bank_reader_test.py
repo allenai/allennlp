@@ -114,4 +114,5 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
         ptb_reader._get_gold_spans(tree, 0, span_dict)
         spans = list(span_dict.items()) # pylint: disable=protected-access
 
-        assert spans ==  [((0, 0), 'V-POS'), ((1, 1), 'D-POS'), ((2, 2), 'N-POS'), ((1, 2), 'NP'), ((0, 2), 'S-VP')]
+        assert spans == [((0, 0), 'V-POS'), ((1, 1), 'D-POS'), ((2, 2), 'N-POS'),
+                         ((1, 2), 'NP'), ((0, 2), 'S-VP')]

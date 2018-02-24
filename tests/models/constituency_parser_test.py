@@ -67,14 +67,13 @@ class SpanConstituencyParserTest(ModelTestCase):
         tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
         correct_tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         assert tree == correct_tree
-    
+
     def test_construct_tree_from_spans_handles_nested_labels(self):
-        # (S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))
+        # The tree construction should split the "S-NP" into (S (NP ...)).
         tree_spans = [((0, 1), 'D'), ((1, 2), 'N'), ((0, 2), 'S-NP')]
         sentence = ["the", "dog"]
         tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
         correct_tree = Tree.fromstring("(S (NP (D the) (N dog)))")
-        print(tree)
         assert tree == correct_tree
 
     def test_tree_construction_with_too_few_spans_creates_trees_with_depth_one_word_nodes(self):
