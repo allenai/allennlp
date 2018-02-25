@@ -115,6 +115,7 @@ class WikiTablesSemanticParser(Model):
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(self.num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
+        self._temp_linear = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
         if num_linking_features > 0:
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
         else:
@@ -228,7 +229,8 @@ class WikiTablesSemanticParser(Model):
 
         # compute similarity of question words with entity_embeddings to capture neighbor info
         # todo(rajas): if this doesn't work just use plain neighbor vector
-        question_ent_embed_sim = torch.bmm(entity_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
+        lin_ent_embeddings = self._temp_linear(entity_embeddings)
+        question_ent_embed_sim = torch.bmm(lin_ent_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
 
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
