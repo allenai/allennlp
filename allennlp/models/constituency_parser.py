@@ -242,6 +242,7 @@ class SpanConstituencyParser(Model):
         Construct ``nltk.Tree``'s for each batch element by greedily nesting spans.
         The trees use exclusive end indices, which contrasts with how spans are
         represented in the rest of the model.
+
         Parameters
         ----------
         predictions : ``torch.FloatTensor``, required.
