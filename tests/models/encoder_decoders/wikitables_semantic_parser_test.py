@@ -314,7 +314,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 class WikiTablesSemanticParserTestWithMixtureFeedforward(ModelTestCase):
     def setUp(self):
         super(WikiTablesSemanticParserTestWithMixtureFeedforward, self).setUp()
-        self.set_up_model("tests/fixtures/encoder_decoder/wikitables_semantic_parser_with_mixture_feedforward/experiment.json",
+        self.set_up_model("tests/fixtures/encoder_decoder/wikitables_semantic_parser_with_mixture_feedforward/experiment.json", # pylint: disable=line-too-long
                           "tests/fixtures/data/wikitables/sample_data.examples")
 
     def test_model_can_train_save_and_load(self):
