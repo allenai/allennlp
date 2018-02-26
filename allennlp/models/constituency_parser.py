@@ -397,7 +397,7 @@ class SpanConstituencyParser(Model):
             argmax_split = start + 1
             # Find the next largest subspan such that
             # the left hand side is a constituent.
-            for split in range(end - 1, start, - 1):
+            for split in range(end - 1, start, -1):
                 if (start, split) in spans_to_labels:
                     argmax_split = split
                     break

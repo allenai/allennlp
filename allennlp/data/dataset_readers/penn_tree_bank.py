@@ -163,6 +163,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         For example, ``(S (NP (D the) (N man)))`` would have an ``S-NP`` label
         for the outer span, as it has both ``S`` and ``NP`` label.
         Spans are inclusive.
+        # TODO(Mark): If we encounter a gold nested labelling at test time
+        # which we haven't encountered, we won't be able to run the model 
+        # at all.
 
         Parameters
         ----------
