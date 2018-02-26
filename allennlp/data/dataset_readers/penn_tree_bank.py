@@ -134,8 +134,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         span_list_field: ListField = ListField(spans)
         fields["spans"] = span_list_field
         if gold_tree is not None:
-            fields["span_labels"] = SequenceLabelField(gold_labels, span_list_field)
-
+            fields["span_labels"] = SequenceLabelField(gold_labels,
+                                                       span_list_field)
         return Instance(fields)
 
     def _strip_functional_tags(self, tree: Tree) -> None:
@@ -158,7 +158,15 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                         typed_spans: Dict[Tuple[int, int], str]) -> int:
         """
         Recursively construct the gold spans from an nltk ``Tree``.
+        Labels are the constituents, and in the case of nested constituents
+        with the same spans, labels are concatenated in parent-child order.
+        For example, ``(S (NP (D the) (N man)))`` would have an ``S-NP`` label
+        for the outer span, as it has both ``S`` and ``NP`` label.
         Spans are inclusive.
+
+        TODO(Mark): If we encounter a gold nested labelling at test time
+        which we haven't encountered, we won't be able to run the model
+        at all.
 
         Parameters
         ----------
@@ -196,7 +204,18 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                 child_start = end
             # Set the end index of the current span to
             # the last appended index - 1, as the span is inclusive.
-            typed_spans[(index, end - 1)] = tree.label()
+            span = (index, end - 1)
+            current_span_label = typed_spans.get(span)
+            if current_span_label is None:
+                # This span doesn't have nested labels, just
+                # use the current node's label.
+                typed_spans[span] = tree.label()
+            else:
+                # This span has already been added, so prepend
+                # this label (as we are traversing the tree from
+                # the bottom up).
+                typed_spans[span] = tree.label() + "-" + current_span_label
+
         return end
 
     @classmethod
