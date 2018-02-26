@@ -162,8 +162,10 @@ class NlvrSemanticParser(Model):
                                   batch_best_sequences]
                 terminal_agenda_actions = []
                 for rule_id in agenda_data[i]:
+                    if rule_id == -1:
+                        continue
                     action_string = get_action_string(batch_actions[rule_id])
-                    _, right_side = action_string.split(" -> ")
+                    right_side = action_string.split(" -> ")[1]
                     if right_side.isdigit() or ('[' not in right_side and len(right_side) > 1):
                         terminal_agenda_actions.append(rule_id)
                 actions_in_agenda = [rule_id in batch_best_sequences for rule_id in
@@ -418,9 +420,8 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
     agenda_mask : ``List[torch.LongTensor]``
         List of masks corresponding to agendas that indicate unpadded action items
     checklist : ``List[Variable]``
-        A (soft) checklist for each instance indicating how many times each action in
-        its agenda has been chosen previously. The checklist is soft because it contains the
-        (sum of) the probabilities previously assigned to each action.
+        A checklist for each instance indicating how many times each action in its agenda has
+        been chosen previously. It contains the actual counts of the agenda actions.
     batch_indices : ``List[int]``
         Passed to super class; see docs there.
     action_history : ``List[List[int]]``
@@ -541,6 +542,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         action_sequences = [[self._get_action_string(action) for action in history]
                             for history in self.action_history]
         agenda_sequences = []
+        all_agenda_indices = []
         for agenda in self.agenda:
             agenda_indices = []
             for action in agenda:
@@ -548,8 +550,11 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                 if action_int != -1:
                     agenda_indices.append(action_int)
             agenda_sequences.append([self._get_action_string(action) for action in agenda_indices])
+            all_agenda_indices.append(agenda_indices)
         return {"agenda": agenda_sequences,
+                "agenda_indices": all_agenda_indices,
                 "history": action_sequences,
+                "history_indices": self.action_history,
                 "costs": checklist_costs,
                 "scores": model_scores}
 
