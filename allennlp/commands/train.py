@@ -256,6 +256,7 @@ def train_model(params: Params, serialization_dir: str, file_friendly_logging: b
         json.dump(serialization_params, param_file, indent=4)
 
     all_datasets = datasets_from_params(params)
+    print("all datasets", all_datasets)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
     for dataset in datasets_for_vocab_creation:

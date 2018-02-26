@@ -4,7 +4,7 @@
       "lazy": "true",
       "paragraph_picker": "triviaqa-web-train",
       "cache_questions": true,
-      "base_tarball_path": "/Users/joelg/data/triviaqa-rc.tar.gz"
+      "base_tarball_path": "/tmp/triviaqa",
       "token_indexers": {
         "tokens": {
           "type": "single_id",
@@ -20,9 +20,9 @@
     },
     "validation_dataset_reader": {
       "type": "triviaqa",
-      "lazy": "true",
+      "lazy": "false",
       "cache_questions": true,
-      "base_tarball_path": "/Users/joelg/data/triviaqa-rc.tar.gz"
+      "base_tarball_path": "/tmp/triviaqa",
       "token_indexers": {
         "tokens": {
           "type": "single_id",

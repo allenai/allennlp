@@ -1,7 +1,10 @@
 import json
 import logging
 import os
+import pathlib
+import shutil
 import tarfile
+import tempfile
 from typing import Dict, List, Tuple, Iterable, Iterator, NamedTuple, Set
 
 from overrides import overrides
@@ -10,8 +13,8 @@ from sklearn.metrics import pairwise_distances
 import numpy as np
 
 from allennlp.common import Params, JsonDict
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -21,20 +24,14 @@ from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-MAX_INSTANCES = 1000
-
 _PARAGRAPH_TOKEN = Token("@@PARAGRAPH@@")
+
+NUM_QUESTIONS = 100
 
 class MergedParagraphs(NamedTuple):
     texts: List[str]
     tokens: List[List[Token]]
     has_answers: Set[int] = None
-
-class Question(NamedTuple):
-    text: str
-    tokens: List[Token]
-    answer_texts: List[str]
-    evidence_files: List[str]
 
 @DatasetReader.register("triviaqa")
 class TriviaQaReader(DatasetReader):
@@ -77,6 +74,11 @@ class TriviaQaReader(DatasetReader):
         Determines how both the question and the evidence passages are represented as arrays.  See
         :class:`TokenIndexer`.  Default is to have a single word ID for every token.
     """
+    # Class static variable for storing the temp locations of untarred files,
+    # so that if we instantiate two different dataset readers for the
+    # same tarball we can reuse the temp file
+    _temp_files: Dict[str, Tuple[str, int]] = {}
+
     def __init__(self,
                  base_tarball_path: str,
                  unfiltered_tarball_path: str = None,
@@ -94,9 +96,47 @@ class TriviaQaReader(DatasetReader):
         self._tfidf = TfidfVectorizer(strip_accents="unicode", stop_words="")
 
         self._questions: Dict[str, JsonDict] = {}
-        self._merged_paragraphs: Dict[str, MergedParagraphs] = {}
-        self._base_tarball_path = base_tarball_path
 
+        # If we're really given a tarball, we need to extract it to a temp directory.
+
+        if os.path.isdir(base_tarball_path):
+            # Given a directory, so do nothing.
+            logger.info(f"{base_tarball_path} is a directory, so no un-tar-ing to do.")
+            self._base_tarball_path = pathlib.Path(base_tarball_path)
+        else:
+            # Otherwise, we need to untar triviaqa into a temp directory.
+            if base_tarball_path in self._temp_files:
+                # We've already untarred this, so just grab its location
+                # and increment its reference count.
+                tempdir, ref_count = self._temp_files[base_tarball_path]
+                self._temp_files[base_tarball_path] = (tempdir, ref_count + 1)
+                logger.info(f"{base_tarball_path} has already been un-tar-ed, will just reuse.")
+            else:
+                # Make a new tempdir, untar the dataset, and store the location.
+                tempdir = tempfile.mkdtemp()
+                logger.info(f"Un-tar-ing {base_tarball_path} to {tempdir}")
+                with tarfile.open(base_tarball_path) as tarball:
+                    tarball.extractall(tempdir)
+                self._temp_files[base_tarball_path] = (tempdir, 1)
+
+            self._base_tarball_path = pathlib.Path(tempdir)
+
+    def __del__(self):
+        """At cleanup time, delete a temp directory that we don't need anymore"""
+        keys = [key for key in self._temp_files]
+
+        for base_tarball_path in keys:
+            tempfile, ref_count = self._temp_files[base_tarball_path]
+            if tempfile == str(self._base_tarball_path):
+                # Our path is a tempfile
+                if ref_count == 1:
+                    # And this was the only usage of it, so clean it up.
+                    logger.info("cleaning up temp directory")
+                    shutil.rmtree(tempfile)
+                    del self._temp_files[base_tarball_path]
+                else:
+                    # Someone else is using it, so just decrement its reference count.
+                    self._temp_files[base_tarball_path] = (tempfile, ref_count - 1)
 
     @overrides
     def _read(self, file_path: str):
@@ -105,71 +145,40 @@ class TriviaQaReader(DatasetReader):
         else:
             result_key, evidence_subdir = 'EntityPages', 'wikipedia'
 
-        questions = self._questions.get(file_path)
+        question_path = self._base_tarball_path / 'qa' / file_path
 
-        if questions is None:
-            with tarfile.open(cached_path(self._base_tarball_path), 'r') as base_tarfile:
-                logger.info("Opening base tarball file at %s", self._base_tarball_path)
+        if question_path in self._questions:
+            data_json = self._questions[question_path]
+        else:
+            logger.info("Loading question file from tarball")
+            with open(question_path, 'r') as f:
+                data_json = json.loads(f.read())
+            self._questions[question_path] = data_json
+            logger.info("Loaded questions into memory")
 
-                logger.info("Loading question file from tarball")
-                path = os.path.join('qa', file_path)
-                data_json = json.loads(base_tarfile.extractfile(path).read().decode('utf-8'))
-                logger.info("Loaded questions into memory")
+        questions_data = data_json['Data'][:NUM_QUESTIONS]
+        num_evidence_files = sum(len(question_json[result_key])
+                                 for question_json in questions_data)
+        logger.info(f"reading {num_evidence_files} evidence files")
 
-                # Now we need an index from archive name to question:
-                index = {}
+        for question_json in questions_data[:NUM_QUESTIONS]:
+            question_text = question_json['Question']
+            question_tokens = self._tokenizer.tokenize(question_text)
 
-                questions: List[Question] = []
+            answer_json = question_json['Answer']
+            human_answers = [util.normalize_text(answer) for answer in answer_json.get('HumanAnswers', [])]
+            answer_texts = answer_json['NormalizedAliases'] + human_answers
 
-                questions_data = data_json['Data']
-                for question_json in Tqdm.tqdm(questions_data, total=len(questions_data), desc='indexing questions'):
-                    question_text = question_json['Question']
-                    question_tokens = self._tokenizer.tokenize(question_text)
+            evidence_files = [result['Filename'] for result in question_json[result_key]]
 
-                    answer_json = question_json['Answer']
-                    human_answers = [util.normalize_text(answer) for answer in answer_json.get('HumanAnswers', [])]
-                    answer_texts = answer_json['NormalizedAliases'] + human_answers
+            for evidence_filename in evidence_files:
+                evidence_path = self._base_tarball_path / 'evidence' / evidence_subdir / evidence_filename
+                with open(evidence_path, 'r') as evidence_file:
+                    paragraphs = [line for line in evidence_file.readlines()]
+                merged_paragraphs = self.merge_and_sort(paragraphs, question_text, answer_texts)
 
-                    evidence_files = [result['Filename'] for result in question_json[result_key]]
-
-                    question = Question(text=question_text,
-                                        tokens=question_tokens,
-                                        answer_texts=answer_texts,
-                                        evidence_files=evidence_files)
-
-                    questions.append(question)
-
-                    for evidence_file in evidence_files:
-                        index[evidence_file] = question
-
-                self._questions[file_path] = questions
-
-                # Now load the evidence files:
-                logger.info("loading evidence files")
-                infos = (tar_info
-                         for tar_info in base_tarfile
-                         if tar_info.name.startswith(f"evidence/{evidence_subdir}")
-                         and tar_info.isfile()
-                         and '/'.join(tar_info.name.split("/")[-2:]) in index)
-
-                for tar_info in Tqdm.tqdm(infos, desc='relevant evidence files'):
-                    filename = '/'.join(tar_info.name.split("/")[-2:])
-                    evidence_file = base_tarfile.extractfile(tar_info)
-                    question = index[filename]
-                    paragraphs = [line.decode('utf-8') for line in evidence_file.readlines()]
-                    merged_paragraphs = self.merge_and_sort(paragraphs, question.text, question.answer_texts)
-                    self._merged_paragraphs[filename] = merged_paragraphs
-
-
-        # Now we can iterate more pleasantly
-        logger.info("Reading the dataset")
-        questions = self._questions[file_path]
-
-        for question in questions:
-            for evidence_file in question.evidence_files:
-                merged_paragraphs = self._merged_paragraphs[evidence_file]
-
-                if merged_paragraphs is None:
+                if not merged_paragraphs:
+                    # TODO(joelgrus) what here
                     continue
 
                 # Pick paragraphs
@@ -183,19 +192,19 @@ class TriviaQaReader(DatasetReader):
                             sample = np.random.choice(np.arange(num_texts), size=2)
                         picked_paragraphs = [merged_paragraphs.texts[i] for i in sample]
                         picked_paragraph_tokens = [merged_paragraphs.tokens[i] for i in sample]
-                        instance = self.text_to_instance(question_text=question.text,
-                                                         question_tokens=question.tokens,
+                        instance = self.text_to_instance(question_text=question_text,
+                                                         question_tokens=question_tokens,
                                                          paragraphs=picked_paragraphs,
                                                          paragraph_tokens=picked_paragraph_tokens,
-                                                         answer_texts=question.answer_texts)
+                                                         answer_texts=answer_texts)
                     else:
                         instance = None
                 else:
-                    instance = self.text_to_instance(question_text=question.text,
-                                                     question_tokens=question.tokens,
+                    instance = self.text_to_instance(question_text=question_text,
+                                                     question_tokens=question_tokens,
                                                      paragraphs=merged_paragraphs.texts,
                                                      paragraph_tokens=merged_paragraphs.tokens,
-                                                     answer_texts=question.answer_texts)
+                                                     answer_texts=answer_texts)
 
                 if instance is not None:
                     yield instance
@@ -225,16 +234,20 @@ class TriviaQaReader(DatasetReader):
 
         merged_paragraphs: List[str] = []
 
+
         for paragraph in paragraphs:
             paragraph_tokens = self._tokenizer.tokenize(paragraph)
 
             if len(current_tokens) + len(paragraph_tokens) + 1 > max_size:
                 # Too big, so add to output
                 merged_paragraphs.append(current_paragraph)
+                current_tokens = []
                 current_paragraph = paragraph
             else:
                 # Keep appending
                 current_paragraph += f" {_PARAGRAPH_TOKEN.text} " + paragraph
+                current_tokens.extend(paragraph_tokens)
+                current_tokens.append(Token(_PARAGRAPH_TOKEN))
 
         if current_paragraph:
             merged_paragraphs.append(current_paragraph)
@@ -274,62 +287,14 @@ class TriviaQaReader(DatasetReader):
                 return None
         else:
             # Not sampling
-            MergedParagraphs(texts=merged_paragraphs,
-                             tokens=merged_paragraph_tokens)
-
-
-
-
-    # def pick_paragraphs(self,
-    #                     paragraphs: List[str],
-    #                     question: str = None,
-    #                     answer_texts: List[str] = None) -> List[str]:
-    #     """
-    #     Given a list of evidence documents, return a list of paragraphs to use as training
-    #     examples.  Each paragraph returned will be made into one training example.
-
-    #     To aid in picking the best paragraph, you can also optionally pass the question text or the
-    #     answer strings.  Note, though, that if you actually use the answer strings for picking the
-    #     paragraph on the dev or test sets, that's likely cheating, depending on how you've defined
-    #     the task.
-    #     """
-    #     paragraphs, paragraph_tokens = zip(*self.merged_paragraphs(paragraphs))
-
-    #     if self._paragraph_picker == "triviaqa-web-train":
-    #         # Take the top four paragraphs ranked by tf-idf score and sample two from them.
-    #         # Sample the highest-ranked paragraph that contains an answer twice as often.
-    #         # Require at least one of the paragraphs to contain an answer span.
-
-    #         # Sort the paragraphs by their tfidf score with the question.
-    #         scores = self.document_tfidf(paragraphs, question)
-    #         # Get the ranked indexes.
-    #         ranks = [i for i, _ in sorted(enumerate(scores), key=lambda pair: pair[1])]
-
-    #         # Find the indexes of paragraphs that have answers.
-    #         has_answers = [i for i in ranks
-    #                        if util.find_valid_answer_spans(paragraph_tokens[i], answer_texts)]
-
-    #         if has_answers:
-    #             # Want to sample the highest rank answer twice as often.
-    #             first_answer = has_answers[0]
-    #             if first_answer < 4:
-    #                 choices = [first_answer] + ranks[:4]
-    #             else:
-    #                 choices = [first_answer, first_answer] + ranks[:3]
-
-    #             sample: Iterable[int] = []
-    #             # Sample until we get at least one paragraph with an answer
-    #             while not any(i in has_answers for i in sample):
-    #                 sample = np.random.choice(choices, size=2)
-    #             picked_paragraphs = [paragraphs[i] for i in sample]
-    #         else:
-    #             # No paragraphs that include an answer!
-    #             # TODO(joelgrus) should we do something else here?
-    #             picked_paragraphs = []
-    #     else:
-    #         picked_paragraphs = paragraphs
-
-    #     return picked_paragraphs
+            has_answers = [i for i, mpt in enumerate(merged_paragraph_tokens)
+                           if util.find_valid_answer_spans(mpt, answer_texts)]
+            if not has_answers:
+                return None
+            else:
+                return MergedParagraphs(texts=merged_paragraphs,
+                                        tokens=merged_paragraph_tokens,
+                                        has_answers=has_answers)
 
     @overrides
     def text_to_instance(self,  # type: ignore

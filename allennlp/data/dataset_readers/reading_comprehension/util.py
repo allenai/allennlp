@@ -272,13 +272,13 @@ def make_multi_paragraph_reading_comprehension_instance(
                                   for paragraph_i_tokens in paragraph_tokens])
     fields['paragraphs'] = paragraphs_field
     fields['question'] = TextField(question_tokens, token_indexers)
-    metadata = {
-            'paragraph_texts': paragraph_texts,
-            'token_offsets': paragraph_offsets,
-            'question_tokens': [token.text for token in question_tokens],
-            'paragraph_tokens': [[token.text for token in paragraph_i_tokens]
-                                 for paragraph_i_tokens in paragraph_tokens],
-            }
+    metadata = {}
+            # 'paragraph_texts': paragraph_texts,
+            # 'token_offsets': paragraph_offsets,
+            # 'question_tokens': [token.text for token in question_tokens],
+            # 'paragraph_tokens': [[token.text for token in paragraph_i_tokens]
+            #                      for paragraph_i_tokens in paragraph_tokens],
+            # }
     if answer_texts:
         metadata['answer_texts'] = answer_texts
 
