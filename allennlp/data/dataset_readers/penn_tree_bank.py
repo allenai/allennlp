@@ -17,7 +17,6 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spans
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -124,7 +123,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                 if (start, end) in gold_spans.keys():
                     gold_labels.append(gold_spans[(start, end)])
                 else:
-                    gold_labels.append(DEFAULT_OOV_TOKEN)
+                    gold_labels.append("NO-LABEL")
 
         metadata = {"tokens": tokens}
         if gold_tree:
@@ -136,8 +135,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         fields["spans"] = span_list_field
         if gold_tree is not None:
             fields["span_labels"] = SequenceLabelField(gold_labels,
-                                                       span_list_field,
-                                                       label_namespace="constituents")
+                                                       span_list_field)
         return Instance(fields)
 
     def _strip_functional_tags(self, tree: Tree) -> None:
