@@ -96,7 +96,6 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
 
     def test_get_gold_spans_correctly_extracts_spans(self):
         ptb_reader = PennTreeBankConstituencySpanDatasetReader()
-        # Get gold spans should strip off all the functional tags.
         tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
 
         span_dict = {}
@@ -105,3 +104,15 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
         assert spans == [((0, 0), 'D-POS'), ((1, 1), 'N-POS'), ((0, 1), 'NP'),
                          ((2, 2), 'V-POS'), ((3, 3), 'D-POS'), ((4, 4), 'N-POS'),
                          ((3, 4), 'NP'), ((2, 4), 'VP'), ((0, 4), 'S')]
+
+    def test_get_gold_spans_correctly_extracts_spans_with_nested_labels(self):
+        ptb_reader = PennTreeBankConstituencySpanDatasetReader()
+        # Here we have a sentence fragment which has the same span with nested S and VP labels.
+        # These should be concatenated into a single label by get_gold_spans.
+        tree = Tree.fromstring("(S (VP (V chased) (NP (D the) (N cat))))")
+        span_dict = {}
+        ptb_reader._get_gold_spans(tree, 0, span_dict)
+        spans = list(span_dict.items()) # pylint: disable=protected-access
+
+        assert spans == [((0, 0), 'V-POS'), ((1, 1), 'D-POS'), ((2, 2), 'N-POS'),
+                         ((1, 2), 'NP'), ((0, 2), 'S-VP')]
