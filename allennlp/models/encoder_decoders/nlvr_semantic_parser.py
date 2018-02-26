@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 from typing import List, Set, Dict, Tuple
 from collections import defaultdict
 
@@ -44,7 +45,8 @@ class NlvrSemanticParser(Model):
                  decoder_trainer: DecoderTrainer,
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction,
-                 checklist_weight: float) -> None:
+                 checklist_selection_weight: float,
+                 checklist_cost_weight: float) -> None:
         super(NlvrSemanticParser, self).__init__(vocab=vocab)
 
         self._sentence_embedder = sentence_embedder
@@ -65,7 +67,8 @@ class NlvrSemanticParser(Model):
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function,
-                                             checklist_weight=checklist_weight)
+                                             checklist_weight=checklist_selection_weight)
+        self._checklist_cost_weight = checklist_cost_weight
 
     @overrides
     def forward(self,  # type: ignore
@@ -131,6 +134,7 @@ class NlvrSemanticParser(Model):
         initial_state = NlvrDecoderState(agenda_list,
                                          agenda_mask_list,
                                          initial_checklist_list,
+                                         self._checklist_cost_weight,
                                          list(range(batch_size)),
                                          [[] for _ in range(batch_size)],
                                          initial_score_list,
@@ -186,8 +190,8 @@ class NlvrSemanticParser(Model):
                           world: NlvrWorld) -> bool:
         logical_form = world.get_logical_form(best_action_sequence)
         denotation = world.execute(logical_form)
-        denotation_is_correct = str(denotation).lower() == label.lower()
-        return denotation_is_correct
+        is_correct = str(denotation).lower() == label.lower()
+        return is_correct
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
@@ -394,7 +398,8 @@ class NlvrSemanticParser(Model):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
-        checklist_weight = params.pop("checklist_weight", 1.0)
+        checklist_selection_weight = params.pop("checklist_selection_weight", 0.5)
+        checklist_cost_weight = params.pop("checklist_cost_weight", 0.8)
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    sentence_embedder=sentence_embedder,
@@ -404,7 +409,8 @@ class NlvrSemanticParser(Model):
                    decoder_trainer=decoder_trainer,
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function,
-                   checklist_weight=checklist_weight)
+                   checklist_selection_weight=checklist_selection_weight,
+                   checklist_cost_weight=checklist_cost_weight)
 
 
 class NlvrDecoderState(DecoderState['NlvrDecoderState']):
@@ -422,6 +428,11 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
     checklist : ``List[Variable]``
         A checklist for each instance indicating how many times each action in its agenda has
         been chosen previously. It contains the actual counts of the agenda actions.
+    checklist_cost_weight : ``float``
+        The cost associated with each state has two components, one based on how well its action
+        sequence covers the agenda, and the other based on whether the sequence evaluates to the
+        correct denotation. The final cost is a linear combination of the two, and this weight is
+        the one associated with the checklist cost.
     batch_indices : ``List[int]``
         Passed to super class; see docs there.
     action_history : ``List[List[int]]``
@@ -477,6 +488,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                  agenda: List[torch.LongTensor],
                  agenda_mask: List[torch.LongTensor],
                  checklist: List[Variable],
+                 checklist_cost_weight: float,
                  batch_indices: List[int],
                  action_history: List[List[int]],
                  score: List[torch.Tensor],
@@ -496,6 +508,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         self.agenda = agenda
         self.agenda_mask = agenda_mask
         self.checklist = checklist
+        self.checklist_cost_weight = checklist_cost_weight
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
         self.previous_action_embedding = previous_action_embedding
@@ -508,7 +521,6 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         self.possible_actions = possible_actions
         self.worlds = worlds
         self.label_strings = label_strings
-        self._checklist_costs = None
 
     def get_valid_actions(self) -> List[List[int]]:
         """
@@ -537,7 +549,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         This method is here for debugging purposes, in case you want to look at the what the model
         is learning. It may be inefficient to call it while training the model on real data.
         """
-        checklist_costs = [float(cost.data.cpu().numpy()) for cost in self.get_costs()]
+        costs = [float(cost.data.cpu().numpy()) for cost in self.get_costs()]
         model_scores = [float(score.data.cpu().numpy()) for score in self.score]
         action_sequences = [[self._get_action_string(action) for action in history]
                             for history in self.action_history]
@@ -555,7 +567,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                 "agenda_indices": all_agenda_indices,
                 "history": action_sequences,
                 "history_indices": self.action_history,
-                "costs": checklist_costs,
+                "costs": costs,
                 "scores": model_scores}
 
     def _get_action_string(self, action_id: int) -> str:
@@ -585,15 +597,26 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
 
     def get_costs(self) -> List[Variable]:
         """
-        Returns the checklist costs all the instances in the group.
+        Returns the costs all the instances in the group. Defined only for finished states.
         """
-        if self._checklist_costs is None:
-            self._checklist_costs: List[Variable] = []
-            for instance_agenda_mask, instance_checklist in zip(self.agenda_mask, self.checklist):
-                # Costs are negative checklist scores.
-                self._checklist_costs.append(- self.score_single_checklist(instance_checklist,
-                                                                           instance_agenda_mask))
-        return self._checklist_costs
+        if not self.is_finished():
+            raise RuntimeError("get_costs() is not defined for unfinished states!")
+        denotations_are_correct = self.denotation_is_correct()
+        costs: List[Variable] = []
+        for instance_agenda_mask, instance_checklist, is_correct in zip(self.agenda_mask,
+                                                                        self.checklist,
+                                                                        denotations_are_correct):
+            checklist_cost = - self.score_single_checklist(instance_checklist, instance_agenda_mask)
+            # This is the number of items on the agenda, and is the upper limit on the checklist cost
+            # for this instance. We use this as the denotation cost if the path is incorrect.
+            max_checklist_cost = torch.sum(instance_agenda_mask.float())
+            checklist_cost = self.checklist_cost_weight * checklist_cost
+            if is_correct:
+                cost = checklist_cost
+            else:
+                cost = checklist_cost + (1 - self.checklist_cost_weight) * max_checklist_cost
+            costs.append(cost)
+        return costs
 
     @classmethod
     def score_single_checklist(cls,
@@ -650,6 +673,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         return NlvrDecoderState(agenda,
                                 agenda_mask,
                                 checklist,
+                                states[0].checklist_cost_weight,
                                 batch_indices,
                                 action_histories,
                                 scores,
@@ -691,6 +715,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         return NlvrDecoderState(group_agenda,
                                 group_agenda_mask,
                                 group_checklist,
+                                self.checklist_cost_weight,
                                 group_batch_indices,
                                 group_action_histories,
                                 group_scores,
@@ -932,7 +957,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         considered_action_probs = nn_util.masked_softmax(action_logits, action_mask)
         all_agenda_action_probs = state.get_agenda_action_probs()
         # batch_index -> [(group_index, action_index, action, checklist, model_score)]
-        next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable, Variable]]] = defaultdict(list)
+        next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
         for group_index, (batch_index, instance_score, instance_action_probs) in \
             enumerate(zip(state.batch_indices, state.score, considered_action_probs)):
             instance_agenda = state.agenda[group_index]  # (agenda_size,)
@@ -979,6 +1004,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 new_state = NlvrDecoderState([state.agenda[group_index]],
                                              [state.agenda_mask[group_index]],
                                              [new_checklist],
+                                             state.checklist_cost_weight,
                                              [batch_index],
                                              [new_action_history],
                                              [new_score],
