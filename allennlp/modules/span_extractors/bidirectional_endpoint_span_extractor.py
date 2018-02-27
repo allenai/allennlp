@@ -216,7 +216,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             return torch.cat([span_embeddings, span_width_embeddings], -1)
 
         if span_indices_mask is not None:
-            return span_embeddings * span_indices_mask.unsqueeze(-1)
+            return span_embeddings * span_indices_mask.float().unsqueeze(-1)
         return span_embeddings
 
     @classmethod

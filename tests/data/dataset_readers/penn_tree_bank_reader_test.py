@@ -37,17 +37,18 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
                             'NNS', 'IN', 'NN', 'TO', 'VB', 'JJ', 'TO', 'JJ', 'NNS', '.']
 
         assert spans == enumerate_spans(tokens)
-        gold_tree = Tree.fromstring("(VROOT(S(ADVP(RB Also))(, ,)(SBAR-PRP(IN because)"
-                                    "(S(NP-SBJ(NP(NNP UAL)(NNP Chairman)(NNP Stephen)(NNP Wolf))"
+        gold_tree = Tree.fromstring("(S(ADVP(RB Also))(, ,)(SBAR(IN because)"
+                                    "(S(NP(NP(NNP UAL)(NNP Chairman)(NNP Stephen)(NNP Wolf))"
                                     "(CC and)(NP(JJ other)(NNP UAL)(NNS executives)))(VP(VBP have)"
                                     "(VP(VBN joined)(NP(NP(DT the)(NNS pilots)(POS '))(NN bid))))))"
-                                    "(, ,)(NP-SBJ(DT the)(NN board))(VP(MD might)(VP(VB be)(VP(VBN "
-                                    "forced)(S(VP(TO to)(VP(VB exclude)(NP(PRP him))(PP-CLR(IN from)"
-                                    "(NP(PRP$ its)(NNS deliberations)))(SBAR-PRP(IN in)(NN order)(S("
-                                    "VP(TO to)(VP(VB be)(ADJP-PRD(JJ fair)(PP(TO to)(NP(JJ other)(NNS "
-                                    "bidders))))))))))))))(. .)))")
+                                    "(, ,)(NP(DT the)(NN board))(VP(MD might)(VP(VB be)(VP(VBN "
+                                    "forced)(S(VP(TO to)(VP(VB exclude)(NP(PRP him))(PP(IN from)"
+                                    "(NP(PRP$ its)(NNS deliberations)))(SBAR(IN in)(NN order)(S("
+                                    "VP(TO to)(VP(VB be)(ADJP(JJ fair)(PP(TO to)(NP(JJ other)(NNS "
+                                    "bidders))))))))))))))(. .))")
 
-        assert fields["gold_tree"].metadata == gold_tree
+        assert fields["metadata"].metadata["gold_tree"] == gold_tree
+        assert fields["metadata"].metadata["tokens"] == tokens
 
         correct_spans_and_labels = {}
         ptb_reader._get_gold_spans(gold_tree, 0, correct_spans_and_labels)
@@ -72,18 +73,26 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
 
         assert spans == enumerate_spans(tokens)
 
-        gold_tree = Tree.fromstring("(VROOT(S(NP-SBJ(DT That))(VP(MD could)(VP(VB cost)(NP(PRP him))"
+        gold_tree = Tree.fromstring("(S(NP(DT That))(VP(MD could)(VP(VB cost)(NP(PRP him))"
                                     "(NP(DT the)(NN chance)(S(VP(TO to)(VP(VP(VB influence)(NP(DT the)"
                                     "(NN outcome)))(CC and)(VP(ADVP(RB perhaps))(VB join)(NP(DT the)"
-                                    "(VBG winning)(NN bidder)))))))))(. .)))")
+                                    "(VBG winning)(NN bidder)))))))))(. .))")
 
-        assert fields["gold_tree"].metadata == gold_tree
+        assert fields["metadata"].metadata["gold_tree"] == gold_tree
+        assert fields["metadata"].metadata["tokens"] == tokens
 
         correct_spans_and_labels = {}
         ptb_reader._get_gold_spans(gold_tree, 0, correct_spans_and_labels)
         for span, label in zip(spans, span_labels):
             if label != "NO-LABEL":
                 assert correct_spans_and_labels[span] == label
+
+    def test_strip_functional_tags(self):
+        ptb_reader = PennTreeBankConstituencySpanDatasetReader()
+        # Get gold spans should strip off all the functional tags.
+        tree = Tree.fromstring("(S (NP=PRP (D the) (N dog)) (VP-0 (V chased) (NP|FUN-TAGS (D the) (N cat))))")
+        ptb_reader._strip_functional_tags(tree)
+        assert tree == Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
 
     def test_get_gold_spans_correctly_extracts_spans(self):
         ptb_reader = PennTreeBankConstituencySpanDatasetReader()
@@ -95,3 +104,15 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
         assert spans == [((0, 0), 'D-POS'), ((1, 1), 'N-POS'), ((0, 1), 'NP'),
                          ((2, 2), 'V-POS'), ((3, 3), 'D-POS'), ((4, 4), 'N-POS'),
                          ((3, 4), 'NP'), ((2, 4), 'VP'), ((0, 4), 'S')]
+
+    def test_get_gold_spans_correctly_extracts_spans_with_nested_labels(self):
+        ptb_reader = PennTreeBankConstituencySpanDatasetReader()
+        # Here we have a sentence fragment which has the same span with nested S and VP labels.
+        # These should be concatenated into a single label by get_gold_spans.
+        tree = Tree.fromstring("(S (VP (V chased) (NP (D the) (N cat))))")
+        span_dict = {}
+        ptb_reader._get_gold_spans(tree, 0, span_dict)
+        spans = list(span_dict.items()) # pylint: disable=protected-access
+
+        assert spans == [((0, 0), 'V-POS'), ((1, 1), 'D-POS'), ((2, 2), 'N-POS'),
+                         ((1, 2), 'NP'), ((0, 2), 'S-VP')]

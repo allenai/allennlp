@@ -2,6 +2,9 @@
 import os
 
 from nltk import Tree
+import torch
+from torch.autograd import Variable
+
 
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.models.constituency_parser import SpanInformation
@@ -24,13 +27,22 @@ class SpanConstituencyParserTest(ModelTestCase):
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
 
+    def test_forward_can_handle_a_single_word_as_input(self):
+        # A very annoying edge case: the PTB has several single word sentences.
+        # when running with a batch size 1, we have to be very careful
+        # about how we .squeeze/.unsqueeze things to make sure it still runs.
+        text = {"tokens": Variable(torch.LongTensor([[1]]).long())}
+        spans = Variable(torch.LongTensor([[[0, 0]]]))
+        label = Variable(torch.LongTensor([[1]]))
+        self.model(text, spans, [{"tokens": ["hello"]}], label)
+
     def test_decode_runs(self):
         self.model.eval()
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
         assert set(decode_output_dict.keys()) == {'spans', 'class_probabilities', 'trees',
-                                                  'tokens', 'sentence_lengths', 'loss'}
+                                                  'tokens', 'num_spans', 'loss'}
         metrics = self.model.get_metrics(reset=True)
         metric_keys = set(metrics.keys())
         assert "evalb_precision" in metric_keys
@@ -54,6 +66,14 @@ class SpanConstituencyParserTest(ModelTestCase):
         sentence = ["the", "dog", "chased", "the", "cat"]
         tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
         correct_tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
+        assert tree == correct_tree
+
+    def test_construct_tree_from_spans_handles_nested_labels(self):
+        # The tree construction should split the "S-NP" into (S (NP ...)).
+        tree_spans = [((0, 1), 'D'), ((1, 2), 'N'), ((0, 2), 'S-NP')]
+        sentence = ["the", "dog"]
+        tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
+        correct_tree = Tree.fromstring("(S (NP (D the) (N dog)))")
         assert tree == correct_tree
 
     def test_tree_construction_with_too_few_spans_creates_trees_with_depth_one_word_nodes(self):

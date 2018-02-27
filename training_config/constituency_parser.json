@@ -16,6 +16,12 @@
             "trainable": true
           }
       },
+      "initializer": [
+        ["tag_projection_layer.*weight", {"type": "xavier_normal"}],
+        ["feedforward_layer.*weight", {"type": "xavier_normal"}],
+        ["encoder._module.weight_ih.*", {"type": "xavier_normal"}],
+        ["encoder._module.weight_hh.*", {"type": "orthogonal"}]
+      ],
       "encoder": {
         "type": "lstm",
         "input_size": 100,
@@ -36,17 +42,17 @@
         "input_dim": 500
       },
       "evalb_directory_path": "scripts/EVALB"
-    },      
+    },
     "iterator": {
       "type": "bucket",
       "sorting_keys": [["tokens", "num_tokens"]],
-      "batch_size" : 20
+      "batch_size" : 1
     },
     "trainer": {
       "num_epochs": 100,
       "grad_norm": 5.0,
       "patience": 20,
-      "cuda_device": -1,
+      "cuda_device": 0,
       "optimizer": {
         "type": "adadelta",
         "lr": 1.0,
@@ -54,4 +60,4 @@
       }
     }
   }
-  
+
