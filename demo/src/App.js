@@ -120,6 +120,7 @@ class Demo extends React.Component {
       }
       else if (selectedModel === "constituency-parsing") {
         return (<ConstituencyParserComponent requestData={requestData} responseData={responseData}/>)
+      }
       else if (selectedModel === "wikitables-parser") {
         return (<WikiTablesComponent requestData={requestData} responseData={responseData}/>)
       }
