@@ -189,13 +189,6 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
     gets loaded once.
     """
 
-    # Check if spacy models are available.  If not, install them.
-    try:
-        import en_core_web_sm
-    except ImportError:
-        logger.warning("Spacy models (en_core_web_sm) not found.  Downloading and installing.")
-        spacy_download("en_core_web_sm")
-
     options = (spacy_model_name, pos_tags, parse, ner)
     if options not in LOADED_SPACY_MODELS:
         disable = ['vectors', 'textcat']
@@ -205,7 +198,13 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
             disable.append('parser')
         if not ner:
             disable.append('ner')
-        spacy_model = spacy.load(spacy_model_name, disable=disable)
+        try:
+            spacy_model = spacy.load(spacy_model_name, disable=disable)
+        except OSError:
+            logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
+            spacy_download(spacy_model_name)
+            spacy_model = spacy.load(spacy_model_name, disable=disable)
+
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
 
