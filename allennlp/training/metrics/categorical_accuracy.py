@@ -56,7 +56,7 @@ class CategoricalAccuracy(Metric):
         correct = top_k.eq(gold_labels.long().unsqueeze(-1)).float()
 
         if mask is not None:
-            correct *= mask.unsqueeze(-1)
+            correct *= mask.float().unsqueeze(-1)
             self.total_count += mask.sum()
         else:
             self.total_count += gold_labels.numel()
