@@ -15,6 +15,7 @@ import sys
 import torch
 import numpy
 import spacy
+from spacy.cli.download import download_model as spacy_download
 from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
@@ -187,6 +188,14 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
     keyed by the options we used to create the spacy model, so any particular configuration only
     gets loaded once.
     """
+
+    # Check if spacy models are available.  If not, install them.
+    try:
+        import en_core_web_sm
+    except ImportError:
+        logger.warning("Spacy models (en_core_web_sm) not found.  Downloading and installing.")
+        spacy_download("en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz")
+
     options = (spacy_model_name, pos_tags, parse, ner)
     if options not in LOADED_SPACY_MODELS:
         disable = ['vectors', 'textcat']
