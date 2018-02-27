@@ -27,12 +27,15 @@ class WikiTablesParserPredictor(Predictor):
         super().__init__(model, dataset_reader)
         # Load auxiliary sempre files during startup for faster logical form execution.
         os.makedirs(SEMPRE_DIR, exist_ok=True)
-        if not os.path.exists(os.path.join(SEMPRE_DIR, 'abbreviations.tsv')):
+        abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
+        if not os.path.exists(abbreviations_path):
             run(f'wget {ABBREVIATIONS_FILE}', shell=True)
-            run(f'mv wikitables-abbreviations.tsv {SEMPRE_DIR}abbreviations.tsv', shell=True)
-        if not os.path.exists(os.path.join(SEMPRE_DIR, 'grow.grammar')):
+            run(f'mv wikitables-abbreviations.tsv {abbreviations_path}', shell=True)
+
+        grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
+        if not os.path.exists(grammar_path):
             run(f'wget {GROW_FILE}', shell=True)
-            run(f'mv wikitables-grow.grammar {SEMPRE_DIR}grow.grammar', shell=True)
+            run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
@@ -78,9 +81,9 @@ class WikiTablesParserPredictor(Predictor):
         with open(logical_form_filename, 'w') as temp_file:
             temp_file.write(logical_form + '\n')
 
-        table_dir = os.path.join(SEMPRE_DIR, 'csv/')
+        table_dir = os.path.join(SEMPRE_DIR, 'tsv/')
         os.makedirs(table_dir, exist_ok=True)
-        table_filename = 'context.csv'
+        table_filename = 'context.tsv'
         with open(os.path.join(table_dir, table_filename), 'w', encoding='utf-8') as temp_file:
             temp_file.write(table)
 
