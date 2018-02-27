@@ -14,7 +14,7 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_mask
-from allennlp.training.metrics import F1Measure
+from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.training.metrics import EvalbBracketingScorer
 
 
@@ -102,8 +102,7 @@ class SpanConstituencyParser(Model):
                                    "stacked encoder output dim",
                                    "feedforward input dim")
 
-        self.metrics = {label: F1Measure(index) for index, label
-                        in self.vocab.get_index_to_token_vocabulary("labels").items()}
+        self.tag_accuracy = CategoricalAccuracy()
 
         if evalb_directory_path is not None:
             self._evalb_score = EvalbBracketingScorer(evalb_directory_path)
@@ -187,8 +186,7 @@ class SpanConstituencyParser(Model):
         }
         if span_labels is not None:
             loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask)
-            for metric in self.metrics.values():
-                metric(logits, span_labels, span_mask)
+            self.tag_accuracy(class_probabilities, span_labels, span_mask)
             output_dict["loss"] = loss
 
         # The evalb score is expensive to compute, so we only compute
@@ -425,28 +423,10 @@ class SpanConstituencyParser(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         all_metrics = {}
-
-        total_f1 = 0.0
-        total_precision = 0.0
-        total_recall = 0.0
-        # We'll just capture the average f1, precision and recall
-        # because there are 27 constituent types, which makes
-        # for very verbose console output.
-        for metric in self.metrics.values():
-            f1, precision, recall = metric.get_metric(reset) # pylint: disable=invalid-name
-            total_f1 += f1
-            total_precision += precision
-            total_recall += recall
-
-        num_metrics = len(self.metrics)
-        all_metrics["average_f1"] = total_f1 / num_metrics
-        all_metrics["average_precision"] = total_precision / num_metrics
-        all_metrics["average_recall"] = total_recall / num_metrics
-
+        all_metrics["tag_accuracy"] = self.tag_accuracy.get_metric(reset=reset)
         if self._evalb_score is not None:
             evalb_metrics = self._evalb_score.get_metric(reset=reset)
             all_metrics.update(evalb_metrics)
-
         return all_metrics
 
     @classmethod

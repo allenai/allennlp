@@ -58,6 +58,10 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
 
         for parse in BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents():
             self._strip_functional_tags(parse)
+            # This is un-needed and clutters the label space.
+            # All the trees also contain a root S node.
+            if parse.label() == "VROOT":
+                parse = parse[0]
             pos_tags = [x[1] for x in parse.pos()] if self._use_pos_tags else None
             yield self.text_to_instance(parse.leaves(), pos_tags, parse)
 
