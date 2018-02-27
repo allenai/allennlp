@@ -22,9 +22,6 @@ nltk
 # Mainly used for the faster tokenizer.
 spacy>=2.0,<2.1
 
-# English models used by spacy.
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
-
 # Used by span prediction models.
 numpy
 
