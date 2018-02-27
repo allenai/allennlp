@@ -64,7 +64,7 @@ The baseline model uses a 200 dimensional input (100 dimensional GloVe embedding
 ELMo provides a 1024 dimension representation so the new `input_size` is 1224.
 
 ```json
-    "stacked_encoder": {
+    "encoder": {
       "type": "alternating_lstm",
       "input_size": 1224,
       "hidden_size": 300,
