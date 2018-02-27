@@ -45,14 +45,18 @@ class CategoricalAccuracy(Metric):
             raise ConfigurationError("A gold label passed to Categorical Accuracy contains an id >= {}, "
                                      "the number of classes.".format(num_classes))
 
-        # Top K indexes of the predictions (or fewer, if there aren't K of them)
-        top_k = predictions.topk(min(self._top_k, predictions.shape[-1]), -1)[1]
+        # Top K indexes of the predictions (or fewer, if there aren't K of them).
+        # Special case topk == 1, because it's common and .max() is much faster than .topk().
+        if self._top_k == 1:
+            top_k = predictions.max(-1)[1].unsqueeze(-1)
+        else:
+            top_k = predictions.topk(min(self._top_k, predictions.shape[-1]), -1)[1]
 
         # This is of shape (batch_size, ..., top_k).
         correct = top_k.eq(gold_labels.long().unsqueeze(-1)).float()
 
         if mask is not None:
-            correct *= mask.unsqueeze(-1)
+            correct *= mask.float().unsqueeze(-1)
             self.total_count += mask.sum()
         else:
             self.total_count += gold_labels.numel()
