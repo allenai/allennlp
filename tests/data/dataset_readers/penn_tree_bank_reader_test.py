@@ -37,7 +37,7 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
                             'NNS', 'IN', 'NN', 'TO', 'VB', 'JJ', 'TO', 'JJ', 'NNS', '.']
 
         assert spans == enumerate_spans(tokens)
-        gold_tree = Tree.fromstring("(VROOT(S(ADVP(RB Also))(, ,)(SBAR(IN because)"
+        gold_tree = Tree.fromstring("(S(ADVP(RB Also))(, ,)(SBAR(IN because)"
                                     "(S(NP(NP(NNP UAL)(NNP Chairman)(NNP Stephen)(NNP Wolf))"
                                     "(CC and)(NP(JJ other)(NNP UAL)(NNS executives)))(VP(VBP have)"
                                     "(VP(VBN joined)(NP(NP(DT the)(NNS pilots)(POS '))(NN bid))))))"
@@ -45,7 +45,7 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
                                     "forced)(S(VP(TO to)(VP(VB exclude)(NP(PRP him))(PP(IN from)"
                                     "(NP(PRP$ its)(NNS deliberations)))(SBAR(IN in)(NN order)(S("
                                     "VP(TO to)(VP(VB be)(ADJP(JJ fair)(PP(TO to)(NP(JJ other)(NNS "
-                                    "bidders))))))))))))))(. .)))")
+                                    "bidders))))))))))))))(. .))")
 
         assert fields["metadata"].metadata["gold_tree"] == gold_tree
         assert fields["metadata"].metadata["tokens"] == tokens
@@ -73,10 +73,10 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
 
         assert spans == enumerate_spans(tokens)
 
-        gold_tree = Tree.fromstring("(VROOT(S(NP(DT That))(VP(MD could)(VP(VB cost)(NP(PRP him))"
+        gold_tree = Tree.fromstring("(S(NP(DT That))(VP(MD could)(VP(VB cost)(NP(PRP him))"
                                     "(NP(DT the)(NN chance)(S(VP(TO to)(VP(VP(VB influence)(NP(DT the)"
                                     "(NN outcome)))(CC and)(VP(ADVP(RB perhaps))(VB join)(NP(DT the)"
-                                    "(VBG winning)(NN bidder)))))))))(. .)))")
+                                    "(VBG winning)(NN bidder)))))))))(. .))")
 
         assert fields["metadata"].metadata["gold_tree"] == gold_tree
         assert fields["metadata"].metadata["tokens"] == tokens
