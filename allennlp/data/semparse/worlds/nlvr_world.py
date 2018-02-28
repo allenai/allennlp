@@ -102,6 +102,10 @@ class NlvrWorld(World):
     """
     # pylint: disable=too-many-public-methods
 
+    # When we're converting from logical forms to action sequences, this set tells us which
+    # functions in the logical form are curried functions, and how many arguments the function
+    # actually takes.  This is necessary because NLTK curries all multi-argument functions to a
+    # series of one-argument function applications.  See `world._get_transitions` for more info.
     curried_functions = {
             types.BOX_COLOR_FILTER_TYPE: 2,
             types.BOX_SHAPE_FILTER_TYPE: 2,

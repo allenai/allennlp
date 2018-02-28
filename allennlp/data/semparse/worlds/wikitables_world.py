@@ -29,6 +29,10 @@ class WikiTablesWorld(World):
         of numbers that we consider to just the numbers that appear in the question, plus a few
         small numbers.
     """
+    # When we're converting from logical forms to action sequences, this set tells us which
+    # functions in the logical form are curried functions, and how many arguments the function
+    # actually takes.  This is necessary because NLTK curries all multi-argument functions to a
+    # series of one-argument function applications.  See `world._get_transitions` for more info.
     curried_functions = {
             types.ARG_EXTREME_TYPE: 4,
             types.CONJUNCTION_TYPE: 2,

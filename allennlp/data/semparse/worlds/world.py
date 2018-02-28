@@ -273,11 +273,9 @@ class World:
         # that's the application of the higher order function to that terminal. This works for most
         # cases, but there are a few edge cases where this breaks, particularly when there's a
         # lambda involved (happens only with "reverse" in LambdaDCS).  We have a hack to try to
-        # handle lambdas, but it doesn't always work.  TODO(mattg,pradeep): to make this logic more
-        # general and remove the need to special-case reverse, we need to fix some things in the
-        # type system.  In particular, we should remove currying in our action sequences.  If each
-        # production accurately reflected the number of arguments to a function, we could remove
-        # most of this logic.
+        # handle lambdas, but it doesn't always work.  TODO(mattg,pradeep): We have now removed
+        # currying from our action sequences, so it should be possible to simplify this logic and
+        # just use the bracketing defined by the action sequence itself.
         terminals = list(reversed(terminals))
         higher_order_functions = ['reverse', 'negate_filter']
         for i, (terminal, num_args) in enumerate(terminals):

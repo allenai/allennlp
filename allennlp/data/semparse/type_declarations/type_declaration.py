@@ -67,7 +67,7 @@ class ComplexType(NltkComplexType):
 class HigherOrderType(ComplexType):
     """
     A higher-order function is a ``ComplexType`` that returns functions.  We just override
-    ``return_type`` to make sure that the returned type is correct.
+    ``return_type`` and ``argument_types`` to make sure that these types are correct.
 
     Parameters
     ----------
@@ -382,7 +382,7 @@ class DynamicTypeLogicParser(LogicParser):
 def substitute_any_type(type_: Type, basic_types: Set[BasicType]) -> List[Type]:
     """
     Takes a type and a set of basic types, and substitutes all instances of ANY_TYPE with all
-    possible basic types, and returns a set with all possible combinations.  Note that this
+    possible basic types, and returns a list with all possible combinations.  Note that this
     substitution is unconstrained. That is, If you have a type with placeholders, <#1,#1> for
     example, this may substitute the placeholders with different basic types. In that case, you'd
     want to use ``_substitute_placeholder_type`` instead.
