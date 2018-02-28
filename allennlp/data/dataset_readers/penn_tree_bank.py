@@ -43,10 +43,12 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
+                 pos_tag_indexers: Dict[str, TokenIndexer] = None,
                  use_pos_tags: bool = True,
                  lazy: bool = False) -> None:
         super().__init__(lazy=lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._pos_tag_indexers = pos_tag_indexers or {'pos_tags': SingleIdTokenIndexer()}
         self._use_pos_tags = use_pos_tags
 
     @overrides
@@ -105,7 +107,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         fields: Dict[str, Field] = {"tokens": text_field}
 
         if self._use_pos_tags and pos_tags is not None:
-            pos_tag_field = SequenceLabelField(pos_tags, text_field, "pos_tags")
+            pos_tag_field = TextField([Token(x) for x in pos_tags], token_indexers=self._pos_tag_indexers)
             fields["pos_tags"] = pos_tag_field
         elif self._use_pos_tags:
             raise ConfigurationError("use_pos_tags was set to True but no gold pos"
@@ -132,6 +134,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         metadata = {"tokens": tokens}
         if gold_tree:
             metadata["gold_tree"] = gold_tree
+        if self._use_pos_tags:
+            metadata["pos_tags"] = pos_tags
 
         fields["metadata"] = MetadataField(metadata)
 

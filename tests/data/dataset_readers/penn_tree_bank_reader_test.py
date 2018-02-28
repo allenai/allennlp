@@ -22,7 +22,7 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
 
         fields = instances[0].fields
         tokens = [x.text for x in fields["tokens"].tokens]
-        pos_tags = fields["pos_tags"].labels
+        pos_tags = [x.text for x in fields["pos_tags"].tokens]
         spans = [(x.span_start, x.span_end) for x in fields["spans"].field_list]
         span_labels = fields["span_labels"].labels
 
@@ -59,7 +59,7 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
 
         fields = instances[1].fields
         tokens = [x.text for x in fields["tokens"].tokens]
-        pos_tags = fields["pos_tags"].labels
+        pos_tags = [x.text for x in fields["pos_tags"].tokens]
         spans = [(x.span_start, x.span_end) for x in fields["spans"].field_list]
         span_labels = fields["span_labels"].labels
 
