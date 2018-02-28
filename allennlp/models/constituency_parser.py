@@ -9,6 +9,7 @@ from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, FeedForward
+from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -16,7 +17,7 @@ from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_lo
 from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.training.metrics import EvalbBracketingScorer
-
+from allennlp.common.checks import ConfigurationError
 
 class SpanInformation(NamedTuple):
     """
@@ -74,6 +75,7 @@ class SpanConstituencyParser(Model):
                  span_extractor: SpanExtractor,
                  encoder: Seq2SeqEncoder,
                  feedforward_layer: FeedForward = None,
+                 pos_tag_embedding: Embedding = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
                  evalb_directory_path: str = None) -> None:
@@ -84,7 +86,7 @@ class SpanConstituencyParser(Model):
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.encoder = encoder
         self.feedforward_layer = TimeDistributed(feedforward_layer) if feedforward_layer else None
-
+        self.pos_tag_embedding = pos_tag_embedding if pos_tag_embedding else None
         if feedforward_layer is not None:
             output_dim = feedforward_layer.get_output_dim()
         else:
@@ -92,7 +94,10 @@ class SpanConstituencyParser(Model):
 
         self.tag_projection_layer = TimeDistributed(Linear(output_dim, self.num_classes))
 
-        check_dimensions_match(text_field_embedder.get_output_dim(),
+        representation_dim = text_field_embedder.get_output_dim()
+        if pos_tag_embedding is not None:
+            representation_dim += pos_tag_embedding.get_output_dim()
+        check_dimensions_match(representation_dim,
                                encoder.get_input_dim(),
                                "text field embedding dim",
                                "encoder input dim")
@@ -115,6 +120,7 @@ class SpanConstituencyParser(Model):
                 tokens: Dict[str, torch.LongTensor],
                 spans: torch.LongTensor,
                 metadata: List[Dict[str, Any]],
+                pos_tags: torch.LongTensor = None,
                 span_labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -159,6 +165,12 @@ class SpanConstituencyParser(Model):
             A scalar loss to be optimised.
         """
         embedded_text_input = self.text_field_embedder(tokens)
+        if pos_tags is not None and self.pos_tag_embedding is not None:
+            embedded_pos_tags = self.pos_tag_embedding(pos_tags)
+            embedded_text_input = torch.cat([embedded_text_input, embedded_pos_tags], -1)
+        elif self.pos_tag_embedding is not None:
+            raise ConfigurationError("Model uses a POS embedding, but no POS tags were passed.")
+
         mask = get_text_field_mask(tokens)
         # Looking at the span start index is enough to know if
         # this is padding or not. Shape: (batch_size, num_spans)
@@ -167,7 +179,7 @@ class SpanConstituencyParser(Model):
             # This happens if you use batch_size 1 and encounter
             # a length 1 sentence in PTB, which do exist. -.-
             span_mask = span_mask.unsqueeze(-1)
-        if span_labels.dim() == 1:
+        if span_labels is not None and span_labels.dim() == 1:
             span_labels = span_labels.unsqueeze(-1)
 
         num_spans = get_lengths_from_binary_sequence_mask(span_mask)
@@ -436,11 +448,17 @@ class SpanConstituencyParser(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         span_extractor = SpanExtractor.from_params(params.pop("span_extractor"))
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+
         feed_forward_params = params.pop("feedforward", None)
         if feed_forward_params is not None:
             feedforward_layer = FeedForward.from_params(feed_forward_params)
         else:
             feedforward_layer = None
+        pos_tag_embedding_params = params.pop("pos_tag_embedding", None)
+        if pos_tag_embedding_params is not None:
+            pos_tag_embedding = Embedding.from_params(Vocabulary(), pos_tag_embedding_params)
+        else:
+            pos_tag_embedding = None
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
         evalb_directory_path = params.pop("evalb_directory_path", None)
@@ -451,6 +469,7 @@ class SpanConstituencyParser(Model):
                    span_extractor=span_extractor,
                    encoder=encoder,
                    feedforward_layer=feedforward_layer,
+                   pos_tag_embedding=pos_tag_embedding,
                    initializer=initializer,
                    regularizer=regularizer,
                    evalb_directory_path=evalb_directory_path)

@@ -17,15 +17,17 @@ class ConstituencyParserPredictor(Predictor):
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordSplitter(language='en_core_web_sm')
+        self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         """
         Expects JSON that looks like ``{"sentence": "..."}``.
         """
-        sentence_text = [token.text for token in self._tokenizer.split_words(json_dict["sentence"])]
-        return self._dataset_reader.text_to_instance(sentence_text), {}
+        spacy_tokens = self._tokenizer.split_words(json_dict["sentence"])
+        sentence_text = [token.text for token in spacy_tokens]
+        pos_tags = [token.pos for token in spacy_tokens]
+        return self._dataset_reader.text_to_instance(sentence_text, pos_tags), {}
 
     @overrides
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
