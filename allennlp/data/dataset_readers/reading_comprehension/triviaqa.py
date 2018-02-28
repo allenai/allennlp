@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 _PARAGRAPH_TOKEN = Token("@@PARAGRAPH@@")
 
-NUM_QUESTIONS = 1_000_000
+NUM_QUESTIONS = 1_000
 
 class MergedParagraphs(NamedTuple):
     texts: List[str]
@@ -182,7 +182,7 @@ class TriviaQaReader(DatasetReader):
 
             evidence_files = [result['Filename'] for result in question_json[result_key]]
 
-            if question_id in self._merged_paragraphs:
+            if False: #question_id in self._merged_paragraphs:
                 all_merged_paragraphs = self._merged_paragraphs[question_id]
             else:
                 all_merged_paragraphs = []
@@ -199,7 +199,7 @@ class TriviaQaReader(DatasetReader):
                         # TODO(joelgrus) what here
                         pass
 
-                self._merged_paragraphs[question_id] = all_merged_paragraphs
+                # self._merged_paragraphs[question_id] = all_merged_paragraphs
 
             for merged_paragraphs in all_merged_paragraphs:
                 # Pick paragraphs

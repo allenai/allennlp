@@ -457,7 +457,6 @@ class Trainer:
             else:
                 self._optimizer.step()
 
-            logger.info("metrics")
             # Update the description with the latest metrics
             metrics = self._get_metrics(train_loss, batch_num)
             description = self._description_from_metrics(metrics)
