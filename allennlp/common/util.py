@@ -49,7 +49,7 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, (list, tuple)):
         # Lists and Tuples need their values sanitized
         return [sanitize(x_i) for x_i in x]
-    elif isinstance(x, type(None)):
+    elif x is None:
         return "None"
     else:
         raise ValueError("cannot sanitize {} of type {}".format(x, type(x)))

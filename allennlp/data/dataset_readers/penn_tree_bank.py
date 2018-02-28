@@ -89,7 +89,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         An ``Instance`` containing the following fields:
             tokens : ``TextField``
                 The tokens in the sentence.
-            pos_tags : ``TextField``
+            pos_tags : ``SequenceLabelField``
                 The POS tags of the words in the sentence.
                 Only returned if ``use_pos_tags`` is ``True``
             spans : ``ListField[SpanField]``
@@ -107,7 +107,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         fields: Dict[str, Field] = {"tokens": text_field}
 
         if self._use_pos_tags and pos_tags is not None:
-            pos_tag_field = TextField([Token(x) for x in pos_tags], token_indexers=self._pos_tag_indexers)
+            pos_tag_field = SequenceLabelField(pos_tags, text_field, label_namespace="pos_tags")
             fields["pos_tags"] = pos_tag_field
         elif self._use_pos_tags:
             raise ConfigurationError("use_pos_tags was set to True but no gold pos"
