@@ -88,7 +88,7 @@ if torch.cuda.is_available():
         # TODO(Mark): Remove this once we have a CPU wrapper for the kernel/switch to ATen.
         from allennlp.modules.alternating_highway_lstm import AlternatingHighwayLSTM
         Seq2SeqEncoder.register("alternating_highway_lstm_cuda")(_Seq2SeqWrapper(AlternatingHighwayLSTM))
-    except (ModuleNotFoundError, FileNotFoundError):
+    except (ModuleNotFoundError, FileNotFoundError, ImportError):
         logger.debug("allennlp could not register 'alternating_highway_lstm_cuda' - installation "
                      "needs to be completed manually if you have pip-installed the package. "
                      "Run ``bash make.sh`` in the 'custom_extensions' module on a machine with a "
