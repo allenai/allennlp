@@ -36,6 +36,36 @@ class NlvrSemanticParser(Model):
     The main differences between this parser and what we have for Wikitables are that we have an
     agenda of actions instead of complete target action sequences, and accordingly the score in this
     parser is based on how many of the agenda actions are covered.
+
+    Parameters
+    ----------
+    vocab : ``Vocabulary``
+    sentence_embedder : ``TextFieldEmbedder``
+        Embedder for sentences.
+    nonterminal_embedder : ``TextFieldEmbedder``
+        We will embed nonterminals in the grammar using this embedder.  These aren't
+        ``TextFields``, but they are structured the same way.
+    terminal_embedder : ``TextFieldEmbedder``
+        We will embed terminals in the grammar using this embedder.  These aren't ``TextFields``,
+        but they are structured the same way.
+    encoder : ``Seq2SeqEncoder``
+        The encoder to use for the input question.
+    decoder_trainer : ``DecoderTrainer``
+        The structured learning algorithm used to train the decoder (which also trains the encoder,
+        but it's applied to the decoder outputs).
+    max_decoding_steps : ``int``
+        Maximum number of decoding steps used for training.
+    attention_function : ``SimilarityFunction``
+        We compute an attention over the input question at each step of the decoder, using the
+        decoder hidden state as the query.  This is the similarity function we use for that
+        attention.
+    checklist_selection_weight : ``float``
+        The mixture weight for combining model probabilities for all actions and probabilities for
+        those in agenda based on how much they contribute to the checklist.
+    checklist_cost_weight : ``float``
+        Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
+        weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
+        denotation accuracy.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -983,8 +1013,9 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 # all 0s.
                 checklist_mask = (instance_agenda == action).float()  # (agenda_size,)
                 agenda_action_prob = torch.sum(checklist_mask * agenda_action_probs)  # (1,)
-                # TODO (pradeep): Learn instance specific checklist weights, and properly combine
-                # these probabilities.
+                # TODO (pradeep): This is not a great way to bias the model towards choosing actions
+                # that fill the checklist. May be use the current checklist in the action logit
+                # computation itself.
                 action_prob = checklist_weight * agenda_action_prob + \
                               (1 - checklist_weight) * action_prob
                 # We're adding 1.0 at the corresponding agenda index.
