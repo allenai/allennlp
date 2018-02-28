@@ -83,6 +83,9 @@ class WikiTablesParserPredictor(Predictor):
 
         table_dir = os.path.join(SEMPRE_DIR, 'tsv/')
         os.makedirs(table_dir, exist_ok=True)
+        # The .tsv file extension is important here since the table string parameter is in tsv format.
+        # If this file was named with suffix .csv then Sempre would interpret it as comma separated
+        # and return the wrong denotation.
         table_filename = 'context.tsv'
         with open(os.path.join(table_dir, table_filename), 'w', encoding='utf-8') as temp_file:
             temp_file.write(table)
