@@ -89,7 +89,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         An ``Instance`` containing the following fields:
             tokens : ``TextField``
                 The tokens in the sentence.
-            pos_tags : ``SequenceLabelField``
+            pos_tags : ``TextField``
                 The POS tags of the words in the sentence.
                 Only returned if ``use_pos_tags`` is ``True``
             spans : ``ListField[SpanField]``
