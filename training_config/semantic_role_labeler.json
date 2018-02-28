@@ -20,7 +20,7 @@
         }
       ]
     ],
-    "stacked_encoder": {
+    "encoder": {
       "type": "alternating_lstm",
       "input_size": 200,
       "hidden_size": 300,
