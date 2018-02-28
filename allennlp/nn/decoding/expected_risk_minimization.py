@@ -46,8 +46,7 @@ class ExpectedRiskMinimization(DecoderTrainer):
 
             states = self._prune_beam(next_states)
             num_steps += 1
-
-        loss = 0
+        loss = 0.0
         finished_model_scores = self._get_model_scores_by_batch(finished_states)
         finished_costs = self._get_costs_by_batch(finished_states)
         for index in finished_model_scores:
@@ -79,9 +78,11 @@ class ExpectedRiskMinimization(DecoderTrainer):
     def _get_costs_by_batch(states: List[DecoderState]) -> Dict[int, List[Variable]]:
         batch_costs: Dict[int, List[Variable]] = defaultdict(list)
         for state in states:
-            costs = state.get_costs()
-            for batch_index, cost in zip(state.batch_indices, costs):
-                batch_costs[batch_index].append(cost)
+            cost = state.get_cost()
+            # Since this is a finished state, its group size is 1, and we just take the only batch
+            # index.
+            batch_index = state.batch_indices[0]
+            batch_costs[batch_index].append(cost)
         return batch_costs
 
     @staticmethod

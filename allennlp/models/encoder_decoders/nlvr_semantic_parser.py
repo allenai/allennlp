@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from overrides import overrides
 
+import numpy
 import torch
 from torch.autograd import Variable
 from torch.nn.modules.rnn import LSTMCell
@@ -112,6 +113,7 @@ class NlvrSemanticParser(Model):
         # Get a mapping from production rules to global action ids.
         agenda_mask = agenda != -1
         agenda_mask = agenda_mask.long()
+        # TODO (pradeep): Use an unindexed field for labels?
         labels_data = label.data.cpu()
         label_strings = [self.vocab.get_token_from_index(int(label_data), "denotations") for
                          label_data in labels_data]
@@ -522,26 +524,33 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         self.worlds = worlds
         self.label_strings = label_strings
 
-    def get_valid_actions(self) -> List[List[int]]:
+    def get_valid_actions(self, shuffle: bool = True) -> List[List[int]]:
         """
         This method is identical to ``WikiTablesDecoderState.get_valid_actions``.
         Returns a list of valid actions for each element of the group.
         """
-        return [state.get_valid_actions() for state in self.grammar_state]
+        valid_actions = [state.get_valid_actions() for state in self.grammar_state]
+        if shuffle:
+            for actions in valid_actions:
+                # In-place shuffle
+                numpy.random.shuffle(actions)
+        return valid_actions
 
-    def denotation_is_correct(self) -> List[bool]:
+    def denotation_is_correct(self) -> bool:
         """
-        Returns whether each action history in the group evaluates to the correct denotation. Only
+        Returns whether action history in the state evaluates to the correct denotation. Only
         defined when the state is finished.
         """
-        is_correct: List[bool] = []
-        for history, world, label_string in zip(self.action_history,
-                                                self.worlds,
-                                                self.label_strings):
-            action_sequence = [self._get_action_string(action) for action in history]
-            logical_form = world.get_logical_form(action_sequence)
-            denotation = world.execute(logical_form)
-            is_correct.append(str(denotation).lower() == label_string.lower())
+        assert self.is_finished(), "Cannot compute denotions for unfinished states!"
+        # Since this is a finished state, its group size must be 1.
+        batch_index = self.batch_indices[0]
+        world = self.worlds[batch_index]
+        label_string = self.label_strings[batch_index]
+        history = self.action_history[0]
+        action_sequence = [self._get_action_string(action) for action in history]
+        logical_form = world.get_logical_form(action_sequence)
+        denotation = world.execute(logical_form)
+        is_correct = str(denotation).lower() == label_string.lower()
         return is_correct
 
     def get_state_info(self) -> Dict[str, List]:
@@ -549,7 +558,10 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         This method is here for debugging purposes, in case you want to look at the what the model
         is learning. It may be inefficient to call it while training the model on real data.
         """
-        costs = [float(cost.data.cpu().numpy()) for cost in self.get_costs()]
+        if len(self.batch_indices) == 1 and self.is_finished():
+            costs = [float(self.get_cost().data.cpu().numpy())]
+        else:
+            costs = []
         model_scores = [float(score.data.cpu().numpy()) for score in self.score]
         action_sequences = [[self._get_action_string(action) for action in history]
                             for history in self.action_history]
@@ -595,28 +607,25 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                                                                (checklist_balance != 0).float())))
         return agenda_probs
 
-    def get_costs(self) -> List[Variable]:
+    def get_cost(self) -> Variable:
         """
-        Returns the costs all the instances in the group. Defined only for finished states.
+        Return the costs a finished state. Since it is a finished state, the group size will be 1,
+        and hence we'll return just one cost.
         """
         if not self.is_finished():
             raise RuntimeError("get_costs() is not defined for unfinished states!")
-        denotations_are_correct = self.denotation_is_correct()
-        costs: List[Variable] = []
-        for instance_agenda_mask, instance_checklist, is_correct in zip(self.agenda_mask,
-                                                                        self.checklist,
-                                                                        denotations_are_correct):
-            checklist_cost = - self.score_single_checklist(instance_checklist, instance_agenda_mask)
-            # This is the number of items on the agenda, and is the upper limit on the checklist cost
-            # for this instance. We use this as the denotation cost if the path is incorrect.
-            max_checklist_cost = torch.sum(instance_agenda_mask.float())
-            checklist_cost = self.checklist_cost_weight * checklist_cost
-            if is_correct:
-                cost = checklist_cost
-            else:
-                cost = checklist_cost + (1 - self.checklist_cost_weight) * max_checklist_cost
-            costs.append(cost)
-        return costs
+        instance_agenda_mask = self.agenda_mask[0]
+        instance_checklist = self.checklist[0]
+        checklist_cost = - self.score_single_checklist(instance_checklist, instance_agenda_mask)
+        # This is the number of items on the agenda, and is the upper limit on the checklist cost
+        # for this instance. We use this as the denotation cost if the path is incorrect.
+        max_checklist_cost = torch.sum(instance_agenda_mask.float())
+        checklist_cost = self.checklist_cost_weight * checklist_cost
+        if self.denotation_is_correct():
+            cost = checklist_cost
+        else:
+            cost = checklist_cost + (1 - self.checklist_cost_weight) * max_checklist_cost
+        return cost
 
     @classmethod
     def score_single_checklist(cls,
