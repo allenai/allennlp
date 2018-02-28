@@ -54,10 +54,10 @@ class DecoderState(Generic[T]):
         self.action_history = action_history
         self.score = score
 
-    def get_costs(self) -> List[Variable]:
+    def get_cost(self) -> Variable:
         """
-        Returns costs associated with this ``DecoderState`` if the training algorithm used calls for
-        it.
+        Returns cost associated with a finished ``DecoderState`` if the training algorithm used
+        calls for it.
         """
         raise NotImplementedError
 
