@@ -9,6 +9,7 @@ from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, FeedForward
+from allennlp.modules.token_embedders import Embedding
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -16,7 +17,7 @@ from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_lo
 from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.training.metrics import EvalbBracketingScorer
-
+from allennlp.common.checks import ConfigurationError
 
 class SpanInformation(NamedTuple):
     """
@@ -63,6 +64,8 @@ class SpanConstituencyParser(Model):
     feedforward_layer : ``FeedForward``, required.
         The FeedForward layer that we will use in between the encoder and the linear
         projection to a distribution over span labels.
+    pos_tag_embedding : ``Embedding``, optional.
+        Used to embed the ``pos_tags`` ``SequenceLabelField`` we get as input to the model.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -74,6 +77,7 @@ class SpanConstituencyParser(Model):
                  span_extractor: SpanExtractor,
                  encoder: Seq2SeqEncoder,
                  feedforward_layer: FeedForward = None,
+                 pos_tag_embedding: Embedding = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
                  evalb_directory_path: str = None) -> None:
@@ -84,7 +88,7 @@ class SpanConstituencyParser(Model):
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.encoder = encoder
         self.feedforward_layer = TimeDistributed(feedforward_layer) if feedforward_layer else None
-
+        self.pos_tag_embedding = pos_tag_embedding or None
         if feedforward_layer is not None:
             output_dim = feedforward_layer.get_output_dim()
         else:
@@ -92,9 +96,12 @@ class SpanConstituencyParser(Model):
 
         self.tag_projection_layer = TimeDistributed(Linear(output_dim, self.num_classes))
 
-        check_dimensions_match(text_field_embedder.get_output_dim(),
+        representation_dim = text_field_embedder.get_output_dim()
+        if pos_tag_embedding is not None:
+            representation_dim += pos_tag_embedding.get_output_dim()
+        check_dimensions_match(representation_dim,
                                encoder.get_input_dim(),
-                               "text field embedding dim",
+                               "representation dim (tokens + optional POS tags)",
                                "encoder input dim")
         if feedforward_layer is not None:
             check_dimensions_match(encoder.get_output_dim(),
@@ -115,6 +122,7 @@ class SpanConstituencyParser(Model):
                 tokens: Dict[str, torch.LongTensor],
                 spans: torch.LongTensor,
                 metadata: List[Dict[str, Any]],
+                pos_tags: Dict[str, torch.LongTensor] = None,
                 span_labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -132,15 +140,21 @@ class SpanConstituencyParser(Model):
         spans : ``torch.LongTensor``, required.
             A tensor of shape ``(batch_size, num_spans, 2)`` representing the
             inclusive start and end indices of all possible spans in the sentence.
-        span_labels : ``torch.LongTensor``, optional (default = None)
-            A torch tensor representing the integer gold class labels for all possible
-            spans, of shape ``(batch_size, num_spans)``.
         metadata : List[Dict[str, Any]], required.
             A dictionary of metadata for each batch element which has keys:
                 tokens : ``List[str]``, required.
                     The original string tokens in the sentence.
                 gold_tree : ``nltk.Tree``, optional (default = None)
                     Gold NLTK trees for use in evaluation.
+                pos_tags : ``List[str]``, optional.
+                    The POS tags for the sentence. These can be used in the
+                    model as embedded features, but they are passed here
+                    in addition for use in constructing the tree.
+        pos_tags : ``torch.LongTensor``, optional (default = None)
+            The output of a ``SequenceLabelField`` containing POS tags.
+        span_labels : ``torch.LongTensor``, optional (default = None)
+            A torch tensor representing the integer gold class labels for all possible
+            spans, of shape ``(batch_size, num_spans)``.
 
         Returns
         -------
@@ -152,14 +166,21 @@ class SpanConstituencyParser(Model):
             The original spans tensor.
         tokens : ``List[List[str]]``, required.
             A list of tokens in the sentence for each element in the batch.
+        pos_tags : ``List[List[str]]``, required.
+            A list of POS tags in the sentence for each element in the batch.
         num_spans : ``torch.LongTensor``, required.
             A tensor of shape (batch_size), representing the lengths of non-padded spans
             in ``enumerated_spans``.
         loss : ``torch.FloatTensor``, optional
             A scalar loss to be optimised.
         """
-
         embedded_text_input = self.text_field_embedder(tokens)
+        if pos_tags is not None and self.pos_tag_embedding is not None:
+            embedded_pos_tags = self.pos_tag_embedding(pos_tags)
+            embedded_text_input = torch.cat([embedded_text_input, embedded_pos_tags], -1)
+        elif self.pos_tag_embedding is not None:
+            raise ConfigurationError("Model uses a POS embedding, but no POS tags were passed.")
+
         mask = get_text_field_mask(tokens)
         # Looking at the span start index is enough to know if
         # this is padding or not. Shape: (batch_size, num_spans)
@@ -168,6 +189,8 @@ class SpanConstituencyParser(Model):
             # This happens if you use batch_size 1 and encounter
             # a length 1 sentence in PTB, which do exist. -.-
             span_mask = span_mask.unsqueeze(-1)
+        if span_labels is not None and span_labels.dim() == 1:
+            span_labels = span_labels.unsqueeze(-1)
 
         num_spans = get_lengths_from_binary_sequence_mask(span_mask)
 
@@ -182,6 +205,7 @@ class SpanConstituencyParser(Model):
                 "class_probabilities": class_probabilities,
                 "spans": spans,
                 "tokens": [meta["tokens"] for meta in metadata],
+                "pos_tags": [meta.get("pos_tags") for meta in metadata],
                 "num_spans": num_spans
         }
         if span_labels is not None:
@@ -193,7 +217,6 @@ class SpanConstituencyParser(Model):
         # it for the validation and test sets.
         batch_gold_trees = [meta.get("gold_tree") for meta in metadata]
         if all(batch_gold_trees) and self._evalb_score is not None and not self.training:
-            # TODO(Mark): Predict POS and use here instead of using the gold ones.
             gold_pos_tags: List[List[str]] = [list(zip(*tree.pos()))[1]
                                               for tree in batch_gold_trees]
             predicted_trees = self.construct_trees(class_probabilities.cpu().data,
@@ -220,8 +243,9 @@ class SpanConstituencyParser(Model):
         all_spans = output_dict["spans"].cpu().data
 
         all_sentences = output_dict["tokens"]
+        all_pos_tags = output_dict["pos_tags"] if all(output_dict["pos_tags"]) else None
         num_spans = output_dict["num_spans"].data
-        trees = self.construct_trees(all_predictions, all_spans, num_spans, all_sentences)
+        trees = self.construct_trees(all_predictions, all_spans, num_spans, all_sentences, all_pos_tags)
 
         batch_size = all_predictions.size(0)
         output_dict["spans"] = [all_spans[i, :num_spans[i]] for i in range(batch_size)]
@@ -435,11 +459,17 @@ class SpanConstituencyParser(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         span_extractor = SpanExtractor.from_params(params.pop("span_extractor"))
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+
         feed_forward_params = params.pop("feedforward", None)
         if feed_forward_params is not None:
             feedforward_layer = FeedForward.from_params(feed_forward_params)
         else:
             feedforward_layer = None
+        pos_tag_embedding_params = params.pop("pos_tag_embedding", None)
+        if pos_tag_embedding_params is not None:
+            pos_tag_embedding = Embedding.from_params(vocab, pos_tag_embedding_params)
+        else:
+            pos_tag_embedding = None
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
         evalb_directory_path = params.pop("evalb_directory_path", None)
@@ -450,6 +480,7 @@ class SpanConstituencyParser(Model):
                    span_extractor=span_extractor,
                    encoder=encoder,
                    feedforward_layer=feedforward_layer,
+                   pos_tag_embedding=pos_tag_embedding,
                    initializer=initializer,
                    regularizer=regularizer,
                    evalb_directory_path=evalb_directory_path)
