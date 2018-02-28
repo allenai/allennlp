@@ -196,28 +196,35 @@ class NlvrWorld(World):
         elif sentence.startswith("there is a "):
             agenda.append(self.terminal_productions["object_exists"])
 
-        if "touch" in sentence:
-            if "top" in sentence:
-                agenda.append(self.terminal_productions["touch_top"])
-            elif "bottom" in sentence or "base" in sentence:
-                agenda.append(self.terminal_productions["touch_bottom"])
-            elif "corner" in sentence:
-                agenda.append(self.terminal_productions["touch_corner"])
-            elif "right" in sentence:
-                agenda.append(self.terminal_productions["touch_right"])
-            elif "left" in sentence:
-                agenda.append(self.terminal_productions["touch_left"])
-            elif "wall" in sentence or "edge" in sentence:
-                agenda.append(self.terminal_productions["touch_wall"])
+        if "<b,t> -> box_exists" not in agenda:
+            # These are object filters and do not apply if we have a box_exists at the top.
+            if "touch" in sentence:
+                if "top" in sentence:
+                    agenda.append(self.terminal_productions["touch_top"])
+                elif "bottom" in sentence or "base" in sentence:
+                    agenda.append(self.terminal_productions["touch_bottom"])
+                elif "corner" in sentence:
+                    agenda.append(self.terminal_productions["touch_corner"])
+                elif "right" in sentence:
+                    agenda.append(self.terminal_productions["touch_right"])
+                elif "left" in sentence:
+                    agenda.append(self.terminal_productions["touch_left"])
+                elif "wall" in sentence or "edge" in sentence:
+                    agenda.append(self.terminal_productions["touch_wall"])
+                else:
+                    agenda.append(self.terminal_productions["touch_object"])
             else:
-                agenda.append(self.terminal_productions["touch_object"])
-        else:
-            # The words "top" and "bottom" may be referring to top and bottom blocks in a tower.
-            if "top" in sentence:
-                agenda.append(self.terminal_productions["top"])
-            elif "bottom" in sentence or "base" in sentence:
-                agenda.append(self.terminal_productions["bottom"])
+                # The words "top" and "bottom" may be referring to top and bottom blocks in a tower.
+                if "top" in sentence:
+                    agenda.append(self.terminal_productions["top"])
+                elif "bottom" in sentence or "base" in sentence:
+                    agenda.append(self.terminal_productions["bottom"])
 
+            if " not " in sentence:
+                agenda.append(self.terminal_productions["negate_filter"])
+
+        if " contains " in sentence or " has " in sentence:
+            agenda.append(self.terminal_productions["all_boxes"])
         # This takes care of shapes, colors, top, bottom, big, small etc.
         for constant, production in self.terminal_productions.items():
             # TODO(pradeep): Deal with constant names with underscores.
@@ -225,11 +232,15 @@ class NlvrWorld(World):
                 # We already dealt with top, bottom, touch_top and touch_bottom above.
                 continue
             if constant in sentence:
-                agenda.append(production)
-        if " not " in sentence:
-            agenda.append(self.terminal_productions["negate_filter"])
-        if " contains " in sentence or " has " in sentence:
-            agenda.append(self.terminal_productions["all_boxes"])
+                if "<o,o> ->" in production and "<b,t> -> box_exists" in agenda:
+                    if constant in ["square", "circle", "triangle"]:
+                        agenda.append(self.terminal_productions[f"shape_{constant}"])
+                    elif constant in ["yellow", "blue", "black"]:
+                        agenda.append(self.terminal_productions[f"color_{constant}"])
+                    else:
+                        continue
+                else:
+                    agenda.append(production)
         # TODO (pradeep): Rules for "member_*" productions ("tower" or "box" followed by a color,
         # shape or number...)
         number_productions = self._get_number_productions(sentence)
