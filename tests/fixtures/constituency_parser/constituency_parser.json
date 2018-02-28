@@ -15,7 +15,7 @@
         }
       },
       "pos_tag_embedding": {
-          "vocab_namespace": "pos_tags",
+          "vocab_namespace": "pos",
           "embedding_dim": 2,
           "trainable": true
       },
@@ -24,7 +24,7 @@
         "input_size": 4,
         "hidden_size": 4,
         "num_layers": 1
-      },    
+      },
       "feedforward": {
         "input_dim": 4,
         "num_layers": 1,
@@ -36,7 +36,7 @@
         "input_dim": 4
       },
       "evalb_directory_path": "scripts/EVALB"
-    },      
+    },
 
     "iterator": {
       "type": "bucket",
@@ -56,4 +56,4 @@
       }
     }
   }
-  
+
