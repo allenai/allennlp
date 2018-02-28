@@ -21,6 +21,50 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
                       [{"y_loc": 60, "size": 10, "type": "triangle", "x_loc": 12, "color": "#0099ff"}]]
         self.custom_world = NlvrWorld(custom_rep)
 
+    def test_get_action_sequence_removes_currying_for_all_nlvr_functions(self):
+        world = self.worlds[0]
+        # box_color_filter
+        logical_form = "(member_color_all_equals all_boxes color_blue)"
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        action_sequence = world.get_action_sequence(parsed_logical_form)
+        assert 'b -> [<b,<c,b>>, b, c]' in action_sequence
+
+        # box_shape_filter
+        logical_form = "(member_shape_all_equals all_boxes shape_square)"
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        action_sequence = world.get_action_sequence(parsed_logical_form)
+        assert 'b -> [<b,<s,b>>, b, s]' in action_sequence
+
+        # box_count_filter
+        logical_form = "(member_count_equals all_boxes 3)"
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        action_sequence = world.get_action_sequence(parsed_logical_form)
+        assert 'b -> [<b,<e,b>>, b, e]' in action_sequence
+
+        # assert_color
+        logical_form = "(object_color_all_equals all_objects color_blue)"
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        action_sequence = world.get_action_sequence(parsed_logical_form)
+        assert 't -> [<o,<c,t>>, o, c]' in action_sequence
+
+        # assert_shape
+        logical_form = "(object_shape_all_equals all_objects shape_square)"
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        action_sequence = world.get_action_sequence(parsed_logical_form)
+        assert 't -> [<o,<s,t>>, o, s]' in action_sequence
+
+        # assert_box_count
+        logical_form = "(box_count_equals all_boxes 1)"
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        action_sequence = world.get_action_sequence(parsed_logical_form)
+        assert 't -> [<b,<e,t>>, b, e]' in action_sequence
+
+        # assert_object_count
+        logical_form = "(object_count_equals all_objects 1)"
+        parsed_logical_form = world.parse_logical_form(logical_form)
+        action_sequence = world.get_action_sequence(parsed_logical_form)
+        assert 't -> [<o,<e,t>>, o, e]' in action_sequence
+
     def test_logical_form_with_assert_executes_correctly(self):
         nlvr_world = self.worlds[0]
         # Utterance is "There is a circle closely touching a corner of a box." and label is "True".
@@ -79,7 +123,7 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         logical_form = "(object_color_all_equals (circle (touch_wall (all_objects))) color_black)"
         expression = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(expression)
-        assert action_sequence == ['@START@ -> t', 't -> [<c,t>, c]', '<c,t> -> [<o,<c,t>>, o]',
+        assert action_sequence == ['@START@ -> t', 't -> [<o,<c,t>>, o, c]',
                                    '<o,<c,t>> -> object_color_all_equals', 'o -> [<o,o>, o]',
                                    '<o,o> -> circle', 'o -> [<o,o>, o]', '<o,o> -> touch_wall',
                                    'o -> all_objects', 'c -> color_black']
@@ -90,9 +134,8 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         expression = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(expression)
         assert action_sequence == ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists',
-                                   'b -> [<c,b>, c]', '<c,b> -> [<b,<c,b>>, b]',
-                                   '<b,<c,b>> -> member_color_none_equals', 'b -> all_boxes',
-                                   'c -> color_blue']
+                                   'b -> [<b,<c,b>>, b, c]', '<b,<c,b>> -> member_color_none_equals',
+                                   'b -> all_boxes', 'c -> color_blue']
 
     def test_spatial_relations_return_objects_in_the_same_box(self):
         # "above", "below", "top", "bottom" are relations defined only for objects within the same

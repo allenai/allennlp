@@ -13,6 +13,7 @@ from allennlp.data import Instance
 
 def main(params: Params, outdir: str):
     os.makedirs(outdir, exist_ok=True)
+    params['dataset_reader']['include_table_metadata'] = True
     all_datasets = datasets_from_params(params)
     for name, dataset in all_datasets.items():
         with open(outdir + name + '.jsonl', 'w') as outfile:
