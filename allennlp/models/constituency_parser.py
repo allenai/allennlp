@@ -158,7 +158,6 @@ class SpanConstituencyParser(Model):
         loss : ``torch.FloatTensor``, optional
             A scalar loss to be optimised.
         """
-
         embedded_text_input = self.text_field_embedder(tokens)
         mask = get_text_field_mask(tokens)
         # Looking at the span start index is enough to know if
@@ -168,6 +167,8 @@ class SpanConstituencyParser(Model):
             # This happens if you use batch_size 1 and encounter
             # a length 1 sentence in PTB, which do exist. -.-
             span_mask = span_mask.unsqueeze(-1)
+        if span_labels.dim() == 1:
+            span_labels = span_labels.unsqueeze(-1)
 
         num_spans = get_lengths_from_binary_sequence_mask(span_mask)
 
