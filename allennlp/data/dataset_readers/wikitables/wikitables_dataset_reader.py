@@ -16,7 +16,7 @@ from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListFie
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
 from allennlp.data.instance import Instance
 from allennlp.data.semparse import ParsingError
-from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
@@ -39,8 +39,8 @@ class WikiTablesDatasetReader(DatasetReader):
     We initialize the dataset reader with paths to the tables directory and the directory where DPD
     output is stored if you are training. While testing, you can either provide existing table
     filenames or if your question is about a new table, provide the content of the table as a dict
-    (See :func:`TableKnowledgeGraph.read_from_json` for the expected format). If you are doing the
-    former, you still need to provide a ``tables_directory`` path here.
+    (See :func:`TableQuestionKnowledgeGraph.read_from_json` for the expected format). If you are
+    doing the former, you still need to provide a ``tables_directory`` path here.
 
     For training, we assume you are reading in ``data/*.examples`` files, and you have access to
     the output from Dynamic Programming on Denotations (DPD) on the training dataset.
@@ -212,7 +212,7 @@ class WikiTablesDatasetReader(DatasetReader):
         files, which we use for training. For running a demo, we may want to provide tables in a
         JSON format. To make this method compatible with both, we take ``table_info``, which can
         either be a filename, or a dict. We check the argument's type and call the appropriate
-        method in ``TableKnowledgeGraph``.
+        method in ``TableQuestionKnowledgeGraph``.
 
         Parameters
         ----------
@@ -220,7 +220,7 @@ class WikiTablesDatasetReader(DatasetReader):
             Input question
         table_info : ``str`` or ``JsonDict``
             Table filename or the table content itself, as a dict. See
-            ``TableKnowledgeGraph.read_from_json`` for the expected format.
+            ``TableQuestionKnowledgeGraph.read_from_json`` for the expected format.
         dpd_output : List[str], optional
             List of logical forms, produced by dynamic programming on denotations. Not required
             during test.
@@ -233,10 +233,11 @@ class WikiTablesDatasetReader(DatasetReader):
         tokenized_question = tokenized_question or self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
         if isinstance(table_info, str):
-            table_knowledge_graph = TableKnowledgeGraph.read_from_file(table_info)
+            table_knowledge_graph = TableQuestionKnowledgeGraph.read_from_file(table_info,
+                                                                               tokenized_question)
             table_metadata = MetadataField(open(table_info).readlines())
         else:
-            table_knowledge_graph = TableKnowledgeGraph.read_from_json(table_info)
+            table_knowledge_graph = TableQuestionKnowledgeGraph.read_from_json(table_info)
             table_metadata = MetadataField(table_info)
         table_field = KnowledgeGraphField(table_knowledge_graph,
                                           tokenized_question,
@@ -244,7 +245,7 @@ class WikiTablesDatasetReader(DatasetReader):
                                           tokenizer=self._tokenizer,
                                           feature_extractors=self._linking_feature_extractors,
                                           include_in_vocab=self._use_table_for_vocab)
-        world = WikiTablesWorld(table_knowledge_graph, tokenized_question)
+        world = WikiTablesWorld(table_knowledge_graph)
         world_field = MetadataField(world)
 
         production_rule_fields: List[Field] = []

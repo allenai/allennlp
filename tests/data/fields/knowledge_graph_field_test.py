@@ -8,7 +8,7 @@ import torch
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.fields import KnowledgeGraphField
-from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
@@ -16,12 +16,17 @@ from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
 class KnowledgeGraphFieldTest(AllenNlpTestCase):
     def setUp(self):
+        self.tokenizer = WordTokenizer(SpacyWordSplitter(pos_tags=True))
+        self.utterance = self.tokenizer.tokenize("where is mersin?")
+        self.token_indexers = {"tokens": SingleIdTokenIndexer("tokens")}
+
         json = {
+                'question': self.utterance,
                 'columns': ['Name in English', 'Location in English'],
                 'cells': [['Paradeniz', 'Mersin'],
                           ['Lake Gala', 'Edirne']]
                 }
-        self.graph = TableKnowledgeGraph.read_from_json(json)
+        self.graph = TableQuestionKnowledgeGraph.read_from_json(json)
         self.vocab = Vocabulary()
         self.name_index = self.vocab.add_token_to_namespace("name", namespace='tokens')
         self.in_index = self.vocab.add_token_to_namespace("in", namespace='tokens')
@@ -34,10 +39,6 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
 
         self.oov_index = self.vocab.get_token_index('random OOV string', namespace='tokens')
         self.edirne_index = self.oov_index
-
-        self.tokenizer = WordTokenizer(SpacyWordSplitter(pos_tags=True))
-        self.utterance = self.tokenizer.tokenize("where is mersin?")
-        self.token_indexers = {"tokens": SingleIdTokenIndexer("tokens")}
         self.field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
 
         super(KnowledgeGraphFieldTest, self).setUp()

@@ -51,10 +51,10 @@ class WikiTablesParserPredictor(Predictor):
                 columns = line.split('\t')
             else:
                 cells.append(line.split('\t'))
-        table_json = {"columns": columns, "cells": cells}
         # pylint: disable=protected-access
         tokenized_question = self._dataset_reader._tokenizer.tokenize(question_text)  # type: ignore
         # pylint: enable=protected-access
+        table_json = {"question": tokenized_question, "columns": columns, "cells": cells}
         instance = self._dataset_reader.text_to_instance(question_text,  # type: ignore
                                                          table_json,
                                                          tokenized_question=tokenized_question)

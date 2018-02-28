@@ -259,6 +259,8 @@ class WikiTablesSemanticParser(Model):
                                                                      encoder_outputs,
                                                                      question_mask)
 
+        for action in actions[0]:
+            print(action['left'][:2], action['right'][:2])
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
 
         _, num_entities, num_question_tokens = linking_scores.size()
