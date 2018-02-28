@@ -97,13 +97,13 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
     def read_from_json(cls, json_object: Dict[str, Any]) -> 'TableQuestionKnowledgeGraph':
         """
         We read tables formatted as JSON objects (dicts) here. This is useful when you are reading
-        data from a demo. The expected format is:
+        data from a demo. The expected format is::
 
-        {"question": [token1, token2, ...],
-         "columns": [column1, column2, ...],
-         "cells": [[row1_cell1, row1_cell2, ...],
-                   [row2_cell1, row2_cell2, ...],
-                   ... ]}
+            {"question": [token1, token2, ...],
+             "columns": [column1, column2, ...],
+             "cells": [[row1_cell1, row1_cell2, ...],
+                       [row2_cell1, row2_cell2, ...],
+                       ... ]}
         """
         entity_text: Dict[str, str] = {}
         neighbors: DefaultDict[str, List[str]] = defaultdict(list)

@@ -11,7 +11,7 @@ allennlp.data.semparse.knowledge_graphs
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.data.semparse.knowledge_graphs.table_knowledge_graph
+.. automodule:: allennlp.data.semparse.knowledge_graphs.table_question_knowledge_graph
    :members:
    :undoc-members:
    :show-inheritance:
