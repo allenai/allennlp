@@ -3,7 +3,7 @@ from collections import defaultdict
 import logging
 import re
 
-from nltk.sem.logic import Expression, LambdaExpression, BasicType, Type
+from nltk.sem.logic import ApplicationExpression, Expression, LambdaExpression, BasicType, Type
 
 from allennlp.data.semparse.type_declarations import type_declaration as types
 from allennlp.data.semparse import util as semparse_util
@@ -156,6 +156,9 @@ class World:
                 all_actions.add(production)
         return sorted(all_actions)
 
+    def _get_curried_functions(self) -> Dict[str, int]:
+        raise NotImplementedError()
+
     def _get_right_side_indexed_actions(self):
         if not self._right_side_indexed_actions:
             self._right_side_indexed_actions = defaultdict(list)
@@ -270,11 +273,9 @@ class World:
         # that's the application of the higher order function to that terminal. This works for most
         # cases, but there are a few edge cases where this breaks, particularly when there's a
         # lambda involved (happens only with "reverse" in LambdaDCS).  We have a hack to try to
-        # handle lambdas, but it doesn't always work.  TODO(mattg,pradeep): to make this logic more
-        # general and remove the need to special-case reverse, we need to fix some things in the
-        # type system.  In particular, we should remove currying in our action sequences.  If each
-        # production accurately reflected the number of arguments to a function, we could remove
-        # most of this logic.
+        # handle lambdas, but it doesn't always work.  TODO(mattg,pradeep): We have now removed
+        # currying from our action sequences, so it should be possible to simplify this logic and
+        # just use the bracketing defined by the action sequence itself.
         terminals = list(reversed(terminals))
         higher_order_functions = ['reverse', 'negate_filter']
         for i, (terminal, num_args) in enumerate(terminals):
@@ -407,21 +408,55 @@ class World:
     def _get_transitions(self,
                          expression: Expression,
                          current_transitions: List[str]) -> List[str]:
+        # The way we handle curried functions in here is a bit of a mess, but it works.  For any
+        # function that takes more than one argument, the NLTK Expression object will be curried,
+        # and so the standard "visitor" pattern used by NLTK will result in action sequences that
+        # are also curried.  We need to detect these curried functions and uncurry them in the
+        # action sequence.  We do that by keeping around a dictionary mapping multi-argument
+        # functions to the number of arguments they take.  When we see a multi-argument function,
+        # we check to see if we're at the top-level, first instance of that function by checking
+        # its number of arguments with NLTK's `uncurry()` function.  If it is, we output an action
+        # using those arguments.  Otherwise, we're at an intermediate node of a curried function,
+        # and we squelch the action that would normally be generated.
+        # TODO(mattg): There might be some way of removing the need for `curried_functions` here,
+        # using instead the `argument_types()` function I added to `ComplexType`, but my guess is
+        # that it would involve needing to modify nltk, and I don't want to bother with figuring
+        # that out right now.
+        curried_functions = self._get_curried_functions()
         expression_type = expression.type
         try:
-            # ``Expression.visit()`` takes two arguments: the first one is a function applied on each
-            # sub-expression and the second is a combinator that is applied to the list of values returned
-            # from the function applications. We just want the list of all sub-expressions here.
+            # ``Expression.visit()`` takes two arguments: the first one is a function applied on
+            # each sub-expression and the second is a combinator that is applied to the list of
+            # values returned from the function applications. We just want the list of all
+            # sub-expressions here.
             sub_expressions = expression.visit(lambda x: x, lambda x: x)
             transformed_types = [sub_exp.type for sub_exp in sub_expressions]
+
             if isinstance(expression, LambdaExpression):
-                # If the expression is a lambda expression, the list of sub expressions does not include
-                # the "lambda x" term. We're adding it here so that we will see transitions like
+                # If the expression is a lambda expression, the list of sub expressions does not
+                # include the "lambda x" term. We're adding it here so that we will see transitions
+                # like
                 #   <e,d> -> [\x, d] instead of
                 #   <e,d> -> [d]
                 transformed_types = ["lambda x"] + transformed_types
-            current_transitions.append("%s -> %s" % (expression_type,
-                                                     str(transformed_types)))
+            elif isinstance(expression, ApplicationExpression):
+                function, arguments = expression.uncurry()
+                function_type = function.type
+                if function_type in curried_functions:
+                    expected_num_arguments = curried_functions[function_type]
+                    if len(arguments) == expected_num_arguments:
+                        # This is the initial application of a curried function.  We'll use this
+                        # node in the expression to generate the action for this function, using
+                        # all of its arguments.
+                        transformed_types = [function.type] + [argument.type for argument in arguments]
+                    else:
+                        # We're at an intermediate node.  We'll set `transformed_types` to `None`
+                        # to indicate that we need to squelch this action.
+                        transformed_types = None
+
+            if transformed_types:
+                transition = f"{expression_type} -> {transformed_types}"
+                current_transitions.append(transition)
             for sub_expression in sub_expressions:
                 self._get_transitions(sub_expression, current_transitions)
         except NotImplementedError:
@@ -429,7 +464,8 @@ class World:
             original_name = str(expression)
             if original_name in self.reverse_name_mapping:
                 original_name = self.reverse_name_mapping[original_name]
-            current_transitions.append("%s -> %s" % (expression_type, original_name))
+            transition = f"{expression_type} -> {original_name}"
+            current_transitions.append(transition)
         return current_transitions
 
     def __eq__(self, other):

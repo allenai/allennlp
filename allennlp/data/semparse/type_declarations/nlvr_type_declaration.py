@@ -1,6 +1,23 @@
-from nltk.sem.logic import TRUTH_TYPE, EntityType, ComplexType
+from typing import List, Set
+from overrides import overrides
 
-from allennlp.data.semparse.type_declarations.type_declaration import NamedBasicType
+from nltk.sem.logic import TRUTH_TYPE, BasicType, EntityType, Type
+
+from allennlp.data.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType, NamedBasicType
+
+
+class NegateFilterType(HigherOrderType):
+    """
+    Because our negate filters are higher-order functions, we need to make an explicit class here,
+    to make sure that we've overridden the right methods correctly.
+    """
+    def __init__(self, first, second):
+        super().__init__(num_arguments=1, first=first, second=second)
+
+    @overrides
+    def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
+        # There's no ANY_TYPE in here, so we don't need to do any substitution.
+        return [self]
 
 
 # All constants default to ``EntityType`` in NLTK. For domains where constants of different types
@@ -13,8 +30,8 @@ OBJECT_TYPE = NamedBasicType("OBJECT")
 COLOR_TYPE = NamedBasicType("COLOR")
 SHAPE_TYPE = NamedBasicType("SHAPE")
 OBJECT_FILTER_TYPE = ComplexType(OBJECT_TYPE, OBJECT_TYPE)
-NEGATE_FILTER_TYPE = ComplexType(ComplexType(OBJECT_TYPE, OBJECT_TYPE),
-                                 ComplexType(OBJECT_TYPE, OBJECT_TYPE))
+NEGATE_FILTER_TYPE = NegateFilterType(ComplexType(OBJECT_TYPE, OBJECT_TYPE),
+                                      ComplexType(OBJECT_TYPE, OBJECT_TYPE))
 BOX_MEMBERSHIP_TYPE = ComplexType(BOX_TYPE, OBJECT_TYPE)
 
 BOX_COLOR_FILTER_TYPE = ComplexType(BOX_TYPE, ComplexType(COLOR_TYPE, BOX_TYPE))

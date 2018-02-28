@@ -3,7 +3,7 @@ We store all the information related to a world (i.e. the context in which logic
 executed) here. For WikiTableQuestions, this includes a representation of a table, mapping from
 Sempre variables in all logical forms to NLTK variables, and the types of all predicates and entities.
 """
-from typing import List, Set
+from typing import Dict, List, Set
 import re
 
 from nltk.sem.logic import Type
@@ -29,6 +29,17 @@ class WikiTablesWorld(World):
         of numbers that we consider to just the numbers that appear in the question, plus a few
         small numbers.
     """
+    # When we're converting from logical forms to action sequences, this set tells us which
+    # functions in the logical form are curried functions, and how many arguments the function
+    # actually takes.  This is necessary because NLTK curries all multi-argument functions to a
+    # series of one-argument function applications.  See `world._get_transitions` for more info.
+    curried_functions = {
+            types.ARG_EXTREME_TYPE: 4,
+            types.CONJUNCTION_TYPE: 2,
+            types.DATE_FUNCTION_TYPE: 3,
+            types.BINARY_NUM_OP_TYPE: 2,
+            }
+
     def __init__(self, table_graph: TableKnowledgeGraph, question_tokens: List[Token]) -> None:
         super(WikiTablesWorld, self).__init__(constant_type_prefixes={"part": types.PART_TYPE,
                                                                       "cell": types.CELL_TYPE},
@@ -59,6 +70,9 @@ class WikiTablesWorld(World):
         Returns ``True`` if the given entity is one of the entities in the table.
         """
         return entity_name in self._entity_set
+
+    def _get_curried_functions(self) -> Dict[Type, int]:
+        return WikiTablesWorld.curried_functions
 
     def _get_numbers_from_tokens(self, tokens: List[Token]) -> List[str]:
         """
@@ -98,6 +112,17 @@ class WikiTablesWorld(World):
     @overrides
     def get_basic_types(self) -> Set[Type]:
         return types.BASIC_TYPES
+
+    @overrides
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        valid_actions = super().get_valid_actions()
+
+        # We just need to add a few things here that don't get added by our world-general logic.
+
+        # This one is possible because of `reverse`.
+        valid_actions['e'].append('e -> [<r,e>, r]')
+        valid_actions['d'].append('d -> [<r,d>, r]')
+        return valid_actions
 
     @overrides
     def get_valid_starting_types(self) -> Set[Type]:
