@@ -275,6 +275,8 @@ class WikiTablesDatasetReader(DatasetReader):
             action_sequence_fields: List[Field] = []
             for logical_form in dpd_output:
                 if not self._should_keep_logical_form(logical_form):
+                    logger.debug(f'Question was: {question}')
+                    logger.debug(f'Table info was: {table_info}')
                     continue
                 try:
                     expression = world.parse_logical_form(logical_form)
@@ -295,6 +297,8 @@ class WikiTablesDatasetReader(DatasetReader):
                     action_sequence_fields.append(ListField(index_fields))
                 except KeyError as error:
                     logger.debug(f'Missing production rule: {error.args}, skipping logical form')
+                    logger.debug(f'Question was: {question}')
+                    logger.debug(f'Table info was: {table_info}')
                     logger.debug(f'Logical form was: {logical_form}')
                     continue
                 if len(action_sequence_fields) >= self._max_dpd_logical_forms:
