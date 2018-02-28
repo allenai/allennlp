@@ -40,50 +40,54 @@
     "validation_data_path": "web-dev.json",
     "model": {
       "type": "multi-paragraph",
-      "embedding_dim": 10,
       "text_field_embedder": {
         "tokens": {
           "type": "embedding",
-          "embedding_dim": 2,
-          "trainable": false
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+        "embedding_dim": 300,
+        "trainable": false
         },
         "token_characters": {
           "type": "character_encoding",
           "embedding": {
             "num_embeddings": 260,
-            "embedding_dim": 8
+            "embedding_dim": 20
           },
           "encoder": {
             "type": "cnn",
-            "embedding_dim": 8,
-            "num_filters": 8,
+            "embedding_dim": 20,
+            "num_filters": 20,
             "ngram_filter_sizes": [5]
           }
         }
       },
       "phrase_layer": {
-        "type": "lstm",
-        "input_size": 10,
-        "hidden_size": 10,
-        "num_layers": 1
+        "type": "gru",
+        "input_size": 320,
+        "hidden_size": 140,
+        "num_layers": 1,
+        "bidirectional": true
       },
       "residual_encoder": {
-        "type": "lstm",
-        "input_size": 10,
-        "hidden_size": 10,
-        "num_layers": 1
+        "type": "gru",
+        "input_size": 280,
+        "hidden_size": 140,
+        "num_layers": 1,
+        "bidirectional": true
       },
       "span_start_encoder": {
-        "type": "lstm",
-        "input_size": 10,
-        "hidden_size": 10,
-        "num_layers": 1
+        "type": "gru",
+        "input_size": 280,
+        "hidden_size": 140,
+        "num_layers": 1,
+        "bidirectional": true
       },
       "span_end_encoder": {
-        "type": "lstm",
-        "input_size": 20,
-        "hidden_size": 10,
-        "num_layers": 1
+        "type": "gru",
+        "input_size": 560,
+        "hidden_size": 140,
+        "num_layers": 1,
+        "bidirectional": true
       }
     },
     "iterator": {

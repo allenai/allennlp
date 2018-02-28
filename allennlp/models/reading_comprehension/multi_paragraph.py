@@ -45,27 +45,32 @@ class MultiParagraphReadingComprehension(Model):
                  span_start_encoder: Seq2SeqEncoder,
                  span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
-                 embedding_dim: int = 200,
                  dropout: float = 0.2,
                  mask_lstms: bool = True) -> None:
         super().__init__(vocab)
 
         self._text_field_embedder = text_field_embedder
-        self._phrase_layer = phrase_layer
-        # TODO(joelgrus): where does 200 come from
-        self._matrix_attention = TriLinearAttention(embedding_dim)
+        # output: (batch_size, num_tokens, embedding_dim)
 
-        self._merge_atten = TimeDistributed(torch.nn.Linear(embedding_dim * 4, embedding_dim))
+        assert text_field_embedder.get_output_dim() == phrase_layer.get_input_dim()
+        self._phrase_layer = phrase_layer
+        encoding_dim = phrase_layer.get_output_dim()
+        # output: (batch_size, num_tokens, encoding_dim)
+
+        self._matrix_attention = TriLinearAttention(encoding_dim)
+        # output: (batch_size, num_tokens, num_tokens)
+
+        self._merge_atten = TimeDistributed(torch.nn.Linear(encoding_dim * 4, encoding_dim))
 
         self._residual_encoder = residual_encoder
-        self._self_atten = TriLinearAttention(embedding_dim)
-        self._merge_self_atten = TimeDistributed(torch.nn.Linear(embedding_dim * 3, embedding_dim))
+        self._self_atten = TriLinearAttention(encoding_dim)
+        self._merge_self_atten = TimeDistributed(torch.nn.Linear(encoding_dim * 3, encoding_dim))
 
         self._span_start_encoder = span_start_encoder
         self._span_end_encoder = span_end_encoder
 
-        self._span_start_predictor = TimeDistributed(torch.nn.Linear(embedding_dim, 1))
-        self._span_end_predictor = TimeDistributed(torch.nn.Linear(embedding_dim, 1))
+        self._span_start_predictor = TimeDistributed(torch.nn.Linear(encoding_dim, 1))
+        self._span_end_predictor = TimeDistributed(torch.nn.Linear(encoding_dim, 1))
 
         initializer(self)
 
@@ -158,6 +163,9 @@ class MultiParagraphReadingComprehension(Model):
         embedded_question = self._dropout(self._text_field_embedder(question))
         embedded_passage = self._dropout(self._text_field_embedder(passage))
 
+        # print("emb q", embedded_question.size())
+        # print("emb p", embedded_passage.size())
+
         # Extended batch size takes into account batch size * num paragraphs
         extended_batch_size = embedded_question.size(0)
         passage_length = embedded_passage.size(1)
@@ -172,17 +180,26 @@ class MultiParagraphReadingComprehension(Model):
         encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
         encoding_dim = encoded_question.size(-1)
 
+        # print("enc q", encoded_question.size())
+        # print("enc p", encoded_passage.size())
+
         # Shape: (extended_batch_size, passage_length, question_length)
         # these are the a_ij in the paper
         passage_question_similarity = self._matrix_attention(encoded_passage, encoded_question)
+
+        # print("pqs", passage_question_similarity.size())
 
         # Shape: (extended_batch_size, passage_length, question_length)
         # these are the p_ij in the paper
         passage_question_attention = util.last_dim_softmax(passage_question_similarity, question_mask)
 
+        # print("pqa", passage_question_attention.size())
+
         # Shape: (extended_batch_size, passage_length, encoding_dim)
         # these are the c_i in the paper
         passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
+
+        # print("pqv", passage_question_vectors.size())
 
         # We replace masked values with something really negative here, so they don't affect the
         # max below.
@@ -195,18 +212,26 @@ class MultiParagraphReadingComprehension(Model):
         # Shape: (extended_batch_size, passage_length)
         question_passage_similarity = masked_similarity.max(dim=-1)[0]
 
+        # print("qps", question_passage_similarity.size())
+
         # masked_softmax operates over the last (i.e. passage_length) dimension
         # Shape: (extended_batch_size, passage_length)
         question_passage_attention = util.masked_softmax(question_passage_similarity, passage_mask)
+
+        # print("qpa", question_passage_attention.size())
 
         # Shape: (extended_batch_size, encoding_dim)
         # these are the q_c in the paper
         question_passage_vector = util.weighted_sum(encoded_passage, question_passage_attention)
 
+        # print("qpv", question_passage_vector.size())
+
         # Shape: (extended_batch_size, passage_length, encoding_dim)
         tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(extended_batch_size,
                                                                                     passage_length,
                                                                                     encoding_dim)
+
+        # print("tiled qpv", tiled_question_passage_vector.size())
 
         # Shape: (extended_batch_size, passage_length, encoding_dim * 4)
         final_merged_passage = torch.cat([encoded_passage,
@@ -215,12 +240,22 @@ class MultiParagraphReadingComprehension(Model):
                                           encoded_passage * tiled_question_passage_vector],
                                          dim=-1)
 
+        # print("fmp1", final_merged_passage.size())
+
+
         # purple "linear ReLU layer"
         final_merged_passage = F.relu(self._merge_atten(final_merged_passage))
 
+        # print("fmp2", final_merged_passage.size())
+
         # Bi-GRU in the paper
         residual_layer = self._dropout(self._residual_encoder(self._dropout(final_merged_passage), passage_mask))
+
+        # print("residual", residual_layer.size())
+
         self_atten_matrix = self._self_atten(residual_layer, residual_layer)
+
+        # print("self attention", self_atten_matrix.size())
 
         # Expand mask for self-attention
         mask = (passage_mask.resize(extended_batch_size, passage_length, 1) *
@@ -237,28 +272,43 @@ class MultiParagraphReadingComprehension(Model):
 
         self_atten_probs = util.last_dim_softmax(self_atten_matrix, mask)
 
+        # print("sap", self_atten_probs.size())
+
         # Batch matrix multiplication:
         # (batch, passage_len, passage_len) * (batch, passage_len, dim) -> (batch, passage_len, dim)
         self_atten_vecs = torch.matmul(self_atten_probs, residual_layer)
+
+        # print("sav", self_atten_vecs.size())
 
         # (extended_batch_size, passage_length, embedding_dim * 3)
         concatenated = torch.cat([self_atten_vecs, residual_layer, residual_layer * self_atten_vecs],
                                  dim=-1)
 
+        # print("concat", concatenated.size())
+
         # _merge_self_atten => (extended_batch_size, passage_length, embedding_dim)
         residual_layer = F.relu(self._merge_self_atten(concatenated))
+
+        # print("residual", residual_layer.size())
 
         final_merged_passage += residual_layer
         final_merged_passage = self._dropout(final_merged_passage)
 
+        # print("fmp", final_merged_passage.size())
+
         # Bi-GRU in paper
         start_rep = self._span_start_encoder(final_merged_passage, passage_lstm_mask)
+        # print("startrep", start_rep.size())
         span_start_logits = self._span_start_predictor(start_rep).squeeze(-1)
         span_start_probs = util.masked_softmax(span_start_logits, passage_mask)
+        # print("spanstart", span_start_logits.size())
+
 
         end_rep = self._span_end_encoder(torch.cat([final_merged_passage, start_rep], dim=-1), passage_lstm_mask)
+        # print("endrep", end_rep.size())
         span_end_logits = self._span_end_predictor(end_rep).squeeze(-1)
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
+        # print("spanend", span_end_logits.size())
 
         span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
         span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
@@ -378,7 +428,6 @@ class MultiParagraphReadingComprehension(Model):
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
         initializer = InitializerApplicator.from_params(params.pop("initializer", []))
         dropout = params.pop('dropout', 0.2)
-        embedding_dim = params.pop_int('embedding_dim', 200)
 
         # TODO: Remove the following when fully deprecated
         evaluation_json_file = params.pop('evaluation_json_file', None)
@@ -395,5 +444,4 @@ class MultiParagraphReadingComprehension(Model):
                    span_end_encoder=span_end_encoder,
                    initializer=initializer,
                    dropout=dropout,
-                   embedding_dim=embedding_dim,
                    mask_lstms=mask_lstms)

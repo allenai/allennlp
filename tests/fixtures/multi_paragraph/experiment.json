@@ -20,7 +20,6 @@
     "validation_data_path": "web-train.json",
     "model": {
       "type": "multi-paragraph",
-      "embedding_dim": 10,
       "text_field_embedder": {
         "tokens": {
           "type": "embedding",

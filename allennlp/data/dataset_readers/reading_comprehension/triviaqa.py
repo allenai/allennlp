@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 _PARAGRAPH_TOKEN = Token("@@PARAGRAPH@@")
 
-NUM_QUESTIONS = 100
+NUM_QUESTIONS = 10
 
 class MergedParagraphs(NamedTuple):
     texts: List[str]
@@ -230,28 +230,36 @@ class TriviaQaReader(DatasetReader):
                        answer_texts: List[str] = None,
                        max_size: int = 400) -> MergedParagraphs:
 
-        current_paragraph, current_tokens = "", []
+        # current_paragraph, current_tokens = "", []
+        # merged_paragraphs: List[str] = []
 
-        merged_paragraphs: List[str] = []
+        # for paragraph in paragraphs:
+        #     paragraph_tokens = self._tokenizer.tokenize(paragraph)
+
+        #     if len(current_tokens) + len(paragraph_tokens) + 1 > max_size:
+        #         # Too big, so add to output
+        #         merged_paragraphs.append(current_paragraph)
+        #         current_tokens = []
+        #         current_paragraph = paragraph
+        #     else:
+        #         # Keep appending
+        #         current_paragraph += f" {_PARAGRAPH_TOKEN.text} " + paragraph
+        #         current_tokens.extend(paragraph_tokens)
+        #         current_tokens.append(Token(_PARAGRAPH_TOKEN))
+
+        # if current_paragraph:
+        #     merged_paragraphs.append(current_paragraph)
 
 
+        tokens = []
         for paragraph in paragraphs:
-            paragraph_tokens = self._tokenizer.tokenize(paragraph)
+            tokens.extend(token.text for token in self._tokenizer.tokenize(paragraph))
+            tokens.append(_PARAGRAPH_TOKEN.text)
 
-            if len(current_tokens) + len(paragraph_tokens) + 1 > max_size:
-                # Too big, so add to output
-                merged_paragraphs.append(current_paragraph)
-                current_tokens = []
-                current_paragraph = paragraph
-            else:
-                # Keep appending
-                current_paragraph += f" {_PARAGRAPH_TOKEN.text} " + paragraph
-                current_tokens.extend(paragraph_tokens)
-                current_tokens.append(Token(_PARAGRAPH_TOKEN))
+        # Get rid of trailing paragraph token
+        tokens = tokens[:-1]
 
-        if current_paragraph:
-            merged_paragraphs.append(current_paragraph)
-
+        merged_paragraphs = [' '.join(paragraph_tokens) for paragraph_tokens in lazy_groups_of(iter(tokens), max_size)]
         merged_paragraph_tokens = [self._tokenizer.tokenize(paragraph) for paragraph in merged_paragraphs]
 
         # If we're training, we can prune the paragraphs down:
