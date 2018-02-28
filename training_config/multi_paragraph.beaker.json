@@ -1,0 +1,108 @@
+{
+    "dataset_reader": {
+      "type": "triviaqa",
+      "lazy": "true",
+      "paragraph_picker": "triviaqa-web-train",
+      "cache_questions": true,
+      "base_tarball_path": "/data/triviaqa-rc.tar.gz",
+      "token_indexers": {
+        "tokens": {
+          "type": "single_id",
+          "lowercase_tokens": true
+        },
+        "token_characters": {
+          "type": "characters",
+          "character_tokenizer": {
+            "byte_encoding": "utf-8"
+          }
+        }
+      }
+    },
+    "validation_dataset_reader": {
+      "type": "triviaqa",
+      "lazy": "false",
+      "cache_questions": true,
+      "base_tarball_path": "/data/triviaqa-rc.tar.gz",
+      "token_indexers": {
+        "tokens": {
+          "type": "single_id",
+          "lowercase_tokens": true
+        },
+        "token_characters": {
+          "type": "characters",
+          "character_tokenizer": {
+            "byte_encoding": "utf-8"
+          }
+        }
+      }
+    },
+    "train_data_path": "web-train.json",
+    "validation_data_path": "web-dev.json",
+    "model": {
+      "type": "multi-paragraph",
+      "text_field_embedder": {
+        "tokens": {
+          "type": "embedding",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+        "embedding_dim": 300,
+        "trainable": false
+        },
+        "token_characters": {
+          "type": "character_encoding",
+          "embedding": {
+            "num_embeddings": 260,
+            "embedding_dim": 20
+          },
+          "encoder": {
+            "type": "cnn",
+            "embedding_dim": 20,
+            "num_filters": 20,
+            "ngram_filter_sizes": [5]
+          }
+        }
+      },
+      "phrase_layer": {
+        "type": "gru",
+        "input_size": 320,
+        "hidden_size": 140,
+        "num_layers": 1,
+        "bidirectional": true
+      },
+      "residual_encoder": {
+        "type": "gru",
+        "input_size": 280,
+        "hidden_size": 140,
+        "num_layers": 1,
+        "bidirectional": true
+      },
+      "span_start_encoder": {
+        "type": "gru",
+        "input_size": 280,
+        "hidden_size": 140,
+        "num_layers": 1,
+        "bidirectional": true
+      },
+      "span_end_encoder": {
+        "type": "gru",
+        "input_size": 560,
+        "hidden_size": 140,
+        "num_layers": 1,
+        "bidirectional": true
+      }
+    },
+    "iterator": {
+      "type": "basic",
+      "batch_size": 10
+    },
+    "trainer": {
+      "num_epochs": 10,
+      "grad_norm": 10.0,
+      "patience" : 12,
+      "cuda_device" : 0,
+      "optimizer": {
+        "type": "adadelta",
+        "lr": 0.5,
+        "rho": 0.95
+      }
+    }
+  }

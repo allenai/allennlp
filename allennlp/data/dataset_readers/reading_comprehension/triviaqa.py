@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 _PARAGRAPH_TOKEN = Token("@@PARAGRAPH@@")
 
-NUM_QUESTIONS = 10
+NUM_QUESTIONS = 1_000_000
 
 class MergedParagraphs(NamedTuple):
     texts: List[str]
@@ -67,6 +67,12 @@ class TriviaQaReader(DatasetReader):
         If ``True``, the JSON blobs representing questions will be stored
         in-memory between iterations. (It is on the order of 100s of MB
         and is somewhat slow to parse.)
+    first_iteration_no_sampling: ``bool``, optional, (default: ``True``)
+        Depending on the value of ``paragraph_picker``, the dataset reader
+        may return a random sample of paragraphs each iteration. This flag
+        disables the sampling during the first iteration, which is likely to
+        be the iteration for creating the ``Vocabulary``, in which you would
+        like all the paragraphs to be represented.
     tokenizer : ``Tokenizer``, optional
         We'll use this tokenizer on questions and evidence passages, defaulting to
         ``WordTokenizer`` if none is provided.
@@ -84,6 +90,7 @@ class TriviaQaReader(DatasetReader):
                  unfiltered_tarball_path: str = None,
                  paragraph_picker: str = None,
                  cache_questions: bool = True,
+                 first_iteration_no_sampling: bool = True,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False) -> None:
@@ -91,11 +98,14 @@ class TriviaQaReader(DatasetReader):
         #self._unfiltered_tarball_path = unfiltered_tarball_path
         self._paragraph_picker = paragraph_picker
         self._cache_questions = cache_questions
+        self._first_iteration_no_sampling = first_iteration_no_sampling
+        self._first_iteration = True
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tfidf = TfidfVectorizer(strip_accents="unicode", stop_words="")
 
         self._questions: Dict[str, JsonDict] = {}
+        self._merged_paragraphs: Dict[str, List[MergedParagraphs]] = {}
 
         # If we're really given a tarball, we need to extract it to a temp directory.
 
@@ -162,6 +172,7 @@ class TriviaQaReader(DatasetReader):
         logger.info(f"reading {num_evidence_files} evidence files")
 
         for question_json in questions_data[:NUM_QUESTIONS]:
+            question_id = question_json['QuestionId']
             question_text = question_json['Question']
             question_tokens = self._tokenizer.tokenize(question_text)
 
@@ -171,16 +182,26 @@ class TriviaQaReader(DatasetReader):
 
             evidence_files = [result['Filename'] for result in question_json[result_key]]
 
-            for evidence_filename in evidence_files:
-                evidence_path = self._base_tarball_path / 'evidence' / evidence_subdir / evidence_filename
-                with open(evidence_path, 'r') as evidence_file:
-                    paragraphs = [line for line in evidence_file.readlines()]
-                merged_paragraphs = self.merge_and_sort(paragraphs, question_text, answer_texts)
+            if question_id in self._merged_paragraphs:
+                all_merged_paragraphs = self._merged_paragraphs[question_id]
+            else:
+                all_merged_paragraphs = []
 
-                if not merged_paragraphs:
-                    # TODO(joelgrus) what here
-                    continue
+                for evidence_filename in evidence_files:
+                    evidence_path = self._base_tarball_path / 'evidence' / evidence_subdir / evidence_filename
+                    with open(evidence_path, 'r') as evidence_file:
+                        paragraphs = [line for line in evidence_file.readlines()]
+                    merged_paragraphs = self.merge_and_sort(paragraphs, question_text, answer_texts)
 
+                    if merged_paragraphs:
+                        all_merged_paragraphs.append(merged_paragraphs)
+                    else:
+                        # TODO(joelgrus) what here
+                        pass
+
+                self._merged_paragraphs[question_id] = all_merged_paragraphs
+
+            for merged_paragraphs in all_merged_paragraphs:
                 # Pick paragraphs
                 if self._paragraph_picker == 'triviaqa-web-train':
                     sample: List[int] = []
@@ -188,10 +209,15 @@ class TriviaQaReader(DatasetReader):
                     num_texts = len(merged_paragraphs.texts)
 
                     if merged_paragraphs.has_answers:
-                        while not any(i in merged_paragraphs.has_answers for i in sample):
-                            sample = np.random.choice(np.arange(num_texts), size=2)
-                        picked_paragraphs = [merged_paragraphs.texts[i] for i in sample]
-                        picked_paragraph_tokens = [merged_paragraphs.tokens[i] for i in sample]
+                        if self._first_iteration and self._first_iteration_no_sampling:
+                            picked_paragraphs = merged_paragraphs.texts
+                            picked_paragraph_tokens = merged_paragraphs.tokens
+                        else:
+                            while not any(i in merged_paragraphs.has_answers for i in sample):
+                                sample = np.random.choice(np.arange(num_texts), size=2)
+                            picked_paragraphs = [merged_paragraphs.texts[i] for i in sample]
+                            picked_paragraph_tokens = [merged_paragraphs.tokens[i] for i in sample]
+
                         instance = self.text_to_instance(question_text=question_text,
                                                          question_tokens=question_tokens,
                                                          paragraphs=picked_paragraphs,
@@ -209,6 +235,7 @@ class TriviaQaReader(DatasetReader):
                 if instance is not None:
                     yield instance
 
+        self._first_iteration = False
 
     def document_tfidf(self, paragraphs: List[str], question: str) -> np.ndarray:
         try:
