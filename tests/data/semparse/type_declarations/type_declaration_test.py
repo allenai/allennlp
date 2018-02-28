@@ -1,9 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
-from nltk.sem.logic import ComplexType
-
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.semparse.type_declarations import type_declaration as types
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.semparse.type_declarations.type_declaration import ComplexType
 
 
 class TestTypeResolution(AllenNlpTestCase):
@@ -21,11 +20,9 @@ class TestTypeResolution(AllenNlpTestCase):
         type_signatures = {'F': ComplexType(type_e, ComplexType(type_r, ComplexType(type_d, type_r)))}
         basic_types = {type_r, type_d, type_e}
         valid_actions = types.get_valid_actions(name_mapping, type_signatures, basic_types)
-        assert len(valid_actions) == 5
+        assert len(valid_actions) == 3
         assert valid_actions["<e,<r,<d,r>>>"] == ["<e,<r,<d,r>>> -> sample_function"]
-        assert valid_actions["<r,<d,r>>"] == ["<r,<d,r>> -> [<e,<r,<d,r>>>, e]"]
-        assert valid_actions["<d,r>"] == ["<d,r> -> [<r,<d,r>>, r]"]
-        assert valid_actions["r"] == ["r -> [<d,r>, d]"]
+        assert valid_actions["r"] == ["r -> [<e,<r,<d,r>>>, e, r, d]"]
         assert valid_actions["@START@"] == ["@START@ -> d", "@START@ -> e", "@START@ -> r"]
 
     def test_get_valid_actions_with_placeholder_type(self):

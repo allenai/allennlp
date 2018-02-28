@@ -101,6 +101,21 @@ class NlvrWorld(World):
         structured_rep from the JSON file.
     """
     # pylint: disable=too-many-public-methods
+
+    # When we're converting from logical forms to action sequences, this set tells us which
+    # functions in the logical form are curried functions, and how many arguments the function
+    # actually takes.  This is necessary because NLTK curries all multi-argument functions to a
+    # series of one-argument function applications.  See `world._get_transitions` for more info.
+    curried_functions = {
+            types.BOX_COLOR_FILTER_TYPE: 2,
+            types.BOX_SHAPE_FILTER_TYPE: 2,
+            types.BOX_COUNT_FILTER_TYPE: 2,
+            types.ASSERT_COLOR_TYPE: 2,
+            types.ASSERT_SHAPE_TYPE: 2,
+            types.ASSERT_BOX_COUNT_TYPE: 2,
+            types.ASSERT_OBJECT_COUNT_TYPE: 2,
+            }
+
     # TODO(pradeep): Define more spatial relationship methods: left_of, right_of..
     # They should be defined for objects within the same box.
     def __init__(self, world_representation: List[List[JsonDict]]) -> None:
@@ -150,6 +165,9 @@ class NlvrWorld(World):
     @overrides
     def get_valid_starting_types(self) -> Set[Type]:
         return {types.TRUTH_TYPE}
+
+    def _get_curried_functions(self) -> Dict[Type, int]:
+        return NlvrWorld.curried_functions
 
     @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
