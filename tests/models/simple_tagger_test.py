@@ -35,9 +35,9 @@ class SimpleTaggerTest(ModelTestCase):
 
     def test_mismatching_dimensions_throws_configuration_error(self):
         params = Params.from_file(self.param_file)
-        # Make the stacked_encoder wrong - it should be 2 to match
+        # Make the encoder wrong - it should be 2 to match
         # the embedding dimension from the text_field_embedder.
-        params["model"]["stacked_encoder"]["input_size"] = 10
+        params["model"]["encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
             Model.from_params(self.vocab, params.pop("model"))
 

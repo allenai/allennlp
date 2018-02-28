@@ -37,7 +37,7 @@
         "dropout": 0.2
       }
     },
-    "stacked_encoder": {
+    "encoder": {
       "type": "lstm",
       "input_size": 100,
       "hidden_size": 100,

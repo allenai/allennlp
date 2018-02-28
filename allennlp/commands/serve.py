@@ -35,7 +35,7 @@ DEFAULT_MODELS = {
                 'machine-comprehension'
         ),
         'semantic-role-labeling': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.02.27.tar.gz', # pylint: disable=line-too-long
                 'semantic-role-labeling'
         ),
         'textual-entailment': DemoModel(

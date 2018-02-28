@@ -12,7 +12,7 @@
         "trainable": true
       }
     },
-    "stacked_encoder": {
+    "encoder": {
       "type": "lstm",
       "input_size": 150,
       "hidden_size": 10,
