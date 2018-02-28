@@ -36,6 +36,9 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         self.mersin_index = self.vocab.add_token_to_namespace("mersin", namespace='tokens')
         self.lake_index = self.vocab.add_token_to_namespace("lake", namespace='tokens')
         self.gala_index = self.vocab.add_token_to_namespace("gala", namespace='tokens')
+        self.negative_one_index = self.vocab.add_token_to_namespace("-1", namespace='tokens')
+        self.zero_index = self.vocab.add_token_to_namespace("0", namespace='tokens')
+        self.one_index = self.vocab.add_token_to_namespace("1", namespace='tokens')
 
         self.oov_index = self.vocab.get_token_index('random OOV string', namespace='tokens')
         self.edirne_index = self.oov_index
@@ -48,6 +51,9 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         self.field.count_vocab_items(namespace_token_counts)
 
         assert namespace_token_counts["tokens"] == {
+                '-1': 1,
+                '0': 1,
+                '1': 1,
                 'name': 1,
                 'in': 2,
                 'english': 2,
@@ -65,7 +71,10 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         assert self.field._indexed_entity_texts.keys() == {'tokens'}
         # Note that these are sorted by their _identifiers_, not their cell text, so the
         # `fb:row.rows` show up after the `fb:cells`.
-        expected_array = [[self.edirne_index],
+        expected_array = [[self.negative_one_index],
+                          [self.zero_index],
+                          [self.one_index],
+                          [self.edirne_index],
                           [self.lake_index, self.gala_index],
                           [self.mersin_index],
                           [self.paradeniz_index],
@@ -80,11 +89,11 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
     def test_padding_lengths_are_computed_correctly(self):
         # pylint: disable=protected-access
         self.field.index(self.vocab)
-        assert self.field.get_padding_lengths() == {'num_entities': 6, 'num_entity_tokens': 3,
+        assert self.field.get_padding_lengths() == {'num_entities': 9, 'num_entity_tokens': 3,
                                                     'num_utterance_tokens': 4}
         self.field._token_indexers['token_characters'] = TokenCharactersIndexer()
         self.field.index(self.vocab)
-        assert self.field.get_padding_lengths() == {'num_entities': 6, 'num_entity_tokens': 3,
+        assert self.field.get_padding_lengths() == {'num_entities': 9, 'num_entity_tokens': 3,
                                                     'num_utterance_tokens': 4,
                                                     'num_token_characters': 9}
 
@@ -95,7 +104,10 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         padding_lengths['num_entities'] += 1
         tensor_dict = self.field.as_tensor(padding_lengths)
         assert tensor_dict.keys() == {'text', 'linking'}
-        expected_text_tensor = [[self.edirne_index, 0, 0],
+        expected_text_tensor = [[self.negative_one_index, 0, 0],
+                                [self.zero_index, 0, 0],
+                                [self.one_index, 0, 0],
+                                [self.edirne_index, 0, 0],
                                 [self.lake_index, self.gala_index, 0],
                                 [self.mersin_index, 0, 0],
                                 [self.paradeniz_index, 0, 0],
@@ -105,7 +117,19 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         assert_almost_equal(tensor_dict['text']['tokens'].data.cpu().numpy(), expected_text_tensor)
 
         linking_tensor = tensor_dict['linking'].data.cpu().numpy()
-        expected_linking_tensor = [[[0, 0, 0, 0, .2, 0, 0, 0],  # fb:cell.edirne, "where"
+        expected_linking_tensor = [[[0, 0, 0, 0, 0, 0, 0, 0],  # -1, "where"
+                                    [0, 0, 0, 0, 0, 0, 0, 0],  # -1, "is"
+                                    [0, 0, 0, 0, 0, 0, 0, 0],  # -1, "mersin"
+                                    [0, 0, 0, 0, -1, 0, 0, 0]],  # -1, "?"
+                                   [[0, 0, 0, 0, 0, 0, 0, 0],  # 0, "where"
+                                    [0, 0, 0, 0, 0, 0, 0, 0],  # 0, "is"
+                                    [0, 0, 0, 0, 0, 0, 0, 0],  # 0, "mersin"
+                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # 0, "?"
+                                   [[0, 0, 0, 0, 0, 0, 0, 0],  # 1, "where"
+                                    [0, 0, 0, 0, 0, 0, 0, 0],  # 1, "is"
+                                    [0, 0, 0, 0, 0, 0, 0, 0],  # 1, "mersin"
+                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # 1, "?"
+                                   [[0, 0, 0, 0, .2, 0, 0, 0],  # fb:cell.edirne, "where"
                                     [0, 0, 0, 0, -1.5, 0, 0, 0],  # fb:cell.edirne, "is"
                                     [0, 0, 0, 0, .1666666, 0, 0, 0],  # fb:cell.edirne, "mersin"
                                     [0, 0, 0, 0, -5, 0, 0, 0],  # fb:cell.edirne, "?"
@@ -174,7 +198,10 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         tensor_dict2 = self.field.as_tensor(padding_lengths)
         batched_tensor_dict = self.field.batch_tensors([tensor_dict1, tensor_dict2])
         assert batched_tensor_dict.keys() == {'text', 'linking'}
-        expected_single_tensor = [[self.edirne_index, 0, 0],
+        expected_single_tensor = [[self.negative_one_index, 0, 0],
+                                  [self.zero_index, 0, 0],
+                                  [self.one_index, 0, 0],
+                                  [self.edirne_index, 0, 0],
                                   [self.lake_index, self.gala_index, 0],
                                   [self.mersin_index, 0, 0],
                                   [self.paradeniz_index, 0, 0],

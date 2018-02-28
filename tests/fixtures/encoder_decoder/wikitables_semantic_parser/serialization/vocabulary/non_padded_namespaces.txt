@@ -1,1 +1,2 @@
-actions
+*tags
+*labels

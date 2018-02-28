@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Tuple
+from typing import Any, DefaultDict, Dict, List, Tuple, Union
 
 from unidecode import unidecode
 
@@ -204,7 +204,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
         """
         numbers = []
         for i, token in enumerate(tokens):
-            number = None
+            number: Union[int, float] = None
             token_text = token.text
             text = token.text.replace(',', '').lower()
             if text in NUMBER_WORDS:

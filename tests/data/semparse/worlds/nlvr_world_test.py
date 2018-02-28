@@ -6,7 +6,7 @@ from allennlp.data.semparse.worlds.nlvr_world import NlvrWorld
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestNlvrWorldRepresentation(AllenNlpTestCase):
+class TestNlvrWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         test_filename = "tests/fixtures/data/nlvr/sample_data.jsonl"

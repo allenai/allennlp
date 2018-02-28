@@ -15,12 +15,12 @@ def check_productions_match(actual_rules: List[str], expected_right_sides: List[
     assert set(actual_right_sides) == set(expected_right_sides)
 
 
-class WikiTablesWorldText(AllenNlpTestCase):
+class TestWikiTablesWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
-        self.table_kg = TableQuestionKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/sample_table.tsv",
-                                                                   question_tokens)
+        table_file = 'tests/fixtures/data/wikitables/sample_table.tsv'
+        self.table_kg = TableQuestionKnowledgeGraph.read_from_file(table_file, question_tokens)
         self.world = WikiTablesWorld(self.table_kg)
 
     def test_get_valid_actions_returns_correct_set(self):
@@ -366,9 +366,10 @@ class WikiTablesWorldText(AllenNlpTestCase):
 
     @pytest.mark.skip(reason="fibonacci recursion currently going on here")
     def test_with_deeply_nested_logical_form(self):
-        table_kg = TableQuestionKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/tables/109.tsv")
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'district', '?']]
-        world = WikiTablesWorld(table_kg, question_tokens)
+        table_filename = 'tests/fixtures/data/wikitables/table/109.tsv'
+        table_kg = TableQuestionKnowledgeGraph.read_from_file(table_filename, question_tokens)
+        world = WikiTablesWorld(table_kg)
         logical_form = ("(count ((reverse fb:cell.cell.number) (or (or (or (or (or (or (or (or "
                         "(or (or (or (or (or (or (or (or (or (or (or (or (or fb:cell.virginia_1 "
                         "fb:cell.virginia_10) fb:cell.virginia_11) fb:cell.virginia_12) "

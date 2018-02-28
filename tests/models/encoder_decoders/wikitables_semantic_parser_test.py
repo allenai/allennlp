@@ -28,40 +28,45 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         worlds, num_entities = self.get_fake_worlds()
         tensor = Variable(torch.LongTensor([]))
 
-        neighbor_indexes = self.model._get_neighbor_indices(worlds, num_entities, tensor)
+        neighbor_indices = self.model._get_neighbor_indices(worlds, num_entities, tensor)
 
         # Checks for the correct shape meaning dimension 2 has size num_neighbors,
         # padding of -1 is used, and correct neighbor indices.
-        assert torch.equal(neighbor_indexes.data, torch.LongTensor([[[2, 3],
-                                                                     [2, 3],
-                                                                     [0, 1],
-                                                                     [0, 1]],
-                                                                    [[1, -1],
-                                                                     [0, -1],
-                                                                     [-1, -1],
-                                                                     [-1, -1]]]))
+        print(neighbor_indices.data.numpy())
+        assert_almost_equal(neighbor_indices.data.numpy(), [[[-1, -1],
+                                                             [3, 4],
+                                                             [3, 4],
+                                                             [1, 2],
+                                                             [1, 2]],
+                                                            [[-1, -1],
+                                                             [2, -1],
+                                                             [1, -1],
+                                                             [-1, -1],
+                                                             [-1, -1]]])
 
     def test_get_type_vector(self):
         worlds, num_entities = self.get_fake_worlds()
         tensor = Variable(torch.LongTensor([]))
         type_vector, _ = self.model._get_type_vector(worlds, num_entities, tensor)
         # Verify that both types are present and padding used for non existent entities.
-        assert torch.equal(type_vector.data, torch.LongTensor([[[1, 0],
-                                                                [1, 0],
-                                                                [0, 1],
-                                                                [0, 1]],
-                                                               [[1, 0],
-                                                                [0, 1],
-                                                                [0, 0],
-                                                                [0, 0]]]))
+        assert_almost_equal(type_vector.data.numpy(), [[[1, 0, 0],
+                                                        [0, 1, 0],
+                                                        [0, 1, 0],
+                                                        [0, 0, 1],
+                                                        [0, 0, 1]],
+                                                       [[1, 0, 0],
+                                                        [0, 1, 0],
+                                                        [0, 0, 1],
+                                                        [0, 0, 0],
+                                                        [0, 0, 0]]])
 
     def test_get_linking_probabilities(self):
         worlds, num_entities = self.get_fake_worlds()
         # (batch_size, num_question_tokens, num_entities)
-        linking_scores = [[[1, 0, -3, 2],
-                           [-1, 5, -3, 4]],
-                          [[1, 8, 10, 10],
-                           [2, -1, -2, 1]]]
+        linking_scores = [[[-2, 1, 0, -3, 2],
+                           [4, -1, 5, -3, 4]],
+                          [[0, 1, 8, 10, 10],
+                           [3, 2, -1, -2, 1]]]
         linking_scores = Variable(torch.FloatTensor(linking_scores))
         question_mask = Variable(torch.LongTensor([[1, 1], [1, 0]]))
         _, entity_type_dict = self.model._get_type_vector(worlds, num_entities, linking_scores)
@@ -77,28 +82,31 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         #     for the second batch instance.
         # (3) The probabilities for entities of the same type with the same question token should
         #     sum to at most 1, but not necessarily 1, because some probability mass goes to the
-        #     null entity.  We have two entity types here, so each row should sum to at most 2, and
-        #     that number will approach 2 as the unnormalized linking scores for each entity get
-        #     higher.
-        true_probability = [[[0.5761169, 0.2119416, 0.0058998, 0.8756006],
-                             [0.0024561, 0.9908675, 0.0008947, 0.9811352]],
-                            [[0.7310586, 0.9996647, 0.0, 0.0],
-                             [0.0, 0.0, 0.0, 0.0]]]
+        #     null entity.  We have three entity types here, so each row should sum to at most 3,
+        #     and that number will approach 3 as the unnormalized linking scores for each entity
+        #     get higher.
+        print(entity_probability.data.cpu().numpy())
+        true_probability = [[[0.1192029, 0.5761169, 0.2119416, 0.0058998, 0.8756006],
+                             [0.9820138, 0.0024561, 0.9908675, 0.0008947, 0.9811352]],
+                            [[0.5, 0.7310586, 0.9996647, 0.0, 0.0],
+                             [0.0, 0.0, 0.0, 0.0, 0.0]]]
         assert_almost_equal(entity_probability.data.cpu().numpy(), true_probability)
 
     def get_fake_worlds(self):
         # Generate a toy WikitablesWorld.
         FakeTable = namedtuple('FakeTable', ['entities', 'neighbors'])
         FakeWorld = namedtuple('FakeWorld', ['table_graph'])
-        entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
-                    ['fb:cell.2012', 'fb:row.row.year']]
+        entities = [['0', 'fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
+                    ['1', 'fb:cell.2012', 'fb:row.row.year']]
         neighbors = [{'fb:cell.2010': ['fb:row.row.year', 'fb:row.row.year2'],
                       'fb:cell.2011': ['fb:row.row.year', 'fb:row.row.year2'],
                       'fb:row.row.year': ['fb:cell.2010', 'fb:cell.2011'],
-                      'fb:row.row.year2': ['fb:cell.2010', 'fb:cell.2011']
+                      'fb:row.row.year2': ['fb:cell.2010', 'fb:cell.2011'],
+                      '0': [],
                      },
                      {'fb:cell.2012': ['fb:row.row.year'],
                       'fb:row.row.year': ['fb:cell.2012'],
+                      '1': [],
                      }]
 
         worlds = [FakeWorld(FakeTable(entity_list, entity2neighbors))
@@ -307,7 +315,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
 class WikiTablesDecoderStepTest(AllenNlpTestCase):
     def setUp(self):
-        super(WikiTablesDecoderStepTest, self).setUp()
+        super().setUp()
 
         batch_indices = [0, 1, 0]
         action_history = [[1], [3, 4], []]
@@ -368,14 +376,14 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                 }
         entity_types = {
                 0: 0,
-                1: 1,
+                1: 2,
                 2: 1,
                 3: 0,
                 4: 0,
                 5: 1,
                 6: 0,
                 7: 1,
-                8: 1,
+                8: 2,
                 }
         self.state = WikiTablesDecoderState(batch_indices=batch_indices,
                                             action_history=action_history,
@@ -457,7 +465,7 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert_almost_equal(embeddings[2, 2].data.cpu().numpy(), action_embeddings[4].data.cpu().numpy())
 
     def test_get_entity_action_logits(self):
-        decoder_step = WikiTablesDecoderStep(1, 5, SimilarityFunction.from_params(Params({})), 2)
+        decoder_step = WikiTablesDecoderStep(1, 5, SimilarityFunction.from_params(Params({})), 3)
         actions_to_link = [[1, 2], [3, 4, 5], [6]]
         # (group_size, num_question_tokens) = (3, 3)
         attention_weights = Variable(torch.Tensor([[.2, .8, 0],
@@ -477,11 +485,13 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert_almost_equal(action_logits[2, 0].data.cpu().numpy(), 1.0 * .3 + 1.1 * .3 + 1.2 * .4)
 
         embedding_matrix = decoder_step._entity_type_embedding.weight.data.cpu().numpy()
-        assert_almost_equal(type_embeddings[0, 0].data.cpu().numpy(), embedding_matrix[1])
+        print(embedding_matrix)
+        print(type_embeddings)
+        assert_almost_equal(type_embeddings[0, 0].data.cpu().numpy(), embedding_matrix[2])
         assert_almost_equal(type_embeddings[0, 1].data.cpu().numpy(), embedding_matrix[1])
         assert_almost_equal(type_embeddings[1, 0].data.cpu().numpy(), embedding_matrix[0])
         assert_almost_equal(type_embeddings[1, 1].data.cpu().numpy(), embedding_matrix[1])
-        assert_almost_equal(type_embeddings[1, 2].data.cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[1, 2].data.cpu().numpy(), embedding_matrix[2])
         assert_almost_equal(type_embeddings[2, 0].data.cpu().numpy(), embedding_matrix[0])
 
     def test_compute_new_states(self):

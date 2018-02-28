@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 from allennlp.data import Token
