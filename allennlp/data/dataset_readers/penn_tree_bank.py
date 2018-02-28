@@ -43,12 +43,10 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 pos_tag_indexers: Dict[str, TokenIndexer] = None,
                  use_pos_tags: bool = True,
                  lazy: bool = False) -> None:
         super().__init__(lazy=lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
-        self._pos_tag_indexers = pos_tag_indexers or {'pos_tags': SingleIdTokenIndexer()}
         self._use_pos_tags = use_pos_tags
 
     @overrides
