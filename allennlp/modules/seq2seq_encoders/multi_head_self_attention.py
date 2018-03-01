@@ -56,26 +56,20 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         self._attention_dim = attention_dim
         self._values_dim = values_dim
 
-        self._query_projections = Parameter(torch.FloatTensor(num_heads, input_dim, attention_dim))
-        self._key_projections = Parameter(torch.FloatTensor(num_heads, input_dim, attention_dim))
-        self._value_projections = Parameter(torch.FloatTensor(num_heads, input_dim, values_dim))
+        if attention_dim % num_heads != 0:
+            raise ValueError(f"Key size ({attention_dim}) must be divisible by the number of "
+                             f"attention heads ({num_heads}).")
+
+        if values_dim % num_heads != 0:
+            raise ValueError(f"Value size ({values_dim}) must be divisible by the number of "
+                             f"attention heads ({num_heads}).")
+
+
+        self._combined_projection = Linear(input_dim, 2 * attention_dim + values_dim)
 
         self._scale = input_dim ** 0.5
-        self._output_projection = Linear(num_heads * values_dim,
-                                         self._output_dim)
+        self._output_projection = Linear(values_dim, self._output_dim)
         self._attention_dropout = Dropout(attention_dropout_prob)
-
-        self.reset_parameters()
-
-    def reset_parameters(self) -> None:
-        # Because we are doing so many torch.bmm calls, which is fast but unstable,
-        # it is critically important to intitialise the parameters correctly such
-        # that these matrix multiplications are well conditioned initially.
-        # Without this initialisation, this (non-deterministically) produces
-        # NaNs and overflows.
-        init.xavier_normal(self._query_projections)
-        init.xavier_normal(self._key_projections)
-        init.xavier_normal(self._value_projections)
 
     def get_input_dim(self):
         return self._input_dim
@@ -101,33 +95,33 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         """
         num_heads = self._num_heads
 
-        batch_size, timesteps, hidden_dim = inputs.size()
+        batch_size, timesteps, _ = inputs.size()
         if mask is None:
             mask = Variable(inputs.data.new(batch_size, timesteps).fill_(1.0))
 
-        # Treat the queries, keys and values each as a ``num_heads`` size batch.
-        # shape (num_heads, batch_size * timesteps, hidden_dim)
-        inputs_per_head = inputs.repeat(num_heads, 1, 1).view(num_heads,
-                                                              batch_size * timesteps,
-                                                              hidden_dim)
-        # Do the projections for all the heads at once.
-        # Then reshape the result as though it had a
-        # (num_heads * batch_size) sized batch.
-        queries_per_head = torch.bmm(inputs_per_head, self._query_projections)
-        # shape (num_heads * batch_size, timesteps, attention_dim)
-        queries_per_head = queries_per_head.view(num_heads * batch_size,
-                                                 timesteps,
-                                                 self._attention_dim)
+        # Shape (batch_size, timesteps, 2 * attention_dim + values_dim)
+        combined_projection = self._combined_projection(inputs)
 
-        keys_per_head = torch.bmm(inputs_per_head, self._key_projections)
-        # shape (num_heads * batch_size, timesteps, attention_dim)
-        keys_per_head = keys_per_head.view(num_heads * batch_size,
-                                           timesteps,
-                                           self._attention_dim)
+        # Shape (batch_size, timesteps, attention_dim)
+        queries = combined_projection[:, :, :self._attention_dim].contiguous()
+        keys = combined_projection[:, :, self._attention_dim :2 * self._attention_dim].contiguous()
+        # Shape (batch_size, timesteps, values_dim)
+        values = combined_projection[:, :, 2 * self._attention_dim:].contiguous()
 
-        values_per_head = torch.bmm(inputs_per_head, self._value_projections)
-        # shape (num_heads * batch_size, timesteps, attention_dim)
-        values_per_head = values_per_head.view(num_heads * batch_size, timesteps, self._values_dim)
+        # Shape (num_heads * batch_size, timesteps, values_dim / num_heads)
+        values_per_head = values.view(batch_size, timesteps, num_heads, int(self._values_dim/num_heads))
+        values_per_head = values_per_head.transpose(1,2).contiguous()
+        values_per_head = values_per_head.view(batch_size * num_heads, timesteps, int(self._values_dim/num_heads))
+
+        # Shape (num_heads * batch_size, timesteps, attention_dim / num_heads)
+        queries_per_head = queries.view(batch_size, timesteps, num_heads, int(self._attention_dim/num_heads))
+        queries_per_head = queries_per_head.transpose(1,2).contiguous()
+        queries_per_head = queries_per_head.view(batch_size * num_heads, timesteps, int(self._attention_dim/num_heads))
+
+        # Shape (num_heads * batch_size, timesteps, attention_dim / num_heads)
+        keys_per_head = keys.view(batch_size, timesteps, num_heads, int(self._attention_dim/num_heads))
+        keys_per_head = keys_per_head.transpose(1,2).contiguous()
+        keys_per_head = keys_per_head.view(batch_size * num_heads, timesteps, int(self._attention_dim/num_heads))
 
         # shape (num_heads * batch_size, timesteps, timesteps)
         scaled_similarities = torch.bmm(queries_per_head, keys_per_head.transpose(1, 2)) / self._scale
@@ -142,10 +136,9 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         # which is equivalent to a weighted sum of the values with respect to
         # the attention distributions for each element in the num_heads * batch_size
         # dimension.
-        # shape (num_heads * batch_size, timesteps, values_dim)
+        # shape (num_heads * batch_size, timesteps, values_dim/num_heads)
         outputs = torch.bmm(attention, values_per_head)
-
-        # Reshape back to original shape (batch_size, timesteps, num_heads * values_dim)
+        # Reshape back to original shape (batch_size, timesteps, values_dim)
         # Note that we _cannot_ use a reshape here, because this tensor was created
         # with num_heads being the first dimension, so reshaping naively would not
         # throw an error, but give an incorrect result.
