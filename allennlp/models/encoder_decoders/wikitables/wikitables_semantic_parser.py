@@ -231,7 +231,6 @@ class WikiTablesSemanticParser(Model):
         # todo(rajas): if this doesn't work just use plain neighbor vector
         type_mask = Variable(entity_types.data.new([0, 1])).unsqueeze(-1)
         # (batch_size, num_entities, 1)
-        print(entity_types.size())
         type_mask = torch.bmm(entity_types, type_mask.unsqueeze(0))
 
         # (batch_size, num_entities, embedding_dim)
