@@ -978,6 +978,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         not_finished_indices = []
         for i, state in enumerate(self.grammar_state):
             if state.is_finished():
+                # print("Finished ````````````")
+                # print("Coverage", self.coverage)
                 finished_indices.append(i)
             else:
                 not_finished_indices.append(i)
@@ -986,7 +988,38 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         if not finished_indices:
             return (None, self)
         if not not_finished_indices:
+            if isinstance(self.score, list):
+                # print(self.score)
+                for i in finished_indices:
+                    coverage = self.coverage[i]
+                    t = Variable(coverage.data.new(coverage.size()).fill_(1))
+                    stacked = torch.stack([coverage, t])
+                    minimum = torch.min(stacked, dim=0)[0]
+                    minimum = 1.0 / minimum
+                    # print('minimum', minimum)
+                    # print('mean', torch.mean(minimum))
+                    print(f"score {self.score[i]} + covloss{torch.mean(minimum)}")
+                    self.score[i] = self.score[i] + torch.mean(minimum)
+            else:
+                print("Score not list")
+                print('````````````')
+                exit(0)
+
             return (self, None)
+
+        print('~~~~~ Hit finished State')
+
+        for i in finished_indices:
+            coverage = self.coverage[i]
+            t = Variable(coverage.data.new(coverage.size()).fill_(1))
+            stacked = torch.stack([coverage, t])
+            minimum = torch.min(stacked, dim=0)[0]
+            minimum = 1.0 / minimum
+            # print('minimum', minimum)
+            # print('mean', torch.mean(minimum))
+            self.score[i] = self.score[i] + torch.mean(minimum)
+
+
         finished_state = self._make_new_state_with_group_indices(finished_indices)
         not_finished_state = self._make_new_state_with_group_indices(not_finished_indices)
         return (finished_state, not_finished_state)
@@ -1040,6 +1073,11 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         group_batch_indices = [self.batch_indices[i] for i in group_indices]
         group_action_histories = [self.action_history[i] for i in group_indices]
         group_scores = [self.score[i] for i in group_indices]
+        group_coverage = [self.coverage[i] for i in group_indices]
+        # print('````````````')
+        # print(len(group_coverage))
+        # print(group_coverage[0].size())
+        # print(group_scores[0].size())
         group_previous_action = [self.previous_action_embedding[i] for i in group_indices]
         group_grammar_states = [self.grammar_state[i] for i in group_indices]
         group_hidden_states = [self.hidden_state[i] for i in group_indices]
@@ -1125,12 +1163,12 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         encoder_outputs = torch.stack([state.encoder_outputs[i] for i in state.batch_indices])
         encoder_output_mask = torch.stack([state.encoder_output_mask[i] for i in state.batch_indices])
 
-        coverage = torch.stack([x for x in state.coverage])
-        encoder_outputs_with_coverage = self._encoder_outputs_projection_layer(encoder_outputs)
-        encoder_outputs_with_coverage = encoder_outputs_with_coverage + self._coverage_projection_layer(coverage.unsqueeze(-1))
+        # coverage = torch.stack([x for x in state.coverage])
+        # encoder_outputs_with_coverage = self._encoder_outputs_projection_layer(encoder_outputs)
+        # encoder_outputs_with_coverage = encoder_outputs_with_coverage + self._coverage_projection_layer(coverage.unsqueeze(-1))
 
         attended_question, attention_weights = self.attend_on_question(hidden_state,
-                                                                       encoder_outputs_with_coverage,
+                                                                       encoder_outputs,
                                                                        encoder_output_mask)
 
         # To predict an action, we'll use a concatenation of the hidden state and attention over
@@ -1503,19 +1541,20 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # todo(rajas): find alternative to sum since coverage_loss quickly becomes 1
                 cov = coverage[group_index]
                 att = attention_weights[group_index]
-                coverage[group_index] = cov + torch.pow(att, 2)
-                coverage_attention = torch.stack([coverage[group_index],
-                                                  attention_weights[group_index]])
-                minimum = torch.min(coverage_attention, dim=0)[0]
-                coverage_loss = torch.sum(minimum)
-                covlosshyper = self._coverage_hyperparameter(coverage_loss)
-                # print("Coverage loss")
-                # print(covlosshyper)
-                # print("new score")
-                # print(new_score)
-                # print("Coverage")
-                # print(coverage[group_index])
-                new_score = new_score + covlosshyper
+                coverage[group_index] = cov + att #+ torch.pow(att, 2)
+                # coverage_attention = torch.stack([coverage[group_index],
+                #                                   attention_weights[group_index]])
+
+                # minimum = torch.min(coverage_attention, dim=0)[0]
+                # coverage_loss = torch.sum(minimum)
+                # covlosshyper = self._coverage_hyperparameter(coverage_loss)
+                # # print("Coverage loss")
+                # # print(covlosshyper)
+                # # print("new score")
+                # # print(new_score)
+                # # print("Coverage")
+                # # print(coverage[group_index])
+                # new_score = new_score + covlosshyper
 
 
                 # `action_index` is the index in the _sorted_ tensors, but the action embedding
