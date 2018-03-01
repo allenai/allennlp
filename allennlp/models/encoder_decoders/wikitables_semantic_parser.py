@@ -978,8 +978,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         not_finished_indices = []
         for i, state in enumerate(self.grammar_state):
             if state.is_finished():
-                # print("Finished ````````````")
-                # print("Coverage", self.coverage)
                 finished_indices.append(i)
             else:
                 not_finished_indices.append(i)
@@ -988,41 +986,31 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         if not finished_indices:
             return (None, self)
         if not not_finished_indices:
-            if isinstance(self.score, list):
-                # print(self.score)
-                for i in finished_indices:
-                    coverage = self.coverage[i]
-                    t = Variable(coverage.data.new(coverage.size()).fill_(1))
-                    stacked = torch.stack([coverage, t])
-                    minimum = torch.min(stacked, dim=0)[0]
-                    minimum = 1.0 / minimum
-                    # print('minimum', minimum)
-                    # print('mean', torch.mean(minimum))
-                    print(f"score {self.score[i]} + covloss{torch.mean(minimum)}")
-                    self.score[i] = self.score[i] + torch.mean(minimum)
-            else:
-                print("Score not list")
-                print('````````````')
-                exit(0)
-
+            for i in finished_indices:
+                self.score[i] = self.score[i] + self.get_coverage_loss(i)
             return (self, None)
 
-        print('~~~~~ Hit finished State')
-
         for i in finished_indices:
-            coverage = self.coverage[i]
-            t = Variable(coverage.data.new(coverage.size()).fill_(1))
-            stacked = torch.stack([coverage, t])
-            minimum = torch.min(stacked, dim=0)[0]
-            minimum = 1.0 / minimum
-            # print('minimum', minimum)
-            # print('mean', torch.mean(minimum))
-            self.score[i] = self.score[i] + torch.mean(minimum)
+            self.score[i] = self.score[i] + self.get_coverage_loss(i)
 
 
         finished_state = self._make_new_state_with_group_indices(finished_indices)
         not_finished_state = self._make_new_state_with_group_indices(not_finished_indices)
         return (finished_state, not_finished_state)
+
+    def get_coverage_loss(self, index):
+        print('----------------')
+        coverage = self.coverage[index]
+        ones = Variable(coverage.data.new(coverage.size()).fill_(1))
+        stacked = torch.stack([coverage, ones])
+        minimum = torch.min(stacked, dim=0)[0]
+        print("coverage")
+        print(coverage)
+        unattended_weight = 1.0 - minimum
+        coverage_loss = torch.mean(unattended_weight)
+        # coverage_loss = torch.sum(unattended_weight)
+        print(f"score {self.score[index].data[0]} + covloss {coverage_loss.data[0]}")
+        return coverage_loss
 
     @classmethod
     # @overrides  - overrides can't handle the generics we're using here, apparently
@@ -1074,10 +1062,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         group_action_histories = [self.action_history[i] for i in group_indices]
         group_scores = [self.score[i] for i in group_indices]
         group_coverage = [self.coverage[i] for i in group_indices]
-        # print('````````````')
-        # print(len(group_coverage))
-        # print(group_coverage[0].size())
-        # print(group_scores[0].size())
         group_previous_action = [self.previous_action_embedding[i] for i in group_indices]
         group_grammar_states = [self.grammar_state[i] for i in group_indices]
         group_hidden_states = [self.hidden_state[i] for i in group_indices]
@@ -1094,6 +1078,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       memory_cell=group_memory_cells,
                                       previous_action_embedding=group_previous_action,
                                       attended_question=group_attended_question,
+                                      coverage=group_coverage,
                                       grammar_state=group_grammar_states,
                                       encoder_outputs=self.encoder_outputs,
                                       encoder_output_mask=self.encoder_output_mask,
@@ -1130,8 +1115,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         self._output_projection_layer = Linear(output_dim + encoder_output_dim, action_embedding_dim)
 
         self._encoder_outputs_projection_layer = Linear(encoder_output_dim, encoder_output_dim)
-        self._coverage_projection_layer = Linear(1, encoder_output_dim)
-        self._coverage_hyperparameter = Linear(1, 1)
+        # self._coverage_projection_layer = Linear(1, encoder_output_dim)
+        # self._coverage_hyperparameter = Linear(1, 1)
 
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
