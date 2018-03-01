@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 _PARAGRAPH_TOKEN = Token("@@PARAGRAPH@@")
 
-NUM_QUESTIONS = 1_000
+NUM_QUESTIONS = 1_0
 
 class MergedParagraphs(NamedTuple):
     texts: List[str]

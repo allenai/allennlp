@@ -145,19 +145,6 @@ class Batch(Iterable):
             for field, tensors in instance.as_tensor_dict(lengths_to_use, cuda_device, for_training).items():
                 field_tensors[field].append(tensors)
 
-        def show_size(x, label):
-            if isinstance(x, dict):
-                for k, v in x.items():
-                    show_size(v, label + ' ' + k)
-            elif isinstance(x, list):
-                for i, v in enumerate(x):
-                    show_size(v, label + ' ' + str(i))
-            elif hasattr(x, 'size'):
-                print(label, x.size())
-            else:
-                print(label, x)
-
-
         # Finally, we combine the tensors that we got for each instance into one big tensor (or set
         # of tensors) per field.  The `Field` classes themselves have the logic for batching the
         # tensors together, so we grab a dictionary of field_name -> field class from the first
@@ -165,12 +152,7 @@ class Batch(Iterable):
         field_classes = self.instances[0].fields
         final_fields = {}
         for field_name, field_tensor_list in field_tensors.items():
-            batched = field_classes[field_name].batch_tensors(field_tensor_list)
-
-            # if field_name != 'metadata':
-            #     show_size(batched, field_name)
-
-            final_fields[field_name] = batched
+            final_fields[field_name] = field_classes[field_name].batch_tensors(field_tensor_list)
 
         return final_fields
 
