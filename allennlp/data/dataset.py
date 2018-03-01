@@ -153,7 +153,6 @@ class Batch(Iterable):
         final_fields = {}
         for field_name, field_tensor_list in field_tensors.items():
             final_fields[field_name] = field_classes[field_name].batch_tensors(field_tensor_list)
-
         return final_fields
 
     def __iter__(self) -> Iterator[Instance]:

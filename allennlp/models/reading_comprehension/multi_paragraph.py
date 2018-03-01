@@ -141,11 +141,11 @@ class MultiParagraphReadingComprehension(Model):
             string from the original passage that the model thinks is the best answer to the
             question.
         """
-        # paragraphs['tokens'] is (batch_size, num_paragraphs, ?)
+        # paragraphs['tokens'] is (batch_size, num_paragraphs, num_tokens)
         batch_size, num_paragraphs, *_ = paragraphs['tokens'].size()
 
         if spans is not None:
-            # span is (batch_size, num_paragraphs, ?)
+            # spans is (batch_size, num_paragraphs, num_spans, 2)
             assert spans.size(1) == num_paragraphs
 
         # Squash paragraph dimension into batch dimension
