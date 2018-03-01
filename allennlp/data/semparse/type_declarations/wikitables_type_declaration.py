@@ -192,7 +192,7 @@ DATE_FUNCTION_TYPE = ComplexType(NUMBER_TYPE,
                                  ComplexType(NUMBER_TYPE, ComplexType(NUMBER_TYPE, DATE_TYPE)))
 # Unary numerical operations: max, min, >, <, sum etc.
 UNARY_DATE_NUM_OP_TYPE = UnaryOpType(allowed_substitutions={DATE_TYPE, NUMBER_TYPE},
-                                     use_placeholder_signature=False)
+                                     signature='<nd,nd>')
 UNARY_NUM_OP_TYPE = ComplexType(NUMBER_TYPE, NUMBER_TYPE)
 
 # Binary numerical operation: -

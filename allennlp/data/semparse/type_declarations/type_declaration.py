@@ -153,9 +153,7 @@ class PlaceholderType(ComplexType):
     inheriting from this class, ``get_application_type`` gets an argument of type ``<a,b>``, it
     should return ``<b,a>`` .
     """
-    @property
-    def _signature(self) -> str:
-        raise NotImplementedError
+    _signature: str = None
 
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
@@ -238,23 +236,19 @@ class UnaryOpType(PlaceholderType):
         have a unary operation that is only permitted for numbers and dates, you can pass those in
         here, and we will only consider those types when calling :func:`substitute_any_type`.  If
         this is ``None``, all basic types are allowed.
-    use_placeholder_signature : ``bool``, optional (default=True)
-        The placeholder type signature of a ``UnaryOpType`` is ``<#1,#1>``.  This is what will
-        appear in action sequences that include this type.  If you want a basic-type-specific
-        signature for each substitution (like ``<n,n>`` for numbers), you can set this to
-        ``False``.
+    signature : ``str``, optional (default='<#1,#1>')
+        The signature of the operation is what will appear in action sequences that include this
+        type.  The default value is suitable for functions that apply to any type.  If you have a
+        restricted set of allowed substitutions, you likely want to change the type signature to
+        reflect that.
     """
     def __init__(self,
                  type_: BasicType = ANY_TYPE,
                  allowed_substitutions: Set[BasicType] = None,
-                 use_placeholder_signature: bool = True) -> None:
+                 signature: str = '<#1,#1>') -> None:
         super().__init__(type_, type_)
         self._allowed_substitutions = allowed_substitutions
-        self._use_placeholder_signature = use_placeholder_signature
-
-    @property
-    def _signature(self) -> str:
-        return "<#1,#1>"
+        self._signature = signature
 
     @overrides
     def resolve(self, other) -> Optional[Type]:
@@ -267,9 +261,7 @@ class UnaryOpType(PlaceholderType):
         other_second = other.second.resolve(other_first)
         if not other_second:
             return None
-        return UnaryOpType(other_first,
-                           self._allowed_substitutions,
-                           self._use_placeholder_signature)
+        return UnaryOpType(other_first, self._allowed_substitutions, self._signature)
 
     @overrides
     def get_application_type(self, argument_type: Type) -> Type:
@@ -280,22 +272,8 @@ class UnaryOpType(PlaceholderType):
         if self.first != ANY_TYPE:
             return [self]
         allowed_basic_types = self._allowed_substitutions if self._allowed_substitutions else basic_types
-        return [UnaryOpType(basic_type, self._allowed_substitutions, self._use_placeholder_signature)
+        return [UnaryOpType(basic_type, self._allowed_substitutions, self._signature)
                 for basic_type in allowed_basic_types]
-
-    @overrides
-    def __str__(self):
-        if self._use_placeholder_signature:
-            return super().__str__()
-        else:
-            return ComplexType.__str__(self)
-
-    @overrides
-    def str(self):
-        if self._use_placeholder_signature:
-            return super().str()
-        else:
-            return ComplexType.str(self)
 
 
 class BinaryOpType(PlaceholderType):
@@ -311,23 +289,19 @@ class BinaryOpType(PlaceholderType):
         have a unary operation that is only permitted for numbers and dates, you can pass those in
         here, and we will only consider those types when calling :func:`substitute_any_type`.  If
         this is ``None``, all basic types are allowed.
-    use_placeholder_signature : ``bool``, optional (default=True)
-        The placeholder type signature of a ``UnaryOpType`` is ``<#1,#1>``.  This is what will
-        appear in action sequences that include this type.  If you want a basic-type-specific
-        signature for each substitution (like ``<n,n>`` for numbers), you can set this to
-        ``False``.
+    signature : ``str``, optional (default='<#1,<#1,#1>>')
+        The signature of the operation is what will appear in action sequences that include this
+        type.  The default value is suitable for functions that apply to any type.  If you have a
+        restricted set of allowed substitutions, you likely want to change the type signature to
+        reflect that.
     """
     def __init__(self,
                  type_: BasicType = ANY_TYPE,
                  allowed_substitutions: Set[BasicType] = None,
-                 use_placeholder_signature: bool = True) -> None:
+                 signature: str = '<#1,<#1,#1>>') -> None:
         super().__init__(type_, ComplexType(type_, type_))
         self._allowed_substitutions = allowed_substitutions
-        self._use_placeholder_signature = use_placeholder_signature
-
-    @property
-    def _signature(self) -> str:
-        return "<#1,<#1,#1>>"
+        self._signature = signature
 
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
@@ -345,7 +319,7 @@ class BinaryOpType(PlaceholderType):
         other_second = other.second.resolve(ComplexType(other_first, other_first))
         if not other_second:
             return None
-        return BinaryOpType(other_first, self._allowed_substitutions, self._use_placeholder_signature)
+        return BinaryOpType(other_first, self._allowed_substitutions, self._signature)
 
     @overrides
     def get_application_type(self, argument_type: Type) -> Type:
@@ -356,22 +330,8 @@ class BinaryOpType(PlaceholderType):
         if self.first != ANY_TYPE:
             return [self]
         allowed_basic_types = self._allowed_substitutions if self._allowed_substitutions else basic_types
-        return [BinaryOpType(basic_type, self._allowed_substitutions, self._use_placeholder_signature)
+        return [BinaryOpType(basic_type, self._allowed_substitutions, self._signature)
                 for basic_type in allowed_basic_types]
-
-    @overrides
-    def __str__(self):
-        if self._use_placeholder_signature:
-            return super().__str__()
-        else:
-            return ComplexType.__str__(self)
-
-    @overrides
-    def str(self):
-        if self._use_placeholder_signature:
-            return super().str()
-        else:
-            return ComplexType.str(self)
 
 
 class TypedConstantExpression(ConstantExpression):

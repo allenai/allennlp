@@ -92,8 +92,8 @@ def assert_dataset_correct(dataset):
     actions = [actions[i] for i in action_indices]
     assert actions == [
             '@START@ -> d',
-            'd -> [<d,d>, d]',
-            '<d,d> -> max',
+            'd -> [<nd,nd>, d]',
+            '<nd,nd> -> max',
             'd -> [<c,d>, c]',
             '<c,d> -> [<<#1,#2>,<#2,#1>>, <d,c>]',
             '<<#1,#2>,<#2,#1>> -> reverse',
@@ -149,8 +149,8 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
                 '<c,r> -> fb:row.row.year',
                 'r -> [<n,r>, n]',
                 '<n,r> -> fb:row.row.index',
-                'n -> [<n,n>, n]',
-                '<n,n> -> max',
+                'n -> [<nd,nd>, n]',
+                '<nd,nd> -> max',
                 'n -> [<r,n>, r]',
                 '<r,n> -> [<<#1,#2>,<#2,#1>>, <n,r>]',
                 '<<#1,#2>,<#2,#1>> -> reverse',

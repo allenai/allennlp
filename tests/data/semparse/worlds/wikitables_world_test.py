@@ -50,6 +50,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                 '<n,n>',
                 '<n,p>',
                 '<n,r>',
+                '<nd,nd>',
                 '<p,c>',
                 '<r,c>',
                 '<r,d>',
@@ -107,8 +108,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                  '[<<#1,#2>,<#2,#1>>, <c,d>]'])
 
         check_productions_match(valid_actions['<d,d>'],
-                                ['<', '<=', '>', '>=', 'min', 'max',
-                                 "['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,d>]'])
+                                ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,d>]'])
 
         check_productions_match(valid_actions['<d,n>'],
                                 ["['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,d>]'])
@@ -134,14 +134,17 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                 ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,n>]'])
 
         check_productions_match(valid_actions['<n,n>'],
-                                ['<', '<=', '>', '>=', 'min', 'max', 'avg', 'sum',
-                                 'number', "['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,n>]'])
+                                ['avg', 'sum', 'number',
+                                 "['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,n>]'])
 
         check_productions_match(valid_actions['<n,p>'],
                                 ['[<<#1,#2>,<#2,#1>>, <p,n>]'])
 
         check_productions_match(valid_actions['<n,r>'],
                                 ['fb:row.row.index', '[<<#1,#2>,<#2,#1>>, <r,n>]'])
+
+        check_productions_match(valid_actions['<nd,nd>'],
+                                ['<', '<=', '>', '>=', 'min', 'max'])
 
         # PART_TYPE rules.  A cell part is for when a cell has text that can be split into multiple
         # parts.  We don't currently handle this, so we don't have any terminal productions here.
@@ -199,7 +202,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                  '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, d, <d,d>]',
                                  '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, d, <n,d>]',
                                  '[<c,d>, c]',
-                                 '[<d,d>, d]'])
+                                 '[<nd,nd>, d]'])
 
         check_productions_match(valid_actions['n'],
                                 ['-1',
@@ -221,6 +224,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                  '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, n, <n,n>]',
                                  '[<n,<n,n>>, n, n]',
                                  '[<n,n>, n]',
+                                 '[<nd,nd>, n]',
                                  '[<r,n>, r]'])
 
         # TODO(mattg): There should be a bunch of terminal productions here, but those aren't
@@ -331,7 +335,7 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                        "(fb:row.row.league fb:cell.usl_a_league))))")
         expression = self.world.parse_logical_form(sempre_form)
         actions = self.world.get_action_sequence(expression)
-        target_action_sequence = ['@START@ -> d', 'd -> [<d,d>, d]', '<d,d> -> max', 'd -> [<c,d>, c]',
+        target_action_sequence = ['@START@ -> d', 'd -> [<nd,nd>, d]', '<nd,nd> -> max', 'd -> [<c,d>, c]',
                                   '<c,d> -> [<<#1,#2>,<#2,#1>>, <d,c>]', '<<#1,#2>,<#2,#1>> -> reverse',
                                   '<d,c> -> fb:cell.cell.date', 'c -> [<r,c>, r]',
                                   '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]', '<<#1,#2>,<#2,#1>> -> reverse',
