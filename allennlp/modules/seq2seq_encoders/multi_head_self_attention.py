@@ -27,11 +27,11 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
     input_dim : ``int``, required.
         The size of the last dimension of the input tensor.
     attention_dim ``int``, required.
-        The dimension of the query and key projections which comprise the
-        dot product attention function.
+        The total dimension of the query and key projections which comprise the
+        dot product attention function. Must be divisible by ``num_heads``.
     values_dim : ``int``, required.
-        The dimension which the input is projected to for representing the values,
-        which are combined using the attention.
+        The total dimension which the input is projected to for representing the values,
+        which are combined using the attention. Must be divisible by ``num_heads``.
     output_projection_dim : ``int``, optional (default = None)
         The dimensionality of the final output projection. If this is not passed
         explicitly, the projection has size `input_size`.
