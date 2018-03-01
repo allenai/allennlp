@@ -229,21 +229,21 @@ class WikiTablesSemanticParser(Model):
 
         # compute similarity of question words with entity_embeddings to capture neighbor info
         # todo(rajas): if this doesn't work just use plain neighbor vector
-        # type_mask = Variable(entity_types.data.new(torch.LongTensor[0,1]))
-        # # (batch_size, num_entities, 1)
-        # type_mask = torch.mul(entity_types, type_mask).squeeze(-1)
-        # # (batch_size, num_entities, embedding_dim)
-        # col_neighbor_info = embedded_neighbors * type_mask
-        #
-        # lin_ent_embeddings = self._temp_linear(col_neighbor_info)
-        # # (batch_size, num_entities, num_question_tokens)
-        # question_ent_embed_sim = torch.bmm(lin_ent_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
+        type_mask = Variable(entity_types.data.new([0, 1])).unsqueeze(-1)
+        # (batch_size, num_entities, 1)
+        print(entity_types.size())
+        type_mask = torch.bmm(entity_types, type_mask.unsqueeze(0))
 
-        lin_ent_embeddings = self._temp_linear(entity_embeddings)
+        # (batch_size, num_entities, embedding_dim)
+        col_neighbor_info = embedded_neighbors * type_mask
+
+        lin_ent_embeddings = self._temp_linear(col_neighbor_info)
         # (batch_size, num_entities, num_question_tokens)
         question_ent_embed_sim = torch.bmm(lin_ent_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
-        print('~~~~~~~~~~~~~~~~~\n\n\n')
-        print(question_ent_embed_sim)
+
+        # lin_ent_embeddings = self._temp_linear(entity_embeddings)
+        # # (batch_size, num_entities, num_question_tokens)
+        # question_ent_embed_sim = torch.bmm(lin_ent_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
 
 
         # (batch_size, num_entities, num_question_tokens, num_features)
