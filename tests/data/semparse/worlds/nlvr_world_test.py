@@ -204,7 +204,7 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
     def test_get_agenda_for_sentence(self):
         world = self.worlds[0]
         agenda = world.get_agenda_for_sentence("there is a tower with exactly two yellow blocks")
-        assert set(agenda) == set(['<o,o> -> yellow', '<b,t> -> box_exists', 'e -> 2'])
+        assert set(agenda) == set(['c -> color_yellow', '<b,t> -> box_exists', 'e -> 2'])
         agenda = world.get_agenda_for_sentence("There is at most one yellow item closely touching "
                                                "the bottom of a box.")
         assert set(agenda) == set(['<o,o> -> yellow', '<o,o> -> touch_bottom', 'e -> 1'])
@@ -223,3 +223,19 @@ class TestNlvrWorldRepresentation(AllenNlpTestCase):
         assert set(agenda) == set(['<o,o> -> blue', 'e -> 1', '<o,o> -> bottom', 'e -> 1'])
         agenda = world.get_agenda_for_sentence("There is only 1 tower with 1 blue block at the top")
         assert set(agenda) == set(['<o,o> -> blue', 'e -> 1', '<o,o> -> top', 'e -> 1'])
+
+    def test_get_agenda_for_sentence_correctly_adds_object_filters(self):
+        # In logical forms that contain "box_exists" at the top, there can never be object filtering
+        # operations like "blue", "square" etc. In those cases, strings like "blue" and "square" in
+        # sentences should map to "color_blue" and "shape_square" respectively.
+        world = self.worlds[0]
+        agenda = world.get_agenda_for_sentence("there is a box with exactly two yellow triangles")
+        assert "<o,o> -> yellow" not in agenda
+        assert "c -> color_yellow" in agenda
+        assert "<o,o> -> triangle" not in agenda
+        assert "s -> shape_triangle" in agenda
+        agenda = world.get_agenda_for_sentence("there are exactly two yellow triangles")
+        assert "<o,o> -> yellow" in agenda
+        assert "c -> color_yellow" not in agenda
+        assert "<o,o> -> triangle" in agenda
+        assert "s -> shape_triangle" not in agenda
