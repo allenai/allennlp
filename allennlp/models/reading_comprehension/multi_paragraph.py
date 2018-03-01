@@ -18,8 +18,11 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEBUG = False
 
-# question_tensor : (batch_size, ...)
 def repeat_question(question_tensor: Variable, num_paragraphs: int) -> Variable:
+    """
+    Turns a (batch_size, num_tokens, input_dim) tensor representing a question into a
+    (batch_size * num_paragraphs, num_tokens, input_dim) tensor to be paired with each paragraph.
+    """
     if num_paragraphs == 1:
         return question_tensor
     old_size = question_tensor.size()
@@ -103,14 +106,11 @@ class MultiParagraphReadingComprehension(Model):
             From a ``ListField[TextField]``.  The model assumes that at least this passage contains the answer to the
             question, and predicts the beginning and ending positions of the answer within the
             passage.
-        span_start : ``torch.IntTensor``, optional
-            From an ``IndexField``.  This is one of the things we are trying to predict - the
-            beginning position of the answer with the passage.  This is an `inclusive` index.  If
-            this is given, we will compute a loss that gets included in the output dictionary.
-        span_end : ``torch.IntTensor``, optional
-            From an ``IndexField``.  This is one of the things we are trying to predict - the
-            ending position of the answer with the passage.  This is an `inclusive` index.  If
-            this is given, we will compute a loss that gets included in the output dictionary.
+        spans : ``torch.IntTensor``, optional
+            From an ``SpanField``. These are what we are trying to predict, the start and the end of the
+            answer within each passage. This is an `inclusive` index. Note that a passage may contain
+            multiple answer spans. If this is given, we will compute a loss that gets included
+            in the output dictionary.
         metadata : ``List[Dict[str, Any]]``, optional
             If present, this should contain the question ID, original passage text, and token
             offsets into the passage for each instance in the batch.  We use this for computing
@@ -347,9 +347,9 @@ class MultiParagraphReadingComprehension(Model):
 
             print("ssl", span_start_logits.size())
             print("sss", span_starts.size())
-            self._span_start_accuracy(span_start_logits, span_starts.squeeze(-1))
-            self._span_end_accuracy(span_end_logits, span_ends.squeeze(-1))
-            self._span_accuracy(best_paragraph_word_span, spans)
+            #self._span_start_accuracy(span_start_logits, span_starts.squeeze(-1))
+            #self._span_end_accuracy(span_end_logits, span_ends.squeeze(-1))
+            #self._span_accuracy(best_paragraph_word_span, spans)
             output_dict["loss"] = loss
 
         # if metadata is not None:
