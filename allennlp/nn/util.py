@@ -433,10 +433,9 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     if label_smoothing is not None and label_smoothing > 0.0:
         num_classes = logits.size(-1)
         smoothing_value = label_smoothing / num_classes
-        smoothed_targets = ones_like(log_probs_flat) * smoothing_value
         # Fill all the correct indices with 1 - smoothing value.
-        smoothed_targets.scatter_(-1, targets_flat, 1.0 - label_smoothing)
-
+        one_hot_targets = zeros_like(log_probs_flat).scatter_(-1, targets_flat, 1.0 - label_smoothing)
+        smoothed_targets = one_hot_targets + smoothing_value
         negative_log_likelihood_flat = - log_probs_flat * smoothed_targets
         negative_log_likelihood_flat = negative_log_likelihood_flat.sum(-1, keepdim=True)
     else:
@@ -493,6 +492,14 @@ def ones_like(tensor: torch.Tensor) -> torch.Tensor:
     device at runtime.
     """
     return tensor.clone().fill_(1)
+
+
+def zeros_like(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Use clone() + fill_() to make sure that a ones tensor ends up on the right
+    device at runtime.
+    """
+    return tensor.clone().fill_(0)
 
 
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:

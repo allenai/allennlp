@@ -452,10 +452,7 @@ class TestNnUtil(AllenNlpTestCase):
             prediction = torch.nn.functional.log_softmax(prediction)
             correct_loss += prediction[label] * 0.9
             # incorrect elements
-            for i, logit in enumerate(prediction):
-                if i != label.data.numpy():
-                    # smoothed label will be (1 - 0.9) / num_classes
-                    correct_loss += logit * 0.1/4
+            correct_loss += prediction.sum() * 0.1/4
         # Average over sequence.
         correct_loss = - correct_loss / 3
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
