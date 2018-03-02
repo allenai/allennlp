@@ -187,7 +187,6 @@ class TestElmo(ElmoTestCase):
         elmo = Elmo(None, None, 2, dropout=0.0, module=elmo_bilm)
         output = elmo(character_ids)
         elmo_representations = output['elmo_representations']
-        mask = output['mask']
 
         assert len(elmo_representations) == 2
         for k in range(2):
