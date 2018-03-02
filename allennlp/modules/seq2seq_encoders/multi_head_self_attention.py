@@ -99,7 +99,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         # Shape (batch_size, timesteps, 2 * attention_dim + values_dim)
         combined_projection = self._combined_projection(inputs)
-        
+
         # split by attention dim - if values_dim > attention_dim, we will get more
         # than 3 elements returned. All of the rest are the values vector, so we
         # just concatenate them back together again below.
