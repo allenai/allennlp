@@ -53,6 +53,14 @@ class Elmo(torch.nn.Module):
         Should we apply layer normalization (passed to ``ScalarMix``)?
     dropout : ``float``, optional, (default = 0.5).
         The dropout to be applied to the ELMo representations.
+    module : ``torch.nn.Module``, optional, (default = None).
+        If provided, then use this module instead of the pre-trained ELMo biLM.
+        If using this option, then pass ``None`` for both ``options_file``
+        and ``weight_file``.  The module must provide a public attribute
+        ``num_layers`` with the number of internal layers and its ``forward``
+        method must return a ``dict`` with ``activations`` and ``mask`` keys
+        (see `_ElmoBilm`` for an example).  Note that ``requires_grad`` is also
+        ignored with this option.
     """
     def __init__(self,
                  options_file: str,
@@ -60,11 +68,18 @@ class Elmo(torch.nn.Module):
                  num_output_representations: int,
                  requires_grad: bool = False,
                  do_layer_norm: bool = False,
-                 dropout: float = 0.5) -> None:
+                 dropout: float = 0.5,
+                 module: torch.nn.Module = None) -> None:
         super(Elmo, self).__init__()
 
         logging.info("Initializing ELMo")
-        self._elmo_lstm = _ElmoBiLm(options_file, weight_file, requires_grad=requires_grad)
+        if module is not None:
+            if options_file is not None or weight_file is not None:
+                raise ConfigurationError(
+                        "Don't provide options_file or weight_file with module")
+            self._elmo_lstm = module
+        else:
+            self._elmo_lstm = _ElmoBiLm(options_file, weight_file, requires_grad=requires_grad)
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
