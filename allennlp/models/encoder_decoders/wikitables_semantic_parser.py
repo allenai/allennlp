@@ -989,7 +989,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         for i in finished_indices:
             self.score[i] = self.score[i] + self.get_coverage_loss(i)
 
-
         finished_state = self._make_new_state_with_group_indices(finished_indices)
         not_finished_state = self._make_new_state_with_group_indices(not_finished_indices)
         return (finished_state, not_finished_state)
@@ -1003,8 +1002,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         print("coverage")
         print(coverage)
         unattended_weight = 1.0 - minimum
-        coverage_loss = torch.mean(unattended_weight)
-        # coverage_loss = torch.sum(unattended_weight)
+        # coverage_loss = torch.mean(unattended_weight)
+        coverage_loss = 0.2 * torch.sum(unattended_weight)
         print(f"score {self.score[index].data[0]} + covloss {coverage_loss.data[0]}")
         return coverage_loss
 
