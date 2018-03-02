@@ -1520,8 +1520,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 new_action_history = state.action_history[group_index] + [action]
                 new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
 
-                # todo(rajas): Can this method be non static so that the decoder step can store a
-                # [coverage_hyperparameter = Linear(1,1)] which will be multiplied by the loss?
                 # Or should I store this hyperparameter in the decoder state?
                 # todo(rajas): find alternative to sum since coverage_loss quickly becomes 1
                 cov = coverage[group_index]
