@@ -57,7 +57,7 @@ class Elmo(torch.nn.Module):
         If provided, then use this module instead of the pre-trained ELMo biLM.
         If using this option, then pass ``None`` for both ``options_file``
         and ``weight_file``.  The module must provide a public attribute
-        ``num_layers`` with the number of internal layers and it's ``forward``
+        ``num_layers`` with the number of internal layers and its ``forward``
         method must return a ``dict`` with ``activations`` and ``mask`` keys
         (see `_ElmoBilm`` for an example).  Note that ``requires_grad`` is also
         ignored with this option.
