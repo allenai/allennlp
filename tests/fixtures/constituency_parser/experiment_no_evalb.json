@@ -19,7 +19,7 @@
         "input_size": 2,
         "hidden_size": 4,
         "num_layers": 1
-      },    
+      },
       "feedforward": {
         "input_dim": 4,
         "num_layers": 1,
@@ -30,7 +30,7 @@
         "type": "endpoint",
         "input_dim": 4
       }
-    },      
+    },
 
     "iterator": {
       "type": "bucket",
@@ -50,4 +50,4 @@
       }
     }
   }
-  
+
