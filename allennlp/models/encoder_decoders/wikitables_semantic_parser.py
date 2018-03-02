@@ -284,7 +284,6 @@ class WikiTablesSemanticParser(Model):
         initial_memory_cell = [memory_cell[i] for i in range(batch_size)]
         initial_attended_question = [attended_question[i] for i in range(batch_size)]
         initial_coverage = [coverage[i] for i in range(batch_size)]
-        initial_attention_weight = [question_attention_weights[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
         question_mask_list = [question_mask[i] for i in range(batch_size)]
         initial_grammar_state = [self._create_grammar_state(world[i], actions[i])
@@ -298,7 +297,6 @@ class WikiTablesSemanticParser(Model):
                                                previous_action_embedding=initial_action_embedding_list,
                                                attended_question=initial_attended_question,
                                                coverage=initial_coverage,
-                                               attention_weights=initial_attention_weight,
                                                grammar_state=initial_grammar_state,
                                                encoder_outputs=encoder_output_list,
                                                encoder_output_mask=question_mask_list,
@@ -929,7 +927,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  previous_action_embedding: List[torch.Tensor],
                  attended_question: List[torch.Tensor],
                  coverage: List[torch.Tensor],
-                 attention_weights: List[torch.Tensor],
                  grammar_state: List[GrammarState],
                  encoder_outputs: torch.Tensor,
                  encoder_output_mask: torch.Tensor,
@@ -946,7 +943,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.previous_action_embedding = previous_action_embedding
         self.attended_question = attended_question
         self.coverage = coverage
-        self.attention_weights = attention_weights
         self.grammar_state = grammar_state
         self.encoder_outputs = encoder_outputs
         self.encoder_output_mask = encoder_output_mask
@@ -1023,7 +1019,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         previous_action = [action for state in states for action in state.previous_action_embedding]
         attended_question = [attended for state in states for attended in state.attended_question]
         coverage = [coverage for state in states for coverage in state.coverage]
-        attention_weights = [attention for state in states for attention in state.attention_weights]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
         if states[0].debug_info is not None:
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
@@ -1037,7 +1032,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       previous_action_embedding=previous_action,
                                       attended_question=attended_question,
                                       coverage=coverage,
-                                      attention_weights=attention_weights,
                                       grammar_state=grammar_states,
                                       encoder_outputs=states[0].encoder_outputs,
                                       encoder_output_mask=states[0].encoder_output_mask,
@@ -1115,7 +1109,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         self._output_projection_layer = Linear(output_dim + encoder_output_dim, action_embedding_dim)
 
         self._encoder_outputs_projection_layer = Linear(encoder_output_dim, encoder_output_dim)
-        # self._coverage_projection_layer = Linear(1, encoder_output_dim)
         # self._coverage_hyperparameter = Linear(1, 1)
 
         # TODO(pradeep): Do not hardcode decoder cell type.
@@ -1147,10 +1140,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # (group_size, num_question_tokens, encoder_output_dim)
         encoder_outputs = torch.stack([state.encoder_outputs[i] for i in state.batch_indices])
         encoder_output_mask = torch.stack([state.encoder_output_mask[i] for i in state.batch_indices])
-
-        # coverage = torch.stack([x for x in state.coverage])
-        # encoder_outputs_with_coverage = self._encoder_outputs_projection_layer(encoder_outputs)
-        # encoder_outputs_with_coverage = encoder_outputs_with_coverage + self._coverage_projection_layer(coverage.unsqueeze(-1))
 
         attended_question, attention_weights = self.attend_on_question(hidden_state,
                                                                        encoder_outputs,
@@ -1520,25 +1509,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 new_action_history = state.action_history[group_index] + [action]
                 new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
 
-                # Or should I store this hyperparameter in the decoder state?
-                # todo(rajas): find alternative to sum since coverage_loss quickly becomes 1
-                cov = coverage[group_index]
-                att = attention_weights[group_index]
-                coverage[group_index] = cov + att #+ torch.pow(att, 2)
-                # coverage_attention = torch.stack([coverage[group_index],
-                #                                   attention_weights[group_index]])
-
-                # minimum = torch.min(coverage_attention, dim=0)[0]
-                # coverage_loss = torch.sum(minimum)
-                # covlosshyper = self._coverage_hyperparameter(coverage_loss)
-                # # print("Coverage loss")
-                # # print(covlosshyper)
-                # # print("new score")
-                # # print(new_score)
-                # # print("Coverage")
-                # # print(coverage[group_index])
-                # new_score = new_score + covlosshyper
-
+                coverage[group_index] = coverage[group_index] + attention_weights[group_index]
 
                 # `action_index` is the index in the _sorted_ tensors, but the action embedding
                 # matrix is _not_ sorted, so we need to get back the original, non-sorted action
@@ -1550,11 +1521,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 new_grammar_state = state.grammar_state[group_index].take_action(left_side, right_side)
                 if state.debug_info is not None:
                     debug_info = {
-                            'considered_actions': considered_actions[group_index],
-                            'question_attention': attention_weights[group_index],
-                            'probabilities': probs_cpu[group_index],
-                            'coverage': coverage[group_index]
-                            }
+                        'considered_actions': considered_actions[group_index],
+                        'question_attention': attention_weights[group_index],
+                        'probabilities': probs_cpu[group_index],
+                        'coverage': coverage[group_index]
+                    }
                     new_debug_info = [state.debug_info[group_index] + [debug_info]]
                 else:
                     new_debug_info = None
@@ -1566,7 +1537,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    previous_action_embedding=[action_embedding],
                                                    attended_question=[attended_question[group_index]],
                                                    coverage=[coverage[group_index]],
-                                                   attention_weights=[coverage[group_index]],
                                                    grammar_state=[new_grammar_state],
                                                    encoder_outputs=state.encoder_outputs,
                                                    encoder_output_mask=state.encoder_output_mask,
