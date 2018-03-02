@@ -1002,8 +1002,11 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         print("coverage")
         print(coverage)
         unattended_weight = 1.0 - minimum
-        # coverage_loss = torch.mean(unattended_weight)
-        coverage_loss = 0.2 * torch.sum(unattended_weight)
+        coverage_loss = torch.mean(unattended_weight)
+        # Add a small number to covg
+        coverage_loss = coverage_loss + 1e-45
+        # coverage_loss = 0.2 * torch.sum(unattended_weight)
+        coverage_loss = coverage_loss.log()
         print(f"score {self.score[index].data[0]} + covloss {coverage_loss.data[0]}")
         return coverage_loss
 
