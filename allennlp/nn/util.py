@@ -415,6 +415,9 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         or returned as a vector of losses per batch element.
     label_smoothing : ``float``, optional (default = None)
         Whether or not to apply label smoothing to the cross-entropy loss.
+        For example, with a label smoothing value of 0.2, a 4 class classifcation
+        target would look like ``[0.05, 0.05, 0.85, 0.05]`` if the 3rd class was
+        the correct label.
 
     Returns
     -------
@@ -496,7 +499,7 @@ def ones_like(tensor: torch.Tensor) -> torch.Tensor:
 
 def zeros_like(tensor: torch.Tensor) -> torch.Tensor:
     """
-    Use clone() + fill_() to make sure that a ones tensor ends up on the right
+    Use clone() + fill_() to make sure that a zeros tensor ends up on the right
     device at runtime.
     """
     return tensor.clone().fill_(0)
