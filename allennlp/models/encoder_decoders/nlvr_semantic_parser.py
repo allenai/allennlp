@@ -190,7 +190,7 @@ class NlvrSemanticParser(Model):
         get_action_string = lambda rule: "%s -> %s" % (rule["left"][0], rule["right"][0])
         for i in range(batch_size):
             batch_actions = actions[i]
-            batch_best_sequences = best_action_sequences[i]
+            batch_best_sequences = best_action_sequences[i] if i in best_action_sequences else []
             sequence_is_correct = False
             in_agenda_ratio = 0.0
             if batch_best_sequences:

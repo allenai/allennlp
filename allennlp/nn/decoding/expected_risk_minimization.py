@@ -21,9 +21,17 @@ class ExpectedRiskMinimization(DecoderTrainer):
     Learning" by Edunov et al., 2017 for more details).
     Note that we do not have a notion of targets here, so we're breaking the API of DecoderTrainer
     a bit.
+
+    Parameters
+    ----------
+    beam_size : ``int``
+    noramlize_by_length : ``bool``
+        Should the log probabilities by normalized by length before renormalizing them? Edunov et
+        al. do this in their work.
     """
-    def __init__(self, beam_size: int) -> None:
+    def __init__(self, beam_size: int, normalize_by_length: bool) -> None:
         self._beam_size = beam_size
+        self._normalize_by_length = normalize_by_length
 
     def decode(self,  # type: ignore  # ``DecoderTrainer.decode`` also takes targets and their masks
                initial_state: DecoderState,
@@ -46,7 +54,8 @@ class ExpectedRiskMinimization(DecoderTrainer):
 
             states = self._prune_beam(next_states)
             num_steps += 1
-        loss = 0.0
+
+        loss = nn_util.new_variable_with_data(initial_state.score[0], torch.Tensor([0.0]))
         finished_model_scores = self._get_model_scores_by_batch(finished_states)
         finished_costs = self._get_costs_by_batch(finished_states)
         for index in finished_model_scores:
@@ -55,22 +64,22 @@ class ExpectedRiskMinimization(DecoderTrainer):
             # the distribution approximated by the beam search.
             costs = torch.cat(finished_costs[index])
             logprobs = torch.cat(finished_model_scores[index])
-            # Note that Edunov et al. normalize the logprobs by length of the output sequence before
-            # computing exp to get the probability. I think this makes sense for machine translation
-            # (which they evaluate on), since predictions should not be discriminated by length. Not
-            # sure if it does for semantic parsing.
-            # TODO (pradeep): Make length normalization an option.
             renormalized_probs = nn_util.masked_softmax(logprobs, None)
             loss += renormalized_probs.dot(costs)
-        return {'loss': loss / len(finished_model_scores),
+        mean_loss = loss / len(finished_model_scores)
+        return {'loss': mean_loss,
                 'best_action_sequence': self._get_best_action_sequences(finished_states)}
 
-    @staticmethod
-    def _get_model_scores_by_batch(states: List[DecoderState]) -> Dict[int, List[Variable]]:
+    def _get_model_scores_by_batch(self, states: List[DecoderState]) -> Dict[int, List[Variable]]:
         batch_scores: Dict[int, List[Variable]] = defaultdict(list)
         for state in states:
-            for batch_index, model_score in zip(state.batch_indices,
-                                                state.score):
+            for batch_index, model_score, history in zip(state.batch_indices,
+                                                         state.score,
+                                                         state.action_history):
+                if self._normalize_by_length:
+                    path_length = nn_util.new_variable_with_data(model_score,
+                                                                 torch.Tensor([len(history)]))
+                    model_score = model_score / path_length
                 batch_scores[batch_index].append(model_score)
         return batch_scores
 
@@ -85,20 +94,17 @@ class ExpectedRiskMinimization(DecoderTrainer):
             batch_costs[batch_index].append(cost)
         return batch_costs
 
-    @staticmethod
-    def _get_best_action_sequences(finished_states: List[DecoderState]) -> Dict[int, List[int]]:
+    def _get_best_action_sequences(self, finished_states: List[DecoderState]) -> Dict[int, List[int]]:
         """
         Returns the best action sequences for each item based on model scores.
         """
-        batch_scores: Dict[int, List[Variable]] = defaultdict(list)
         batch_action_histories: Dict[int, List[List[int]]] = defaultdict(list)
         for state in finished_states:
-            for batch_index, score, action_history in zip(state.batch_indices,
-                                                          state.score,
-                                                          state.action_history):
-                batch_scores[batch_index].append(score)
+            for batch_index, action_history in zip(state.batch_indices,
+                                                   state.action_history):
                 batch_action_histories[batch_index].append(action_history)
 
+        batch_scores = self._get_model_scores_by_batch(finished_states)
         best_action_sequences: Dict[int, List[int]] = {}
         for batch_index, scores in batch_scores.items():
             _, sorted_indices = torch.cat(scores).sort(-1, descending=True)
@@ -125,6 +131,7 @@ class ExpectedRiskMinimization(DecoderTrainer):
 
     @classmethod
     def from_params(cls, params: Params) -> 'ExpectedRiskMinimization':
-        beam_size = params.pop('beam_size')
+        beam_size = params.pop_int('beam_size')
+        normalize_by_length = params.pop_bool('normalize_by_length', True)
         params.assert_empty(cls.__name__)
-        return cls(beam_size)
+        return cls(beam_size, normalize_by_length)
