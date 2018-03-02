@@ -3,7 +3,7 @@ import torch
 from torch.autograd import Variable
 from torch.nn import Dropout, Linear
 
-from allennlp.nn.util import last_dim_softmax
+from allennlp.nn.util import last_dim_softmax, weighted_sum
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.common.params import Params
 
@@ -99,13 +99,14 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         # Shape (batch_size, timesteps, 2 * attention_dim + values_dim)
         combined_projection = self._combined_projection(inputs)
-
-        # Shape (batch_size, timesteps, attention_dim)
-        queries = combined_projection[:, :, :self._attention_dim].contiguous()
-        keys = combined_projection[:, :, self._attention_dim :2 * self._attention_dim].contiguous()
-        # Shape (batch_size, timesteps, values_dim)
-        values = combined_projection[:, :, 2 * self._attention_dim:].contiguous()
-
+        
+        # split by attention dim - if values_dim > attention_dim, we will get more
+        # than 3 elements returned. All of the rest are the values vector, so we
+        # just concatenate them back together again below.
+        queries, keys, *values = combined_projection.split(self._attention_dim, -1)
+        queries = queries.contiguous()
+        keys = keys.contiguous()
+        values = torch.cat(values, -1).contiguous()
         # Shape (num_heads * batch_size, timesteps, values_dim / num_heads)
         values_per_head = values.view(batch_size, timesteps, num_heads, int(self._values_dim/num_heads))
         values_per_head = values_per_head.transpose(1, 2).contiguous()
@@ -128,14 +129,10 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         # Normalise the distributions, using the same mask for all heads.
         attention = last_dim_softmax(scaled_similarities, mask.repeat(num_heads, 1))
         attention = self._attention_dropout(attention)
-        # This is doing the following batch-wise matrix multiplication:
-        # (num_heads * batch_size, timesteps, timesteps) *
-        # (num_heads * batch_size, timesteps, values_dim)
-        # which is equivalent to a weighted sum of the values with respect to
-        # the attention distributions for each element in the num_heads * batch_size
-        # dimension.
+        # Take a weighted sum of the values with respect to the attention
+        # distributions for each element in the num_heads * batch_size dimension.
         # shape (num_heads * batch_size, timesteps, values_dim/num_heads)
-        outputs = torch.bmm(attention, values_per_head)
+        outputs = weighted_sum(values_per_head, attention)
         # Reshape back to original shape (batch_size, timesteps, values_dim)
         # Note that we _cannot_ use a reshape here, because this tensor was created
         # with num_heads being the first dimension, so reshaping naively would not
