@@ -1,3 +1,5 @@
+from allennlp.common import JsonDict
+
 class Token:
     """
     A simple token representation, keeping track of the token's text, offset in the passage it was
@@ -49,3 +51,31 @@ class Token:
 
     def __repr__(self):
         return self.__str__()
+
+
+def json_to_token(blob, short: bool = True) -> Token:
+    if short:
+        text, idx = blob
+        return Token(text, idx)
+    else:
+        return Token(**blob)
+
+def token_to_json(token: Token, short: bool = True):
+    if short:
+        return [token.text, token.idx]
+    else:
+        blob = {"text": token.text}
+        if token.idx is not None:
+            blob['idx'] = token.idx
+        if token.pos_:
+            blob['pos'] = token.pos_
+        if token.tag_:
+            blob['tag'] = token.tag_
+        if token.dep_:
+            blob['dep'] = token.dep_
+        if token.ent_type_:
+            blob['ent_type'] = token.ent_type_
+        if hasattr(token, 'text_id') and token.text_id is not None:
+            blob['text_id'] = token.text_id
+
+        return blob

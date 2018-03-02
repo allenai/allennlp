@@ -345,8 +345,6 @@ class MultiParagraphReadingComprehension(Model):
             loss = self._shared_norm_loss(paragraph_span_start_logits, paragraphs_mask, span_starts, span_idx_mask)
             loss += self._shared_norm_loss(paragraph_span_end_logits, paragraphs_mask, span_ends, span_idx_mask)
 
-            print("ssl", span_start_logits.size())
-            print("sss", span_starts.size())
             #self._span_start_accuracy(span_start_logits, span_starts.squeeze(-1))
             #self._span_end_accuracy(span_end_logits, span_ends.squeeze(-1))
             #self._span_accuracy(best_paragraph_word_span, spans)

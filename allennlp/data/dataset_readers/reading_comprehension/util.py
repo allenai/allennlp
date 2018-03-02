@@ -262,15 +262,19 @@ def make_multi_paragraph_reading_comprehension_instance(
         you want any other metadata to be associated with each instance, you can pass that in here.
         This dictionary will get added to the ``metadata`` dictionary we already construct.
     """
+    #logger.info("make instance")
     additional_metadata = additional_metadata or {}
     fields: Dict[str, Field] = {}
     paragraph_offsets = [[(token.idx, token.idx + len(token.text)) for token in paragraph_i_tokens]
                          for paragraph_i_tokens in paragraph_tokens]
 
+    #logger.info("paragraphs field")
     # This is separate so we can reference it later with a known type.
     paragraphs_field = ListField([TextField(paragraph_i_tokens, token_indexers)
                                   for paragraph_i_tokens in paragraph_tokens])
     fields['paragraphs'] = paragraphs_field
+
+    #logger.info("question_field")
     fields['question'] = TextField(question_tokens, token_indexers)
     metadata = {}
             # 'paragraph_texts': paragraph_texts,
@@ -283,6 +287,7 @@ def make_multi_paragraph_reading_comprehension_instance(
         metadata['answer_texts'] = answer_texts
 
     if token_spans:
+        #logger.info("token spans")
         span_fields = []
         for paragraph_field_i, token_spans_i in zip(paragraphs_field, token_spans):
             if token_spans_i:
@@ -299,4 +304,5 @@ def make_multi_paragraph_reading_comprehension_instance(
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
 
+    #logger.info("returning instance")
     return Instance(fields)
