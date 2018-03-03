@@ -35,6 +35,39 @@ class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
         assert graph.entity_text['0'] == '0'
         assert graph.entity_text['1'] == '1'
 
+    def test_read_from_json_replaces_newlines(self):
+        # The csv -> tsv conversion renders '\n' as r'\n' (with a literal slash character), that
+        # gets read in a two characters instead of one.  We need to make sure we convert it back to
+        # one newline character, so our splitting and other processing works correctly.
+        json = {
+                'question': [Token(x) for x in ['where', 'is', 'mersin', '?']],
+                'columns': ['Name\\nin English', 'Location'],
+                'cells': [['Paradeniz', 'Mersin'],
+                          ['Lake\\nGala', 'Edirne']]
+                }
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
+        assert graph.entities == ['-1', '0', '1', 'fb:cell.edirne', 'fb:cell.lake_gala',
+                                  'fb:cell.mersin', 'fb:cell.paradeniz', 'fb:part.gala',
+                                  'fb:part.lake', 'fb:part.paradeniz', 'fb:row.row.location',
+                                  'fb:row.row.name_in_english']
+        assert graph.entity_text['fb:row.row.name_in_english'] == 'Name\nin English'
+
+    def test_read_from_json_splits_columns_when_necessary(self):
+        json = {
+                'question': [Token(x) for x in ['where', 'is', 'mersin', '?']],
+                'columns': ['Name in English', 'Location'],
+                'cells': [['Paradeniz', 'Mersin with spaces'],
+                          ['Lake, Gala', 'Edirne']]
+                }
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
+        assert graph.entities == ['-1', '0', '1', 'fb:cell.edirne', 'fb:cell.lake_gala',
+                                  'fb:cell.mersin_with_spaces', 'fb:cell.paradeniz', 'fb:part.gala',
+                                  'fb:part.lake', 'fb:part.paradeniz', 'fb:row.row.location',
+                                  'fb:row.row.name_in_english']
+        assert graph.neighbors['fb:part.lake'] == []
+        assert graph.neighbors['fb:part.gala'] == []
+        assert graph.neighbors['fb:part.paradeniz'] == []
+
     def test_read_from_json_handles_numbers_in_question(self):
         # The TSV file we use has newlines converted to "\n", not actual escape characters.  We
         # need to be sure we catch this.
@@ -48,6 +81,36 @@ class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
         assert graph.neighbors['4'] == []
         assert graph.entity_text['1'] == 'one'
         assert graph.entity_text['4'] == '4'
+
+    def test_get_cell_parts_returns_cell_text_on_simple_cells(self):
+        assert TableQuestionKnowledgeGraph._get_cell_parts('Team') == [('fb:part.team', 'Team')]
+        assert TableQuestionKnowledgeGraph._get_cell_parts('2006') == [('fb:part.2006', '2006')]
+        assert TableQuestionKnowledgeGraph._get_cell_parts('Wolfe Tones') == [('fb:part.wolfe_tones',
+                                                                               'Wolfe Tones')]
+
+    def test_get_cell_parts_splits_on_commas(self):
+        parts = TableQuestionKnowledgeGraph._get_cell_parts('United States, Los Angeles')
+        assert set(parts) == {('fb:part.united_states', 'United States'),
+                              ('fb:part.los_angeles', 'Los Angeles')}
+
+    def test_get_cell_parts_on_past_failure_cases(self):
+        parts = TableQuestionKnowledgeGraph._get_cell_parts('Checco D\'Angelo\n "Jimmy"')
+        assert set(parts) == {('fb:part.checco_d_angelo', "Checco D\'Angelo"),
+                              ('fb:part._jimmy', '"Jimmy"')}
+
+    def test_get_cell_parts_handles_multiple_splits(self):
+        parts = TableQuestionKnowledgeGraph._get_cell_parts('this, has / lots\n of , commas')
+        assert set(parts) == {('fb:part.this', 'this'),
+                              ('fb:part.has', 'has'),
+                              ('fb:part.lots', 'lots'),
+                              ('fb:part.of', 'of'),
+                              ('fb:part.commas', 'commas')}
+
+    def test_should_split_column_returns_false_when_all_text_is_simple(self):
+        assert TableQuestionKnowledgeGraph._should_split_column(['Team', '2006', 'Wolfe Tones']) is False
+
+    def test_should_split_column_returns_true_when_one_input_is_splitable(self):
+        assert TableQuestionKnowledgeGraph._should_split_column(['Team, 2006', 'Wolfe Tones']) is True
 
     def test_read_from_json_handles_diacritics(self):
         json = {
@@ -152,12 +215,14 @@ class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
 
         json = {
                 'question': [],
-                'columns': ['€0.01'],
-                'cells': [['6,000']]
+                'columns': ['€0.01', 'Σ Points'],
+                'cells': [['6,000', '9.5']]
                 }
         graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row._0_01'])
         assert neighbors == {'fb:cell.6_000'}
+        neighbors = set(graph.neighbors['fb:row.row._points'])
+        assert neighbors == {'fb:cell.9_5'}
 
         json = {
                 'question': [],
@@ -214,6 +279,19 @@ class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
         assert neighbors == {'fb:cell.2', 'fb:cell.4'}
         neighbors = set(graph.neighbors['fb:cell.1'])
         assert neighbors == {'fb:row.row._of_votes'}
+
+    def test_read_from_json_handles_cells_with_duplicate_normalizations(self):
+        json = {
+                'question': [],
+                'columns': ['answer'],
+                'cells': [['yes'], ['yes*'], ['yes'], ['yes '], ['yes*']]
+                }
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
+
+        # There are three unique text strings that all normalize to "yes", so there are three
+        # fb:cell.yes entities.  Hopefully we produce them in the same order as SEMPRE does...
+        assert graph.entities == ['-1', '0', '1', 'fb:cell.yes', 'fb:cell.yes_2', 'fb:cell.yes_3',
+                                  'fb:row.row.answer']
 
     def test_get_numbers_from_tokens_works_for_arabic_numerals(self):
         tokens = [Token(x) for x in ['7', '1.0', '-20']]

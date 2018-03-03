@@ -341,13 +341,6 @@ class WikiTablesDatasetReader(DatasetReader):
         if logical_form.count('(or') > 3:
             logger.debug(f'Skipping logical form with inordinate number of "ors": {logical_form}')
             return False
-        if 'fb:part' in logical_form:
-            # TODO(mattg): we don't currently ever create production rules to generate cell parts,
-            # and it's not clear to me why we ever should.  These always fail to parse right now,
-            # so we'll just skip them and fix it later.
-            logger.debug(f'Skipping logical form with "fb.part": {logical_form}')
-            return False
-        # TODO(mattg): check for dates here
         return True
 
     @classmethod

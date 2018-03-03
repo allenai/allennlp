@@ -11,17 +11,28 @@ DEFAULT_NUMBERS = ['-1', '0', '1']
 NUMBER_CHARACTERS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-'}
 MONTH_NUMBERS = {
         'january': 1,
+        'jan': 1,
         'february': 2,
+        'feb': 2,
         'march': 3,
+        'mar': 3,
         'april': 4,
+        'apr': 4,
         'may': 5,
         'june': 6,
+        'jun': 6,
         'july': 7,
+        'jul': 7,
         'august': 8,
+        'aug': 8,
         'september': 9,
+        'sep': 9,
         'october': 10,
+        'oct': 10,
         'november': 11,
+        'nov': 11,
         'december': 12,
+        'dec': 12,
         }
 ORDER_OF_MAGNITUDE_WORDS = {'hundred': 100, 'thousand': 1000, 'million': 1000000}
 NUMBER_WORDS = {
@@ -63,8 +74,10 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
     example, we don't store the order of rows.
 
     We represent numbers as standalone nodes in the graph, without any neighbors.
+
+    Additionally, when we encounter cells that can be split, we create ``fb:part.[something]``
+    entities, also without any neighbors.
     """
-    # TODO (pradeep): We may want to reconsider this representation later.
     @classmethod
     def read_from_file(cls, filename: str, question: List[Token]) -> 'TableQuestionKnowledgeGraph':
         """
@@ -126,6 +139,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
         column_ids = []
         columns: Dict[str, int] = {}
         for column_string in json_object['columns']:
+            column_string = column_string.replace('\\n', '\n')
             normalized_string = f'fb:row.row.{cls._normalize_string(column_string)}'
             if normalized_string in columns:
                 columns[normalized_string] += 1
@@ -134,18 +148,39 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
             column_ids.append(normalized_string)
             entity_text[normalized_string] = column_string
 
+        # Stores cell text to cell name, making sure that unique text maps to a unique name.
+        cell_id_mapping = {}
+        column_cells = [[] for _ in columns]
         for row_index, row_cells in enumerate(json_object['cells']):
             assert len(columns) == len(row_cells), ("Invalid format. Row %d has %d cells, but header has %d"
                                                     " columns" % (row_index, len(row_cells), len(columns)))
             # Following Sempre's convention for naming cells.
             row_cell_ids = []
-            for cell_string in row_cells:
-                normalized_string = f'fb:cell.{cls._normalize_string(cell_string)}'
+            for column_index, cell_string in enumerate(row_cells):
+                cell_string = cell_string.replace('\\n', '\n')
+                column_cells[column_index].append(cell_string)
+                if cell_string in cell_id_mapping:
+                    normalized_string = cell_id_mapping[cell_string]
+                else:
+                    base_normalized_string = f'fb:cell.{cls._normalize_string(cell_string)}'
+                    normalized_string = base_normalized_string
+                    attempt_number = 1
+                    while normalized_string in cell_id_mapping.values():
+                        attempt_number += 1
+                        normalized_string = f"{base_normalized_string}_{attempt_number}"
+                    cell_id_mapping[cell_string] = normalized_string
                 row_cell_ids.append(normalized_string)
                 entity_text[normalized_string] = cell_string
             for column, cell in zip(column_ids, row_cell_ids):
                 neighbors[column].append(cell)
                 neighbors[cell].append(column)
+
+        for column in column_cells:
+            if cls._should_split_column(column):
+                for cell_string in column:
+                    for part_entity, part_string in cls._get_cell_parts(cell_string):
+                        neighbors[part_entity] = []
+                        entity_text[part_entity] = part_string
         return cls(set(neighbors.keys()), dict(neighbors), entity_text)
 
     @staticmethod
@@ -174,7 +209,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
         # Oddly, some unicode characters get converted to _ instead of being stripped.  Not really
         # sure how sempre decides what to do with these...  TODO(mattg): can we just get rid of the
         # need for this function somehow?  It's causing a whole lot of headaches.
-        string = re.sub("[ðø′″€⁄ª]", "_", string)
+        string = re.sub("[ðø′″€⁄ªΣ]", "_", string)
         # This is such a mess.  There isn't just a block of unicode that we can strip out, because
         # sometimes sempre just strips diacritics...  We'll try stripping out a few separate
         # blocks, skipping the ones that sempre skips...
@@ -250,3 +285,40 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                         num_zeros += 1
                     numbers.append((str(int(number + 10 ** num_zeros)), token_text))
         return numbers
+
+    cell_part_regex = re.compile(r',\s|\n|/')
+    @classmethod
+    def _get_cell_parts(cls, cell_text: str) -> List[Tuple[str, str]]:
+        """
+        Splits a cell into parts and returns the parts of the cell.  We return a list of
+        ``(entity_name, entity_text)``, where ``entity_name`` is ``fb:part.[something]``, and
+        ``entity_text`` is the text of the cell corresponding to that part.  For many cells, there
+        is only one "part", and we return a list of length one.
+
+        Note that you shouldn't call this on every cell in the table; SEMPRE decides to make these
+        splits only when at least one of the cells in a column looks "splitable".  Only if you're
+        splitting a column should you use this function.
+        """
+        parts = []
+        for part_text in cls.cell_part_regex.split(cell_text):
+            part_text = part_text.strip()
+            part_entity = f'fb:part.{cls._normalize_string(part_text)}'
+            parts.append((part_entity, part_text))
+        return parts
+
+    @classmethod
+    def _should_split_column(cls, column_cells: List[str]) -> bool:
+        """
+        Returns true if there is any cell in this column that can be split.
+        """
+        return any(cls._should_split_cell(cell_text) for cell_text in column_cells)
+
+    @classmethod
+    def _should_split_cell(cls, cell_text: str) -> bool:
+        """
+        Checks whether the cell should be split.  We're just doing the same thing that SEMPRE did
+        here.
+        """
+        if ', ' in cell_text or '\n' in cell_text or '/' in cell_text:
+            return True
+        return False

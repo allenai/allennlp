@@ -120,7 +120,7 @@ class WikiTablesSemanticParser(Model):
 
         self._action_padding_index = -1  # the padding value used by IndexField
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
-        num_entity_types = 3  # TODO(mattg): get this in a more principled way somehow?
+        num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
@@ -433,14 +433,16 @@ class WikiTablesSemanticParser(Model):
         for batch_index, world in enumerate(worlds):
             types = []
             for entity_index, entity in enumerate(world.table_graph.entities):
-                one_hot_vectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-                # We need numbers to be first, then cells, then row, because our entities are going
-                # to be sorted.  We do a split by type and then a merge later, and it relies on
-                # this sorting.
+                one_hot_vectors = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+                # We need numbers to be first, then cells, then parts, then row, because our
+                # entities are going to be sorted.  We do a split by type and then a merge later,
+                # and it relies on this sorting.
                 if entity.startswith('fb:cell'):
                     entity_type = 1
-                elif entity.startswith('fb:row'):
+                elif entity.startswith('fb:part'):
                     entity_type = 2
+                elif entity.startswith('fb:row'):
+                    entity_type = 3
                 else:
                     entity_type = 0
                 types.append(one_hot_vectors[entity_type])
@@ -450,7 +452,7 @@ class WikiTablesSemanticParser(Model):
                 # linking scores are stored.
                 flattened_entity_index = batch_index * num_entities + entity_index
                 entity_types[flattened_entity_index] = entity_type
-            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0, 0])
+            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0, 0, 0])
             batch_types.append(padded)
         return Variable(tensor.data.new(batch_types)), entity_types
 
