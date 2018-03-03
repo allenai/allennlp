@@ -996,17 +996,17 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
     def get_coverage_loss(self, index):
         print('----------------')
         coverage = self.coverage[index]
-        ones = Variable(coverage.data.new(coverage.size()).fill_(1))
+        hyper = 0.5
+        ones = Variable(coverage.data.new(coverage.size()).fill_(hyper))
         stacked = torch.stack([coverage, ones])
         minimum = torch.min(stacked, dim=0)[0]
         print("coverage")
         print(coverage)
-        unattended_weight = 1.0 - minimum
-        coverage_loss = torch.mean(unattended_weight)
-        # Add a small number to covg
-        coverage_loss = coverage_loss + 1e-45
-        # coverage_loss = 0.2 * torch.sum(unattended_weight)
-        coverage_loss = coverage_loss.log()
+        unattended_weight = hyper - minimum
+        avg_unattended_weight = torch.mean(unattended_weight)
+        # So if question is well attended to, then avg_unattended weight is very
+        # small making coverage loss 0. If
+        coverage_loss = (1.0 - avg_unattended_weight).log()
         print(f"score {self.score[index].data[0]} + covloss {coverage_loss.data[0]}")
         return coverage_loss
 
