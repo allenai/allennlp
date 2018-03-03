@@ -116,12 +116,14 @@ class WikiTablesSemanticParser(Model):
         self._type_params = torch.nn.Linear(self.num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
         self._temp_linear = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
+        self._temp2_linear = torch.nn.Linear(1, 1)
         if num_linking_features > 0:
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
         else:
             self._linking_params = None
 
         self._decoder_trainer = MaximumMarginalLikelihood()
+
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
@@ -236,6 +238,14 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_question_tokens)
         question_neighbor_similarity_score, _ = torch.max(question_neighbor_similarity, 2)
 
+        # We zero out scores for cells, since the feature doesn't include this.
+        # Note this can be commented out.
+        # type_mask = Variable(entity_types.data.new([0, 1])).unsqueeze(-1)
+        # # (batch_size, num_entities, 1)
+        # type_mask = torch.bmm(entity_types, type_mask.unsqueeze(0))
+        # question_neighbor_similarity_score = question_neighbor_similarity_score * type_mask
+
+        lin_qnss = self._temp2_linear(question_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
 
         # compute similarity of question words with entity_embeddings to capture neighbor info
         # 1. plain neighbor vector
@@ -258,7 +268,7 @@ class WikiTablesSemanticParser(Model):
 
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_table_similarity_max_score + question_neighbor_similarity_score
+        linking_scores = question_table_similarity_max_score + lin_qnss#question_neighbor_similarity_score
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
             linking_scores = linking_scores + feature_scores
