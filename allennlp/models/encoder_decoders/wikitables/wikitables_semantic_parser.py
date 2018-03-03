@@ -229,24 +229,13 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_question_tokens)
         question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
 
-        # (batch_size, num_entities, num_neighbors, num_entity_tokens * embedding_dim)
-        embedded_table_neighbors = util.batched_index_select(embedded_table.view(batch_size,
-                                                                                 num_entities,
-                                                                                 -1),
-                                                             torch.abs(neighbor_indices))
 
-        question_neighbor_similarity = torch.bmm(embedded_table_neighbors.view(batch_size,
-                                                                  num_entities * num_neighbors * num_entity_tokens,
-                                                                  self._embedding_dim),
-                                              torch.transpose(embedded_question, 1, 2))
-        # (batch_size, num_entities, num_neighbors, num_entity_tokens, num_question_tokens)
-        question_neighbor_similarity = question_neighbor_similarity.view(batch_size,
-                                                                   num_entities,
-                                                                   num_neighbors,
-                                                                   num_entity_tokens,
-                                                                   num_question_tokens) / self._embedding_dim
-        question_neighbor_token_similarity_max, _ = torch.max(question_neighbor_similarity, 3)
-        question_neighbor_similarity_max, _ = torch.max(question_neighbor_token_similarity_max, 2)
+        # (batch_size, num_entities, num_neighbors, num_question_tokens)
+        question_neighbor_similarity = util.batched_index_select(question_table_similarity_max_score,
+                                                                       torch.abs(neighbor_indices))
+        # (batch_size, num_entities, num_question_tokens)
+        question_neighbor_similarity_score, _ = torch.max(question_neighbor_similarity, 2)
+
 
         # compute similarity of question words with entity_embeddings to capture neighbor info
         # 1. plain neighbor vector
@@ -269,7 +258,7 @@ class WikiTablesSemanticParser(Model):
 
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_table_similarity_max_score + question_neighbor_similarity_max
+        linking_scores = question_table_similarity_max_score + question_neighbor_similarity_score
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
             linking_scores = linking_scores + feature_scores
