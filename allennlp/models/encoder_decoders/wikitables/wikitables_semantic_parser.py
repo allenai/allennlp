@@ -183,12 +183,14 @@ class WikiTablesSemanticParser(Model):
         encoded_table = self._entity_encoder(embedded_table, table_mask)
         # (batch_size, num_entities, num_neighbors)
         neighbor_indices = self._get_neighbor_indices(world, num_entities, encoded_table)
+        num_neighbors = neighbor_indices.size(-1)
 
         # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
         # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
         # be added for the mask since that method expects 0 for padding.
-        # (batch_size, num_entities, num_entities, embedding_dim)
+        # (batch_size, num_entities, num_neighbors, embedding_dim)
         embedded_neighbors = util.batched_index_select(encoded_table, torch.abs(neighbor_indices))
+
         neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices + 1},
                                                  num_wrapping_dims=1).float()
 
@@ -227,19 +229,39 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_question_tokens)
         question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
 
+        # (batch_size, num_entities, num_neighbors, num_entity_tokens * embedding_dim)
+        embedded_table_neighbors = util.batched_index_select(embedded_table.view(batch_size,
+                                                                                 num_entities,
+                                                                                 -1),
+                                                             torch.abs(neighbor_indices))
+
+        question_neighbor_similarity = torch.bmm(embedded_table_neighbors.view(batch_size,
+                                                                  num_entities * num_neighbors * num_entity_tokens,
+                                                                  self._embedding_dim),
+                                              torch.transpose(embedded_question, 1, 2))
+        # (batch_size, num_entities, num_neighbors, num_entity_tokens, num_question_tokens)
+        question_neighbor_similarity = question_neighbor_similarity.view(batch_size,
+                                                                   num_entities,
+                                                                   num_neighbors,
+                                                                   num_entity_tokens,
+                                                                   num_question_tokens) / self._embedding_dim
+        question_neighbor_token_similarity_max, _ = torch.max(question_neighbor_similarity, 3)
+        question_neighbor_similarity_max, _ = torch.max(question_neighbor_token_similarity_max, 2)
+
         # compute similarity of question words with entity_embeddings to capture neighbor info
-        # todo(rajas): if this doesn't work just use plain neighbor vector
-        type_mask = Variable(entity_types.data.new([0, 1])).unsqueeze(-1)
-        # (batch_size, num_entities, 1)
-        type_mask = torch.bmm(entity_types, type_mask.unsqueeze(0))
+        # 1. plain neighbor vector
+        # type_mask = Variable(entity_types.data.new([0, 1])).unsqueeze(-1)
+        # # (batch_size, num_entities, 1)
+        # type_mask = torch.bmm(entity_types, type_mask.unsqueeze(0))
+        #
+        # # (batch_size, num_entities, embedding_dim)
+        # col_neighbor_info = embedded_neighbors * type_mask
+        #
+        # lin_ent_embeddings = self._temp_linear(col_neighbor_info)
+        # # (batch_size, num_entities, num_question_tokens)
+        # question_ent_embed_sim = torch.bmm(lin_ent_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
 
-        # (batch_size, num_entities, embedding_dim)
-        col_neighbor_info = embedded_neighbors * type_mask
-
-        lin_ent_embeddings = self._temp_linear(col_neighbor_info)
-        # (batch_size, num_entities, num_question_tokens)
-        question_ent_embed_sim = torch.bmm(lin_ent_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
-
+        # 2. ent embedding
         # lin_ent_embeddings = self._temp_linear(entity_embeddings)
         # # (batch_size, num_entities, num_question_tokens)
         # question_ent_embed_sim = torch.bmm(lin_ent_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
@@ -247,7 +269,7 @@ class WikiTablesSemanticParser(Model):
 
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_table_similarity_max_score + question_ent_embed_sim
+        linking_scores = question_table_similarity_max_score + question_neighbor_similarity_max
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
             linking_scores = linking_scores + feature_scores
