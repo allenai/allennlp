@@ -119,9 +119,11 @@ class WikiTablesSemanticParser(Model):
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
         else:
             self._linking_params = None
-            self._temp1_linear = torch.nn.Linear(1, 1)
-            self._temp2_linear = torch.nn.Linear(1, 1)
+            self._question_entity_params = torch.nn.Linear(1, 1)
+            self._question_neighbor_params = torch.nn.Linear(1, 1)
             # Todo(rajas): remove temp_linear
+            # self._temp1_linear = torch.nn.Linear(1, 1)
+            # self._temp2_linear = torch.nn.Linear(1, 1)
             # self._temp_linear = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
 
         self._decoder_trainer = MaximumMarginalLikelihood()
@@ -215,10 +217,10 @@ class WikiTablesSemanticParser(Model):
         entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
 
         # Compute entity and question word similarity through a dot product.
-        question_table_similarity = torch.bmm(embedded_table.view(batch_size,
-                                                                  num_entities * num_entity_tokens,
-                                                                  self._embedding_dim),
-                                              torch.transpose(embedded_question, 1, 2))
+        question_entity_similarity = torch.bmm(embedded_table.view(batch_size,
+                                                                   num_entities * num_entity_tokens,
+                                                                   self._embedding_dim),
+                                               torch.transpose(embedded_question, 1, 2))
 
         # We divide the similarity scores by the embedding dim to reduce the variance of these
         # scores, and put the similarity scores into the same ballpark range as the linking
@@ -226,42 +228,33 @@ class WikiTablesSemanticParser(Model):
         # the order of 1, which means that a 200-dimensional vector would have a dot product with
         # itself on the order of 200.  This is not reasonable to have as input to a softmax, which
         # we do later, so we need to scale by the number of dimensions.
-        question_table_similarity = question_table_similarity.view(batch_size,
-                                                                   num_entities,
-                                                                   num_entity_tokens,
-                                                                   num_question_tokens) / self._embedding_dim
+        question_entity_similarity = question_entity_similarity.view(batch_size,
+                                                                     num_entities,
+                                                                     num_entity_tokens,
+                                                                     num_question_tokens) / self._embedding_dim
         # (batch_size, num_entities, num_question_tokens)
-        question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
+        question_entity_similarity_max_score, _ = torch.max(question_entity_similarity, 2)
 
 
         # (batch_size, num_entities, num_neighbors, num_question_tokens)
-        question_neighbor_similarity = util.batched_index_select(question_table_similarity_max_score,
+        question_entity_neighbor_similarity = util.batched_index_select(question_entity_similarity_max_score,
                                                                  torch.abs(neighbor_indices))
         # (batch_size, num_entities, num_question_tokens)
-        question_neighbor_similarity_score, _ = torch.max(question_neighbor_similarity, 2)
-
-        # # We zero out scores for cells, since the feature doesn't include this.
-        # # Note this can be commented out.
-        # type_mask = Variable(entity_types.data.new([0, 1])).unsqueeze(-1)
-        # # (batch_size, num_entities, 1)
-        # type_mask = torch.bmm(entity_types, type_mask.unsqueeze(0))
-        # question_neighbor_similarity_score = question_neighbor_similarity_score * type_mask
-
+        question_entity_neighbor_similarity_score, _ = torch.max(question_entity_neighbor_similarity, 2)
 
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_table_similarity_max_score #question_neighbor_similarity_score
-        print("question_table_similarity_max_score", question_table_similarity_max_score)
-        # print("question_neighbor_similarity_score", question_neighbor_similarity_score)
+        linking_scores = question_entity_similarity_max_score
+
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
             linking_scores = linking_scores + feature_scores
         else:
-            # todo(rajas) uncomment below
-            linking_scores = self._temp1_linear(linking_scores.unsqueeze(-1)).squeeze(-1)
-            lin_qnss = self._temp2_linear(question_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
-            linking_scores = linking_scores + lin_qnss
-            # print("lin_qnss", lin_qnss)
+            # linking_scores = self._temp1_linear(linking_scores.unsqueeze(-1)).squeeze(-1)
+            # lin_qnss = self._temp2_linear(question_entity_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
+            projected_question_entity_similarity = self._question_entity_params(linking_scores.unsqueeze(-1)).squeeze(-1)
+            projected_question_neighbor_similarity = self._question_neighbor_params(question_entity_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
+            linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
 
         # (batch_size, num_question_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
@@ -355,7 +348,7 @@ class WikiTablesSemanticParser(Model):
             outputs['linking_scores'] = linking_scores
             if self._linking_params is not None:
                 outputs['feature_scores'] = feature_scores
-            outputs['similarity_scores'] = question_table_similarity_max_score
+            outputs['similarity_scores'] = question_entity_similarity_max_score
             outputs['logical_form'] = []
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
