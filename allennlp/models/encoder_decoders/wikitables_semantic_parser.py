@@ -255,10 +255,10 @@ class WikiTablesSemanticParser(Model):
         memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
 
         initial_score = Variable(embedded_question.data.new(batch_size).fill_(0))
-        attended_question, question_attention_weights = self._decoder_step.attend_on_question(final_encoder_output,
+        attended_question, _ = self._decoder_step.attend_on_question(final_encoder_output,
                                                                                               encoder_outputs,
                                                                                               question_mask)
-        coverage = Variable(attended_question.data.new(question_attention_weights.size()).fill_(0))
+        coverage = Variable(attended_question.data.new(batch_size, num_question_tokens).fill_(0))
 
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
 
@@ -982,33 +982,33 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         if not finished_indices:
             return (None, self)
         if not not_finished_indices:
-            for i in finished_indices:
-                self.score[i] = self.score[i] + self.get_coverage_loss(i)
+            # for i in finished_indices:
+            #     self.score[i] = self.score[i] + self.get_coverage_loss(i)
             return (self, None)
 
-        for i in finished_indices:
-            self.score[i] = self.score[i] + self.get_coverage_loss(i)
+        # for i in finished_indices:
+        #     self.score[i] = self.score[i] + self.get_coverage_loss(i)
 
         finished_state = self._make_new_state_with_group_indices(finished_indices)
         not_finished_state = self._make_new_state_with_group_indices(not_finished_indices)
         return (finished_state, not_finished_state)
 
-    def get_coverage_loss(self, index):
-        print('----------------')
-        coverage = self.coverage[index]
-        hyper = 0.5
-        ones = Variable(coverage.data.new(coverage.size()).fill_(hyper))
-        stacked = torch.stack([coverage, ones])
-        minimum = torch.min(stacked, dim=0)[0]
-        print("coverage")
-        print(coverage)
-        unattended_weight = hyper - minimum
-        avg_unattended_weight = torch.mean(unattended_weight)
-        # So if question is well attended to, then avg_unattended weight is very
-        # small making coverage loss 0. If
-        coverage_loss = (1.0 - avg_unattended_weight).log()
-        print(f"score {self.score[index].data[0]} + covloss {coverage_loss.data[0]}")
-        return coverage_loss
+    # def get_coverage_loss(self, index):
+    #     print('----------------')
+    #     coverage = self.coverage[index]
+    #     hyper = 0.5
+    #     ones = Variable(coverage.data.new(coverage.size()).fill_(hyper))
+    #     stacked = torch.stack([coverage, ones])
+    #     minimum = torch.min(stacked, dim=0)[0]
+    #     print("coverage")
+    #     print(coverage)
+    #     unattended_weight = hyper - minimum
+    #     avg_unattended_weight = torch.mean(unattended_weight)
+    #     # So if question is well attended to, then avg_unattended weight is very
+    #     # small making coverage loss 0. If
+    #     coverage_loss = (1.0 - avg_unattended_weight).log()
+    #     print(f"score {self.score[index].data[0]} + covloss {coverage_loss.data[0]}")
+    #     return coverage_loss
 
     @classmethod
     # @overrides  - overrides can't handle the generics we're using here, apparently
@@ -1057,12 +1057,12 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         group_batch_indices = [self.batch_indices[i] for i in group_indices]
         group_action_histories = [self.action_history[i] for i in group_indices]
         group_scores = [self.score[i] for i in group_indices]
-        group_coverage = [self.coverage[i] for i in group_indices]
         group_previous_action = [self.previous_action_embedding[i] for i in group_indices]
         group_grammar_states = [self.grammar_state[i] for i in group_indices]
         group_hidden_states = [self.hidden_state[i] for i in group_indices]
         group_memory_cells = [self.memory_cell[i] for i in group_indices]
         group_attended_question = [self.attended_question[i] for i in group_indices]
+        group_coverage = [self.coverage[i] for i in group_indices]
         if self.debug_info is not None:
             group_debug_info = [self.debug_info[i] for i in group_indices]
         else:
@@ -1466,6 +1466,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         hidden_state = [x.squeeze(0) for x in hidden_state.split(1, 0)]
         memory_cell = [x.squeeze(0) for x in memory_cell.split(1, 0)]
         attended_question = [x.squeeze(0) for x in attended_question.split(1, 0)]
+        # This is already a list so no need to split like the other parameter tensors
         coverage = state.coverage
         attention_weights = [x.squeeze(0) for x in attention_weights.split(1, 0)]
 
