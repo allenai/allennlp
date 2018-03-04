@@ -115,12 +115,14 @@ class WikiTablesSemanticParser(Model):
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(self.num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
-        self._temp_linear = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
-        self._temp2_linear = torch.nn.Linear(1, 1)
         if num_linking_features > 0:
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
         else:
             self._linking_params = None
+            self._temp1_linear = torch.nn.Linear(1, 1)
+            self._temp2_linear = torch.nn.Linear(1, 1)
+            # Todo(rajas): remove temp_linear
+            # self._temp_linear = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
 
         self._decoder_trainer = MaximumMarginalLikelihood()
 
@@ -234,44 +236,32 @@ class WikiTablesSemanticParser(Model):
 
         # (batch_size, num_entities, num_neighbors, num_question_tokens)
         question_neighbor_similarity = util.batched_index_select(question_table_similarity_max_score,
-                                                                       torch.abs(neighbor_indices))
+                                                                 torch.abs(neighbor_indices))
         # (batch_size, num_entities, num_question_tokens)
         question_neighbor_similarity_score, _ = torch.max(question_neighbor_similarity, 2)
 
-        # We zero out scores for cells, since the feature doesn't include this.
-        # Note this can be commented out.
+        # # We zero out scores for cells, since the feature doesn't include this.
+        # # Note this can be commented out.
         # type_mask = Variable(entity_types.data.new([0, 1])).unsqueeze(-1)
         # # (batch_size, num_entities, 1)
         # type_mask = torch.bmm(entity_types, type_mask.unsqueeze(0))
         # question_neighbor_similarity_score = question_neighbor_similarity_score * type_mask
 
-        lin_qnss = self._temp2_linear(question_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
-
-        # compute similarity of question words with entity_embeddings to capture neighbor info
-        # 1. plain neighbor vector
-        # type_mask = Variable(entity_types.data.new([0, 1])).unsqueeze(-1)
-        # # (batch_size, num_entities, 1)
-        # type_mask = torch.bmm(entity_types, type_mask.unsqueeze(0))
-        #
-        # # (batch_size, num_entities, embedding_dim)
-        # col_neighbor_info = embedded_neighbors * type_mask
-        #
-        # lin_ent_embeddings = self._temp_linear(col_neighbor_info)
-        # # (batch_size, num_entities, num_question_tokens)
-        # question_ent_embed_sim = torch.bmm(lin_ent_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
-
-        # 2. ent embedding
-        # lin_ent_embeddings = self._temp_linear(entity_embeddings)
-        # # (batch_size, num_entities, num_question_tokens)
-        # question_ent_embed_sim = torch.bmm(lin_ent_embeddings, torch.transpose(embedded_question, 1, 2)) / self._embedding_dim
-
 
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_table_similarity_max_score + lin_qnss#question_neighbor_similarity_score
+        linking_scores = question_table_similarity_max_score #question_neighbor_similarity_score
+        print("question_table_similarity_max_score", question_table_similarity_max_score)
+        # print("question_neighbor_similarity_score", question_neighbor_similarity_score)
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
             linking_scores = linking_scores + feature_scores
+        else:
+            # todo(rajas) uncomment below
+            linking_scores = self._temp1_linear(linking_scores.unsqueeze(-1)).squeeze(-1)
+            lin_qnss = self._temp2_linear(question_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
+            linking_scores = linking_scores + lin_qnss
+            # print("lin_qnss", lin_qnss)
 
         # (batch_size, num_question_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
