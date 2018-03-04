@@ -69,7 +69,27 @@ class MaximumMarginalLikelihood(DecoderTrainer):
         loss = 0
         for scores in batch_scores.values():  # we don't care about the batch index, just the scores
             loss += -util.logsumexp(torch.cat(scores))
+
+        for state in finished_states:
+            loss += self.get_coverage_loss(state)
+
         return {'loss': loss / len(batch_scores)}
+
+    def get_coverage_loss(self, state):
+        coverage_loss = 0.0
+        for coverage in state.coverage:
+            hyper = 1.0
+            ones = Variable(coverage.data.new(coverage.size()).fill_(hyper))
+            stacked = torch.stack([coverage, ones])
+            minimum = torch.min(stacked, dim=0)[0]
+            unattended_weight = hyper - minimum
+            avg_unattended_weight = torch.mean(unattended_weight)
+            coverage_loss += avg_unattended_weight
+            # print('----------------')
+            # print("coverage")
+            # print(coverage)
+            # print(f"covloss {coverage_loss}")
+        return coverage_loss
 
     @staticmethod
     def _create_allowed_transitions(targets: Union[torch.Tensor, List[List[List[int]]]],
