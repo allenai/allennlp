@@ -153,30 +153,30 @@ class PlaceholderType(ComplexType):
     inheriting from this class, ``get_application_type`` gets an argument of type ``<a,b>``, it
     should return ``<b,a>`` .
     """
-    @property
-    def _signature(self) -> str:
-        raise NotImplementedError
+    _signature: str = None
 
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
         """
-        This method is central to type inference and checking. When a variable's type is being checked, we
-        compare what we know of its type against what is expected of its type by its context. The expectation
-        is provided as ``other``. We make sure that there are no contradictions between this type and other,
-        and return an updated type which may be more specific than the original type.
+        This method is central to type inference and checking. When a variable's type is being
+        checked, we compare what we know of its type against what is expected of its type by its
+        context. The expectation is provided as ``other``. We make sure that there are no
+        contradictions between this type and other, and return an updated type which may be more
+        specific than the original type.
 
-        For example, say this type is of the function variable F in F(cell), and we start out with ``<?, d>``
-        (that is, it takes any type and returns ``d`` ). Now we have already resolved cell to be of type
-        ``e`` . Then ``resolve`` gets called with ``other = <e, ?>`` , because we know F is a function that
-        took a constant of type ``e`` . When we resolve ``<e, ?>`` against ``<?, d>`` , there will not be a
-        contradiction, because any type can be successfully resolved against ``?`` . Finally we return
-        ``<e, d>`` as the resolved type.
+        For example, say this type is of the function variable F in F(cell), and we start out with
+        ``<?, d>`` (that is, it takes any type and returns ``d`` ). Now we have already resolved
+        cell to be of type ``e`` . Then ``resolve`` gets called with ``other = <e, ?>`` , because
+        we know F is a function that took a constant of type ``e`` . When we resolve ``<e, ?>``
+        against ``<?, d>`` , there will not be a contradiction, because any type can be
+        successfully resolved against ``?`` . Finally we return ``<e, d>`` as the resolved type.
 
-        As a counter example, if we are trying to resolve ``<?, d>`` against ``<?, e>`` , the resolution fails,
-        and in that case, this method returns ``None`` .
+        As a counter example, if we are trying to resolve ``<?, d>`` against ``<?, e>`` , the
+        resolution fails, and in that case, this method returns ``None`` .
 
-        Note that a successful resolution does not imply equality of types because of one of them may be
-        ANY_TYPE, and so in the subclasses of this type, we explicitly resolve in both directions.
+        Note that a successful resolution does not imply equality of types because of one of them
+        may be ANY_TYPE, and so in the subclasses of this type, we explicitly resolve in both
+        directions.
         """
         raise NotImplementedError
 
@@ -223,17 +223,32 @@ class PlaceholderType(ComplexType):
     __hash__ = ComplexType.__hash__
 
 
-class IdentityType(PlaceholderType):
+class UnaryOpType(PlaceholderType):
     """
-    ``IdentityType`` is a kind of ``PlaceholderType`` that takes an argument of any type and
-    returns an expression of the same type. That is, type signature is <#1, #1>. This is in this
-    module because it is a commonly needed ``PlaceholderType`` in many domains. For example, if
-    your logical form language has lambda expressions, it is quite convenient to specify the
-    variable's usage as "(var x)", and you can make "var" a function of this type.
+    ``UnaryOpType`` is a kind of ``PlaceholderType`` that takes an argument of any type and returns
+    an expression of the same type.  ``identity`` is an example of this kind of function.  The type
+    signature of ``UnaryOpType`` is <#1, #1>.
+
+    Parameters
+    ----------
+    allowed_substitutions : ``Set[BasicType]``, optional (default=None)
+        If given, this sets restrictions on the types that can be substituted.  That is, say you
+        have a unary operation that is only permitted for numbers and dates, you can pass those in
+        here, and we will only consider those types when calling :func:`substitute_any_type`.  If
+        this is ``None``, all basic types are allowed.
+    signature : ``str``, optional (default='<#1,#1>')
+        The signature of the operation is what will appear in action sequences that include this
+        type.  The default value is suitable for functions that apply to any type.  If you have a
+        restricted set of allowed substitutions, you likely want to change the type signature to
+        reflect that.
     """
-    @property
-    def _signature(self) -> str:
-        return "<#1,#1>"
+    def __init__(self,
+                 type_: BasicType = ANY_TYPE,
+                 allowed_substitutions: Set[BasicType] = None,
+                 signature: str = '<#1,#1>') -> None:
+        super().__init__(type_, type_)
+        self._allowed_substitutions = allowed_substitutions
+        self._signature = signature
 
     @overrides
     def resolve(self, other) -> Optional[Type]:
@@ -246,7 +261,7 @@ class IdentityType(PlaceholderType):
         other_second = other.second.resolve(other_first)
         if not other_second:
             return None
-        return IdentityType(other_first, other_second)
+        return UnaryOpType(other_first, self._allowed_substitutions, self._signature)
 
     @overrides
     def get_application_type(self, argument_type: Type) -> Type:
@@ -256,7 +271,67 @@ class IdentityType(PlaceholderType):
     def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
         if self.first != ANY_TYPE:
             return [self]
-        return [IdentityType(basic_type, basic_type) for basic_type in basic_types]
+        allowed_basic_types = self._allowed_substitutions if self._allowed_substitutions else basic_types
+        return [UnaryOpType(basic_type, self._allowed_substitutions, self._signature)
+                for basic_type in allowed_basic_types]
+
+
+class BinaryOpType(PlaceholderType):
+    """
+    ``BinaryOpType`` is a function that takes two arguments of the same type and returns an
+    argument of that type.  ``+``, ``-``, ``and`` and ``or`` are examples of this kind of function.
+    The type signature of ``BinaryOpType`` is ``<#1,<#1,#1>>``.
+
+    Parameters
+    ----------
+    allowed_substitutions : ``Set[BasicType]``, optional (default=None)
+        If given, this sets restrictions on the types that can be substituted.  That is, say you
+        have a unary operation that is only permitted for numbers and dates, you can pass those in
+        here, and we will only consider those types when calling :func:`substitute_any_type`.  If
+        this is ``None``, all basic types are allowed.
+    signature : ``str``, optional (default='<#1,<#1,#1>>')
+        The signature of the operation is what will appear in action sequences that include this
+        type.  The default value is suitable for functions that apply to any type.  If you have a
+        restricted set of allowed substitutions, you likely want to change the type signature to
+        reflect that.
+    """
+    def __init__(self,
+                 type_: BasicType = ANY_TYPE,
+                 allowed_substitutions: Set[BasicType] = None,
+                 signature: str = '<#1,<#1,#1>>') -> None:
+        super().__init__(type_, ComplexType(type_, type_))
+        self._allowed_substitutions = allowed_substitutions
+        self._signature = signature
+
+    @overrides
+    def resolve(self, other: Type) -> Optional[Type]:
+        """See ``PlaceholderType.resolve``"""
+        if not isinstance(other, NltkComplexType):
+            return None
+        if not isinstance(other.second, NltkComplexType):
+            return None
+        other_first = other.first.resolve(other.second.first)
+        if other_first is None:
+            return None
+        other_first = other_first.resolve(other.second.second)
+        if not other_first:
+            return None
+        other_second = other.second.resolve(ComplexType(other_first, other_first))
+        if not other_second:
+            return None
+        return BinaryOpType(other_first, self._allowed_substitutions, self._signature)
+
+    @overrides
+    def get_application_type(self, argument_type: Type) -> Type:
+        return ComplexType(argument_type, argument_type)
+
+    @overrides
+    def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
+        if self.first != ANY_TYPE:
+            return [self]
+        allowed_basic_types = self._allowed_substitutions if self._allowed_substitutions else basic_types
+        return [BinaryOpType(basic_type, self._allowed_substitutions, self._signature)
+                for basic_type in allowed_basic_types]
 
 
 class TypedConstantExpression(ConstantExpression):
@@ -453,11 +528,11 @@ def get_valid_actions(name_mapping: Dict[str, str],
         types, where the variable is determined by the number of nestings.  We currently only
         permit up to three levels of nesting, just for ease of implementation.
     """
-    valid_actions: Dict[Type, Set[str]] = defaultdict(set)
+    valid_actions: Dict[str, Set[str]] = defaultdict(set)
 
     valid_starting_types = valid_starting_types or basic_types
     for type_ in valid_starting_types:
-        valid_actions[START_TYPE].add(_make_production_string(START_TYPE, type_))
+        valid_actions[str(START_TYPE)].add(_make_production_string(START_TYPE, type_))
 
     complex_types = set()
     for name, alias in name_mapping.items():
@@ -473,7 +548,7 @@ def get_valid_actions(name_mapping: Dict[str, str],
         name_type = type_signatures[alias]
         # Type to terminal productions.
         for substituted_type in substitute_any_type(name_type, basic_types):
-            valid_actions[substituted_type].add(_make_production_string(substituted_type, name))
+            valid_actions[str(substituted_type)].add(_make_production_string(substituted_type, name))
         # Keeping track of complex types.
         if isinstance(name_type, ComplexType) and name_type != ANY_TYPE:
             complex_types.add(name_type)
@@ -481,7 +556,7 @@ def get_valid_actions(name_mapping: Dict[str, str],
     for complex_type in complex_types:
         for substituted_type in substitute_any_type(complex_type, basic_types):
             head, production = _get_complex_type_production(substituted_type)
-            valid_actions[head].add(production)
+            valid_actions[str(head)].add(production)
 
     # We can produce complex types with a lambda expression, though we'll leave out
     # placeholder types for now.
@@ -494,9 +569,9 @@ def get_valid_actions(name_mapping: Dict[str, str],
             for second_type in basic_types:
                 key = ComplexType(first_type, second_type)
                 production_string = _make_production_string(key, ['lambda ' + lambda_var, second_type])
-                valid_actions[key].add(production_string)
+                valid_actions[str(key)].add(production_string)
 
-    valid_action_strings = {str(key): sorted(value) for key, value in valid_actions.items()}
+    valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
     return valid_action_strings
 
 

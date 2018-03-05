@@ -95,7 +95,7 @@ class WorldTest(AllenNlpTestCase):
                         "(reverse (lambda x ((reverse fb:row.row.index) (var x))))")
         parsed_logical_form = world.parse_logical_form(logical_form)
         action_sequence = world.get_action_sequence(parsed_logical_form)
-        assert 'r -> [<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d,r>]' in action_sequence
+        assert 'r -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <n,r>]' in action_sequence
 
     def test_get_action_sequence_removes_and_retains_var_correctly(self):
         world = self.wikitables_world

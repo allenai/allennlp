@@ -132,6 +132,8 @@ class ModelTestCase(AllenNlpTestCase):
                                          subfield2,
                                          tolerance=tolerance,
                                          name=name + f"[{i}]")
+        elif isinstance(field1, (float, int)):
+            assert_allclose([field1], [field2], rtol=tolerance, err_msg=name)
         else:
             assert field1 == field2
 

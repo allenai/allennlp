@@ -4,10 +4,11 @@ Defines all the types in the WikitablesQuestions domain.
 from typing import List, Optional, Set
 from overrides import overrides
 
-from nltk.sem.logic import Type, BasicType, EntityType, ANY_TYPE, ComplexType as NltkComplexType
+from nltk.sem.logic import Type, BasicType, ANY_TYPE, ComplexType as NltkComplexType
 
-from allennlp.data.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType, IdentityType
+from allennlp.data.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType
 from allennlp.data.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType
+from allennlp.data.semparse.type_declarations.type_declaration import UnaryOpType, BinaryOpType
 
 
 class ReverseType(PlaceholderType, HigherOrderType):
@@ -26,10 +27,7 @@ class ReverseType(PlaceholderType, HigherOrderType):
     """
     def __init__(self, first: Type, second: Type) -> None:
         super().__init__(num_arguments=1, first=first, second=second)
-
-    @property
-    def _signature(self) -> str:
-        return "<<#1,#2>,<#2,#1>>"
+        self._signature = '<<#1,#2>,<#2,#1>>'
 
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
@@ -65,64 +63,36 @@ class ReverseType(PlaceholderType, HigherOrderType):
         return substitutions
 
 
-class ConjunctionType(PlaceholderType):
-    """
-    ``ConjunctionType`` takes an entity of any type and returns a function that takes and returns the same
-    type. That is, its signature is <#1, <#1, #1>>
-    """
-    @property
-    def _signature(self) -> str:
-        return "<#1,<#1,#1>>"
-
-    @overrides
-    def resolve(self, other: Type) -> Optional[Type]:
-        """See ``PlaceholderType.resolve``"""
-        if not isinstance(other, NltkComplexType):
-            return None
-        if not isinstance(other.second, NltkComplexType):
-            return None
-        other_first = other.first.resolve(other.second.first)
-        if other_first is None:
-            return None
-        other_first = other_first.resolve(other.second.second)
-        if not other_first:
-            return None
-        other_second = other.second.resolve(ComplexType(other_first, other_first))
-        if not other_second:
-            return None
-        return ConjunctionType(other_first, other_second)
-
-    @overrides
-    def get_application_type(self, argument_type: Type) -> Type:
-        return ComplexType(argument_type, argument_type)
-
-    @overrides
-    def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
-        if self.first != ANY_TYPE:
-            return [self]
-        return [ConjunctionType(basic_type, ComplexType(basic_type, basic_type)) for basic_type in basic_types]
-
-
 class ArgExtremeType(PlaceholderType):
     """
     This is the type for argmax and argmin in Sempre. The type signature is <d,<d,<#1,<<d,#1>,#1>>>>.
     Example: (argmax (number 1) (number 1) (fb:row.row.league fb:cell.usl_a_league) fb:row.row.index)
     meaning, of the subset of rows where league == usl_a_league, find the row with the maximum index.
     """
-    @property
-    def _signature(self) -> str:
-        return "<d,<d,<#1,<<d,#1>,#1>>>>"
+    def __init__(self, basic_type: BasicType = ANY_TYPE, lambda_arg_type: BasicType = ANY_TYPE) -> None:
+        super().__init__(NUMBER_TYPE,
+                         ComplexType(NUMBER_TYPE,
+                                     ComplexType(basic_type,
+                                                 ComplexType(ComplexType(lambda_arg_type, basic_type),
+                                                             basic_type))))
+        self._signature = '<n,<n,<#1,<<#2,#1>,#1>>>>'
 
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
         """See ``PlaceholderType.resolve``"""
         if not isinstance(other, NltkComplexType):
             return None
-        expected_second = ComplexType(DATE_NUM_TYPE,
-                                      ComplexType(ANY_TYPE, ComplexType(ComplexType(DATE_NUM_TYPE, ANY_TYPE),
+        expected_second = ComplexType(NUMBER_TYPE,
+                                      ComplexType(ANY_TYPE, ComplexType(ComplexType(ANY_TYPE, ANY_TYPE),
                                                                         ANY_TYPE)))
         resolved_second = other.second.resolve(expected_second)
         if resolved_second is None:
+            return None
+
+        # The lambda function that we use inside the argmax  must take either a number or a date as
+        # an argument.
+        lambda_arg_type = other.second.second.second.first.first
+        if lambda_arg_type.resolve(NUMBER_TYPE) is None and lambda_arg_type.resolve(DATE_TYPE) is None:
             return None
 
         try:
@@ -146,12 +116,7 @@ class ArgExtremeType(PlaceholderType):
             if not resolved_first_ph or not resolved_second_ph or not resolved_third_ph:
                 return None
 
-            return ArgExtremeType(DATE_NUM_TYPE,
-                                  ComplexType(DATE_NUM_TYPE,
-                                              ComplexType(resolved_first_ph,
-                                                          ComplexType(ComplexType(DATE_NUM_TYPE,
-                                                                                  resolved_second_ph),
-                                                                      resolved_third_ph))))
+            return ArgExtremeType(resolved_first_ph, lambda_arg_type)
         except AttributeError:
             return None
 
@@ -165,89 +130,83 @@ class ArgExtremeType(PlaceholderType):
     def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
         if self.second.second.first != ANY_TYPE:
             return [self]
-        return [self._substitute_basic_type(basic_type) for basic_type in basic_types]
-
-    @classmethod
-    def _substitute_basic_type(cls, basic_type: BasicType) -> 'ArgExtremeType':
-        return cls(DATE_NUM_TYPE,
-                   ComplexType(DATE_NUM_TYPE,
-                               ComplexType(basic_type,
-                                           ComplexType(ComplexType(DATE_NUM_TYPE, basic_type),
-                                                       basic_type))))
+        return [ArgExtremeType(basic_type, inner_function_type)
+                for basic_type in basic_types
+                for inner_function_type in {NUMBER_TYPE, DATE_TYPE}]
 
 
 class CountType(PlaceholderType):
     """
-    Type of a function that counts arbitrary things. Signature is <#1,d>.
+    Type of a function that counts arbitrary things. Signature is <#1,n>.
     """
-    @property
-    def _signature(self) -> str:
-        return "<#1,d>"
+    def __init__(self, count_type: Type) -> None:
+        super().__init__(count_type, NUMBER_TYPE)
+        self._signature = '<#1,n>'
 
     @overrides
     def resolve(self, other: Type) -> Type:
         """See ``PlaceholderType.resolve``"""
         if not isinstance(other, NltkComplexType):
             return None
-        resolved_second = DATE_NUM_TYPE.resolve(other.second)
+        resolved_second = NUMBER_TYPE.resolve(other.second)
         if not resolved_second:
             return None
-        return CountType(ANY_TYPE, resolved_second)
+        return CountType(other.first)
 
     @overrides
     def get_application_type(self, argument_type: Type) -> Type:
-        return DATE_NUM_TYPE
+        return NUMBER_TYPE
 
     @overrides
     def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
         if self.first != ANY_TYPE:
             return [self]
-        return [CountType(basic_type, DATE_NUM_TYPE) for basic_type in basic_types]
+        return [CountType(basic_type) for basic_type in basic_types]
 
 
-CELL_TYPE = EntityType()
+CELL_TYPE = NamedBasicType("CELL")
 PART_TYPE = NamedBasicType("PART")
 ROW_TYPE = NamedBasicType("ROW")
-# TODO (pradeep): Merging dates and nums. Can define a hierarchy instead.
-DATE_NUM_TYPE = NamedBasicType("DATENUM")
+DATE_TYPE = NamedBasicType("DATE")
+NUMBER_TYPE = NamedBasicType("NUMBER")
 
-BASIC_TYPES = {CELL_TYPE, PART_TYPE, ROW_TYPE, DATE_NUM_TYPE}
+BASIC_TYPES = {CELL_TYPE, PART_TYPE, ROW_TYPE, DATE_TYPE, NUMBER_TYPE}
 # Functions like fb:row.row.year.
 COLUMN_TYPE = ComplexType(CELL_TYPE, ROW_TYPE)
 # fb:cell.cell.part
-PART2CELL_TYPE = ComplexType(PART_TYPE, CELL_TYPE)
+PART_TO_CELL_TYPE = ComplexType(PART_TYPE, CELL_TYPE)
 # fb:cell.cell.date
-CELL2DATE_NUM_TYPE = ComplexType(DATE_NUM_TYPE, CELL_TYPE)
+DATE_TO_CELL_TYPE = ComplexType(DATE_TYPE, CELL_TYPE)
+# fb:cell.cell.number
+NUM_TO_CELL_TYPE = ComplexType(NUMBER_TYPE, CELL_TYPE)
 # number
-NUMBER_FUNCTION_TYPE = ComplexType(EntityType(), DATE_NUM_TYPE)
+NUMBER_FUNCTION_TYPE = ComplexType(NUMBER_TYPE, NUMBER_TYPE)
 # date (Signature: <e,<e,<e,d>>>; Example: (date 1982 -1 -1))
-DATE_FUNCTION_TYPE = ComplexType(EntityType(),
-                                 ComplexType(EntityType(), ComplexType(EntityType(), DATE_NUM_TYPE)))
+DATE_FUNCTION_TYPE = ComplexType(NUMBER_TYPE,
+                                 ComplexType(NUMBER_TYPE, ComplexType(NUMBER_TYPE, DATE_TYPE)))
 # Unary numerical operations: max, min, >, <, sum etc.
-UNARY_NUM_OP_TYPE = ComplexType(DATE_NUM_TYPE, DATE_NUM_TYPE)
+UNARY_DATE_NUM_OP_TYPE = UnaryOpType(allowed_substitutions={DATE_TYPE, NUMBER_TYPE},
+                                     signature='<nd,nd>')
+UNARY_NUM_OP_TYPE = ComplexType(NUMBER_TYPE, NUMBER_TYPE)
+
 # Binary numerical operation: -
-BINARY_NUM_OP_TYPE = ComplexType(DATE_NUM_TYPE, ComplexType(DATE_NUM_TYPE, DATE_NUM_TYPE))
+BINARY_NUM_OP_TYPE = ComplexType(NUMBER_TYPE, ComplexType(NUMBER_TYPE, NUMBER_TYPE))
+
 # next
-NEXT_ROW_TYPE = ComplexType(ROW_TYPE, ROW_TYPE)
+ROW_TO_ROW_TYPE = ComplexType(ROW_TYPE, ROW_TYPE)
 # reverse
 REVERSE_TYPE = ReverseType(ComplexType(ANY_TYPE, ANY_TYPE), ComplexType(ANY_TYPE, ANY_TYPE))
 # !=, fb:type.object.type
 # fb:type.object.type takes a type and returns all objects of that type.
-IDENTITY_TYPE = IdentityType(ANY_TYPE, ANY_TYPE)
+IDENTITY_TYPE = UnaryOpType()
 # index
-ROW_INDEX_TYPE = ComplexType(DATE_NUM_TYPE, ROW_TYPE)
+ROW_INDEX_TYPE = ComplexType(NUMBER_TYPE, ROW_TYPE)
 # count
-COUNT_TYPE = CountType(ANY_TYPE, DATE_NUM_TYPE)
+COUNT_TYPE = CountType(ANY_TYPE)
 # and, or
-CONJUNCTION_TYPE = ConjunctionType(ANY_TYPE, ComplexType(ANY_TYPE, ANY_TYPE))
+CONJUNCTION_TYPE = BinaryOpType()
 # argmax, argmin
-ARG_EXTREME_TYPE = ArgExtremeType(DATE_NUM_TYPE,
-                                  ComplexType(DATE_NUM_TYPE,
-                                              ComplexType(ANY_TYPE,
-                                                          ComplexType(ComplexType(DATE_NUM_TYPE,
-                                                                                  ANY_TYPE),
-                                                                      ANY_TYPE))))
-
+ARG_EXTREME_TYPE = ArgExtremeType()
 
 
 COMMON_NAME_MAPPING = {"lambda": "\\", "var": "V", "x": "X"}
@@ -263,26 +222,26 @@ def add_common_name_with_type(name, mapping, type_signature):
 add_common_name_with_type("reverse", "R", REVERSE_TYPE)
 add_common_name_with_type("argmax", "A0", ARG_EXTREME_TYPE)
 add_common_name_with_type("argmin", "A1", ARG_EXTREME_TYPE)
-add_common_name_with_type("max", "M0", UNARY_NUM_OP_TYPE)
-add_common_name_with_type("min", "M1", UNARY_NUM_OP_TYPE)
+add_common_name_with_type("max", "M0", UNARY_DATE_NUM_OP_TYPE)
+add_common_name_with_type("min", "M1", UNARY_DATE_NUM_OP_TYPE)
 add_common_name_with_type("and", "A", CONJUNCTION_TYPE)
 add_common_name_with_type("or", "O", CONJUNCTION_TYPE)
-add_common_name_with_type("fb:row.row.next", "N", NEXT_ROW_TYPE)
+add_common_name_with_type("fb:row.row.next", "N", ROW_TO_ROW_TYPE)
 add_common_name_with_type("number", "I", NUMBER_FUNCTION_TYPE)
 add_common_name_with_type("date", "D0", DATE_FUNCTION_TYPE)
-add_common_name_with_type("fb:cell.cell.part", "P", PART2CELL_TYPE)
-add_common_name_with_type("fb:cell.cell.date", "D1", CELL2DATE_NUM_TYPE)
-add_common_name_with_type("fb:cell.cell.number", "I1", CELL2DATE_NUM_TYPE)
-add_common_name_with_type("fb:cell.cell.num2", "I2", CELL2DATE_NUM_TYPE)
+add_common_name_with_type("fb:cell.cell.part", "P", PART_TO_CELL_TYPE)
+add_common_name_with_type("fb:cell.cell.date", "D1", DATE_TO_CELL_TYPE)
+add_common_name_with_type("fb:cell.cell.number", "I1", NUM_TO_CELL_TYPE)
+add_common_name_with_type("fb:cell.cell.num2", "I2", NUM_TO_CELL_TYPE)
 add_common_name_with_type("fb:row.row.index", "W", ROW_INDEX_TYPE)
 add_common_name_with_type("fb:type.row", "T0", ROW_TYPE)
-add_common_name_with_type("fb:type.object.type", "T", IDENTITY_TYPE)
+add_common_name_with_type("fb:type.object.type", "T", ROW_TO_ROW_TYPE)
 add_common_name_with_type("count", "C", COUNT_TYPE)
 add_common_name_with_type("!=", "Q", IDENTITY_TYPE)
-add_common_name_with_type(">", "G0", UNARY_NUM_OP_TYPE)
-add_common_name_with_type(">=", "G1", UNARY_NUM_OP_TYPE)
-add_common_name_with_type("<", "L0", UNARY_NUM_OP_TYPE)
-add_common_name_with_type("<=", "L1", UNARY_NUM_OP_TYPE)
+add_common_name_with_type(">", "G0", UNARY_DATE_NUM_OP_TYPE)
+add_common_name_with_type(">=", "G1", UNARY_DATE_NUM_OP_TYPE)
+add_common_name_with_type("<", "L0", UNARY_DATE_NUM_OP_TYPE)
+add_common_name_with_type("<=", "L1", UNARY_DATE_NUM_OP_TYPE)
 add_common_name_with_type("sum", "S0", UNARY_NUM_OP_TYPE)
 add_common_name_with_type("avg", "S1", UNARY_NUM_OP_TYPE)
 add_common_name_with_type("-", "F", BINARY_NUM_OP_TYPE)  # subtraction
