@@ -171,9 +171,9 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                     cell_id_mapping[cell_string] = normalized_string
                 row_cell_ids.append(normalized_string)
                 entity_text[normalized_string] = cell_string
-            for column, cell in zip(column_ids, row_cell_ids):
-                neighbors[column].append(cell)
-                neighbors[cell].append(column)
+            for column_id, cell_id in zip(column_ids, row_cell_ids):
+                neighbors[column_id].append(cell_id)
+                neighbors[cell_id].append(column_id)
 
         for column in column_cells:
             if cls._should_split_column(column):
