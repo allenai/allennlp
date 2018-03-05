@@ -15,6 +15,7 @@ import sys
 import torch
 import numpy
 import spacy
+from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
@@ -49,6 +50,8 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, (list, tuple)):
         # Lists and Tuples need their values sanitized
         return [sanitize(x_i) for x_i in x]
+    elif x is None:
+        return "None"
     else:
         raise ValueError("cannot sanitize {} of type {}".format(x, type(x)))
 
@@ -187,6 +190,7 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
     keyed by the options we used to create the spacy model, so any particular configuration only
     gets loaded once.
     """
+
     options = (spacy_model_name, pos_tags, parse, ner)
     if options not in LOADED_SPACY_MODELS:
         disable = ['vectors', 'textcat']
@@ -196,7 +200,13 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
             disable.append('parser')
         if not ner:
             disable.append('ner')
-        spacy_model = spacy.load(spacy_model_name, disable=disable)
+        try:
+            spacy_model = spacy.load(spacy_model_name, disable=disable)
+        except OSError:
+            logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
+            spacy_download(spacy_model_name)
+            spacy_model = spacy.load(spacy_model_name, disable=disable)
+
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
 

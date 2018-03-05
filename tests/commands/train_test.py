@@ -26,7 +26,7 @@ class TestTrain(AllenNlpTestCase):
                                         "embedding_dim": 5
                                 }
                         },
-                        "stacked_encoder": {
+                        "encoder": {
                                 "type": "lstm",
                                 "input_size": 5,
                                 "hidden_size": 7,
@@ -55,7 +55,7 @@ class TestTrain(AllenNlpTestCase):
                                         "embedding_dim": 5
                                 }
                         },
-                        "stacked_encoder": {
+                        "encoder": {
                                 "type": "lstm",
                                 "input_size": 5,
                                 "hidden_size": 7,
@@ -133,7 +133,7 @@ class TestTrain(AllenNlpTestCase):
                                         "embedding_dim": 5
                                 }
                         },
-                        "stacked_encoder": {
+                        "encoder": {
                                 "type": "lstm",
                                 "input_size": 5,
                                 "hidden_size": 7,
@@ -209,7 +209,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                                         "embedding_dim": 5
                                 }
                         },
-                        "stacked_encoder": {
+                        "encoder": {
                                 "type": "lstm",
                                 "input_size": 5,
                                 "hidden_size": 7,
@@ -238,7 +238,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                                         "embedding_dim": 5
                                 }
                         },
-                        "stacked_encoder": {
+                        "encoder": {
                                 "type": "lstm",
                                 "input_size": 5,
                                 "hidden_size": 7,

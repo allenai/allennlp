@@ -72,6 +72,6 @@ class SemanticRoleLabelerTest(ModelTestCase):
         params = Params.from_file(self.param_file)
         # Make the phrase layer wrong - it should be 150 to match
         # the embedding + binary feature dimensions.
-        params["model"]["stacked_encoder"]["input_size"] = 10
+        params["model"]["encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
             Model.from_params(self.vocab, params.pop("model"))

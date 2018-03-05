@@ -177,6 +177,21 @@ class TestElmo(ElmoTestCase):
                     embeddings_3d[k]['elmo_representations'][0].data.numpy()
             )
 
+    def test_elmo_with_module(self):
+        # We will create the _ElmoBilm class and pass it in as a module.
+        sentences = [['The', 'sentence', '.'],
+                     ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']]
+
+        character_ids = self._sentences_to_ids(sentences)
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
+        elmo = Elmo(None, None, 2, dropout=0.0, module=elmo_bilm)
+        output = elmo(character_ids)
+        elmo_representations = output['elmo_representations']
+
+        assert len(elmo_representations) == 2
+        for k in range(2):
+            assert list(elmo_representations[k].size()) == [2, 7, 32]
+
 
 class TestElmoRequiresGrad(ElmoTestCase):
     def _run_test(self, requires_grad):

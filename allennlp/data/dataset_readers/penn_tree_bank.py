@@ -105,7 +105,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         fields: Dict[str, Field] = {"tokens": text_field}
 
         if self._use_pos_tags and pos_tags is not None:
-            pos_tag_field = SequenceLabelField(pos_tags, text_field, "pos_tags")
+            pos_tag_field = SequenceLabelField(pos_tags, text_field, label_namespace="pos")
             fields["pos_tags"] = pos_tag_field
         elif self._use_pos_tags:
             raise ConfigurationError("use_pos_tags was set to True but no gold pos"
@@ -132,6 +132,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         metadata = {"tokens": tokens}
         if gold_tree:
             metadata["gold_tree"] = gold_tree
+        if self._use_pos_tags:
+            metadata["pos_tags"] = pos_tags
 
         fields["metadata"] = MetadataField(metadata)
 
