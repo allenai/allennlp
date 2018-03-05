@@ -90,8 +90,6 @@ def merge_and_sort(paragraphs: List[str],
             "has_answers": [i for i, choice in enumerate(choices) if choice in has_answers]
         }
 
-STOP_AT = 100
-
 def main(params: Params, triviaqa_path: pathlib.Path, outdir: pathlib.Path):
     global tokenizer
 
@@ -124,10 +122,10 @@ def main(params: Params, triviaqa_path: pathlib.Path, outdir: pathlib.Path):
             questions_data = json.loads(f.read())['Data']
 
         with open(output_path, 'w') as f:
-            for question in questions_data[:STOP_AT]:
+            for i, question in enumerate(questions_data):
                 question_id = question['QuestionId']
                 question_text = question['Question']
-                logger.info(f"{question_id} {question_text}")
+                logger.info(f"{i} {question_id} {question_text}")
                 question_tokens = tokenizer.tokenize(question_text)
 
                 answer = question['Answer']
