@@ -149,8 +149,8 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
             entity_text[normalized_string] = column_string
 
         # Stores cell text to cell name, making sure that unique text maps to a unique name.
-        cell_id_mapping = {}
-        column_cells = [[] for _ in columns]
+        cell_id_mapping: Dict[str, str] = {}
+        column_cells: List[List[str]] = [[] for _ in columns]
         for row_index, row_cells in enumerate(json_object['cells']):
             assert len(columns) == len(row_cells), ("Invalid format. Row %d has %d cells, but header has %d"
                                                     " columns" % (row_index, len(row_cells), len(columns)))
