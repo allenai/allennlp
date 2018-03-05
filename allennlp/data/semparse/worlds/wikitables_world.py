@@ -82,14 +82,13 @@ class WikiTablesWorld(World):
         valid_actions['n'].append('n -> [<r,n>, r]')
         valid_actions['n'].append('n -> [<c,n>, c]')
         valid_actions['p'].append('p -> [<c,p>, c]')
-        valid_actions['<p,n>'].append("<p,n> -> ['lambda x', n]")
+        valid_actions['<p,n>'] = ["<p,n> -> ['lambda x', n]"]
 
         # These get added when we do our ANY_TYPE substitution with basic types, but we don't
         # actually need them.
         del valid_actions['<c,c>']
         del valid_actions['<d,p>']
         del valid_actions['<p,d>']
-        del valid_actions['<p,n>']
         del valid_actions['<p,p>']
         del valid_actions['<p,r>']
 
