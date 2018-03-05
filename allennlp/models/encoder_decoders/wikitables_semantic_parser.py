@@ -237,7 +237,7 @@ class WikiTablesSemanticParser(Model):
         linking_scores = question_table_similarity_max_score
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
-            linking_scores += feature_scores
+            linking_scores = linking_scores + feature_scores
 
         # (batch_size, num_question_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
