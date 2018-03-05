@@ -11,7 +11,6 @@ from allennlp.data.semparse.type_declarations.wikitables_type_declaration import
         CONJUNCTION_TYPE,
         COUNT_TYPE,
         CountType,
-        NUMBER_TYPE,
         ROW_TYPE,
         REVERSE_TYPE,
         ReverseType,
