@@ -121,10 +121,6 @@ class WikiTablesSemanticParser(Model):
             self._linking_params = None
             self._question_entity_params = torch.nn.Linear(1, 1)
             self._question_neighbor_params = torch.nn.Linear(1, 1)
-            # Todo(rajas): remove temp_linear
-            # self._temp1_linear = torch.nn.Linear(1, 1)
-            # self._temp2_linear = torch.nn.Linear(1, 1)
-            # self._temp_linear = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
 
         self._decoder_trainer = MaximumMarginalLikelihood()
 
@@ -250,8 +246,7 @@ class WikiTablesSemanticParser(Model):
             feature_scores = self._linking_params(linking_features).squeeze(3)
             linking_scores = linking_scores + feature_scores
         else:
-            # linking_scores = self._temp1_linear(linking_scores.unsqueeze(-1)).squeeze(-1)
-            # lin_qnss = self._temp2_linear(question_entity_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
+            # pylint: disable=line-too-long
             projected_question_entity_similarity = self._question_entity_params(linking_scores.unsqueeze(-1)).squeeze(-1)
             projected_question_neighbor_similarity = self._question_neighbor_params(question_entity_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
             linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
