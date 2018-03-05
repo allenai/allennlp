@@ -112,6 +112,8 @@ class TriviaQaReader(DatasetReader):
 
         logger.info(f"loading data from {question_path}")
 
+        CUTOFF = 2
+
         with open(question_path, 'r') as f:
             for line in f:
                 question = json.loads(line)
@@ -136,8 +138,8 @@ class TriviaQaReader(DatasetReader):
                     picked_paragraph_texts = [paragraph_texts[i] for i in sample]
                     picked_paragraph_tokens = [paragraph_tokens[i] for i in sample]
                 else:
-                    picked_paragraph_texts = paragraph_texts
-                    picked_paragraph_tokens = paragraph_tokens
+                    picked_paragraph_texts = paragraph_texts[:CUTOFF]
+                    picked_paragraph_tokens = paragraph_tokens[:CUTOFF]
 
                 instance = util.make_multi_paragraph_reading_comprehension_instance(
                         question_tokens,

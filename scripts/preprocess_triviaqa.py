@@ -1,3 +1,23 @@
+"""
+Takes the raw `triviaqa-rc.tar.gz` (or an untarred version of it)
+and converts it into two JSONL files: `web-train.jsonl` and `web-dev.jsonl`.
+
+Each JSON line corresponds to a single question and has the format
+
+{
+    "id": "qw_1934",
+    "text": "what is the ... ?",
+    "tokens": [["what", 0], ...],
+    "paragraphs": {
+        "text": ["first paragraph...", "second paragraph", ...],
+        "tokens": [[["first", 0], ...], ...],
+        "token_spans": [[[62, 63]], ...],
+        "has_answers": [0],
+    },
+    "answer_texts": ["primary answer", "alternative answer"]
+}
+"""
+
 from typing import List
 import json
 import logging
@@ -23,6 +43,7 @@ from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.tokenizers.token import Token, token_to_json, json_to_token
 from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.dataset_readers.reading_comprehension.triviaqa import _PARAGRAPH_TOKEN
+from allennlp.data.vocabulary import Vocabulary
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +111,6 @@ def merge_and_sort(paragraphs: List[str],
             "has_answers": [i for i, choice in enumerate(choices) if choice in has_answers]
         }
 
-STOP_AT = 100
-
 def main(params: Params, triviaqa_path: pathlib.Path, outdir: pathlib.Path):
     global tokenizer
 
@@ -124,10 +143,10 @@ def main(params: Params, triviaqa_path: pathlib.Path, outdir: pathlib.Path):
             questions_data = json.loads(f.read())['Data']
 
         with open(output_path, 'w') as f:
-            for question in questions_data[:STOP_AT]:
+            for i, question in enumerate(questions_data):
                 question_id = question['QuestionId']
                 question_text = question['Question']
-                logger.info(f"{question_id} {question_text}")
+                logger.info(f"{i} {question_id} {question_text}")
                 question_tokens = tokenizer.tokenize(question_text)
 
                 answer = question['Answer']
