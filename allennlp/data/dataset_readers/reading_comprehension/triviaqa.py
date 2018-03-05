@@ -90,6 +90,7 @@ class TriviaQaReader(DatasetReader):
                  processed_data_path: str,
                  paragraph_picker: str = None,
                  sample_first_iteration: bool = False,
+                 load_all: bool = True,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False) -> None:
@@ -97,9 +98,11 @@ class TriviaQaReader(DatasetReader):
         self._sample_this_iteration = sample_first_iteration
         self._processed_data_path = pathlib.Path(processed_data_path)
         self._paragraph_picker = paragraph_picker
+        self._load_all = load_all
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
+        self._data: Dict[str, List[Instance]] = {}
 
     @overrides
     def _read(self, file_path: str):
@@ -109,6 +112,14 @@ class TriviaQaReader(DatasetReader):
             result_key, evidence_subdir = 'EntityPages', 'wikipedia'
 
         question_path = self._processed_data_path / file_path
+
+        if self._load_all and file_path in self._data:
+            logger.info("yielding instances from memory")
+            yield from self._data[file_path]
+            return
+
+        if self._load_all:
+            self._data[file_path] = []
 
         logger.info(f"loading data from {question_path}")
 
@@ -148,6 +159,9 @@ class TriviaQaReader(DatasetReader):
                         picked_paragraph_texts,
                         token_spans,
                         answer_texts)
+
+                if self._load_all:
+                    self._data[file_path].append(instance)
 
                 yield instance
 
