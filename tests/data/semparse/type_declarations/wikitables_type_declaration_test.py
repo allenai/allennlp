@@ -56,8 +56,8 @@ class WikiTablesTypeDeclarationTest(AllenNlpTestCase):
         assert COUNT_TYPE.resolve(ComplexType(CELL_TYPE, ROW_TYPE)) is None
 
         # Resolution should resolve the return type to number
-        assert COUNT_TYPE.resolve(ComplexType(CELL_TYPE, ANY_TYPE)) == CountType(CELL_TYPE, NUMBER_TYPE)
-        assert COUNT_TYPE.resolve(ComplexType(ANY_TYPE, ANY_TYPE)) == CountType(ANY_TYPE, NUMBER_TYPE)
+        assert COUNT_TYPE.resolve(ComplexType(CELL_TYPE, ANY_TYPE)) == CountType(CELL_TYPE)
+        assert COUNT_TYPE.resolve(ComplexType(ANY_TYPE, ANY_TYPE)) == CountType(ANY_TYPE)
 
     def test_arg_extreme_type_resolves_correctly(self):
         # Resolution should fail on basic type

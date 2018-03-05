@@ -27,10 +27,7 @@ class ReverseType(PlaceholderType, HigherOrderType):
     """
     def __init__(self, first: Type, second: Type) -> None:
         super().__init__(num_arguments=1, first=first, second=second)
-
-    @property
-    def _signature(self) -> str:
-        return "<<#1,#2>,<#2,#1>>"
+        self._signature = '<<#1,#2>,<#2,#1>>'
 
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
@@ -78,10 +75,7 @@ class ArgExtremeType(PlaceholderType):
                                      ComplexType(basic_type,
                                                  ComplexType(ComplexType(lambda_arg_type, basic_type),
                                                              basic_type))))
-
-    @property
-    def _signature(self) -> str:
-        return "<n,<n,<#1,<<#2,#1>,#1>>>>"
+        self._signature = '<n,<n,<#1,<<#2,#1>,#1>>>>'
 
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
@@ -145,9 +139,9 @@ class CountType(PlaceholderType):
     """
     Type of a function that counts arbitrary things. Signature is <#1,n>.
     """
-    @property
-    def _signature(self) -> str:
-        return "<#1,n>"
+    def __init__(self, count_type: Type) -> None:
+        super().__init__(count_type, NUMBER_TYPE)
+        self._signature = '<#1,n>'
 
     @overrides
     def resolve(self, other: Type) -> Type:
@@ -157,7 +151,7 @@ class CountType(PlaceholderType):
         resolved_second = NUMBER_TYPE.resolve(other.second)
         if not resolved_second:
             return None
-        return CountType(ANY_TYPE, resolved_second)
+        return CountType(other.first)
 
     @overrides
     def get_application_type(self, argument_type: Type) -> Type:
@@ -167,7 +161,7 @@ class CountType(PlaceholderType):
     def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
         if self.first != ANY_TYPE:
             return [self]
-        return [CountType(basic_type, NUMBER_TYPE) for basic_type in basic_types]
+        return [CountType(basic_type) for basic_type in basic_types]
 
 
 CELL_TYPE = NamedBasicType("CELL")
@@ -208,7 +202,7 @@ IDENTITY_TYPE = UnaryOpType()
 # index
 ROW_INDEX_TYPE = ComplexType(NUMBER_TYPE, ROW_TYPE)
 # count
-COUNT_TYPE = CountType(ANY_TYPE, NUMBER_TYPE)
+COUNT_TYPE = CountType(ANY_TYPE)
 # and, or
 CONJUNCTION_TYPE = BinaryOpType()
 # argmax, argmin
