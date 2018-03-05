@@ -231,13 +231,6 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_question_tokens)
         question_entity_similarity_max_score, _ = torch.max(question_entity_similarity, 2)
 
-
-        # (batch_size, num_entities, num_neighbors, num_question_tokens)
-        question_entity_neighbor_similarity = util.batched_index_select(question_entity_similarity_max_score,
-                                                                 torch.abs(neighbor_indices))
-        # (batch_size, num_entities, num_question_tokens)
-        question_entity_neighbor_similarity_score, _ = torch.max(question_entity_neighbor_similarity, 2)
-
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
         linking_scores = question_entity_similarity_max_score
@@ -247,6 +240,14 @@ class WikiTablesSemanticParser(Model):
             linking_scores = linking_scores + feature_scores
         else:
             # pylint: disable=line-too-long
+            # The similarity between a question token and an entity's neighbors is useful when
+            # a column needs to be selected. For example, the question token might have no similarity
+            # with the column name, but is similar with the cells in the column.
+            # (batch_size, num_entities, num_neighbors, num_question_tokens)
+            question_entity_neighbor_similarity = util.batched_index_select(question_entity_similarity_max_score,
+                                                                            torch.abs(neighbor_indices))
+            # (batch_size, num_entities, num_question_tokens)
+            question_entity_neighbor_similarity_score, _ = torch.max(question_entity_neighbor_similarity, 2)
             projected_question_entity_similarity = self._question_entity_params(linking_scores.unsqueeze(-1)).squeeze(-1)
             projected_question_neighbor_similarity = self._question_neighbor_params(question_entity_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
             linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
