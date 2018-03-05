@@ -25,91 +25,72 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
     def test_get_valid_actions_returns_correct_set(self):
         # This test is long, but worth it.  These are all of the valid actions in the grammar, and
         # we want to be sure they are what we expect.
+
+        # This test checks that our valid actions for each type match  PNP's, except for the
+        # terminal productions for type 'p'.
         valid_actions = self.world.get_valid_actions()
         assert set(valid_actions.keys()) == {
                 '<#1,#1>',
                 '<#1,<#1,#1>>',
-                '<#1,d>',
+                '<#1,n>',
                 '<<#1,#2>,<#2,#1>>',
-                '<d,<d,<#1,<<d,#1>,#1>>>>',
-                '<d,<d,d>>',
+                '<c,d>',
+                '<c,n>',
+                '<c,p>',
+                '<c,r>',
+                '<d,c>',
                 '<d,d>',
-                '<d,e>',
-                '<d,p>',
+                '<d,n>',
                 '<d,r>',
-                '<e,<e,<e,d>>>',
-                '<e,d>',
-                '<e,e>',
-                '<e,p>',
-                '<e,r>',
-                '<p,d>',
-                '<p,e>',
-                '<p,p>',
-                '<p,r>',
+                '<n,<n,<#1,<<#2,#1>,#1>>>>',
+                '<n,<n,<n,d>>>',
+                '<n,<n,n>>',
+                '<n,c>',
+                '<n,d>',
+                '<n,n>',
+                '<n,p>',
+                '<n,r>',
+                '<nd,nd>',
+                '<p,c>',
+                '<r,c>',
                 '<r,d>',
-                '<r,e>',
+                '<r,n>',
                 '<r,p>',
                 '<r,r>',
                 '@START@',
+                'c',
                 'd',
-                'e',
+                'n',
                 'p',
                 'r',
                 }
 
         check_productions_match(valid_actions['<#1,#1>'],
-                                ['!=', 'fb:type.object.type'])
+                                ['!='])
 
         check_productions_match(valid_actions['<#1,<#1,#1>>'],
                                 ['and', 'or'])
 
-        check_productions_match(valid_actions['<#1,d>'],
+        check_productions_match(valid_actions['<#1,n>'],
                                 ['count'])
 
         check_productions_match(valid_actions['<<#1,#2>,<#2,#1>>'],
                                 ['reverse'])
 
-        check_productions_match(valid_actions['<d,<d,<#1,<<d,#1>,#1>>>>'],
-                                ['argmax', 'argmin'])
+        check_productions_match(valid_actions['<c,d>'],
+                                ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,c>]'])
 
-        check_productions_match(valid_actions['<d,<d,d>>'],
-                                ['-'])
+        check_productions_match(valid_actions['<c,n>'],
+                                ["['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,c>]'])
 
-        check_productions_match(valid_actions['<d,d>'],
-                                ['<', '<=', '>', '>=', 'avg', 'min', 'sum', 'max',
-                                 "['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,d>]'])
-
-        # These might look backwards, but that's because SEMPRE chose to make them backwards.
-        # fb:a.b is a function that takes b and returns a.  So fb:cell.cell.date takes cell.date
-        # and returns cell and fb:row.row.index takes row.index and returns row.
-        check_productions_match(valid_actions['<d,e>'],
-                                ['fb:cell.cell.num2', 'fb:cell.cell.date', 'fb:cell.cell.number',
-                                 "['lambda x', e]", '[<<#1,#2>,<#2,#1>>, <e,d>]'])
-
-        check_productions_match(valid_actions['<d,p>'],
-                                ["['lambda x', p]", '[<<#1,#2>,<#2,#1>>, <p,d>]'])
-
-        check_productions_match(valid_actions['<d,r>'],
-                                ['fb:row.row.index', "['lambda x', r]", '[<<#1,#2>,<#2,#1>>, <r,d>]'])
-
-        # "date" is a function that takes three numbers: (date 2018 01 06).
-        check_productions_match(valid_actions['<e,<e,<e,d>>>'],
-                                ['date'])
-
-        check_productions_match(valid_actions['<e,d>'],
-                                ['number', "['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,e>]'])
-
-        check_productions_match(valid_actions['<e,e>'],
-                                ["['lambda x', e]", '[<<#1,#2>,<#2,#1>>, <e,e>]'])
-
-        check_productions_match(valid_actions['<e,p>'],
-                                ["['lambda x', p]", '[<<#1,#2>,<#2,#1>>, <p,e>]'])
+        check_productions_match(valid_actions['<c,p>'],
+                                ['[<<#1,#2>,<#2,#1>>, <p,c>]'])
 
         # Most of these are instance-specific production rules.  These are the columns in the
         # table.  Remember that SEMPRE did things backwards: fb:row.row.division takes a cell ID
         # and returns the row that has that cell in its row.division column.  This is why we have
         # to reverse all of these functions to go from a row to the cell in a particular column.
-        check_productions_match(valid_actions['<e,r>'],
+        check_productions_match(valid_actions['<c,r>'],
                                 ['fb:row.row.null',  # This one is global, representing an empty set.
                                  'fb:row.row.year',
                                  'fb:row.row.league',
@@ -117,75 +98,89 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                  'fb:row.row.division',
                                  'fb:row.row.regular_season',
                                  'fb:row.row.playoffs',
-                                 'fb:row.row.open_cup',
-                                 "['lambda x', r]",
-                                 '[<<#1,#2>,<#2,#1>>, <r,e>]'])
+                                 'fb:row.row.open_cup'])
+
+        # These might look backwards, but that's because SEMPRE chose to make them backwards.
+        # fb:a.b is a function that takes b and returns a.  So fb:cell.cell.date takes cell.date
+        # and returns cell and fb:row.row.index takes row.index and returns row.
+        check_productions_match(valid_actions['<d,c>'],
+                                ['fb:cell.cell.date',
+                                 '[<<#1,#2>,<#2,#1>>, <c,d>]'])
+
+        check_productions_match(valid_actions['<d,d>'],
+                                ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,d>]'])
+
+        check_productions_match(valid_actions['<d,n>'],
+                                ["['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,d>]'])
+
+        check_productions_match(valid_actions['<d,r>'],
+                                ['[<<#1,#2>,<#2,#1>>, <r,d>]'])
+
+        check_productions_match(valid_actions['<n,<n,<#1,<<#2,#1>,#1>>>>'],
+                                ['argmax', 'argmin'])
+
+        # "date" is a function that takes three numbers: (date 2018 01 06).
+        check_productions_match(valid_actions['<n,<n,<n,d>>>'],
+                                ['date'])
+
+        check_productions_match(valid_actions['<n,<n,n>>'],
+                                ['-'])
+
+        check_productions_match(valid_actions['<n,c>'],
+                                ['fb:cell.cell.num2', 'fb:cell.cell.number',
+                                 '[<<#1,#2>,<#2,#1>>, <c,n>]'])
+
+        check_productions_match(valid_actions['<n,d>'],
+                                ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,n>]'])
+
+        check_productions_match(valid_actions['<n,n>'],
+                                ['avg', 'sum', 'number',
+                                 "['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,n>]'])
+
+        check_productions_match(valid_actions['<n,p>'],
+                                ['[<<#1,#2>,<#2,#1>>, <p,n>]'])
+
+        check_productions_match(valid_actions['<n,r>'],
+                                ['fb:row.row.index', '[<<#1,#2>,<#2,#1>>, <r,n>]'])
+
+        check_productions_match(valid_actions['<nd,nd>'],
+                                ['<', '<=', '>', '>=', 'min', 'max'])
 
         # PART_TYPE rules.  A cell part is for when a cell has text that can be split into multiple
         # parts.  We don't currently handle this, so we don't have any terminal productions here.
         # We actually skip all logical forms that have "fb:part" productions, and we'll never
         # actually push one of these non-terminals onto our stack.  But they're in the grammar, so
         # we they are in our list of valid actions.
-        check_productions_match(valid_actions['<p,d>'],
-                                ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,p>]'])
+        check_productions_match(valid_actions['<p,c>'],
+                                ['fb:cell.cell.part'])
 
-        check_productions_match(valid_actions['<p,e>'],
-                                ['fb:cell.cell.part', "['lambda x', e]", '[<<#1,#2>,<#2,#1>>, <e,p>]'])
-
-        check_productions_match(valid_actions['<p,p>'],
-                                ["['lambda x', p]", '[<<#1,#2>,<#2,#1>>, <p,p>]'])
-
-        check_productions_match(valid_actions['<p,r>'],
-                                ["['lambda x', r]", '[<<#1,#2>,<#2,#1>>, <r,p>]'])
+        check_productions_match(valid_actions['<r,c>'],
+                                ['[<<#1,#2>,<#2,#1>>, <c,r>]'])
 
         check_productions_match(valid_actions['<r,d>'],
-                                ["['lambda x', d]", '[<<#1,#2>,<#2,#1>>, <d,r>]'])
+                                ["['lambda x', d]"])
 
-        check_productions_match(valid_actions['<r,e>'],
-                                ["['lambda x', e]", '[<<#1,#2>,<#2,#1>>, <e,r>]'])
+        check_productions_match(valid_actions['<r,n>'],
+                                ["['lambda x', n]", '[<<#1,#2>,<#2,#1>>, <n,r>]'])
 
         check_productions_match(valid_actions['<r,p>'],
                                 ["['lambda x', p]", '[<<#1,#2>,<#2,#1>>, <p,r>]'])
 
         check_productions_match(valid_actions['<r,r>'],
-                                ['fb:row.row.next', "['lambda x', r]", '[<<#1,#2>,<#2,#1>>, <r,r>]'])
+                                ['fb:row.row.next', 'fb:type.object.type', '[<<#1,#2>,<#2,#1>>, <r,r>]'])
 
         check_productions_match(valid_actions['@START@'],
-                                ['d', 'e', 'p', 'r'])
+                                ['d', 'c', 'p', 'r', 'n'])
 
-        check_productions_match(valid_actions['d'],
-                                ['[<d,<d,d>>, d, d]',
-                                 '[<#1,#1>, d]',
-                                 '[<#1,<#1,#1>>, d, d]',
-                                 '[<d,<d,<#1,<<d,#1>,#1>>>>, d, d, d, <d,d>]',
-                                 '[<#1,d>, d]',
-                                 '[<#1,d>, e]',
-                                 '[<#1,d>, p]',
-                                 '[<#1,d>, r]',
-                                 '[<d,d>, d]',
-                                 '[<e,d>, e]',
-                                 '[<e,<e,<e,d>>>, e, e, e]',
-                                 '[<r,d>, r]'])
-
-        check_productions_match(valid_actions['e'],
-                                ['-1',
-                                 '0',
-                                 '1',
-                                 '2',
-                                 '3',
-                                 '4',
-                                 '5',
-                                 '6',
-                                 '7',
-                                 '8',
-                                 '9',
-                                 '2000',
-                                 '[<#1,#1>, e]',
-                                 '[<#1,<#1,#1>>, e, e]',
-                                 '[<d,<d,<#1,<<d,#1>,#1>>>>, d, d, e, <d,e>]',
-                                 '[<d,e>, d]',
-                                 '[<p,e>, p]',
-                                 '[<r,e>, r]',
+        check_productions_match(valid_actions['c'],
+                                ['[<#1,#1>, c]',
+                                 '[<#1,<#1,#1>>, c, c]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, c, <n,c>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, c, <d,c>]',
+                                 '[<d,c>, d]',
+                                 '[<n,c>, n]',
+                                 '[<p,c>, p]',
+                                 '[<r,c>, r]',
                                  'fb:cell.null',
                                  'fb:cell.2',
                                  'fb:cell.2001',
@@ -200,18 +195,55 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                  'fb:cell.usl_a_league',
                                  'fb:cell.usl_first_division'])
 
+        check_productions_match(valid_actions['d'],
+                                ['[<n,<n,<n,d>>>, n, n, n]',
+                                 '[<#1,#1>, d]',
+                                 '[<#1,<#1,#1>>, d, d]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, d, <d,d>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, d, <n,d>]',
+                                 '[<c,d>, c]',
+                                 '[<nd,nd>, d]'])
+
+        check_productions_match(valid_actions['n'],
+                                ['-1',
+                                 '0',
+                                 '1',
+                                 '2',
+                                 '3',
+                                 '4',
+                                 '2000',
+                                 '[<#1,#1>, n]',
+                                 '[<#1,<#1,#1>>, n, n]',
+                                 '[<#1,n>, c]',
+                                 '[<#1,n>, d]',
+                                 '[<#1,n>, n]',
+                                 '[<#1,n>, p]',
+                                 '[<#1,n>, r]',
+                                 '[<c,n>, c]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, n, <d,n>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, n, <n,n>]',
+                                 '[<n,<n,n>>, n, n]',
+                                 '[<n,n>, n]',
+                                 '[<nd,nd>, n]',
+                                 '[<r,n>, r]'])
+
+        # TODO(mattg): There should be a bunch of terminal productions here, but those aren't
+        # implemented at this point.
         check_productions_match(valid_actions['p'],
-                                ['[<d,<d,<#1,<<d,#1>,#1>>>>, d, d, p, <d,p>]',
+                                ['[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, p, <d,p>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, p, <n,p>]',
                                  '[<#1,#1>, p]',
+                                 '[<c,p>, c]',
                                  '[<#1,<#1,#1>>, p, p]'])
 
         check_productions_match(valid_actions['r'],
                                 ['fb:type.row',
                                  '[<#1,#1>, r]',
                                  '[<#1,<#1,#1>>, r, r]',
-                                 '[<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d,r>]',
-                                 '[<d,r>, d]',
-                                 '[<e,r>, e]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <d,r>]',
+                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <n,r>]',
+                                 '[<n,r>, n]',
+                                 '[<c,r>, c]',
                                  '[<r,r>, r]'])
 
     def test_world_processes_sempre_forms_correctly(self):
@@ -224,40 +256,40 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
     def test_world_parses_logical_forms_with_dates(self):
         sempre_form = "((reverse fb:row.row.league) (fb:row.row.year (fb:cell.cell.date (date 2000 -1 -1))))"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "R(C2,C6(D1(D0(2000,~1,~1))))"
+        assert str(expression) == "R(C2,C6(D1(D0(num:2000,num:~1,num:~1))))"
 
     def test_world_parses_logical_forms_with_decimals(self):
         question_tokens = [Token(x) for x in ['0.2']]
         world = WikiTablesWorld(self.table_kg, question_tokens)
         sempre_form = "(fb:cell.cell.number (number 0.200))"
         expression = world.parse_logical_form(sempre_form)
-        assert str(expression) == "I1(I(0_200))"
+        assert str(expression) == "I1(I(num:0_200))"
 
     def test_get_action_sequence_removes_currying_for_all_wikitables_functions(self):
         # minus
         logical_form = "(- (number 3) (number 2))"
         parsed_logical_form = self.world.parse_logical_form(logical_form)
         action_sequence = self.world.get_action_sequence(parsed_logical_form)
-        assert 'd -> [<d,<d,d>>, d, d]' in action_sequence
+        assert 'n -> [<n,<n,n>>, n, n]' in action_sequence
 
         # date
         logical_form = "(count (fb:cell.cell.date (date 2000 -1 -1)))"
         parsed_logical_form = self.world.parse_logical_form(logical_form)
         action_sequence = self.world.get_action_sequence(parsed_logical_form)
-        assert 'd -> [<e,<e,<e,d>>>, e, e, e]' in action_sequence
+        assert 'd -> [<n,<n,<n,d>>>, n, n, n]' in action_sequence
 
         # argmax
         logical_form = ("(argmax (number 1) (number 1) (fb:row.row.division fb:cell.2) "
                         "(reverse (lambda x ((reverse fb:row.row.index) (var x))))")
         parsed_logical_form = self.world.parse_logical_form(logical_form)
         action_sequence = self.world.get_action_sequence(parsed_logical_form)
-        assert 'r -> [<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d,r>]' in action_sequence
+        assert 'r -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <n,r>]' in action_sequence
 
         # and
         logical_form = "(and (number 1) (number 1))"
         parsed_logical_form = self.world.parse_logical_form(logical_form)
         action_sequence = self.world.get_action_sequence(parsed_logical_form)
-        assert 'd -> [<#1,<#1,#1>>, d, d]' in action_sequence
+        assert 'n -> [<#1,<#1,#1>>, n, n]' in action_sequence
 
     def test_parsing_logical_forms_fails_with_unmapped_names(self):
         with pytest.raises(ParsingError):
@@ -265,37 +297,37 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
 
     def test_world_has_only_basic_numbers(self):
         valid_actions = self.world.get_valid_actions()
-        for i in range(10):
-            assert f'e -> {i}' in valid_actions['e']
-        assert 'e -> 17' not in valid_actions['e']
-        assert 'e -> 231' not in valid_actions['e']
-        assert 'e -> 2007' not in valid_actions['e']
-        assert 'e -> 2107' not in valid_actions['e']
-        assert 'e -> 1800' not in valid_actions['e']
+        for i in range(-1, 5):
+            assert f'n -> {i}' in valid_actions['n']
+        assert 'n -> 17' not in valid_actions['n']
+        assert 'n -> 231' not in valid_actions['n']
+        assert 'n -> 2007' not in valid_actions['n']
+        assert 'n -> 2107' not in valid_actions['n']
+        assert 'n -> 1800' not in valid_actions['n']
 
     def test_world_adds_numbers_from_question(self):
         question_tokens = [Token(x) for x in ['what', '2007', '2,107', '0.2', '1800s', '1950s', '?']]
         world = WikiTablesWorld(self.table_kg, question_tokens)
         valid_actions = world.get_valid_actions()
-        assert 'e -> 2007' in valid_actions['e']
-        assert 'e -> 2107' in valid_actions['e']
+        assert 'n -> 2007' in valid_actions['n']
+        assert 'n -> 2107' in valid_actions['n']
 
         # It appears that sempre normalizes floating point numbers.
-        assert 'e -> 0.200' in valid_actions['e']
+        assert 'n -> 0.200' in valid_actions['n']
 
         # We want to add the end-points to things like "1800s": 1800 and 1900.
-        assert 'e -> 1800' in valid_actions['e']
-        assert 'e -> 1900' in valid_actions['e']
-        assert 'e -> 1950' in valid_actions['e']
-        assert 'e -> 1960' in valid_actions['e']
+        assert 'n -> 1800' in valid_actions['n']
+        assert 'n -> 1900' in valid_actions['n']
+        assert 'n -> 1950' in valid_actions['n']
+        assert 'n -> 1960' in valid_actions['n']
 
     def test_world_returns_correct_actions_with_reverse(self):
         sempre_form = "((reverse fb:row.row.year) (fb:row.row.league fb:cell.usl_a_league))"
         expression = self.world.parse_logical_form(sempre_form)
         actions = self.world.get_action_sequence(expression)
-        target_action_sequence = ['@START@ -> e', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
-                                  '<<#1,#2>,<#2,#1>> -> reverse', '<e,r> -> fb:row.row.year',
-                                  'r -> [<e,r>, e]', '<e,r> -> fb:row.row.league', 'e -> fb:cell.usl_a_league']
+        target_action_sequence = ['@START@ -> c', 'c -> [<r,c>, r]', '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]',
+                                  '<<#1,#2>,<#2,#1>> -> reverse', '<c,r> -> fb:row.row.year',
+                                  'r -> [<c,r>, c]', '<c,r> -> fb:row.row.league', 'c -> fb:cell.usl_a_league']
         assert actions == target_action_sequence
 
     def test_world_returns_correct_actions_with_two_reverses(self):
@@ -303,12 +335,12 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                        "(fb:row.row.league fb:cell.usl_a_league))))")
         expression = self.world.parse_logical_form(sempre_form)
         actions = self.world.get_action_sequence(expression)
-        target_action_sequence = ['@START@ -> d', 'd -> [<d,d>, d]', '<d,d> -> max', 'd -> [<e,d>, e]',
-                                  '<e,d> -> [<<#1,#2>,<#2,#1>>, <d,e>]', '<<#1,#2>,<#2,#1>> -> reverse',
-                                  '<d,e> -> fb:cell.cell.date', 'e -> [<r,e>, r]',
-                                  '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]', '<<#1,#2>,<#2,#1>> -> reverse',
-                                  '<e,r> -> fb:row.row.year', 'r -> [<e,r>, e]',
-                                  '<e,r> -> fb:row.row.league', 'e -> fb:cell.usl_a_league']
+        target_action_sequence = ['@START@ -> d', 'd -> [<nd,nd>, d]', '<nd,nd> -> max', 'd -> [<c,d>, c]',
+                                  '<c,d> -> [<<#1,#2>,<#2,#1>>, <d,c>]', '<<#1,#2>,<#2,#1>> -> reverse',
+                                  '<d,c> -> fb:cell.cell.date', 'c -> [<r,c>, r]',
+                                  '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]', '<<#1,#2>,<#2,#1>> -> reverse',
+                                  '<c,r> -> fb:row.row.year', 'r -> [<c,r>, c]',
+                                  '<c,r> -> fb:row.row.league', 'c -> fb:cell.usl_a_league']
         assert actions == target_action_sequence
 
     def test_world_returns_correct_actions_with_lambda_with_var(self):

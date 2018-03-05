@@ -1,130 +1,73 @@
 # pylint: disable=no-self-use
 from allennlp.data.semparse.type_declarations import type_declaration as base_types
-from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
+from allennlp.data.semparse.type_declarations.type_declaration import (
+        ComplexType,
+        ANY_TYPE,
+        )
+from allennlp.data.semparse.type_declarations.wikitables_type_declaration import (
+        ARG_EXTREME_TYPE,
+        ArgExtremeType,
+        CELL_TYPE,
+        CONJUNCTION_TYPE,
+        COUNT_TYPE,
+        CountType,
+        ROW_TYPE,
+        REVERSE_TYPE,
+        ReverseType,
+        )
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class WikiTablesTypeDeclarationTest(AllenNlpTestCase):
     def test_reverse_resolves_correctly(self):
-        assert types.REVERSE_TYPE.resolve(types.CELL_TYPE) is None
+        assert REVERSE_TYPE.resolve(CELL_TYPE) is None
 
         # Resolving against <?,<e,r>> should give <<r,e>,<e,r>>
-        resolution = types.REVERSE_TYPE.resolve(types.ComplexType(types.ANY_TYPE,
-                                                                  types.ComplexType(types.CELL_TYPE,
-                                                                                    types.ROW_TYPE)))
-        assert resolution == types.ReverseType(types.ComplexType(types.ROW_TYPE, types.CELL_TYPE),
-                                               types.ComplexType(types.CELL_TYPE, types.ROW_TYPE))
+        resolution = REVERSE_TYPE.resolve(ComplexType(ANY_TYPE, ComplexType(CELL_TYPE, ROW_TYPE)))
+        assert resolution == ReverseType(ComplexType(ROW_TYPE, CELL_TYPE), ComplexType(CELL_TYPE, ROW_TYPE))
 
         # Resolving against <<r,?>,<e,?>> should give <<r,e>,<e,r>>
-        resolution = types.REVERSE_TYPE.resolve(types.ComplexType(types.ComplexType(types.ROW_TYPE,
-                                                                                    types.ANY_TYPE),
-                                                                  types.ComplexType(types.CELL_TYPE,
-                                                                                    types.ANY_TYPE)))
-        assert resolution == types.ReverseType(types.ComplexType(types.ROW_TYPE, types.CELL_TYPE),
-                                               types.ComplexType(types.CELL_TYPE, types.ROW_TYPE))
+        resolution = REVERSE_TYPE.resolve(ComplexType(ComplexType(ROW_TYPE, ANY_TYPE),
+                                                      ComplexType(CELL_TYPE, ANY_TYPE)))
+        assert resolution == ReverseType(ComplexType(ROW_TYPE, CELL_TYPE), ComplexType(CELL_TYPE, ROW_TYPE))
 
         # Resolving against <<r,?>,?> should give <<r,?>,<?,r>>
-        resolution = types.REVERSE_TYPE.resolve(types.ComplexType(types.ComplexType(types.ROW_TYPE,
-                                                                                    types.ANY_TYPE),
-                                                                  types.ANY_TYPE))
-        assert resolution == types.ReverseType(types.ComplexType(types.ROW_TYPE, types.ANY_TYPE),
-                                               types.ComplexType(types.ANY_TYPE, types.ROW_TYPE))
+        resolution = REVERSE_TYPE.resolve(ComplexType(ComplexType(ROW_TYPE, ANY_TYPE), ANY_TYPE))
+        assert resolution == ReverseType(ComplexType(ROW_TYPE, ANY_TYPE), ComplexType(ANY_TYPE, ROW_TYPE))
 
         # Resolving against <<r,?>,<?,e>> should give None
-        resolution = types.REVERSE_TYPE.resolve(types.ComplexType(types.ComplexType(types.ROW_TYPE,
-                                                                                    types.ANY_TYPE),
-                                                                  types.ComplexType(types.ANY_TYPE,
-                                                                                    types.CELL_TYPE)))
+        resolution = REVERSE_TYPE.resolve(ComplexType(ComplexType(ROW_TYPE, ANY_TYPE),
+                                                      ComplexType(ANY_TYPE, CELL_TYPE)))
         assert resolution is None
-
-    def test_identity_type_resolves_correctly(self):
-        # Resolution should fail against a basic type
-        assert types.IDENTITY_TYPE.resolve(types.ROW_TYPE) is None
-
-        # Resolution should fail against a complex type where the argument and return types are not same
-        assert types.IDENTITY_TYPE.resolve(types.ComplexType(types.CELL_TYPE, types.ROW_TYPE)) is None
-
-        # Resolution should resolve ANY_TYPE given the other type
-        assert types.IDENTITY_TYPE.resolve(types.ComplexType(types.ANY_TYPE, types.ROW_TYPE)) == \
-        types.IdentityType(types.ROW_TYPE, types.ROW_TYPE)
-        assert types.IDENTITY_TYPE.resolve(types.ComplexType(types.CELL_TYPE, types.ANY_TYPE)) == \
-        types.IdentityType(types.CELL_TYPE, types.CELL_TYPE)
-
-        resolution = types.IDENTITY_TYPE.resolve(types.ComplexType(types.ComplexType(types.CELL_TYPE,
-                                                                                     types.ROW_TYPE),
-                                                                   types.ComplexType(types.CELL_TYPE,
-                                                                                     types.ROW_TYPE)))
-        assert resolution == types.IdentityType(types.ComplexType(types.CELL_TYPE,
-                                                                  types.ROW_TYPE),
-                                                types.ComplexType(types.CELL_TYPE, types.ROW_TYPE))
-
-    def test_conjunction_type_resolves_correctly(self):
-        # Resolution must fail against a basic type and a complex type that returns a basic type
-        assert types.CONJUNCTION_TYPE.resolve(types.CELL_TYPE) is None
-        assert types.CONJUNCTION_TYPE.resolve(types.ComplexType(types.CELL_TYPE, types.ROW_TYPE)) is None
-
-        # Resolution must fail against incompatible types
-        assert types.CONJUNCTION_TYPE.resolve(types.ComplexType(types.ANY_TYPE,
-                                                                types.ComplexType(types.CELL_TYPE,
-                                                                                  types.ROW_TYPE))) is None
-        assert types.CONJUNCTION_TYPE.resolve(types.ComplexType(types.ROW_TYPE,
-                                                                types.ComplexType(types.CELL_TYPE,
-                                                                                  types.ANY_TYPE))) is None
-        assert types.CONJUNCTION_TYPE.resolve(types.ComplexType(types.ROW_TYPE,
-                                                                types.ComplexType(types.ANY_TYPE,
-                                                                                  types.CELL_TYPE))) is None
-
-        # Resolution must resolve any types appropriately
-        resolution = types.CONJUNCTION_TYPE.resolve(types.ComplexType(types.ROW_TYPE,
-                                                                      types.ComplexType(types.ANY_TYPE,
-                                                                                        types.ROW_TYPE)))
-        assert resolution == types.ConjunctionType(types.ROW_TYPE, types.ComplexType(types.ROW_TYPE,
-                                                                                     types.ROW_TYPE))
-
-        resolution = types.CONJUNCTION_TYPE.resolve(types.ComplexType(types.ROW_TYPE,
-                                                                      types.ComplexType(types.ANY_TYPE,
-                                                                                        types.ANY_TYPE)))
-        assert resolution == types.ConjunctionType(types.ROW_TYPE, types.ComplexType(types.ROW_TYPE,
-                                                                                     types.ROW_TYPE))
-
-        resolution = types.CONJUNCTION_TYPE.resolve(types.ComplexType(types.ANY_TYPE,
-                                                                      types.ComplexType(types.ROW_TYPE,
-                                                                                        types.ANY_TYPE)))
-        assert resolution == types.ConjunctionType(types.ROW_TYPE, types.ComplexType(types.ROW_TYPE,
-                                                                                     types.ROW_TYPE))
 
     def test_conjunction_maps_to_correct_actions(self):
         valid_actions = base_types.get_valid_actions({'and': 'O'},
-                                                     {'O': types.CONJUNCTION_TYPE},
-                                                     {types.CELL_TYPE},
-                                                     {types.CELL_TYPE})
-        assert 'e -> [<#1,<#1,#1>>, e, e]' in valid_actions['e']
+                                                     {'O': CONJUNCTION_TYPE},
+                                                     {CELL_TYPE},
+                                                     {CELL_TYPE})
+        assert 'c -> [<#1,<#1,#1>>, c, c]' in valid_actions['c']
 
     def test_count_type_resolves_correctly(self):
         # Resolution should fail with basic type
-        assert types.COUNT_TYPE.resolve(types.CELL_TYPE) is None
+        assert COUNT_TYPE.resolve(CELL_TYPE) is None
 
         # Resolution should fail when return type is not a number
-        assert types.COUNT_TYPE.resolve(types.ComplexType(types.CELL_TYPE, types.ROW_TYPE)) is None
+        assert COUNT_TYPE.resolve(ComplexType(CELL_TYPE, ROW_TYPE)) is None
 
         # Resolution should resolve the return type to number
-        assert types.COUNT_TYPE.resolve(types.ComplexType(types.CELL_TYPE, types.ANY_TYPE)) == \
-                types.CountType(types.CELL_TYPE, types.DATE_NUM_TYPE)
-        assert types.COUNT_TYPE.resolve(types.ComplexType(types.ANY_TYPE, types.ANY_TYPE)) == \
-                types.CountType(types.ANY_TYPE, types.DATE_NUM_TYPE)
+        assert COUNT_TYPE.resolve(ComplexType(CELL_TYPE, ANY_TYPE)) == CountType(CELL_TYPE)
+        assert COUNT_TYPE.resolve(ComplexType(ANY_TYPE, ANY_TYPE)) == CountType(ANY_TYPE)
 
     def test_arg_extreme_type_resolves_correctly(self):
         # Resolution should fail on basic type
-        assert types.ARG_EXTREME_TYPE.resolve(types.ROW_TYPE) is None
+        assert ARG_EXTREME_TYPE.resolve(ROW_TYPE) is None
 
-        assert types.ARG_EXTREME_TYPE.resolve(types.ComplexType(types.CELL_TYPE, types.ROW_TYPE)) is None
+        assert ARG_EXTREME_TYPE.resolve(ComplexType(CELL_TYPE, ROW_TYPE)) is None
 
-        other = types.ComplexType(types.ANY_TYPE, types.ComplexType(types.ANY_TYPE, \
-                types.ComplexType(types.CELL_TYPE, types.ComplexType(types.ComplexType(types.ANY_TYPE,
-                                                                                       types.CELL_TYPE),
-                                                                     types.CELL_TYPE))))
-        resolution = types.ARG_EXTREME_TYPE.resolve(other)
-        assert resolution == types.ArgExtremeType(types.DATE_NUM_TYPE,\
-                             types.ComplexType(types.DATE_NUM_TYPE, types.ComplexType(types.DATE_NUM_TYPE,\
-                             types.ComplexType(types.ComplexType(types.DATE_NUM_TYPE, types.CELL_TYPE),\
-                             types.CELL_TYPE))))
+        other = ComplexType(ANY_TYPE,
+                            ComplexType(ANY_TYPE,
+                                        ComplexType(CELL_TYPE,
+                                                    ComplexType(ComplexType(ANY_TYPE, CELL_TYPE),
+                                                                CELL_TYPE))))
+        resolution = ARG_EXTREME_TYPE.resolve(other)
+        assert resolution == ArgExtremeType(CELL_TYPE)
