@@ -965,7 +965,9 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         all_agenda_action_probs = state.get_agenda_action_probs()
         # Mixing model scores and agenda selection probabilities to compute the probabilities of all
         # actions for the next step and the corresponding new checklists.
-        all_action_logprobs: List[List[torch.Tensor]] = []
+        # All action logprobs will keep track of logprob corresponding to each local action index
+        # for each instance.
+        all_action_logprobs: List[List[Tuple[int, torch.Tensor]]] = []
         all_new_checklists: List[List[torch.LongTensor]] = []
         for group_index, instance_info in enumerate(zip(state.batch_indices,
                                                         state.score,
@@ -975,8 +977,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
             instance_agenda = state.agenda_relevant_actions[group_index]  # (agenda_size, 1)
             agenda_action_probs = all_agenda_action_probs[group_index]
             # We will mix the model scores with agenda selection probabilities and compute their
-            # logs to fill the following list.
-            instance_action_logprobs: List[torch.Tensor] = []
+            # logs to fill the following list with action indices and corresponding logprobs.
+            instance_action_logprobs: List[Tuple[int, torch.Tensor]] = []
             instance_new_checklists: List[torch.LongTensor] = []
             for action_index, action_prob in enumerate(instance_probs):
                 # This is the actual index of the action from the original list of actions.
@@ -998,10 +1000,9 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 new_checklist = instance_checklist + checklist_addition  # (agenda_size, 1)
                 instance_new_checklists.append(new_checklist)
                 logprob = instance_score + torch.log(action_prob + 1e-13)
-                instance_action_logprobs.append(logprob)
+                instance_action_logprobs.append((action_index, logprob))
             all_action_logprobs.append(instance_action_logprobs)
             all_new_checklists.append(instance_new_checklists)
-
         return self._compute_new_states(state,
                                         all_action_logprobs,
                                         all_new_checklists,
@@ -1084,7 +1085,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     @classmethod
     def _compute_new_states(cls,  # type: ignore
                             state: NlvrDecoderState,
-                            action_logprobs: List[List[torch.Tensor]],
+                            action_logprobs: List[List[Tuple[int, torch.Tensor]]],
                             new_checklists: List[List[torch.LongTensor]],
                             hidden_state: torch.Tensor,
                             memory_cell: torch.Tensor,
@@ -1104,9 +1105,10 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                                         new_checklists)):
             batch_index, instance_logprobs, instance_new_checklists = instance_info
             # We're sorting states by model scores.
-            batch_scores = torch.cat(instance_logprobs)
-            action_indices = list(range(len(instance_logprobs)))
-            states_info = list(zip(action_indices, instance_logprobs, instance_new_checklists))
+            action_indices, batch_scores_sequence = zip(*instance_logprobs)
+            batch_scores_list = list(batch_scores_sequence)
+            batch_scores = torch.cat(batch_scores_list)
+            states_info = list(zip(action_indices, batch_scores_list, instance_new_checklists))
             _, sorted_indices = batch_scores.sort(-1, descending=True)
             sorted_states_info = [states_info[int(i)] for i in sorted_indices.data.cpu()]
             if max_actions is not None:
