@@ -65,7 +65,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         self._combined_projection = Linear(input_dim, 2 * attention_dim + values_dim)
 
-        self._scale = input_dim ** 0.5
+        self._scale = (input_dim // num_heads) ** 0.5
         self._output_projection = Linear(values_dim, self._output_dim)
         self._attention_dropout = Dropout(attention_dropout_prob)
 
@@ -99,7 +99,6 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         # Shape (batch_size, timesteps, 2 * attention_dim + values_dim)
         combined_projection = self._combined_projection(inputs)
-
         # split by attention dim - if values_dim > attention_dim, we will get more
         # than 3 elements returned. All of the rest are the values vector, so we
         # just concatenate them back together again below.
@@ -127,17 +126,22 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         # shape (num_heads * batch_size, timesteps, timesteps)
         # Normalise the distributions, using the same mask for all heads.
-        attention = last_dim_softmax(scaled_similarities, mask.repeat(num_heads, 1))
+        attention = last_dim_softmax(scaled_similarities, mask.repeat(1, num_heads).view(batch_size * num_heads, timesteps))
         attention = self._attention_dropout(attention)
+
         # Take a weighted sum of the values with respect to the attention
         # distributions for each element in the num_heads * batch_size dimension.
         # shape (num_heads * batch_size, timesteps, values_dim/num_heads)
         outputs = weighted_sum(values_per_head, attention)
+
         # Reshape back to original shape (batch_size, timesteps, values_dim)
-        # Note that we _cannot_ use a reshape here, because this tensor was created
-        # with num_heads being the first dimension, so reshaping naively would not
-        # throw an error, but give an incorrect result.
-        outputs = torch.cat(torch.split(outputs, batch_size, dim=0), dim=-1)
+        # shape (batch_size, num_heads, timesteps, values_dim/num_heads)
+        outputs = outputs.view(batch_size, num_heads, timesteps, int(self._values_dim / num_heads))
+        # shape (batch_size, timesteps, num_heads, values_dim/num_heads)
+        outputs = outputs.transpose(1, 2).contiguous()
+        # shape (batch_size, timesteps, values_dim)
+        outputs = outputs.view(batch_size, timesteps, self._values_dim)
+        #outputs = outputs.view(batch_size, timesteps, -1)
 
         # Project back to original input size.
         # shape (batch_size, timesteps, input_size)
