@@ -1,5 +1,6 @@
 # pylint: disable=too-many-lines
 from typing import List, Set, Dict, Tuple
+from collections import defaultdict
 
 from overrides import overrides
 
@@ -1086,7 +1087,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     def _compute_new_states(cls,  # type: ignore
                             state: NlvrDecoderState,
                             action_logprobs: List[List[Tuple[int, torch.Tensor]]],
-                            new_checklists: List[List[torch.LongTensor]],
+                            new_checklists: List[List[torch.Tensor]],
                             hidden_state: torch.Tensor,
                             memory_cell: torch.Tensor,
                             action_embeddings: torch.Tensor,
@@ -1099,21 +1100,23 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         """
         # TODO(pradeep): We do not have a notion of ``allowed_actions`` for NLVR for now, but this
         # may be applicable in the future.
-        new_states = []
+        # batch_index -> group_index, action_index, checklist, score
+        states_info: Dict[int, List[Tuple[int, int, torch.Tensor, torch.Tensor]]] = defaultdict(list)
         for group_index, instance_info in enumerate(zip(state.batch_indices,
                                                         action_logprobs,
                                                         new_checklists)):
             batch_index, instance_logprobs, instance_new_checklists = instance_info
-            # We're sorting states by model scores.
-            action_indices, batch_scores_sequence = zip(*instance_logprobs)
-            batch_scores_list = list(batch_scores_sequence)
-            batch_scores = torch.cat(batch_scores_list)
-            states_info = list(zip(action_indices, batch_scores_list, instance_new_checklists))
+            for (action_index, score), checklist in zip(instance_logprobs, instance_new_checklists):
+                states_info[batch_index].append((group_index, action_index, checklist, score))
+
+        new_states = []
+        for batch_index, instance_states_info in states_info.items():
+            batch_scores = torch.cat([info[-1] for info in instance_states_info])
             _, sorted_indices = batch_scores.sort(-1, descending=True)
-            sorted_states_info = [states_info[int(i)] for i in sorted_indices.data.cpu()]
+            sorted_states_info = [instance_states_info[i] for i in sorted_indices.data.cpu().numpy()]
             if max_actions is not None:
                 sorted_states_info = sorted_states_info[:max_actions]
-            for action_index, new_score, new_checklist in sorted_states_info:
+            for group_index, action_index, new_checklist, new_score in sorted_states_info:
                 # This is the actual index of the action from the original list of actions.
                 # We do not have to check whether it is the padding index because ``take_step``
                 # already took care of that.
