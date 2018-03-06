@@ -747,27 +747,6 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
             raise RuntimeError("is_finished() is only defined with a group_size of 1")
         return self.grammar_state[0].is_finished()
 
-    def split_finished(self) -> Tuple['NlvrDecoderState', 'NlvrDecoderState']:
-        """This method is identical to ``WikiTablesDecoderState.split_finished``."""
-        # We keep track of both of these so we can efficiently decide whether we need to split at
-        # all.
-        finished_indices = []
-        not_finished_indices = []
-        for i, state in enumerate(self.grammar_state):
-            if state.is_finished():
-                finished_indices.append(i)
-            else:
-                not_finished_indices.append(i)
-
-        # Return value is (finished, not_finished)
-        if not finished_indices:
-            return (None, self)
-        if not not_finished_indices:
-            return (self, None)
-        finished_state = self._make_new_state_with_group_indices(finished_indices)
-        not_finished_state = self._make_new_state_with_group_indices(not_finished_indices)
-        return (finished_state, not_finished_state)
-
     @classmethod
     def combine_states(cls, states) -> 'NlvrDecoderState':
         relevant_actions = [actions for state in states for actions in state.agenda_relevant_actions]
@@ -801,48 +780,6 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                                 states[0].possible_actions,
                                 states[0].worlds,
                                 states[0].label_strings)
-
-    def _make_new_state_with_group_indices(self, group_indices: List[int]) -> 'NlvrDecoderState':
-        """
-        This method's logic is identical to that of
-        ``WikiTablesDecoderState._make_new_state_with_group_indices``.
-        The ``NlvrDecoderState`` is `grouped`.  This is batching together the computation of
-        many individual states, but we're using a different word here because it's not the same
-        batching as the input training examples.  This method returns a new state that contains
-        only selected elements of the group.  You might use this to split the group elements in a
-        state into a finished state and a not finished state, for instance, if you know which group
-        elements are finished.
-        """
-        group_relevant_actions = [self.agenda_relevant_actions[i] for i in group_indices]
-        group_checklist_target = [self.checklist_target[i] for i in group_indices]
-        group_checklist = [self.checklist[i] for i in group_indices]
-        group_batch_indices = [self.batch_indices[i] for i in group_indices]
-        group_action_histories = [self.action_history[i] for i in group_indices]
-        group_scores = [self.score[i] for i in group_indices]
-        group_previous_action = [self.previous_action_embedding[i] for i in group_indices]
-        group_grammar_states = [self.grammar_state[i] for i in group_indices]
-        group_hidden_states = [self.hidden_state[i] for i in group_indices]
-        group_memory_cells = [self.memory_cell[i] for i in group_indices]
-        group_attended_sentence = [self.attended_sentence[i] for i in group_indices]
-        return NlvrDecoderState(group_relevant_actions,
-                                group_checklist_target,
-                                group_checklist,
-                                self.checklist_cost_weight,
-                                group_batch_indices,
-                                group_action_histories,
-                                group_scores,
-                                group_hidden_states,
-                                group_memory_cells,
-                                group_previous_action,
-                                group_attended_sentence,
-                                group_grammar_states,
-                                self.encoder_outputs,
-                                self.encoder_output_mask,
-                                self.action_embeddings,
-                                self.action_indices,
-                                self.possible_actions,
-                                self.worlds,
-                                self.label_strings)
 
 
 class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
