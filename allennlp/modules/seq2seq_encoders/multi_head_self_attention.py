@@ -141,7 +141,6 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         outputs = outputs.transpose(1, 2).contiguous()
         # shape (batch_size, timesteps, values_dim)
         outputs = outputs.view(batch_size, timesteps, self._values_dim)
-        #outputs = outputs.view(batch_size, timesteps, -1)
 
         # Project back to original input size.
         # shape (batch_size, timesteps, input_size)
