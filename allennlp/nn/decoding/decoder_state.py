@@ -1,6 +1,7 @@
 from typing import Generic, List, Tuple, TypeVar
 
 import torch
+from torch.autograd import Variable
 
 # Note that the bound here is `DecoderState` itself.  This is what lets us have methods that take
 # lists of a `DecoderState` subclass and output structures with the subclass.  Really ugly that we
@@ -52,6 +53,16 @@ class DecoderState(Generic[T]):
         self.batch_indices = batch_indices
         self.action_history = action_history
         self.score = score
+
+    def get_cost(self) -> Variable:
+        """
+        Returns cost associated with a finished ``DecoderState`` if the training algorithm used
+        calls for it.
+        """
+        # pylint: disable=no-self-use
+        # We raise a ``RuntimeError`` instead of ``NotImplementedError`` because some subclasses may
+        # choose to not implement this method.
+        raise RuntimeError
 
     def is_finished(self) -> bool:
         """

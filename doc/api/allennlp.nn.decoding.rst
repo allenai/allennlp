@@ -31,7 +31,7 @@ allennlp.nn.decoding
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.nn.decoding.beam_search_trainer
+.. automodule:: allennlp.nn.decoding.expected_risk_minimization
    :members:
    :undoc-members:
    :show-inheritance:
