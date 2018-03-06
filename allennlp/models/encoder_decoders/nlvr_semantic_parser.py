@@ -1,6 +1,5 @@
 # pylint: disable=too-many-lines
 from typing import List, Set, Dict, Tuple
-from collections import defaultdict
 
 from overrides import overrides
 
@@ -962,16 +961,55 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
 
         action_logits = embedded_action_logits
         action_mask = embedded_action_mask.float()
+        considered_action_probs = nn_util.masked_softmax(action_logits, action_mask)
+        all_agenda_action_probs = state.get_agenda_action_probs()
+        # Mixing model scores and agenda selection probabilities to compute the probabilities of all
+        # actions for the next step and the corresponding new checklists.
+        all_action_logprobs: List[List[torch.Tensor]] = []
+        all_new_checklists: List[List[torch.LongTensor]] = []
+        for group_index, instance_info in enumerate(zip(state.batch_indices,
+                                                        state.score,
+                                                        considered_action_probs,
+                                                        state.checklist)):
+            (batch_index, instance_score, instance_probs, instance_checklist) = instance_info
+            instance_agenda = state.agenda_relevant_actions[group_index]  # (agenda_size, 1)
+            agenda_action_probs = all_agenda_action_probs[group_index]
+            # We will mix the model scores with agenda selection probabilities and compute their
+            # logs to fill the following list.
+            instance_action_logprobs: List[torch.Tensor] = []
+            instance_new_checklists: List[torch.LongTensor] = []
+            for action_index, action_prob in enumerate(instance_probs):
+                # This is the actual index of the action from the original list of actions.
+                action = considered_actions[group_index][action_index]
+                if action == -1:
+                    # Ignoring padding.
+                    continue
+                # If action is not in instance_agenda, mask_variable, and checklist_addition will be
+                # all 0s.
+                checklist_mask = (instance_agenda == action).float()  # (agenda_size, 1)
+                agenda_action_prob = torch.sum(checklist_mask * agenda_action_probs)  # (1,)
+                # TODO (pradeep): This is not a great way to bias the model towards choosing actions
+                # that fill the checklist. May be use the current checklist in the action logit
+                # computation itself.
+                action_prob = self._checklist_weight * agenda_action_prob + \
+                              (1 - self._checklist_weight) * action_prob
+                # We're adding 1.0 at the corresponding agenda index.
+                checklist_addition = checklist_mask.float()  # (agenda_size, 1)
+                new_checklist = instance_checklist + checklist_addition  # (agenda_size, 1)
+                instance_new_checklists.append(new_checklist)
+                logprob = instance_score + torch.log(action_prob + 1e-13)
+                instance_action_logprobs.append(logprob)
+            all_action_logprobs.append(instance_action_logprobs)
+            all_new_checklists.append(instance_new_checklists)
 
         return self._compute_new_states(state,
-                                        action_logits,
-                                        action_mask,
+                                        all_action_logprobs,
+                                        all_new_checklists,
                                         hidden_state,
                                         memory_cell,
                                         action_embeddings,
                                         attended_sentence,
                                         considered_actions,
-                                        self._checklist_weight,
                                         max_actions)
 
     def attend_on_sentence(self,
@@ -1046,69 +1084,38 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     @classmethod
     def _compute_new_states(cls,  # type: ignore
                             state: NlvrDecoderState,
-                            action_logits: torch.Tensor,
-                            action_mask: torch.Tensor,
+                            action_logprobs: List[List[torch.Tensor]],
+                            new_checklists: List[List[torch.LongTensor]],
                             hidden_state: torch.Tensor,
                             memory_cell: torch.Tensor,
                             action_embeddings: torch.Tensor,
                             attended_sentence: torch.Tensor,
                             considered_actions: List[List[int]],
-                            checklist_weight: float,
                             max_actions: int = None) -> List[NlvrDecoderState]:
         """
         This method is very similar to ``WikiTabledDecoderStep._compute_new_states``.
-        The difference here is that we compute new states based on coverage loss.  For each action
-        in considered actions, if it is in the agenda, we update the checklist
-        and recalculate the score. We'll have to iterate through considered actions, but we have
-        to do that to update action histories anyway.
+        The difference here is that we also have checklists to deal with.
         """
         # TODO(pradeep): We do not have a notion of ``allowed_actions`` for NLVR for now, but this
         # may be applicable in the future.
-        # Note that we're not sorting these probs. We'll score checklists and sort states based on
-        # checklist scores later.
-        considered_action_probs = nn_util.masked_softmax(action_logits, action_mask)
-        all_agenda_action_probs = state.get_agenda_action_probs()
-        # batch_index -> [(group_index, action_index, action, checklist, model_score)]
-        next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
-        for group_index, instance_info in enumerate(zip(state.batch_indices,
-                                                        state.score,
-                                                        considered_action_probs)):
-            batch_index, instance_score, instance_action_probs = instance_info
-            instance_agenda = state.agenda_relevant_actions[group_index]  # (agenda_size, 1)
-            instance_checklist = state.checklist[group_index]  # (agenda_size, 1)
-            agenda_action_probs = all_agenda_action_probs[group_index]
-            # action_prob is a Variable.
-            for action_index, action_prob in enumerate(instance_action_probs):
-                # This is the actual index of the action from the original list of actions.
-                action = considered_actions[group_index][action_index]
-                if action == -1:
-                    # Ignoring padding.
-                    continue
-                # If action is not in instance_agenda, mask_variable, and checklist_addition will be
-                # all 0s.
-                checklist_mask = (instance_agenda == action).float()  # (agenda_size, 1)
-                agenda_action_prob = torch.sum(checklist_mask * agenda_action_probs)  # (1,)
-                # TODO (pradeep): This is not a great way to bias the model towards choosing actions
-                # that fill the checklist. May be use the current checklist in the action logit
-                # computation itself.
-                action_prob = checklist_weight * agenda_action_prob + \
-                              (1 - checklist_weight) * action_prob
-                # We're adding 1.0 at the corresponding agenda index.
-                checklist_addition = checklist_mask.float()  # (agenda_size, 1)
-                new_checklist = instance_checklist + checklist_addition  # (agenda_size, 1)
-                new_score = instance_score + torch.log(action_prob + 1e-13)
-
-                next_states_info[batch_index].append((group_index, action_index, action,
-                                                      new_checklist, new_score))
         new_states = []
-        for batch_index, states_info in next_states_info.items():
+        for group_index, instance_info in enumerate(zip(state.batch_indices,
+                                                        action_logprobs,
+                                                        new_checklists)):
+            batch_index, instance_logprobs, instance_new_checklists = instance_info
             # We're sorting states by model scores.
-            batch_scores = torch.cat([state_info[-1] for state_info in states_info])
+            batch_scores = torch.cat(instance_logprobs)
+            action_indices = list(range(len(instance_logprobs)))
+            states_info = list(zip(action_indices, instance_logprobs, instance_new_checklists))
             _, sorted_indices = batch_scores.sort(-1, descending=True)
-            sorted_states_info = [states_info[i] for i in sorted_indices.cpu().data.numpy()]
+            sorted_states_info = [states_info[int(i)] for i in sorted_indices.data.cpu()]
             if max_actions is not None:
                 sorted_states_info = sorted_states_info[:max_actions]
-            for group_index, action_index, action, new_checklist, new_score in sorted_states_info:
+            for action_index, new_score, new_checklist in sorted_states_info:
+                # This is the actual index of the action from the original list of actions.
+                # We do not have to check whether it is the padding index because ``take_step``
+                # already took care of that.
+                action = considered_actions[group_index][action_index]
                 action_embedding = action_embeddings[group_index, action_index, :]
                 new_action_history = state.action_history[group_index] + [action]
                 left_side = state.possible_actions[batch_index][action]['left'][0]
