@@ -26,7 +26,7 @@ class ExpectedRiskMinimization(DecoderTrainer):
     ----------
     beam_size : ``int``
     noramlize_by_length : ``bool``
-        Should the log probabilities by normalized by length before renormalizing them? Edunov et
+        Should the log probabilities be normalized by length before renormalizing them? Edunov et
         al. do this in their work.
     """
     def __init__(self, beam_size: int, normalize_by_length: bool) -> None:
@@ -58,12 +58,14 @@ class ExpectedRiskMinimization(DecoderTrainer):
         loss = nn_util.new_variable_with_data(initial_state.score[0], torch.Tensor([0.0]))
         finished_model_scores = self._get_model_scores_by_batch(finished_states)
         finished_costs = self._get_costs_by_batch(finished_states)
-        for index in finished_model_scores:
+        for batch_index in finished_model_scores:
             # Finished model scores are log-probabilities of the predicted sequences. We convert
-            # them into sequence probabilities and re-normalize them to compute expected cost under
+            # log probabilities into probabilities and re-normalize them to compute expected cost under
             # the distribution approximated by the beam search.
-            costs = torch.cat(finished_costs[index])
-            logprobs = torch.cat(finished_model_scores[index])
+            costs = torch.cat(finished_costs[batch_index])
+            logprobs = torch.cat(finished_model_scores[batch_index])
+            # Unmasked softmax of log probabilities will convert them into probabilities and
+            # renormalize them.
             renormalized_probs = nn_util.masked_softmax(logprobs, None)
             loss += renormalized_probs.dot(costs)
         mean_loss = loss / len(finished_model_scores)

@@ -140,17 +140,19 @@ class NlvrSemanticParser(Model):
         attended_sentence = self._decoder_step.attend_on_sentence(final_encoder_output,
                                                                   encoder_outputs, sentence_mask)
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
-        # Get a mapping from production rules to global action ids.
-        agenda_mask = agenda != -1
+        # After batching, agenda is of size (batch_size, agenda_size, 1).
+        agenda_mask = agenda != -1  # (batch_size, agenda_size, 1)
         agenda_mask = agenda_mask.long()
         # TODO (pradeep): Use an unindexed field for labels?
         labels_data = label.data.cpu()
         label_strings = [self.vocab.get_token_from_index(int(label_data), "denotations") for
                          label_data in labels_data]
-        # (batch_size, agenda_size)
+        # (batch_size, agenda_size, 1)
         initial_checklist = nn_util.new_variable_with_size(agenda, agenda.size(), 0).float()
+        # Each instance's agenda is of size (agenda_size, 1)
         agenda_list = [agenda[i] for i in range(batch_size)]
         agenda_mask_list = [agenda_mask[i] for i in range(batch_size)]
+        # Each instance's checklist is of size (agenda_size, 1)
         initial_checklist_list = [initial_checklist[i] for i in range(batch_size)]
         initial_score_list = [nn_util.new_variable_with_data(agenda, torch.Tensor([0.0])) for i in
                               range(batch_size)]
@@ -571,7 +573,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         Returns whether action history in the state evaluates to the correct denotation. Only
         defined when the state is finished.
         """
-        assert self.is_finished(), "Cannot compute denotions for unfinished states!"
+        assert self.is_finished(), "Cannot compute denotations for unfinished states!"
         # Since this is a finished state, its group size must be 1.
         batch_index = self.batch_indices[0]
         world = self.worlds[batch_index]
@@ -628,13 +630,12 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         """
         agenda_probs: List[Variable] = []
         for instance_agenda_mask, instance_checklist in zip(self.agenda_mask, self.checklist):
-            float_mask = instance_agenda_mask.float()
-            masked_checklist = instance_checklist * float_mask
+            float_mask = instance_agenda_mask.float()  # (agenda_size, 1)
+            masked_checklist = instance_checklist * float_mask  # (agenda_size, 1)
             # If a specific checklist value is 1.0 or greater, we don't want to select it.
-            # We're transposing twice here since masked_softmax normalizes rows, not columns.
-            checklist_balance = torch.t(1 - torch.clamp(masked_checklist, max=1.0))
-            agenda_probs.append(torch.t(nn_util.masked_softmax(checklist_balance,
-                                                               (checklist_balance != 0).float())))
+            checklist_balance = 1 - torch.clamp(masked_checklist, max=1.0)  # (agenda_size, 1)
+            agenda_probs.append(nn_util.masked_softmax(checklist_balance,
+                                                       (checklist_balance != 0).float()))
         return agenda_probs
 
     def get_cost(self) -> Variable:
@@ -997,10 +998,12 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         all_agenda_action_probs = state.get_agenda_action_probs()
         # batch_index -> [(group_index, action_index, action, checklist, model_score)]
         next_states_info: Dict[int, List[Tuple[int, int, int, Variable, Variable]]] = defaultdict(list)
-        for group_index, (batch_index, instance_score, instance_action_probs) in \
-            enumerate(zip(state.batch_indices, state.score, considered_action_probs)):
-            instance_agenda = state.agenda[group_index]  # (agenda_size,)
-            instance_checklist = state.checklist[group_index]  # (agenda_size,)
+        for group_index, instance_info in enumerate(zip(state.batch_indices,
+                                                        state.score,
+                                                        considered_action_probs)):
+            batch_index, instance_score, instance_action_probs = instance_info
+            instance_agenda = state.agenda[group_index]  # (agenda_size, 1)
+            instance_checklist = state.checklist[group_index]  # (agenda_size, 1)
             agenda_action_probs = all_agenda_action_probs[group_index]
             # action_prob is a Variable.
             for action_index, action_prob in enumerate(instance_action_probs):
@@ -1011,7 +1014,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                     continue
                 # If action is not in instance_agenda, mask_variable, and checklist_addition will be
                 # all 0s.
-                checklist_mask = (instance_agenda == action).float()  # (agenda_size,)
+                checklist_mask = (instance_agenda == action).float()  # (agenda_size, 1)
                 agenda_action_prob = torch.sum(checklist_mask * agenda_action_probs)  # (1,)
                 # TODO (pradeep): This is not a great way to bias the model towards choosing actions
                 # that fill the checklist. May be use the current checklist in the action logit
@@ -1019,8 +1022,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 action_prob = checklist_weight * agenda_action_prob + \
                               (1 - checklist_weight) * action_prob
                 # We're adding 1.0 at the corresponding agenda index.
-                checklist_addition = checklist_mask.float()  # (agenda_size,)
-                new_checklist = instance_checklist + checklist_addition  # (agenda_size,)
+                checklist_addition = checklist_mask.float()  # (agenda_size, 1)
+                new_checklist = instance_checklist + checklist_addition  # (agenda_size, 1)
                 new_score = instance_score + torch.log(action_prob + 1e-13)
 
                 next_states_info[batch_index].append((group_index, action_index, action,

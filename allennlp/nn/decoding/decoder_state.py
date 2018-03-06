@@ -59,7 +59,10 @@ class DecoderState(Generic[T]):
         Returns cost associated with a finished ``DecoderState`` if the training algorithm used
         calls for it.
         """
-        raise NotImplementedError
+        # pylint: disable=no-self-use
+        # We raise a ``RuntimeError`` instead of ``NotImplementedError`` because some subclasses may
+        # choose to not implement this method.
+        raise RuntimeError
 
     def is_finished(self) -> bool:
         """
