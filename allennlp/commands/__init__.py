@@ -34,9 +34,7 @@ def main(prog: str = None,
     # `model_overrides`, and maybe the whole `serve` command as a public API (we only need that
     # path for demo.allennlp.org, and it's not likely anyone else would host that particular demo).
 
-    # TODO(mattg): is it the `[command]` here in the usage parameter that causes the funny
-    # duplication we see in the module docstrings?
-    parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]', prog=prog)
+    parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s', prog=prog)
 
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 
