@@ -1,5 +1,4 @@
 # pytest: disable=no-self-use,invalid-name
-from unittest import TestCase
 import pathlib
 import shutil
 import sys
@@ -60,12 +59,12 @@ class TestMain(AllenNlpTestCase):
 
         # Write out a duplicate model there, but registered under a different name.
         from allennlp.models import simple_tagger
-        with open(simple_tagger.__file__) as f:
-            code = f.read().replace("""@Model.register("simple_tagger")""",
-                                    """@Model.register("duplicate-test-tagger")""")
+        with open(simple_tagger.__file__) as model_file:
+            code = model_file.read().replace("""@Model.register("simple_tagger")""",
+                                             """@Model.register("duplicate-test-tagger")""")
 
-        with open(os.path.join(packagedir, 'model.py'), 'w') as f:
-            f.write(code)
+        with open(os.path.join(packagedir, 'model.py'), 'w') as new_model_file:
+            new_model_file.write(code)
 
         # Copy fixture there too.
         shutil.copy(os.path.join(os.getcwd(), 'tests/fixtures/data/sequence_tagging.tsv'), self.TEST_DIR)
@@ -98,8 +97,8 @@ class TestMain(AllenNlpTestCase):
                         "optimizer": "adam"
                 }
             """.replace('$$$', data_path)
-        with open(config_path, 'w') as f:
-            f.write(config_json)
+        with open(config_path, 'w') as config_file:
+            config_file.write(config_json)
 
         serialization_dir = os.path.join(self.TEST_DIR, 'serialization')
 
@@ -119,8 +118,8 @@ class TestMain(AllenNlpTestCase):
         main()
 
         # Rewrite out config file, but change a value.
-        with open(config_path, 'w') as f:
-            f.write(config_json.replace('"num_epochs": 2,', '"num_epochs": 4,'))
+        with open(config_path, 'w') as new_config_file:
+            new_config_file.write(config_json.replace('"num_epochs": 2,', '"num_epochs": 4,'))
 
         # This should fail because the config.json does not match that in the serialization directory.
         with pytest.raises(ConfigurationError):
