@@ -1,19 +1,10 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
-import json
-import os
-import shutil
-import sys
-import tarfile
 
 from flaky import flaky
-import pytest
 
 from allennlp.commands.evaluate import evaluate_from_args, Evaluate
-from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.models.archival import archive_model
 
 
 class TestEvaluate(AllenNlpTestCase):

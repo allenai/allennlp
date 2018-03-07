@@ -1,3 +1,4 @@
+# pytest: disable=no-self-use,invalid-name
 from unittest import TestCase
 import pathlib
 import shutil

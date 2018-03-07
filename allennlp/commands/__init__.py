@@ -62,7 +62,7 @@ def main(prog: str = None,
 
     args = parser.parse_args()
 
-    # Import any additional modules needed (to register custom classes)
+    # Import any additional modules needed (to register custom classes).
     for package_name in args.include_package:
         import_submodules(package_name)
 
