@@ -12,6 +12,7 @@ from allennlp.commands.serve import Serve
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.train import Train
 from allennlp.service.predictors import DemoModel
+from allennlp.common.util import import_submodules
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -33,12 +34,10 @@ def main(prog: str = None,
     # `model_overrides`, and maybe the whole `serve` command as a public API (we only need that
     # path for demo.allennlp.org, and it's not likely anyone else would host that particular demo).
 
-    # TODO(mattg): is it feasible to add `--include-package` somewhere in here, so it's included by
-    # all commands, instead of needing to be added manually for each one?
-
     # TODO(mattg): is it the `[command]` here in the usage parameter that causes the funny
     # duplication we see in the module docstrings?
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]', prog=prog)
+
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 
     subcommands = {
@@ -56,9 +55,18 @@ def main(prog: str = None,
     }
 
     for name, subcommand in subcommands.items():
-        subcommand.add_subparser(name, subparsers)
+        subparser = subcommand.add_subparser(name, subparsers)
+        subparser.add_argument('--include-package',
+                               type=str,
+                               action='append',
+                               default=[],
+                               help='additional packages to include')
 
     args = parser.parse_args()
+
+    # Import any additional modules needed (to register custom classes)
+    for package_name in args.include_package:
+        import_submodules(package_name)
 
     # If a subparser is triggered, it adds its work as `args.func`.
     # So if no such attribute has been added, no subparser was triggered,

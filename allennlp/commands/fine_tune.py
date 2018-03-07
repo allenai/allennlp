@@ -16,7 +16,7 @@ from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.train import datasets_from_params
 from allennlp.common import Params, TeeLogger, Tqdm
-from allennlp.common.util import prepare_environment, import_submodules
+from allennlp.common.util import prepare_environment
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
@@ -55,12 +55,6 @@ class FineTune(Subcommand):
                                help='a HOCON structure used to override the training configuration '
                                '(only affects the config_file, _not_ the model_archive)')
 
-        subparser.add_argument('--include-package',
-                               type=str,
-                               action='append',
-                               default=[],
-                               help='additional packages to include')
-
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
                                default=False,
@@ -75,9 +69,6 @@ def fine_tune_model_from_args(args: argparse.Namespace):
     """
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
-    # Import any additional modules needed (to register custom classes)
-    for package_name in args.include_package:
-        import_submodules(package_name)
     fine_tune_model_from_file_paths(model_archive_path=args.model_archive,
                                     config_file=args.config_file,
                                     serialization_dir=args.serialization_dir,
