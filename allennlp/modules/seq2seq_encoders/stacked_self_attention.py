@@ -84,7 +84,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             self.add_module(f"feedforward_{i}", feedfoward)
             self._feedfoward_layers.append(feedfoward)
 
-            feedforward_layer_norm = LayerNorm(feedfoward.get_input_dim())
+            feedforward_layer_norm = LayerNorm(feedfoward.get_output_dim())
             self.add_module(f"feedforward_layer_norm_{i}", feedforward_layer_norm)
             self._feed_forward_layer_norm_layers.append(feedforward_layer_norm)
 
@@ -95,7 +95,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             self.add_module(f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 
-            layer_norm = LayerNorm(self_attention.get_input_dim())
+            layer_norm = LayerNorm(self_attention.get_output_dim())
             self.add_module(f"layer_norm_{i}", layer_norm)
             self._layer_norm_layers.append(layer_norm)
 
@@ -104,7 +104,6 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         self.dropout = Dropout(dropout_prob)
         self._input_dim = input_dim
         self._output_dim = self._attention_layers[-1].get_output_dim()
-        self._output_layer_norm = LayerNorm(self._output_dim)
 
     @overrides
     def get_input_dim(self) -> int:
@@ -130,16 +129,17 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             # Project output of attention encoder through a feedforward
             # network and back to the input size for the next layer.
             # shape (batch_size, timesteps, input_size)
-            feedforward_output = feedforward(feedforward_layer_norm(output))
+            feedforward_output = feedforward(output)
             feedforward_output = self.dropout(feedforward_output)
             if feedforward_output.size() == cached_input.size():
                 # First layer might have the wrong size for highway
                 # layers, so we exclude it here.
-                feedforward_output += cached_input
+                feedforward_output = feedforward_layer_norm(feedforward_output + cached_input)
             # shape (batch_size, sequence_length, hidden_dim)
-            attention_output = attention(layer_norm(feedforward_output), mask)
-            output = self.dropout(attention_output) + feedforward_output
-        return self._output_layer_norm(output)
+            attention_output = attention(feedforward_output, mask)
+            output = layer_norm(self.dropout(attention_output) + feedforward_output)
+
+        return output
 
     @classmethod
     def from_params(cls, params: Params):
