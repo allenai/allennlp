@@ -3,8 +3,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 import argparse
-import tqdm
 from allennlp.common import Params
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.iterators import BasicIterator
 from allennlp.data import DatasetReader
 from allennlp.models import Model
@@ -19,7 +19,7 @@ def main(serialization_directory, device):
         The device to run the evaluation on.
     """
 
-    config = Params.from_file(os.path.join(serialization_directory, "model_params.json"))
+    config = Params.from_file(os.path.join(serialization_directory, "config.json"))
     dataset_reader = DatasetReader.from_params(config['dataset_reader'])
     evaluation_data_path = config['validation_data_path']
 
@@ -32,17 +32,18 @@ def main(serialization_directory, device):
 
     # Load the evaluation data and index it.
     print("Reading evaluation data from {}".format(evaluation_data_path))
-    dataset = dataset_reader.read(evaluation_data_path)
-    dataset.index_instances(model.vocab)
+    instances = dataset_reader.read(evaluation_data_path)
     iterator = BasicIterator(batch_size=32)
+    iterator.index_with(model.vocab)
 
     model_predictions = []
-    for batch in tqdm.tqdm(iterator(dataset, num_epochs=1, shuffle=False, cuda_device=device, for_training=False)):
+    batches = iterator(instances, num_epochs=1, shuffle=False, cuda_device=device, for_training=False)
+    for batch in Tqdm.tqdm(batches):
         result = model(**batch)
         predictions = model.decode(result)
         model_predictions.extend(predictions["tags"])
 
-    for instance, prediction in zip(dataset.instances, model_predictions):
+    for instance, prediction in zip(instances, model_predictions):
         fields = instance.fields
         try:
             # Most sentences have a verbal predicate, but not all.

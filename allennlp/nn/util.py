@@ -147,7 +147,7 @@ def masked_softmax(vector, mask):
     if mask is None:
         result = torch.nn.functional.softmax(vector, dim=-1)
     else:
-        # To limit numerical errors from large vector elements outside mask, we zero these out
+        # To limit numerical errors from large vector elements outside the mask, we zero these out.
         result = torch.nn.functional.softmax(vector * mask, dim=-1)
         result = result * mask
         result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
@@ -162,12 +162,23 @@ def masked_log_softmax(vector, mask):
 
     We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
 
-    In the case that the input vector is completely masked, this function returns an array
-    of ``0.0``.  You should be masking the result of whatever computation comes out of this in that
-    case, anyway, so it shouldn't matter.
+    In the case that the input vector is completely masked, the return value of this function is
+    arbitrary, but not ``nan``.  You should be masking the result of whatever computation comes out
+    of this in that case, anyway, so the specific values returned shouldn't matter.  Also, the way
+    that we deal with this case relies on having single-precision floats; mixing half-precision
+    floats with fully-masked vectors will likely give you ``nans``.
+
+    If your logits are all extremely negative (i.e., the max value in your logit vector is -50 or
+    lower), the way we handle masking here could mess you up.  But if you've got logit values that
+    extreme, you've got bigger problems than this.
     """
     if mask is not None:
-        vector = vector + mask.log()
+        # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
+        # results in nans when the whole vector is masked.  We need a very small value instead of a
+        # zero in the mask for these cases.  log(1 + 1e-45) is still basically 0, so we can safely
+        # just add 1e-45 before calling mask.log().  We use 1e-45 because 1e-46 is so small it
+        # becomes 0 - this is just the smallest value we can actually use.
+        vector = vector + (mask + 1e-45).log()
     return torch.nn.functional.log_softmax(vector, dim=1)
 
 
@@ -380,7 +391,8 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
-                                       batch_average: bool = True) -> torch.FloatTensor:
+                                       batch_average: bool = True,
+                                       label_smoothing: float = None) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
@@ -401,6 +413,11 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     batch_average : bool, optional, (default = True).
         A bool indicating whether the loss should be averaged across the batch,
         or returned as a vector of losses per batch element.
+    label_smoothing : ``float``, optional (default = None)
+        Whether or not to apply label smoothing to the cross-entropy loss.
+        For example, with a label smoothing value of 0.2, a 4 class classifcation
+        target would look like ``[0.05, 0.05, 0.85, 0.05]`` if the 3rd class was
+        the correct label.
 
     Returns
     -------
@@ -416,11 +433,20 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     # shape : (batch * max_len, 1)
     targets_flat = targets.view(-1, 1).long()
 
-    # Contribution to the negative log likelihood only comes from the exact indices
-    # of the targets, as the target distributions are one-hot. Here we use torch.gather
-    # to extract the indices of the num_classes dimension which contribute to the loss.
-    # shape : (batch * sequence_length, 1)
-    negative_log_likelihood_flat = - torch.gather(log_probs_flat, dim=1, index=targets_flat)
+    if label_smoothing is not None and label_smoothing > 0.0:
+        num_classes = logits.size(-1)
+        smoothing_value = label_smoothing / num_classes
+        # Fill all the correct indices with 1 - smoothing value.
+        one_hot_targets = zeros_like(log_probs_flat).scatter_(-1, targets_flat, 1.0 - label_smoothing)
+        smoothed_targets = one_hot_targets + smoothing_value
+        negative_log_likelihood_flat = - log_probs_flat * smoothed_targets
+        negative_log_likelihood_flat = negative_log_likelihood_flat.sum(-1, keepdim=True)
+    else:
+        # Contribution to the negative log likelihood only comes from the exact indices
+        # of the targets, as the target distributions are one-hot. Here we use torch.gather
+        # to extract the indices of the num_classes dimension which contribute to the loss.
+        # shape : (batch * sequence_length, 1)
+        negative_log_likelihood_flat = - torch.gather(log_probs_flat, dim=1, index=targets_flat)
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
@@ -469,6 +495,14 @@ def ones_like(tensor: torch.Tensor) -> torch.Tensor:
     device at runtime.
     """
     return tensor.clone().fill_(1)
+
+
+def zeros_like(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Use clone() + fill_() to make sure that a zeros tensor ends up on the right
+    device at runtime.
+    """
+    return tensor.clone().fill_(0)
 
 
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
@@ -585,6 +619,15 @@ def logsumexp(tensor: torch.Tensor,
         stable_vec = tensor - max_score.unsqueeze(dim)
     return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
 
+def get_device_of(tensor: torch.Tensor) -> int:
+    """
+    Returns the device of the tensor.
+    """
+    if not tensor.is_cuda:
+        return -1
+    else:
+        return tensor.get_device()
+
 def flatten_and_batch_shift_indices(indices: torch.Tensor,
                                     sequence_length: int) -> torch.Tensor:
     """
@@ -617,7 +660,7 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
     offset_indices : ``torch.LongTensor``
     """
     # Shape: (batch_size)
-    offsets = get_range_vector(indices.size(0), indices.is_cuda) * sequence_length
+    offsets = get_range_vector(indices.size(0), get_device_of(indices)) * sequence_length
     for _ in range(len(indices.size()) - 1):
         offsets = offsets.unsqueeze(1)
 
@@ -714,13 +757,13 @@ def flattened_index_select(target: torch.Tensor,
     return selected
 
 
-def get_range_vector(size: int, is_cuda: bool) -> torch.Tensor:
+def get_range_vector(size: int, device: int) -> torch.Tensor:
     """
     Returns a range vector with the desired size, starting at 0. The CUDA implementation
     is meant to avoid copy data from CPU to GPU.
     """
-    if is_cuda:
-        indices = torch.cuda.LongTensor(size).fill_(1).cumsum(0) - 1
+    if device > -1:
+        indices = torch.cuda.LongTensor(size, device=device).fill_(1).cumsum(0) - 1
     else:
         indices = torch.arange(0, size).long()
     return Variable(indices, requires_grad=False)
@@ -897,11 +940,11 @@ def add_positional_features(tensor: torch.Tensor,
     """
     _, timesteps, hidden_dim = tensor.size()
 
-    timestep_range = get_range_vector(timesteps, tensor.is_cuda).data.float()
+    timestep_range = get_range_vector(timesteps, get_device_of(tensor)).data.float()
     # We're generating both cos and sin frequencies,
     # so half for each.
     num_timescales = hidden_dim // 2
-    timescale_range = get_range_vector(num_timescales, tensor.is_cuda).data.float()
+    timescale_range = get_range_vector(num_timescales, get_device_of(tensor)).data.float()
 
     log_timescale_increments = math.log(float(max_timescale) / float(min_timescale)) / float(num_timescales - 1)
     inverse_timescales = min_timescale * torch.exp(timescale_range * -log_timescale_increments)

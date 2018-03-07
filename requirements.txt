@@ -29,8 +29,9 @@ numpy
 scipy
 scikit-learn
 
-# Training visualisation using tensorboard.
-tensorboard
+# Write logs for training visualisation with the Tensorboard application
+# Install the Tensorboard application separately (part of tensorflow) to view them.
+tensorboardX==1.0
 
 # Required by torch.utils.ffi
 cffi==1.11.2
@@ -54,7 +55,7 @@ argparse
 requests>=2.18
 
 # progress bars in data cleaning scripts
-tqdm
+tqdm>=4.19
 
 # In SQuAD eval script, we use this to see if we likely have some tokenization problem.
 editdistance

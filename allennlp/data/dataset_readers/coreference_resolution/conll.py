@@ -5,15 +5,13 @@ from typing import Any, Dict, List, Optional, Tuple, DefaultDict, Set
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, ListField, TextField, IndexField, MetadataField, SequenceLabelField
+from allennlp.data.fields import Field, ListField, TextField, SpanField, MetadataField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.dataset_readers.dataset_utils import Ontonotes
+from allennlp.data.dataset_readers.dataset_utils import Ontonotes, enumerate_spans
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -60,9 +58,8 @@ class ConllCorefReader(DatasetReader):
     into the correct format.
 
     Returns a ``Dataset`` where the ``Instances`` have four fields: ``text``, a ``TextField``
-    containing the full document text, ``span_starts``, a ``ListField[IndexField]`` of inclusive
-    start indices for span candidates, ``span_ends``, a ``ListField[IndexField]`` of inclusive end
-    indices for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's
+    containing the full document text, ``spans``, a ``ListField[SpanField]`` of inclusive start and
+    end indices for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's
     original text. For data with gold cluster labels, we also include the original ``clusters``
     (a list of list of index pairs) and a ``SequenceLabelField`` of cluster ids for every span
     candidate.
@@ -77,20 +74,20 @@ class ConllCorefReader(DatasetReader):
     """
     def __init__(self,
                  max_span_width: int,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
-    def read(self, file_path: str):
+    def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
-        instances = []
         ontonotes_reader = Ontonotes()
-        for document in ontonotes_reader.dataset_path_iterator(file_path):
+        for sentences in ontonotes_reader.dataset_document_iterator(file_path):
             clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
-            sentences = [s for s in ontonotes_reader.sentence_iterator(document)]
 
             total_tokens = 0
             for sentence in sentences:
@@ -104,13 +101,7 @@ class ConllCorefReader(DatasetReader):
                 total_tokens += len(sentence.words)
 
             canonical_clusters = canonicalize_clusters(clusters)
-            instance = self.text_to_instance([s.words for s in sentences], canonical_clusters)
-            instances.append(instance)
-
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return Dataset(instances)
+            yield self.text_to_instance([s.words for s in sentences], canonical_clusters)
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -132,17 +123,14 @@ class ConllCorefReader(DatasetReader):
         An ``Instance`` containing the following ``Fields``:
             text : ``TextField``
                 The text of the full document.
-            span_starts : ``ListField[IndexField]``
-                A ListField containing the span starts represented as ``IndexFields``
-                with respect to the document text.
-            span_ends : ``ListField[IndexField]``
-                A ListField containing the span ends represented as ``IndexFields``
+            spans : ``ListField[SpanField]``
+                A ListField containing the spans represented as ``SpanFields``
                 with respect to the document text.
             span_labels : ``SequenceLabelField``, optional
                 The id of the cluster which each possible span belongs to, or -1 if it does
                  not belong to a cluster. As these labels have variable length (it depends on
                  how many spans we are considering), we represent this a as a ``SequenceLabelField``
-                 with respect to the ``span_starts`` ``ListField``.
+                 with respect to the ``spans ``ListField``.
         """
         flattened_sentences = [self._normalize_word(word)
                                for sentence in sentences
@@ -160,37 +148,31 @@ class ConllCorefReader(DatasetReader):
                 for mention in cluster:
                     cluster_dict[tuple(mention)] = cluster_id
 
-        span_starts: List[Field] = []
-        span_ends: List[Field] = []
+        spans: List[Field] = []
         span_labels: Optional[List[int]] = [] if gold_clusters is not None else None
 
         sentence_offset = 0
         for sentence in sentences:
-            for start_index in range(len(sentence)):
-                for end_index in range(start_index, min(start_index + self._max_span_width, len(sentence))):
-                    start = sentence_offset + start_index
-                    end = sentence_offset + end_index
+            for start, end in enumerate_spans(sentence,
+                                              offset=sentence_offset,
+                                              max_span_width=self._max_span_width):
+                if span_labels is not None:
+                    if (start, end) in cluster_dict:
+                        span_labels.append(cluster_dict[(start, end)])
+                    else:
+                        span_labels.append(-1)
 
-                    if span_labels is not None:
-                        if (start, end) in cluster_dict:
-                            span_labels.append(cluster_dict[(start, end)])
-                        else:
-                            span_labels.append(-1)
-
-                    span_starts.append(IndexField(start, text_field))
-                    span_ends.append(IndexField(end, text_field))
+                spans.append(SpanField(start, end, text_field))
             sentence_offset += len(sentence)
 
-        span_starts_field = ListField(span_starts)
-        span_ends_field = ListField(span_ends)
+        span_field = ListField(spans)
         metadata_field = MetadataField(metadata)
 
         fields: Dict[str, Field] = {"text": text_field,
-                                    "span_starts": span_starts_field,
-                                    "span_ends": span_ends_field,
+                                    "spans": span_field,
                                     "metadata": metadata_field}
         if span_labels is not None:
-            fields["span_labels"] = SequenceLabelField(span_labels, span_starts_field)
+            fields["span_labels"] = SequenceLabelField(span_labels, span_field)
 
         return Instance(fields)
 
@@ -198,8 +180,9 @@ class ConllCorefReader(DatasetReader):
     def from_params(cls, params: Params) -> "ConllCorefReader":
         token_indexers = TokenIndexer.dict_from_params(params.pop("token_indexers", {}))
         max_span_width = params.pop_int("max_span_width")
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
-        return cls(token_indexers=token_indexers, max_span_width=max_span_width)
+        return cls(token_indexers=token_indexers, max_span_width=max_span_width, lazy=lazy)
 
     @staticmethod
     def _normalize_word(word):

@@ -87,13 +87,12 @@
     "patience": 10,
     "validation_metric": "+em",
     "cuda_device": 0,
-    "learning_rate_scheduler":  {
+    "learning_rate_scheduler": {
       "type": "reduce_on_plateau",
       "factor": 0.5,
       "mode": "max",
-      "patience": 2,
+      "patience": 2
     },
-    "no_tqdm": true,
     "optimizer": {
       "type": "adam",
       "betas": [0.9, 0.9]

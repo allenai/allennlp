@@ -31,13 +31,8 @@ build will test that:
 
 If your code fails one of these checks, you will be expected to fix your pull request before it is considered.
 
-You can run most of these tests locally, which will be faster than waiting for cloud systems to run tests.  To see
-exactly what our continuous build system runs, look at `.travis.yml`.  The most common checks you should run
-locally are:
-
-* `pytest -v`.  If you run this in the root AllenNLP directory, this will run all of our tests.
-* `./scripts/pylint.sh`.  This will make sure your code conforms to our automatically-checkable style guidelines.
-* `./scripts/mypy.sh`.  This will run the mypy typechecker over the code.
+You can run most of these tests locally with `./scripts/verify.py`, which will be faster than waiting for
+cloud systems to run tests.
 
 ### Do you have a suggestion for an enhancement?
 

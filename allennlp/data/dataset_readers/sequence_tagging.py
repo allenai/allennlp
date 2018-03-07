@@ -2,12 +2,9 @@ from typing import Dict, List
 import logging
 
 from overrides import overrides
-import tqdm
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.instance import Instance
@@ -43,21 +40,22 @@ class SequenceTaggingDatasetReader(DatasetReader):
     def __init__(self,
                  word_tag_delimiter: str = DEFAULT_WORD_TAG_DELIMITER,
                  token_delimiter: str = None,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._word_tag_delimiter = word_tag_delimiter
         self._token_delimiter = token_delimiter
 
     @overrides
-    def read(self, file_path):
+    def _read(self, file_path):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
         with open(file_path, "r") as data_file:
 
-            instances = []
             logger.info("Reading instances from lines in file at: %s", file_path)
-            for line in tqdm.tqdm(data_file):
+            for line in data_file:
                 line = line.strip("\n")
 
                 # skip blank lines
@@ -71,12 +69,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
                 sequence = TextField(tokens, self._token_indexers)
                 sequence_tags = SequenceLabelField(tags, sequence)
-                instances.append(Instance({'tokens': sequence,
-                                           'tags': sequence_tags}))
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return Dataset(instances)
+                yield Instance({'tokens': sequence,
+                                'tags': sequence_tags})
 
     def text_to_instance(self, tokens: List[Token]) -> Instance:  # type: ignore
         """
@@ -90,7 +84,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         word_tag_delimiter = params.pop("word_tag_delimiter", DEFAULT_WORD_TAG_DELIMITER)
         token_delimiter = params.pop("token_delimiter", None)
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return SequenceTaggingDatasetReader(token_indexers=token_indexers,
                                             word_tag_delimiter=word_tag_delimiter,
-                                            token_delimiter=token_delimiter)
+                                            token_delimiter=token_delimiter,
+                                            lazy=lazy)

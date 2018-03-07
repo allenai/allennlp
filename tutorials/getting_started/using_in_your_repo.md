@@ -26,7 +26,7 @@ pytorch and a spacy model, as described in [the installation tutorial](installat
 
 ```bash
 pip install -r requirements.txt
-pip install http://download.pytorch.org/whl/cu80/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl
+pip install http://download.pytorch.org/whl/cu80/torch-0.3.1-cp36-cp36m-linux_x86_64.whl
 python -m spacy download en_core_web_sm
 ```
 
@@ -140,14 +140,13 @@ With our test in hand, we're now ready to actually write the `DatasetReader` its
 as a [file in
 `my_library.dataset_readers`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/dataset_readers/semantic_scholar_papers.py).
 
-To understand what's going on in this class, let's look at the `read` method first:
+To understand what's going on in this class, let's look at the `_read` method first:
 
 ```python
-    def read(self, file_path):
-        instances = []
+    def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
-            for line_num, line in enumerate(tqdm.tqdm(data_file.readlines())):
+            for line_num, line in enumerate(Tqdm.tqdm(data_file.readlines())):
                 line = line.strip("\n")
                 if not line:
                     continue
@@ -155,10 +154,7 @@ To understand what's going on in this class, let's look at the `read` method fir
                 title = paper_json['title']
                 abstract = paper_json['paperAbstract']
                 venue = paper_json['venue']
-                instances.append(self.text_to_instance(title, abstract, venue))
-        if not instances:
-            raise ConfigurationError("No instances read!")
-        return Dataset(instances)
+                yield self.text_to_instance(title, abstract, venue)
 ```
 
 The `cached_path` method inside of the `with open()` call allows the path we specify to be a web
@@ -473,38 +469,10 @@ Now let's train it on some real data!
 
 ## Step five: train the model
 
-Our [getting started tutorial](training_and_evaluating.md) says to use `python -m allennlp.run
-train CONFIG_FILE` to train a model.  That's not going to work for us, however, because
-`allennlp.run` doesn't know about the `DatasetReader` and `Model` classes that we added to the
-registry, so it will fail to load our configuration files.  Instead, we need to write our own
-`run.py` script:
+As per our [getting started tutorial](training_and_evaluating.md),
+you can use `python -m allennlp.run train` to train a model.
 
-```python
-#!/usr/bin/env python
-import logging
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                    level=logging.INFO)
-
-# NOTE: This line is important!  It's what makes all of the classes in `my_library` findable by
-# AllenNLP's registry.
-from my_library import *
-
-from allennlp.commands import main  # pylint: disable=wrong-import-position
-
-if __name__ == "__main__":
-    main(prog="python run.py")
-```
-
-This is just copied directly from `allennlp.run`, with one crucial addition: the line `from
-my_library import *`.  We set up imports in our `__init__.py` files such that this line imports
-our `DatasetReader` and `Model` classes, which adds them to the registry so that AllenNLP can find
-them.  Now we can train our model with `python run.py train CONFIG_FILE -s SAVE_DIR`.
-
-The only thing we're missing is the configuration file.  You can see the full file
+To do that, we need a configuration file.  You can see the full file
 [here](https://github.com/allenai/allennlp-as-a-library-example/blob/master/experiments/venue_classifier.json).
 We'll look at it in chunks.
 
@@ -605,12 +573,33 @@ The feed-forward network has a configurable depth, width, and activation.  You c
 `FeedForward` for more information on these parameters.
 
 And that's it!  You're now the proud owner of a new `DatasetReader`, `Model`, and means to train
-the model on your favorite data.  You can checkout the code from the [github
+the model on your favorite data.
+
+The only remaining twist is that `allennlp.run` doesn't know about
+our custom `Model` and `DatasetReader`, which means we'll need to
+provide an extra parameter so that it loads and registers them.
+
+Here our custom code all lives in the `my_library` module,
+which means we need to add an extra parameter
+
+```
+--include-package my_library
+```
+
+which (as long that package is somewhere visible on our PATH)
+will load all of the `my_library/...` submodules
+(and hence register all of our custom classes)
+before training the model.
+
+You can checkout the code from the [github
 repository](https://github.com/allenai/allennlp-as-a-library-example/), run the setup commands
 mentioned above to install AllenNLP, pytorch, and spacy, and try training this with:
 
 ```bash
-python run.py train experiments/venue_classifier.json -s /tmp/venue_output_dir
+python -m allennlp.run train \
+    experiments/venue_classifier.json \
+    -s /tmp/venue_output_dir \
+    --include-package my_library
 ```
 
 When we do this, we get to around 80% validation accuracy after a few epochs of training.

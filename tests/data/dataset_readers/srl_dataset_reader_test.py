@@ -1,14 +1,15 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
 
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 
-
-class TestSrlReader(AllenNlpTestCase):
-    def test_read_from_file(self):
-        conll_reader = SrlReader()
-        dataset = conll_reader.read('tests/fixtures/conll_2012/')
-        instances = dataset.instances
+class TestSrlReader:
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_read_from_file(self, lazy):
+        conll_reader = SrlReader(lazy=lazy)
+        instances = conll_reader.read('tests/fixtures/conll_2012/subdomain')
+        instances = ensure_list(instances)
 
         fields = instances[0].fields
         tokens = [t.text for t in fields['tokens'].tokens]
@@ -48,3 +49,11 @@ class TestSrlReader(AllenNlpTestCase):
         assert tokens == ["Denise", "Dillon", "Headline", "News", "."]
         assert fields["verb_indicator"].labels == [0, 0, 0, 0, 0]
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O']
+
+    def test_srl_reader_can_filter_by_domain(self):
+
+        conll_reader = SrlReader(domain_identifier="subdomain2")
+        instances = conll_reader.read('tests/fixtures/conll_2012/')
+        instances = ensure_list(instances)
+        # If we'd included the folder, we'd have 9 instances.
+        assert len(instances) == 2

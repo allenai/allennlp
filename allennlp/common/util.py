@@ -2,17 +2,26 @@
 Various utilities that don't fit anwhere else.
 """
 
-from itertools import zip_longest
-from typing import Any, Callable, Dict, List, Tuple, TypeVar
+from itertools import zip_longest, islice
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
+import importlib
+import logging
+import pkgutil
 import random
+import resource
+import subprocess
+import sys
 
 import torch
 import numpy
 import spacy
+from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
@@ -41,6 +50,8 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, (list, tuple)):
         # Lists and Tuples need their values sanitized
         return [sanitize(x_i) for x_i in x]
+    elif x is None:
+        return "None"
     else:
         raise ValueError("cannot sanitize {} of type {}".format(x, type(x)))
 
@@ -58,6 +69,14 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     """
     return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
+A = TypeVar('A')
+
+def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
+    """
+    Takes an iterator and batches the invididual instances into lists of the
+    specified size. The last list may be smaller if there are instances left over.
+    """
+    return iter(lambda: list(islice(iterator, 0, group_size)), [])
 
 def pad_sequence_to_length(sequence: List,
                            desired_length: int,
@@ -103,7 +122,6 @@ def pad_sequence_to_length(sequence: List,
     return padded_sequence
 
 
-A = TypeVar('A')
 def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> Dict[A, float]:
     """
     Returns a new dictionary with noise added to every key in ``dictionary``.  The noise is
@@ -172,6 +190,7 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
     keyed by the options we used to create the spacy model, so any particular configuration only
     gets loaded once.
     """
+
     options = (spacy_model_name, pos_tags, parse, ner)
     if options not in LOADED_SPACY_MODELS:
         disable = ['vectors', 'textcat']
@@ -181,6 +200,99 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
             disable.append('parser')
         if not ner:
             disable.append('ner')
-        spacy_model = spacy.load(spacy_model_name, disable=disable)
+        try:
+            spacy_model = spacy.load(spacy_model_name, disable=disable)
+        except OSError:
+            logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
+            spacy_download(spacy_model_name)
+            spacy_model = spacy.load(spacy_model_name, disable=disable)
+
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
+
+def import_submodules(package_name: str) -> None:
+    """
+    Import all submodules under the given package.
+    Primarily useful so that people using AllenNLP as a library
+    can specify their own custom packages and have their custom
+    classes get loaded and registered.
+    """
+    importlib.invalidate_caches()
+
+    module = importlib.import_module(package_name)
+    path = getattr(module, '__path__', '')
+
+    for _, name, _ in pkgutil.walk_packages(path):
+        importlib.import_module(package_name + '.' + name)
+
+
+def peak_memory_mb() -> float:
+    """
+    Get peak memory usage for this process, as measured by
+    max-resident-set size:
+
+    https://unix.stackexchange.com/questions/30940/getrusage-system-call-what-is-maximum-resident-set-size
+
+    Only works on OSX and Linux, returns 0.0 otherwise.
+    """
+    if sys.platform not in ('linux', 'darwin'):
+        return 0.0
+
+    # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
+    # next line, but later versions (e.g. 0.530) are fine with it. Once we get that
+    # figured out, remove the type: ignore.
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
+
+    if sys.platform == 'darwin':
+        # On OSX the result is in bytes.
+        return peak / 1_000_000
+
+    else:
+        # On Linux the result is in kilobytes.
+        return peak / 1_000
+
+def gpu_memory_mb() -> Dict[int, int]:
+    """
+    Get the current GPU memory usage.
+    Based on https://discuss.pytorch.org/t/access-gpu-memory-usage-in-pytorch/3192/4
+
+    Returns
+    -------
+    ``Dict[int, int]``
+        Keys are device ids as integers.
+        Values are memory usage as integers in MB.
+        Returns an empty ``dict`` if GPUs are not available.
+    """
+    # pylint: disable=bare-except
+    try:
+        result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
+                                          '--format=csv,nounits,noheader'],
+                                         encoding='utf-8')
+        gpu_memory = [int(x) for x in result.strip().split('\n')]
+        return {gpu: memory for gpu, memory in enumerate(gpu_memory)}
+    except FileNotFoundError:
+        # `nvidia-smi` doesn't exist, assume that means no GPU.
+        return {}
+    except:
+        # Catch *all* exceptions, because this memory check is a nice-to-have
+        # and we'd never want a training run to fail because of it.
+        logger.exception("unable to check gpu_memory_mb(), continuing")
+        return {}
+
+
+def ensure_list(iterable: Iterable[A]) -> List[A]:
+    """
+    An Iterable may be a list or a generator.
+    This ensures we get a list without making an unnecessary copy.
+    """
+    if isinstance(iterable, list):
+        return iterable
+    else:
+        return list(iterable)
+
+def is_lazy(iterable: Iterable[A]) -> bool:
+    """
+    Checks if the given iterable is lazy,
+    which here just means it's not a list.
+    """
+    return not isinstance(iterable, list)

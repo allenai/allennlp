@@ -1,16 +1,20 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
+
 from allennlp.common import Params
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 from allennlp.data.dataset_readers import TriviaQaReader
 
-
-class TestTriviaQaReader(AllenNlpTestCase):
-    def test_read(self):
+class TestTriviaQaReader:
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_read(self, lazy):
         params = Params({
                 'base_tarball_path': 'tests/fixtures/data/triviaqa-sample.tgz',
+                'lazy': lazy
                 })
         reader = TriviaQaReader.from_params(params)
-        instances = reader.read('web-train.json').instances
+        instances = reader.read('web-train.json')
+        instances = ensure_list(instances)
         assert len(instances) == 3
 
         assert [t.text for t in instances[0].fields["question"].tokens[:3]] == ["Which", "American", "-"]

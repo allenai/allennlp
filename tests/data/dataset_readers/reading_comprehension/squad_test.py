@@ -1,13 +1,15 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
+
 from allennlp.common import Params
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 from allennlp.data.dataset_readers import SquadReader
 
-
-class TestSquadReader(AllenNlpTestCase):
-    def test_read_from_file(self):
-        reader = SquadReader()
-        instances = reader.read('tests/fixtures/data/squad.json').instances
+class TestSquadReader:
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_read_from_file(self, lazy):
+        reader = SquadReader(lazy=lazy)
+        instances = ensure_list(reader.read('tests/fixtures/data/squad.json'))
         assert len(instances) == 5
 
         assert [t.text for t in instances[0].fields["question"].tokens[:3]] == ["To", "whom", "did"]
@@ -25,7 +27,8 @@ class TestSquadReader(AllenNlpTestCase):
         # We're checking this case because I changed the answer text to only have a partial
         # annotation for the last token, which happens occasionally in the training data.  We're
         # making sure we get a reasonable output in that case here.
-        assert [t.text for t in instances[3].fields["question"].tokens[:3]] == ["Which", "individual", "worked"]
+        assert ([t.text for t in instances[3].fields["question"].tokens[:3]] ==
+                ["Which", "individual", "worked"])
         assert [t.text for t in instances[3].fields["passage"].tokens[:3]] == ["In", "1882", ","]
         assert [t.text for t in instances[3].fields["passage"].tokens[-3:]] == ["Nuclear", "Astrophysics", "."]
         span_start = instances[3].fields["span_start"].sequence_index

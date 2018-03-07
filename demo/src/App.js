@@ -6,6 +6,7 @@ import TeComponent from './components/TeComponent';
 import McComponent from './components/McComponent';
 import CorefComponent from './components/CorefComponent'
 import NamedEntityComponent from './components/NamedEntityComponent'
+import ConstituencyParserComponent from './components/ConstituencyParserComponent'
 import Header from './components/Header';
 import WaitingForPermalink from './components/WaitingForPermalink'
 
@@ -115,6 +116,9 @@ class Demo extends React.Component {
       }
       else if (selectedModel === "named-entity-recognition") {
         return (<NamedEntityComponent requestData={requestData} responseData={responseData}/>)
+      }
+      else if (selectedModel === "constituency-parsing") {
+        return (<ConstituencyParserComponent requestData={requestData} responseData={responseData}/>)
       }
     }
 

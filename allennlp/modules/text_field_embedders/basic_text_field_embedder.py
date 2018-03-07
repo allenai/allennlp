@@ -7,6 +7,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 
@@ -34,7 +35,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             output_dim += embedder.get_output_dim()
         return output_dim
 
-    def forward(self, text_field_input: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0) -> torch.Tensor:
         if self._token_embedders.keys() != text_field_input.keys():
             message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
                                                             str(text_field_input.keys()))
@@ -43,7 +44,11 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         keys = sorted(text_field_input.keys())
         for key in keys:
             tensor = text_field_input[key]
-            embedder = self._token_embedders[key]
+            # Note: need to use getattr here so that the pytorch voodoo
+            # with submodules works with multiple GPUs.
+            embedder = getattr(self, 'token_embedder_{}'.format(key))
+            for _ in range(num_wrapping_dims):
+                embedder = TimeDistributed(embedder)
             token_vectors = embedder(tensor)
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)

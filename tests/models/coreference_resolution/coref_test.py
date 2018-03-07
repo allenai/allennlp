@@ -9,7 +9,7 @@ class CorefTest(ModelTestCase):
     def setUp(self):
         super(CorefTest, self).setUp()
         self.set_up_model('tests/fixtures/coref/experiment.json',
-                          'tests/fixtures/conll_2012/')
+                          'tests/fixtures/coref/coref.gold_conll')
 
     def test_coref_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -37,10 +37,10 @@ class CorefTest(ModelTestCase):
         predicted_antecedents = torch.LongTensor([-1, 0, -1, -1, 1, 3])
         predicted_antecedents = Variable(predicted_antecedents.unsqueeze(0))
         output_dict = {
-                        "top_spans": spans,
-                        "antecedent_indices": antecedent_indices,
-                        "predicted_antecedents": predicted_antecedents
-                    }
+                "top_spans": spans,
+                "antecedent_indices": antecedent_indices,
+                "predicted_antecedents": predicted_antecedents
+                }
         output = self.model.decode(output_dict)
 
         clusters = output["clusters"][0]

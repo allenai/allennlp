@@ -26,6 +26,19 @@ class TestSimpleWordSplitter(AllenNlpTestCase):
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
+    def test_batch_tokenization(self):
+        sentences = ["This is a sentence",
+                     "This isn't a sentence.",
+                     "This is the 3rd sentence."
+                     "Here's the 'fourth' sentence."]
+        batch_split = self.word_splitter.batch_split_words(sentences)
+        separately_split = [self.word_splitter.split_words(sentence) for sentence in sentences]
+        assert len(batch_split) == len(separately_split)
+        for batch_sentence, separate_sentence in zip(batch_split, separately_split):
+            assert len(batch_sentence) == len(separate_sentence)
+            for batch_word, separate_word in zip(batch_sentence, separate_sentence):
+                assert batch_word.text == separate_word.text
+
     def test_tokenize_handles_multiple_contraction(self):
         sentence = "wouldn't've"
         expected_tokens = ["would", "n't", "'ve"]
@@ -92,8 +105,8 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
 
     def test_tokenize_handles_contraction(self):
         # note that "would've" is kept together, while "ain't" is not.
-        sentence = "it ain't joe's problem; would've been yesterday"
-        expected_tokens = ["it", "ai", "n't", "joe", "'s", "problem", ";", "would've", "been",
+        sentence = "it ain't joe's problem; would been yesterday"
+        expected_tokens = ["it", "ai", "n't", "joe", "'s", "problem", ";", "would", "been",
                            "yesterday"]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens

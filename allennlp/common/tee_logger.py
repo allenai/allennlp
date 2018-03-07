@@ -5,6 +5,19 @@ A logger that maintains logs of both stdout and stderr when models are run.
 from typing import TextIO
 import os
 
+def replace_cr_with_newline(message: str):
+    """
+    TQDM and requests use carriage returns to get the training line to update for each batch
+    without adding more lines to the terminal output.  Displaying those in a file won't work
+    correctly, so we'll just make sure that each batch shows up on its one line.
+    :param message: the message to permute
+    :return: the message with carriage returns replaced with newlines
+    """
+    if '\r' in message:
+        message = message.replace('\r', '')
+        if not message or message[-1] != '\n':
+            message += '\n'
+    return message
 
 class TeeLogger:
     """
@@ -14,23 +27,22 @@ class TeeLogger:
         sys.stdout = TeeLogger("stdout.log", sys.stdout)
         sys.stderr = TeeLogger("stdout.log", sys.stderr)
     """
-    def __init__(self, filename: str, terminal: TextIO) -> None:
+    def __init__(self, filename: str, terminal: TextIO, file_friendly_terminal_output: bool) -> None:
         self.terminal = terminal
+        self.file_friendly_terminal_output = file_friendly_terminal_output
         parent_directory = os.path.dirname(filename)
         os.makedirs(parent_directory, exist_ok=True)
         self.log = open(filename, 'a')
 
     def write(self, message):
-        self.terminal.write(message)
-        # We'll special case a particular thing that keras does, to make the log file more
-        # readable.  Keras uses ^H characters to get the training line to update for each batch
-        # without adding more lines to the terminal output.  Displaying those in a file won't work
-        # correctly, so we'll just make sure that each batch shows up on its one line.
-        if '\x08' in message:
-            message = message.replace('\x08', '')
-            if not message or message[-1] != '\n':
-                message += '\n'
-        self.log.write(message)
+        cleaned = replace_cr_with_newline(message)
+
+        if self.file_friendly_terminal_output:
+            self.terminal.write(cleaned)
+        else:
+            self.terminal.write(message)
+
+        self.log.write(cleaned)
 
     def flush(self):
         self.terminal.flush()
