@@ -19,7 +19,7 @@ class MultiParagraphReadingComprehensionTest(ModelTestCase):
         super().setUp()
         self.set_up_model(
             'tests/fixtures/multi_paragraph/experiment.json',
-            'web-train.json'
+            'web-train.jsonl'
         )
         # 'tests/fixtures/data/triviaqa-sample.tgz
 
@@ -29,8 +29,11 @@ class MultiParagraphReadingComprehensionTest(ModelTestCase):
         training_tensors = batch.as_tensor_dict()
 
         output_dict = self.model(**training_tensors)
-        # metrics = self.model.get_metrics(reset=True)
+        metrics = self.model.get_metrics(reset=True)
 
         assert 'span_start_logits' in output_dict
         assert 'best_span' in output_dict
         assert 'loss' in output_dict
+
+        assert 'em' in metrics
+        assert 'f1' in metrics

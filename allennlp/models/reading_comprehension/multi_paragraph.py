@@ -350,34 +350,35 @@ class MultiParagraphReadingComprehension(Model):
             #self._span_accuracy(best_paragraph_word_span, spans)
             output_dict["loss"] = loss
 
-        # if metadata is not None:
-        #     output_dict['best_span_str'] = []
-        #     best_paragraphs = best_paragraph_word_span[:, 0]
-        #     best_span = best_paragraph_word_span[:, 1:]
-        #     batch_size = len(metadata)
-        #     for i in range(batch_size):
-        #         paragraph_idx = int(best_paragraphs[i].data.cpu().numpy())
-        #         passage_str = metadata[i]['original_passage'][paragraph_idx]
-        #         offsets = metadata[i]['token_offsets'][paragraph_idx]
-        #         predicted_span = tuple(best_span[i].data.cpu().numpy())
-        #         start_offset = offsets[predicted_span[0]][0]
-        #         end_offset = offsets[predicted_span[1]][1]
-        #         best_span_string = passage_str[start_offset:end_offset]
-        #         output_dict['best_span_str'].append(best_span_string)
-        #         output_dict['best_span_str'].append(best_span_string)
-        #         answer_texts = metadata[i].get('answer_texts', [])
-        #         exact_match = f1_score = 0
-        #         if answer_texts:
-        #             exact_match = squad_eval.metric_max_over_ground_truths(
-        #                     squad_eval.exact_match_score,
-        #                     best_span_string,
-        #                     answer_texts)
-        #             f1_score = squad_eval.metric_max_over_ground_truths(
-        #                     squad_eval.f1_score,
-        #                     best_span_string,
-        #                     answer_texts)
-        #         self._official_em(100 * exact_match)
-        #         self._official_f1(100 * f1_score)
+        if metadata is not None:
+            output_dict['best_span_str'] = []
+            best_paragraphs = best_paragraph_word_span[:, 0]
+            best_span = best_paragraph_word_span[:, 1:]
+            batch_size = len(metadata)
+            for i in range(batch_size):
+                paragraph_idx = int(best_paragraphs[i].data.cpu().numpy())
+                passage_str = metadata[i]['paragraph_texts'][paragraph_idx]
+                offsets = metadata[i]['token_offsets'][paragraph_idx]
+                predicted_span = tuple(best_span[i].data.cpu().numpy())
+
+                start_offset = offsets[predicted_span[0]][0]
+                end_offset = offsets[predicted_span[1]][1]
+                best_span_string = passage_str[start_offset:end_offset]
+                output_dict['best_span_str'].append(best_span_string)
+                output_dict['best_span_str'].append(best_span_string)
+                answer_texts = metadata[i].get('answer_texts', [])
+                exact_match = f1_score = 0
+                if answer_texts:
+                    exact_match = squad_eval.metric_max_over_ground_truths(
+                            squad_eval.exact_match_score,
+                            best_span_string,
+                            answer_texts)
+                    f1_score = squad_eval.metric_max_over_ground_truths(
+                            squad_eval.f1_score,
+                            best_span_string,
+                            answer_texts)
+                self._official_em(100 * exact_match)
+                self._official_f1(100 * f1_score)
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

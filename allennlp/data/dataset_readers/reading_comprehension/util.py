@@ -276,7 +276,10 @@ def make_multi_paragraph_reading_comprehension_instance(
 
     #logger.info("question_field")
     fields['question'] = TextField(question_tokens, token_indexers)
-    metadata = {}
+    metadata = {
+        'paragraph_texts': paragraph_texts,
+        'token_offsets': paragraph_offsets
+    }
             # 'paragraph_texts': paragraph_texts,
             # 'token_offsets': paragraph_offsets,
             # 'question_tokens': [token.text for token in question_tokens],
