@@ -15,8 +15,13 @@ def assert_dataset_correct(dataset):
     assert [t.text for t in instance.fields["question"].tokens] == question_tokens
 
     entities = instance.fields['table'].knowledge_graph.entities
-    assert len(entities) == 47
+    assert len(entities) == 50
     assert sorted(entities) == [
+            # Numbers, which are represented as graph entities, as we link them to the question.
+            '-1',
+            '0',
+            '1',
+
             # The table cell entity names.
             'fb:cell.10_727',
             'fb:cell.11th',

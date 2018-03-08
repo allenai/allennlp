@@ -5,7 +5,7 @@ from overrides import overrides
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.semparse import ParsingError, World
-from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 from allennlp.data.semparse.worlds import NlvrWorld, WikiTablesWorld
 from allennlp.data.tokenizers import Token
 
@@ -39,9 +39,9 @@ class FakeWorldWithRecursion(FakeWorldWithoutRecursion):
         return actions
 
 
-class WorldTest(AllenNlpTestCase):
+class TestWorld(AllenNlpTestCase):
     def setUp(self):
-        super(WorldTest, self).setUp()
+        super().setUp()
         self.world_without_recursion = FakeWorldWithoutRecursion()
         self.world_with_recursion = FakeWorldWithRecursion()
 
@@ -49,9 +49,10 @@ class WorldTest(AllenNlpTestCase):
         data = [json.loads(line)["structured_rep"] for line in open(test_filename).readlines()]
         self.nlvr_world = NlvrWorld(data[0])
 
-        table_kg = TableKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/sample_table.tsv")
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '?']]
-        self.wikitables_world = WikiTablesWorld(table_kg, question_tokens)
+        table_file = 'tests/fixtures/data/wikitables/sample_table.tsv'
+        table_kg = TableQuestionKnowledgeGraph.read_from_file(table_file, question_tokens)
+        self.wikitables_world = WikiTablesWorld(table_kg)
 
     def test_get_paths_to_root_without_recursion(self):
         argument_paths = self.world_without_recursion.get_paths_to_root('e -> argument')

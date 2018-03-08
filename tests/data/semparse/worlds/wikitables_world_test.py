@@ -5,7 +5,7 @@ import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.semparse import ParsingError
-from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.tokenizers import Token
 
@@ -15,12 +15,13 @@ def check_productions_match(actual_rules: List[str], expected_right_sides: List[
     assert set(actual_right_sides) == set(expected_right_sides)
 
 
-class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
+class TestWikiTablesWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.table_kg = TableKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/sample_table.tsv")
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
-        self.world = WikiTablesWorld(self.table_kg, question_tokens)
+        table_file = 'tests/fixtures/data/wikitables/sample_table.tsv'
+        self.table_kg = TableQuestionKnowledgeGraph.read_from_file(table_file, question_tokens)
+        self.world = WikiTablesWorld(self.table_kg)
 
     def test_get_valid_actions_returns_correct_set(self):
         # This test is long, but worth it.  These are all of the valid actions in the grammar, and
@@ -208,9 +209,6 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
                                 ['-1',
                                  '0',
                                  '1',
-                                 '2',
-                                 '3',
-                                 '4',
                                  '2000',
                                  '[<#1,#1>, n]',
                                  '[<#1,<#1,#1>>, n, n]',
@@ -260,14 +258,16 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
 
     def test_world_parses_logical_forms_with_decimals(self):
         question_tokens = [Token(x) for x in ['0.2']]
-        world = WikiTablesWorld(self.table_kg, question_tokens)
+        table_kg = TableQuestionKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/sample_table.tsv",
+                                                              question_tokens)
+        world = WikiTablesWorld(table_kg)
         sempre_form = "(fb:cell.cell.number (number 0.200))"
         expression = world.parse_logical_form(sempre_form)
         assert str(expression) == "I1(I(num:0_200))"
 
     def test_get_action_sequence_removes_currying_for_all_wikitables_functions(self):
         # minus
-        logical_form = "(- (number 3) (number 2))"
+        logical_form = "(- (number 0) (number 1))"
         parsed_logical_form = self.world.parse_logical_form(logical_form)
         action_sequence = self.world.get_action_sequence(parsed_logical_form)
         assert 'n -> [<n,<n,n>>, n, n]' in action_sequence
@@ -297,8 +297,9 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
 
     def test_world_has_only_basic_numbers(self):
         valid_actions = self.world.get_valid_actions()
-        for i in range(-1, 5):
-            assert f'n -> {i}' in valid_actions['n']
+        assert 'n -> -1' in valid_actions['n']
+        assert 'n -> 0' in valid_actions['n']
+        assert 'n -> 1' in valid_actions['n']
         assert 'n -> 17' not in valid_actions['n']
         assert 'n -> 231' not in valid_actions['n']
         assert 'n -> 2007' not in valid_actions['n']
@@ -307,7 +308,9 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
 
     def test_world_adds_numbers_from_question(self):
         question_tokens = [Token(x) for x in ['what', '2007', '2,107', '0.2', '1800s', '1950s', '?']]
-        world = WikiTablesWorld(self.table_kg, question_tokens)
+        table_kg = TableQuestionKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/sample_table.tsv",
+                                                              question_tokens)
+        world = WikiTablesWorld(table_kg)
         valid_actions = world.get_valid_actions()
         assert 'n -> 2007' in valid_actions['n']
         assert 'n -> 2107' in valid_actions['n']
@@ -363,9 +366,10 @@ class TestWikiTablesWorldRepresentation(AllenNlpTestCase):
 
     @pytest.mark.skip(reason="fibonacci recursion currently going on here")
     def test_with_deeply_nested_logical_form(self):
-        table_kg = TableKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/tables/109.tsv")
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'district', '?']]
-        world = WikiTablesWorld(table_kg, question_tokens)
+        table_filename = 'tests/fixtures/data/wikitables/table/109.tsv'
+        table_kg = TableQuestionKnowledgeGraph.read_from_file(table_filename, question_tokens)
+        world = WikiTablesWorld(table_kg)
         logical_form = ("(count ((reverse fb:cell.cell.number) (or (or (or (or (or (or (or (or "
                         "(or (or (or (or (or (or (or (or (or (or (or (or (or fb:cell.virginia_1 "
                         "fb:cell.virginia_10) fb:cell.virginia_11) fb:cell.virginia_12) "
