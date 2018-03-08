@@ -172,7 +172,8 @@ class Vocabulary:
         self._padding_token = DEFAULT_PADDING_TOKEN
         self._oov_token = DEFAULT_OOV_TOKEN
         if not isinstance(max_vocab_size, dict):
-            max_vocab_size = defaultdict(lambda: max_vocab_size)  # type: ignore
+            max_vocab_size_notdict = max_vocab_size
+            max_vocab_size = defaultdict(lambda: max_vocab_size_notdict)  # type: ignore
         self._non_padded_namespaces = non_padded_namespaces
         self._token_to_index = _TokenToIndexDefaultDict(non_padded_namespaces,
                                                         self._padding_token,
@@ -190,7 +191,7 @@ class Vocabulary:
                     pretrained_list = None
                 token_counts = list(counter[namespace].items())
                 token_counts.sort(key=lambda x: x[1], reverse=True)
-                max_vocab = max_vocab_size.get(namespace)
+                max_vocab = max_vocab_size[namespace]
                 if max_vocab:
                     token_counts = token_counts[:max_vocab]
                 for token, count in token_counts:
