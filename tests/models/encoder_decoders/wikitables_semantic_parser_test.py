@@ -32,7 +32,6 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
         # Checks for the correct shape meaning dimension 2 has size num_neighbors,
         # padding of -1 is used, and correct neighbor indices.
-        print(neighbor_indices.data.numpy())
         assert_almost_equal(neighbor_indices.data.numpy(), [[[-1, -1],
                                                              [3, 4],
                                                              [3, 4],
@@ -85,7 +84,6 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         #     null entity.  We have three entity types here, so each row should sum to at most 3,
         #     and that number will approach 3 as the unnormalized linking scores for each entity
         #     get higher.
-        print(entity_probability.data.cpu().numpy())
         true_probability = [[[0.1192029, 0.5761169, 0.2119416, 0.0058998, 0.8756006],
                              [0.9820138, 0.0024561, 0.9908675, 0.0008947, 0.9811352]],
                             [[0.5, 0.7310586, 0.9996647, 0.0, 0.0],
@@ -485,8 +483,6 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert_almost_equal(action_logits[2, 0].data.cpu().numpy(), 1.0 * .3 + 1.1 * .3 + 1.2 * .4)
 
         embedding_matrix = decoder_step._entity_type_embedding.weight.data.cpu().numpy()
-        print(embedding_matrix)
-        print(type_embeddings)
         assert_almost_equal(type_embeddings[0, 0].data.cpu().numpy(), embedding_matrix[2])
         assert_almost_equal(type_embeddings[0, 1].data.cpu().numpy(), embedding_matrix[1])
         assert_almost_equal(type_embeddings[1, 0].data.cpu().numpy(), embedding_matrix[0])
