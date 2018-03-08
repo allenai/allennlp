@@ -144,9 +144,6 @@ class NlvrSemanticParser(Model):
         attended_sentence = self._decoder_step.attend_on_sentence(final_encoder_output,
                                                                   encoder_outputs, sentence_mask)
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
-        # After batching, agenda is of size (batch_size, agenda_size, 1).
-        agenda_mask = agenda != -1  # (batch_size, agenda_size, 1)
-        agenda_mask = agenda_mask.long()
         # TODO (pradeep): Use an unindexed field for labels?
         labels_data = label.data.cpu()
         label_strings = [self.vocab.get_token_from_index(int(label_data), "denotations") for
@@ -156,9 +153,9 @@ class NlvrSemanticParser(Model):
         checklist_targets = []
         agenda_relevant_actions = []
         initial_checklist_list = []
-        for batch_actions, batch_agenda in zip(actions, agenda_list):
-            checklist_target, relevant_actions = self._get_checklist_target(batch_agenda,
-                                                                            batch_actions)
+        for instance_actions, instance_agenda in zip(actions, agenda_list):
+            checklist_target, relevant_actions = self._get_checklist_target(instance_agenda,
+                                                                            instance_actions)
             checklist_targets.append(checklist_target)
             agenda_relevant_actions.append(relevant_actions)
             initial_checklist_list.append(nn_util.new_variable_with_size(checklist_target,
@@ -238,7 +235,7 @@ class NlvrSemanticParser(Model):
         actions relevant for checklist loss computation (``relevant_actions``). If
         ``penalize_non_agenda_actions`` is set to ``True``, ``relevant_actions`` will contain
         indices to all the terminal actions. If not, we will simply return the ``agenda`` itself as
-        ``relevant_actions``.
+        ``relevant_actions``, in which case, it will be a padded tensor, with -1 indicating padding.
 
         Parameters
         ----------
@@ -254,11 +251,10 @@ class NlvrSemanticParser(Model):
                 # values are tuples where the second element shows whether element is a
                 # non_terminal.
                 if not action["right"][1]:
-                    terminal_indices.append(index)
-            terminal_indices_tensor = torch.Tensor([terminal_indices])  # (1, num_terminals)
-            # We want to return a checklist target and relevant actions that column vectors to make
-            # computing softmax over the difference between checklist and target easier.
-            terminal_indices_tensor = torch.t(terminal_indices_tensor)  # (num_terminals, 1)
+                    terminal_indices.append([index])
+            # We want to return a checklist target and the relevant actions that are column vectors to
+            # make computing softmax over the difference between checklist and target easier.
+            terminal_indices_tensor = torch.Tensor([terminal_indices])  # (num_terminals, 1)
             relevant_actions = nn_util.new_variable_with_data(agenda,
                                                               terminal_indices_tensor)
             # (num_terminals, 1)
