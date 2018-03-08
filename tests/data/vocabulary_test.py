@@ -25,8 +25,18 @@ class TestVocabulary(AllenNlpTestCase):
         self.dataset = Batch([self.instance])
         super(TestVocabulary, self).setUp()
 
-    def test_from_dataset_respects_min_count(self):
+    def test_from_dataset_respects_max_vocab_size_single_int(self):
+        max_vocab_size = 1
+        vocab = Vocabulary.from_instances(self.dataset, max_vocab_size=max_vocab_size)
+        words = vocab.get_index_to_token_vocabulary().values()
+        # Additional 2 tokens are '@@PADDING@@' and '@@UNKNOWN@@' by default
+        assert len(words) == max_vocab_size + 2
 
+        vocab = Vocabulary.from_instances(self.dataset, min_count=None)
+        words = vocab.get_index_to_token_vocabulary().values()
+        assert len(words) == 5
+
+    def test_from_dataset_respects_min_count(self):
         vocab = Vocabulary.from_instances(self.dataset, min_count={'tokens': 4})
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
