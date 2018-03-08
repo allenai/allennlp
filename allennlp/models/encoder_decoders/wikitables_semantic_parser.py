@@ -120,7 +120,7 @@ class WikiTablesSemanticParser(Model):
 
         self._action_padding_index = -1  # the padding value used by IndexField
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
-        num_entity_types = 2  # TODO(mattg): get this in a more principled way somehow?
+        num_entity_types = 3  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
@@ -433,17 +433,24 @@ class WikiTablesSemanticParser(Model):
         for batch_index, world in enumerate(worlds):
             types = []
             for entity_index, entity in enumerate(world.table_graph.entities):
-                cell_type_one_hot = [1, 0]
-                row_type_one_hot = [0, 1]
-                entity_type = 0 if entity.startswith('fb:cell') else 1
-                types.append((cell_type_one_hot if entity_type == 0 else row_type_one_hot))
+                one_hot_vectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+                # We need numbers to be first, then cells, then row, because our entities are going
+                # to be sorted.  We do a split by type and then a merge later, and it relies on
+                # this sorting.
+                if entity.startswith('fb:cell'):
+                    entity_type = 1
+                elif entity.startswith('fb:row'):
+                    entity_type = 2
+                else:
+                    entity_type = 0
+                types.append(one_hot_vectors[entity_type])
 
                 # For easier lookups later, we're actually using a _flattened_ version
                 # of (batch_index, entity_index) for the key, because this is how the
                 # linking scores are stored.
                 flattened_entity_index = batch_index * num_entities + entity_index
                 entity_types[flattened_entity_index] = entity_type
-            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0])
+            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0, 0])
             batch_types.append(padded)
         return Variable(tensor.data.new(batch_types)), entity_types
 
@@ -475,49 +482,46 @@ class WikiTablesSemanticParser(Model):
         """
         _, num_question_tokens, num_entities = linking_scores.size()
         batch_probabilities = []
+        num_types = len(set(entity_type_dict.values()))
 
         for batch_index, world in enumerate(worlds):
-            # This index of 0 is for the null entity for each type, representing the case where a
-            # word doesn't link to any entity.
-            cell_type_index, row_type_index = [0], [0]
-            entities = world.table_graph.entities
-            for entity_index, _ in enumerate(entities):
-                if entity_type_dict[batch_index * num_entities + entity_index] == 0:
-                    cell_type_index.append(entity_index)
-                else:
-                    row_type_index.append(entity_index)
-
-            # We separate the scores by type, since normalization is done per type.  There's an
-            # extra "null" entity per type, also, so we have `num_entities_per_type + 1`.  We're
-            # selecting from a (num_question_tokens, num_entities) linking tensor on _dimension 1_,
-            # so we get back something of shape (num_question_tokens,) for each index we're
-            # selecting.  All of the selected indices together then make a tensor of shape
-            # (num_question_tokens, num_entities_per_type + 1).
-            cell_type_scores = torch.index_select(linking_scores[batch_index],
-                                                  dim=1,
-                                                  index=Variable(linking_scores.data.new(cell_type_index)).long())
-            row_type_scores = torch.index_select(linking_scores[batch_index],
-                                                 dim=1,
-                                                 index=Variable(linking_scores.data.new(row_type_index)).long())
-
-            # We used index 0 for the null entity, so this will actually have some values in it.
-            # But we want the null entity's score to be 0, so we set that here.
-            cell_type_scores[:, 0] = 0
-            row_type_scores[:, 0] = 0
-
-            # No need for a mask here, as this is done per batch instance, with no padding.
-            probabilities_cell = torch.nn.functional.softmax(cell_type_scores, dim=1)
-            probabilities_row = torch.nn.functional.softmax(row_type_scores, dim=1)
+            all_probabilities = []
+            num_entities_in_instance = 0
 
             # NOTE: The way that we're doing this here relies on the fact that entities are
-            # implicitly sorted by their types when we sort them by name, and that "fb:cell" comes
-            # before "fb:row".  This is not a great assumption, and could easily break later, but
-            # it should work for now.
-            all_probabilities = [probabilities_cell[:, 1:], probabilities_row[:, 1:]]
+            # implicitly sorted by their types when we sort them by name, and that numbers come
+            # before "fb:cell", and "fb:cell" comes before "fb:row".  This is not a great
+            # assumption, and could easily break later, but it should work for now.
+            for type_index in range(num_types):
+                # This index of 0 is for the null entity for each type, representing the case where a
+                # word doesn't link to any entity.
+                entity_indices = [0]
+                entities = world.table_graph.entities
+                for entity_index, _ in enumerate(entities):
+                    if entity_type_dict[batch_index * num_entities + entity_index] == type_index:
+                        entity_indices.append(entity_index)
 
-            # We need to add padding here if we don't have the right number of entities.  The -2
-            # removes the scores for the null entities.
-            num_entities_in_instance = len(cell_type_index) + len(row_type_index) - 2
+                # We're subtracting one here because of the null entity we added above.
+                num_entities_in_instance += len(entity_indices) - 1
+
+                # We separate the scores by type, since normalization is done per type.  There's an
+                # extra "null" entity per type, also, so we have `num_entities_per_type + 1`.  We're
+                # selecting from a (num_question_tokens, num_entities) linking tensor on _dimension 1_,
+                # so we get back something of shape (num_question_tokens,) for each index we're
+                # selecting.  All of the selected indices together then make a tensor of shape
+                # (num_question_tokens, num_entities_per_type + 1).
+                indices = Variable(linking_scores.data.new(entity_indices)).long()
+                entity_scores = linking_scores[batch_index].index_select(1, indices)
+
+                # We used index 0 for the null entity, so this will actually have some values in it.
+                # But we want the null entity's score to be 0, so we set that here.
+                entity_scores[:, 0] = 0
+
+                # No need for a mask here, as this is done per batch instance, with no padding.
+                type_probabilities = torch.nn.functional.softmax(entity_scores, dim=1)
+                all_probabilities.append(type_probabilities[:, 1:])
+
+            # We need to add padding here if we don't have the right number of entities.
             if num_entities_in_instance != num_entities:
                 zeros = Variable(linking_scores.data.new(num_question_tokens,
                                                          num_entities - num_entities_in_instance).fill_(0))

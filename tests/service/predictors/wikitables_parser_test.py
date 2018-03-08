@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import os
+import shutil
 from unittest import TestCase
 
 from allennlp.models.archival import load_archive
@@ -7,6 +8,16 @@ from allennlp.service.predictors import Predictor
 
 
 class TestWikiTablesParserPredictor(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.should_remove_data_dir = not os.path.exists('data')
+
+    def tearDown(self):
+        super().tearDown()
+        if self.should_remove_data_dir:
+            shutil.rmtree('data')
+
+
     def test_uses_named_inputs(self):
         inputs = {
                 "question": "names",

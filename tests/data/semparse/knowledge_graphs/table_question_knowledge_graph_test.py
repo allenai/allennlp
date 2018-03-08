@@ -1,19 +1,21 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
+from allennlp.data import Token
 
 
-class TestTableKnowledgeGraph(AllenNlpTestCase):
+class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
     def test_read_from_json_handles_simple_cases(self):
         json = {
+                'question': [Token(x) for x in ['where', 'is', 'mersin', '?']],
                 'columns': ['Name in English', 'Location'],
                 'cells': [['Paradeniz', 'Mersin'],
                           ['Lake Gala', 'Edirne']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:cell.mersin'])
-        assert graph.entities == ['fb:cell.edirne', 'fb:cell.lake_gala', 'fb:cell.mersin',
-                                  'fb:cell.paradeniz', 'fb:row.row.location',
+        assert graph.entities == ['-1', '0', '1', 'fb:cell.edirne', 'fb:cell.lake_gala',
+                                  'fb:cell.mersin', 'fb:cell.paradeniz', 'fb:row.row.location',
                                   'fb:row.row.name_in_english']
         assert neighbors == {'fb:row.row.location'}
         neighbors = set(graph.neighbors['fb:row.row.name_in_english'])
@@ -25,37 +27,63 @@ class TestTableKnowledgeGraph(AllenNlpTestCase):
         assert graph.entity_text['fb:row.row.location'] == 'Location'
         assert graph.entity_text['fb:row.row.name_in_english'] == 'Name in English'
 
+        # These are default numbers that should always be in the graph.
+        assert graph.neighbors['-1'] == []
+        assert graph.neighbors['0'] == []
+        assert graph.neighbors['1'] == []
+        assert graph.entity_text['-1'] == '-1'
+        assert graph.entity_text['0'] == '0'
+        assert graph.entity_text['1'] == '1'
+
+    def test_read_from_json_handles_numbers_in_question(self):
+        # The TSV file we use has newlines converted to "\n", not actual escape characters.  We
+        # need to be sure we catch this.
+        json = {
+                'question': [Token(x) for x in ['one', '4']],
+                'columns': [],
+                'cells': []
+                }
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
+        assert graph.neighbors['1'] == []
+        assert graph.neighbors['4'] == []
+        assert graph.entity_text['1'] == 'one'
+        assert graph.entity_text['4'] == '4'
+
     def test_read_from_json_handles_diacritics(self):
         json = {
+                'question': [],
                 'columns': ['Name in English', 'Name in Turkish', 'Location'],
                 'cells': [['Lake Van', 'Van Gölü', 'Mersin'],
                           ['Lake Gala', 'Gala Gölü', 'Edirne']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.name_in_turkish'])
         assert neighbors == {'fb:cell.van_golu', 'fb:cell.gala_golu'}
 
         json = {
+                'question': [],
                 'columns': ['Notes'],
                 'cells': [['Ordained as a priest at\nReșița on March, 29th 1936']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.notes'])
         assert neighbors == {'fb:cell.ordained_as_a_priest_at_resita_on_march_29th_1936'}
 
         json = {
+                'question': [],
                 'columns': ['Player'],
                 'cells': [['Mateja Kežman']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.player'])
         assert neighbors == {'fb:cell.mateja_kezman'}
 
         json = {
+                'question': [],
                 'columns': ['Venue'],
                 'cells': [['Arena Națională, Bucharest, Romania']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.venue'])
         assert neighbors == {'fb:cell.arena_nationala_bucharest_romania'}
 
@@ -63,11 +91,12 @@ class TestTableKnowledgeGraph(AllenNlpTestCase):
         # The TSV file we use has newlines converted to "\n", not actual escape characters.  We
         # need to be sure we catch this.
         json = {
+                'question': [],
                 'columns': ['Peak\\nAUS', 'Peak\\nNZ'],
                 'cells': [['1', '2'],
                           ['3', '4']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.peak_aus'])
         assert neighbors == {'fb:cell.1', 'fb:cell.3'}
         neighbors = set(graph.neighbors['fb:row.row.peak_nz'])
@@ -76,30 +105,33 @@ class TestTableKnowledgeGraph(AllenNlpTestCase):
         assert neighbors == {'fb:row.row.peak_aus'}
 
         json = {
+                'question': [],
                 'columns': ['Title'],
                 'cells': [['Dance of the\\nSeven Veils']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.title'])
         assert neighbors == {'fb:cell.dance_of_the_seven_veils'}
 
     def test_read_from_json_handles_diacritics_and_newlines(self):
         json = {
+                'question': [],
                 'columns': ['Notes'],
                 'cells': [['8 districts\nFormed from Orūzgān Province in 2004']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.notes'])
         assert neighbors == {'fb:cell.8_districts_formed_from_oruzgan_province_in_2004'}
 
     def test_read_from_json_handles_crazy_unicode(self):
         json = {
+                'question': [],
                 'columns': ['Town'],
                 'cells': [['Viðareiði'],
                           ['Funningsfjørður'],
                           ['Froðba']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.town'])
         assert neighbors == {
                 'fb:cell.funningsfj_r_ur',
@@ -108,70 +140,102 @@ class TestTableKnowledgeGraph(AllenNlpTestCase):
                 }
 
         json = {
+                'question': [],
                 'columns': ['Fate'],
                 'cells': [['Sunk at 45°00′N 11°21′W﻿ / ﻿45.000°N 11.350°W'],
                           ['66°22′32″N 29°20′19″E﻿ / ﻿66.37556°N 29.33861°E']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.fate'])
         assert neighbors == {'fb:cell.sunk_at_45_00_n_11_21_w_45_000_n_11_350_w',
                              'fb:cell.66_22_32_n_29_20_19_e_66_37556_n_29_33861_e'}
 
         json = {
+                'question': [],
                 'columns': ['€0.01'],
                 'cells': [['6,000']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row._0_01'])
         assert neighbors == {'fb:cell.6_000'}
 
         json = {
+                'question': [],
                 'columns': ['Division'],
                 'cells': [['1ª Aut. Pref.']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.division'])
         assert neighbors == {'fb:cell.1_aut_pref'}
 
     def test_read_from_json_handles_parentheses_correctly(self):
         json = {
+                'question': [],
                 'columns': ['Urban settlements'],
                 'cells': [['Dzhebariki-Khaya\\n(Джебарики-Хая)'],
                           ['South Korea (KOR)'],
                           ['Area (km²)']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.urban_settlements'])
         assert neighbors == {'fb:cell.dzhebariki_khaya',
                              'fb:cell.south_korea_kor',
                              'fb:cell.area_km'}
 
         json = {
+                'question': [],
                 'columns': ['Margin\\nof victory'],
                 'cells': [['−9 (67-67-68-69=271)']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.margin_of_victory'])
         assert neighbors == {'fb:cell._9_67_67_68_69_271'}
 
         json = {
+                'question': [],
                 'columns': ['Record'],
                 'cells': [['4.08 m (13 ft 41⁄2 in)']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row.record'])
         assert neighbors == {'fb:cell.4_08_m_13_ft_41_2_in'}
 
     def test_read_from_json_handles_columns_with_duplicate_normalizations(self):
         json = {
+                'question': [],
                 'columns': ['# of votes', '% of votes'],
                 'cells': [['1', '2'],
                           ['3', '4']]
                 }
-        graph = TableKnowledgeGraph.read_from_json(json)
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
         neighbors = set(graph.neighbors['fb:row.row._of_votes'])
         assert neighbors == {'fb:cell.1', 'fb:cell.3'}
         neighbors = set(graph.neighbors['fb:row.row._of_votes_2'])
         assert neighbors == {'fb:cell.2', 'fb:cell.4'}
         neighbors = set(graph.neighbors['fb:cell.1'])
         assert neighbors == {'fb:row.row._of_votes'}
+
+    def test_get_numbers_from_tokens_works_for_arabic_numerals(self):
+        tokens = [Token(x) for x in ['7', '1.0', '-20']]
+        numbers = TableQuestionKnowledgeGraph._get_numbers_from_tokens(tokens)
+        assert numbers == [('7', '7'), ('1.000', '1.0'), ('-20', '-20')]
+
+    def test_get_numbers_from_tokens_works_for_ordinal_and_cardinal_numbers(self):
+        tokens = [Token(x) for x in ['one', 'five', 'Seventh']]
+        numbers = TableQuestionKnowledgeGraph._get_numbers_from_tokens(tokens)
+        assert numbers == [('1', 'one'), ('5', 'five'), ('7', 'Seventh')]
+
+    def test_get_numbers_from_tokens_works_for_months(self):
+        tokens = [Token(x) for x in ['January', 'March', 'october']]
+        numbers = TableQuestionKnowledgeGraph._get_numbers_from_tokens(tokens)
+        assert numbers == [('1', 'January'), ('3', 'March'), ('10', 'october')]
+
+    def test_get_numbers_from_tokens_works_for_units(self):
+        tokens = [Token(x) for x in ['1ghz', '3.5mm', '-2m/s']]
+        numbers = TableQuestionKnowledgeGraph._get_numbers_from_tokens(tokens)
+        assert numbers == [('1', '1ghz'), ('3.500', '3.5mm'), ('-2', '-2m/s')]
+
+    def test_get_numbers_from_tokens_works_with_magnitude_words(self):
+        tokens = [Token(x) for x in ['one', 'million', '7', 'thousand']]
+        numbers = TableQuestionKnowledgeGraph._get_numbers_from_tokens(tokens)
+        assert numbers == [('1000000', 'one million'), ('7000', '7 thousand')]
