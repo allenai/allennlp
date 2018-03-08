@@ -1,15 +1,15 @@
 c
+p
 n
 r
 d
 <c,r>
-p
 <nd,nd>
+['lambda x', n]
 <n,n>
 @START@
 x
 ['lambda x', d]
-['lambda x', n]
 <n,c>
 <r,r>
 <#1,<#1,#1>>
@@ -68,6 +68,7 @@ max
 min
 <p,c>
 fb:cell.cell.part
+<p,n>
 <r,c>
 [<<#1,#2>,<#2,#1>>, <c,r>]
 <r,d>
