@@ -9,10 +9,9 @@ import re
 from nltk.sem.logic import Type
 from overrides import overrides
 
-from allennlp.data.tokenizers import Token
 from allennlp.data.semparse.worlds.world import ParsingError, World
 from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
-from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 
 
 class WikiTablesWorld(World):
@@ -21,13 +20,8 @@ class WikiTablesWorld(World):
 
     Parameters
     ----------
-    table_graph : ``TableKnowledgeGraph``
+    table_graph : ``TableQuestionKnowledgeGraph``
         Context associated with this world.
-    question_tokens : ``List[Token]``
-        The tokenized question, which we use to augment our parser output space.  In particular,
-        because there are an infinite number of numbers that we can output, we restrict the space
-        of numbers that we consider to just the numbers that appear in the question, plus a few
-        small numbers.
     """
     # When we're converting from logical forms to action sequences, this set tells us which
     # functions in the logical form are curried functions, and how many arguments the function
@@ -40,7 +34,7 @@ class WikiTablesWorld(World):
             types.BINARY_NUM_OP_TYPE: 2,
             }
 
-    def __init__(self, table_graph: TableKnowledgeGraph, question_tokens: List[Token]) -> None:
+    def __init__(self, table_graph: TableQuestionKnowledgeGraph) -> None:
         super(WikiTablesWorld, self).__init__(constant_type_prefixes={"part": types.PART_TYPE,
                                                                       "cell": types.CELL_TYPE,
                                                                       "num": types.NUMBER_TYPE},
@@ -48,21 +42,16 @@ class WikiTablesWorld(World):
                                               global_name_mapping=types.COMMON_NAME_MAPPING,
                                               num_nested_lambdas=1)
         self.table_graph = table_graph
-        self.question_tokens = [token.text for token in question_tokens]
 
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
 
         # This adds all of the cell and column names to our local name mapping, including null
-        # cells and columns, so we can get them as valid actions in the parser.  The null cell and
-        # column are used to check against empty sets, e.g., for questions like "Is there a team
-        # that won three times in a row?".
-        for entity in table_graph.entities + ['fb:cell.null', 'fb:row.row.null']:
+        # cells and columns and a few simple numbers, so we can get them as valid actions in the
+        # parser.  The null cell and column are used to check against empty sets, e.g., for
+        # questions like "Is there a team that won three times in a row?".
+        for entity in table_graph.entities + ['fb:cell.null', 'fb:row.row.null', '-1', '0', '1']:
             self._map_name(entity, keep_mapping=True)
-
-        numbers = self._get_numbers_from_tokens(question_tokens) + list(str(i) for i in range(-1, 5))
-        for number in numbers:
-            self._map_name(number, keep_mapping=True)
 
         self._entity_set = set(table_graph.entities)
 
@@ -74,41 +63,6 @@ class WikiTablesWorld(World):
 
     def _get_curried_functions(self) -> Dict[Type, int]:
         return WikiTablesWorld.curried_functions
-
-    def _get_numbers_from_tokens(self, tokens: List[Token]) -> List[str]:
-        """
-        Finds numbers in the input tokens and returns them as strings.
-
-        Eventually, we'd want this to detect things like ordinals ("first", "third") and cardinals
-        ("one", "two"), but for now we just look for literal digits, and make up for missing
-        ordinals and cardinals by adding all single-digit numbers as possible numbers to output.
-
-        We also handle year ranges expressed as decade or centuries ("1800s" or "1950s"), adding
-        the endpoints of the range as possible numbers to generate.
-        """
-        # pylint: disable=no-self-use
-        numbers = []
-        for token in tokens:
-            # We'll use a check for float(text) to find numbers, because text.isdigit() doesn't
-            # catch things like "-3" or "0.07".
-            text = token.text.replace(',', '')
-            is_range = False
-            if len(text) > 1 and text[-1] == 's' and text[-2] == '0':
-                is_range = True
-                text = text[:-1]
-            try:
-                number = float(text)
-                if '.' in text:
-                    text = '%.3f' % number
-                numbers.append(text)
-                if is_range:
-                    num_zeros = 1
-                    while text[-(num_zeros + 1)] == '0':
-                        num_zeros += 1
-                    numbers.append(str(int(number + 10 ** num_zeros)))
-            except ValueError:
-                pass
-        return numbers
 
     @overrides
     def get_basic_types(self) -> Set[Type]:

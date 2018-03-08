@@ -41,10 +41,6 @@ class KnowledgeGraph:
         self.neighbors = neighbors
         self.entity_text = entity_text
 
-    @classmethod
-    def read_from_file(cls, filename: str):
-        raise NotImplementedError
-
     def __eq__(self, other):
         if isinstance(self, other.__class__):
             return self.__dict__ == other.__dict__

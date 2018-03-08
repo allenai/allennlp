@@ -14,7 +14,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListField
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
 from allennlp.data.instance import Instance
-from allennlp.data.semparse.knowledge_graphs import TableKnowledgeGraph
+from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import Token
@@ -85,7 +85,8 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
         # pylint: disable=arguments-differ
         question_tokens = self._read_tokens_from_json_list(json_obj['question_tokens'])
         question_field = TextField(question_tokens, self._question_token_indexers)
-        table_knowledge_graph = TableKnowledgeGraph.read_from_lines(json_obj['table_lines'])
+        table_knowledge_graph = TableQuestionKnowledgeGraph.read_from_lines(json_obj['table_lines'],
+                                                                            question_tokens)
         entity_tokens = [self._read_tokens_from_json_list(token_list)
                          for token_list in json_obj['entity_texts']]
         table_field = KnowledgeGraphField(table_knowledge_graph,
@@ -95,7 +96,7 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
                                           entity_tokens=entity_tokens,
                                           linking_features=json_obj['linking_features'],
                                           include_in_vocab=self._use_table_for_vocab)
-        world = WikiTablesWorld(table_knowledge_graph, question_tokens)
+        world = WikiTablesWorld(table_knowledge_graph)
         world_field = MetadataField(world)
 
         production_rule_fields: List[Field] = []
