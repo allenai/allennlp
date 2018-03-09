@@ -1,5 +1,6 @@
 # pylint: disable=too-many-lines
-from typing import List, Set, Dict, Tuple
+import logging
+from typing import List, Set, Dict, Tuple, Union
 from collections import defaultdict
 
 from overrides import overrides
@@ -24,6 +25,8 @@ from allennlp.nn.decoding import DecoderState, DecoderStep, DecoderTrainer
 from allennlp.nn import util as nn_util
 from allennlp.models.model import Model
 from allennlp.training.metrics import Average
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @Model.register("nlvr_parser")
@@ -66,6 +69,11 @@ class NlvrSemanticParser(Model):
         Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
         weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
         denotation accuracy.
+    dynamic_cost_weight : ``Dict[str, Union[int, float]]``
+        A dict containing keys ``wait_num_steps`` and ``rate`` indicating the number of steps after
+        which we should start decreasing the weight on checklist cost in favor of denotation cost,
+        and the rate at which we should do it. The weight will remain constant if this is an empty
+        dict.
     penalize_non_agenda_actions : ``bool``
         Should we penalize the model for producing terminal actions that are outside the agenda?
     """
@@ -79,6 +87,7 @@ class NlvrSemanticParser(Model):
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction,
                  checklist_cost_weight: float,
+                 dynamic_cost_weight: Dict[str, Union[int, float]],
                  penalize_non_agenda_actions: bool) -> None:
         super(NlvrSemanticParser, self).__init__(vocab=vocab)
 
@@ -103,7 +112,13 @@ class NlvrSemanticParser(Model):
                                              attention_function=attention_function,
                                              checklist_size=num_terminals)
         self._checklist_cost_weight = checklist_cost_weight
+        self._dynamic_cost_wait_epochs: int = None
+        self._dynamic_cost_rate: float = None
+        if dynamic_cost_weight:
+            self._dynamic_cost_wait_epochs = dynamic_cost_weight["wait_num_epochs"]
+            self._dynamic_cost_rate = dynamic_cost_weight["rate"]
         self._penalize_non_agenda_actions = penalize_non_agenda_actions
+        self._last_epoch_in_forward = None
 
     @overrides
     def forward(self,  # type: ignore
@@ -111,14 +126,26 @@ class NlvrSemanticParser(Model):
                 world: List[NlvrWorld],
                 actions: List[List[ProductionRuleArray]],
                 agenda: torch.LongTensor,
-                label: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                label: torch.LongTensor = None,
+                epoch_num: List[int] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
-        Decoder logic for producing type constrained target sequences, that maximize coverage of
-        their respective agendas. This will change soon, to include a denotation based score as
-        well, once we have a way to transform action sequences into logical forms that can be
-        executed to produce denotations.
+        Decoder logic for producing type constrained target sequences that maximize coverage of
+        their respective agendas, and minimize a denotation based loss.
         """
+        # We look at the epoch number and adjust the checklist cost weight if needed here.
+        instance_epoch_num = epoch_num[0] if epoch_num is not None else None
+        if self._dynamic_cost_rate is not None:
+            if instance_epoch_num is None:
+                raise RuntimeError("If you want a dynamic cost weight, use the "
+                                   "EpochTrackingBucketIterator!")
+            if instance_epoch_num != self._last_epoch_in_forward:
+                if instance_epoch_num >= self._dynamic_cost_wait_epochs:
+                    decrement = self._checklist_cost_weight * self._dynamic_cost_rate
+                    self._checklist_cost_weight -= decrement
+                    logger.info("Checklist cost weight is now %f", self._checklist_cost_weight)
+                self._last_epoch_in_forward = instance_epoch_num
+
         embedded_input = self._sentence_embedder(sentence)
         # (batch_size, sentence_length)
         sentence_mask = nn_util.get_text_field_mask(sentence).float()
@@ -132,7 +159,7 @@ class NlvrSemanticParser(Model):
         # We are assuming sentences are right padded.
         # (batch_size,)
         last_word_indices = sentence_mask.sum(1).long() - 1
-        batch_size, _, encoder_output_dim = encoder_outputs.size()
+        encoder_output_dim = encoder_outputs.size(2)
         # Expanding indices to 3 dimensions
         expanded_indices = last_word_indices.view(-1, 1, 1).expand(batch_size, 1, encoder_output_dim)
         # (batch_size, 1, encoder_output_dim)
@@ -491,6 +518,7 @@ class NlvrSemanticParser(Model):
         else:
             attention_function = None
         checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
+        dynamic_cost_weight = params.pop("dynamic_cost_weight", {})
         penalize_non_agenda_actions = params.pop_bool("penalize_non_agenda_actions", False)
         params.assert_empty(cls.__name__)
         return cls(vocab,
@@ -502,6 +530,7 @@ class NlvrSemanticParser(Model):
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function,
                    checklist_cost_weight=checklist_cost_weight,
+                   dynamic_cost_weight=dynamic_cost_weight,
                    penalize_non_agenda_actions=penalize_non_agenda_actions)
 
 
