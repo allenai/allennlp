@@ -46,7 +46,8 @@
     "max_decoding_steps": 20,
     "attention_function": {"type": "dot_product"},
     "checklist_selection_weight": 0.5,
-    "checklist_cost_weight": 0.8
+    "checklist_cost_weight": 0.8,
+    "penalize_non_agenda_actions": true
   },
   "iterator": {
     "type": "bucket",
