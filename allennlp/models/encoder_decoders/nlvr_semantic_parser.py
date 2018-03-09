@@ -94,11 +94,10 @@ class NlvrSemanticParser(Model):
         self._encoder = encoder
         self._decoder_trainer = decoder_trainer
         self._max_decoding_steps = max_decoding_steps
-        attention_function = attention_function
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
 
         # Instantiating an empty NlvrWorld just to get the number of terminals.
-        num_terminals = len(NlvrWorld({}).terminal_productions)
+        num_terminals = len(NlvrWorld([]).terminal_productions)
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function,
