@@ -11,7 +11,7 @@ from allennlp.common.params import Params
 class MultiHeadSelfAttentionTest(AllenNlpTestCase):
 
     def test_multi_head_self_attention_can_build_from_params(self):
-        params = Params({"num_heads": 3, "input_dim": 2, "attention_dim": 5, "values_dim": 5})
+        params = Params({"num_heads": 3, "input_dim": 2, "attention_dim": 3, "values_dim": 6})
 
         encoder = MultiHeadSelfAttention.from_params(params)
         assert isinstance(encoder, MultiHeadSelfAttention)
@@ -21,7 +21,7 @@ class MultiHeadSelfAttentionTest(AllenNlpTestCase):
     def test_multi_head_self_attention_runs_forward(self):
         attention = MultiHeadSelfAttention(num_heads=3,
                                            input_dim=5,
-                                           attention_dim=7,
+                                           attention_dim=6,
                                            values_dim=9)
         inputs = Variable(torch.randn(2, 12, 5))
         assert list(attention(inputs).size()) == [2, 12, 5]
@@ -29,7 +29,7 @@ class MultiHeadSelfAttentionTest(AllenNlpTestCase):
     def test_multi_head_self_attention_respects_masking(self):
         attention = MultiHeadSelfAttention(num_heads=3,
                                            input_dim=5,
-                                           attention_dim=7,
+                                           attention_dim=6,
                                            values_dim=9,
                                            attention_dropout_prob=0.0)
         tensor = Variable(torch.randn(2, 12, 5))

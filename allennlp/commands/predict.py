@@ -46,7 +46,6 @@ from typing import Optional, IO, Dict
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import import_submodules
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
@@ -92,12 +91,6 @@ class Predict(Subcommand):
                                type=str,
                                default="",
                                help='a HOCON structure used to override the experiment configuration')
-
-        subparser.add_argument('--include-package',
-                               type=str,
-                               action='append',
-                               default=[],
-                               help='additional packages to include')
 
         subparser.add_argument('--predictor',
                                type=str,
@@ -165,10 +158,6 @@ def _run(predictor: Predictor,
 
 def _predict(predictors: Dict[str, str]):
     def predict_inner(args: argparse.Namespace) -> None:
-        # Import any additional modules needed (to register custom classes)
-        for package_name in args.include_package:
-            import_submodules(package_name)
-
         predictor = _get_predictor(args, predictors)
         output_file = None
 

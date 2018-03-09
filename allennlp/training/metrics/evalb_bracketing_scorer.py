@@ -2,8 +2,6 @@
 from typing import List
 import os
 import tempfile
-import re
-import math
 import subprocess
 
 from overrides import overrides
@@ -49,14 +47,12 @@ class EvalbBracketingScorer(Metric):
             raise ConfigurationError("You must compile the EVALB scorer before using it."
                                      " Run 'make' in the 'scripts/EVALB' directory.")
 
-        self._recall_regex = re.compile(r"Bracketing Recall\s+=\s+(\d+\.\d+)")
-        self._precision_regex = re.compile(r"Bracketing Precision\s+=\s+(\d+\.\d+)")
-        self._f1_measure_regex = re.compile(r"Bracketing FMeasure\s+=\s+(\d+\.\d+)")
+        self._header_line = ['ID', 'Len.', 'Stat.', 'Recal', 'Prec.', 'Bracket',
+                             'gold', 'test', 'Bracket', 'Words', 'Tags', 'Accracy']
 
-        self._precision = 0.0
-        self._recall = 0.0
-        self._f1_measure = 0.0
-        self._count = 0.0
+        self._correct_predicted_brackets = 0.0
+        self._gold_brackets = 0.0
+        self._predicted_brackets = 0.0
 
     @overrides
     def __call__(self, predicted_trees: List[Tree], gold_trees: List[Tree]) -> None: # type: ignore
@@ -84,36 +80,15 @@ class EvalbBracketingScorer(Metric):
                   f"{gold_path} {predicted_path} > {output_path}"
         subprocess.run(command, shell=True, check=True)
 
-        recall = math.nan
-        precision = math.nan
-        fmeasure = math.nan
         with open(output_path) as infile:
             for line in infile:
-                recall_match = self._recall_regex.match(line)
-                if recall_match:
-                    recall = float(recall_match.group(1))
-                precision_match = self._precision_regex.match(line)
-                if precision_match:
-                    precision = float(precision_match.group(1))
-                f1_measure_match = self._f1_measure_regex.match(line)
-                if f1_measure_match:
-                    fmeasure = float(f1_measure_match.group(1))
-                    break
-        if any([math.isnan(recall), math.isnan(precision)]):
-            raise RuntimeError(f"Call to EVALB produced invalid metrics: recall: "
-                               f"{recall}, precision: {precision}, fmeasure: {fmeasure}")
-
-        if math.isnan(fmeasure) and recall == 0.0 and precision == 0.0:
-            fmeasure = 0.0
-        elif math.isnan(fmeasure):
-            raise RuntimeError(f"Call to EVALB produced an invalid f1 measure, "
-                               f"which was not due to zero division: recall: "
-                               f"{recall}, precision: {precision}, fmeasure: {fmeasure}")
-
-        self._precision += precision / 100.0
-        self._recall += recall / 100.0
-        self._f1_measure += fmeasure / 100.0
-        self._count += 1
+                stripped = line.strip().split()
+                if len(stripped) == 12 and stripped != self._header_line:
+                    # This line contains results for a single tree.
+                    numeric_line = [float(x) for x in stripped]
+                    self._correct_predicted_brackets += numeric_line[5]
+                    self._gold_brackets += numeric_line[6]
+                    self._predicted_brackets += numeric_line[7]
 
     @overrides
     def get_metric(self, reset: bool = False):
@@ -122,18 +97,16 @@ class EvalbBracketingScorer(Metric):
         -------
         The average precision, recall and f1.
         """
-        metrics = {}
-        metrics["evalb_precision"] = self._precision / self._count if self._count > 0 else 0.0
-        metrics["evalb_recall"] = self._recall / self._count if self._count > 0 else 0.0
-        metrics["evalb_f1_measure"] = self._f1_measure / self._count if self._count > 0 else 0.0
+        recall = self._correct_predicted_brackets / self._gold_brackets if self._gold_brackets > 0 else 0.0
+        precision = self._correct_predicted_brackets / self._predicted_brackets if self._gold_brackets > 0 else 0.0
+        f1_measure = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
 
         if reset:
             self.reset()
-        return metrics
+        return {"evalb_recall": recall, "evalb_precision": precision, "evalb_f1_measure": f1_measure}
 
     @overrides
     def reset(self):
-        self._recall = 0.0
-        self._precision = 0.0
-        self._f1_measure = 0.0
-        self._count = 0
+        self._correct_predicted_brackets = 0.0
+        self._gold_brackets = 0.0
+        self._predicted_brackets = 0.0
