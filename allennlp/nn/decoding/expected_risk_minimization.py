@@ -46,11 +46,10 @@ class ExpectedRiskMinimization(DecoderTrainer):
             grouped_state = states[0].combine_states(states)
             # These states already come sorted.
             for next_state in decode_step.take_step(grouped_state):
-                finished, not_finished = next_state.split_finished()
-                if finished is not None:
-                    finished_states.append(finished)
-                if not_finished is not None:
-                    next_states.append(not_finished)
+                if next_state.is_finished():
+                    finished_states.append(next_state)
+                else:
+                    next_states.append(next_state)
 
             states = self._prune_beam(next_states)
             num_steps += 1
