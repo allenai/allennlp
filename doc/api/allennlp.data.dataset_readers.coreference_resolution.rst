@@ -5,3 +5,8 @@ allennlp.data.dataset_readers.coreference_resolution
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.data.dataset_readers.coreference_resolution.winobias
+   :members:
+   :undoc-members:
+   :show-inheritance:
