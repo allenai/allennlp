@@ -1,6 +1,6 @@
 import logging
 import collections
-from typing import Any, Dict, List, Optional, Tuple, DefaultDict, Set
+from typing import Any, Dict, List, Optional, Tuple, DefaultDict
 
 from overrides import overrides
 
@@ -11,7 +11,7 @@ from allennlp.data.fields import Field, ListField, TextField, SpanField, Metadat
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.dataset_readers.dataset_utils import Ontonotes, enumerate_spans
+from allennlp.data.dataset_readers.dataset_utils import  enumerate_spans
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -19,7 +19,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("winobias")
 class WinobiasReader(DatasetReader):
     """
-    Returns a ``Dataset`` where the ``Instances`` have four fields: ``text``, a ``TextField``
+    TODO(Mark): Add paper reference.
+
+    Winobias is a dataset to analyse the issue of gender bias in co-reference
+    resolution. It contains simple sentences with pro/anti stereotypical gender
+    associations with which to measure the bias of a coreference system trained
+    on another corpora.
+
+    Returns a list of ``Instances`` which have four fields: ``text``, a ``TextField``
     containing the full sentence text, ``spans``, a ``ListField[SpanField]`` of inclusive start and
     end indices for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's
     original text. For data with gold cluster labels, we also include the original ``clusters``
@@ -48,45 +55,48 @@ class WinobiasReader(DatasetReader):
         file_path = cached_path(file_path)
 
         for sentence in open(file_path, "r"):
-
             tokens = sentence.strip().split(" ")
-
             clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
             words = []
-            inside_open_span = False
+            inside_square_span = False
+            inside_round_span = False
             for index, token in enumerate(tokens):
+                # Coreference is annotated using [square brackets]
+                # or (round brackets) around coreferent phrases.
                 if "[" in token and "]" in token:
                     clusters[0].append((index, index))
                 elif "[" in token:
                     clusters[0].append((index, index))
-                    inside_open_span = True
-                elif inside_open_span and "]" in token:
+                    inside_square_span = True
+                elif inside_square_span or "]" in token:
                     old_span = clusters[0][-1]
                     clusters[0][-1] = (old_span[0], old_span[1] + 1)
+                    inside_square_span = False
 
-                
+                if "(" in token and ")" in token:
+                    clusters[1].append((index, index))
+                elif "(" in token:
+                    clusters[1].append((index, index))
+                    inside_round_span = True
+                elif inside_round_span or ")" in token:
+                    old_span = clusters[1][-1]
+                    clusters[1][-1] = (old_span[0], old_span[1] + 1)
+                    inside_round_span = False
 
+                if token.endswith("."):
+                    # Winobias is tokenised, but not for full stops.
+                    # We'll just special case them here.
+                    token = token[:-1]
+                    words.append(token.strip("[]()"))
+                    words.append(".")
+                else:
+                    words.append(token.strip("[]()"))
 
-
-            print(tokens)
-            square_bracket_endpoints = [index for index, x in enumerate(tokens) if "[" in x or "]" in x]
-            print(square_bracket_endpoints)
-            round_bracket_endpoints = [index for index, x in enumerate(tokens) if "(" in x or ")" in x]
-            print(round_bracket_endpoints)
-
-
-
-
-
-
-
-
-            total_tokens = 0
-            yield self.text_to_instance(tokens, clusters)
+            yield self.text_to_instance(words, [x for x in clusters.values()])
 
     @overrides
     def text_to_instance(self,  # type: ignore
-                         sentences: List[str],
+                         sentence: List[str],
                          gold_clusters: Optional[List[List[Tuple[int, int]]]] = None) -> Instance:
         # pylint: disable=arguments-differ
         """
@@ -113,15 +123,11 @@ class WinobiasReader(DatasetReader):
                  how many spans we are considering), we represent this a as a ``SequenceLabelField``
                  with respect to the ``spans ``ListField``.
         """
-        flattened_sentences = [self._normalize_word(word)
-                               for sentence in sentences
-                               for word in sentence]
-
-        metadata: Dict[str, Any] = {"original_text": flattened_sentences}
+        metadata: Dict[str, Any] = {"original_text": sentence}
         if gold_clusters is not None:
             metadata["clusters"] = gold_clusters
 
-        text_field = TextField([Token(word) for word in flattened_sentences], self._token_indexers)
+        text_field = TextField([Token(word) for word in sentence], self._token_indexers)
 
         cluster_dict = {}
         if gold_clusters is not None:
@@ -132,19 +138,14 @@ class WinobiasReader(DatasetReader):
         spans: List[Field] = []
         span_labels: Optional[List[int]] = [] if gold_clusters is not None else None
 
-        sentence_offset = 0
-        for sentence in sentences:
-            for start, end in enumerate_spans(sentence,
-                                              offset=sentence_offset,
-                                              max_span_width=self._max_span_width):
-                if span_labels is not None:
-                    if (start, end) in cluster_dict:
-                        span_labels.append(cluster_dict[(start, end)])
-                    else:
-                        span_labels.append(-1)
+        for start, end in enumerate_spans(sentence, max_span_width=self._max_span_width):
+            if span_labels is not None:
+                if (start, end) in cluster_dict:
+                    span_labels.append(cluster_dict[(start, end)])
+                else:
+                    span_labels.append(-1)
 
-                spans.append(SpanField(start, end, text_field))
-            sentence_offset += len(sentence)
+            spans.append(SpanField(start, end, text_field))
 
         span_field = ListField(spans)
         metadata_field = MetadataField(metadata)
@@ -164,10 +165,3 @@ class WinobiasReader(DatasetReader):
         lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return cls(token_indexers=token_indexers, max_span_width=max_span_width, lazy=lazy)
-
-    @staticmethod
-    def _normalize_word(word):
-        if word == "/." or word == "/?":
-            return word[1:]
-        else:
-            return word
