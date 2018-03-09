@@ -246,24 +246,26 @@ class NlvrSemanticParser(Model):
         """
         if self._penalize_non_agenda_actions:
             terminal_indices = []
+            target_checklist_list = []
+            agenda_indices_set = set([int(x) for x in agenda.squeeze(0).data.cpu().numpy()])
             for index, action in enumerate(all_actions):
                 # Each action is a ProductionRuleArray, a dict with keys "left" and "right", and
                 # values are tuples where the second element shows whether element is a
                 # non_terminal.
                 if not action["right"][1]:
                     terminal_indices.append([index])
+                    if index in agenda_indices_set:
+                        target_checklist_list.append([1])
+                    else:
+                        target_checklist_list.append([0])
             # We want to return a checklist target and the relevant actions that are column vectors to
             # make computing softmax over the difference between checklist and target easier.
-            terminal_indices_tensor = torch.Tensor([terminal_indices])  # (num_terminals, 1)
-            relevant_actions = nn_util.new_variable_with_data(agenda,
-                                                              terminal_indices_tensor)
             # (num_terminals, 1)
-            target_checklist = nn_util.new_variable_with_size(relevant_actions,
-                                                              relevant_actions.size(),
-                                                              0)
-            for agenda_item in agenda.squeeze(0).float():
-                target_addition = (relevant_actions == agenda_item).float()
-                target_checklist += target_addition
+            relevant_actions = nn_util.new_variable_with_data(agenda,
+                                                              torch.Tensor(terminal_indices))
+            # (num_terminals, 1)
+            target_checklist = nn_util.new_variable_with_data(agenda,
+                                                              torch.Tensor(target_checklist_list))
         else:
             relevant_actions = agenda  # (agenda_size, 1)
             target_checklist = (agenda != -1).float()  # (agenda_size, 1)
@@ -509,12 +511,15 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
     Parameters
     ----------
     agenda_relevant_actions : ``List[torch.LongTensor]``
-        List of actions relevant for computing chacklist costs for instances, each of which is a
+        List of actions relevant for computing checklist costs for instances, each of which is a
         tensor containing the indices of the actions we want to see or not see in the decoded
         output
     checklist_target : ``List[torch.LongTensor]``
         List of targets corresponding to agendas that indicate the states we want the checklists to
-        ideally be.
+        ideally be. Each element in this list is the same size as the corresponding element in
+        ``agenda_relevant_actions``, and it contains 1 for each corresponding action in the relevant
+        actions list that we want to see in the final logical form, and 0 for each corresponding
+        action that we do not.
     checklist : ``List[Variable]``
         A checklist for each instance indicating how many times each action in its agenda has
         been chosen previously. It contains the actual counts of the agenda actions.
@@ -824,6 +829,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         that we do not have a notion of "allowed actions" here, and we do not perform entity linking
         here.
         """
+        # TODO(pradeep): Break this method into smaller methods.
         # Outline here: first we'll construct the input to the decoder, which is a concatenation of
         # an embedding of the decoder input (the last action taken) and an attention over the
         # sentence.  Then we'll update our decoder's hidden state given this input, and recompute
