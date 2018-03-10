@@ -144,8 +144,10 @@ class TriviaQaReader(DatasetReader):
                 # sample:
                 if self._sample_this_iteration and self._paragraph_picker == 'triviaqa-web-train':
                     sample: List[int] = []
+                    # double sample the first one
+                    choices = [0] + [i for i in range(len(paragraph_texts))]
                     while not any(i in has_answers for i in sample):
-                        sample = np.random.choice(np.arange(len(paragraph_texts)), size=2)
+                        sample = np.random.choice(choices, size=2)
                     picked_paragraph_texts = [paragraph_texts[i] for i in sample]
                     picked_paragraph_tokens = [paragraph_tokens[i] for i in sample]
                 else:

@@ -94,7 +94,7 @@ def merge_and_sort(paragraphs: List[str],
         first_answer = has_answers[0]
         # Want first_answer to be the first paragraph, and then take the most highly ranked
         # other topn - 1
-        choices = [first_answer, first_answer] + [i for i in ranks if i != first_answer][:(topn - 1)]
+        choices = [first_answer] + [i for i in ranks if i != first_answer][:(topn - 1)]
 
         texts = [merged_paragraphs[i] for i in choices]
         tokens = [merged_paragraph_tokens[i] for i in choices]
