@@ -120,9 +120,9 @@ class WikiTablesSemanticParser(Model):
 
         self._action_padding_index = -1  # the padding value used by IndexField
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
-        num_entity_types = 3  # TODO(mattg): get this in a more principled way somehow?
+        self.num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
-        self._type_params = torch.nn.Linear(num_entity_types, self._embedding_dim)
+        self._type_params = torch.nn.Linear(self.num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
         if num_linking_features > 0:
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
@@ -132,7 +132,7 @@ class WikiTablesSemanticParser(Model):
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
-                                                   num_entity_types=num_entity_types)
+                                                   num_entity_types=self.num_entity_types)
 
     @overrides
     def forward(self,  # type: ignore
@@ -433,14 +433,16 @@ class WikiTablesSemanticParser(Model):
         for batch_index, world in enumerate(worlds):
             types = []
             for entity_index, entity in enumerate(world.table_graph.entities):
-                one_hot_vectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-                # We need numbers to be first, then cells, then row, because our entities are going
-                # to be sorted.  We do a split by type and then a merge later, and it relies on
-                # this sorting.
+                one_hot_vectors = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+                # We need numbers to be first, then cells, then parts, then row, because our
+                # entities are going to be sorted.  We do a split by type and then a merge later,
+                # and it relies on this sorting.
                 if entity.startswith('fb:cell'):
                     entity_type = 1
-                elif entity.startswith('fb:row'):
+                elif entity.startswith('fb:part'):
                     entity_type = 2
+                elif entity.startswith('fb:row'):
+                    entity_type = 3
                 else:
                     entity_type = 0
                 types.append(one_hot_vectors[entity_type])
@@ -450,12 +452,12 @@ class WikiTablesSemanticParser(Model):
                 # linking scores are stored.
                 flattened_entity_index = batch_index * num_entities + entity_index
                 entity_types[flattened_entity_index] = entity_type
-            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0, 0])
+            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0, 0, 0])
             batch_types.append(padded)
         return Variable(tensor.data.new(batch_types)), entity_types
 
-    @staticmethod
-    def _get_linking_probabilities(worlds: List[WikiTablesWorld],
+    def _get_linking_probabilities(self,
+                                   worlds: List[WikiTablesWorld],
                                    linking_scores: torch.FloatTensor,
                                    question_mask: torch.LongTensor,
                                    entity_type_dict: Dict[int, int]) -> torch.FloatTensor:
@@ -482,7 +484,6 @@ class WikiTablesSemanticParser(Model):
         """
         _, num_question_tokens, num_entities = linking_scores.size()
         batch_probabilities = []
-        num_types = len(set(entity_type_dict.values()))
 
         for batch_index, world in enumerate(worlds):
             all_probabilities = []
@@ -492,7 +493,7 @@ class WikiTablesSemanticParser(Model):
             # implicitly sorted by their types when we sort them by name, and that numbers come
             # before "fb:cell", and "fb:cell" comes before "fb:row".  This is not a great
             # assumption, and could easily break later, but it should work for now.
-            for type_index in range(num_types):
+            for type_index in range(self.num_entity_types):
                 # This index of 0 is for the null entity for each type, representing the case where a
                 # word doesn't link to any entity.
                 entity_indices = [0]
@@ -500,6 +501,10 @@ class WikiTablesSemanticParser(Model):
                 for entity_index, _ in enumerate(entities):
                     if entity_type_dict[batch_index * num_entities + entity_index] == type_index:
                         entity_indices.append(entity_index)
+
+                if len(entity_indices) == 1:
+                    # No entities of this type; move along...
+                    continue
 
                 # We're subtracting one here because of the null entity we added above.
                 num_entities_in_instance += len(entity_indices) - 1

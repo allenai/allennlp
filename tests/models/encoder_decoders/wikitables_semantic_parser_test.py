@@ -48,16 +48,16 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         tensor = Variable(torch.LongTensor([]))
         type_vector, _ = self.model._get_type_vector(worlds, num_entities, tensor)
         # Verify that both types are present and padding used for non existent entities.
-        assert_almost_equal(type_vector.data.numpy(), [[[1, 0, 0],
-                                                        [0, 1, 0],
-                                                        [0, 1, 0],
-                                                        [0, 0, 1],
-                                                        [0, 0, 1]],
-                                                       [[1, 0, 0],
-                                                        [0, 1, 0],
-                                                        [0, 0, 1],
-                                                        [0, 0, 0],
-                                                        [0, 0, 0]]])
+        assert_almost_equal(type_vector.data.numpy(), [[[1, 0, 0, 0],
+                                                        [0, 1, 0, 0],
+                                                        [0, 1, 0, 0],
+                                                        [0, 0, 0, 1],
+                                                        [0, 0, 0, 1]],
+                                                       [[1, 0, 0, 0],
+                                                        [0, 1, 0, 0],
+                                                        [0, 0, 0, 1],
+                                                        [0, 0, 0, 0],
+                                                        [0, 0, 0, 0]]])
 
     def test_get_linking_probabilities(self):
         worlds, num_entities = self.get_fake_worlds()

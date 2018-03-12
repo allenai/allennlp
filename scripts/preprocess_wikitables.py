@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                    level=logging.INFO)
+                    level=logging.DEBUG)
 from allennlp.commands.train import datasets_from_params
 from allennlp.common import Params
 from allennlp.data import Instance

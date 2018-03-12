@@ -53,6 +53,7 @@ class TestWikiTablesWorld(AllenNlpTestCase):
                 '<n,r>',
                 '<nd,nd>',
                 '<p,c>',
+                '<p,n>',
                 '<r,c>',
                 '<r,d>',
                 '<r,n>',
@@ -148,12 +149,12 @@ class TestWikiTablesWorld(AllenNlpTestCase):
                                 ['<', '<=', '>', '>=', 'min', 'max'])
 
         # PART_TYPE rules.  A cell part is for when a cell has text that can be split into multiple
-        # parts.  We don't currently handle this, so we don't have any terminal productions here.
-        # We actually skip all logical forms that have "fb:part" productions, and we'll never
-        # actually push one of these non-terminals onto our stack.  But they're in the grammar, so
-        # we they are in our list of valid actions.
+        # parts.
         check_productions_match(valid_actions['<p,c>'],
                                 ['fb:cell.cell.part'])
+
+        check_productions_match(valid_actions['<p,n>'],
+                                ["['lambda x', n]"])
 
         check_productions_match(valid_actions['<r,c>'],
                                 ['[<<#1,#2>,<#2,#1>>, <c,r>]'])
@@ -232,7 +233,10 @@ class TestWikiTablesWorld(AllenNlpTestCase):
                                  '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, p, <n,p>]',
                                  '[<#1,#1>, p]',
                                  '[<c,p>, c]',
-                                 '[<#1,<#1,#1>>, p, p]'])
+                                 '[<#1,<#1,#1>>, p, p]',
+                                 'fb:part.4th',
+                                 'fb:part.5th',
+                                 'fb:part.western'])
 
         check_productions_match(valid_actions['r'],
                                 ['fb:type.row',
