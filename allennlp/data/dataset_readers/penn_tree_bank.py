@@ -57,9 +57,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         logger.info("Reading instances from lines in file at: %s", file_path)
         for parse in BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents():
 
-            print(parse)
             self._strip_functional_tags(parse)
-            print("Stripped functional tags", parse)
             # This is un-needed and clutters the label space.
             # All the trees also contain a root S node.
             if parse.label() == "VROOT":
@@ -119,9 +117,6 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             gold_spans: Dict[Tuple[int, int], str] = {}
             self._get_gold_spans(gold_tree, 0, gold_spans)
 
-            print("gold spans: ", gold_spans)
-            print("tokens : ", tokens)
-            print("POS tags: ", pos_tags)
         else:
             gold_spans = None
         for start, end in enumerate_spans(tokens):
