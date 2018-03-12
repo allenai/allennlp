@@ -24,6 +24,10 @@ class WikiTablesSemanticParserTest(ModelTestCase):
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    def test_mixture_feedforward_model_can_train_save_and_load(self):
+        # pylint: disable=line-too-long
+        self.ensure_model_can_train_save_and_load('tests/fixtures/encoder_decoder/wikitables_semantic_parser_with_mixture_feedforward/experiment.json')
+
     def test_get_neighbor_indices(self):
         worlds, num_entities = self.get_fake_worlds()
         tensor = Variable(torch.LongTensor([]))
@@ -309,7 +313,6 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                 (2, 1): 8,
                 (2, 2): 9,
                 }
-
 
 class WikiTablesDecoderStepTest(AllenNlpTestCase):
     def setUp(self):
