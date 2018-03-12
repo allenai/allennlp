@@ -105,7 +105,7 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
 
     def test_get_gold_spans_correctly_extracts_spans_with_nested_labels(self):
         ptb_reader = PennTreeBankConstituencySpanDatasetReader()
-        # Here we have a parse with several nested labels - particularly the (WHNP(WHNP (WP What)))
+        # Here we have a parse with several nested labels - particularly the (WHNP (WHNP (WP What)))
         # fragment. These should be concatenated into a single label by get_gold_spans.
         tree = Tree.fromstring("""
             (S
