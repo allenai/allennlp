@@ -15,7 +15,7 @@ def assert_dataset_correct(dataset):
     assert [t.text for t in instance.fields["question"].tokens] == question_tokens
 
     entities = instance.fields['table'].knowledge_graph.entities
-    assert len(entities) == 50
+    assert len(entities) == 59
     assert sorted(entities) == [
             # Numbers, which are represented as graph entities, as we link them to the question.
             '-1',
@@ -63,6 +63,17 @@ def assert_dataset_correct(dataset):
             'fb:cell.usl_a_league',
             'fb:cell.usl_first_division',
             'fb:cell.ussf_d_2_pro_league',
+
+            # Cell parts
+            'fb:part.11th',
+            'fb:part.1st',
+            'fb:part.2nd',
+            'fb:part.3rd',
+            'fb:part.4th',
+            'fb:part.5th',
+            'fb:part.pacific',
+            'fb:part.usl_3rd',
+            'fb:part.western',
 
             # Column headers
             'fb:row.row.avg_attendance',
