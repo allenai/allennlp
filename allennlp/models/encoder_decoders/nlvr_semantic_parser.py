@@ -112,13 +112,13 @@ class NlvrSemanticParser(Model):
                                              attention_function=attention_function,
                                              checklist_size=num_terminals)
         self._checklist_cost_weight = checklist_cost_weight
-        self._dynamic_cost_wait_epochs: int = None
-        self._dynamic_cost_rate: float = None
+        self._dynamic_cost_wait_epochs = None
+        self._dynamic_cost_rate = None
         if dynamic_cost_weight:
             self._dynamic_cost_wait_epochs = dynamic_cost_weight["wait_num_epochs"]
             self._dynamic_cost_rate = dynamic_cost_weight["rate"]
         self._penalize_non_agenda_actions = penalize_non_agenda_actions
-        self._last_epoch_in_forward = None
+        self._last_epoch_in_forward: int = None
 
     @overrides
     def forward(self,  # type: ignore
