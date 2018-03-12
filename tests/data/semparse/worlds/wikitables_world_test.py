@@ -226,11 +226,8 @@ class TestWikiTablesWorld(AllenNlpTestCase):
                                  '[<nd,nd>, n]',
                                  '[<r,n>, r]'])
 
-        # TODO(mattg): There should be a bunch of terminal productions here, but those aren't
-        # implemented at this point.
         check_productions_match(valid_actions['p'],
-                                ['[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, p, <d,p>]',
-                                 '[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, p, <n,p>]',
+                                ['[<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, p, <n,p>]',
                                  '[<#1,#1>, p]',
                                  '[<c,p>, c]',
                                  '[<#1,<#1,#1>>, p, p]',
