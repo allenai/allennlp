@@ -107,10 +107,10 @@ class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
                               ('fb:part.commas', 'commas')}
 
     def test_should_split_column_returns_false_when_all_text_is_simple(self):
-        assert TableQuestionKnowledgeGraph._should_split_column(['Team', '2006', 'Wolfe Tones']) is False
+        assert TableQuestionKnowledgeGraph._should_split_column_cells(['Team', '2006', 'Wolfe Tones']) is False
 
     def test_should_split_column_returns_true_when_one_input_is_splitable(self):
-        assert TableQuestionKnowledgeGraph._should_split_column(['Team, 2006', 'Wolfe Tones']) is True
+        assert TableQuestionKnowledgeGraph._should_split_column_cells(['Team, 2006', 'Wolfe Tones']) is True
 
     def test_read_from_json_handles_diacritics(self):
         json = {

@@ -176,7 +176,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                 neighbors[cell_id].append(column_id)
 
         for column in column_cells:
-            if cls._should_split_column(column):
+            if cls._should_split_column_cells(column):
                 for cell_string in column:
                     for part_entity, part_string in cls._get_cell_parts(cell_string):
                         neighbors[part_entity] = []
@@ -296,8 +296,8 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
         is only one "part", and we return a list of length one.
 
         Note that you shouldn't call this on every cell in the table; SEMPRE decides to make these
-        splits only when at least one of the cells in a column looks "splitable".  Only if you're
-        splitting a column should you use this function.
+        splits only when at least one of the cells in a column looks "splittable".  Only if you're
+        splitting the cells in a column should you use this function.
         """
         parts = []
         for part_text in cls.cell_part_regex.split(cell_text):
@@ -307,7 +307,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
         return parts
 
     @classmethod
-    def _should_split_column(cls, column_cells: List[str]) -> bool:
+    def _should_split_column_cells(cls, column_cells: List[str]) -> bool:
         """
         Returns true if there is any cell in this column that can be split.
         """
