@@ -246,6 +246,12 @@ class NlvrWorld(World):
         number_productions = self._get_number_productions(sentence)
         for production in number_productions:
             agenda.append(production)
+        if not agenda:
+            # None of the rules above was triggered!
+            if "box" in sentence:
+                agenda.append(self.terminal_productions["all_boxes"])
+            else:
+                agenda.append(self.terminal_productions["all_objects"])
         if add_paths_to_agenda:
             agenda = self._add_nonterminal_productions(agenda)
         return agenda
