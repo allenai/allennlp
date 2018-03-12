@@ -21,7 +21,7 @@ from allennlp.data.semparse.type_declarations.type_declaration import START_SYMB
 from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.semparse import ParsingError
 from allennlp.models.model import Model
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder, FeedForward
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
@@ -92,6 +92,7 @@ class WikiTablesSemanticParser(Model):
                  terminal_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
+                 mixture_feedforward: FeedForward,
                  decoder_trainer: DecoderTrainer,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
@@ -132,7 +133,8 @@ class WikiTablesSemanticParser(Model):
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
-                                                   num_entity_types=self.num_entity_types)
+                                                   num_entity_types=self.num_entity_types,
+                                                   mixture_feedforward=mixture_feedforward)
 
     @overrides
     def forward(self,  # type: ignore
@@ -828,6 +830,11 @@ class WikiTablesSemanticParser(Model):
             terminal_embedder = TextFieldEmbedder.from_params(vocab, terminal_embedder_params)
         else:
             terminal_embedder = None
+        mixture_feedforward_type = params.pop('mixture_feedforward', None)
+        if mixture_feedforward_type is not None:
+            mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
+        else:
+            mixture_feedforward = None
         decoder_trainer = DecoderTrainer.from_params(params.pop("decoder_trainer"))
         decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         # If no attention function is specified, we should not use attention, not attention with
@@ -846,6 +853,7 @@ class WikiTablesSemanticParser(Model):
                    terminal_embedder=terminal_embedder,
                    encoder=encoder,
                    entity_encoder=entity_encoder,
+                   mixture_feedforward=mixture_feedforward,
                    decoder_trainer=decoder_trainer,
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
@@ -1067,8 +1075,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
-                 num_entity_types: int) -> None:
+                 num_entity_types: int,
+                 mixture_feedforward: FeedForward = None) -> None:
         super(WikiTablesDecoderStep, self).__init__()
+        self._mixture_feedforward = mixture_feedforward
         self._entity_type_embedding = Embedding(num_entity_types, action_embedding_dim)
         self._input_attention = Attention(attention_function)
 
@@ -1087,6 +1097,12 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
+
+        if mixture_feedforward is not None:
+            check_dimensions_match(output_dim, mixture_feedforward.get_input_dim(),
+                                   "hidden state embedding dim", "mixture feedforward input dim")
+            check_dimensions_match(mixture_feedforward.get_output_dim(), 1,
+                                   "mixture feedforward output dim", "dimension for scalar value")
 
     @overrides
     def take_step(self,
@@ -1142,17 +1158,33 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             # entity_action_mask: (group_size, num_entity_actions)
             entity_action_logits, entity_action_mask, entity_type_embeddings = \
                     self._get_entity_action_logits(state, actions_to_link, attention_weights)
-            action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
-            action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=1).float()
 
             # The `action_embeddings` tensor gets used later as the input to the next decoder step.
             # For linked actions, we don't have any action embedding, so we use the entity type
             # instead.
             action_embeddings = torch.cat([action_embeddings, entity_type_embeddings], dim=1)
+
+            if self._mixture_feedforward is not None:
+                # The entity and action logits are combined with a mixture weight to prevent the
+                # entity_action_logits from dominating the embedded_action_logits if a softmax
+                # was applied on both together.
+                mixture_weight = self._mixture_feedforward(hidden_state)
+                mix1 = torch.log(mixture_weight)
+                mix2 = torch.log(1 - mixture_weight)
+
+                entity_action_probs = util.masked_log_softmax(entity_action_logits,
+                                                              entity_action_mask.float()) + mix1
+                embedded_action_probs = util.masked_log_softmax(embedded_action_logits,
+                                                                embedded_action_mask.float()) + mix2
+                log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=1)
+            else:
+                action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
+                action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=1).float()
+                log_probs = util.masked_log_softmax(action_logits, action_mask)
         else:
             action_logits = embedded_action_logits
             action_mask = embedded_action_mask.float()
-        log_probs = util.masked_log_softmax(action_logits, action_mask)
+            log_probs = util.masked_log_softmax(action_logits, action_mask)
 
         return self._compute_new_states(state,
                                         log_probs,
