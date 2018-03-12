@@ -5,6 +5,7 @@ out-of-vocabulary token.
 
 from collections import defaultdict
 from typing import Any, Callable, Dict, Union, Sequence, Set, Optional, Iterable
+from overrides import overrides
 import codecs
 import logging
 import os
@@ -417,3 +418,8 @@ class Vocabulary:
 
     def get_vocab_size(self, namespace: str = 'tokens') -> int:
         return len(self._token_to_index[namespace])
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return False

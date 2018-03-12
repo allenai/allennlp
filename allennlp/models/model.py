@@ -131,6 +131,17 @@ class Model(torch.nn.Module, Registrable):
         batched output into a list of individual dicts per instance. Note that typically
         this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
         :func:`forward_on_instance`.
+
+        Parameters
+        ----------
+        instances : List[Instance], required
+            The instances to run the model on.
+        cuda_device : int, required
+            The GPU device to use.  -1 means use the CPU.
+
+        Returns
+        -------
+        A list of the models output for each instance.
         """
         dataset = Batch(instances)
         dataset.index_instances(self.vocab)
@@ -231,8 +242,9 @@ class Model(torch.nn.Module, Registrable):
         # want the code to look for it, so we remove it from the parameters here.
         _remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab, model_params)
-        model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
-        model.load_state_dict(model_state)
+        if not model.__class__.__name__ == "BidafEnsemble":
+            model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
+            model.load_state_dict(model_state)
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights
