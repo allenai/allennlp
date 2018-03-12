@@ -101,7 +101,7 @@ class NlvrSemanticParser(Model):
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function,
-                                             num_terminals=num_terminals)
+                                             checklist_size=num_terminals)
         self._checklist_cost_weight = checklist_cost_weight
         self._penalize_non_agenda_actions = penalize_non_agenda_actions
 
@@ -237,7 +237,7 @@ class NlvrSemanticParser(Model):
         Takes an agenda and a list of all actions and returns a target checklist against which the
         checklist at each state will be compared to compute a loss, indices of ``terminal_actions``,
         and a ``checklist_mask`` that indicates which of the terminal actions are relevant for
-        checklist loss computation. If ``penalize_non_agenda_actions`` is set to``True``,
+        checklist loss computation. If ``self.penalize_non_agenda_actions`` is set to``True``,
         ``checklist_mask`` will be all 1s (i.e., all terminal actions are relevant). If it is set to
         ``False``, indices of all terminals that are not in the agenda will be masked.
 
@@ -792,23 +792,23 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
 
 
 class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
+    """
+    Parameters
+    ----------
+    encoder_output_dim : ``int``
+    action_embedding_dim : ``int``
+    attention_function : ``SimilarityFunction``
+    checklist_size : ``int``
+        We need the size of the checklist vector to define the output projection layer, which
+        projects a concatenation of the current hidden state, attended encoder input and the
+        current checklist balance into the action space. The size of the checklist balance
+        vector is the same as the number of terminals.
+    """
     def __init__(self,
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
-                 num_terminals: int) -> None:
-        """
-        Parameters
-        ----------
-        encoder_output_dim : ``int``
-        action_embedding_dim : ``int``
-        attention_function : ``SimilarityFunction``
-        num_terminals : ``int``
-            We need the total number of terminals to define the output projection layer, which
-            projects a concatenation of the current hidden state, attended encoder input and the
-            current checklist balance into the action space. The size of the checklist balance
-            vector is the same as the number of terminals.
-        """
+                 checklist_size: int) -> None:
         super(NlvrDecoderStep, self).__init__()
         self._input_attention = Attention(attention_function)
 
@@ -824,7 +824,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # hidden state, and a difference between the current checklist vector and its target. Then we
         # concatenate those with the decoder state and project to `action_embedding_dim` to make a
         # prediction.
-        self._output_projection_layer = Linear(output_dim + encoder_output_dim + num_terminals,
+        self._output_projection_layer = Linear(output_dim + encoder_output_dim + checklist_size,
                                                action_embedding_dim)
 
         # TODO(pradeep): Do not hardcode decoder cell type.
