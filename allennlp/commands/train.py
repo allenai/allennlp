@@ -43,7 +43,7 @@ from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Params, TeeLogger, Tqdm
-from allennlp.common.util import prepare_environment, import_submodules
+from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -80,12 +80,6 @@ class Train(Subcommand):
                                default="",
                                help='a HOCON structure used to override the experiment configuration')
 
-        subparser.add_argument('--include-package',
-                               type=str,
-                               action='append',
-                               default=[],
-                               help='additional packages to include')
-
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
                                default=False,
@@ -99,10 +93,6 @@ def train_model_from_args(args: argparse.Namespace):
     """
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
-    # Import any additional modules needed (to register custom classes)
-    for package_name in args.include_package:
-        import_submodules(package_name)
-
     train_model_from_file(args.param_path,
                           args.serialization_dir,
                           args.overrides,
