@@ -92,6 +92,10 @@ class WikiTablesWorld(World):
         del valid_actions['<p,p>']
         del valid_actions['<p,r>']
 
+        # The argmax type generates an action that takes a date as an argument, which it turns out
+        # we don't need for parts.
+        self._remove_action_from_type(valid_actions, 'p', lambda x: '<d,p>' in x)
+
         # Our code that generates lambda productions similarly creates more than we need.
         for type_ in ['<c,p>', '<c,r>', '<d,c>', '<d,r>', '<n,c>', '<n,p>', '<n,r>', '<p,c>',
                       '<r,c>', '<r,r>']:
