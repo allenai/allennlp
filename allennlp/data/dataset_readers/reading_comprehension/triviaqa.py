@@ -102,7 +102,7 @@ class TriviaQaReader(DatasetReader):
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
-        self._data: Dict[str, List[Instance]] = {}
+        self._data: Dict[str, List[JsonDict]] = {}
 
     @overrides
     def _read(self, file_path: str):
@@ -113,59 +113,51 @@ class TriviaQaReader(DatasetReader):
 
         question_path = self._processed_data_path / file_path
 
-        if self._load_all and file_path in self._data:
-            logger.info("yielding instances from memory")
-            yield from self._data[file_path]
-            return
-
-        if self._load_all:
-            self._data[file_path] = []
-
-        logger.info(f"loading data from {question_path}")
+        if file_path in self._data:
+            questions = self._data[file_path]
+        else:
+            with open(question_path, 'r') as f:
+                questions = [json.loads(line) for line in f]
+            self._data[file_path] = questions
 
         CUTOFF = 2
 
-        with open(question_path, 'r') as f:
-            for line in f:
-                question = json.loads(line)
-                question_id = question['id']
-                question_text = question['text']
-                question_tokens = [json_to_token(token) for token in question['tokens']]
-                answer_texts = question['answer_texts']
+        for question in questions:
+            question_id = question['id']
+            question_text = question['text']
+            question_tokens = [json_to_token(token) for token in question['tokens']]
+            answer_texts = question['answer_texts']
 
-                paragraphs = question['paragraphs']
+            paragraphs = question['paragraphs']
 
-                paragraph_texts = paragraphs['texts']
-                paragraph_tokens = [[json_to_token(token) for token in pt]
-                                    for pt in paragraphs['tokens']]
-                has_answers = paragraphs['has_answers']
-                token_spans = paragraphs['token_spans']
+            paragraph_texts = paragraphs['texts']
+            paragraph_tokens = [[json_to_token(token) for token in pt]
+                                for pt in paragraphs['tokens']]
+            has_answers = paragraphs['has_answers']
+            token_spans = paragraphs['token_spans']
 
-                # sample:
-                if self._sample_this_iteration and self._paragraph_picker == 'triviaqa-web-train':
-                    sample: List[int] = []
-                    # double sample the first one
-                    choices = [0] + [i for i in range(len(paragraph_texts))]
-                    while not any(i in has_answers for i in sample):
-                        sample = np.random.choice(choices, size=2)
-                    picked_paragraph_texts = [paragraph_texts[i] for i in sample]
-                    picked_paragraph_tokens = [paragraph_tokens[i] for i in sample]
-                else:
-                    picked_paragraph_texts = paragraph_texts[:CUTOFF]
-                    picked_paragraph_tokens = paragraph_tokens[:CUTOFF]
+            # sample:
+            if self._sample_this_iteration and self._paragraph_picker == 'triviaqa-web-train':
+                sample: List[int] = []
+                # double sample the first one
+                choices = [0] + [i for i in range(len(paragraph_texts))]
+                while not any(i in has_answers for i in sample):
+                    sample = np.random.choice(choices, size=2)
+                picked_paragraph_texts = [paragraph_texts[i] for i in sample]
+                picked_paragraph_tokens = [paragraph_tokens[i] for i in sample]
+            else:
+                picked_paragraph_texts = paragraph_texts[:CUTOFF]
+                picked_paragraph_tokens = paragraph_tokens[:CUTOFF]
 
-                instance = util.make_multi_paragraph_reading_comprehension_instance(
-                        question_tokens,
-                        picked_paragraph_tokens,
-                        self._token_indexers,
-                        picked_paragraph_texts,
-                        token_spans,
-                        answer_texts)
+            instance = util.make_multi_paragraph_reading_comprehension_instance(
+                    question_tokens,
+                    picked_paragraph_tokens,
+                    self._token_indexers,
+                    picked_paragraph_texts,
+                    token_spans,
+                    answer_texts)
 
-                if self._load_all:
-                    self._data[file_path].append(instance)
-
-                yield instance
+            yield instance
 
     #                 paragraphs.append((texts, tokens, has_answers))
 
