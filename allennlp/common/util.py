@@ -11,6 +11,7 @@ import random
 import resource
 import subprocess
 import sys
+import os
 
 import torch
 import numpy
@@ -19,7 +20,7 @@ from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
-from allennlp.common.params import Params
+from allennlp.common import Params, Tqdm, TeeLogger
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -180,6 +181,31 @@ def prepare_environment(params: Params):
 
     log_pytorch_version_info()
 
+def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> None:
+    """
+    This function configures 3 global logging attributes - streaming stdout, stderr and
+    python logging to a file as well as the terminal, setting the formatting for the
+    python logging library and setting the interval frequency for the Tqdm progress bar. 
+    
+    Parameters
+    ----------
+    serializezation_dir : ``str``, required.
+        The directory to stream logs to.
+    file_friendly_logging : ``bool``, required.
+        Whether logs should clean the output to prevent carridge returns
+        (used to update progress bars on a single terminal line).
+    """
+    Tqdm.set_slower_interval(file_friendly_logging)
+    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
+                           sys.stdout,
+                           file_friendly_logging)
+    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
+                           sys.stderr,
+                           file_friendly_logging)
+    handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
+    logging.getLogger().addHandler(handler)
 
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
