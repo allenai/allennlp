@@ -185,7 +185,6 @@ class WikiTablesSemanticParser(Model):
         encoded_table = self._entity_encoder(embedded_table, table_mask)
         # (batch_size, num_entities, num_neighbors)
         neighbor_indices = self._get_neighbor_indices(world, num_entities, encoded_table)
-        num_neighbors = neighbor_indices.size(-1)
 
         # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
         # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
