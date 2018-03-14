@@ -70,10 +70,12 @@ class NlvrSemanticParser(Model):
         weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
         denotation accuracy.
     dynamic_cost_weight : ``Dict[str, Union[int, float]]``
-        A dict containing keys ``wait_num_steps`` and ``rate`` indicating the number of steps after
+        A dict containing keys ``wait_num_epochs`` and ``rate`` indicating the number of steps after
         which we should start decreasing the weight on checklist cost in favor of denotation cost,
-        and the rate at which we should do it. The weight will remain constant if this is an empty
-        dict.
+        and the rate at which we should do it. We will decrease the weight in the following way -
+        ``checklist_cost_weight = checklist_cost_weight - rate * checklist_cost_weight`` starting at
+        the apropriate epoch.
+        The weight will remain constant if this is an empty dict.
     penalize_non_agenda_actions : ``bool``
         Should we penalize the model for producing terminal actions that are outside the agenda?
     """

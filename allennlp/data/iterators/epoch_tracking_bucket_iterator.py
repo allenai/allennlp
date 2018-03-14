@@ -71,4 +71,7 @@ class EpochTrackingBucketIterator(BucketIterator):
                                     instances: Iterable[Instance],
                                     dataset_id: int) -> None:
         for instance in instances:
-            instance.fields["epoch_num"] = MetadataField(self._global_epoch_nums[dataset_id])
+            # TODO(pradeep): Mypy complains here most probably because ``fields`` is typed as a
+            # ``Mapping``, and not a ``Dict``. Ignoring this for now, but the type of fields
+            # probably needs to be changed.
+            instance.fields["epoch_num"] = MetadataField(self._global_epoch_nums[dataset_id])  #type: ignore
