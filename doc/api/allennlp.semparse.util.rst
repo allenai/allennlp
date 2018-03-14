@@ -1,7 +1,7 @@
-allennlp.data.semparse.util
+allennlp.semparse.util
 ===========================
 
-.. automodule:: allennlp.data.semparse.util
+.. automodule:: allennlp.semparse.util
    :members:
    :undoc-members:
    :show-inheritance:
