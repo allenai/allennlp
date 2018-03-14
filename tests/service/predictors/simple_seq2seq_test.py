@@ -1,8 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 from unittest import TestCase
 
-from pytest import approx
-
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
@@ -19,6 +17,6 @@ class TestSimpleSeq2SeqPredictor(TestCase):
         result = predictor.predict_json(inputs)
 
         predicted_tokens = result.get("predicted_tokens")
-        predicted_tokens is not None
+        assert predicted_tokens is not None
         assert isinstance(predicted_tokens, list)
         assert all(isinstance(x, str) for x in predicted_tokens)
