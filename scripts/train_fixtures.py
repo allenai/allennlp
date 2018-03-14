@@ -54,7 +54,7 @@ if __name__ == "__main__":
                 'constituency_parser',
                 'coref',
                 'decomposable_attention',
-                'encoder_decoder/simple_seq2seq/',
+                'encoder_decoder/simple_seq2seq',
                 'srl',
                 ]
         for model in models:
