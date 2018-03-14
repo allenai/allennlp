@@ -34,3 +34,9 @@ allennlp.data.iterators
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _epoch_tracking_bucket-iterator:
+.. automodule:: allennlp.data.iterators.epoch_tracking_bucket_iterator
+   :members:
+   :undoc-members:
+   :show-inheritance:
