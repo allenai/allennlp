@@ -1591,7 +1591,6 @@ svg {
   prevents the user from having to scroll when the sentence is long.
 */
 .hierplane__visualization .hierplane--theme-light #passage {
-  max-height: initial;
   height: auto !important;
   flex: 1;
 }
