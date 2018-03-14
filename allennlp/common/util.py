@@ -185,9 +185,11 @@ def prepare_environment(params: Params):
 
 def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> None:
     """
-    This function configures 3 global logging attributes - streaming stdout, stderr and
-    python logging to a file as well as the terminal, setting the formatting for the
-    python logging library and setting the interval frequency for the Tqdm progress bar.
+    This function configures 3 global logging attributes - streaming stdout and stderr
+    to a file as well as the terminal, setting the formatting for the python logging
+    library and setting the interval frequency for the Tqdm progress bar.
+
+    Note that this function does not set the logging level, which is set in ``allennlp/run.py``.
 
     Parameters
     ----------
@@ -204,10 +206,10 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
     sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
                            sys.stderr,
                            file_friendly_logging)
-    handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
-    handler.setLevel(logging.INFO)
-    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
-    logging.getLogger().addHandler(handler)
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
+    logging.getLogger().addHandler(stdout_handler)
 
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 

@@ -9,13 +9,12 @@ import argparse
 import json
 import logging
 import os
-import sys
 from copy import deepcopy
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.train import datasets_from_params
-from allennlp.common import Params, TeeLogger, Tqdm
+from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models import load_archive, archive_model

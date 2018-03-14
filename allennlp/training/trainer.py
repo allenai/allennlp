@@ -271,7 +271,7 @@ class Trainer:
         self._histogram_interval = histogram_interval
         self._log_histograms_this_batch = False
         # We keep the total batch number as a class variable because it
-        # is used inside a closure for the hook which logs activations in 
+        # is used inside a closure for the hook which logs activations in
         # ``_enable_activation_logging``.
         self._batch_num_total = 0
 
@@ -497,9 +497,9 @@ class Trainer:
 
         return False
 
-    def _parameter_and_gradient_statistics_to_tensorboard(self,
+    def _parameter_and_gradient_statistics_to_tensorboard(self, # pylint: disable=invalid-name
                                                           epoch: int,
-                                                          batch_grad_norm: float) -> None: # pylint: disable=invalid-name
+                                                          batch_grad_norm: float) -> None:
         """
         Send the mean and std of all parameters and gradients to tensorboard, as well
         as logging the average gradient norm.
@@ -535,8 +535,8 @@ class Trainer:
         for name, param in self._model.named_parameters():
             if name in histogram_parameters:
                 self._tensorboard.add_train_histogram("parameter_histogram/" + name,
-                                                        param,
-                                                        epoch)
+                                                      param,
+                                                      epoch)
 
     def _metrics_to_tensorboard(self,
                                 epoch: int,
