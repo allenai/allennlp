@@ -46,10 +46,14 @@
     "max_decoding_steps": 20,
     "attention_function": {"type": "dot_product"},
     "checklist_cost_weight": 0.8,
+    "dynamic_cost_weight": {
+      "wait_num_epochs": 0,
+      "rate": 0.1
+    },
     "penalize_non_agenda_actions": true
   },
   "iterator": {
-    "type": "bucket",
+    "type": "epoch_tracking_bucket",
     "sorting_keys": [["sentence", "num_tokens"]],
     "padding_noise": 0.0,
     "batch_size" : 2
