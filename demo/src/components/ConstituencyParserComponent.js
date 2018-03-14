@@ -11,11 +11,11 @@ import { Tree } from 'hierplane';
 *******************************************************************************/
 
 const constituencyParserSentences = [
-  "The keys, which were needed to access the building, were locked in the car.",
-  "However, voters decided that if the stadium was such a good idea someone would build it himself, and rejected it 59% to 41%.",
-  "Did Uriah honestly think he could beat the game in under three hours?",
-  "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!",
-  "More than a few CEOs say the red-carpet treatment tempts them to return to a heartland city for future meetings.",
+  "",
+  "Pierre Vinken died aged 81; immortalised aged 61.",
+  "James went to the corner shop to buy some eggs, milk and bread for breakfast.",
+  "If you bring $10 with you tomorrow, can you pay for me to eat too?",
+  "True self-control is waiting until the movie starts to eat your popcorn.",
 ];
 
 const title = "Constituency Parsing";
@@ -82,7 +82,7 @@ class ConstituencyParserInput extends React.Component {
           </select>
         </div>
         <div className="form__field">
-          <label htmlFor="#input--srl-sentence">Sentence</label>
+          <label htmlFor="#input--parser-sentence">Sentence</label>
           <input onChange={this.handleSentenceChange} value={constituencyParserSentenceValue} id="input--parser-sentence" ref="constituencyParserSentence" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
         </div>
         <div className="form__field form__field--btn">

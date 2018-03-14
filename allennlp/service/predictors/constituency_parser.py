@@ -12,16 +12,20 @@ from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from spacy.lang.en.tag_map import TAG_MAP
 
 # Make the links to POS tag nodes render as "pos",
-# to distinguish them from constituency tags.
+# to distinguish them from constituency tags. The
+# actual tag is still visible within the node.
 LINK_TO_LABEL = {x: "pos" for x in TAG_MAP.keys()}
 
-NODE_TYPE_TO_STYLE = {x: ["placeholder"] for x in LINK_TO_LABEL.keys()}
+# POS tags have a unified colour.
+NODE_TYPE_TO_STYLE = {x: ["color0"] for x in TAG_MAP.keys()}
+
 # Verb and Noun phrases get their own colour.
 NODE_TYPE_TO_STYLE["NP"] = ["color1"]
 NODE_TYPE_TO_STYLE["NX"] = ["color1"]
 NODE_TYPE_TO_STYLE["QP"] = ["color1"]
 NODE_TYPE_TO_STYLE["NAC"] = ["color1"]
 NODE_TYPE_TO_STYLE["VP"] = ["color2"]
+
 # Clause level fragments
 NODE_TYPE_TO_STYLE["S"] = ["color3"]
 NODE_TYPE_TO_STYLE["SBAR"] = ["color3"]
