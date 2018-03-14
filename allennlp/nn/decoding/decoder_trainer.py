@@ -1,13 +1,13 @@
-from typing import Dict
+from typing import Dict, Generic, TypeVar
 
 import torch
 
-from allennlp.common import Params, Registrable
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 
+SupervisionType = TypeVar('SupervisionType')
 
-class DecoderTrainer(Registrable):
+class DecoderTrainer(Generic[SupervisionType]):
     """
     ``DecoderTrainers`` define a training regime for transition-based decoders.  A
     ``DecoderTrainer`` assumes an initial ``DecoderState``, a ``DecoderStep`` function that can
@@ -25,11 +25,5 @@ class DecoderTrainer(Registrable):
     def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               targets: torch.Tensor,
-               target_mask: torch.Tensor) -> Dict[str, torch.Tensor]:
+               supervision: SupervisionType) -> Dict[str, torch.Tensor]:
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'DecoderTrainer':
-        choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(params)

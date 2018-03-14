@@ -54,32 +54,11 @@ class DecoderState(Generic[T]):
         self.action_history = action_history
         self.score = score
 
-    def get_cost(self) -> Variable:
-        """
-        Returns cost associated with a finished ``DecoderState`` if the training algorithm used
-        calls for it.
-        """
-        # pylint: disable=no-self-use
-        # We raise a ``RuntimeError`` instead of ``NotImplementedError`` because some subclasses may
-        # choose to not implement this method.
-        raise RuntimeError
-
     def is_finished(self) -> bool:
         """
         If this state has a ``group_size`` of 1, this returns whether the single action sequence in
         this state is finished or not.  If this state has a ``group_size`` other than 1, this
         method raises an error.
-        """
-        raise NotImplementedError
-
-    def split_finished(self) -> Tuple[T, T]:
-        """
-        This method decides, for each instance in the batch, whether that instance has reached a
-        finished state.  We then group all `finished` and `not finished` instances and create two
-        new states out of them.  If all of the instances are finished, for efficiency reasons, this
-        should return ``(self, None)``, and the reverse if none of the instances are finished.
-
-        The returned tuple is (finished, not_finished).
         """
         raise NotImplementedError
 
