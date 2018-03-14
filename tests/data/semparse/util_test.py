@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.semparse import util
+from allennlp.semparse import util
 
 
 class TestSemparseUtil(AllenNlpTestCase):

@@ -15,15 +15,15 @@ from allennlp.common import Params
 from allennlp.common import util as common_util
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
-from allennlp.data.semparse.type_declarations import GrammarState
-from allennlp.data.semparse.worlds import NlvrWorld
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding import DecoderState, DecoderStep, DecoderTrainer
 from allennlp.nn import util as nn_util
 from allennlp.models.model import Model
+from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
+from allennlp.semparse.type_declarations import GrammarState
+from allennlp.semparse.worlds import NlvrWorld
 from allennlp.training.metrics import Average
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

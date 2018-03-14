@@ -4,10 +4,10 @@ import json
 from overrides import overrides
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.semparse import ParsingError, World
-from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
-from allennlp.data.semparse.worlds import NlvrWorld, WikiTablesWorld
 from allennlp.data.tokenizers import Token
+from allennlp.semparse import ParsingError, World
+from allennlp.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
+from allennlp.semparse.worlds import NlvrWorld, WikiTablesWorld
 
 
 class FakeWorldWithoutRecursion(World):

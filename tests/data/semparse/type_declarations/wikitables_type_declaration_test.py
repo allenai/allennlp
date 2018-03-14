@@ -1,10 +1,11 @@
 # pylint: disable=no-self-use
-from allennlp.data.semparse.type_declarations import type_declaration as base_types
-from allennlp.data.semparse.type_declarations.type_declaration import (
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.semparse.type_declarations import type_declaration as base_types
+from allennlp.semparse.type_declarations.type_declaration import (
         ComplexType,
         ANY_TYPE,
         )
-from allennlp.data.semparse.type_declarations.wikitables_type_declaration import (
+from allennlp.semparse.type_declarations.wikitables_type_declaration import (
         ARG_EXTREME_TYPE,
         ArgExtremeType,
         CELL_TYPE,
@@ -15,7 +16,6 @@ from allennlp.data.semparse.type_declarations.wikitables_type_declaration import
         REVERSE_TYPE,
         ReverseType,
         )
-from allennlp.common.testing import AllenNlpTestCase
 
 
 class WikiTablesTypeDeclarationTest(AllenNlpTestCase):

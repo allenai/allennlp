@@ -3,7 +3,7 @@ from overrides import overrides
 
 from nltk.sem.logic import TRUTH_TYPE, BasicType, EntityType, Type
 
-from allennlp.data.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType, NamedBasicType
+from allennlp.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType, NamedBasicType
 
 
 class NegateFilterType(HigherOrderType):

@@ -1,0 +1,1 @@
+from allennlp.semparse.knowledge_graphs.table_question_knowledge_graph import TableQuestionKnowledgeGraph

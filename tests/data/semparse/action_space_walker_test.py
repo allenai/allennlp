@@ -3,8 +3,8 @@ from overrides import overrides
 from nltk.sem.logic import TRUTH_TYPE
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.semparse.worlds.world import World
-from allennlp.data.semparse import ActionSpaceWalker
+from allennlp.semparse.worlds.world import World
+from allennlp.semparse import ActionSpaceWalker
 
 
 class FakeWorldWithAssertions(World):

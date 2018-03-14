@@ -11,10 +11,10 @@ from nltk.sem.logic import Type
 from overrides import overrides
 
 from allennlp.common.util import JsonDict
-from allennlp.data.semparse import util as semparse_util
-from allennlp.data.semparse.worlds.world import ExecutionError
-from allennlp.data.semparse.type_declarations import nlvr_type_declaration as types
-from allennlp.data.semparse.worlds.world import World
+from allennlp.semparse import util as semparse_util
+from allennlp.semparse.worlds.world import ExecutionError
+from allennlp.semparse.type_declarations import nlvr_type_declaration as types
+from allennlp.semparse.worlds.world import World
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

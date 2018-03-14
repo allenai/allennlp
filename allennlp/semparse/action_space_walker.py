@@ -1,8 +1,8 @@
 from collections import defaultdict
 from typing import List, Dict, Set
 
-from allennlp.data.semparse.worlds.world import World
-from allennlp.data.semparse.type_declarations import type_declaration as types
+from allennlp.semparse.worlds.world import World
+from allennlp.semparse.type_declarations import type_declaration as types
 
 
 class ActionSpaceWalker:

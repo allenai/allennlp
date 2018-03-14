@@ -5,8 +5,8 @@ import re
 
 from nltk.sem.logic import ApplicationExpression, Expression, LambdaExpression, BasicType, Type
 
-from allennlp.data.semparse.type_declarations import type_declaration as types
-from allennlp.data.semparse import util as semparse_util
+from allennlp.semparse.type_declarations import type_declaration as types
+from allennlp.semparse import util as semparse_util
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

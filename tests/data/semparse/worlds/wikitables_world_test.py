@@ -4,10 +4,10 @@ from typing import List
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.semparse import ParsingError
-from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
-from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.tokenizers import Token
+from allennlp.semparse import ParsingError
+from allennlp.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
+from allennlp.semparse.worlds import WikiTablesWorld
 
 
 def check_productions_match(actual_rules: List[str], expected_right_sides: List[str]):

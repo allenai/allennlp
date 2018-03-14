@@ -1,7 +1,7 @@
 from copy import deepcopy
 from typing import Dict, List, Tuple
 
-from allennlp.data.semparse.type_declarations import type_declaration as types
+from allennlp.semparse.type_declarations import type_declaration as types
 
 
 class GrammarState:

@@ -1,15 +1,15 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.semparse.type_declarations import type_declaration as types
-from allennlp.data.semparse.type_declarations.type_declaration import (
+from allennlp.semparse.type_declarations import type_declaration as types
+from allennlp.semparse.type_declarations.type_declaration import (
         ANY_TYPE,
         BinaryOpType,
         ComplexType,
         NamedBasicType,
         UnaryOpType,
         )
-from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
-from allennlp.data.semparse.type_declarations.wikitables_type_declaration import (
+from allennlp.semparse.type_declarations import wikitables_type_declaration as wt_types
+from allennlp.semparse.type_declarations.wikitables_type_declaration import (
         CELL_TYPE,
         ROW_TYPE,
         )

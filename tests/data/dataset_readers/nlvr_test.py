@@ -1,8 +1,7 @@
-# pylint: disable=no-self-use
-# pylint: disable=invalid-name
-from allennlp.data.semparse.worlds import NlvrWorld
-from allennlp.data.dataset_readers import NlvrDatasetReader
+# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.dataset_readers import NlvrDatasetReader
+from allennlp.semparse.worlds import NlvrWorld
 
 
 class TestNlvrDatasetReader(AllenNlpTestCase):

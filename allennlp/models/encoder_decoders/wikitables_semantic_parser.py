@@ -16,10 +16,6 @@ from allennlp.common.checks import check_dimensions_match
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.data.semparse.type_declarations import GrammarState
-from allennlp.data.semparse.type_declarations.type_declaration import START_SYMBOL
-from allennlp.data.semparse.worlds import WikiTablesWorld
-from allennlp.data.semparse import ParsingError
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder, FeedForward
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
@@ -28,6 +24,10 @@ from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
+from allennlp.semparse.type_declarations import GrammarState
+from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
+from allennlp.semparse.worlds import WikiTablesWorld
+from allennlp.semparse import ParsingError
 from allennlp.training.metrics import Average
 
 

@@ -6,9 +6,9 @@ from overrides import overrides
 
 from nltk.sem.logic import Type, BasicType, ANY_TYPE, ComplexType as NltkComplexType
 
-from allennlp.data.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType
-from allennlp.data.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType
-from allennlp.data.semparse.type_declarations.type_declaration import UnaryOpType, BinaryOpType
+from allennlp.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType
+from allennlp.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType
+from allennlp.semparse.type_declarations.type_declaration import UnaryOpType, BinaryOpType
 
 
 class ReverseType(PlaceholderType, HigherOrderType):

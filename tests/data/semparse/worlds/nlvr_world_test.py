@@ -1,9 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
 import json
 
-from allennlp.data.semparse.worlds.world import ExecutionError
-from allennlp.data.semparse.worlds.nlvr_world import NlvrWorld
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.semparse.worlds.world import ExecutionError
+from allennlp.semparse.worlds.nlvr_world import NlvrWorld
 
 
 class TestNlvrWorld(AllenNlpTestCase):

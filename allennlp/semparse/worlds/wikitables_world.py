@@ -9,9 +9,9 @@ import re
 from nltk.sem.logic import Type
 from overrides import overrides
 
-from allennlp.data.semparse.worlds.world import ParsingError, World
-from allennlp.data.semparse.type_declarations import wikitables_type_declaration as types
-from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
+from allennlp.semparse.worlds.world import ParsingError, World
+from allennlp.semparse.type_declarations import wikitables_type_declaration as types
+from allennlp.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 
 
 class WikiTablesWorld(World):

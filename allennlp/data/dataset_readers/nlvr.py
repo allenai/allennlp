@@ -13,7 +13,7 @@ from allennlp.data.fields import ProductionRuleField, MetadataField
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.semparse.worlds import NlvrWorld
+from allennlp.semparse.worlds import NlvrWorld
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
