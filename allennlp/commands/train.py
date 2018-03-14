@@ -292,7 +292,7 @@ def train_model(params: Params,
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
         if os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
-            logging.info("Training interupted by the user. Attempting to create "
+            logging.info("Training interrupted by the user. Attempting to create "
                          "a model archive using the current best epoch weights.")
             archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         raise
