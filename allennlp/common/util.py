@@ -20,7 +20,9 @@ from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
-from allennlp.common import Params, Tqdm, TeeLogger
+from allennlp.common.params import Params
+from allennlp.common.tqdm import Tqdm
+from allennlp.common.tee_logger import TeeLogger
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -185,8 +187,8 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
     """
     This function configures 3 global logging attributes - streaming stdout, stderr and
     python logging to a file as well as the terminal, setting the formatting for the
-    python logging library and setting the interval frequency for the Tqdm progress bar. 
-    
+    python logging library and setting the interval frequency for the Tqdm progress bar.
+
     Parameters
     ----------
     serializezation_dir : ``str``, required.

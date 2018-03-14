@@ -14,7 +14,7 @@ import time
 import re
 import datetime
 import traceback
-from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
+from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, Set
 
 import torch
 import torch.optim.lr_scheduler
@@ -465,39 +465,13 @@ class Trainer:
 
             # Log parameter values to Tensorboard
             if batch_num_total % self._summary_interval == 0:
-                for name, param in self._model.named_parameters():
-                    self._tensorboard.add_train_scalar("parameter_mean/" + name,
-                                                       param.data.mean(),
-                                                       batch_num_total)
-                    self._tensorboard.add_train_scalar("parameter_std/" + name, param.data.std(), batch_num_total)
-                    if param.grad is not None:
-                        if is_sparse(param.grad):
-                            # pylint: disable=protected-access
-                            grad_data = param.grad.data._values()
-                        else:
-                            grad_data = param.grad.data
-                        self._tensorboard.add_train_scalar("gradient_mean/" + name,
-                                                           grad_data.mean(),
-                                                           batch_num_total)
-                        self._tensorboard.add_train_scalar("gradient_std/" + name,
-                                                           grad_data.std(),
-                                                           batch_num_total)
+                self._parameter_and_gradient_statistics_to_tensorboard(batch_num_total)
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
                 self._metrics_to_tensorboard(batch_num_total,
                                              {"epoch_metrics/" + k: v for k, v in metrics.items()})
-                # norm of gradients
-                if self._batch_grad_norm is not None:
-                    self._tensorboard.add_train_scalar("gradient_norm",
-                                                       self._batch_grad_norm,
-                                                       batch_num_total)
 
-            # Histogram logging
             if self._log_histograms_this_batch:
-                for name, param in self._model.named_parameters():
-                    if name in histogram_parameters:
-                        self._tensorboard.add_train_histogram("parameter_histogram/" + name,
-                                                              param,
-                                                              batch_num_total)
+                self._histograms_to_tensorboard(batch_num_total, histogram_parameters)
 
             # Save model if needed.
             if self._model_save_interval is not None and (
@@ -522,6 +496,46 @@ class Trainer:
                 return max(metric_history[-self._patience:]) < max(metric_history)
 
         return False
+
+    def _parameter_and_gradient_statistics_to_tensorboard(self, epoch: int) -> None: # pylint: disable=invalid-name
+        """
+        Send the mean and std of all parameters and gradients to tensorboard, as well
+        as logging the average gradient norm.
+        """
+        # Log parameter values to Tensorboard
+        for name, param in self._model.named_parameters():
+            self._tensorboard.add_train_scalar("parameter_mean/" + name,
+                                               param.data.mean(),
+                                               epoch)
+            self._tensorboard.add_train_scalar("parameter_std/" + name, param.data.std(), epoch)
+            if param.grad is not None:
+                if is_sparse(param.grad):
+                    # pylint: disable=protected-access
+                    grad_data = param.grad.data._values()
+                else:
+                    grad_data = param.grad.data
+                self._tensorboard.add_train_scalar("gradient_mean/" + name,
+                                                   grad_data.mean(),
+                                                   epoch)
+                self._tensorboard.add_train_scalar("gradient_std/" + name,
+                                                   grad_data.std(),
+                                                   epoch)
+        # norm of gradients
+        if self._batch_grad_norm is not None:
+            self._tensorboard.add_train_scalar("gradient_norm",
+                                               self._batch_grad_norm,
+                                               epoch)
+
+    def _histograms_to_tensorboard(self, epoch: int, histogram_parameters: Set[str]) -> None:
+        """
+        Send histograms of parameters to tensorboard.
+        """
+        if self._log_histograms_this_batch and histogram_parameters is not None:
+            for name, param in self._model.named_parameters():
+                if name in histogram_parameters:
+                    self._tensorboard.add_train_histogram("parameter_histogram/" + name,
+                                                          param,
+                                                          epoch)
 
     def _metrics_to_tensorboard(self,
                                 epoch: int,
