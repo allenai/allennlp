@@ -2,6 +2,7 @@ from typing import Tuple, List
 
 from overrides import overrides
 from nltk import Tree
+from spacy.lang.en.tag_map import TAG_MAP
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
@@ -9,7 +10,6 @@ from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
-from spacy.lang.en.tag_map import TAG_MAP
 
 # Make the links to POS tag nodes render as "pos",
 # to distinguish them from constituency tags. The
@@ -28,6 +28,7 @@ NODE_TYPE_TO_STYLE["VP"] = ["color2"]
 
 # Clause level fragments
 NODE_TYPE_TO_STYLE["S"] = ["color3"]
+NODE_TYPE_TO_STYLE["SQ"] = ["color3"]
 NODE_TYPE_TO_STYLE["SBAR"] = ["color3"]
 NODE_TYPE_TO_STYLE["SBARQ"] = ["color3"]
 NODE_TYPE_TO_STYLE["SINQ"] = ["color3"]
