@@ -35,7 +35,7 @@ this many epochs, training halts. And if you have a GPU you can change `cuda_dev
 Change any of those if you want to, and then run
 
 ```
-$ python -m allennlp.run train tutorials/getting_started/simple_tagger.json --serialization-dir /tmp/tutorials/getting_started
+$ allennlp train tutorials/getting_started/simple_tagger.json --serialization-dir /tmp/tutorials/getting_started
 ```
 
 The `serialization-dir` argument specifies the directory where the model's vocabulary and checkpointed weights will be saved.
@@ -96,7 +96,7 @@ is shared publicly on Amazon S3.
 We can use the `evaluate` command, giving it the archived model and the evaluation dataset:
 
 ```
-$ python -m allennlp.run evaluate /tmp/tutorials/getting_started/model.tar.gz --evaluation-data-file https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
+$ allennlp evaluate /tmp/tutorials/getting_started/model.tar.gz --evaluation-data-file https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
 ```
 
 When you run this it will load the archived model, download and cache the evaluation dataset, and then make predictions:
@@ -138,7 +138,7 @@ EOF
 After which we can make predictions:
 
 ```bash
-$ python -m allennlp.run predict /tmp/tutorials/getting_started/model.tar.gz inputs.txt
+$ allennlp predict /tmp/tutorials/getting_started/model.tar.gz inputs.txt
 ... lots of logging omitted
 {"tags": ["ppss", "bem", "vbg", "at", "nn", "."], "class_probabilities": [[ ... ]]}
 {"tags": ["jj", "nn", "nn", "bez", "jj", "."], "class_probabilities": [[ ... ]]}

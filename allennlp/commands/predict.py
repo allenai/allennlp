@@ -4,16 +4,16 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
 
 .. code-block:: bash
 
-    $ python -m allennlp.run predict --help
-    usage: python -m allennlp.run [command] predict [-h]
-                                                    [--output-file OUTPUT_FILE]
-                                                    [--batch-size BATCH_SIZE]
-                                                    [--silent]
-                                                    [--cuda-device CUDA_DEVICE]
-                                                    [-o OVERRIDES]
-                                                    [--include-package INCLUDE_PACKAGE]
-                                                    [--predictor PREDICTOR]
-                                                    archive_file input_file
+    $ allennlp predict --help
+    usage: allennlp [command] predict [-h]
+                                      [--output-file OUTPUT_FILE]
+                                      [--batch-size BATCH_SIZE]
+                                      [--silent]
+                                      [--cuda-device CUDA_DEVICE]
+                                      [-o OVERRIDES]
+                                      [--include-package INCLUDE_PACKAGE]
+                                      [--predictor PREDICTOR]
+                                      archive_file input_file
 
     Run the specified model against a JSON-lines input file.
 
