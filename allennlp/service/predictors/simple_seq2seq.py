@@ -13,7 +13,7 @@ class SimpleSeq2SeqPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         """
-        Expects JSON that looks like ``{"source_string": "..."}``.
+        Expects JSON that looks like ``{"source": "..."}``.
         """
-        source_string = json_dict["source_string"]
-        return self._dataset_reader.text_to_instance(source_string), {}
+        source = json_dict["source"]
+        return self._dataset_reader.text_to_instance(source), {}
