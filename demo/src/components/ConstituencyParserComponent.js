@@ -1,7 +1,7 @@
 import React from 'react';
 import { API_ROOT } from '../api-config';
 import { withRouter } from 'react-router-dom';
-import { PaneLeft, PaneRight } from './Pane'
+import { PaneTop, PaneBottom } from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
 import { Tree } from 'hierplane';
@@ -11,7 +11,6 @@ import { Tree } from 'hierplane';
 *******************************************************************************/
 
 const constituencyParserSentences = [
-  "",
   "Pierre Vinken died aged 81; immortalised aged 61.",
   "James went to the corner shop to buy some eggs, milk and bread for breakfast.",
   "If you bring $10 with you tomorrow, can you pay for me to eat too?",
@@ -165,15 +164,15 @@ class _ConstituencyParserComponent extends React.Component {
     const sentence = requestData && requestData.sentence;
 
     return (
-      <div className="pane model">
-        <PaneLeft>
+      <div className="pane__horizontal model">
+        <PaneTop>
           <ConstituencyParserInput runConstituencyParserModel={this.runConstituencyParserModel}
             outputState={this.state.outputState}
             sentence={sentence} />
-        </PaneLeft>
-        <PaneRight outputState={this.state.outputState}>
+        </PaneTop>
+        <PaneBottom outputState={this.state.outputState}>
           <HierplaneVisualization tree={responseData ? responseData.hierplane_tree : null} />
-        </PaneRight>
+        </PaneBottom>
       </div>
     );
   }
