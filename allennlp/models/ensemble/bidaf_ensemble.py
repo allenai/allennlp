@@ -33,15 +33,6 @@ class BidafEnsemble(Ensemble):
         for i, submodel in enumerate(self.submodels):
             subresults.append(submodel.forward(question, passage, span_start, span_end, metadata))
 
-            """
-            subresults.append(result)
-            key = (result["span_start"], result["span_end"])
-            new_value = span_votes.get(key, []) + i
-            span_votes[key] = new_value
-            if len(new_value) > max_vote:
-                max_vote = len(new_value)
-            """
-
         batch_size = len(subresults[0]["best_span"])
 
         #TODO(michaels): fix float arithmatic
@@ -79,6 +70,11 @@ class BidafEnsemble(Ensemble):
             output["best_span"][batch] = best_span
 
             if metadata is not None:
+                if not "best_span_str" in output:
+                    output["best_span_str"] = []
+                best_span_str = subresults[best]["best_span_str"][batch]
+                output["best_span_str"].append(best_span_str)
+
                 answer_texts = metadata[batch].get('answer_texts', [])
                 if answer_texts:
                     passage_str = metadata[batch]['original_passage']
@@ -86,9 +82,24 @@ class BidafEnsemble(Ensemble):
                     start_offset = offsets[best_span[0]][0]
                     end_offset = offsets[best_span[1]][1]
                     best_span_string = passage_str[start_offset:end_offset]
+                    assert best_span_string == best_span_str, f"{best_span_string} != {best_span_str}"
+                    x = subresults[0]["best_span_str"][batch]
+                    y = subresults[1]["best_span_str"][batch]
+                    print(f"0: {x}")
+                    print(f"1: {y}")
+                    print(best_span_string)
+                    print(answer_texts)
+                    print()
                     self._squad_metrics(best_span_string, answer_texts)
 
         return output
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        exact_match, f1_score = self._squad_metrics.get_metric(reset)
+        return {
+            'em': exact_match,
+            'f1': f1_score,
+        }
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params):
