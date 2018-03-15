@@ -77,6 +77,7 @@ class BidirectionalAttentionFlow(Model):
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BidirectionalAttentionFlow, self).__init__(vocab, regularizer)
 
+
         self._text_field_embedder = text_field_embedder
         self._highway_layer = TimeDistributed(Highway(text_field_embedder.get_output_dim(),
                                                       num_highway_layers))
@@ -133,12 +134,12 @@ class BidirectionalAttentionFlow(Model):
             passage.
         span_start : ``torch.IntTensor``, optional
             From an ``IndexField``.  This is one of the things we are trying to predict - the
-            beginning position of the answer with the passage.  This is an `inclusive` index.  If
-            this is given, we will compute a loss that gets included in the output dictionary.
+            beginning position of the answer with the passage.  This is an `inclusive` token index.
+            If this is given, we will compute a loss that gets included in the output dictionary.
         span_end : ``torch.IntTensor``, optional
             From an ``IndexField``.  This is one of the things we are trying to predict - the
-            ending position of the answer with the passage.  This is an `inclusive` index.  If
-            this is given, we will compute a loss that gets included in the output dictionary.
+            ending position of the answer with the passage.  This is an `inclusive` token index.
+            If this is given, we will compute a loss that gets included in the output dictionary.
         metadata : ``List[Dict[str, Any]]``, optional
             If present, this should contain the question ID, original passage text, and token
             offsets into the passage for each instance in the batch.  We use this for computing
@@ -151,18 +152,19 @@ class BidirectionalAttentionFlow(Model):
         -------
         An output dictionary consisting of:
         span_start_logits : torch.FloatTensor
-            A tensor of shape ``(batch_size, passage_length)`` representing unnormalised log
+            A tensor of shape ``(batch_size, passage_length)`` representing unnormalized log
             probabilities of the span start position.
         span_start_probs : torch.FloatTensor
             The result of ``softmax(span_start_logits)``.
         span_end_logits : torch.FloatTensor
-            A tensor of shape ``(batch_size, passage_length)`` representing unnormalised log
+            A tensor of shape ``(batch_size, passage_length)`` representing unnormalized log
             probabilities of the span end position (inclusive).
         span_end_probs : torch.FloatTensor
             The result of ``softmax(span_end_logits)``.
         best_span : torch.IntTensor
             The result of a constrained inference over ``span_start_logits`` and
-            ``span_end_logits`` to find the most probable span.  Shape is ``(batch_size, 2)``.
+            ``span_end_logits`` to find the most probable span.  Shape is ``(batch_size, 2)``
+            and each offset is a token index.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         best_span_str : List[str]
@@ -255,6 +257,8 @@ class BidirectionalAttentionFlow(Model):
                 "span_end_probs": span_end_probs,
                 "best_span": best_span,
                 }
+
+        # Compute the loss for training.
         if span_start is not None:
             loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1))
             self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
@@ -262,6 +266,8 @@ class BidirectionalAttentionFlow(Model):
             self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
             self._span_accuracy(best_span, torch.stack([span_start, span_end], -1))
             output_dict["loss"] = loss
+
+        # Compute the EM and F1 on SQuAD and add the tokenized input to the output.
         if metadata is not None:
             output_dict['best_span_str'] = []
             question_tokens = []
@@ -270,7 +276,7 @@ class BidirectionalAttentionFlow(Model):
                 question_tokens.append(metadata[i]['question_tokens'])
                 passage_tokens.append(metadata[i]['passage_tokens'])
                 passage_str = metadata[i]['original_passage']
-                offsets = metadata[i]['token_offsets']
+                offsets = metadata[i]['token_offsets'] # character offsets of tokens
                 predicted_span = tuple(best_span[i].data.cpu().numpy())
                 start_offset = offsets[predicted_span[0]][0]
                 end_offset = offsets[predicted_span[1]][1]

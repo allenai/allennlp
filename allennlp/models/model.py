@@ -177,7 +177,7 @@ class Model(torch.nn.Module, Registrable):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         """
         Returns a dictionary of metrics. This method will be called by
-        :class:`allennlp.training.Trainer` in order to compute and use model metrics for early
+        :class:`allennlp.training.T/ainer` in order to compute and use model metrics for early
         stopping and model serialisation.  We return an empty dictionary here rather than raising
         as it is not required to implement metrics for a new model.  A boolean `reset` parameter is
         passed, as frequently a metric accumulator will have some state which should be reset
