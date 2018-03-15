@@ -8,7 +8,7 @@ from allennlp.service.predictors import Predictor
 class TestSimpleSeq2SeqPredictor(TestCase):
     def test_uses_named_inputs(self):
         inputs = {
-                "source_string": "What kind of test succeeded on its first attempt?",
+                "source": "What kind of test succeeded on its first attempt?",
         }
 
         archive = load_archive('tests/fixtures/encoder_decoder/simple_seq2seq/serialization/model.tar.gz')
