@@ -380,14 +380,14 @@ class Trainer:
 
         return loss
 
-    def _get_metrics(self, total_loss: float, batch_num_total: int, reset: bool = False) -> Dict[str, float]:
+    def _get_metrics(self, total_loss: float, batch_num: int, reset: bool = False) -> Dict[str, float]:
         """
         Gets the metrics but sets ``"loss"`` to
-        the total loss divided by the ``batch_num_total`` so that
+        the total loss divided by the ``batch_num`` so that
         the ``"loss"`` metric is "average loss per batch".
         """
         metrics = self._model.get_metrics(reset=reset)
-        metrics["loss"] = float(total_loss / batch_num_total)
+        metrics["loss"] = float(total_loss / batch_num)
         return metrics
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
@@ -413,6 +413,7 @@ class Trainer:
         self._last_log = time.time()
         last_save_time = time.time()
 
+        batches_this_epoch = 0
         if self._batch_num_total is None:
             self._batch_num_total = 0
 
@@ -421,6 +422,7 @@ class Trainer:
 
         logger.info("Training")
         for batch in train_generator_tqdm:
+            batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
@@ -482,7 +484,7 @@ class Trainer:
                         '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
 
-        return self._get_metrics(train_loss, batch_num_total, reset=True)
+        return self._get_metrics(train_loss, batches_this_epoch, reset=True)
 
     def _should_stop_early(self, metric_history: List[float]) -> bool:
         """
@@ -623,20 +625,20 @@ class Trainer:
         num_validation_batches = self._iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
-        batch_num_total = 0
+        batches_this_epoch = 0
         val_loss = 0
         for batch in val_generator_tqdm:
-            batch_num_total += 1
+            batches_this_epoch += 1
 
             loss = self._batch_loss(batch, for_training=False)
             val_loss += loss.data.cpu().numpy()
 
             # Update the description with the latest metrics
-            val_metrics = self._get_metrics(val_loss, batch_num_total)
+            val_metrics = self._get_metrics(val_loss, batches_this_epoch)
             description = self._description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
-        return val_loss, batch_num_total
+        return val_loss, batches_this_epoch
 
     def train(self) -> Dict[str, Any]:
         """
