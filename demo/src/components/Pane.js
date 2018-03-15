@@ -8,7 +8,7 @@ import React from 'react';
 class ResultDisplay extends React.Component {
 
     render() {
-      const { orientation, outputState } = this.props;
+      const { resultPane, outputState } = this.props;
 
       const placeholderTemplate = (message) => {
         return (
@@ -42,7 +42,7 @@ class ResultDisplay extends React.Component {
       }
 
       return (
-        <div className={`${orientation} model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
+        <div className={`pane__${resultPane} model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
           <div className="pane__thumb"></div>
           {outputContent}
         </div>
@@ -60,7 +60,7 @@ export class PaneRight extends React.Component {
       const { outputState } = this.props;
 
       return (
-        <ResultDisplay orientation="pane__right" outputState={outputState}>
+        <ResultDisplay resultPane="right" outputState={outputState}>
           {this.props.children}
         </ResultDisplay>
       )
@@ -76,7 +76,7 @@ export class PaneBottom extends React.Component {
     const { outputState } = this.props;
 
     return (
-      <ResultDisplay orientation="pane__bottom" outputState={outputState}>
+      <ResultDisplay resultPane="bottom" outputState={outputState}>
         {this.props.children}
       </ResultDisplay>
     )
