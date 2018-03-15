@@ -1,25 +1,22 @@
 import logging
 from typing import List, Set, Dict, Tuple, Union
-from collections import defaultdict
 
 from overrides import overrides
 
-import numpy
 import torch
 from torch.autograd import Variable
-from torch.nn.modules.rnn import LSTMCell
-from torch.nn.modules.linear import Linear
 
 from allennlp.common import Params
-from allennlp.common import util as common_util
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.nn.decoding import DecoderState, DecoderStep, DecoderTrainer
+from allennlp.nn.decoding import ExpectedRiskMinimization
 from allennlp.nn import util as nn_util
 from allennlp.models.model import Model
+from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_state import NlvrDecoderState
+from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_step import NlvrDecoderStep
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.type_declarations import GrammarState
 from allennlp.semparse.worlds import NlvrWorld
@@ -52,9 +49,6 @@ class NlvrSemanticParser(Model):
         but they are structured the same way.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
-    decoder_trainer : ``DecoderTrainer``
-        The structured learning algorithm used to train the decoder (which also trains the encoder,
-        but it's applied to the decoder outputs).
     beam_size : ``int``
     normalize_by_length : ``bool``, optional (default=True)
         Should the log probabilities be normalized by length before renormalizing them? Edunov et
@@ -108,8 +102,9 @@ class NlvrSemanticParser(Model):
         self._nonterminal_embedder = nonterminal_embedder
         self._terminal_embedder = terminal_embedder
         self._encoder = encoder
-        self._decoder_trainer = decoder_trainer
-        self._max_decoding_steps = max_decoding_steps
+        self._decoder_trainer = ExpectedRiskMinimization(beam_size,
+                                                         normalize_by_length,
+                                                         max_decoding_steps)
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
 
         # Instantiating an empty NlvrWorld just to get the number of terminals.
@@ -212,7 +207,6 @@ class NlvrSemanticParser(Model):
                                          checklist_targets,
                                          checklist_masks,
                                          initial_checklist_list,
-                                         self._checklist_cost_weight,
                                          list(range(batch_size)),
                                          [[] for _ in range(batch_size)],
                                          initial_score_list,
@@ -509,12 +503,97 @@ class NlvrSemanticParser(Model):
         output_dict["predicted_actions"] = [action_strings]
         return output_dict
 
+    def _get_state_cost(self, state: NlvrDecoderState) -> torch.Tensor:
+        """
+        Return the costs a finished state. Since it is a finished state, the group size will be 1,
+        and hence we'll return just one cost.
+        """
+        if not state.is_finished():
+            raise RuntimeError("get_costs() is not defined for unfinished states!")
+        instance_checklist_target = state.checklist_target[0]
+        instance_checklist = state.checklist[0]
+        instance_checklist_mask = state.checklist_mask[0]
+
+        # Our checklist cost is a sum of squared error from where we want to be, making sure we
+        # take into account the mask.
+        checklist_balance = instance_checklist_target - instance_checklist
+        checklist_balance = checklist_balance * instance_checklist_mask
+        checklist_cost = torch.sum((checklist_balance) ** 2)
+
+        # This is the number of items on the agenda that we want to see in the decoded sequence.
+        # We use this as the denotation cost if the path is incorrect.
+        # Note: If we are penalizing the model for producing non-agenda actions, this is not the
+        # upper limit on the checklist cost. That would be the number of terminal actions.
+        denotation_cost = torch.sum(instance_checklist_target.float())
+        checklist_cost = self._checklist_cost_weight * checklist_cost
+        if self._denotation_is_correct(state):
+            cost = checklist_cost
+        else:
+            cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost
+        return cost
+
+    def _denotation_is_correct(self) -> bool:
+        """
+        Returns whether action history in the state evaluates to the correct denotation. Only
+        defined when the state is finished.
+        """
+        assert self.is_finished(), "Cannot compute denotations for unfinished states!"
+        # Since this is a finished state, its group size must be 1.
+        batch_index = self.batch_indices[0]
+        world = self.worlds[batch_index]
+        label_string = self.label_strings[batch_index]
+        history = self.action_history[0]
+        action_sequence = [self._get_action_string(action) for action in history]
+        logical_form = world.get_logical_form(action_sequence)
+        denotation = world.execute(logical_form)
+        is_correct = str(denotation).lower() == label_string.lower()
+        return is_correct
+
+    def _get_state_info(self, state) -> Dict[str, List]:
+        """
+        This method is here for debugging purposes, in case you want to look at the what the model
+        is learning. It may be inefficient to call it while training the model on real data.
+        """
+        if len(state.batch_indices) == 1 and state.is_finished():
+            costs = [float(self._get_state_cost(state).data.cpu().numpy())]
+        else:
+            costs = []
+        model_scores = [float(score.data.cpu().numpy()) for score in state.score]
+        all_actions = state.possible_actions[0]
+        action_sequences = [[self._get_action_string(all_actions[action]) for action in history]
+                            for history in state.action_history]
+        agenda_sequences = []
+        all_agenda_indices = []
+        for agenda, checklist_target in zip(state.terminal_actions, state.checklist_target):
+            agenda_indices = []
+            for action, is_wanted in zip(agenda, checklist_target):
+                action_int = int(action.data.cpu().numpy())
+                is_wanted_int = int(is_wanted.data.cpu().numpy())
+                if is_wanted_int != 0:
+                    agenda_indices.append(action_int)
+            agenda_sequences.append([self._get_action_string(all_actions[action])
+                                     for action in agenda_indices])
+            all_agenda_indices.append(agenda_indices)
+        return {"agenda": agenda_sequences,
+                "agenda_indices": all_agenda_indices,
+                "history": action_sequences,
+                "history_indices": state.action_history,
+                "costs": costs,
+                "scores": model_scores}
+
+    @staticmethod
+    def _get_action_string(production_rule: ProductionRuleArray) -> str:
+        return "%s -> %s" % (production_rule["left"][0], production_rule["right"][0])
+
+
     @classmethod
     def from_params(cls, vocab, params: Params) -> 'NlvrSemanticParser':
         sentence_embedder_params = params.pop("sentence_embedder")
         sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        max_decoding_steps = params.pop("max_decoding_steps")
+        beam_size = params.pop_int('beam_size')
+        normalize_by_length = params.pop_bool('normalize_by_length', True)
+        max_decoding_steps = params.pop_int("max_decoding_steps")
         nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
         terminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("terminal_embedder"))
         decoder_trainer = DecoderTrainer.from_params(params.pop("decoder_trainer"))
@@ -533,7 +612,9 @@ class NlvrSemanticParser(Model):
                    terminal_embedder=terminal_embedder,
                    encoder=encoder,
                    decoder_trainer=decoder_trainer,
+                   beam_size=beam_size,
                    max_decoding_steps=max_decoding_steps,
+                   normalize_by_length=normalize_by_length,
                    attention_function=attention_function,
                    checklist_cost_weight=checklist_cost_weight,
                    dynamic_cost_weight=dynamic_cost_weight,

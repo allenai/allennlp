@@ -1,4 +1,18 @@
+from typing import List, Dict, Tuple
+from collections import defaultdict
 
+from overrides import overrides
+
+import torch
+from torch.autograd import Variable
+from torch.nn.modules.rnn import LSTMCell
+from torch.nn.modules.linear import Linear
+
+from allennlp.common import util as common_util
+from allennlp.modules import Attention
+from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.nn.decoding import DecoderStep
+from allennlp.nn import util as nn_util
 
 
 class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):

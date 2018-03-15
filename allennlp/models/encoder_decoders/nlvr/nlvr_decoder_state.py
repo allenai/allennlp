@@ -1,3 +1,13 @@
+from typing import List, Dict, Tuple
+
+import torch
+from torch.autograd import Variable
+
+from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.nn.decoding import DecoderState
+from allennlp.semparse.type_declarations import GrammarState
+from allennlp.semparse.worlds import NlvrWorld
+
 
 class NlvrDecoderState(DecoderState['NlvrDecoderState']):
     """
@@ -24,11 +34,6 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
     checklist : ``List[Variable]``
         A checklist for each instance indicating how many times each action in its agenda has
         been chosen previously. It contains the actual counts of the agenda actions.
-    checklist_cost_weight : ``float``
-        The cost associated with each state has two components, one based on how well its action
-        sequence covers the agenda, and the other based on whether the sequence evaluates to the
-        correct denotation. The final cost is a linear combination of the two, and this weight is
-        the one associated with the checklist cost.
     batch_indices : ``List[int]``
         Passed to super class; see docs there.
     action_history : ``List[List[int]]``
@@ -85,7 +90,6 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                  checklist_target: List[torch.Tensor],
                  checklist_masks: List[torch.Tensor],
                  checklist: List[Variable],
-                 checklist_cost_weight: float,
                  batch_indices: List[int],
                  action_history: List[List[int]],
                  score: List[torch.Tensor],
@@ -106,7 +110,6 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         self.checklist_target = checklist_target
         self.checklist_mask = checklist_masks
         self.checklist = checklist
-        self.checklist_cost_weight = checklist_cost_weight
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
         self.previous_action_embedding = previous_action_embedding
@@ -197,31 +200,6 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
             checklist_balances.append(checklist_balance)
         return checklist_balances
 
-    def get_cost(self) -> Variable:
-        """
-        Return the costs a finished state. Since it is a finished state, the group size will be 1,
-        and hence we'll return just one cost.
-        """
-        if not self.is_finished():
-            raise RuntimeError("get_costs() is not defined for unfinished states!")
-        instance_checklist_target = self.checklist_target[0]
-        instance_checklist = self.checklist[0]
-        instance_checklist_mask = self.checklist_mask[0]
-        checklist_cost = - self.score_single_checklist(instance_checklist,
-                                                       instance_checklist_target,
-                                                       instance_checklist_mask)
-        # This is the number of items on the agenda that we want to see in the decoded sequence.
-        # We use this as the denotation cost if the path is incorrect.
-        # Note: If we are penalizing the model for producing non-agenda actions, this is not the
-        # upper limit on the checklist cost. That would be the number of terminal actions.
-        denotation_cost = torch.sum(instance_checklist_target.float())
-        checklist_cost = self.checklist_cost_weight * checklist_cost
-        if self.denotation_is_correct():
-            cost = checklist_cost
-        else:
-            cost = checklist_cost + (1 - self.checklist_cost_weight) * denotation_cost
-        return cost
-
     @classmethod
     def score_single_checklist(cls,
                                instance_checklist: Variable,
@@ -261,7 +239,6 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                                 checklist_target,
                                 checklist_masks,
                                 checklist,
-                                states[0].checklist_cost_weight,
                                 batch_indices,
                                 action_histories,
                                 scores,

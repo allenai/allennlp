@@ -1,4 +1,22 @@
+from collections import defaultdict
+from typing import Dict, List, Set, Tuple
 
+from overrides import overrides
+
+import torch
+from torch.autograd import Variable
+from torch.nn.modules.rnn import LSTMCell
+from torch.nn.modules.linear import Linear
+
+from allennlp.common import util as common_util
+from allennlp.common.checks import check_dimensions_match
+from allennlp.common.util import pad_sequence_to_length
+from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_state import WikiTablesDecoderState
+from allennlp.modules import Attention, FeedForward
+from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules.token_embedders import Embedding
+from allennlp.nn import util
+from allennlp.nn.decoding import DecoderStep
 
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):

@@ -1,4 +1,10 @@
+from typing import Dict, List, Tuple
 
+import torch
+
+from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.nn.decoding import DecoderState
+from allennlp.semparse.type_declarations import GrammarState
 
 
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that

@@ -1,27 +1,25 @@
-from collections import defaultdict
 from typing import Any, Dict, List, Set, Tuple
 
 from overrides import overrides
 
 import torch
 from torch.autograd import Variable
-from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 
 from allennlp.common import Params
-from allennlp.common import util as common_util
 from allennlp.common.checks import check_dimensions_match
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder, FeedForward
+from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
+from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_state import WikiTablesDecoderState
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
-from allennlp.nn.decoding import BeamSearch, DecoderTrainer, DecoderState, DecoderStep
+from allennlp.nn.decoding import BeamSearch, DecoderTrainer
 from allennlp.semparse.type_declarations import GrammarState
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
