@@ -1125,6 +1125,11 @@ svg {
   min-height: 34.375em
 }
 
+.pane__top {
+  min-height: 40em;
+  height: auto;
+}
+
 .pane__bottom {
   min-height: 100%;
   height: auto;
