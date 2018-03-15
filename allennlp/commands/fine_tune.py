@@ -9,18 +9,17 @@ import argparse
 import json
 import logging
 import os
-import sys
 from copy import deepcopy
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.train import datasets_from_params
-from allennlp.common import Params, TeeLogger, Tqdm
-from allennlp.common.util import prepare_environment
+from allennlp.common import Params
+from allennlp.common.util import prepare_environment, prepare_global_logging
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
-from allennlp.models.model import Model
+from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -139,22 +138,8 @@ def fine_tune_model(model: Model,
         down tqdm's output to only once every 10 seconds.
     """
     prepare_environment(params)
-
     os.makedirs(serialization_dir)
-
-    # TODO(mattg): pull this block out into a separate function (maybe just add this to
-    # `prepare_environment`?)
-    Tqdm.set_slower_interval(file_friendly_logging)
-    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
-                           sys.stdout,
-                           file_friendly_logging)
-    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
-                           sys.stderr,
-                           file_friendly_logging)
-    handler = logging.FileHandler(os.path.join(serialization_dir, "python_logging.log"))
-    handler.setLevel(logging.INFO)
-    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
-    logging.getLogger().addHandler(handler)
+    prepare_global_logging(serialization_dir, file_friendly_logging)
 
     serialization_params = deepcopy(params).as_dict(quiet=True)
     with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
@@ -190,7 +175,15 @@ def fine_tune_model(model: Model,
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
-    metrics = trainer.train()
+    try:
+        metrics = trainer.train()
+    except KeyboardInterrupt:
+        # if we have completed an epoch, try to create a model archive.
+        if os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
+            logging.info("Fine-tuning interrupted by the user. Attempting to create "
+                         "a model archive using the current best epoch weights.")
+            archive_model(serialization_dir, files_to_archive=params.files_to_archive)
+        raise
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
