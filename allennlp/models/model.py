@@ -242,7 +242,7 @@ class Model(torch.nn.Module, Registrable):
         # want the code to look for it, so we remove it from the parameters here.
         _remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab, model_params)
-        if not model.__class__.__name__ == "BidafEnsemble":
+        if not model.__class__.__name__ == "BidafEnsemble": # TODO(michaels): horrible hack
             model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
             model.load_state_dict(model_state)
 

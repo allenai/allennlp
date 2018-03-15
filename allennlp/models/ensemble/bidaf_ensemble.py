@@ -29,11 +29,30 @@ class BidafEnsemble(Ensemble):
                 span_end: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
 
+        import copy
+
         subresults = []
         for i, submodel in enumerate(self.submodels):
-            subresults.append(submodel.forward(question, passage, span_start, span_end, metadata))
+            question_copy = {}
+            for k, v in question.items():
+                question_copy[k] = v.clone()
+            passage_copy = {}
+            for k, v in passage.items():
+                passage_copy[k] = v.clone()
+            span_start_copy = span_start.clone()
+            span_end_copy = span_end.clone()
+            metadata_copy = copy.deepcopy(metadata)
+            subresults.append(self.submodels[0].forward(question_copy, passage_copy, span_start_copy, span_end_copy, metadata_copy))
 
         batch_size = len(subresults[0]["best_span"])
+
+        for i in range(batch_size):
+            print(subresults[0]["best_span_str"][i])
+            print(subresults[1]["best_span_str"][i])
+            print()
+
+        assert subresults[0]["best_span_str"] == subresults[0]["best_span_str"], "impossible"
+        assert subresults[0]["best_span_str"] == subresults[1]["best_span_str"], "unexplainable"
 
         #TODO(michaels): fix float arithmatic
         output = {
