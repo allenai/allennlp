@@ -14,7 +14,7 @@ import time
 import re
 import datetime
 import traceback
-from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
+from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, Set
 
 import torch
 import torch.optim.lr_scheduler
@@ -41,7 +41,7 @@ def is_sparse(tensor):
     return tensor.data.is_sparse
 
 
-def sparse_clip_norm(parameters, max_norm, norm_type=2):
+def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     """Clips gradient norm of an iterable of parameters.
 
     The norm is computed over all gradients together, as if they were
@@ -59,7 +59,7 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2):
 
     Returns
     -------
-        Total norm of the parameters (viewed as a single vector).
+    Total norm of the parameters (viewed as a single vector).
     """
     # pylint: disable=invalid-name,protected-access
     parameters = list(filter(lambda p: p.grad is not None, parameters))
@@ -201,7 +201,7 @@ class Trainer:
             this schedule at the end of each epoch. If you use
             :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`, this will use the ``validation_metric``
             provided to determine if learning has plateaued.  To support updating the learning
-            rate on every batch, this can optionally implement ``step_batch(batch_num)`` which
+            rate on every batch, this can optionally implement ``step_batch(batch_num_total)`` which
             updates the learning rate given the batch number.
         summary_interval: ``int``, optional, (default = 100)
             Number of batches between logging scalars to tensorboard
@@ -237,7 +237,6 @@ class Trainer:
         self._model_save_interval = model_save_interval
 
         self._grad_norm = grad_norm
-        self._batch_grad_norm = None
         self._grad_clipping = grad_clipping
         self._learning_rate_scheduler = learning_rate_scheduler
 
@@ -271,6 +270,9 @@ class Trainer:
         self._summary_interval = summary_interval
         self._histogram_interval = histogram_interval
         self._log_histograms_this_batch = False
+        # We keep the total batch number as a class variable because it
+        # is used inside a closure for the hook which logs activations in
+        # ``_enable_activation_logging``.
         self._batch_num_total = 0
 
         self._last_log = 0.0  # time of last logging
@@ -333,15 +335,15 @@ class Trainer:
 
                 module.register_forward_hook(hook)
 
-    def _rescale_gradients(self) -> None:
+    def _rescale_gradients(self) -> Optional[float]:
         """
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
         """
         if self._grad_norm:
             parameters_to_clip = [p for p in self._model.parameters()
                                   if p.grad is not None]
-            self._batch_grad_norm = sparse_clip_norm(parameters_to_clip, self._grad_norm)
-
+            return sparse_clip_norm(parameters_to_clip, self._grad_norm)
+        return None
     def _data_parallel(self, batch):
         """
         Do the forward pass using multiple GPUs.  This is a simplification
@@ -411,7 +413,7 @@ class Trainer:
         self._last_log = time.time()
         last_save_time = time.time()
 
-        batch_num = 0
+        batches_this_epoch = 0
         if self._batch_num_total is None:
             self._batch_num_total = 0
 
@@ -420,7 +422,7 @@ class Trainer:
 
         logger.info("Training")
         for batch in train_generator_tqdm:
-            batch_num += 1
+            batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
@@ -436,7 +438,7 @@ class Trainer:
             # .cpu() is a no-op if you aren't using GPUs.
             train_loss += loss.data.cpu().numpy()
 
-            self._rescale_gradients()
+            batch_grad_norm = self._rescale_gradients()
 
             self._update_learning_rate(None, batch_num_total=batch_num_total)
 
@@ -458,46 +460,20 @@ class Trainer:
                 self._optimizer.step()
 
             # Update the description with the latest metrics
-            metrics = self._get_metrics(train_loss, batch_num)
+            metrics = self._get_metrics(train_loss, self._batch_num_total)
             description = self._description_from_metrics(metrics)
 
             train_generator_tqdm.set_description(description, refresh=False)
 
             # Log parameter values to Tensorboard
             if batch_num_total % self._summary_interval == 0:
-                for name, param in self._model.named_parameters():
-                    self._tensorboard.add_train_scalar("parameter_mean/" + name,
-                                                       param.data.mean(),
-                                                       batch_num_total)
-                    self._tensorboard.add_train_scalar("parameter_std/" + name, param.data.std(), batch_num_total)
-                    if param.grad is not None:
-                        if is_sparse(param.grad):
-                            # pylint: disable=protected-access
-                            grad_data = param.grad.data._values()
-                        else:
-                            grad_data = param.grad.data
-                        self._tensorboard.add_train_scalar("gradient_mean/" + name,
-                                                           grad_data.mean(),
-                                                           batch_num_total)
-                        self._tensorboard.add_train_scalar("gradient_std/" + name,
-                                                           grad_data.std(),
-                                                           batch_num_total)
+                self._parameter_and_gradient_statistics_to_tensorboard(batch_num_total, batch_grad_norm)
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
                 self._metrics_to_tensorboard(batch_num_total,
                                              {"epoch_metrics/" + k: v for k, v in metrics.items()})
-                # norm of gradients
-                if self._batch_grad_norm is not None:
-                    self._tensorboard.add_train_scalar("gradient_norm",
-                                                       self._batch_grad_norm,
-                                                       batch_num_total)
 
-            # Histogram logging
             if self._log_histograms_this_batch:
-                for name, param in self._model.named_parameters():
-                    if name in histogram_parameters:
-                        self._tensorboard.add_train_histogram("parameter_histogram/" + name,
-                                                              param,
-                                                              batch_num_total)
+                self._histograms_to_tensorboard(batch_num_total, histogram_parameters)
 
             # Save model if needed.
             if self._model_save_interval is not None and (
@@ -508,7 +484,7 @@ class Trainer:
                         '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
 
-        return self._get_metrics(train_loss, batch_num, reset=True)
+        return self._get_metrics(train_loss, batches_this_epoch, reset=True)
 
     def _should_stop_early(self, metric_history: List[float]) -> bool:
         """
@@ -522,6 +498,47 @@ class Trainer:
                 return max(metric_history[-self._patience:]) < max(metric_history)
 
         return False
+
+    def _parameter_and_gradient_statistics_to_tensorboard(self, # pylint: disable=invalid-name
+                                                          epoch: int,
+                                                          batch_grad_norm: float) -> None:
+        """
+        Send the mean and std of all parameters and gradients to tensorboard, as well
+        as logging the average gradient norm.
+        """
+        # Log parameter values to Tensorboard
+        for name, param in self._model.named_parameters():
+            self._tensorboard.add_train_scalar("parameter_mean/" + name,
+                                               param.data.mean(),
+                                               epoch)
+            self._tensorboard.add_train_scalar("parameter_std/" + name, param.data.std(), epoch)
+            if param.grad is not None:
+                if is_sparse(param.grad):
+                    # pylint: disable=protected-access
+                    grad_data = param.grad.data._values()
+                else:
+                    grad_data = param.grad.data
+                self._tensorboard.add_train_scalar("gradient_mean/" + name,
+                                                   grad_data.mean(),
+                                                   epoch)
+                self._tensorboard.add_train_scalar("gradient_std/" + name,
+                                                   grad_data.std(),
+                                                   epoch)
+        # norm of gradients
+        if batch_grad_norm is not None:
+            self._tensorboard.add_train_scalar("gradient_norm",
+                                               batch_grad_norm,
+                                               epoch)
+
+    def _histograms_to_tensorboard(self, epoch: int, histogram_parameters: Set[str]) -> None:
+        """
+        Send histograms of parameters to tensorboard.
+        """
+        for name, param in self._model.named_parameters():
+            if name in histogram_parameters:
+                self._tensorboard.add_train_histogram("parameter_histogram/" + name,
+                                                      param,
+                                                      epoch)
 
     def _metrics_to_tensorboard(self,
                                 epoch: int,
@@ -608,20 +625,20 @@ class Trainer:
         num_validation_batches = self._iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
-        batch_num = 0
+        batches_this_epoch = 0
         val_loss = 0
         for batch in val_generator_tqdm:
-            batch_num += 1
+            batches_this_epoch += 1
 
             loss = self._batch_loss(batch, for_training=False)
             val_loss += loss.data.cpu().numpy()
 
             # Update the description with the latest metrics
-            val_metrics = self._get_metrics(val_loss, batch_num)
+            val_metrics = self._get_metrics(val_loss, batches_this_epoch)
             description = self._description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
-        return val_loss, batch_num
+        return val_loss, batches_this_epoch
 
     def train(self) -> Dict[str, Any]:
         """
