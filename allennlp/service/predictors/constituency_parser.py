@@ -14,10 +14,10 @@ from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 # Make the links to POS tag nodes render as "pos",
 # to distinguish them from constituency tags. The
 # actual tag is still visible within the node.
-LINK_TO_LABEL = {x: "pos" for x in TAG_MAP.keys()}
+LINK_TO_LABEL = {x: "pos" for x in TAG_MAP}
 
 # POS tags have a unified colour.
-NODE_TYPE_TO_STYLE = {x: ["color0"] for x in TAG_MAP.keys()}
+NODE_TYPE_TO_STYLE = {x: ["color0"] for x in TAG_MAP}
 
 # Verb and Noun phrases get their own colour.
 NODE_TYPE_TO_STYLE["NP"] = ["color1"]
