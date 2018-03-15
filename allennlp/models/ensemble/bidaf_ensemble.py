@@ -17,6 +17,10 @@ class BidafEnsemble(Ensemble):
                  submodels: List[BidirectionalAttentionFlow]) -> None:
         super(BidafEnsemble, self).__init__(submodels)
 
+        # Setting this propagates calls to .eval() so dropout is disabled on the submodels in evaluation
+        # and prediction.
+        self.linears = torch.nn.ModuleList(submodels)
+
         self.submodels = submodels
 
         self._squad_metrics = SquadEmAndF1()
@@ -29,32 +33,13 @@ class BidafEnsemble(Ensemble):
                 span_end: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
 
-        import copy
-
         subresults = []
         for i, submodel in enumerate(self.submodels):
-            question_copy = {}
-            for k, v in question.items():
-                question_copy[k] = v.clone()
-            passage_copy = {}
-            for k, v in passage.items():
-                passage_copy[k] = v.clone()
-            span_start_copy = span_start.clone()
-            span_end_copy = span_end.clone()
-            metadata_copy = copy.deepcopy(metadata)
-            subresults.append(self.submodels[0].forward(question_copy, passage_copy, span_start_copy, span_end_copy, metadata_copy))
+            subresults.append(self.submodels[0].forward(question, passage, span_start, span_end, metadata))
 
         batch_size = len(subresults[0]["best_span"])
 
-        for i in range(batch_size):
-            print(subresults[0]["best_span_str"][i])
-            print(subresults[1]["best_span_str"][i])
-            print()
-
-        assert subresults[0]["best_span_str"] == subresults[0]["best_span_str"], "impossible"
-        assert subresults[0]["best_span_str"] == subresults[1]["best_span_str"], "unexplainable"
-
-        #TODO(michaels): fix float arithmatic
+        #TODO(michaels): fix float arithmetic
         output = {
             "best_span": torch.zeros(batch_size, 2)
         }
@@ -104,11 +89,6 @@ class BidafEnsemble(Ensemble):
                     assert best_span_string == best_span_str, f"{best_span_string} != {best_span_str}"
                     x = subresults[0]["best_span_str"][batch]
                     y = subresults[1]["best_span_str"][batch]
-                    print(f"0: {x}")
-                    print(f"1: {y}")
-                    print(best_span_string)
-                    print(answer_texts)
-                    print()
                     self._squad_metrics(best_span_string, answer_texts)
 
         return output
