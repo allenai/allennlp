@@ -9,6 +9,7 @@ from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 
 from allennlp.common import util as common_util
+from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_state import NlvrDecoderState
 from allennlp.modules import Attention
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding import DecoderStep
@@ -122,11 +123,24 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         action_embeddings, embedded_action_mask = self._get_action_embeddings(state,
                                                                               global_actions_to_embed)
 
-        # Note that tha checklist balance has 0s for actions that are masked (see
-        # ``state.get_checklist_balance()``). So, masked actions do not contribute to the
-        # projection of ``predicted_action_emebedding`` below.
+        # This holds a list of checklist balances for this state. Each balance is a float vector
+        # containing just 1s and 0s showing which of the items are filled. We clamp the min at 0 to
+        # ignore the number of times an action is taken. The value at an index will be 1 iff the
+        # target wants an unmasked action to be taken, and it is not yet taken. All elements in
+        # each balance corresponding to masked actions will be 0.
+        checklist_balances = []
+        for instance_target, instance_checklist, checklist_mask in zip(state.checklist_target,
+                                                                       state.checklist,
+                                                                       state.checklist_mask):
+            checklist_balance = torch.clamp(instance_target - instance_checklist, min=0.0)
+            checklist_balance = checklist_balance * checklist_mask
+            checklist_balances.append(checklist_balance)
+
+        # Note that the checklist balance has 0s for actions that are masked (see comment above).
+        # So, masked actions do not contribute to the projection of ``predicted_action_emebedding``
+        # below.
         # (group_size, num_terminals, 1)
-        checklist_balance = torch.stack([x for x in  state.get_checklist_balances()])
+        checklist_balance = torch.stack([x for x in  checklist_balances])
         checklist_balance = checklist_balance.squeeze(2)  # (group_size, num_terminals)
 
         # To predict an action, we'll use a concatenation of the hidden state and attention over
@@ -306,7 +320,6 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                              [state.checklist_target[group_index]],
                                              [state.checklist_mask[group_index]],
                                              [new_checklist],
-                                             state.checklist_cost_weight,
                                              [batch_index],
                                              [new_action_history],
                                              [new_score],

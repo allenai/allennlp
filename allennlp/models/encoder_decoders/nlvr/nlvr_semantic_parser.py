@@ -1,5 +1,5 @@
 import logging
-from typing import List, Set, Dict, Tuple, Union
+from typing import Callable, List, Set, Dict, Tuple, Union
 
 from overrides import overrides
 
@@ -12,7 +12,7 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.nn.decoding import ExpectedRiskMinimization
+from allennlp.nn.decoding import DecoderTrainer, ExpectedRiskMinimization
 from allennlp.nn import util as nn_util
 from allennlp.models.model import Model
 from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_state import NlvrDecoderState
@@ -49,31 +49,27 @@ class NlvrSemanticParser(Model):
         but they are structured the same way.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
-    beam_size : ``int``
-    normalize_by_length : ``bool``, optional (default=True)
-        Should the log probabilities be normalized by length before renormalizing them? Edunov et
-        al. do this in their work.
-    max_decoding_steps : ``int``
-        We use a beam search during decoding; what's the maximum number of steps we should take?
     attention_function : ``SimilarityFunction``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  This is the similarity function we use for that
         attention.
-    checklist_selection_weight : ``float``
-        The mixture weight for combining model probabilities for all actions and probabilities for
-        those in agenda based on how much they contribute to the checklist.
-    checklist_cost_weight : ``float``
+    beam_size : ``int``
+    normalize_beam_score_by_length : ``bool``, optional (default=True)
+        Should the log probabilities be normalized by length before renormalizing them? Edunov et
+        al. do this in their work.
+    max_decoding_steps : ``int``
+        We use a beam search during decoding; what's the maximum number of steps we should take?
+    checklist_cost_weight : ``float``, optional (default=0.8)
         Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
         weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
         denotation accuracy.
-    dynamic_cost_weight : ``Dict[str, Union[int, float]]``
-        A dict containing keys ``wait_num_epochs`` and ``rate`` indicating the number of steps after
-        which we should start decreasing the weight on checklist cost in favor of denotation cost,
-        and the rate at which we should do it. We will decrease the weight in the following way -
-        ``checklist_cost_weight = checklist_cost_weight - rate * checklist_cost_weight`` starting at
-        the apropriate epoch.
-        The weight will remain constant if this is an empty dict.
-    penalize_non_agenda_actions : ``bool``
+    dynamic_cost_weight : ``Dict[str, Union[int, float]]``, optional (default=None)
+        A dict containing keys ``wait_num_epochs`` and ``rate`` indicating the number of steps
+        after which we should start decreasing the weight on checklist cost in favor of denotation
+        cost, and the rate at which we should do it. We will decrease the weight in the following
+        way - ``checklist_cost_weight = checklist_cost_weight - rate * checklist_cost_weight``
+        starting at the apropriate epoch.  The weight will remain constant if this is not provided.
+    penalize_non_agenda_actions : ``bool``, optional (default=False)
         Should we penalize the model for producing terminal actions that are outside the agenda?
     """
     def __init__(self,
@@ -82,14 +78,13 @@ class NlvrSemanticParser(Model):
                  nonterminal_embedder: TextFieldEmbedder,
                  terminal_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 decoder_trainer: DecoderTrainer,
-                 beam_size: int,
-                 normalize_by_length: bool = True,
-                 max_decoding_steps: int,
                  attention_function: SimilarityFunction,
-                 checklist_cost_weight: float,
-                 dynamic_cost_weight: Dict[str, Union[int, float]],
-                 penalize_non_agenda_actions: bool) -> None:
+                 beam_size: int,
+                 max_decoding_steps: int,
+                 normalize_beam_score_by_length: bool = True,
+                 checklist_cost_weight: float = 0.8,
+                 dynamic_cost_weight: Dict[str, Union[int, float]] = None,
+                 penalize_non_agenda_actions: bool = False) -> None:
         super(NlvrSemanticParser, self).__init__(vocab=vocab)
 
         self._sentence_embedder = sentence_embedder
@@ -102,9 +97,8 @@ class NlvrSemanticParser(Model):
         self._nonterminal_embedder = nonterminal_embedder
         self._terminal_embedder = terminal_embedder
         self._encoder = encoder
-        self._decoder_trainer = ExpectedRiskMinimization(beam_size,
-                                                         normalize_by_length,
-                                                         max_decoding_steps)
+        self._decoder_trainer: DecoderTrainer[Callable[[NlvrDecoderState], torch.Tensor]] = \
+                ExpectedRiskMinimization(beam_size, normalize_beam_score_by_length, max_decoding_steps)
         action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
 
         # Instantiating an empty NlvrWorld just to get the number of terminals.
@@ -532,18 +526,19 @@ class NlvrSemanticParser(Model):
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost
         return cost
 
-    def _denotation_is_correct(self) -> bool:
+    def _denotation_is_correct(self, state) -> bool:
         """
         Returns whether action history in the state evaluates to the correct denotation. Only
         defined when the state is finished.
         """
-        assert self.is_finished(), "Cannot compute denotations for unfinished states!"
+        assert state.is_finished(), "Cannot compute denotations for unfinished states!"
         # Since this is a finished state, its group size must be 1.
-        batch_index = self.batch_indices[0]
-        world = self.worlds[batch_index]
-        label_string = self.label_strings[batch_index]
-        history = self.action_history[0]
-        action_sequence = [self._get_action_string(action) for action in history]
+        batch_index = state.batch_indices[0]
+        world = state.worlds[batch_index]
+        label_string = state.label_strings[batch_index]
+        history = state.action_history[0]
+        all_actions = state.possible_actions[0]
+        action_sequence = [self._get_action_string(all_actions[action]) for action in history]
         logical_form = world.get_logical_form(action_sequence)
         denotation = world.execute(logical_form)
         is_correct = str(denotation).lower() == label_string.lower()
@@ -591,19 +586,18 @@ class NlvrSemanticParser(Model):
         sentence_embedder_params = params.pop("sentence_embedder")
         sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        beam_size = params.pop_int('beam_size')
-        normalize_by_length = params.pop_bool('normalize_by_length', True)
-        max_decoding_steps = params.pop_int("max_decoding_steps")
         nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
         terminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("terminal_embedder"))
-        decoder_trainer = DecoderTrainer.from_params(params.pop("decoder_trainer"))
         attention_function_type = params.pop("attention_function", None)
         if attention_function_type is not None:
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
+        beam_size = params.pop_int('beam_size')
+        normalize_beam_score_by_length = params.pop_bool('normalize_beam_score_by_length', True)
+        max_decoding_steps = params.pop_int("max_decoding_steps")
         checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
-        dynamic_cost_weight = params.pop("dynamic_cost_weight", {})
+        dynamic_cost_weight = params.pop("dynamic_cost_weight", None)
         penalize_non_agenda_actions = params.pop_bool("penalize_non_agenda_actions", False)
         params.assert_empty(cls.__name__)
         return cls(vocab,
@@ -611,11 +605,10 @@ class NlvrSemanticParser(Model):
                    nonterminal_embedder=nonterminal_embedder,
                    terminal_embedder=terminal_embedder,
                    encoder=encoder,
-                   decoder_trainer=decoder_trainer,
+                   attention_function=attention_function,
                    beam_size=beam_size,
                    max_decoding_steps=max_decoding_steps,
-                   normalize_by_length=normalize_by_length,
-                   attention_function=attention_function,
+                   normalize_beam_score_by_length=normalize_beam_score_by_length,
                    checklist_cost_weight=checklist_cost_weight,
                    dynamic_cost_weight=dynamic_cost_weight,
                    penalize_non_agenda_actions=penalize_non_agenda_actions)

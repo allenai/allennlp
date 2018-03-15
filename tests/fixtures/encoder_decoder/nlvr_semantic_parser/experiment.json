@@ -39,10 +39,7 @@
       "hidden_size": 10,
       "num_layers": 1
     },
-    "decoder_trainer": {
-      "type": "expected_risk_minimization",
-      "beam_size": 20
-    },
+    "beam_size": 20,
     "max_decoding_steps": 20,
     "attention_function": {"type": "dot_product"},
     "checklist_cost_weight": 0.8,

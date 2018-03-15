@@ -1,18 +1,18 @@
-from typing import Dict, List
+from typing import Callable, Dict, List, TypeVar
 from collections import defaultdict
 
 import torch
 from torch.autograd import Variable
 
-from allennlp.common import Params
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
 from allennlp.nn import util as nn_util
 
+StateType = TypeVar('StateType', bound=DecoderState)  # pylint: disable=invalid-name
 
-@DecoderTrainer.register('expected_risk_minimization')
-class ExpectedRiskMinimization(DecoderTrainer[Callable[[DecoderState], torch.Tensor]]):
+
+class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor]]):
     """
     This class implements a trainer that minimizes the expected value of a cost function over the
     space of some candidate sequences produced by a decoder. We generate the candidate sequences by
@@ -33,7 +33,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[DecoderState], torch.Ten
     def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               supervision: Callable[[DecoderState], torch.Tensor]) -> Dict[str, torch.Tensor]:
+               supervision: Callable[[StateType], torch.Tensor]) -> Dict[str, torch.Tensor]:
         cost_function = supervision
         finished_states = []
         states = [initial_state]
@@ -82,8 +82,8 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[DecoderState], torch.Ten
         return batch_scores
 
     @staticmethod
-    def _get_costs_by_batch(states: List[DecoderState],
-                            cost_function: Callable[[DecoderState], torch.Tensor]) -> Dict[int, List[Variable]]:
+    def _get_costs_by_batch(states: List[StateType],
+                            cost_function: Callable[[StateType], torch.Tensor]) -> Dict[int, List[Variable]]:
         batch_costs: Dict[int, List[Variable]] = defaultdict(list)
         for state in states:
             cost = cost_function(state)

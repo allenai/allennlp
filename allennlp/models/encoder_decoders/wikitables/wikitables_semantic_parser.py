@@ -4,7 +4,6 @@ from overrides import overrides
 
 import torch
 from torch.autograd import Variable
-from torch.nn.modules.linear import Linear
 
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
@@ -19,7 +18,7 @@ from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEnc
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
-from allennlp.nn.decoding import BeamSearch, DecoderTrainer
+from allennlp.nn.decoding import BeamSearch, MaximumMarginalLikelihood
 from allennlp.semparse.type_declarations import GrammarState
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
@@ -56,9 +55,6 @@ class WikiTablesSemanticParser(Model):
         The encoder to use for the input question.
     entity_encoder : ``Seq2VecEncoder``
         The encoder to used for averaging the words of an entity.
-    decoder_trainer : ``DecoderTrainer``
-        The structured learning algorithm used to train the decoder (which also trains the encoder,
-        but it's applied to the decoder outputs).
     decoder_beam_search : ``BeamSearch``
         When we're not training, this is how we will do decoding.
     max_decoding_steps : ``int``
@@ -89,7 +85,6 @@ class WikiTablesSemanticParser(Model):
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
                  mixture_feedforward: FeedForward,
-                 decoder_trainer: DecoderTrainer,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction,
@@ -99,7 +94,6 @@ class WikiTablesSemanticParser(Model):
         self._question_embedder = question_embedder
         self._encoder = encoder
         self._entity_encoder = TimeDistributed(entity_encoder)
-        self._decoder_trainer = decoder_trainer
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._nonterminal_embedder = nonterminal_embedder
@@ -126,6 +120,7 @@ class WikiTablesSemanticParser(Model):
         else:
             self._linking_params = None
 
+        self._decoder_trainer = MaximumMarginalLikelihood()
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
@@ -305,8 +300,7 @@ class WikiTablesSemanticParser(Model):
         if self.training:
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
-                                                target_action_sequences,
-                                                target_mask)
+                                                (target_action_sequences, target_mask))
         else:
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
@@ -316,8 +310,7 @@ class WikiTablesSemanticParser(Model):
             if target_action_sequences is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
-                                                               target_action_sequences,
-                                                               target_mask)['loss']
+                                                               (target_action_sequences, target_mask))['loss']
             num_steps = self._max_decoding_steps
             # This tells the state to start keeping track of debug info, which we'll pass along in
             # our output dictionary.
@@ -831,7 +824,6 @@ class WikiTablesSemanticParser(Model):
             mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
         else:
             mixture_feedforward = None
-        decoder_trainer = DecoderTrainer.from_params(params.pop("decoder_trainer"))
         decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         # If no attention function is specified, we should not use attention, not attention with
         # default similarity function.
@@ -850,7 +842,6 @@ class WikiTablesSemanticParser(Model):
                    encoder=encoder,
                    entity_encoder=entity_encoder,
                    mixture_feedforward=mixture_feedforward,
-                   decoder_trainer=decoder_trainer,
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function,

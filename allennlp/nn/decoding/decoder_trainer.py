@@ -5,7 +5,7 @@ import torch
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 
-SupervisionType = TypeVar('SupervisionType')
+SupervisionType = TypeVar('SupervisionType')  # pylint: disable=invalid-name
 
 class DecoderTrainer(Generic[SupervisionType]):
     """

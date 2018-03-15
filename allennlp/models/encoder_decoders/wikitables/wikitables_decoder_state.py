@@ -115,14 +115,12 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         """
         return [state.get_valid_actions() for state in self.grammar_state]
 
-    # @overrides  - overrides can't handle the generics we're using here, apparently
     def is_finished(self) -> bool:
         if len(self.batch_indices) != 1:
             raise RuntimeError("is_finished() is only defined with a group_size of 1")
         return self.grammar_state[0].is_finished()
 
     @classmethod
-    # @overrides  - overrides can't handle the generics we're using here, apparently
     def combine_states(cls, states: List['WikiTablesDecoderState']) -> 'WikiTablesDecoderState':
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
         action_histories = [action_history for state in states for action_history in state.action_history]

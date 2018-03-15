@@ -9,8 +9,8 @@ from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.testing import ModelTestCase
 from allennlp.models import Model, WikiTablesSemanticParser
-from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderState
-from allennlp.models.encoder_decoders.wikitables_semantic_parser import WikiTablesDecoderStep
+from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_state import WikiTablesDecoderState
+from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.modules import SimilarityFunction
 from allennlp.semparse.type_declarations import GrammarState
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL

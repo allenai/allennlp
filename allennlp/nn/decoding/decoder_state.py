@@ -1,7 +1,6 @@
-from typing import Generic, List, Tuple, TypeVar
+from typing import Generic, List, TypeVar
 
 import torch
-from torch.autograd import Variable
 
 # Note that the bound here is `DecoderState` itself.  This is what lets us have methods that take
 # lists of a `DecoderState` subclass and output structures with the subclass.  Really ugly that we

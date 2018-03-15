@@ -5,7 +5,6 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 import torch
 from torch.autograd import Variable
 
-from allennlp.common import Params
 from allennlp.nn import util
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
@@ -14,7 +13,6 @@ from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@DecoderTrainer.register('max_marginal_likelihood')
 class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]]):
     """
     This class trains a decoder by maximizing the marginal likelihood of the targets.  That is,
@@ -54,9 +52,9 @@ class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]
             for next_state in decode_step.take_step(grouped_state, allowed_actions=allowed_actions):
                 actions_taken.add((next_state.batch_indices[0], tuple(next_state.action_history[0])))
                 if next_state.is_finished():
-                    finished_states.append(finished)
+                    finished_states.append(next_state)
                 else:
-                    next_states.append(not_finished)
+                    next_states.append(next_state)
             states = next_states
             self._check_all_actions_taken(actions_taken, grouped_state, allowed_actions)
 
