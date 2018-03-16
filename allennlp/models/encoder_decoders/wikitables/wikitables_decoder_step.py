@@ -15,7 +15,7 @@ from allennlp.modules import Attention, FeedForward
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
-from allennlp.nn.decoding import DecoderStep
+from allennlp.nn.decoding import DecoderStep, RnnState
 
 
 class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
@@ -64,10 +64,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # the new hidden state and the new attention to predict an output, then yield new states.
         # Each new state corresponds to one valid action that can be taken from the current state,
         # and they are ordered by their probability of being selected.
-        attended_question = torch.stack([x for x in state.attended_question])
-        hidden_state = torch.stack([x for x in state.hidden_state])
-        memory_cell = torch.stack([x for x in state.memory_cell])
-        previous_action_embedding = torch.stack([x for x in state.previous_action_embedding])
+        attended_question = torch.stack([rnn_state.attended_input for rnn_state in state.rnn_state])
+        hidden_state = torch.stack([rnn_state.hidden_state for rnn_state in state.rnn_state])
+        memory_cell = torch.stack([rnn_state.memory_cell for rnn_state in state.rnn_state])
+        previous_action_embedding = torch.stack([rnn_state.previous_action_embedding
+                                                 for rnn_state in state.rnn_state])
 
         # (group_size, decoder_input_dim)
         decoder_input = self._input_projection_layer(torch.cat([attended_question,
@@ -76,8 +77,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
 
         # (group_size, encoder_output_dim)
-        encoder_outputs = torch.stack([state.encoder_outputs[i] for i in state.batch_indices])
-        encoder_output_mask = torch.stack([state.encoder_output_mask[i] for i in state.batch_indices])
+        encoder_outputs = torch.stack([state.rnn_state[i].encoder_outputs for i in state.batch_indices])
+        encoder_output_mask = torch.stack([state.rnn_state[i].encoder_output_mask for i in state.batch_indices])
         attended_question, attention_weights = self.attend_on_question(hidden_state,
                                                                        encoder_outputs,
                                                                        encoder_output_mask)
@@ -288,7 +289,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
                           for action_list in actions_to_embed]
         # Shape: (group_size, num_actions)
-        action_tensor = Variable(state.encoder_output_mask[0].data.new(padded_actions).long())
+        action_tensor = Variable(state.score[0].data.new(padded_actions).long())
         # `state.action_embeddings` is shape (total_num_actions, action_embedding_dim).
         # We want to select from state.action_embeddings using `action_tensor` to get a tensor of
         # shape (group_size, num_actions, action_embedding_dim).  Unfortunately, the index_select
@@ -370,8 +371,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         padded_types = [common_util.pad_sequence_to_length(type_list, max_num_actions)
                         for type_list in entity_types]
         # Shape: (group_size, num_actions)
-        action_tensor = Variable(state.encoder_output_mask[0].data.new(padded_actions).long())
-        type_tensor = Variable(state.encoder_output_mask[0].data.new(padded_types).long())
+        action_tensor = Variable(state.score[0].data.new(padded_actions).long())
+        type_tensor = Variable(state.score[0].data.new(padded_types).long())
 
         # To get the type embedding tensor, we just use an embedding matrix on the list of entity
         # types.
@@ -477,16 +478,19 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                     new_debug_info = [state.debug_info[group_index] + [debug_info]]
                 else:
                     new_debug_info = None
+
+                new_rnn_state = RnnState(hidden_state[group_index],
+                                         memory_cell[group_index],
+                                         action_embedding,
+                                         attended_question[group_index],
+                                         state.rnn_state[group_index].encoder_outputs,
+                                         state.rnn_state[group_index].encoder_output_mask)
+
                 new_state = WikiTablesDecoderState(batch_indices=[batch_index],
                                                    action_history=[new_action_history],
                                                    score=[new_score],
-                                                   hidden_state=[hidden_state[group_index]],
-                                                   memory_cell=[memory_cell[group_index]],
-                                                   previous_action_embedding=[action_embedding],
-                                                   attended_question=[attended_question[group_index]],
+                                                   rnn_state=[new_rnn_state],
                                                    grammar_state=[new_grammar_state],
-                                                   encoder_outputs=state.encoder_outputs,
-                                                   encoder_output_mask=state.encoder_output_mask,
                                                    action_embeddings=state.action_embeddings,
                                                    action_indices=state.action_indices,
                                                    possible_actions=state.possible_actions,

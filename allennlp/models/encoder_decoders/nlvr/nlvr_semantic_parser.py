@@ -12,7 +12,7 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.nn.decoding import DecoderTrainer, ExpectedRiskMinimization
+from allennlp.nn.decoding import DecoderTrainer, ExpectedRiskMinimization, RnnState
 from allennlp.nn import util as nn_util
 from allennlp.models.model import Model
 from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_state import NlvrDecoderState
@@ -188,34 +188,34 @@ class NlvrSemanticParser(Model):
                                                                   encoder_outputs, sentence_mask)
         initial_score_list = [nn_util.new_variable_with_data(agenda, torch.Tensor([0.0])) for i in
                               range(batch_size)]
-        initial_hidden_state = [final_encoder_output[i] for i in range(batch_size)]
-        initial_memory_cell = [memory_cell[i] for i in range(batch_size)]
-        initial_action_embedding_list = [initial_action_embedding for _ in range(batch_size)]
-        initial_grammar_state = [self._create_grammar_state(world[i], actions[i]) for i in
-                                 range(batch_size)]
-        initial_attended_sentence = [attended_sentence[i] for i in range(batch_size)]
         encoder_outputs_list = [encoder_outputs[i] for i in range(batch_size)]
         sentence_mask_list = [sentence_mask[i] for i in range(batch_size)]
+        initial_rnn_state = []
+        for i in range(batch_size):
+            initial_rnn_state.append(RnnState(final_encoder_output[i],
+                                              memory_cell[i],
+                                              initial_action_embedding,
+                                              attended_sentence[i],
+                                              encoder_outputs_list,
+                                              sentence_mask_list))
+
+        initial_grammar_state = [self._create_grammar_state(world[i], actions[i]) for i in
+                                 range(batch_size)]
         worlds_list = [world[i] for i in range(batch_size)]
-        initial_state = NlvrDecoderState(all_terminal_actions,
-                                         checklist_targets,
-                                         checklist_masks,
-                                         initial_checklist_list,
-                                         list(range(batch_size)),
-                                         [[] for _ in range(batch_size)],
-                                         initial_score_list,
-                                         initial_hidden_state,
-                                         initial_memory_cell,
-                                         initial_action_embedding_list,
-                                         initial_attended_sentence,
-                                         initial_grammar_state,
-                                         encoder_outputs_list,
-                                         sentence_mask_list,
-                                         action_embeddings,
-                                         action_indices,
-                                         actions,
-                                         worlds_list,
-                                         label_strings)
+        initial_state = NlvrDecoderState(batch_indices=list(range(batch_size)),
+                                         action_history=[[] for _ in range(batch_size)],
+                                         score=initial_score_list,
+                                         rnn_state=initial_rnn_state,
+                                         grammar_state=initial_grammar_state,
+                                         terminal_actions=all_terminal_actions,
+                                         checklist_target=checklist_targets,
+                                         checklist_masks=checklist_masks,
+                                         checklist=initial_checklist_list,
+                                         action_embeddings=action_embeddings,
+                                         action_indices=action_indices,
+                                         possible_actions=actions,
+                                         worlds=worlds_list,
+                                         label_strings=label_strings)
 
         outputs = self._decoder_trainer.decode(initial_state, self._decoder_step, self._get_state_cost)
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]

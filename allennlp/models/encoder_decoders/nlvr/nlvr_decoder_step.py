@@ -12,7 +12,7 @@ from allennlp.common import util as common_util
 from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_state import NlvrDecoderState
 from allennlp.modules import Attention
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.nn.decoding import DecoderStep
+from allennlp.nn.decoding import DecoderStep, RnnState
 from allennlp.nn import util as nn_util
 
 
@@ -74,10 +74,11 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # yield new states.
         # Each new state corresponds to one valid action that can be taken from the current state,
         # and they are ordered by how much they contribute to an agenda.
-        attended_sentence = torch.stack([x for x in state.attended_sentence])
-        hidden_state = torch.stack([x for x in state.hidden_state])
-        memory_cell = torch.stack([x for x in state.memory_cell])
-        previous_action_embedding = torch.stack([x for x in state.previous_action_embedding])
+        attended_sentence = torch.stack([rnn_state.attended_input for rnn_state in state.rnn_state])
+        hidden_state = torch.stack([rnn_state.hidden_state for rnn_state in state.rnn_state])
+        memory_cell = torch.stack([rnn_state.memory_cell for rnn_state in state.rnn_state])
+        previous_action_embedding = torch.stack([rnn_state.previous_action_embedding
+                                                 for rnn_state in state.rnn_state])
 
         # (group_size, decoder_input_dim)
         decoder_input = self._input_projection_layer(torch.cat([attended_sentence,
@@ -86,10 +87,9 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
 
         # (group_size, encoder_output_dim)
-        encoder_outputs = torch.stack([state.encoder_outputs[i] for i in state.batch_indices])
-        encoder_output_mask = torch.stack([state.encoder_output_mask[i] for i in state.batch_indices])
-        attended_sentence = self.attend_on_sentence(hidden_state, encoder_outputs,
-                                                    encoder_output_mask)
+        encoder_outputs = torch.stack([state.rnn_state[i].encoder_outputs for i in state.batch_indices])
+        encoder_output_mask = torch.stack([state.rnn_state[i].encoder_output_mask for i in state.batch_indices])
+        attended_sentence = self.attend_on_sentence(hidden_state, encoder_outputs, encoder_output_mask)
 
         # We get global indices of actions to embed here. The following logic is similar to
         # ``WikiTablesDecoderStep._get_actions_to_consider``, except that we do not have any actions
@@ -256,7 +256,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
                           for action_list in actions_to_embed]
         # Shape: (group_size, num_actions)
-        action_tensor = Variable(state.encoder_output_mask[0].data.new(padded_actions).long())
+        action_tensor = Variable(state.score[0].data.new(padded_actions).long())
         # `state.action_embeddings` is shape (total_num_actions, action_embedding_dim).
         # We want to select from state.action_embeddings using `action_tensor` to get a tensor of
         # shape (group_size, num_actions, action_embedding_dim).  Unfortunately, the index_select
@@ -315,25 +315,26 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 right_side = state.possible_actions[batch_index][action]['right'][0]
                 new_grammar_state = state.grammar_state[group_index].take_action(left_side,
                                                                                  right_side)
+                new_rnn_state = RnnState(hidden_state[group_index],
+                                         memory_cell[group_index],
+                                         action_embedding,
+                                         attended_sentence[group_index],
+                                         state.rnn_state[group_index].encoder_outputs,
+                                         state.rnn_state[group_index].encoder_output_mask)
 
-                new_state = NlvrDecoderState([state.terminal_actions[group_index]],
-                                             [state.checklist_target[group_index]],
-                                             [state.checklist_mask[group_index]],
-                                             [new_checklist],
-                                             [batch_index],
-                                             [new_action_history],
-                                             [new_score],
-                                             [hidden_state[group_index]],
-                                             [memory_cell[group_index]],
-                                             [action_embedding],
-                                             [attended_sentence[group_index]],
-                                             [new_grammar_state],
-                                             state.encoder_outputs,
-                                             state.encoder_output_mask,
-                                             state.action_embeddings,
-                                             state.action_indices,
-                                             state.possible_actions,
-                                             state.worlds,
-                                             state.label_strings)
+                new_state = NlvrDecoderState(batch_indices=[batch_index],
+                                             action_history=[new_action_history],
+                                             score=[new_score],
+                                             rnn_state=[new_rnn_state],
+                                             grammar_state=[new_grammar_state],
+                                             terminal_actions=[state.terminal_actions[group_index]],
+                                             checklist_target=[state.checklist_target[group_index]],
+                                             checklist_masks=[state.checklist_mask[group_index]],
+                                             checklist=[new_checklist],
+                                             action_embeddings=state.action_embeddings,
+                                             action_indices=state.action_indices,
+                                             possible_actions=state.possible_actions,
+                                             worlds=state.worlds,
+                                             label_strings=state.label_strings)
                 new_states.append(new_state)
         return new_states
