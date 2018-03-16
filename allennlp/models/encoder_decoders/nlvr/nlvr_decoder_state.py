@@ -114,17 +114,17 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                             state.checklist_target]
         checklist_masks = [mask for state in states for mask in state.checklist_mask]
         checklist = [checklist_list for state in states for checklist_list in state.checklist]
-        return NlvrDecoderState(batch_indices,
-                                action_histories,
-                                scores,
-                                rnn_states,
-                                terminal_actions,
-                                checklist_target,
-                                checklist_masks,
-                                checklist,
-                                grammar_states,
-                                states[0].action_embeddings,
-                                states[0].action_indices,
-                                states[0].possible_actions,
-                                states[0].worlds,
-                                states[0].label_strings)
+        return NlvrDecoderState(batch_indices=batch_indices,
+                                action_history=action_histories,
+                                score=scores,
+                                rnn_state=rnn_states,
+                                grammar_state=grammar_states,
+                                terminal_actions=terminal_actions,
+                                checklist_target=checklist_target,
+                                checklist_masks=checklist_masks,
+                                checklist=checklist,
+                                action_embeddings=states[0].action_embeddings,
+                                action_indices=states[0].action_indices,
+                                possible_actions=states[0].possible_actions,
+                                worlds=states[0].worlds,
+                                label_strings=states[0].label_strings)

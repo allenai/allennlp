@@ -87,8 +87,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
 
         # (group_size, encoder_output_dim)
-        encoder_outputs = torch.stack([state.rnn_state[i].encoder_outputs for i in state.batch_indices])
-        encoder_output_mask = torch.stack([state.rnn_state[i].encoder_output_mask for i in state.batch_indices])
+        encoder_outputs = torch.stack([state.rnn_state[0].encoder_outputs[i] for i in state.batch_indices])
+        encoder_output_mask = torch.stack([state.rnn_state[0].encoder_output_mask[i] for i in state.batch_indices])
         attended_sentence = self.attend_on_sentence(hidden_state, encoder_outputs, encoder_output_mask)
 
         # We get global indices of actions to embed here. The following logic is similar to
