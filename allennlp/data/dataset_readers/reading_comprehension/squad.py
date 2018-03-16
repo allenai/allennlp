@@ -29,6 +29,10 @@ class SquadReader(DatasetReader):
 
     Parameters
     ----------
+    multiparagraph : ``bool``, optional (default=``False``)
+        If ``True``, uses ``util.make_multi_paragraph_reading_comprehension_instance`` to create
+        a "multi-paragraph" instance (but with only one paragraph) with ``"paragraphs"`` being a
+        ``ListField[TextField]``. Otherwise creates an instance with ``"passage"`` being a ``TextField``.
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this ``Tokenizer`` for both the question and the passage.  See :class:`Tokenizer`.
         Default is ```WordTokenizer()``.
@@ -37,10 +41,12 @@ class SquadReader(DatasetReader):
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
     """
     def __init__(self,
+                 multiparagraph: bool = False,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
+        self._multiparagraph = multiparagraph
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
@@ -100,17 +106,28 @@ class SquadReader(DatasetReader):
                 logger.debug("Answer: %s", passage_text[char_span_start:char_span_end])
             token_spans.append((span_start, span_end))
 
-        return util.make_reading_comprehension_instance(self._tokenizer.tokenize(question_text),
-                                                        passage_tokens,
-                                                        self._token_indexers,
-                                                        passage_text,
-                                                        token_spans,
-                                                        answer_texts)
+        if self._multiparagraph:
+            return util.make_multi_paragraph_reading_comprehension_instance(
+                    self._tokenizer.tokenize(question_text),
+                    [passage_tokens],
+                    self._token_indexers,
+                    [passage_text],
+                    [token_spans],
+                    answer_texts
+            )
+        else:
+            return util.make_reading_comprehension_instance(self._tokenizer.tokenize(question_text),
+                                                            passage_tokens,
+                                                            self._token_indexers,
+                                                            passage_text,
+                                                            token_spans,
+                                                            answer_texts)
 
     @classmethod
     def from_params(cls, params: Params) -> 'SquadReader':
+        multiparagraph = params.pop_bool('multiparagraph', False)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
-        return cls(tokenizer=tokenizer, token_indexers=token_indexers, lazy=lazy)
+        return cls(multiparagraph=multiparagraph, tokenizer=tokenizer, token_indexers=token_indexers, lazy=lazy)
