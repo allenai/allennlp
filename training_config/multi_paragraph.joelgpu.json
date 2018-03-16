@@ -22,7 +22,7 @@
     },
     "validation_dataset_reader": {
       "type": "triviaqa",
-      "lazy": "false",
+      "lazy": "true",
       "processed_data_path": "/home/joelg/data/triviaqa_processed",
       "token_indexers": {
         "tokens": {
@@ -93,20 +93,23 @@
     },
     "iterator": {
       "type": "bucket",
-      "batch_size": 2,
+      "batch_size": 3,
       "max_instances_in_memory": 1000000,
       "biggest_batch_first": true,
       "sorting_keys": [["paragraphs", "list_num_tokens"], ["question", "num_tokens"]]
     },
+
     "trainer": {
-      "num_epochs": 100,
-      "grad_norm": 10.0,
-      "patience" : 12,
-      "cuda_device" : 0,
+      "num_epochs": 200,
+      //"grad_norm": 5.0,
+      "grad_clipping": 5.0,
+      "patience": 10,
+      "validation_metric": "+em",
+      "cuda_device": 0,
       "optimizer": {
         "type": "adadelta",
         "lr": 0.5,
         "rho": 0.95
       }
     }
-  }
+}
