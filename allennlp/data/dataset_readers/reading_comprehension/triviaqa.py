@@ -114,11 +114,16 @@ class TriviaQaReader(DatasetReader):
         question_path = self._processed_data_path / file_path
 
         if file_path in self._data:
+            logger.info("questions from memory")
             questions = self._data[file_path]
         else:
+            logger.info("questions from disk")
             with open(question_path, 'r') as f:
                 questions = [json.loads(line) for line in f]
             self._data[file_path] = questions
+
+
+        logger.info("sample this iteration %s", self._sample_this_iteration)
 
         CUTOFF = 2
 
@@ -145,23 +150,28 @@ class TriviaQaReader(DatasetReader):
                     sample = np.random.choice(choices, size=2)
                 picked_paragraph_texts = [paragraph_texts[i] for i in sample]
                 picked_paragraph_tokens = [paragraph_tokens[i] for i in sample]
+                picked_paragraph_spans = [token_spans[i] for i in sample]
+            elif self._paragraph_picker == 'triviaqa-web-train':
+                # need all for building vocab
+                picked_paragraph_texts = paragraph_texts
+                picked_paragraph_tokens = paragraph_tokens
+                picked_paragraph_spans = token_spans
             else:
                 picked_paragraph_texts = paragraph_texts[:CUTOFF]
                 picked_paragraph_tokens = paragraph_tokens[:CUTOFF]
+                picked_paragraph_spans = token_spans[:CUTOFF]
 
             instance = util.make_multi_paragraph_reading_comprehension_instance(
                     question_tokens,
                     picked_paragraph_tokens,
                     self._token_indexers,
                     picked_paragraph_texts,
-                    token_spans,
+                    picked_paragraph_spans,
                     answer_texts)
 
             yield instance
 
-    #                 paragraphs.append((texts, tokens, has_answers))
-
-    #     self._sample_this_iteration = True
+        self._sample_this_iteration = True
 
     #     questions_data = data_json['Data'][:NUM_QUESTIONS]
     #     num_evidence_files = sum(len(question_json[result_key])
