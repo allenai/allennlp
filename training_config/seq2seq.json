@@ -1,0 +1,41 @@
+{
+  "dataset_reader": {
+    "type": "seq2seq",
+    "lazy":true
+  },
+  "train_data_path": "data/translation.tsv",
+  "model": {
+    "type": "simple_seq2seq",
+    "source_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "embedding_dim": 200
+      }
+    },
+    "encoder": {
+        "type":"stacked_self_attention"
+        "input_dim": 200,
+        "hidden_dim": 200,
+        "projection_dim": 200,
+        "feedforward_hidden_dim": 200,
+        "num_layers": 2,
+        "num_attention_heads": 2
+    },
+    "max_decoding_steps":100, 
+    "scheduled_sampling_ratio":0.0
+    },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["source_tokens", "num_tokens"], ["target_tokens", "num_tokens"]],
+    "batch_size": 64
+  },
+  "trainer": {
+    "num_epochs": 5,
+    "patience": 2,
+    "cuda_device": -1,
+    "grad_clipping": 5.0,
+    "optimizer": {
+      "type": "adagrad"
+    }
+  }
+}
