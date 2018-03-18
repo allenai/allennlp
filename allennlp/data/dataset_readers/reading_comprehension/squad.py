@@ -113,15 +113,15 @@ class SquadReader(DatasetReader):
                     self._token_indexers,
                     [passage_text],
                     [token_spans],
-                    answer_texts
-            )
+                    answer_texts)
         else:
-            return util.make_reading_comprehension_instance(self._tokenizer.tokenize(question_text),
-                                                            passage_tokens,
-                                                            self._token_indexers,
-                                                            passage_text,
-                                                            token_spans,
-                                                            answer_texts)
+            return util.make_reading_comprehension_instance(
+                    self._tokenizer.tokenize(question_text),
+                    passage_tokens,
+                    self._token_indexers,
+                    passage_text,
+                    token_spans,
+                    answer_texts)
 
     @classmethod
     def from_params(cls, params: Params) -> 'SquadReader':
