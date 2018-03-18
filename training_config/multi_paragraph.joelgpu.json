@@ -4,7 +4,8 @@
     },
     "dataset_reader": {
       "type": "triviaqa",
-      "lazy": "true",
+      "lazy": true,
+      "sample_first_iteration": false,
       "paragraph_picker": "triviaqa-web-train",
       "processed_data_path": "/home/joelg/data/triviaqa_processed",
       "token_indexers": {
@@ -22,7 +23,8 @@
     },
     "validation_dataset_reader": {
       "type": "triviaqa",
-      "lazy": "true",
+      "lazy": true,
+      "sample_first_iteration": false,
       "processed_data_path": "/home/joelg/data/triviaqa_processed",
       "token_indexers": {
         "tokens": {
@@ -51,20 +53,21 @@
         "token_characters": {
           "type": "character_encoding",
           "embedding": {
-            "num_embeddings": 260,
+            "num_embeddings": 262,
             "embedding_dim": 20
           },
           "encoder": {
             "type": "cnn",
             "embedding_dim": 20,
-            "num_filters": 20,
+            "num_filters": 100,
             "ngram_filter_sizes": [5]
-          }
+          },
+          "dropout": 0.2
         }
       },
       "phrase_layer": {
         "type": "gru",
-        "input_size": 320,
+        "input_size": 400,
         "hidden_size": 140,
         "num_layers": 1,
         "bidirectional": true
@@ -100,16 +103,20 @@
     },
 
     "trainer": {
-      "num_epochs": 200,
-      //"grad_norm": 5.0,
-      "grad_clipping": 5.0,
-      "patience": 10,
+      "num_epochs": 100,
+      //"grad_norm": 10.0,
+      "patience" : 12,
+      "cuda_device" : 0,
+      "learning_rate_scheduler": {
+          "type": "reduce_on_plateau",
+          "factor": 0.5,
+          "mode": "max",
+          "patience": 2
+      },
       "validation_metric": "+em",
-      "cuda_device": 0,
       "optimizer": {
-        "type": "adadelta",
-        "lr": 0.5,
-        "rho": 0.95
+        "type": "adam",
+        "betas": [0.9, 0.9]
       }
     }
 }

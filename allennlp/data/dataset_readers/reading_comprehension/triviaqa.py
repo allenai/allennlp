@@ -345,22 +345,24 @@ class TriviaQaReader(DatasetReader):
             question_tokens = self._tokenizer.tokenize(question_text)
 
         return util.make_multi_paragraph_reading_comprehension_instance(
-            question_tokens,
-            paragraph_tokens,
-            self._token_indexers,
-            paragraphs,
-            token_spans,
-            answer_texts)
+                question_tokens,
+                paragraph_tokens,
+                self._token_indexers,
+                paragraphs,
+                token_spans,
+                answer_texts)
 
     @classmethod
     def from_params(cls, params: Params) -> 'TriviaQaReader':
         processed_data_path = params.pop('processed_data_path')
         paragraph_picker = params.pop('paragraph_picker', None)
+        sample_first_iteration = params.pop_bool('sample_first_iteration', False)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return cls(processed_data_path=processed_data_path,
+                   sample_first_iteration=sample_first_iteration,
                    paragraph_picker=paragraph_picker,
                    tokenizer=tokenizer,
                    token_indexers=token_indexers,
