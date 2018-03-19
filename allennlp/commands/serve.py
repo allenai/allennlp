@@ -17,7 +17,6 @@ their predictions.
 """
 
 import argparse
-from typing import Dict
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.service import server_flask as server
@@ -58,10 +57,6 @@ DEFAULT_MODELS = {
 
 
 class Serve(Subcommand):
-    def __init__(self, model_overrides: Dict[str, DemoModel] = {}) -> None:
-        # pylint: disable=dangerous-default-value
-        self.trained_models = {**DEFAULT_MODELS, **model_overrides}
-
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Run the web service, which provides an HTTP API as well as a web demo.'''
@@ -70,12 +65,9 @@ class Serve(Subcommand):
 
         subparser.add_argument('--port', type=int, default=8000)
 
-        subparser.set_defaults(func=_serve(self.trained_models))
+        subparser.set_defaults(func=_serve)
 
         return subparser
 
-def _serve(trained_models: Dict[str, DemoModel]):
-    def serve_inner(args: argparse.Namespace) -> None:
-        server.run(args.port, trained_models)
-
-    return serve_inner
+def _serve(args: argparse.Namespace):
+    server.run(args.port, DEFAULT_MODELS)
