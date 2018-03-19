@@ -1,7 +1,7 @@
 import React from 'react';
 import { API_ROOT } from '../api-config';
 import { withRouter } from 'react-router-dom';
-import { PaneLeft, PaneRight } from './Pane'
+import { PaneTop, PaneBottom } from './Pane'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
 import { Tree } from 'hierplane';
@@ -11,11 +11,10 @@ import { Tree } from 'hierplane';
 *******************************************************************************/
 
 const constituencyParserSentences = [
-  "The keys, which were needed to access the building, were locked in the car.",
-  "However, voters decided that if the stadium was such a good idea someone would build it himself, and rejected it 59% to 41%.",
-  "Did Uriah honestly think he could beat the game in under three hours?",
-  "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!",
-  "More than a few CEOs say the red-carpet treatment tempts them to return to a heartland city for future meetings.",
+  "Pierre Vinken died aged 81; immortalised aged 61.",
+  "James went to the corner shop to buy some eggs, milk and bread for breakfast.",
+  "If you bring $10 with you tomorrow, can you pay for me to eat too?",
+  "True self-control is waiting until the movie starts to eat your popcorn.",
 ];
 
 const title = "Constituency Parsing";
@@ -23,12 +22,12 @@ const description = (
   <span>
     <span>
       A constituency parse tree breaks a text into sub-phrases, or constituents. Non-terminals in the tree are types of phrases, the terminals are the words in the sentence.
-      This demo is an implementation of a minimal neural model for constituency parsing based on an independent scoring of labels and spans from 
+      This demo is an implementation of a minimal neural model for constituency parsing based on an independent scoring of labels and spans from
     </span>
     <a href="https://www.semanticscholar.org/paper/A-Minimal-Span-Based-Neural-Constituency-Parser-Stern-Andreas/593e4e749bd2dbcaf8dc25298d830b41d435e435" target="_blank" rel="noopener noreferrer">{' '} a Minimal Span Based Constituency Parser (Stern et al, 2017)</a>
     <span>
-      . This model achieved state of the art single model performance on the Penn Tree Bank in 2017.
-    </span> 
+      . This model uses <a href="https://arxiv.org/abs/1802.05365">ELMo embeddings</a>, which are completely character based and improves single model performance from 92.6 F1 to 94.11 F1 on the Penn Treebank, a 20% relative error reduction.
+    </span>
   </span>
 );
 
@@ -82,7 +81,7 @@ class ConstituencyParserInput extends React.Component {
           </select>
         </div>
         <div className="form__field">
-          <label htmlFor="#input--srl-sentence">Sentence</label>
+          <label htmlFor="#input--parser-sentence">Sentence</label>
           <input onChange={this.handleSentenceChange} value={constituencyParserSentenceValue} id="input--parser-sentence" ref="constituencyParserSentence" type="text" required="true" autoFocus="true" placeholder="E.g. &quot;John likes and Bill hates ice cream.&quot;" />
         </div>
         <div className="form__field form__field--btn">
@@ -165,15 +164,15 @@ class _ConstituencyParserComponent extends React.Component {
     const sentence = requestData && requestData.sentence;
 
     return (
-      <div className="pane model">
-        <PaneLeft>
+      <div className="pane__horizontal model">
+        <PaneTop>
           <ConstituencyParserInput runConstituencyParserModel={this.runConstituencyParserModel}
             outputState={this.state.outputState}
             sentence={sentence} />
-        </PaneLeft>
-        <PaneRight outputState={this.state.outputState}>
+        </PaneTop>
+        <PaneBottom outputState={this.state.outputState}>
           <HierplaneVisualization tree={responseData ? responseData.hierplane_tree : null} />
-        </PaneRight>
+        </PaneBottom>
       </div>
     );
   }

@@ -185,10 +185,10 @@ We don't *need* to, but we also make a few other changes
 
 At this point we're ready to train the model.
 In this case our new classes are part of the `allennlp` library,
-which means we can just use `python -m allennlp.run train`:
+which means we can just use `allennlp train`:
 
 ```bash
-$ python -m allennlp.run train \
+$ allennlp train \
     tutorials/getting_started/crf_tagger.json \
     -s /tmp/crf_model
 ```
@@ -207,7 +207,7 @@ and your dataset reader is in the module `myallennlp.dataset_reader`.
 
 Then you would just
 ```bash
-$ python -m allennlp.run train \
+$ allennlp train \
     /path/to/your/model/configuration \
     -s /path/to/serialization/dir \
     --include-package myallennlp

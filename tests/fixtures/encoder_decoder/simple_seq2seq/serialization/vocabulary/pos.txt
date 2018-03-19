@@ -1,0 +1,10 @@
+@@UNKNOWN@@
+NONE
+DT
+VBZ
+NN
+PDT
+NNS
+MD
+VB
+VBN
