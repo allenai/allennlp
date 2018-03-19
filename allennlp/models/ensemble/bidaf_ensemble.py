@@ -39,7 +39,6 @@ class BidafEnsemble(Ensemble):
 
         batch_size = len(subresults[0]["best_span"])
 
-        #TODO(michaels): fix float arithmetic
         output = {
             "best_span": torch.zeros(batch_size, 2)
         }
