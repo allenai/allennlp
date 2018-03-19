@@ -807,7 +807,6 @@ header {
 
 .header__content .nav__link span {
   font-size: 1em;
-  font-size: 1.125em;
   height: 100%;
   -webkit-transition: color .2s ease;
   transition: color .2s ease;
@@ -1093,8 +1092,30 @@ svg {
   min-height: 34.375em
 }
 
+.pane__horizontal {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  -ms-flex-direction: column;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  flex-direction: column;
+  position: relative;
+  -webkit-box-flex: 2;
+  -webkit-flex: 2;
+  -ms-flex: 2;
+  flex: 2;
+  height: auto;
+  min-height: 100%;
+  min-height: 34.375em
+}
+
 .pane__left,
-.pane__right {
+.pane__right,
+.pane__top,
+.pane__bottom {
   width: 100%;
   height: 100%;
   -webkit-align-self: stretch;
@@ -1102,6 +1123,17 @@ svg {
   align-self: stretch;
   min-width: 24em;
   min-height: 34.375em
+}
+
+.pane__top {
+  min-height: 40em;
+  height: auto;
+}
+
+.pane__bottom {
+  min-height: 100%;
+  overflow: auto;
+  height: auto;
 }
 
 .pane__left {
@@ -1591,7 +1623,6 @@ svg {
   prevents the user from having to scroll when the sentence is long.
 */
 .hierplane__visualization .hierplane--theme-light #passage {
-  max-height: initial;
   height: auto !important;
   flex: 1;
 }

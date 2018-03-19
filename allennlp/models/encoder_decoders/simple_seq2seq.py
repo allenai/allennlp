@@ -277,7 +277,7 @@ class SimpleSeq2Seq(Model):
             # Collect indices till the first end_symbol
             if self._end_index in indices:
                 indices = indices[:indices.index(self._end_index)]
-            predicted_tokens = [self.vocab.get_token_from_index(x, namespace="target_tokens")
+            predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
                                 for x in indices]
             all_predicted_tokens.append(predicted_tokens)
         output_dict["predicted_tokens"] = all_predicted_tokens

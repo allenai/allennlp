@@ -43,9 +43,6 @@ class EvalbBracketingScorer(Metric):
         self._evalb_program_path = os.path.join(evalb_directory_path, "evalb")
         self._evalb_param_path = os.path.join(evalb_directory_path, evalb_param_filename)
 
-        if not os.path.exists(self._evalb_program_path):
-            raise ConfigurationError("You must compile the EVALB scorer before using it."
-                                     " Run 'make' in the 'scripts/EVALB' directory.")
 
         self._header_line = ['ID', 'Len.', 'Stat.', 'Recal', 'Prec.', 'Bracket',
                              'gold', 'test', 'Bracket', 'Words', 'Tags', 'Accracy']
@@ -64,6 +61,9 @@ class EvalbBracketingScorer(Metric):
         gold_trees : ``List[Tree]``
             A list of gold NLTK Trees to use as a reference.
         """
+        if not os.path.exists(self._evalb_program_path):
+            raise ConfigurationError("You must compile the EVALB scorer before using it."
+                                     " Run 'make' in the 'scripts/EVALB' directory.")
         tempdir = tempfile.gettempdir()
         gold_path = os.path.join(tempdir, "gold.txt")
         predicted_path = os.path.join(tempdir, "predicted.txt")

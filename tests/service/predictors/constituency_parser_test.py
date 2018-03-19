@@ -5,6 +5,7 @@ from nltk import Tree
 
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
+from allennlp.service.predictors.constituency_parser import LINK_TO_LABEL, NODE_TYPE_TO_STYLE
 
 
 class TestConstituencyParserPredictor(TestCase):
@@ -64,6 +65,8 @@ class TestConstituencyParserPredictor(TestCase):
         # pylint: disable=bad-continuation
         correct_tree = {
                 'text': 'the dog chased the cat',
+                "linkNameToLabel": LINK_TO_LABEL,
+                "nodeTypeToStyle": NODE_TYPE_TO_STYLE,
                 'root': {
                         'word': 'the dog chased the cat',
                         'nodeType': 'S',

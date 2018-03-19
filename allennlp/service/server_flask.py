@@ -220,14 +220,15 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
             log_blob["outputs"]["tags"] = prediction["tags"]
         elif model_name == "semantic-role-labeling":
             verbs = []
-
             for verb in prediction["verbs"]:
                 # Don't want to log boring verbs with no semantic parses.
                 good_tags = [tag for tag in verb["tags"] if tag != "0"]
                 if len(good_tags) > 1:
                     verbs.append({"verb": verb["verb"], "description": verb["description"]})
-
             log_blob["outputs"]["verbs"] = verbs
+
+        elif model_name == "constituency-parsing":
+            log_blob["outputs"]["trees"] = prediction["trees"]
 
         logger.info("prediction: %s", json.dumps(log_blob))
 

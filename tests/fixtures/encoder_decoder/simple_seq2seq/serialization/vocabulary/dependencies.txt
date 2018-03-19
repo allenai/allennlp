@@ -1,0 +1,10 @@
+@@UNKNOWN@@
+NONE
+ROOT
+nsubj
+det
+attr
+predet
+nsubjpass
+aux
+auxpass
