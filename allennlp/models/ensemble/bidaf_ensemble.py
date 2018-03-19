@@ -35,7 +35,7 @@ class BidafEnsemble(Ensemble):
 
         subresults = []
         for i, submodel in enumerate(self.submodels):
-            subresults.append(self.submodels[0].forward(question, passage, span_start, span_end, metadata))
+            subresults.append(submodel.forward(question, passage, span_start, span_end, metadata))
 
         batch_size = len(subresults[0]["best_span"])
 
