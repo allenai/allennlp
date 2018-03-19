@@ -5,7 +5,6 @@ out-of-vocabulary token.
 
 from collections import defaultdict
 from typing import Any, Callable, Dict, Union, Sequence, Set, Optional, Iterable
-from overrides import overrides
 import codecs
 import logging
 import os
