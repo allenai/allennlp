@@ -15,6 +15,7 @@ class Ensemble(Model):
 
         super(Ensemble, self).__init__(vocab, None)
         self.submodels = submodels
+        self.is_ensemble = True
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         raise NotImplementedError

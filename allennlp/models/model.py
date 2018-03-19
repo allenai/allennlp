@@ -50,6 +50,7 @@ class Model(torch.nn.Module, Registrable):
         super().__init__()
         self.vocab = vocab
         self._regularizer = regularizer
+        self.is_ensemble = False
 
     def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
         """
@@ -232,7 +233,10 @@ class Model(torch.nn.Module, Registrable):
 
         # Load vocabulary from file
         vocab_dir = os.path.join(serialization_dir, 'vocabulary')
-        vocab = Vocabulary.from_files(vocab_dir)
+        if os.path.exists(vocab_dir):
+            vocab = Vocabulary.from_files(vocab_dir)
+        else:
+            vocab = None
 
         model_params = config.get('model')
 
@@ -242,7 +246,7 @@ class Model(torch.nn.Module, Registrable):
         # want the code to look for it, so we remove it from the parameters here.
         _remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab, model_params)
-        if not model.__class__.__name__ == "BidafEnsemble": # TODO(michaels): horrible hack
+        if not model.is_ensemble:
             model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
             model.load_state_dict(model_state)
 

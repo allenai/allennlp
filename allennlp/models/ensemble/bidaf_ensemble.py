@@ -102,6 +102,8 @@ class BidafEnsemble(Ensemble):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params):
+        assert vocab == None, "vocab should be None"
+
         submodels = []
         paths = params.pop("submodels")
         for path in paths:
