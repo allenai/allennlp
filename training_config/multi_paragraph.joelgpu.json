@@ -5,7 +5,7 @@
     "dataset_reader": {
       "type": "triviaqa",
       "lazy": true,
-      "sample_first_iteration": false,
+      "sample_first_iteration": true,
       "paragraph_picker": "triviaqa-web-train",
       "processed_data_path": "/home/joelg/data/triviaqa_processed",
       "token_indexers": {
@@ -24,7 +24,7 @@
     "validation_dataset_reader": {
       "type": "triviaqa",
       "lazy": true,
-      "sample_first_iteration": false,
+      "sample_first_iteration": true,
       "processed_data_path": "/home/joelg/data/triviaqa_processed",
       "token_indexers": {
         "tokens": {
