@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 _PARAGRAPH_TOKEN = "@@PARAGRAPH@@"
 
-NUM_QUESTIONS = 1_0
+# Truncate tokens after this many characters.
+MAX_LEN = 20
 
 class MergedParagraphs(NamedTuple):
     texts: List[str]
@@ -121,17 +122,19 @@ class TriviaQaReader(DatasetReader):
             self._data[file_path] = questions
 
         CUTOFF = 2
+        if MAX_LEN:
+            logger.info(f"truncating tokens to {MAX_LEN}")
 
         for question in questions:
             question_id = question['id']
             question_text = question['text']
-            question_tokens = [json_to_token(token) for token in question['tokens']]
+            question_tokens = [json_to_token(token, max_len=MAX_LEN) for token in question['tokens']]
             answer_texts = question['answer_texts']
 
             paragraphs = question['paragraphs']
 
             paragraph_texts = paragraphs['texts']
-            paragraph_tokens = [[json_to_token(token) for token in pt]
+            paragraph_tokens = [[json_to_token(token, max_len=MAX_LEN) for token in pt]
                                 for pt in paragraphs['tokens']]
             has_answers = paragraphs['has_answers']
             token_spans = paragraphs['token_spans']

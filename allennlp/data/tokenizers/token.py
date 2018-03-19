@@ -53,11 +53,15 @@ class Token:
         return self.__str__()
 
 
-def json_to_token(blob, short: bool = True) -> Token:
+def json_to_token(blob, short: bool = True, max_len: int = None) -> Token:
     if short:
         text, idx = blob
+        if max_len:
+            text = text[:max_len]
         return Token(text, idx)
     else:
+        if max_len:
+            blob['text'] = blob['text'][:max_len]
         return Token(**blob)
 
 def token_to_json(token: Token, short: bool = True):
