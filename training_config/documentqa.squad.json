@@ -38,49 +38,57 @@
           "encoder": {
             "type": "cnn",
             "embedding_dim": 20,
-            "num_filters": 20,
+            "num_filters": 100,
             "ngram_filter_sizes": [5]
-          }
+          },
+          "dropout": 0.2
         }
       },
       "phrase_layer": {
         "type": "gru",
-        "input_size": 320,
-        "hidden_size": 140,
+        "input_size": 400,
+        "hidden_size": 100,
         "num_layers": 1,
         "bidirectional": true
       },
       "residual_encoder": {
         "type": "gru",
-        "input_size": 280,
-        "hidden_size": 140,
+        "input_size": 200,
+        "hidden_size": 100,
         "num_layers": 1,
         "bidirectional": true
       },
       "span_start_encoder": {
         "type": "gru",
-        "input_size": 280,
-        "hidden_size": 140,
+        "input_size": 200,
+        "hidden_size": 100,
         "num_layers": 1,
         "bidirectional": true
       },
       "span_end_encoder": {
         "type": "gru",
-        "input_size": 560,
-        "hidden_size": 140,
+        "input_size": 400,
+        "hidden_size": 100,
         "num_layers": 1,
         "bidirectional": true
       }
     },
     "iterator": {
-      "type": "basic",
-      "batch_size": 10
+      "type": "bucket",
+      "sorting_keys": [["paragraphs", "list_num_tokens"], ["question", "num_tokens"]],
+      "batch_size": 45
     },
     "trainer": {
-      "num_epochs": 100,
-      "grad_norm": 10.0,
-      "patience" : 12,
-      "cuda_device" : -1,
+      "num_epochs": 26,
+      //"grad_norm": 10.0,
+      "patience" : 10,
+      "cuda_device" : 0,
+      "learning_rate_scheduler": {
+          "type": "reduce_on_plateau",
+          "factor": 0.5,
+          "mode": "max",
+          "patience": 2
+      },
       "optimizer": {
         "type": "adam",
         "betas": [0.9, 0.9]
