@@ -5,9 +5,9 @@ each training run.
 
 .. code-block:: bash
 
-   $ python -m allennlp.run make-vocab --help
+   $ allennlp make-vocab --help
 
-    usage: python -m allennlp.run make-vocab [-h] [-o OVERRIDES] param_path
+    usage: allennlp make-vocab [-h] [-o OVERRIDES] param_path
 
     Create a vocabulary from the specified dataset.
 

@@ -5,12 +5,12 @@ which to write the results.
 
 .. code-block:: bash
 
-   $ python -m allennlp.run train --help
-   usage: python -m allennlp.run train [-h] -s SERIALIZATION_DIR
-                                            [-o OVERRIDES]
-                                            [--include-package INCLUDE_PACKAGE]
-                                            [--file-friendly-logging]
-                                            param_path
+   $ allennlp train --help
+   usage: allennlp train [-h] -s SERIALIZATION_DIR
+                              [-o OVERRIDES]
+                              [--include-package INCLUDE_PACKAGE]
+                              [--file-friendly-logging]
+                              param_path
 
    Train the specified model on the specified dataset.
 
