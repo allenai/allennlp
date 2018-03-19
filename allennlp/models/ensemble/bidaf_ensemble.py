@@ -40,7 +40,7 @@ class BidafEnsemble(Ensemble):
         batch_size = len(subresults[0]["best_span"])
 
         output = {
-            "best_span": torch.zeros(batch_size, 2)
+                "best_span": torch.zeros(batch_size, 2)
         }
         for batch in range(batch_size):
             max_vote = 0
@@ -56,13 +56,13 @@ class BidafEnsemble(Ensemble):
             # If there is a tie, break it with the average confidence (span_start_probs + span_end_probs).
             best = 0
             max_average_confidence = 0
-            for (span_start, span_end), indices in span_votes.items():
+            for (start, end), indices in span_votes.items():
                 votes = len(indices)
                 if votes == max_vote:
                     average_confidence = 0
                     for i in indices:
                         subresult = subresults[i]
-                        average = (subresult["span_start_probs"].data[batch][span_start] + subresult["span_end_probs"].data[batch][span_end]) / 2.0
+                        average = (subresult["span_start_probs"].data[batch][start] + subresult["span_end_probs"].data[batch][end]) / 2.0
                         if average > average_confidence:
                             average_confidence = average
                     if average_confidence > max_average_confidence:
@@ -73,7 +73,7 @@ class BidafEnsemble(Ensemble):
             output["best_span"][batch] = best_span
 
             if metadata is not None:
-                if not "best_span_str" in output:
+                if "best_span_str" not in output:
                     output["best_span_str"] = []
                 best_span_str = subresults[best]["best_span_str"][batch]
                 output["best_span_str"].append(best_span_str)
@@ -86,8 +86,6 @@ class BidafEnsemble(Ensemble):
                     end_offset = offsets[best_span[1]][1]
                     best_span_string = passage_str[start_offset:end_offset]
                     assert best_span_string == best_span_str, f"{best_span_string} != {best_span_str}"
-                    x = subresults[0]["best_span_str"][batch]
-                    y = subresults[1]["best_span_str"][batch]
                     self._squad_metrics(best_span_string, answer_texts)
 
         return output
@@ -95,8 +93,8 @@ class BidafEnsemble(Ensemble):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         exact_match, f1_score = self._squad_metrics.get_metric(reset)
         return {
-            'em': exact_match,
-            'f1': f1_score,
+                'em': exact_match,
+                'f1': f1_score,
         }
 
     @classmethod
@@ -106,6 +104,6 @@ class BidafEnsemble(Ensemble):
         submodels = []
         paths = params.pop("submodels")
         for path in paths:
-           submodels.append(load_archive(path).model)
+            submodels.append(load_archive(path).model)
 
         return cls(submodels=submodels)

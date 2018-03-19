@@ -1,8 +1,9 @@
 from typing import Dict, List
 
+import torch
+
 from allennlp.common.params import Params
 from allennlp.models import Model
-import torch
 
 
 class Ensemble(Model):
@@ -21,7 +22,11 @@ class Ensemble(Model):
         raise NotImplementedError
 
     @classmethod
-    def _load(cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1) -> 'Model':
+    def _load(cls,
+             config: Params,
+             serialization_dir: str,
+             weights_file: str = None,
+             cuda_device: int = -1) -> 'Model':
         """
         Ensembles don't have vocabularies or weights, so they override _load.
         """

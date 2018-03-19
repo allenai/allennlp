@@ -18,10 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__f
 from allennlp.commands.train import Train
 from allennlp.common.params import Params
 
-def main(param_file: str, extra_beaker_commands: List[str]):
-    ecr_repository = "896129387501.dkr.ecr.us-west-2.amazonaws.com"
-    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
-    image = f"{ecr_repository}/allennlp/allennlp:{commit}"
+def main(image: str, param_file: str, extra_beaker_commands: List[str]):
     overrides = ""
 
     # Reads params and sets environment.
@@ -31,23 +28,6 @@ def main(param_file: str, extra_beaker_commands: List[str]):
     for k, v in flat_params.items():
         k = str(k).replace('.', '_')
         env.append(f"--env={k}={v}")
-
-    # If the git repository is dirty, add a random hash.
-    result = subprocess.run('git diff-index --quiet HEAD --', shell=True)
-    if result.returncode != 0:
-        dirty_hash = "%x" % random_int
-        image += "-" + dirty_hash
-
-    # Get temporary ecr login. For this command to work, you need the python awscli
-    # package with a version more recent than 1.11.91.
-    print("Logging into ECR")
-    subprocess.run('eval $(aws --region=us-west-2 ecr get-login --no-include-email)', shell=True, check=True)
-
-    print(f"Building the Docker image ({image})")
-    subprocess.run(f'docker build -t {image} .', shell=True, check=True)
-
-    print(f"Pushing the Docker image ({image})")
-    subprocess.run(f'docker push {image}', shell=True, check=True)
 
     config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
     filename = os.path.basename(param_file)
@@ -80,6 +60,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('param_file', type=str, help='The model configuration file.')
+    parser.add_argument('image', type=str, help='The docker image to run.')
     parser.add_argument('--desc', type=str, help='A description for the experiment.')
     parser.add_argument('--debug', action='store_true', help='Print verbose stack traces on error.')
     parser.add_argument('--env', action='append', help='Set environment variables (e.g. NAME=value or NAME)')
@@ -111,4 +92,4 @@ if __name__ == "__main__":
     if args.memory:
         extra_beaker_commands.append(f"--memory={args.memory}")
 
-    main(args.param_file, extra_beaker_commands)
+    main(args.image, args.param_file, extra_beaker_commands)
