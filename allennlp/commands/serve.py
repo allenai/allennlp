@@ -6,8 +6,8 @@ their predictions.
 
 .. code-block:: bash
 
-    $ python -m allennlp.run serve --help
-    usage: python -m allennlp.run serve [-h] [--port PORT]
+    $ allennlp serve --help
+    usage: allennlp serve [-h] [--port PORT]
 
     Run the web service, which provides an HTTP API as well as a web demo.
 
