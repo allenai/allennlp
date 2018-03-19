@@ -38,7 +38,7 @@ class WinobiasReader(DatasetReader):
     max_span_width: ``int``, required.
         The maximum width of candidate spans to consider.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
-        This is used to index the words in the document.  See :class:`TokenIndexer`.
+        This is used to index the words in the sentence.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
     """
     def __init__(self,
@@ -102,10 +102,10 @@ class WinobiasReader(DatasetReader):
         """
         Parameters
         ----------
-        sentences : ``List[List[str]]``, required.
-            A list of lists representing the tokenised words and sentences in the document.
+        sentences : ``List[str]``, required.
+            The sentence to analyse.
         gold_clusters : ``Optional[List[List[Tuple[int, int]]]]``, optional (default = None)
-            A list of all clusters in the document, represented as word spans. Each cluster
+            A list of all clusters in the sentence, represented as word spans. Each cluster
             contains some number of spans, which can be nested and overlap, but will never
             exactly match between clusters.
 
@@ -113,10 +113,10 @@ class WinobiasReader(DatasetReader):
         -------
         An ``Instance`` containing the following ``Fields``:
             text : ``TextField``
-                The text of the full document.
+                The text of the full sentence.
             spans : ``ListField[SpanField]``
                 A ListField containing the spans represented as ``SpanFields``
-                with respect to the document text.
+                with respect to the sentence text.
             span_labels : ``SequenceLabelField``, optional
                 The id of the cluster which each possible span belongs to, or -1 if it does
                  not belong to a cluster. As these labels have variable length (it depends on
