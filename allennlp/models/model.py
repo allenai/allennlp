@@ -50,7 +50,6 @@ class Model(torch.nn.Module, Registrable):
         super().__init__()
         self.vocab = vocab
         self._regularizer = regularizer
-        self.is_ensemble = False
 
     def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
         """
@@ -197,6 +196,38 @@ class Model(torch.nn.Module, Registrable):
         return model
 
     @classmethod
+    def _load(cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1) -> 'Model':
+        """
+        Instantiates an already-trained model, based on the experiment
+        configuration and some optional overrides.
+        """
+        weights_file = weights_file or os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+
+        # Load vocabulary from file
+        vocab_dir = os.path.join(serialization_dir, 'vocabulary')
+        vocab = Vocabulary.from_files(vocab_dir)
+
+        model_params = config.get('model')
+
+        # The experiment config tells us how to _train_ a model, including where to get pre-trained
+        # embeddings from.  We're now _loading_ the model, so those embeddings will already be
+        # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
+        # want the code to look for it, so we remove it from the parameters here.
+        _remove_pretrained_embedding_params(model_params)
+        model = Model.from_params(vocab, model_params)
+        model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
+        model.load_state_dict(model_state)
+
+        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
+        # in sync with the weights
+        if cuda_device >= 0:
+            model.cuda(cuda_device)
+        else:
+            model.cpu()
+
+        return model
+
+    @classmethod
     def load(cls,
              config: Params,
              serialization_dir: str,
@@ -229,35 +260,13 @@ class Model(torch.nn.Module, Registrable):
             The model specified in the configuration, loaded with the serialized
             vocabulary and the trained weights.
         """
-        weights_file = weights_file or os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
 
-        # Load vocabulary from file
-        vocab_dir = os.path.join(serialization_dir, 'vocabulary')
-        if os.path.exists(vocab_dir):
-            vocab = Vocabulary.from_files(vocab_dir)
-        else:
-            vocab = None
+        # Peak at the class of the model.
+        model_type = config["model"]["type"]
 
-        model_params = config.get('model')
-
-        # The experiment config tells us how to _train_ a model, including where to get pre-trained
-        # embeddings from.  We're now _loading_ the model, so those embeddings will already be
-        # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
-        # want the code to look for it, so we remove it from the parameters here.
-        _remove_pretrained_embedding_params(model_params)
-        model = Model.from_params(vocab, model_params)
-        if not model.is_ensemble:
-            model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
-            model.load_state_dict(model_state)
-
-        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
-        # in sync with the weights
-        if cuda_device >= 0:
-            model.cuda(cuda_device)
-        else:
-            model.cpu()
-
-        return model
+        # Load using an overridable _load method.
+        # This allows subclasses of Model to override _load.
+        return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
 
 
 def _remove_pretrained_embedding_params(params: Params):
