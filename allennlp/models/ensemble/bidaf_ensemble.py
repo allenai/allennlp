@@ -34,7 +34,7 @@ class BidafEnsemble(Ensemble):
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
 
         subresults = []
-        for i, submodel in enumerate(self.submodels):
+        for submodel in self.submodels:
             subresults.append(submodel.forward(question, passage, span_start, span_end, metadata))
 
         batch_size = len(subresults[0]["best_span"])
@@ -43,32 +43,26 @@ class BidafEnsemble(Ensemble):
                 "best_span": torch.zeros(batch_size, 2)
         }
         for batch in range(batch_size):
-            max_vote = 0
-            span_votes = {}
+            # Populate span_votes so each key represents a span range that a submodel predicts and the value
+            # is the number of models that made the prediction.
+            votes: Dict[(int, int), int] = {}
             for i, subresult in enumerate(subresults):
                 key = (subresult["best_span"].data[batch][0], subresult["best_span"].data[batch][1])
-                new_value = span_votes.get(key, []) + [i]
-                span_votes[key] = new_value
-                if len(new_value) > max_vote:
-                    max_vote = len(new_value)
+                new_value = votes.get(key, 0) + 1
+                votes[key] = new_value
 
             # Choose the majority-vote span.
             # If there is a tie, break it with the average confidence (span_start_probs + span_end_probs).
-            best = 0
-            max_average_confidence = 0
-            for (start, end), indices in span_votes.items():
-                votes = len(indices)
-                if votes == max_vote:
-                    average_confidence = 0
-                    for i in indices:
-                        subresult = subresults[i]
-                        average = (subresult["span_start_probs"].data[batch][start] + subresult["span_end_probs"].data[batch][end]) / 2.0
-                        if average > average_confidence:
-                            average_confidence = average
-                    if average_confidence > max_average_confidence:
-                        max_average_confidence = average_confidence
-                        best = i
+            options = []
+            for i, subresult in enumerate(subresults):
+                start = subresult["best_span"].data[batch][0]
+                end = subresult["best_span"].data[batch][1]
+                num_votes = votes[(start, end)]
+                average_confidence = (subresult["span_start_probs"].data[batch][start] +
+                                      subresult["span_end_probs"].data[batch][end]) / 2.0
+                options.append((-num_votes, -average_confidence, i))
 
+            best = sorted(options)[0][2]
             best_span = subresults[best]["best_span"].data[batch]
             output["best_span"][batch] = best_span
 
