@@ -17,11 +17,9 @@ class BidafEnsemble(Ensemble):
                  submodels: List[BidirectionalAttentionFlow]) -> None:
         super(BidafEnsemble, self).__init__(submodels)
 
-        # Setting this propagates calls to .eval() so dropout is disabled on the submodels in evaluation
+        # Using ModuleList propagates calls to .eval() so dropout is disabled on the submodels in evaluation
         # and prediction.
-        self.linears = torch.nn.ModuleList(submodels)
-
-        self.submodels = submodels
+        self.submodels = torch.nn.ModuleList(submodels)
 
         self._squad_metrics = SquadEmAndF1()
 
