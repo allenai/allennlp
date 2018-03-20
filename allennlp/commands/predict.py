@@ -56,7 +56,8 @@ DEFAULT_PREDICTORS = {
         'bidaf': 'machine-comprehension',
         'simple_tagger': 'sentence-tagger',
         'crf_tagger': 'sentence-tagger',
-        'coref': 'coreference-resolution'
+        'coref': 'coreference-resolution',
+        'constituency_parser': 'constituency-parser',
 }
 
 
