@@ -197,10 +197,10 @@ class Model(torch.nn.Module, Registrable):
 
     @classmethod
     def _load(cls,
-             config: Params,
-             serialization_dir: str,
-             weights_file: str = None,
-             cuda_device: int = -1) -> 'Model':
+              config: Params,
+              serialization_dir: str,
+              weights_file: str = None,
+              cuda_device: int = -1) -> 'Model':
         """
         Instantiates an already-trained model, based on the experiment
         configuration and some optional overrides.

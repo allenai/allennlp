@@ -1,6 +1,6 @@
 from overrides import overrides
-import torch
 from typing import Dict, List, Any
+import torch
 
 from allennlp.models.ensemble.ensemble import Ensemble
 from allennlp.models.archival import load_archive
@@ -44,7 +44,7 @@ class BidafEnsemble(Ensemble):
             # Populate span_votes so each key represents a span range that a submodel predicts and the value
             # is the number of models that made the prediction.
             spans = [(subresult["best_span"].data[batch][0], subresult["best_span"].data[batch][1])
-                      for subresult in subresults]
+                     for subresult in subresults]
             votes: Dict[(int, int), int] = {span:spans.count(span) for span in spans}
 
             # Choose the majority-vote span.
@@ -59,7 +59,7 @@ class BidafEnsemble(Ensemble):
                 options.append((-num_votes, -average_confidence, i))
 
             best = sorted(options)[0][2]
-            best_span = subresults[best]["best_span"].data[batch]
+            best_span = subresults[best]["best_span"].data[batch] # TODO(michaels): convert to int
             output["best_span"][batch] = best_span
 
             if metadata is not None:
@@ -89,7 +89,7 @@ class BidafEnsemble(Ensemble):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params):
-        assert vocab == None, "vocab should be None"
+        assert not vocab, "vocab should be None"
 
         submodels = []
         paths = params.pop("submodels")

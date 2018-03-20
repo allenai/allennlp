@@ -23,10 +23,10 @@ class Ensemble(Model):
 
     @classmethod
     def _load(cls,
-             config: Params,
-             serialization_dir: str,
-             weights_file: str = None,
-             cuda_device: int = -1) -> 'Model':
+              config: Params,
+              serialization_dir: str,
+              weights_file: str = None,
+              cuda_device: int = -1) -> 'Model':
         """
         Ensembles don't have vocabularies or weights, so they override _load.
         """
