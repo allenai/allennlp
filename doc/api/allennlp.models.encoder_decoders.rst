@@ -11,12 +11,7 @@ allennlp.models.encoder_decoders
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.models.encoder_decoders.wikitables_semantic_parser
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
 
-.. automodule:: allennlp.models.encoder_decoders.nlvr_semantic_parser
-   :members:
-   :undoc-members:
-   :show-inheritance:
+  allennlp.models.encoder_decoders.nlvr
+  allennlp.models.encoder_decoders.wikitables

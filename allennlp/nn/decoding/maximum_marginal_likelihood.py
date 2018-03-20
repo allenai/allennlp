@@ -5,7 +5,6 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 import torch
 from torch.autograd import Variable
 
-from allennlp.common import Params
 from allennlp.nn import util
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
@@ -14,8 +13,7 @@ from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@DecoderTrainer.register('max_marginal_likelihood')
-class MaximumMarginalLikelihood(DecoderTrainer):
+class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]]):
     """
     This class trains a decoder by maximizing the marginal likelihood of the targets.  That is,
     during training, we are given a `set` of acceptable or possible target sequences, and we
@@ -35,8 +33,8 @@ class MaximumMarginalLikelihood(DecoderTrainer):
     def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               targets: Union[torch.Tensor, List[List[List[int]]]],
-               target_mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+               supervision: Tuple[torch.Tensor, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        targets, target_mask = supervision
         allowed_transitions = self._create_allowed_transitions(targets, target_mask)
         finished_states = []
         states = [initial_state]
@@ -53,11 +51,10 @@ class MaximumMarginalLikelihood(DecoderTrainer):
             actions_taken: Set[Tuple[int, Tuple[int, ...]]] = set()
             for next_state in decode_step.take_step(grouped_state, allowed_actions=allowed_actions):
                 actions_taken.add((next_state.batch_indices[0], tuple(next_state.action_history[0])))
-                finished, not_finished = next_state.split_finished()
-                if finished is not None:
-                    finished_states.append(finished)
-                if not_finished is not None:
-                    next_states.append(not_finished)
+                if next_state.is_finished():
+                    finished_states.append(next_state)
+                else:
+                    next_states.append(next_state)
             states = next_states
             self._check_all_actions_taken(actions_taken, grouped_state, allowed_actions)
 
@@ -149,8 +146,3 @@ class MaximumMarginalLikelihood(DecoderTrainer):
             for score, batch_index in zip(state.score, state.batch_indices):
                 batch_scores[batch_index].append(score)
         return batch_scores
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'MaximumMarginalLikelihood':
-        params.assert_empty(cls.__name__)
-        return cls()
