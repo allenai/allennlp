@@ -38,7 +38,7 @@ class BidafEnsemble(Ensemble):
         batch_size = len(subresults[0]["best_span"])
 
         output = {
-                "best_span": torch.zeros(batch_size, 2)
+                "best_span": torch.zeros(batch_size, 2).long()
         }
         for batch in range(batch_size):
             # Populate span_votes so each key represents a span range that a submodel predicts and the value
@@ -59,7 +59,7 @@ class BidafEnsemble(Ensemble):
                 options.append((-num_votes, -average_confidence, i))
 
             best = sorted(options)[0][2]
-            best_span = subresults[best]["best_span"].data[batch] # TODO(michaels): convert to int
+            best_span = subresults[best]["best_span"].data[batch].long()
             output["best_span"][batch] = best_span
 
             if metadata is not None:
