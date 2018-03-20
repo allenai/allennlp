@@ -45,11 +45,9 @@ class BidafEnsemble(Ensemble):
         for batch in range(batch_size):
             # Populate span_votes so each key represents a span range that a submodel predicts and the value
             # is the number of models that made the prediction.
-            votes: Dict[(int, int), int] = {}
-            for i, subresult in enumerate(subresults):
-                key = (subresult["best_span"].data[batch][0], subresult["best_span"].data[batch][1])
-                new_value = votes.get(key, 0) + 1
-                votes[key] = new_value
+            spans = [(subresult["best_span"].data[batch][0], subresult["best_span"].data[batch][1])
+                      for subresult in subresults]
+            votes: Dict[(int, int), int] = {span:spans.count(span) for span in spans}
 
             # Choose the majority-vote span.
             # If there is a tie, break it with the average confidence (span_start_probs + span_end_probs).
