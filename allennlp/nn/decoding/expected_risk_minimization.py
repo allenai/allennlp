@@ -24,6 +24,12 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
 
     Parameters
     ----------
+    beam_size : ``int``
+    noramlize_by_length : ``bool``
+        Should the log probabilities be normalized by length before renormalizing them? Edunov et
+        al. do this in their work.
+    max_decoding_steps : ``int``
+        The maximum number of steps we should take during decoding.
     """
     def __init__(self, beam_size: int, normalize_by_length: bool, max_decoding_steps: int) -> None:
         self._beam_size = beam_size

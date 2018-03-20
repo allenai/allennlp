@@ -503,7 +503,7 @@ class NlvrSemanticParser(Model):
         and hence we'll return just one cost.
         """
         if not state.is_finished():
-            raise RuntimeError("get_costs() is not defined for unfinished states!")
+            raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
         instance_checklist_target = state.checklist_target[0]
         instance_checklist = state.checklist[0]
         instance_checklist_mask = state.checklist_mask[0]
