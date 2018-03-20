@@ -17,7 +17,7 @@ class TestEndpointSpanExtractor:
                 })
         extractor = SpanExtractor.from_params(params)
         assert isinstance(extractor, EndpointSpanExtractor)
-        assert extractor.get_output_dim() == 10
+        assert extractor.get_output_dim() == 17 # 2 * input_dim + span_width_embedding_dim
 
     def test_correct_sequence_elements_are_embedded(self):
         sequence_tensor = Variable(torch.randn([2, 5, 7]))
