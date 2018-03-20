@@ -57,7 +57,7 @@ DEFAULT_PREDICTORS = {
         'simple_tagger': 'sentence-tagger',
         'crf_tagger': 'sentence-tagger',
         'coref': 'coreference-resolution',
-        'constituency_parser': 'constituency-parser'
+        'constituency_parser': 'constituency-parser',
 }
 
 
