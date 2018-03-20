@@ -13,7 +13,7 @@ In this tutorial we'll also implement a custom PyTorch
 [`Module`](http://pytorch.org/docs/master/nn.html#torch.nn.Module),
 but you won't need to do that in general.
 
-Our [simple tagger](simple-tagger) model
+Our [simple tagger](training_and_evaluating.md) model
 uses an LSTM to capture dependencies between
 the words in the input sentence, but doesn't have a great way
 to capture dependencies between the _tags_. This can be a problem
