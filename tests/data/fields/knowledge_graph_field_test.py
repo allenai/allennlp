@@ -8,10 +8,10 @@ import torch
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.fields import KnowledgeGraphField
-from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 
 
 class KnowledgeGraphFieldTest(AllenNlpTestCase):

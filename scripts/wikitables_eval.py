@@ -52,7 +52,7 @@ def predict_logical_forms(args: argparse.Namespace):
     data_iterator.index_with(model.vocab)
     num_batches = data_iterator.get_num_batches(dataset)
     logical_forms = []
-    for batch in tqdm.tqdm(data_iterator(dataset, num_epochs=1, shuffle=False)):
+    for batch in tqdm.tqdm(data_iterator(dataset, num_epochs=1, shuffle=False, cuda_device=args.cuda_device)):
         if 'target_action_sequences' in batch:
             # This makes the model skip the loss computation, which will make things a bit faster.
             # We shouldn't ever hit this branch anymore, because we removed the

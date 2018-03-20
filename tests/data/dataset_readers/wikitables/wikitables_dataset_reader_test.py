@@ -1,7 +1,8 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import WikiTablesDatasetReader
-from allennlp.data.semparse.worlds import WikiTablesWorld
+from allennlp.semparse.worlds import WikiTablesWorld
+
 
 def assert_dataset_correct(dataset):
     instances = list(dataset)

@@ -11,12 +11,12 @@ from torch.autograd import Variable
 from allennlp.common import util
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.field import Field
-from allennlp.data.semparse import KnowledgeGraph
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.nn import util as nn_util
+from allennlp.semparse import KnowledgeGraph
 
 TokenList = List[TokenType]  # pylint: disable=invalid-name
 

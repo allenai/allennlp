@@ -15,13 +15,13 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListField
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
 from allennlp.data.instance import Instance
-from allennlp.data.semparse import ParsingError
-from allennlp.data.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
-from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
-from allennlp.data.semparse.worlds import WikiTablesWorld
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.semparse import ParsingError
+from allennlp.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
+from allennlp.semparse.type_declarations import wikitables_type_declaration as wt_types
+from allennlp.semparse.worlds import WikiTablesWorld
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
