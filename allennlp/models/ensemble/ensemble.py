@@ -7,10 +7,13 @@ from allennlp.models import Model
 
 
 class Ensemble(Model):
+    """
+    An ensemble runs multiple instances of a model and selects an answer from the subresults via some
+    ensembling strategy.
+    """
 
     def __init__(self,
                  submodels: List[Model]) -> None:
-        assert len(submodels) > 0
         vocab = submodels[0].vocab
         for submodel in submodels:
             assert submodel.vocab == vocab, "Vocabularies in ensemble differ"
@@ -36,7 +39,7 @@ class Ensemble(Model):
         # embeddings from.  We're now _loading_ the model, so those embeddings will already be
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
-        # Model._remove_pretrained_embedding_params(model_params) TODO(michaels)
+        Model.remove_pretrained_embedding_params(model_params)
         model = Model.from_params(None, model_params)
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are

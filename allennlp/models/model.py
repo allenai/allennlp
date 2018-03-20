@@ -217,7 +217,7 @@ class Model(torch.nn.Module, Registrable):
         # embeddings from.  We're now _loading_ the model, so those embeddings will already be
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
-        _remove_pretrained_embedding_params(model_params)
+        remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab, model_params)
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
@@ -270,13 +270,14 @@ class Model(torch.nn.Module, Registrable):
 
         # Load using an overridable _load method.
         # This allows subclasses of Model to override _load.
+        # pylint: disable=protected-access
         return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
 
 
-def _remove_pretrained_embedding_params(params: Params):
+def remove_pretrained_embedding_params(params: Params):
     keys = params.keys()
     if 'pretrained_file' in keys:
         del params['pretrained_file']
     for value in params.values():
         if isinstance(value, Params):
-            _remove_pretrained_embedding_params(value)
+            remove_pretrained_embedding_params(value)
