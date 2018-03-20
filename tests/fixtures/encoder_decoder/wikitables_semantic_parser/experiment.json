@@ -48,9 +48,6 @@
       "embedding_dim": 25,
       "averaged": true
     },
-    "decoder_trainer": {
-      "type": "max_marginal_likelihood"
-    },
     "decoder_beam_search": {
       "beam_size": 3
     },

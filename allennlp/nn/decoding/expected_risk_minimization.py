@@ -1,18 +1,18 @@
-from typing import Dict, List
+from typing import Callable, Dict, List, TypeVar
 from collections import defaultdict
 
 import torch
 from torch.autograd import Variable
 
-from allennlp.common import Params
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
 from allennlp.nn import util as nn_util
 
+StateType = TypeVar('StateType', bound=DecoderState)  # pylint: disable=invalid-name
 
-@DecoderTrainer.register('expected_risk_minimization')
-class ExpectedRiskMinimization(DecoderTrainer):
+
+class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor]]):
     """
     This class implements a trainer that minimizes the expected value of a cost function over the
     space of some candidate sequences produced by a decoder. We generate the candidate sequences by
@@ -28,20 +28,23 @@ class ExpectedRiskMinimization(DecoderTrainer):
     noramlize_by_length : ``bool``
         Should the log probabilities be normalized by length before renormalizing them? Edunov et
         al. do this in their work.
+    max_decoding_steps : ``int``
+        The maximum number of steps we should take during decoding.
     """
-    def __init__(self, beam_size: int, normalize_by_length: bool) -> None:
+    def __init__(self, beam_size: int, normalize_by_length: bool, max_decoding_steps: int) -> None:
         self._beam_size = beam_size
         self._normalize_by_length = normalize_by_length
+        self.max_decoding_steps = max_decoding_steps
 
-    def decode(self,  # type: ignore  # ``DecoderTrainer.decode`` also takes targets and their masks
+    def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               max_num_steps: int) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+               supervision: Callable[[StateType], torch.Tensor]) -> Dict[str, torch.Tensor]:
+        cost_function = supervision
         finished_states = []
         states = [initial_state]
         num_steps = 0
-        while states and num_steps < max_num_steps:
+        while states and num_steps < self.max_decoding_steps:
             next_states = []
             grouped_state = states[0].combine_states(states)
             # These states already come sorted.
@@ -56,7 +59,7 @@ class ExpectedRiskMinimization(DecoderTrainer):
 
         loss = nn_util.new_variable_with_data(initial_state.score[0], torch.Tensor([0.0]))
         finished_model_scores = self._get_model_scores_by_batch(finished_states)
-        finished_costs = self._get_costs_by_batch(finished_states)
+        finished_costs = self._get_costs_by_batch(finished_states, cost_function)
         for batch_index in finished_model_scores:
             # Finished model scores are log-probabilities of the predicted sequences. We convert
             # log probabilities into probabilities and re-normalize them to compute expected cost under
@@ -85,10 +88,11 @@ class ExpectedRiskMinimization(DecoderTrainer):
         return batch_scores
 
     @staticmethod
-    def _get_costs_by_batch(states: List[DecoderState]) -> Dict[int, List[Variable]]:
+    def _get_costs_by_batch(states: List[StateType],
+                            cost_function: Callable[[StateType], torch.Tensor]) -> Dict[int, List[Variable]]:
         batch_costs: Dict[int, List[Variable]] = defaultdict(list)
         for state in states:
-            cost = state.get_cost()
+            cost = cost_function(state)
             # Since this is a finished state, its group size is 1, and we just take the only batch
             # index.
             batch_index = state.batch_indices[0]
@@ -129,10 +133,3 @@ class ExpectedRiskMinimization(DecoderTrainer):
                 pruned_states.append(state)
                 num_states_per_instance[batch_index] += 1
         return pruned_states
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'ExpectedRiskMinimization':
-        beam_size = params.pop_int('beam_size')
-        normalize_by_length = params.pop_bool('normalize_by_length', True)
-        params.assert_empty(cls.__name__)
-        return cls(beam_size, normalize_by_length)
