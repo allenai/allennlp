@@ -24,14 +24,22 @@ class WinobiasReader(DatasetReader):
     Winobias is a dataset to analyse the issue of gender bias in co-reference
     resolution. It contains simple sentences with pro/anti stereotypical gender
     associations with which to measure the bias of a coreference system trained
-    on another corpora.
+    on another corpus. It is effectively a toy dataset and as such, uses very
+    simplistic language; it has little use outside of evaluating a model for bias.
+
+    The dataset is formatted with a single sentence per line, with a maximum of 2
+    non-nested coreference clusters annotated using either square or round brackets.
+    For example:
+
+    [The salesperson] sold (some books) to the librarian because [she] was trying to sell (them).
+
 
     Returns a list of ``Instances`` which have four fields: ``text``, a ``TextField``
     containing the full sentence text, ``spans``, a ``ListField[SpanField]`` of inclusive start and
     end indices for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's
     original text. For data with gold cluster labels, we also include the original ``clusters``
     (a list of list of index pairs) and a ``SequenceLabelField`` of cluster ids for every span
-    candidate.
+    candidate in the ``metadata`` also.
 
     Parameters
     ----------
@@ -51,15 +59,11 @@ class WinobiasReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        # if `file_path` is a URL, redirect to the cache
-        file_path = cached_path(file_path)
 
-        for sentence in open(file_path, "r"):
+        for sentence in open(cached_path(file_path), "r"):
             tokens = sentence.strip().split(" ")
             clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
             words = []
-            inside_square_span = False
-            inside_round_span = False
             for index, token in enumerate(tokens):
                 # Coreference is annotated using [square brackets]
                 # or (round brackets) around coreferent phrases.
@@ -67,21 +71,17 @@ class WinobiasReader(DatasetReader):
                     clusters[0].append((index, index))
                 elif "[" in token:
                     clusters[0].append((index, index))
-                    inside_square_span = True
-                elif inside_square_span or "]" in token:
+                elif "]" in token:
                     old_span = clusters[0][-1]
-                    clusters[0][-1] = (old_span[0], old_span[1] + 1)
-                    inside_square_span = False
+                    clusters[0][-1] = (old_span[0], index)
 
                 if "(" in token and ")" in token:
                     clusters[1].append((index, index))
                 elif "(" in token:
                     clusters[1].append((index, index))
-                    inside_round_span = True
-                elif inside_round_span or ")" in token:
+                elif ")" in token:
                     old_span = clusters[1][-1]
-                    clusters[1][-1] = (old_span[0], old_span[1] + 1)
-                    inside_round_span = False
+                    clusters[1][-1] = (old_span[0], index)
 
                 if token.endswith("."):
                     # Winobias is tokenised, but not for full stops.
@@ -92,18 +92,18 @@ class WinobiasReader(DatasetReader):
                 else:
                     words.append(token.strip("[]()"))
 
-            yield self.text_to_instance(words, [x for x in clusters.values()])
+            yield self.text_to_instance([Token(x) for x in words], [x for x in clusters.values()])
 
     @overrides
     def text_to_instance(self,  # type: ignore
-                         sentence: List[str],
+                         sentence: List[Token],
                          gold_clusters: Optional[List[List[Tuple[int, int]]]] = None) -> Instance:
         # pylint: disable=arguments-differ
         """
         Parameters
         ----------
-        sentences : ``List[str]``, required.
-            The sentence to analyse.
+        sentences : ``List[Token]``, required.
+            The already tokenised sentence to analyse.
         gold_clusters : ``Optional[List[List[Tuple[int, int]]]]``, optional (default = None)
             A list of all clusters in the sentence, represented as word spans. Each cluster
             contains some number of spans, which can be nested and overlap, but will never
@@ -127,7 +127,7 @@ class WinobiasReader(DatasetReader):
         if gold_clusters is not None:
             metadata["clusters"] = gold_clusters
 
-        text_field = TextField([Token(word) for word in sentence], self._token_indexers)
+        text_field = TextField(sentence, self._token_indexers)
 
         cluster_dict = {}
         if gold_clusters is not None:

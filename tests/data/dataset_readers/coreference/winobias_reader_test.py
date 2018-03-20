@@ -53,7 +53,7 @@ class TestWinobiasReader:
         candidate_mentions = []
         for start, end in zip(span_starts, span_ends):
             # Spans are inclusive.
-            text_span = text[start: end + 1]
+            text_span = text[start:(end + 1)]
             candidate_mentions.append(text_span)
 
         # Check we aren't considering zero length spans and all
