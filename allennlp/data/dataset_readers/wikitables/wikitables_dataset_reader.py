@@ -250,11 +250,9 @@ class WikiTablesDatasetReader(DatasetReader):
 
         production_rule_fields: List[Field] = []
         for production_rule in world.all_possible_actions():
-            field = ProductionRuleField(production_rule,
-                                        terminal_indexers=self._terminal_indexers,
-                                        nonterminal_indexers=self._nonterminal_indexers,
-                                        is_nonterminal=lambda x: not world.is_table_entity(x),
-                                        context=tokenized_question)
+            _, rule_right_side = production_rule.split(' -> ')
+            is_global_rule = not world.is_table_entity(rule_right_side)
+            field = ProductionRuleField(production_rule, is_global_rule)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
 

@@ -116,11 +116,7 @@ class NlvrDatasetReader(DatasetReader):
         instance_action_ids: Dict[str, int] = {}
         for production_rule in world.all_possible_actions():
             instance_action_ids[production_rule] = len(instance_action_ids)
-            field = ProductionRuleField(production_rule,
-                                        terminal_indexers=self._terminal_indexers,
-                                        nonterminal_indexers=self._nonterminal_indexers,
-                                        is_nonterminal=lambda x: x not in world.terminal_productions,
-                                        context=tokenized_sentence)
+            field = ProductionRuleField(production_rule, is_global_rule=True)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
         # agenda_field contains indices into actions.

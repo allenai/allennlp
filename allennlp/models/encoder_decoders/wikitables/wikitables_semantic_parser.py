@@ -45,12 +45,6 @@ class WikiTablesSemanticParser(Model):
     vocab : ``Vocabulary``
     question_embedder : ``TextFieldEmbedder``
         Embedder for questions.
-    nonterminal_embedder : ``TextFieldEmbedder``
-        We will embed nonterminals in the grammar using this embedder.  These aren't
-        ``TextFields``, but they are structured the same way.
-    terminal_embedder : ``TextFieldEmbedder``
-        We will embed terminals in the grammar using this embedder.  These aren't ``TextFields``,
-        but they are structured the same way.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
     entity_encoder : ``Seq2VecEncoder``
@@ -80,8 +74,6 @@ class WikiTablesSemanticParser(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  question_embedder: TextFieldEmbedder,
-                 nonterminal_embedder: TextFieldEmbedder,
-                 terminal_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
                  mixture_feedforward: FeedForward,
@@ -89,17 +81,15 @@ class WikiTablesSemanticParser(Model):
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction,
                  num_linking_features: int = 8,
-                 embed_terminals: bool = False) -> None:
+                 embed_terminals: bool = False,
+                 rule_namespace: str = 'rule_labels') -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
         self._entity_encoder = TimeDistributed(entity_encoder)
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
-        self._nonterminal_embedder = nonterminal_embedder
-        if embed_terminals:
-            self._terminal_embedder = terminal_embedder
-            # TODO(mattg): should we raise an error here if terminal_embedder is not None?
+        self._action_embedder = Embedding(
         self._action_sequence_accuracy = Average()
         self._embed_terminals = embed_terminals
 
@@ -666,52 +656,6 @@ class WikiTablesSemanticParser(Model):
                 action_id = global_action_ids[action_indices]
                 action_map[(batch_index, action_index)] = action_id
         return embedded_actions, action_map, initial_action_embedding
-
-    @staticmethod
-    def _get_unique_elements(
-            actions: List[List[ProductionRuleArray]]) -> Tuple[Dict[str, Dict[str, torch.Tensor]],
-                                                               Dict[str, Dict[str, torch.Tensor]]]:
-        """
-        Finds all of the unique terminals and non-terminals in all of the production rules.  We
-        will embed these elements separately, then use those embeddings to get final action
-        embeddings.
-
-        Returns
-        -------
-        nonterminals : ``Dict[str, Dict[str, torch.Tensor]]]``
-            Each item in this dictionary represents a single nonterminal element of the grammar,
-            like "d", "<r,d>", "or "<#1,#1>".  The key is the string representation of the
-            nonterminal and the value its indexed representation, which we will use for computing
-            the embedding.
-        terminals : ``Dict[str, Dict[str, torch.Tensor]]]``
-            Identical to ``nonterminals``, but for terminal elements of the grammar, like
-            "fb:type.object.type", "reverse", or "fb:cell.2nd".
-        """
-        nonterminals: Dict[str, Dict[str, torch.Tensor]] = {}
-        terminals: Dict[str, Dict[str, torch.Tensor]] = {}
-        for action_sequence in actions:
-            for production_rule in action_sequence:
-                if not production_rule['left'][0]:
-                    # This rule is padding.
-                    continue
-                # This logic is hard to understand, because the ProductionRuleArray is a messy
-                # type.  The structure of each ProductionRuleArray is:
-                #     {
-                #      "left": (LHS_string, left_is_nonterminal, padded_LHS_tensor_dict),
-                #      "right": (RHS_string, right_is_nonterminal, padded_RHS_tensor_dict)
-                #     }
-                # Technically, the left hand side is _always_ a non-terminal (by definition, you
-                # can't expand a terminal), but we'll do this check anyway, in case you did
-                # something really crazy.
-                if production_rule['left'][1]:  # this is a nonterminal production
-                    nonterminals[production_rule['left'][0]] = production_rule['left'][2]
-                else:
-                    terminals[production_rule['left'][0]] = production_rule['left'][2]
-                if production_rule['right'][1]:  # this is a nonterminal production
-                    nonterminals[production_rule['right'][0]] = production_rule['right'][2]
-                else:
-                    terminals[production_rule['right'][0]] = production_rule['right'][2]
-        return nonterminals, terminals
 
     @staticmethod
     def _map_entity_productions(linking_scores: torch.FloatTensor,
