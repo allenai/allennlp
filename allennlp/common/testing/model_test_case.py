@@ -150,7 +150,7 @@ class ModelTestCase(AllenNlpTestCase):
         if has_zero_or_none_grads:
             for name, grad in has_zero_or_none_grads.items():
                 print(f"Parameter: {name} had incorrect gradient: {grad}")
-            raise Exception("Incorrect gradients found. See stack trace for info.")
+            raise Exception("Incorrect gradients found. See stdout for more info.")
 
     def ensure_batch_predictions_are_consistent(self):
         self.model.eval()
