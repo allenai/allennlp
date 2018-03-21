@@ -79,8 +79,7 @@ class BidafEnsemble(Ensemble):
 
         subresults = []
         for submodel in self.submodels:
-            # TODO(michaels): should I not call forward directly here and instead call submodel(**)?
-            subresults.append(submodel.forward(question, passage, span_start, span_end, metadata))
+            subresults.append(submodel(question, passage, span_start, span_end, metadata))
 
         batch_size = len(subresults[0]["best_span"])
 
