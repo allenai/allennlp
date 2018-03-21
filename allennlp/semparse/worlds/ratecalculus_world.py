@@ -46,6 +46,12 @@ class RateCalculusWorld(World):
     def _get_curried_functions(self) -> Dict[Type, int]:
         return RateCalculusWorld.curried_functions
 
+    def is_question_entity(self, entity_name: str) -> bool:
+        """
+        Returns ``True`` if the given entity is one of the entities in the question.
+        """
+        return entity_name in self._entity_set
+
     @overrides
     def get_basic_types(self) -> Set[Type]:
         return types.BASIC_TYPES

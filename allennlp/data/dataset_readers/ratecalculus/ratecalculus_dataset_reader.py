@@ -16,10 +16,10 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListField
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
 from allennlp.data.instance import Instance
-from allennlp.data.semparse import ParsingError
-from allennlp.data.semparse.knowledge_graphs import QuestionKnowledgeGraph
-from allennlp.data.semparse.type_declarations import wikitables_type_declaration as wt_types
-from allennlp.data.semparse.worlds import RateCalculusWorld
+from allennlp.semparse import ParsingError
+from allennlp.semparse.knowledge_graphs import QuestionKnowledgeGraph
+from allennlp.semparse.type_declarations import wikitables_type_declaration as wt_types
+from allennlp.semparse.worlds import RateCalculusWorld
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
@@ -106,7 +106,7 @@ class RateCalculusDatasetReader(DatasetReader):
             field = ProductionRuleField(production_rule,
                                         terminal_indexers=self._terminal_indexers,
                                         nonterminal_indexers=self._nonterminal_indexers,
-                                        is_nonterminal=lambda x: not world.is_table_entity(x),
+                                        is_nonterminal=lambda x: not world.is_question_entity(x),
                                         context=tokenized_question)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)

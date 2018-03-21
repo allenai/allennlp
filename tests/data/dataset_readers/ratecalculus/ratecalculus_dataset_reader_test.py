@@ -1,7 +1,7 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import RateCalculusDatasetReader
-from allennlp.data.semparse.worlds import RateCalculusWorld
+from allennlp.semparse.worlds import RateCalculusWorld
 
 def assert_dataset_correct(dataset):
     instances = list(dataset)
