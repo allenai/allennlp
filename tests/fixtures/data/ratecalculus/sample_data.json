@@ -8,6 +8,6 @@
         "lSolutions": [
             "20.0"
         ],
-        "lSemantics": "(Equals (Value x dollar) 20)"
+        "lSemantics": "(Equals (Value s dollar) 20)"
   }
 ]

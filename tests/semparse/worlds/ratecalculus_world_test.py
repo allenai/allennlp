@@ -28,29 +28,30 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         assert str(expression) == "E(num:50,num:20)"
 
     def test_world_parses_values(self):
-        sempre_form = "(Value x dollar)"
+        sempre_form = "(Value s dollar)"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "V1(X,D)"
+        assert str(expression) == "V1(S,D)"
 
     def test_world_parses_rates(self):
-        sempre_form = "(Rate x dollar unit)"
+        sempre_form = "(Rate s dollar unit)"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "R1(X,D,U)"
+        assert str(expression) == "R1(S,D,U)"
 
     def test_world_parses_value_constraint(self):
-        sempre_form = "(Equals (Value x dollar) 20)"
+        sempre_form = "(Equals (Value s dollar) 20)"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "E(V1(X,D),num:20)"
+        print("ACTION SEQ: ", self.world.get_action_sequence(expression))
+        assert str(expression) == "E(V1(S,D),num:20)"
 
     def test_world_parses_rate_constraint(self):
-        sempre_form = "(Equals (Rate x dollar unit) 20)"
+        sempre_form = "(Equals (Rate s dollar unit) 20)"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "E(R1(X,D,U),num:20)"
+        assert str(expression) == "E(R1(S,D,U),num:20)"
 
     def test_world_parses_union_constraint(self):
-        sempre_form = "(Equals (Value (Union x y) dollar) 20)"
+        sempre_form = "(Equals (Value (Union s t) dollar) 20)"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "E(V1(U1(X,Y),D),num:20)"
+        assert str(expression) == "E(V1(U1(S,T),D),num:20)"
 
     def test_world_parses_conjunction(self):
         sempre_form = "(And (Equals 20 20) (Equals 50 50))"
@@ -66,6 +67,7 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         # This test checks valid actions for each type match
         valid_actions = self.world.get_valid_actions()
 
+        print("VALID ACTIONS: ", valid_actions)
         assert set(valid_actions.keys()) == {
                 '@START@',
                 'b',
@@ -92,7 +94,7 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                                 ['20', '50', '[<o,<d,<d,n>>>, o, d, d]', '[<o,<d,n>>, o, d]', 'p', 'q'])
 
         check_productions_match(valid_actions['o'],
-                                ['[<o,<o,o>>, o, o]'])
+                                ['[<o,<o,o>>, o, o]', 's', 't'])
 
         check_productions_match(valid_actions['<o,<d,n>>'],
                                 ['Value'])

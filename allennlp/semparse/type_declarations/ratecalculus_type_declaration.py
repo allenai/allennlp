@@ -15,7 +15,7 @@ DIMENSION_TYPE = NamedBasicType("DIMENSION")
 OBJECT_TYPE = NamedBasicType("OBJECT")
 NUMBER_TYPE = NamedBasicType("NUMBER")
 
-BASIC_TYPES = {BOOLEAN_TYPE}
+BASIC_TYPES = {BOOLEAN_TYPE, NUMBER_TYPE, DIMENSION_TYPE, OBJECT_TYPE}
 VALUE_TYPE = ComplexType(OBJECT_TYPE,
                          ComplexType(DIMENSION_TYPE, NUMBER_TYPE))
 RATE_TYPE = ComplexType(OBJECT_TYPE,
@@ -41,8 +41,8 @@ BINARY_BOOL_OP_TYPE = ComplexType(BOOLEAN_TYPE, ComplexType(BOOLEAN_TYPE, BOOLEA
 # and, or
 CONJUNCTION_TYPE = BINARY_BOOL_OP_TYPE
 
-COMMON_NAME_MAPPING = {"x": "X", "y": "Y", "p": "P", "q": "Q"}
-COMMON_TYPE_SIGNATURE = {"X": OBJECT_TYPE, "Y": OBJECT_TYPE, "P": NUMBER_TYPE, "Q": NUMBER_TYPE}
+COMMON_NAME_MAPPING = {"s": "S", "t": "T", "p": "P", "q": "Q"}
+COMMON_TYPE_SIGNATURE = {"S": OBJECT_TYPE, "T": OBJECT_TYPE, "P": NUMBER_TYPE, "Q": NUMBER_TYPE}
 
 def add_common_name_with_type(name, mapping, type_signature):
     COMMON_NAME_MAPPING[name] = mapping

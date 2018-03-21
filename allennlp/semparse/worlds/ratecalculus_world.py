@@ -69,7 +69,7 @@ class RateCalculusWorld(World):
 
     @overrides
     def get_valid_starting_types(self) -> Set[Type]:
-        return types.BASIC_TYPES
+        return {types.BOOLEAN_TYPE}
 
     @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
