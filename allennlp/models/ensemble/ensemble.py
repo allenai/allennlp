@@ -4,7 +4,7 @@ import torch
 
 from allennlp.common.params import Params
 from allennlp.models import Model
-
+from allennlp.models.model import remove_pretrained_embedding_params
 
 class Ensemble(Model):
     """
@@ -39,7 +39,7 @@ class Ensemble(Model):
         # embeddings from.  We're now _loading_ the model, so those embeddings will already be
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
-        Model.remove_pretrained_embedding_params(model_params)
+        remove_pretrained_embedding_params(model_params)
         model = Model.from_params(None, model_params)
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
